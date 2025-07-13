@@ -173,7 +173,7 @@ impl Interpreter {
         Ok(())
     }
 
-    /// トークンをデータとして解析し、Valueのベクタに変換する
+    /// トークンをデータとして解析し、Valueのベクタに変換する（ネスト対応）
     fn collect_vector_as_data(&self, tokens: &[Token]) -> Result<(Vec<Value>, usize), String> {
         let mut values = Vec::new();
         let mut i = 1; // 開始の'['をスキップ
@@ -255,7 +255,8 @@ impl Interpreter {
                                 self.execute_builtin(name)?;
                             }
                         } else {
-                            self.execute_tokens_with_context(&def.tokens)?;
+                            // カスタムワードの実行時に暗黙の反復をチェック
+                            self.execute_custom_word(name, &def.tokens)?;
                         }
                     } else {
                         return Err(format!("Unknown word: {}", name));
@@ -268,6 +269,48 @@ impl Interpreter {
         }
         
         Ok(())
+    }
+
+    // カスタムワードの実行（暗黙の反復対応）
+    fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), String> {
+        web_sys::console::log_1(&format!("execute_custom_word: {} with stack top: {:?}", 
+                                         name, self.stack.last()).into());
+        
+        // スタックトップがVectorかチェック
+        if let Some(top) = self.stack.last() {
+            if let ValueType::Vector(v) = &top.val_type {
+                web_sys::console::log_1(&format!("Applying {} to vector of {} elements", 
+                                                 name, v.len()).into());
+                
+                // Vectorの場合、各要素に対してワードを適用
+                self.stack.pop(); // Vectorを取り出す
+                
+                let mut results = Vec::new();
+                for (idx, elem) in v.iter().enumerate() {
+                    web_sys::console::log_1(&format!("Processing element {}: {:?}", idx, elem).into());
+                    
+                    // 各要素をスタックに積む
+                    self.stack.push(elem.clone());
+                    
+                    // ワードを実行
+                    self.execute_tokens_with_context(tokens)?;
+                    
+                    // 結果を取得（複数の結果がある可能性を考慮）
+                    if let Some(result) = self.stack.pop() {
+                        web_sys::console::log_1(&format!("Result for element {}: {:?}", idx, result).into());
+                        results.push(result);
+                    }
+                }
+                
+                // 結果をVectorとしてスタックに戻す
+                self.stack.push(Value { val_type: ValueType::Vector(results) });
+                return Ok(());
+            }
+        }
+        
+        // Vectorでない場合は通常の実行
+        web_sys::console::log_1(&format!("Normal execution of {}", name).into());
+        self.execute_tokens_with_context(tokens)
     }
 
     fn body_vector_to_tokens(
@@ -315,6 +358,8 @@ impl Interpreter {
     }
         
     fn execute_builtin(&mut self, name: &str) -> Result<(), String> {
+        web_sys::console::log_1(&format!("execute_builtin: {}", name).into());
+        
         match name {
             "DUP" => self.op_dup(),
             "DROP" => self.op_drop(),
@@ -350,6 +395,8 @@ impl Interpreter {
     }
     
     fn execute_operator(&mut self, op: &str) -> Result<(), String> {
+        web_sys::console::log_1(&format!("execute_operator: {}", op).into());
+        
         match op {
             "+" => self.op_add(),
             "-" => self.op_sub(),
@@ -371,6 +418,9 @@ impl Interpreter {
     
         let name_val = self.stack.pop().unwrap();
         let body_val = self.stack.pop().unwrap();
+    
+        web_sys::console::log_1(&format!("DEF: defining {} with body {:?}", 
+                                         name_val, body_val).into());
     
         match (&name_val.val_type, &body_val.val_type) {
             (ValueType::String(name), ValueType::Vector(body)) => {
@@ -844,9 +894,13 @@ impl Interpreter {
         let b = self.stack.pop().unwrap();
         let a = self.stack.pop().unwrap();
         
+        web_sys::console::log_1(&format!("op_ge: a={:?}, b={:?}", a, b).into());
+        
         match (&a.val_type, &b.val_type) {
             (ValueType::Number(n1), ValueType::Number(n2)) => {
-                self.stack.push(Value { val_type: ValueType::Boolean(n1.ge(n2)) });
+                let result = n1.ge(n2);
+                web_sys::console::log_1(&format!("op_ge result: {}", result).into());
+                self.stack.push(Value { val_type: ValueType::Boolean(result) });
                 Ok(())
             },
             (ValueType::Vector(v), ValueType::Number(n)) => {
