@@ -97,81 +97,79 @@ impl Interpreter {
     }
 
     // 単一トークンの実行
-    fn execute_single_token(&mut self, token: &Token) -> Result<(), String> {
-        let mut pending_description: Option<String> = None;
-        
-        match token {
-            Token::Description(text) => {
-                pending_description = Some(text.clone());
-            },
-            Token::Number(num, den) => {
-                self.stack.push(Value {
-                    val_type: ValueType::Number(Fraction::new(*num, *den)),
-                });
-            },
-            Token::String(s) => {
-                self.stack.push(Value {
-                    val_type: ValueType::String(s.clone()),
-                });
-            },
-            Token::Boolean(b) => {
-                self.stack.push(Value {
-                    val_type: ValueType::Boolean(*b),
-                });
-            },
-            Token::Nil => {
-                self.stack.push(Value {
-                    val_type: ValueType::Nil,
-                });
-            },
-            Token::VectorStart => {
-                // ベクタを収集（ステップ実行時は一度に処理）
-                let mut depth = 1;
-                let mut vector_tokens = vec![Token::VectorStart];
+fn execute_single_token(&mut self, token: &Token) -> Result<(), String> {
+    match token {
+        Token::Description(_text) => {
+            // 説明文はここでは処理しない（execute_tokens_with_contextで処理）
+            Ok(())
+        },
+        Token::Number(num, den) => {
+            self.stack.push(Value {
+                val_type: ValueType::Number(Fraction::new(*num, *den)),
+            });
+            Ok(())
+        },
+        Token::String(s) => {
+            self.stack.push(Value {
+                val_type: ValueType::String(s.clone()),
+            });
+            Ok(())
+        },
+        Token::Boolean(b) => {
+            self.stack.push(Value {
+                val_type: ValueType::Boolean(*b),
+            });
+            Ok(())
+        },
+        Token::Nil => {
+            self.stack.push(Value {
+                val_type: ValueType::Nil,
+            });
+            Ok(())
+        },
+        Token::VectorStart => {
+            // ベクタを収集（ステップ実行時は一度に処理）
+            let mut depth = 1;
+            let mut vector_tokens = vec![Token::VectorStart];
+            
+            while depth > 0 && self.step_position < self.step_tokens.len() {
+                let next_token = self.step_tokens[self.step_position].clone();
+                self.step_position += 1;
                 
-                while depth > 0 && self.step_position < self.step_tokens.len() {
-                    let next_token = self.step_tokens[self.step_position].clone();
-                    self.step_position += 1;
-                    
-                    match &next_token {
-                        Token::VectorStart => depth += 1,
-                        Token::VectorEnd => depth -= 1,
-                        _ => {}
-                    }
-                    
-                    vector_tokens.push(next_token);
+                match &next_token {
+                    Token::VectorStart => depth += 1,
+                    Token::VectorEnd => depth -= 1,
+                    _ => {}
                 }
                 
-                // ベクタをデータとして解析
-                let (vector_values, _) = self.collect_vector_as_data(&vector_tokens)?;
-                self.stack.push(Value {
-                    val_type: ValueType::Vector(vector_values),
-                });
-            },
-            Token::Symbol(name) => {
-                if matches!(name.as_str(), "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=") {
-                    self.execute_operator(name)?;
-                } else if let Some(def) = self.dictionary.get(name).cloned() {
-                    if def.is_builtin {
-                        if name == "DEF" {
-                            let desc = pending_description.take();
-                            self.op_def_with_comment(desc)?;
-                        } else {
-                            self.execute_builtin(name)?;
-                        }
-                    } else {
-                        // カスタムワードは展開して実行
-                        self.execute_tokens_with_context(&def.tokens)?;
-                    }
+                vector_tokens.push(next_token);
+            }
+            
+            // ベクタをデータとして解析
+            let (vector_values, _) = self.collect_vector_as_data(&vector_tokens)?;
+            self.stack.push(Value {
+                val_type: ValueType::Vector(vector_values),
+            });
+            Ok(())
+        },
+        Token::Symbol(name) => {
+            if matches!(name.as_str(), "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=") {
+                self.execute_operator(name)?;
+            } else if let Some(def) = self.dictionary.get(name).cloned() {
+                if def.is_builtin {
+                    self.execute_builtin(name)?;
                 } else {
-                    return Err(format!("Unknown word: {}", name));
+                    // カスタムワードは展開して実行
+                    self.execute_tokens_with_context(&def.tokens)?;
                 }
-            },
-            Token::VectorEnd => return Err("Unexpected ']' found.".to_string()),
-        }
-        
-        Ok(())
+            } else {
+                return Err(format!("Unknown word: {}", name));
+            }
+            Ok(())
+        },
+        Token::VectorEnd => Err("Unexpected ']' found.".to_string()),
     }
+}
 
     /// トークンをデータとして解析し、Valueのベクタに変換する（ネスト対応）
     fn collect_vector_as_data(&self, tokens: &[Token]) -> Result<(Vec<Value>, usize), String> {
@@ -272,46 +270,46 @@ impl Interpreter {
     }
 
     // カスタムワードの実行（暗黙の反復対応）
-    fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), String> {
-        web_sys::console::log_1(&format!("execute_custom_word: {} with stack top: {:?}", 
-                                         name, self.stack.last()).into());
-        
-        // スタックトップがVectorかチェック
-        if let Some(top) = self.stack.last() {
-            if let ValueType::Vector(v) = &top.val_type {
-                web_sys::console::log_1(&format!("Applying {} to vector of {} elements", 
-                                                 name, v.len()).into());
+fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), String> {
+    web_sys::console::log_1(&format!("execute_custom_word: {} with stack top: {:?}", 
+                                     name, self.stack.last()).into());
+    
+    // スタックトップがVectorかチェック（クローンして借用を解放）
+    if let Some(top) = self.stack.last().cloned() {
+        if let ValueType::Vector(v) = top.val_type {
+            web_sys::console::log_1(&format!("Applying {} to vector of {} elements", 
+                                             name, v.len()).into());
+            
+            // Vectorの場合、各要素に対してワードを適用
+            self.stack.pop(); // Vectorを取り出す
+            
+            let mut results = Vec::new();
+            for (idx, elem) in v.iter().enumerate() {
+                web_sys::console::log_1(&format!("Processing element {}: {:?}", idx, elem).into());
                 
-                // Vectorの場合、各要素に対してワードを適用
-                self.stack.pop(); // Vectorを取り出す
+                // 各要素をスタックに積む
+                self.stack.push(elem.clone());
                 
-                let mut results = Vec::new();
-                for (idx, elem) in v.iter().enumerate() {
-                    web_sys::console::log_1(&format!("Processing element {}: {:?}", idx, elem).into());
-                    
-                    // 各要素をスタックに積む
-                    self.stack.push(elem.clone());
-                    
-                    // ワードを実行
-                    self.execute_tokens_with_context(tokens)?;
-                    
-                    // 結果を取得（複数の結果がある可能性を考慮）
-                    if let Some(result) = self.stack.pop() {
-                        web_sys::console::log_1(&format!("Result for element {}: {:?}", idx, result).into());
-                        results.push(result);
-                    }
+                // ワードを実行
+                self.execute_tokens_with_context(tokens)?;
+                
+                // 結果を取得（複数の結果がある可能性を考慮）
+                if let Some(result) = self.stack.pop() {
+                    web_sys::console::log_1(&format!("Result for element {}: {:?}", idx, result).into());
+                    results.push(result);
                 }
-                
-                // 結果をVectorとしてスタックに戻す
-                self.stack.push(Value { val_type: ValueType::Vector(results) });
-                return Ok(());
             }
+            
+            // 結果をVectorとしてスタックに戻す
+            self.stack.push(Value { val_type: ValueType::Vector(results) });
+            return Ok(());
         }
-        
-        // Vectorでない場合は通常の実行
-        web_sys::console::log_1(&format!("Normal execution of {}", name).into());
-        self.execute_tokens_with_context(tokens)
     }
+    
+    // Vectorでない場合は通常の実行
+    web_sys::console::log_1(&format!("Normal execution of {}", name).into());
+    self.execute_tokens_with_context(tokens)
+}
 
     fn body_vector_to_tokens(
         &self,
