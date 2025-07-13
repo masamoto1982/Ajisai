@@ -104,7 +104,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // 数値の判定（整数と小数）
         if let Ok(num) = word.parse::<i64>() {
             tokens.push(Token::Number(num, 1));
-        } else if word.contains('.') {
+        } else if word.contains('.') && !word.starts_with('.') && !word.ends_with('.') {
             // 小数点を含む場合、分数に変換
             let parts: Vec<&str> = word.split('.').collect();
             if parts.len() == 2 {
@@ -125,10 +125,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             } else {
                 return Err(format!("Invalid number: {}", word));
             }
-        } else if word.contains('/') {
-            // 分数記法（例: 1/2）
+        } else if word.contains('/') && word.len() > 1 && !word.starts_with('/') && !word.ends_with('/') {
+            // 分数記法（例: 1/2）- 単独の / は除外
             let parts: Vec<&str> = word.split('/').collect();
-            if parts.len() == 2 {
+            if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
                 let numerator = parts[0].parse::<i64>()
                     .map_err(|_| format!("Invalid fraction numerator: {}", word))?;
                 let denominator = parts[1].parse::<i64>()
@@ -138,9 +138,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                     return Err("Division by zero in fraction".to_string());
                 }
                 
+                web_sys::console::log_1(&format!("Parsed fraction {} as {}/{}", word, numerator, denominator).into());
                 tokens.push(Token::Number(numerator, denominator));
             } else {
-                return Err(format!("Invalid fraction: {}", word));
+                // 分数として解析できない場合はシンボルとして扱う
+                tokens.push(Token::Symbol(word.to_uppercase()));
             }
         } else {
             // その他のトークン
