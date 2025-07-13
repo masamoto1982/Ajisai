@@ -173,7 +173,7 @@ impl Interpreter {
         Ok(())
     }
 
-    /// トークンをデータとして解析し、Valueのベクタに変換する（ネスト対応）
+    /// トークンをデータとして解析し、Valueのベクタに変換する
     fn collect_vector_as_data(&self, tokens: &[Token]) -> Result<(Vec<Value>, usize), String> {
         let mut values = Vec::new();
         let mut i = 1; // 開始の'['をスキップ
