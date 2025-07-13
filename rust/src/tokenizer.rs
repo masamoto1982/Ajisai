@@ -101,7 +101,31 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // デバッグログ
         web_sys::console::log_1(&format!("Tokenizing word: '{}'", word).into());
         
-        // 数値の判定（整数と小数）
+        // まず特殊なケースを処理
+        match word.as_str() {
+            // 単独の演算子はシンボルとして処理
+            "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=" => {
+                tokens.push(Token::Symbol(word.to_uppercase()));
+                continue;
+            },
+            // 真偽値
+            "true" => {
+                tokens.push(Token::Boolean(true));
+                continue;
+            },
+            "false" => {
+                tokens.push(Token::Boolean(false));
+                continue;
+            },
+            // NIL
+            "NIL" => {
+                tokens.push(Token::Nil);
+                continue;
+            },
+            _ => {}
+        }
+        
+        // 数値の判定（整数）
         if let Ok(num) = word.parse::<i64>() {
             tokens.push(Token::Number(num, 1));
         } else if word.contains('.') && !word.starts_with('.') && !word.ends_with('.') {
@@ -125,8 +149,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             } else {
                 return Err(format!("Invalid number: {}", word));
             }
-        } else if word.contains('/') && word.len() > 1 && !word.starts_with('/') && !word.ends_with('/') {
-            // 分数記法（例: 1/2）- 単独の / は除外
+        } else if word.contains('/') && word != "/" {
+            // 分数記法（例: 1/2）- 単独の / は既に処理済み
             let parts: Vec<&str> = word.split('/').collect();
             if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
                 let numerator = parts[0].parse::<i64>()
@@ -145,16 +169,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 tokens.push(Token::Symbol(word.to_uppercase()));
             }
         } else {
-            // その他のトークン
-            match word.as_str() {
-                "true" => tokens.push(Token::Boolean(true)),
-                "false" => tokens.push(Token::Boolean(false)),
-                "NIL" => tokens.push(Token::Nil),
-                _ => {
-                    // シンボルは大文字に正規化
-                    tokens.push(Token::Symbol(word.to_uppercase()))
-                },
-            }
+            // その他はすべてシンボル
+            tokens.push(Token::Symbol(word.to_uppercase()));
         }
     }
     
