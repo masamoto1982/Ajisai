@@ -14,6 +14,9 @@ pub struct Interpreter {
     step_mode: bool,
     // 出力バッファ
     output_buffer: String,
+    // データベース関連
+    current_table: Option<String>,
+    tables: HashMap<String, TableData>,
 }
 
 #[derive(Clone)]
@@ -21,6 +24,12 @@ pub struct WordDefinition {
     pub tokens: Vec<Token>,
     pub is_builtin: bool,
     pub description: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TableData {
+    pub schema: Vec<String>,
+    pub records: Vec<Vec<Value>>,
 }
 
 impl Interpreter {
@@ -34,6 +43,8 @@ impl Interpreter {
             step_position: 0,
             step_mode: false,
             output_buffer: String::new(),
+            current_table: None,
+            tables: HashMap::new(),
         };
         
         builtins::register_builtins(&mut interpreter.dictionary);
@@ -381,6 +392,27 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
             "EMPTY?" => self.op_empty(),
             "DEL" => self.op_del(),
             "NOT" => self.op_not(),
+            "AND" => self.op_and(),
+            "OR" => self.op_or(),
+            // Nil関連
+            "NIL?" => self.op_nil_check(),
+            "NOT-NIL?" => self.op_not_nil_check(),
+            "KNOWN?" => self.op_not_nil_check(), // エイリアス
+            "DEFAULT" => self.op_default(),
+            // データベース関連
+            "TABLE" => self.op_table(),
+            "TABLE-CREATE" => self.op_table_create(),
+            "FILTER" => self.op_filter(),
+            "PROJECT" => self.op_project(),
+            "INSERT" => self.op_insert(),
+            "UPDATE" => self.op_update(),
+            "DELETE" => self.op_delete(),
+            "TABLES" => self.op_tables(),
+            "SAVE-DB" => self.op_save_db(),
+            "LOAD-DB" => self.op_load_db(),
+            // ワイルドカード
+            "MATCH?" => self.op_match(),
+            "WILDCARD" => self.op_wildcard(),
             // 出力ワード
             "." => self.op_dot(),
             "PRINT" => self.op_print(),
@@ -830,7 +862,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
         }
     }
     
-    // 比較演算子も暗黙の反復に対応
+    // 比較演算子も暗黙の反復に対応（Nil対応も追加）
     fn op_gt(&mut self) -> Result<(), String> {
         if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
         let b = self.stack.pop().unwrap();
@@ -841,12 +873,20 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                 self.stack.push(Value { val_type: ValueType::Boolean(n1.gt(n2)) });
                 Ok(())
             },
+            // Nilとの比較
+            (ValueType::Number(_), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Number(_)) |
+            (ValueType::Nil, ValueType::Nil) => {
+                self.stack.push(Value { val_type: ValueType::Nil });
+                Ok(())
+            },
             (ValueType::Vector(v), ValueType::Number(n)) => {
                 let result: Vec<Value> = v.iter()
                     .map(|elem| match &elem.val_type {
                         ValueType::Number(en) => Value {
                             val_type: ValueType::Boolean(en.gt(n))
                         },
+                        ValueType::Nil => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -859,6 +899,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         ValueType::Number(en) => Value {
                             val_type: ValueType::Boolean(n.gt(en))
                         },
+                        ValueType::Nil => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -874,6 +915,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         (ValueType::Number(n1), ValueType::Number(n2)) => Value {
                             val_type: ValueType::Boolean(n1.gt(n2))
                         },
+                        (ValueType::Nil, _) | (_, ValueType::Nil) => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -901,12 +943,20 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                 self.stack.push(Value { val_type: ValueType::Boolean(result) });
                 Ok(())
             },
+            // Nilとの比較
+            (ValueType::Number(_), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Number(_)) |
+            (ValueType::Nil, ValueType::Nil) => {
+                self.stack.push(Value { val_type: ValueType::Nil });
+                Ok(())
+            },
             (ValueType::Vector(v), ValueType::Number(n)) => {
                 let result: Vec<Value> = v.iter()
                     .map(|elem| match &elem.val_type {
                         ValueType::Number(en) => Value {
                             val_type: ValueType::Boolean(en.ge(n))
                         },
+                        ValueType::Nil => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -919,6 +969,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         ValueType::Number(en) => Value {
                             val_type: ValueType::Boolean(n.ge(en))
                         },
+                        ValueType::Nil => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -934,6 +985,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         (ValueType::Number(n1), ValueType::Number(n2)) => Value {
                             val_type: ValueType::Boolean(n1.ge(n2))
                         },
+                        (ValueType::Nil, _) | (_, ValueType::Nil) => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -1002,12 +1054,20 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                 self.stack.push(Value { val_type: ValueType::Boolean(n1.lt(n2)) });
                 Ok(())
             },
+            // Nilとの比較
+            (ValueType::Number(_), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Number(_)) |
+            (ValueType::Nil, ValueType::Nil) => {
+                self.stack.push(Value { val_type: ValueType::Nil });
+                Ok(())
+            },
             (ValueType::Vector(v), ValueType::Number(n)) => {
                 let result: Vec<Value> = v.iter()
                     .map(|elem| match &elem.val_type {
                         ValueType::Number(en) => Value {
                             val_type: ValueType::Boolean(en.lt(n))
                         },
+                        ValueType::Nil => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -1020,6 +1080,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         ValueType::Number(en) => Value {
                             val_type: ValueType::Boolean(n.lt(en))
                         },
+                        ValueType::Nil => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -1035,6 +1096,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         (ValueType::Number(n1), ValueType::Number(n2)) => Value {
                             val_type: ValueType::Boolean(n1.lt(n2))
                         },
+                        (ValueType::Nil, _) | (_, ValueType::Nil) => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -1058,12 +1120,20 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                 self.stack.push(Value { val_type: ValueType::Boolean(n1.le(n2)) });
                 Ok(())
             },
+            // Nilとの比較
+            (ValueType::Number(_), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Number(_)) |
+            (ValueType::Nil, ValueType::Nil) => {
+                self.stack.push(Value { val_type: ValueType::Nil });
+                Ok(())
+            },
             (ValueType::Vector(v), ValueType::Number(n)) => {
                 let result: Vec<Value> = v.iter()
                     .map(|elem| match &elem.val_type {
                         ValueType::Number(en) => Value {
                             val_type: ValueType::Boolean(en.le(n))
                         },
+                        ValueType::Nil => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -1076,6 +1146,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         ValueType::Number(en) => Value {
                             val_type: ValueType::Boolean(n.le(en))
                         },
+                        ValueType::Nil => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -1091,6 +1162,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         (ValueType::Number(n1), ValueType::Number(n2)) => Value {
                             val_type: ValueType::Boolean(n1.le(n2))
                         },
+                        (ValueType::Nil, _) | (_, ValueType::Nil) => Value { val_type: ValueType::Nil },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
                     .collect();
@@ -1102,6 +1174,482 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                 Ok(())
             }
         }
+    }
+
+    // 三値論理対応のAND演算
+    fn op_and(&mut self) -> Result<(), String> {
+        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+        let b = self.stack.pop().unwrap();
+        let a = self.stack.pop().unwrap();
+        
+        match (&a.val_type, &b.val_type) {
+            (ValueType::Boolean(a_val), ValueType::Boolean(b_val)) => {
+                self.stack.push(Value { 
+                    val_type: ValueType::Boolean(*a_val && *b_val) 
+                });
+            },
+            // falseが確定的
+            (ValueType::Boolean(false), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Boolean(false)) => {
+                self.stack.push(Value { 
+                    val_type: ValueType::Boolean(false) 
+                });
+            },
+            // 結果は不明
+            (ValueType::Boolean(_), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Boolean(_)) |
+            (ValueType::Nil, ValueType::Nil) => {
+                self.stack.push(Value { 
+                    val_type: ValueType::Nil 
+                });
+            },
+            // Vector対応（暗黙の反復）
+            (ValueType::Vector(v), other) => {
+                let results: Vec<Value> = v.iter()
+                    .map(|elem| {
+                        let mut temp_stack = vec![elem.clone(), other.clone()];
+                        match self.apply_and_3vl(&mut temp_stack) {
+                            Ok(result) => result,
+                            Err(_) => Value { val_type: ValueType::Nil },
+                        }
+                    })
+                    .collect();
+                self.stack.push(Value { 
+                    val_type: ValueType::Vector(results) 
+                });
+            },
+            (other, ValueType::Vector(v)) => {
+                let results: Vec<Value> = v.iter()
+                    .map(|elem| {
+                        let mut temp_stack = vec![other.clone(), elem.clone()];
+                        match self.apply_and_3vl(&mut temp_stack) {
+                            Ok(result) => result,
+                            Err(_) => Value { val_type: ValueType::Nil },
+                        }
+                    })
+                    .collect();
+                self.stack.push(Value { 
+                    val_type: ValueType::Vector(results) 
+                });
+            },
+            _ => return Err("Type error in AND".to_string()),
+        }
+        Ok(())
+    }
+
+    // ヘルパー関数：3値論理のAND
+    fn apply_and_3vl(&self, stack: &mut Vec<Value>) -> Result<Value, String> {
+        let b = stack.pop().unwrap();
+        let a = stack.pop().unwrap();
+        
+        match (&a.val_type, &b.val_type) {
+            (ValueType::Boolean(a_val), ValueType::Boolean(b_val)) => {
+                Ok(Value { val_type: ValueType::Boolean(*a_val && *b_val) })
+            },
+            (ValueType::Boolean(false), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Boolean(false)) => {
+                Ok(Value { val_type: ValueType::Boolean(false) })
+            },
+            (ValueType::Boolean(_), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Boolean(_)) |
+            (ValueType::Nil, ValueType::Nil) => {
+                Ok(Value { val_type: ValueType::Nil })
+            },
+            _ => Err("Type error in AND".to_string()),
+        }
+    }
+
+    // 三値論理対応のOR演算
+    fn op_or(&mut self) -> Result<(), String> {
+        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+        let b = self.stack.pop().unwrap();
+        let a = self.stack.pop().unwrap();
+        
+        match (&a.val_type, &b.val_type) {
+            (ValueType::Boolean(a_val), ValueType::Boolean(b_val)) => {
+                self.stack.push(Value { 
+                    val_type: ValueType::Boolean(*a_val || *b_val) 
+                });
+            },
+            // trueが確定的
+            (ValueType::Boolean(true), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Boolean(true)) => {
+                self.stack.push(Value { 
+                    val_type: ValueType::Boolean(true) 
+                });
+            },
+            // 結果は不明
+            (ValueType::Boolean(_), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Boolean(_)) |
+            (ValueType::Nil, ValueType::Nil) => {
+                self.stack.push(Value { 
+                    val_type: ValueType::Nil 
+                });
+            },
+            // Vector対応（暗黙の反復）
+            (ValueType::Vector(v), other) => {
+                let results: Vec<Value> = v.iter()
+                    .map(|elem| {
+                        let mut temp_stack = vec![elem.clone(), other.clone()];
+                        match self.apply_or_3vl(&mut temp_stack) {
+                            Ok(result) => result,
+                            Err(_) => Value { val_type: ValueType::Nil },
+                        }
+                    })
+                    .collect();
+                self.stack.push(Value { 
+                    val_type: ValueType::Vector(results) 
+                });
+            },
+            (other, ValueType::Vector(v)) => {
+                let results: Vec<Value> = v.iter()
+                    .map(|elem| {
+                        let mut temp_stack = vec![other.clone(), elem.clone()];
+                        match self.apply_or_3vl(&mut temp_stack) {
+                            Ok(result) => result,
+                            Err(_) => Value { val_type: ValueType::Nil },
+                        }
+                    })
+                    .collect();
+                self.stack.push(Value { 
+                    val_type: ValueType::Vector(results) 
+                });
+            },
+            _ => return Err("Type error in OR".to_string()),
+        }
+        Ok(())
+    }
+
+    // ヘルパー関数：3値論理のOR
+    fn apply_or_3vl(&self, stack: &mut Vec<Value>) -> Result<Value, String> {
+        let b = stack.pop().unwrap();
+        let a = stack.pop().unwrap();
+        
+        match (&a.val_type, &b.val_type) {
+            (ValueType::Boolean(a_val), ValueType::Boolean(b_val)) => {
+                Ok(Value { val_type: ValueType::Boolean(*a_val || *b_val) })
+            },
+            (ValueType::Boolean(true), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Boolean(true)) => {
+                Ok(Value { val_type: ValueType::Boolean(true) })
+            },
+            (ValueType::Boolean(_), ValueType::Nil) |
+            (ValueType::Nil, ValueType::Boolean(_)) |
+            (ValueType::Nil, ValueType::Nil) => {
+                Ok(Value { val_type: ValueType::Nil })
+            },
+            _ => Err("Type error in OR".to_string()),
+        }
+    }
+
+    // Nil関連操作
+    fn op_nil_check(&mut self) -> Result<(), String> {
+        if let Some(val) = self.stack.pop() {
+            match val.val_type {
+                ValueType::Nil => self.stack.push(Value { val_type: ValueType::Boolean(true) }),
+                _ => self.stack.push(Value { val_type: ValueType::Boolean(false) }),
+            }
+            Ok(())
+        } else {
+            Err("Stack underflow".to_string())
+        }
+    }
+
+    fn op_not_nil_check(&mut self) -> Result<(), String> {
+        if let Some(val) = self.stack.pop() {
+            match val.val_type {
+                ValueType::Nil => self.stack.push(Value { val_type: ValueType::Boolean(false) }),
+                _ => self.stack.push(Value { val_type: ValueType::Boolean(true) }),
+            }
+            Ok(())
+        } else {
+            Err("Stack underflow".to_string())
+        }
+    }
+
+    fn op_default(&mut self) -> Result<(), String> {
+        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+        let default_val = self.stack.pop().unwrap();
+        let val = self.stack.pop().unwrap();
+        
+        match val.val_type {
+            ValueType::Nil => self.stack.push(default_val),
+            _ => self.stack.push(val),
+        }
+        Ok(())
+    }
+
+    // データベース操作
+    fn op_table(&mut self) -> Result<(), String> {
+        if let Some(val) = self.stack.pop() {
+            match val.val_type {
+                ValueType::String(name) => {
+                    if let Some(table) = self.tables.get(&name) {
+                        // テーブルデータをスタックに載せる
+                        let table_vec = self.table_to_vector(table);
+                        self.stack.push(table_vec);
+                        self.current_table = Some(name);
+                        Ok(())
+                    } else {
+                        Err(format!("Table '{}' not found", name))
+                    }
+                },
+                _ => Err("TABLE requires a string".to_string()),
+            }
+        } else {
+            Err("Stack underflow".to_string())
+        }
+    }
+
+    fn op_table_create(&mut self) -> Result<(), String> {
+        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+        let name_val = self.stack.pop().unwrap();
+        let data_val = self.stack.pop().unwrap();
+        
+        match (&name_val.val_type, &data_val.val_type) {
+            (ValueType::String(name), ValueType::Vector(records)) => {
+                // 最初のレコードからスキーマを推測
+                if let Some(first_record) = records.first() {
+                    if let ValueType::Vector(fields) = &first_record.val_type {
+                        let schema: Vec<String> = fields.iter()
+                            .step_by(2)
+                            .filter_map(|v| match &v.val_type {
+                                ValueType::String(s) => Some(s.clone()),
+                                _ => None,
+                            })
+                            .collect();
+                        
+                        let table_data = TableData {
+                            schema,
+                            records: records.clone(),
+                        };
+                        
+                        self.tables.insert(name.clone(), table_data);
+                        Ok(())
+                    } else {
+                        Err("Invalid record format".to_string())
+                    }
+                } else {
+                    Err("Cannot create empty table".to_string())
+                }
+            },
+            _ => Err("TABLE-CREATE requires a vector and a string".to_string()),
+        }
+    }
+
+    fn op_filter(&mut self) -> Result<(), String> {
+        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+        let filter_val = self.stack.pop().unwrap();
+        let table_val = self.stack.pop().unwrap();
+        
+        match (&table_val.val_type, &filter_val.val_type) {
+            (ValueType::Vector(records), ValueType::Vector(filter_expr)) => {
+                let mut filtered_records = Vec::new();
+                
+                for record in records {
+                    // 各レコードに対してフィルタ式を評価
+                    self.stack.push(record.clone());
+                    let (tokens, _) = self.body_vector_to_tokens(filter_expr)?;
+                    self.execute_tokens_with_context(&tokens)?;
+                    
+                    if let Some(result) = self.stack.pop() {
+                        match result.val_type {
+                            ValueType::Boolean(true) => filtered_records.push(record.clone()),
+                            _ => {},
+                        }
+                    }
+                }
+                
+                self.stack.push(Value { val_type: ValueType::Vector(filtered_records) });
+                Ok(())
+            },
+            _ => Err("FILTER requires a table and a filter expression".to_string()),
+        }
+    }
+
+    fn op_project(&mut self) -> Result<(), String> {
+        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+        let columns_val = self.stack.pop().unwrap();
+        let table_val = self.stack.pop().unwrap();
+        
+        match (&table_val.val_type, &columns_val.val_type) {
+            (ValueType::Vector(records), ValueType::Vector(columns)) => {
+                let mut projected_records = Vec::new();
+                
+                for record in records {
+                    if let ValueType::Vector(fields) = &record.val_type {
+                        let mut new_fields = Vec::new();
+                        
+                        for col in columns {
+                            if let ValueType::String(col_name) = &col.val_type {
+                                // レコードから指定されたカラムを探す
+                                for i in (0..fields.len()).step_by(2) {
+                                    if let ValueType::String(field_name) = &fields[i].val_type {
+                                        if field_name == col_name && i + 1 < fields.len() {
+                                            new_fields.push(fields[i].clone());
+                                            new_fields.push(fields[i + 1].clone());
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if !new_fields.is_empty() {
+                            projected_records.push(Value { val_type: ValueType::Vector(new_fields) });
+                        }
+                    }
+                }
+                
+                self.stack.push(Value { val_type: ValueType::Vector(projected_records) });
+                Ok(())
+            },
+            _ => Err("PROJECT requires a table and column names".to_string()),
+        }
+    }
+
+    fn op_insert(&mut self) -> Result<(), String> {
+        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+        let table_name_val = self.stack.pop().unwrap();
+        let record_val = self.stack.pop().unwrap();
+        
+        match (&table_name_val.val_type, &record_val.val_type) {
+            (ValueType::String(name), ValueType::Vector(_)) => {
+                if let Some(table) = self.tables.get_mut(name) {
+                    table.records.push(record_val);
+                    Ok(())
+                } else {
+                    Err(format!("Table '{}' not found", name))
+                }
+            },
+            _ => Err("INSERT requires a record and table name".to_string()),
+        }
+    }
+
+    fn op_update(&mut self) -> Result<(), String> {
+        // 簡略化された実装
+        // TODO: 完全な実装を後で追加
+        Ok(())
+    }
+
+    fn op_delete(&mut self) -> Result<(), String> {
+        // 簡略化された実装
+        // TODO: 完全な実装を後で追加
+        Ok(())
+    }
+
+    fn op_tables(&mut self) -> Result<(), String> {
+        if let Some(pattern_val) = self.stack.pop() {
+            match pattern_val.val_type {
+                ValueType::String(pattern) => {
+                    let table_names: Vec<Value> = self.tables.keys()
+                        .filter(|name| self.wildcard_match(name, &pattern))
+                        .map(|name| Value { val_type: ValueType::String(name.clone()) })
+                        .collect();
+                    
+                    self.stack.push(Value { val_type: ValueType::Vector(table_names) });
+                    Ok(())
+                },
+                _ => Err("TABLES requires a pattern string".to_string()),
+            }
+        } else {
+            Err("Stack underflow".to_string())
+        }
+    }
+
+    fn op_save_db(&mut self) -> Result<(), String> {
+        // JavaScript側に保存を委譲
+        // TODO: WASMとJSの連携実装
+        Ok(())
+    }
+
+    fn op_load_db(&mut self) -> Result<(), String> {
+        // JavaScript側から読み込みを委譲
+        // TODO: WASMとJSの連携実装
+        Ok(())
+    }
+
+    // ワイルドカード操作
+    fn op_match(&mut self) -> Result<(), String> {
+        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+        let pattern = self.stack.pop().unwrap();
+        let value = self.stack.pop().unwrap();
+        
+        match (&value.val_type, &pattern.val_type) {
+            (ValueType::String(s), ValueType::String(p)) => {
+                let result = self.wildcard_match(s, p);
+                self.stack.push(Value { 
+                    val_type: ValueType::Boolean(result) 
+                });
+            },
+            (ValueType::Vector(v), ValueType::String(p)) => {
+                // 暗黙の反復
+                let results: Vec<Value> = v.iter()
+                    .map(|item| match &item.val_type {
+                        ValueType::String(s) => Value {
+                            val_type: ValueType::Boolean(self.wildcard_match(s, p))
+                        },
+                        _ => Value { val_type: ValueType::Boolean(false) }
+                    })
+                    .collect();
+                self.stack.push(Value { 
+                    val_type: ValueType::Vector(results) 
+                });
+            },
+            _ => return Err("Type error in MATCH?".to_string()),
+        }
+        Ok(())
+    }
+
+    fn op_wildcard(&mut self) -> Result<(), String> {
+        // パターンをスタックに載せる（将来の拡張用）
+        Ok(())
+    }
+
+    // ヘルパー関数
+    fn wildcard_match(&self, text: &str, pattern: &str) -> bool {
+        let mut text_chars = text.chars().peekable();
+        let mut pattern_chars = pattern.chars().peekable();
+        
+        while let Some(&p) = pattern_chars.peek() {
+            match p {
+                '*' => {
+                    pattern_chars.next();
+                    if pattern_chars.peek().is_none() {
+                        return true; // パターンが*で終わる
+                    }
+                    // 次のパターン文字が見つかるまでテキストを進める
+                    while text_chars.peek().is_some() {
+                        if self.wildcard_match(
+                            &text_chars.clone().collect::<String>(),
+                            &pattern_chars.clone().collect::<String>()
+                        ) {
+                            return true;
+                        }
+                        text_chars.next();
+                    }
+                    return false;
+                },
+                '?' => {
+                    pattern_chars.next();
+                    if text_chars.next().is_none() {
+                        return false;
+                    }
+                },
+                _ => {
+                    pattern_chars.next();
+                    if text_chars.next() != Some(p) {
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        text_chars.peek().is_none()
+    }
+
+    fn table_to_vector(&self, table: &TableData) -> Value {
+        Value { val_type: ValueType::Vector(table.records.clone()) }
     }
     
     fn op_length(&mut self) -> Result<(), String> {
@@ -1269,6 +1817,12 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                 self.execute_tokens_with_context(&tokens)?;
                 Ok(())
             },
+            // Nilの場合はelse分岐
+            (ValueType::Nil, ValueType::Vector(_), ValueType::Vector(else_vec)) => {
+                let (tokens, _) = self.body_vector_to_tokens(else_vec)?;
+                self.execute_tokens_with_context(&tokens)?;
+                Ok(())
+            },
             // Vectorの真偽値に対する暗黙の反復
             (ValueType::Vector(cond_vec), ValueType::Vector(then_vec), ValueType::Vector(else_vec)) => {
                 // 各条件に対してIFを実行
@@ -1277,6 +1831,10 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         ValueType::Boolean(cond) => {
                             let vec_to_execute = if *cond { then_vec } else { else_vec };
                             let (tokens, _) = self.body_vector_to_tokens(vec_to_execute)?;
+                            self.execute_tokens_with_context(&tokens)?;
+                        },
+                        ValueType::Nil => {
+                            let (tokens, _) = self.body_vector_to_tokens(else_vec)?;
                             self.execute_tokens_with_context(&tokens)?;
                         },
                         _ => {
@@ -1297,6 +1855,11 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                     self.stack.push(Value { val_type: ValueType::Boolean(!b) });
                     Ok(())
                 },
+                ValueType::Nil => {
+                    // Nilの否定はNil
+                    self.stack.push(Value { val_type: ValueType::Nil });
+                    Ok(())
+                },
                 // Vectorに対してもNOTを適用（暗黙の反復）
                 ValueType::Vector(v) => {
                     let result: Vec<Value> = v.iter()
@@ -1304,13 +1867,14 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                             ValueType::Boolean(b) => Value {
                                 val_type: ValueType::Boolean(!b)
                             },
+                            ValueType::Nil => Value { val_type: ValueType::Nil },
                             _ => elem.clone()
                         })
                         .collect();
                     self.stack.push(Value { val_type: ValueType::Vector(result) });
                     Ok(())
                 },
-                _ => Err("Type error: NOT requires a boolean or vector of booleans".to_string()),
+                _ => Err("Type error: NOT requires a boolean, nil, or vector".to_string()),
             }
         } else {
             Err("Stack underflow".to_string())
@@ -1444,5 +2008,19 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
            .collect();
        words.sort_by(|a, b| a.0.cmp(&b.0));
        words
+   }
+   
+   // データベース操作用のpublicメソッド
+   pub fn save_table(&mut self, name: String, schema: Vec<String>, records: Vec<Vec<Value>>) {
+       let table_data = TableData { schema, records };
+       self.tables.insert(name, table_data);
+   }
+   
+   pub fn load_table(&self, name: &str) -> Option<(Vec<String>, Vec<Vec<Value>>)> {
+       self.tables.get(name).map(|t| (t.schema.clone(), t.records.clone()))
+   }
+   
+   pub fn get_all_tables(&self) -> Vec<String> {
+       self.tables.keys().cloned().collect()
    }
 }
