@@ -47,23 +47,3 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "=", "等しい ( a b -- bool )");
     register_builtin(dictionary, "<", "より小さい - 暗黙の反復対応 ( a b -- bool )");
     register_builtin(dictionary, "<=", "以下 - 暗黙の反復対応 ( a b -- bool )");
-    
-    // 論理演算子（暗黙の反復対応）
-    register_builtin(dictionary, "NOT", "論理否定 - 暗黙の反復対応 ( bool -- bool )");
-
-    // 出力
-    register_builtin(dictionary, ".", "値を出力してドロップ ( a -- )");
-    register_builtin(dictionary, "PRINT", "値を出力（ドロップしない） ( a -- a )");
-    register_builtin(dictionary, "CR", "改行を出力 ( -- )");
-    register_builtin(dictionary, "SPACE", "スペースを出力 ( -- )");
-    register_builtin(dictionary, "SPACES", "N個のスペースを出力 ( n -- )");
-    register_builtin(dictionary, "EMIT", "文字コードを文字として出力 ( n -- )");
-}
-
-fn register_builtin(dictionary: &mut HashMap<String, WordDefinition>, name: &str, description: &str) {
-    dictionary.insert(name.to_string(), WordDefinition {
-        tokens: vec![],
-        is_builtin: true,
-        description: Some(description.to_string()),
-    });
-}
