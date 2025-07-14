@@ -143,5 +143,8 @@ const DB = {
     }
 };
 
-// グローバルに公開
+// グローバルに公開（即座に実行）
 window.AjisaiDB = DB;
+
+// デバッグ用
+console.log('AjisaiDB initialized:', window.AjisaiDB);
