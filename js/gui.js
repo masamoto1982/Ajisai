@@ -37,11 +37,68 @@ const GUI = {
     // データベース初期化
     async initDatabase() {
         try {
+            // window.AjisaiDBが存在するか確認
+            if (!window.AjisaiDB) {
+                console.error('AjisaiDB is not defined');
+                return;
+            }
+            
             await window.AjisaiDB.open();
-            console.log('Database initialized');
+            console.log('Database initialized successfully');
+            
+            // データベース連携用のイベントリスナーを設定
+            this.setupDatabaseListeners();
         } catch (error) {
             console.error('Failed to initialize database:', error);
         }
+    },
+    
+    // データベース連携用のイベントリスナー
+    setupDatabaseListeners() {
+        // SAVE-DBワード実行時のイベント
+        window.addEventListener('ajisai-save-db', async (event) => {
+            try {
+                if (!window.ajisaiInterpreter) return;
+                
+                // WASMからテーブル一覧を取得
+                const tableNames = window.ajisaiInterpreter.get_all_tables();
+                
+                for (const tableName of tableNames) {
+                    const tableData = window.ajisaiInterpreter.load_table(tableName);
+                    if (tableData) {
+                        await window.AjisaiDB.saveTable(tableName, tableData[0], tableData[1]);
+                    }
+                }
+                
+                console.log('Database saved successfully');
+            } catch (error) {
+                console.error('Failed to save database:', error);
+            }
+        });
+        
+        // LOAD-DBワード実行時のイベント
+        window.addEventListener('ajisai-load-db', async (event) => {
+            try {
+                if (!window.ajisaiInterpreter) return;
+                
+                const tableNames = await window.AjisaiDB.getAllTableNames();
+                
+                for (const tableName of tableNames) {
+                    const tableData = await window.AjisaiDB.loadTable(tableName);
+                    if (tableData) {
+                        window.ajisaiInterpreter.save_table(
+                            tableName,
+                            tableData.schema,
+                            tableData.records
+                        );
+                    }
+                }
+                
+                console.log('Database loaded successfully');
+            } catch (error) {
+                console.error('Failed to load database:', error);
+            }
+        });
     },
     
     // DOM要素をキャッシュ
