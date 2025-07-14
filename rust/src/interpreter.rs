@@ -1290,9 +1290,10 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
             },
             // Vector対応（暗黙の反復）
             (ValueType::Vector(v), other) => {
+                let other_value = Value { val_type: other.clone() };
                 let results: Vec<Value> = v.iter()
                     .map(|elem| {
-                        let mut temp_stack = vec![elem.clone(), other.clone()];
+                        let mut temp_stack = vec![elem.clone(), other_value.clone()];
                         match self.apply_or_3vl(&mut temp_stack) {
                             Ok(result) => result,
                             Err(_) => Value { val_type: ValueType::Nil },
@@ -1304,9 +1305,10 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                 });
             },
             (other, ValueType::Vector(v)) => {
+                let other_value = Value { val_type: other.clone() };
                 let results: Vec<Value> = v.iter()
                     .map(|elem| {
-                        let mut temp_stack = vec![other.clone(), elem.clone()];
+                        let mut temp_stack = vec![other_value.clone(), elem.clone()];
                         match self.apply_or_3vl(&mut temp_stack) {
                             Ok(result) => result,
                             Err(_) => Value { val_type: ValueType::Nil },
