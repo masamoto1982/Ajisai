@@ -29,6 +29,19 @@ const GUI = {
         // 初期状態でスタックとレジスタを空表示
         this.updateStackDisplay([]);
         this.updateRegisterDisplay(null);
+        
+        // IndexedDBを初期化
+        this.initDatabase();
+    },
+    
+    // データベース初期化
+    async initDatabase() {
+        try {
+            await window.AjisaiDB.open();
+            console.log('Database initialized');
+        } catch (error) {
+            console.error('Failed to initialize database:', error);
+        }
     },
     
     // DOM要素をキャッシュ
@@ -247,6 +260,8 @@ const GUI = {
             { name: '<', description: 'より小さい - 暗黙の反復対応 ( a b -- bool )' },
             { name: '<=', description: '以下 - 暗黙の反復対応 ( a b -- bool )' },
             { name: 'NOT', description: '論理否定 - 暗黙の反復対応 ( bool -- bool )' },
+            { name: 'AND', description: '論理積 - 三値論理対応 ( bool bool -- bool )' },
+            { name: 'OR', description: '論理和 - 三値論理対応 ( bool bool -- bool )' },
             { name: 'DUP', description: 'スタックトップを複製 ( a -- a a )' },
             { name: 'DROP', description: 'スタックトップを削除 ( a -- )' },
             { name: 'SWAP', description: '上位2つを交換 ( a b -- b a )' },
@@ -268,6 +283,25 @@ const GUI = {
             { name: 'DEF', description: '新しいワードを定義 ( vec str -- )' },
             { name: 'IF', description: '条件分岐 ( bool vec vec -- ... )' },
             { name: 'DEL', description: 'カスタムワードを削除 ( str -- )' },
+            // Nil関連
+            { name: 'NIL?', description: 'nilかどうかをチェック ( a -- bool )' },
+            { name: 'NOT-NIL?', description: 'nilでないかをチェック ( a -- bool )' },
+            { name: 'KNOWN?', description: 'nil以外の値かチェック ( a -- bool )' },
+            { name: 'DEFAULT', description: 'nilならデフォルト値を使用 ( a b -- a | nil b -- b )' },
+            // データベース関連
+            { name: 'TABLE', description: 'テーブルをスタックに載せる ( str -- table )' },
+            { name: 'TABLE-CREATE', description: '新しいテーブルを作成 ( vec str -- )' },
+            { name: 'FILTER', description: '条件でレコードをフィルタ ( table vec -- table\' )' },
+            { name: 'PROJECT', description: '指定カラムを選択 ( table vec -- table\' )' },
+            { name: 'INSERT', description: 'レコードを挿入 ( record str -- )' },
+            { name: 'UPDATE', description: 'レコードを更新 ( table vec -- )' },
+            { name: 'DELETE', description: 'レコードを削除 ( table -- )' },
+            { name: 'TABLES', description: 'テーブル名をパターンで検索 ( str -- vec )' },
+            { name: 'SAVE-DB', description: 'データベースを保存 ( -- )' },
+            { name: 'LOAD-DB', description: 'データベースを読み込み ( -- )' },
+            // ワイルドカード
+            { name: 'MATCH?', description: 'ワイルドカードマッチング ( str str -- bool )' },
+            { name: 'WILDCARD', description: 'ワイルドカードパターンを作成 ( str -- pattern )' },
             // 出力ワード
             { name: '.', description: '値を出力してドロップ ( a -- )' },
             { name: 'PRINT', description: '値を出力（ドロップしない） ( a -- a )' },
