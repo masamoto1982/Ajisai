@@ -47,3 +47,47 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "=", "等しい ( a b -- bool )");
     register_builtin(dictionary, "<", "より小さい - 暗黙の反復対応 ( a b -- bool )");
     register_builtin(dictionary, "<=", "以下 - 暗黙の反復対応 ( a b -- bool )");
+
+    // 論理演算子（暗黙の反復対応、三値論理対応）
+    register_builtin(dictionary, "NOT", "論理否定 - 暗黙の反復対応 ( bool -- bool )");
+    register_builtin(dictionary, "AND", "論理積 - 三値論理対応 ( bool bool -- bool )");
+    register_builtin(dictionary, "OR", "論理和 - 三値論理対応 ( bool bool -- bool )");
+
+    // Nil関連
+    register_builtin(dictionary, "NIL?", "nilかどうかをチェック ( a -- bool )");
+    register_builtin(dictionary, "NOT-NIL?", "nilでないかをチェック ( a -- bool )");
+    register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック（NOT-NIL?のエイリアス） ( a -- bool )");
+    register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a b -- a | nil b -- b )");
+
+    // データベース操作
+    register_builtin(dictionary, "TABLE", "テーブルをスタックに載せる ( str -- table )");
+    register_builtin(dictionary, "TABLE-CREATE", "新しいテーブルを作成 ( vec str -- )");
+    register_builtin(dictionary, "FILTER", "条件でレコードをフィルタ ( table vec -- table' )");
+    register_builtin(dictionary, "PROJECT", "指定カラムを選択 ( table vec -- table' )");
+    register_builtin(dictionary, "INSERT", "レコードを挿入 ( record str -- )");
+    register_builtin(dictionary, "UPDATE", "レコードを更新 ( table vec -- )");
+    register_builtin(dictionary, "DELETE", "レコードを削除 ( table -- )");
+    register_builtin(dictionary, "TABLES", "テーブル名をパターンで検索 ( str -- vec )");
+    register_builtin(dictionary, "SAVE-DB", "データベースを保存 ( -- )");
+    register_builtin(dictionary, "LOAD-DB", "データベースを読み込み ( -- )");
+
+    // ワイルドカード・パターンマッチング
+    register_builtin(dictionary, "MATCH?", "ワイルドカードマッチング ( str str -- bool )");
+    register_builtin(dictionary, "WILDCARD", "ワイルドカードパターンを作成 ( str -- pattern )");
+
+    // 出力
+    register_builtin(dictionary, ".", "値を出力してドロップ ( a -- )");
+    register_builtin(dictionary, "PRINT", "値を出力（ドロップしない） ( a -- a )");
+    register_builtin(dictionary, "CR", "改行を出力 ( -- )");
+    register_builtin(dictionary, "SPACE", "スペースを出力 ( -- )");
+    register_builtin(dictionary, "SPACES", "N個のスペースを出力 ( n -- )");
+    register_builtin(dictionary, "EMIT", "文字コードを文字として出力 ( n -- )");
+}
+
+fn register_builtin(dictionary: &mut HashMap<String, WordDefinition>, name: &str, description: &str) {
+    dictionary.insert(name.to_string(), WordDefinition {
+        tokens: vec![],
+        is_builtin: true,
+        description: Some(description.to_string()),
+    });
+}
