@@ -1412,27 +1412,34 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
         
         match (&name_val.val_type, &data_val.val_type) {
             (ValueType::String(name), ValueType::Vector(records)) => {
-                // 最初のレコードからスキーマを推測
-                if let Some(first_record) = records.first() {
-                    if let ValueType::Vector(fields) = &first_record.val_type {
-                        let schema: Vec<String> = fields.iter()
-                            .step_by(2)
-                            .filter_map(|v| match &v.val_type {
-                                ValueType::String(s) => Some(s.clone()),
-                                _ => None,
-                            })
-                            .collect();
-                        
-                        let table_data = TableData {
-                            schema,
-                            records: records.clone(),
-                        };
-                        
-                        self.tables.insert(name.clone(), table_data);
-                        Ok(())
+                // recordsは各レコード（Vector）を含むVector
+                let mut table_records: Vec<Vec<Value>> = Vec::new();
+                
+                for record in records {
+                    if let ValueType::Vector(fields) = &record.val_type {
+                        table_records.push(fields.clone());
                     } else {
-                        Err("Invalid record format".to_string())
+                        return Err("Each record must be a vector".to_string());
                     }
+                }
+                
+                // 最初のレコードからスキーマを推測
+                if let Some(first_record) = table_records.first() {
+                    let schema: Vec<String> = first_record.iter()
+                        .step_by(2)
+                        .filter_map(|v| match &v.val_type {
+                            ValueType::String(s) => Some(s.clone()),
+                            _ => None,
+                        })
+                        .collect();
+                    
+                    let table_data = TableData {
+                        schema,
+                        records: table_records,
+                    };
+                    
+                    self.tables.insert(name.clone(), table_data);
+                    Ok(())
                 } else {
                     Err("Cannot create empty table".to_string())
                 }
@@ -1518,15 +1525,15 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
         let record_val = self.stack.pop().unwrap();
         
         match (&table_name_val.val_type, &record_val.val_type) {
-            (ValueType::String(name), ValueType::Vector(_)) => {
+            (ValueType::String(name), ValueType::Vector(fields)) => {
                 if let Some(table) = self.tables.get_mut(name) {
-                    table.records.push(record_val);
+                    table.records.push(fields.clone());
                     Ok(())
                 } else {
                     Err(format!("Table '{}' not found", name))
                 }
             },
-            _ => Err("INSERT requires a record and table name".to_string()),
+            _ => Err("INSERT requires a record vector and table name".to_string()),
         }
     }
 
@@ -1653,7 +1660,14 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn table_to_vector(&self, table: &TableData) -> Value {
-        Value { val_type: ValueType::Vector(table.records.clone()) }
+        // 各レコードをValueに変換
+        let record_values: Vec<Value> = table.records.iter()
+            .map(|record| Value { 
+                val_type: ValueType::Vector(record.clone()) 
+            })
+            .collect();
+        
+        Value { val_type: ValueType::Vector(record_values) }
     }
     
     fn op_length(&mut self) -> Result<(), String> {
