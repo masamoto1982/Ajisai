@@ -132,10 +132,7 @@ impl AjisaiInterpreter {
     pub fn reset(&mut self) {
         self.interpreter = Interpreter::new();
     }
-}
 
-// 既存のメソッドの後に追加
-    
     #[wasm_bindgen]
     pub fn save_table(&mut self, name: String, schema: JsValue, records: JsValue) -> Result<(), String> {
         // JavaScriptの配列をRustのVecに変換
@@ -151,7 +148,7 @@ impl AjisaiInterpreter {
             let mut record: Vec<Value> = Vec::new();
             for value_js in record_js {
                 // 簡略化された変換（完全な実装が必要）
-                if let Ok(num) = value_js.as_f64() {
+                if let Some(num) = value_js.as_f64() {
                     record.push(Value {
                         val_type: ValueType::Number(Fraction::new(num as i64, 1))
                     });
@@ -210,6 +207,7 @@ impl AjisaiInterpreter {
     pub fn get_all_tables(&self) -> Vec<String> {
         self.interpreter.get_all_tables()
     }
+}
 
 fn value_to_js(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
