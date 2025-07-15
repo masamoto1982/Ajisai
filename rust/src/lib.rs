@@ -136,7 +136,8 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn save_table(&mut self, name: String, schema: JsValue, records: JsValue) -> Result<(), String> {
         // スキーマの変換
-        let schema_vec: Vec<String> = if let Ok(arr) = js_sys::Array::try_from(&schema) {
+        let schema_vec: Vec<String> = if schema.is_array() {
+            let arr = js_sys::Array::from(&schema);
             let mut result = Vec::new();
             for i in 0..arr.length() {
                 let val = arr.get(i);
@@ -152,12 +153,14 @@ impl AjisaiInterpreter {
         };
         
         // レコードの変換
-        let records_vec: Vec<Vec<Value>> = if let Ok(records_arr) = js_sys::Array::try_from(&records) {
+        let records_vec: Vec<Vec<Value>> = if records.is_array() {
+            let records_arr = js_sys::Array::from(&records);
             let mut result = Vec::new();
             
             for i in 0..records_arr.length() {
                 let record_js = records_arr.get(i);
-                if let Ok(record_arr) = js_sys::Array::try_from(&record_js) {
+                if record_js.is_array() {
+                    let record_arr = js_sys::Array::from(&record_js);
                     let mut record = Vec::new();
                     
                     for j in 0..record_arr.length() {
@@ -291,8 +294,9 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
         Ok(Value {
             val_type: ValueType::Nil
         })
-    } else if let Ok(arr) = js_sys::Array::try_from(js_val) {
+    } else if js_val.is_array() {
         // 配列の場合はVectorとして処理
+        let arr = js_sys::Array::from(js_val);
         let mut values = Vec::new();
         for i in 0..arr.length() {
             let elem = arr.get(i);
