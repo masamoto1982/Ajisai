@@ -182,6 +182,36 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
+    pub fn load_table(&self, name: &str) -> JsValue {
+        match self.interpreter.load_table(name) {
+            Some((schema, records)) => {
+                let obj = js_sys::Object::new();
+                
+                // スキーマを変換
+                let schema_arr = js_sys::Array::new();
+                for s in schema {
+                    schema_arr.push(&JsValue::from_str(&s));
+                }
+                js_sys::Reflect::set(&obj, &"schema".into(), &schema_arr).unwrap();
+                
+                // レコードを変換
+                let records_arr = js_sys::Array::new();
+                for record in records {
+                    let record_arr = js_sys::Array::new();
+                    for value in record {
+                        record_arr.push(&value_to_js(&value));
+                    }
+                    records_arr.push(&record_arr);
+                }
+                js_sys::Reflect::set(&obj, &"records".into(), &records_arr).unwrap();
+                
+                obj.into()
+            },
+            None => JsValue::NULL,
+        }
+    }
+    
+    #[wasm_bindgen]
     pub fn get_all_tables(&self) -> Vec<String> {
         self.interpreter.get_all_tables()
     }
@@ -232,4 +262,46 @@ fn value_to_js(value: &Value) -> JsValue {
     js_sys::Reflect::set(&obj, &"value".into(), &val).unwrap();
     
     obj.into()
+}
+
+fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
+    if let Some(b) = js_val.as_bool() {
+        Ok(Value {
+            val_type: ValueType::Boolean(b)
+        })
+    } else if let Some(n) = js_val.as_f64() {
+        // 整数かどうかチェック
+        if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
+            Ok(Value {
+                val_type: ValueType::Number(Fraction::new(n as i64, 1))
+            })
+        } else {
+            // 小数を分数に変換（簡易版）
+            let denominator = 1000000; // 6桁精度
+            let numerator = (n * denominator as f64).round() as i64;
+            Ok(Value {
+                val_type: ValueType::Number(Fraction::new(numerator, denominator))
+            })
+        }
+    } else if let Some(s) = js_val.as_string() {
+        Ok(Value {
+            val_type: ValueType::String(s)
+        })
+    } else if js_val.is_null() || js_val.is_undefined() {
+        Ok(Value {
+            val_type: ValueType::Nil
+        })
+    } else if let Ok(arr) = js_sys::Array::try_from(js_val) {
+        // 配列の場合はVectorとして処理
+        let mut values = Vec::new();
+        for i in 0..arr.length() {
+            let elem = arr.get(i);
+            values.push(js_value_to_rust_value(&elem)?);
+        }
+        Ok(Value {
+            val_type: ValueType::Vector(values)
+        })
+    } else {
+        Err("Unsupported value type".to_string())
+    }
 }
