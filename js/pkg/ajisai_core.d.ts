@@ -12,6 +12,9 @@ export class AjisaiInterpreter {
   get_custom_words_with_descriptions(): any;
   get_custom_words_info(): any;
   reset(): void;
+  save_table(name: string, schema: any, records: any): void;
+  load_table(name: string): any;
+  get_all_tables(): string[];
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -29,6 +32,9 @@ export interface InitOutput {
   readonly ajisaiinterpreter_get_custom_words_with_descriptions: (a: number) => any;
   readonly ajisaiinterpreter_get_custom_words_info: (a: number) => any;
   readonly ajisaiinterpreter_reset: (a: number) => void;
+  readonly ajisaiinterpreter_save_table: (a: number, b: number, c: number, d: any, e: any) => [number, number];
+  readonly ajisaiinterpreter_load_table: (a: number, b: number, c: number) => any;
+  readonly ajisaiinterpreter_get_all_tables: (a: number) => [number, number];
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __externref_table_alloc: () => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
