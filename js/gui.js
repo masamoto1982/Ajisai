@@ -35,23 +35,61 @@ const GUI = {
     },
     
     // データベース初期化
-    async initDatabase() {
-        try {
-            // window.AjisaiDBが存在するか確認
-            if (!window.AjisaiDB) {
-                console.error('AjisaiDB is not defined');
-                return;
-            }
-            
-            await window.AjisaiDB.open();
-            console.log('Database initialized successfully');
-            
-            // データベース連携用のイベントリスナーを設定
-            this.setupDatabaseListeners();
-        } catch (error) {
-            console.error('Failed to initialize database:', error);
+async initDatabase() {
+    try {
+        // window.AjisaiDBが存在するか確認
+        if (!window.AjisaiDB) {
+            console.error('AjisaiDB is not defined');
+            return;
         }
-    },
+        
+        await window.AjisaiDB.open();
+        console.log('Database initialized successfully');
+        
+        // データベース連携用のイベントリスナーを設定
+        this.setupDatabaseListeners();
+        
+        // ★★★ ページロード時に自動的にデータベースを読み込む ★★★
+        if (window.ajisaiInterpreter) {
+            console.log('Auto-loading database on page load...');
+            await this.loadDatabaseData();
+        } else {
+            // WASMロード後に読み込み
+            window.addEventListener('wasmLoaded', async () => {
+                if (window.ajisaiInterpreter) {
+                    console.log('Auto-loading database after WASM load...');
+                    await this.loadDatabaseData();
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Failed to initialize database:', error);
+    }
+},
+
+// データベースからデータを読み込む新しいメソッド
+async loadDatabaseData() {
+    try {
+        const tableNames = await window.AjisaiDB.getAllTableNames();
+        console.log(`Loading ${tableNames.length} tables from database...`);
+        
+        for (const tableName of tableNames) {
+            const tableData = await window.AjisaiDB.loadTable(tableName);
+            if (tableData) {
+                console.log(`Loading table '${tableName}' with ${tableData.records.length} records`);
+                window.ajisaiInterpreter.save_table(
+                    tableName,
+                    tableData.schema,
+                    tableData.records
+                );
+            }
+        }
+        
+        console.log('Database loaded successfully');
+    } catch (error) {
+        console.error('Failed to load database:', error);
+    }
+},
     
     // データベース連携用のイベントリスナー
     setupDatabaseListeners() {
