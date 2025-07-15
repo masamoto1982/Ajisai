@@ -135,72 +135,50 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn save_table(&mut self, name: String, schema: JsValue, records: JsValue) -> Result<(), String> {
-        // JavaScriptの配列をRustのVecに変換
-        let schema_vec: Vec<String> = serde_wasm_bindgen::from_value(schema)
-            .map_err(|e| format!("Failed to parse schema: {:?}", e))?;
-            
-        let records_js: Vec<Vec<JsValue>> = serde_wasm_bindgen::from_value(records)
-            .map_err(|e| format!("Failed to parse records: {:?}", e))?;
-            
-        // JsValueをValueに変換
-        let mut records_vec: Vec<Vec<Value>> = Vec::new();
-        for record_js in records_js {
-            let mut record: Vec<Value> = Vec::new();
-            for value_js in record_js {
-                // 簡略化された変換（完全な実装が必要）
-                if let Some(num) = value_js.as_f64() {
-                    record.push(Value {
-                        val_type: ValueType::Number(Fraction::new(num as i64, 1))
-                    });
-                } else if let Some(s) = value_js.as_string() {
-                    record.push(Value {
-                        val_type: ValueType::String(s)
-                    });
-                } else if let Some(b) = value_js.as_bool() {
-                    record.push(Value {
-                        val_type: ValueType::Boolean(b)
-                    });
-                } else if value_js.is_null() || value_js.is_undefined() {
-                    record.push(Value {
-                        val_type: ValueType::Nil
-                    });
+        // スキーマの変換
+        let schema_vec: Vec<String> = if let Ok(arr) = js_sys::Array::try_from(&schema) {
+            let mut result = Vec::new();
+            for i in 0..arr.length() {
+                let val = arr.get(i);
+                if let Some(s) = val.as_string() {
+                    result.push(s);
+                } else {
+                    return Err("Schema must be an array of strings".to_string());
                 }
             }
-            records_vec.push(record);
-        }
+            result
+        } else {
+            return Err("Schema must be an array".to_string());
+        };
+        
+        // レコードの変換
+        let records_vec: Vec<Vec<Value>> = if let Ok(records_arr) = js_sys::Array::try_from(&records) {
+            let mut result = Vec::new();
+            
+            for i in 0..records_arr.length() {
+                let record_js = records_arr.get(i);
+                if let Ok(record_arr) = js_sys::Array::try_from(&record_js) {
+                    let mut record = Vec::new();
+                    
+                    for j in 0..record_arr.length() {
+                        let value_js = record_arr.get(j);
+                        let value = js_value_to_rust_value(&value_js)?;
+                        record.push(value);
+                    }
+                    
+                    result.push(record);
+                } else {
+                    return Err("Each record must be an array".to_string());
+                }
+            }
+            
+            result
+        } else {
+            return Err("Records must be an array".to_string());
+        };
         
         self.interpreter.save_table(name, schema_vec, records_vec);
         Ok(())
-    }
-    
-    #[wasm_bindgen]
-    pub fn load_table(&self, name: &str) -> JsValue {
-        match self.interpreter.load_table(name) {
-            Some((schema, records)) => {
-                let obj = js_sys::Object::new();
-                
-                // スキーマを変換
-                let schema_arr = js_sys::Array::new();
-                for s in schema {
-                    schema_arr.push(&JsValue::from_str(&s));
-                }
-                js_sys::Reflect::set(&obj, &"schema".into(), &schema_arr).unwrap();
-                
-                // レコードを変換
-                let records_arr = js_sys::Array::new();
-                for record in records {
-                    let record_arr = js_sys::Array::new();
-                    for value in record {
-                        record_arr.push(&value_to_js(&value));
-                    }
-                    records_arr.push(&record_arr);
-                }
-                js_sys::Reflect::set(&obj, &"records".into(), &records_arr).unwrap();
-                
-                obj.into()
-            },
-            None => JsValue::NULL,
-        }
     }
     
     #[wasm_bindgen]
