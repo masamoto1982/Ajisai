@@ -8,27 +8,44 @@ const DB = {
 
     // データベースを開く
     async open() {
+        console.log('Opening IndexedDB...');
+        
+        // IndexedDBがサポートされているかチェック
+        if (!window.indexedDB) {
+            throw new Error('IndexedDB is not supported in this browser');
+        }
+        
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.version);
             
-            request.onerror = () => reject(request.error);
+            request.onerror = () => {
+                console.error('IndexedDB open error:', request.error);
+                reject(request.error);
+            };
+            
             request.onsuccess = () => {
                 this.db = request.result;
+                console.log('IndexedDB opened successfully');
                 resolve(this.db);
             };
             
             request.onupgradeneeded = (event) => {
+                console.log('IndexedDB upgrade needed, creating stores...');
                 const db = event.target.result;
                 
                 // テーブル用のストア
                 if (!db.objectStoreNames.contains(this.storeName)) {
+                    console.log(`Creating store: ${this.storeName}`);
                     db.createObjectStore(this.storeName, { keyPath: 'name' });
                 }
                 
                 // インタープリタの状態用のストア
                 if (!db.objectStoreNames.contains(this.stateStoreName)) {
+                    console.log(`Creating store: ${this.stateStoreName}`);
                     db.createObjectStore(this.stateStoreName, { keyPath: 'key' });
                 }
+                
+                console.log('IndexedDB stores created successfully');
             };
         });
     },
@@ -254,3 +271,39 @@ window.AjisaiDB = DB;
 
 // デバッグ用
 console.log('AjisaiDB initialized:', window.AjisaiDB);
+
+// IndexedDBの基本テスト関数を追加
+DB.test = async function() {
+    try {
+        console.log('Starting IndexedDB test...');
+        
+        // データベースを開く
+        await this.open();
+        console.log('✓ Database opened successfully');
+        
+        // テストテーブルを保存
+        await this.saveTable('test_table', ['id', 'name'], [
+            [1, 'Test Record 1'],
+            [2, 'Test Record 2']
+        ]);
+        console.log('✓ Test table saved successfully');
+        
+        // テストテーブルを読み込み
+        const loadedTable = await this.loadTable('test_table');
+        console.log('✓ Test table loaded:', loadedTable);
+        
+        // テーブル一覧を取得
+        const tableNames = await this.getAllTableNames();
+        console.log('✓ Table names retrieved:', tableNames);
+        
+        // テストテーブルを削除
+        await this.deleteTable('test_table');
+        console.log('✓ Test table deleted successfully');
+        
+        console.log('IndexedDB test completed successfully!');
+        return true;
+    } catch (error) {
+        console.error('IndexedDB test failed:', error);
+        return false;
+    }
+};

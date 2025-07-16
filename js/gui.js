@@ -87,12 +87,15 @@ const GUI = {
     // データベース初期化
     async initDatabase() {
         try {
+            console.log('Initializing database...');
+            
             // window.AjisaiDBが存在するか確認
             if (!window.AjisaiDB) {
-                console.error('AjisaiDB is not defined');
+                console.error('AjisaiDB is not defined - db.js may not have loaded properly');
                 return;
             }
             
+            console.log('AjisaiDB found, attempting to open...');
             await window.AjisaiDB.open();
             console.log('Database initialized successfully');
             
@@ -104,6 +107,7 @@ const GUI = {
                 console.log('Auto-loading database on page load...');
                 await this.loadDatabaseData();
             } else {
+                console.log('WASM not loaded yet, waiting for wasmLoaded event...');
                 // WASMロード後に読み込み
                 window.addEventListener('wasmLoaded', async () => {
                     if (window.ajisaiInterpreter) {
@@ -114,6 +118,7 @@ const GUI = {
             }
         } catch (error) {
             console.error('Failed to initialize database:', error);
+            console.error('Error details:', error.message, error.stack);
         }
     },
     
