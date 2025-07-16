@@ -1348,11 +1348,13 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
 
     // Nil関連操作
     fn op_nil_check(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("NIL?: checking if stack top is nil, stack size: {}", self.stack.len()).into());
+        
         if let Some(val) = self.stack.pop() {
-            match val.val_type {
-                ValueType::Nil => self.stack.push(Value { val_type: ValueType::Boolean(true) }),
-                _ => self.stack.push(Value { val_type: ValueType::Boolean(false) }),
-            }
+            let is_nil = matches!(val.val_type, ValueType::Nil);
+            web_sys::console::log_1(&format!("NIL?: value = {:?}, result = {}", val, is_nil).into());
+            
+            self.stack.push(Value { val_type: ValueType::Boolean(is_nil) });
             Ok(())
         } else {
             Err("Stack underflow".to_string())
@@ -1360,11 +1362,13 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_not_nil_check(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("NOT-NIL?/KNOWN?: checking if stack top is not nil, stack size: {}", self.stack.len()).into());
+        
         if let Some(val) = self.stack.pop() {
-            match val.val_type {
-                ValueType::Nil => self.stack.push(Value { val_type: ValueType::Boolean(false) }),
-                _ => self.stack.push(Value { val_type: ValueType::Boolean(true) }),
-            }
+            let not_nil = !matches!(val.val_type, ValueType::Nil);
+            web_sys::console::log_1(&format!("NOT-NIL?/KNOWN?: value = {:?}, result = {}", val, not_nil).into());
+            
+            self.stack.push(Value { val_type: ValueType::Boolean(not_nil) });
             Ok(())
         } else {
             Err("Stack underflow".to_string())
@@ -1372,29 +1376,45 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_default(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("DEFAULT: stack size = {}", self.stack.len()).into());
+        
         if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
         let default_val = self.stack.pop().unwrap();
         let val = self.stack.pop().unwrap();
         
+        web_sys::console::log_1(&format!("DEFAULT: value = {:?}, default = {:?}", val, default_val).into());
+        
         match val.val_type {
-            ValueType::Nil => self.stack.push(default_val),
-            _ => self.stack.push(val),
+            ValueType::Nil => {
+                web_sys::console::log_1(&"DEFAULT: using default value".into());
+                self.stack.push(default_val)
+            },
+            _ => {
+                web_sys::console::log_1(&"DEFAULT: using original value".into());
+                self.stack.push(val)
+            },
         }
         Ok(())
     }
 
     // データベース操作
     fn op_table(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("TABLE: loading table, stack size = {}", self.stack.len()).into());
+        
         if let Some(val) = self.stack.pop() {
             match val.val_type {
                 ValueType::String(name) => {
+                    web_sys::console::log_1(&format!("TABLE: looking for table '{}'", name).into());
+                    
                     if let Some(table) = self.tables.get(&name) {
-                        // テーブルデータをスタックに載せる
+                        web_sys::console::log_1(&format!("TABLE: found table '{}' with {} records", name, table.records.len()).into());
+                        
                         let table_vec = self.table_to_vector(table);
                         self.stack.push(table_vec);
                         self.current_table = Some(name);
                         Ok(())
                     } else {
+                        web_sys::console::log_1(&format!("TABLE: table '{}' not found", name).into());
                         Err(format!("Table '{}' not found", name))
                     }
                 },
@@ -1406,12 +1426,16 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_table_create(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("TABLE-CREATE: creating table, stack size = {}", self.stack.len()).into());
+        
         if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
         let name_val = self.stack.pop().unwrap();
         let data_val = self.stack.pop().unwrap();
         
         match (&name_val.val_type, &data_val.val_type) {
             (ValueType::String(name), ValueType::Vector(records)) => {
+                web_sys::console::log_1(&format!("TABLE-CREATE: creating table '{}' with {} records", name, records.len()).into());
+                
                 // recordsは各レコード（Vector）を含むVector
                 let mut table_records: Vec<Vec<Value>> = Vec::new();
                 
@@ -1433,6 +1457,8 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                         })
                         .collect();
                     
+                    web_sys::console::log_1(&format!("TABLE-CREATE: schema = {:?}", schema).into());
+                    
                     let table_data = TableData {
                         schema,
                         records: table_records,
@@ -1449,15 +1475,19 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_filter(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("FILTER: filtering table, stack size = {}", self.stack.len()).into());
+        
         if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
         let filter_val = self.stack.pop().unwrap();
         let table_val = self.stack.pop().unwrap();
         
         match (&table_val.val_type, &filter_val.val_type) {
             (ValueType::Vector(records), ValueType::Vector(filter_expr)) => {
+                web_sys::console::log_1(&format!("FILTER: filtering {} records", records.len()).into());
+                
                 let mut filtered_records = Vec::new();
                 
-                for record in records {
+                for (idx, record) in records.iter().enumerate() {
                     // 各レコードに対してフィルタ式を評価
                     self.stack.push(record.clone());
                     let (tokens, _) = self.body_vector_to_tokens(filter_expr)?;
@@ -1465,11 +1495,18 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                     
                     if let Some(result) = self.stack.pop() {
                         match result.val_type {
-                            ValueType::Boolean(true) => filtered_records.push(record.clone()),
-                            _ => {},
+                            ValueType::Boolean(true) => {
+                                web_sys::console::log_1(&format!("FILTER: record {} passed", idx).into());
+                                filtered_records.push(record.clone());
+                            },
+                            _ => {
+                                web_sys::console::log_1(&format!("FILTER: record {} filtered out", idx).into());
+                            },
                         }
                     }
                 }
+                
+                web_sys::console::log_1(&format!("FILTER: {} records passed filter", filtered_records.len()).into());
                 
                 self.stack.push(Value { val_type: ValueType::Vector(filtered_records) });
                 Ok(())
@@ -1479,12 +1516,16 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_project(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("PROJECT: projecting columns, stack size = {}", self.stack.len()).into());
+        
         if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
         let columns_val = self.stack.pop().unwrap();
         let table_val = self.stack.pop().unwrap();
         
         match (&table_val.val_type, &columns_val.val_type) {
             (ValueType::Vector(records), ValueType::Vector(columns)) => {
+                web_sys::console::log_1(&format!("PROJECT: projecting {} columns from {} records", columns.len(), records.len()).into());
+                
                 let mut projected_records = Vec::new();
                 
                 for record in records {
@@ -1512,6 +1553,8 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
                     }
                 }
                 
+                web_sys::console::log_1(&format!("PROJECT: produced {} records", projected_records.len()).into());
+                
                 self.stack.push(Value { val_type: ValueType::Vector(projected_records) });
                 Ok(())
             },
@@ -1520,14 +1563,20 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_insert(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("INSERT: inserting record, stack size = {}", self.stack.len()).into());
+        
         if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
         let table_name_val = self.stack.pop().unwrap();
         let record_val = self.stack.pop().unwrap();
         
         match (&table_name_val.val_type, &record_val.val_type) {
             (ValueType::String(name), ValueType::Vector(fields)) => {
+                web_sys::console::log_1(&format!("INSERT: inserting into table '{}'", name).into());
+                
                 if let Some(table) = self.tables.get_mut(name) {
+                    web_sys::console::log_1(&format!("INSERT: table had {} records", table.records.len()).into());
                     table.records.push(fields.clone());
+                    web_sys::console::log_1(&format!("INSERT: table now has {} records", table.records.len()).into());
                     Ok(())
                 } else {
                     Err(format!("Table '{}' not found", name))
@@ -1538,25 +1587,35 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_update(&mut self) -> Result<(), String> {
-        // 簡略化された実装
+        web_sys::console::log_1(&"UPDATE: not fully implemented yet".into());
         // TODO: 完全な実装を後で追加
         Ok(())
     }
 
     fn op_delete(&mut self) -> Result<(), String> {
-        // 簡略化された実装
+        web_sys::console::log_1(&"DELETE: not fully implemented yet".into());
         // TODO: 完全な実装を後で追加
         Ok(())
     }
 
     fn op_tables(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("TABLES: listing tables, stack size = {}", self.stack.len()).into());
+        
         if let Some(pattern_val) = self.stack.pop() {
             match pattern_val.val_type {
                 ValueType::String(pattern) => {
+                    web_sys::console::log_1(&format!("TABLES: searching with pattern '{}'", pattern).into());
+                    
                     let table_names: Vec<Value> = self.tables.keys()
-                        .filter(|name| self.wildcard_match(name, &pattern))
+                        .filter(|name| {
+                            let matches = self.wildcard_match(name, &pattern);
+                            web_sys::console::log_1(&format!("TABLES: '{}' matches '{}': {}", name, pattern, matches).into());
+                            matches
+                        })
                         .map(|name| Value { val_type: ValueType::String(name.clone()) })
                         .collect();
+                    
+                    web_sys::console::log_1(&format!("TABLES: found {} matching tables", table_names.len()).into());
                     
                     self.stack.push(Value { val_type: ValueType::Vector(table_names) });
                     Ok(())
@@ -1569,19 +1628,38 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_save_db(&mut self) -> Result<(), String> {
-        // JavaScript側に保存を委譲
-        // TODO: WASMとJSの連携実装
+        web_sys::console::log_1(&"SAVE-DB: Saving database to IndexedDB".into());
+        
+        // JavaScript側にイベントを送信
+        if let Some(window) = web_sys::window() {
+            let event = web_sys::CustomEvent::new("ajisai-save-db")
+                .map_err(|_| "Failed to create save event")?;
+            window.dispatch_event(&event)
+                .map_err(|_| "Failed to dispatch save event")?;
+        }
+        
+        web_sys::console::log_1(&format!("SAVE-DB: {} tables to save", self.tables.len()).into());
         Ok(())
     }
 
     fn op_load_db(&mut self) -> Result<(), String> {
-        // JavaScript側から読み込みを委譲
-        // TODO: WASMとJSの連携実装
+        web_sys::console::log_1(&"LOAD-DB: Loading database from IndexedDB".into());
+        
+        // JavaScript側にイベントを送信
+        if let Some(window) = web_sys::window() {
+            let event = web_sys::CustomEvent::new("ajisai-load-db")
+                .map_err(|_| "Failed to create load event")?;
+            window.dispatch_event(&event)
+                .map_err(|_| "Failed to dispatch load event")?;
+        }
+        
         Ok(())
     }
 
     // ワイルドカード操作
     fn op_match(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&format!("MATCH?: wildcard matching, stack size = {}", self.stack.len()).into());
+        
         if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
         let pattern = self.stack.pop().unwrap();
         let value = self.stack.pop().unwrap();
@@ -1589,16 +1667,24 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
         match (&value.val_type, &pattern.val_type) {
             (ValueType::String(s), ValueType::String(p)) => {
                 let result = self.wildcard_match(s, p);
+                web_sys::console::log_1(&format!("MATCH?: '{}' matches '{}': {}", s, p, result).into());
+                
                 self.stack.push(Value { 
                     val_type: ValueType::Boolean(result) 
                 });
             },
             (ValueType::Vector(v), ValueType::String(p)) => {
+                web_sys::console::log_1(&format!("MATCH?: matching {} items against '{}'", v.len(), p).into());
+                
                 // 暗黙の反復
                 let results: Vec<Value> = v.iter()
                     .map(|item| match &item.val_type {
-                        ValueType::String(s) => Value {
-                            val_type: ValueType::Boolean(self.wildcard_match(s, p))
+                        ValueType::String(s) => {
+                            let matches = self.wildcard_match(s, p);
+                            web_sys::console::log_1(&format!("MATCH?: '{}' matches '{}': {}", s, p, matches).into());
+                            Value {
+                                val_type: ValueType::Boolean(matches)
+                            }
                         },
                         _ => Value { val_type: ValueType::Boolean(false) }
                     })
@@ -1613,6 +1699,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
     }
 
     fn op_wildcard(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&"WILDCARD: pattern creation (no-op for now)".into());
         // パターンをスタックに載せる（将来の拡張用）
         Ok(())
     }
