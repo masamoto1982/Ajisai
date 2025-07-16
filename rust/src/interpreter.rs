@@ -408,6 +408,9 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
             "UPDATE" => self.op_update(),
             "DELETE" => self.op_delete(),
             "TABLES" => self.op_tables(),
+            "TABLES-INFO" => self.op_tables_info(),
+            "TABLE-INFO" => self.op_table_info(),
+            "TABLE-SIZE" => self.op_table_size(),
             "SAVE-DB" => self.op_save_db(),
             "LOAD-DB" => self.op_load_db(),
             // ワイルドカード
@@ -1627,6 +1630,80 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
         }
     }
 
+    // 新しいメソッドの実装
+    fn op_tables_info(&mut self) -> Result<(), String> {
+        web_sys::console::log_1(&"TABLES-INFO: Displaying all tables info".into());
+        
+        if self.tables.is_empty() {
+            self.append_output("No tables found.\n");
+        } else {
+            self.append_output(&format!("Total tables: {}\n", self.tables.len()));
+            
+            for (name, table) in &self.tables {
+                self.append_output(&format!(
+                    "Table '{}': {} records, schema: {:?}\n",
+                    name, table.records.len(), table.schema
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn op_table_info(&mut self) -> Result<(), String> {
+        if let Some(val) = self.stack.pop() {
+            match val.val_type {
+                ValueType::String(name) => {
+                    if let Some(table) = self.tables.get(&name) {
+                        self.append_output(&format!(
+                            "Table '{}'\n  Schema: {:?}\n  Records: {}\n",
+                            name, table.schema, table.records.len()
+                        ));
+                        
+                        // 最初の3レコードをサンプルとして表示
+                        for (i, record) in table.records.iter().take(3).enumerate() {
+                            self.append_output(&format!("  Record {}: ", i));
+                            for (j, field) in record.iter().enumerate() {
+                                if j > 0 { self.append_output(", "); }
+                                self.append_output(&field.to_string());
+                            }
+                            self.append_output("\n");
+                        }
+                        
+                        if table.records.len() > 3 {
+                            self.append_output(&format!("  ... and {} more records\n", table.records.len() - 3));
+                        }
+                    } else {
+                        self.append_output(&format!("Table '{}' not found\n", name));
+                    }
+                    Ok(())
+                },
+                _ => Err("TABLE-INFO requires a string".to_string()),
+            }
+        } else {
+            Err("Stack underflow".to_string())
+        }
+    }
+
+    fn op_table_size(&mut self) -> Result<(), String> {
+        if let Some(val) = self.stack.pop() {
+            match val.val_type {
+                ValueType::String(name) => {
+                    if let Some(table) = self.tables.get(&name) {
+                        self.stack.push(Value {
+                            val_type: ValueType::Number(Fraction::new(table.records.len() as i64, 1))
+                        });
+                    } else {
+                        self.stack.push(Value { val_type: ValueType::Number(Fraction::new(0, 1)) });
+                    }
+                    Ok(())
+                },
+                _ => Err("TABLE-SIZE requires a string".to_string()),
+            }
+        } else {
+            Err("Stack underflow".to_string())
+        }
+    }
+
     fn op_save_db(&mut self) -> Result<(), String> {
         web_sys::console::log_1(&"SAVE-DB: Saving database to IndexedDB".into());
         
@@ -2128,58 +2205,48 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
    pub fn get_all_tables(&self) -> Vec<String> {
        self.tables.keys().cloned().collect()
    }
-
-    
-
-
-    #[wasm_bindgen]
-    pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
-        if !stack_js.is_array() {
-            return Err("Stack must be an array".to_string());
-        }
-        
-        let arr = js_sys::Array::from(&stack_js);
-        let mut new_stack = Vec::new();
-        
-        for i in 0..arr.length() {
-            let item = arr.get(i);
-            let value = js_value_to_rust_value(&item)?;
-            new_stack.push(value);
-        }
-        
-        self.interpreter.set_stack(new_stack);
-        Ok(())
-    }
-    
-    #[wasm_bindgen]
-    pub fn restore_register(&mut self, register_js: JsValue) -> Result<(), String> {
-        if register_js.is_null() || register_js.is_undefined() {
-            self.interpreter.set_register(None);
-        } else {
-            let value = js_value_to_rust_value(&register_js)?;
-            self.interpreter.set_register(Some(value));
-        }
-        Ok(())
-    }
-    
-    #[wasm_bindgen]
-    pub fn get_word_definition(&self, name: &str) -> JsValue {
-        match self.interpreter.get_word_definition(name) {
-            Some(def) => JsValue::from_str(&def),
-            None => JsValue::NULL,
-        }
-    }
-    
-    #[wasm_bindgen]
-    pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
-        // 説明があれば先に追加
-        let code = if let Some(desc) = description {
-            format!("({}) {} \"{}\" DEF", desc, definition, name)
-        } else {
-            format!("{} \"{}\" DEF", definition, name)
-        };
-        
-        self.interpreter.execute(&code)?;
-        Ok(())
-    }
+   
+   // スタックを設定
+   pub fn set_stack(&mut self, stack: Stack) {
+       self.stack = stack;
+   }
+   
+   // レジスタを設定
+   pub fn set_register(&mut self, register: Register) {
+       self.register = register;
+   }
+   
+   // カスタムワードの定義を取得（復元用）
+   pub fn get_word_definition(&self, name: &str) -> Option<String> {
+       if let Some(def) = self.dictionary.get(name) {
+           if !def.is_builtin {
+               // トークンを文字列に変換
+               let mut result = String::new();
+               for token in &def.tokens {
+                   match token {
+                       Token::Number(n, d) => {
+                           if *d == 1 {
+                               result.push_str(&n.to_string());
+                           } else {
+                               result.push_str(&format!("{}/{}", n, d));
+                           }
+                       },
+                       Token::String(s) => result.push_str(&format!("\"{}\"", s)),
+                       Token::Boolean(b) => result.push_str(if *b { "true" } else { "false" }),
+                       Token::Nil => result.push_str("nil"),
+                       Token::Symbol(s) => result.push_str(s),
+                       Token::VectorStart => result.push_str("["),
+                       Token::VectorEnd => result.push_str("]"),
+                       Token::Description(d) => result.push_str(&format!("({})", d)),
+                   }
+                   result.push(' ');
+               }
+               Some(result.trim().to_string())
+           } else {
+               None
+           }
+       } else {
+           None
+       }
+   }
 }
