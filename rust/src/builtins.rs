@@ -70,6 +70,9 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "TABLES", "テーブル名をパターンで検索 ( str -- vec )");
     register_builtin(dictionary, "SAVE-DB", "データベースを保存 ( -- )");
     register_builtin(dictionary, "LOAD-DB", "データベースを読み込み ( -- )");
+    register_builtin(dictionary, "TABLES-INFO", "全テーブルの詳細情報を表示 ( -- )");
+    register_builtin(dictionary, "TABLE-INFO", "指定テーブルの情報を表示 ( str -- )");
+    register_builtin(dictionary, "TABLE-SIZE", "テーブルのレコード数を取得 ( str -- n )");
 
     // ワイルドカード・パターンマッチング
     register_builtin(dictionary, "MATCH?", "ワイルドカードマッチング ( str str -- bool )");
