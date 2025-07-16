@@ -2173,11 +2173,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
         }
     }
 }
-4. rust/src/lib.rs への追加（AjisaiInterpreter implブロック内）
-rust#[wasm_bindgen]
-impl AjisaiInterpreter {
-    // ... 既存のメソッド ...
-    
+
     #[wasm_bindgen]
     pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
         if !stack_js.is_array() {
