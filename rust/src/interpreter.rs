@@ -2129,49 +2129,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
        self.tables.keys().cloned().collect()
    }
 
-    // スタックを設定
-    pub fn set_stack(&mut self, stack: Stack) {
-        self.stack = stack;
-    }
     
-    // レジスタを設定
-    pub fn set_register(&mut self, register: Register) {
-        self.register = register;
-    }
-    
-    // カスタムワードの定義を取得（復元用）
-    pub fn get_word_definition(&self, name: &str) -> Option<String> {
-        if let Some(def) = self.dictionary.get(name) {
-            if !def.is_builtin {
-                // トークンを文字列に変換
-                let mut result = String::new();
-                for token in &def.tokens {
-                    match token {
-                        Token::Number(n, d) => {
-                            if *d == 1 {
-                                result.push_str(&n.to_string());
-                            } else {
-                                result.push_str(&format!("{}/{}", n, d));
-                            }
-                        },
-                        Token::String(s) => result.push_str(&format!("\"{}\"", s)),
-                        Token::Boolean(b) => result.push_str(if *b { "true" } else { "false" }),
-                        Token::Nil => result.push_str("nil"),
-                        Token::Symbol(s) => result.push_str(s),
-                        Token::VectorStart => result.push_str("["),
-                        Token::VectorEnd => result.push_str("]"),
-                        Token::Description(d) => result.push_str(&format!("({})", d)),
-                    }
-                    result.push(' ');
-                }
-                Some(result.trim().to_string())
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
 
 
     #[wasm_bindgen]
