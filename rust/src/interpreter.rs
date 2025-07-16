@@ -2172,7 +2172,7 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
             None
         }
     }
-}
+
 
     #[wasm_bindgen]
     pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
