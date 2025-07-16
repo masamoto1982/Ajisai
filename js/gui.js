@@ -193,19 +193,30 @@ const GUI = {
                     return;
                 }
                 
-                // WASMからテーブル一覧を取得
-                const tableNames = window.ajisaiInterpreter.get_all_tables();
-                console.log('Saving tables:', tableNames);
+                // WASMからテーブル一覧を取得（エラーハンドリング付き）
+                let tableNames = [];
+                try {
+                    tableNames = window.ajisaiInterpreter.get_all_tables();
+                    console.log('Saving tables:', tableNames);
+                } catch (wasmError) {
+                    console.warn('Failed to get table names from WASM:', wasmError);
+                    console.log('Continuing with empty table list...');
+                    tableNames = [];
+                }
                 
                 for (const tableName of tableNames) {
-                    const tableData = window.ajisaiInterpreter.load_table(tableName);
-                    if (tableData) {
-                        console.log(`Saving table ${tableName}:`, tableData);
-                        await window.AjisaiDB.saveTable(tableName, tableData[0], tableData[1]);
+                    try {
+                        const tableData = window.ajisaiInterpreter.load_table(tableName);
+                        if (tableData) {
+                            console.log(`Saving table ${tableName}:`, tableData);
+                            await window.AjisaiDB.saveTable(tableName, tableData[0], tableData[1]);
+                        }
+                    } catch (tableError) {
+                        console.warn(`Failed to save table ${tableName}:`, tableError);
                     }
                 }
                 
-                console.log('Database saved successfully');
+                console.log('Database save completed');
             } catch (error) {
                 console.error('Failed to save database:', error);
             }
