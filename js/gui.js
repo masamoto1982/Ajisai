@@ -102,18 +102,13 @@ const GUI = {
             // データベース連携用のイベントリスナーを設定
             this.setupDatabaseListeners();
             
-            // ページロード時に自動的にデータベースを読み込む
-            if (window.ajisaiInterpreter) {
-                console.log('Auto-loading database on page load...');
-                await this.loadDatabaseData();
-            } else {
-                console.log('WASM not loaded yet, waiting for wasmLoaded event...');
-                // WASMロード後に読み込み
-                window.addEventListener('wasmLoaded', async () => {
-                    if (window.ajisaiInterpreter) {
-                        console.log('Auto-loading database after WASM load...');
-                        await this.loadDatabaseData();
-                    }
+            // 自動読み込みを一時的に無効化（手動でLOAD-DBを実行）
+            console.log('Auto-loading disabled. Use LOAD-DB command to restore data.');
+            
+            // WASMロード後にイベントリスナーのみ設定
+            if (!window.ajisaiInterpreter) {
+                window.addEventListener('wasmLoaded', () => {
+                    console.log('WASM loaded, database functions are now available');
                 });
             }
         } catch (error) {
