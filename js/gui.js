@@ -145,24 +145,27 @@ const GUI = {
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
                 console.log('Loading interpreter state...');
+                console.log('Note: Stack and register restoration is not yet implemented in WASM');
                 
-                // スタックを復元
+                // 現在のWASMインタープリタで利用可能なメソッドを確認
+                console.log('Available interpreter methods:', Object.getOwnPropertyNames(window.ajisaiInterpreter));
+                
+                // スタックとレジスタの復元は現在未実装のため、表示のみ更新
                 if (state.stack && state.stack.length > 0) {
-                    console.log(`Restoring stack with ${state.stack.length} items`);
-                    window.ajisaiInterpreter.restore_stack(state.stack);
+                    console.log(`Found saved stack with ${state.stack.length} items (display only)`);
+                    // 表示のみ更新（実際の復元は未実装）
                     this.updateStackDisplay(this.convertWasmStack(state.stack));
                 }
                 
-                // レジスタを復元
                 if (state.register !== null && state.register !== undefined) {
-                    console.log('Restoring register');
-                    window.ajisaiInterpreter.restore_register(state.register);
+                    console.log('Found saved register (display only)');
+                    // 表示のみ更新（実際の復元は未実装）
                     this.updateRegisterDisplay(this.convertWasmValue(state.register));
                 }
                 
                 // カスタムワードを復元
                 if (state.customWords && state.customWords.length > 0) {
-                    console.log(`Restoring ${state.customWords.length} custom words`);
+                    console.log(`Found ${state.customWords.length} saved custom words`);
                     
                     // 保存されているカスタムワードの定義を取得して復元
                     for (const [name, description, _protected] of state.customWords) {
