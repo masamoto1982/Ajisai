@@ -737,19 +737,20 @@ impl Interpreter {
     }
 
     fn op_project(&mut self) -> Result<(), String> {
-        if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
-        let columns_val = self.stack.pop().unwrap();
-        let table_val = self.stack.pop().unwrap();
-        
-        // This is a simplified implementation. A real one would need schema info.
-        if let (ValueType::Vector(_), ValueType::Vector(_)) = (table_val.val_type, columns_val.val_type) {
+    if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
+    let columns_val = self.stack.pop().unwrap();
+    let table_val = self.stack.pop().unwrap();
+    
+    // val_typeの参照を使用してパターンマッチ
+    match (&table_val.val_type, &columns_val.val_type) {
+        (ValueType::Vector(_), ValueType::Vector(_)) => {
             // For now, just push back the table.
             self.stack.push(table_val);
             Ok(())
-        } else {
-            Err("PROJECT requires a table and a columns vector".to_string())
-        }
+        },
+        _ => Err("PROJECT requires a table and a columns vector".to_string()),
     }
+}
 
     fn op_insert(&mut self) -> Result<(), String> {
         if self.stack.len() < 2 { return Err("Stack underflow".to_string()); }
