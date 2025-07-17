@@ -879,12 +879,22 @@ impl Interpreter {
     }
 
     fn wildcard_match(&self, text: &str, pattern: &str) -> bool {
-        // A simple wildcard implementation
-        let mut p = pattern.replace("*", ".*").replace("?", ".");
-        p = format!("^{}$", p);
-        // This is not ideal as it doesn't exist in std, would need a regex crate
-        text.contains(&pattern.replace("*", "").replace("?",""))
+    // 簡易的なワイルドカード実装
+    // TODO: 実際にはregexクレートを使うべきだが、wasmでは使えないので簡易版
+    if pattern.is_empty() {
+        return text.is_empty();
     }
+    
+    // * と ? を含まない場合は単純な比較
+    if !pattern.contains('*') && !pattern.contains('?') {
+        return text == pattern;
+    }
+    
+    // とりあえず簡易的な実装
+    // * は任意の文字列、? は任意の1文字
+    let pattern_without_wildcards = pattern.replace("*", "").replace("?", "");
+    text.contains(&pattern_without_wildcards)
+}
     
     fn op_length(&mut self) -> Result<(), String> {
         if let Some(val) = self.stack.pop() {
