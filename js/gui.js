@@ -60,15 +60,26 @@ const GUI = {
                 tables: {}
             };
             
-            // テーブルも取得
-            const tableNames = window.ajisaiInterpreter.get_all_tables();
+            // テーブルも取得（エラーハンドリング付き）
+            let tableNames = [];
+            try {
+                tableNames = window.ajisaiInterpreter.get_all_tables();
+            } catch (wasmError) {
+                console.warn('Failed to get table names during auto-save:', wasmError);
+                tableNames = [];
+            }
+            
             for (const name of tableNames) {
-                const tableData = window.ajisaiInterpreter.load_table(name);
-                if (tableData) {
-                    state.tables[name] = {
-                        schema: tableData[0],
-                        records: tableData[1]
-                    };
+                try {
+                    const tableData = window.ajisaiInterpreter.load_table(name);
+                    if (tableData) {
+                        state.tables[name] = {
+                            schema: tableData[0],
+                            records: tableData[1]
+                        };
+                    }
+                } catch (tableError) {
+                    console.warn(`Failed to load table ${name} during auto-save:`, tableError);
                 }
             }
             
