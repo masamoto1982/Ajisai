@@ -267,9 +267,9 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), String> {
-        self.execute_tokens_with_context(tokens)
-    }
+    fn execute_custom_word(&mut self, _name: &str, tokens: &[Token]) -> Result<(), String> {
+    self.execute_tokens_with_context(tokens)
+}
 
     fn op_def(&mut self, description: Option<String>) -> Result<(), String> {
         if self.stack.len() < 2 {
