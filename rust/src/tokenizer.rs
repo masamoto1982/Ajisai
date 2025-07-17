@@ -1,26 +1,18 @@
-#[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    Number(i64, i64),  // 分子, 分母
-    String(String),
-    Boolean(bool),
-    Symbol(String),
-    VectorStart,
-    VectorEnd,
-    Nil,
-    Description(String),
-}
+// in: masamoto1982/ajisai/Ajisai-e4b1951ad8cf96ca24706236c945342f04c7cf22/rust/src/tokenizer.rs
+
+use crate::types::Token;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();
-    
+
     while let Some(&ch) = chars.peek() {
         // 空白をスキップ
         if ch.is_whitespace() {
             chars.next();
             continue;
         }
-        
+
         // 行コメント処理（#から行末まで）
         if ch == '#' {
             chars.next();
@@ -32,7 +24,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             }
             continue;
         }
-        
+
         // 説明文処理（DEF用）
         if ch == '(' {
             chars.next();
@@ -47,13 +39,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             tokens.push(Token::Description(description.trim().to_string()));
             continue;
         }
-        
+
         // 文字列リテラル
         if ch == '"' {
             chars.next();
             let mut string = String::new();
             let mut escaped = false;
-            
+
             while let Some(&ch) = chars.peek() {
                 chars.next();
                 if escaped {
@@ -70,30 +62,41 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             tokens.push(Token::String(string));
             continue;
         }
-        
-        // ベクトル開始/終了
+
+        // ベクター開始/終了
         if ch == '[' {
             chars.next();
             tokens.push(Token::VectorStart);
             continue;
         }
-        
         if ch == ']' {
             chars.next();
             tokens.push(Token::VectorEnd);
             continue;
         }
         
+        // ブロック開始/終了
+        if ch == '{' {
+            chars.next();
+            tokens.push(Token::BlockStart);
+            continue;
+        }
+        if ch == '}' {
+            chars.next();
+            tokens.push(Token::BlockEnd);
+            continue;
+        }
+
         // その他のトークン（数値、真偽値、NIL、シンボル）
         let mut word = String::new();
         while let Some(&ch) = chars.peek() {
-            if ch.is_whitespace() || ch == '(' || ch == '[' || ch == ']' || ch == '"' || ch == '#' {
+            if ch.is_whitespace() || ['(', ')', '[', ']', '{', '}', '"', '#'].contains(&ch) {
                 break;
             }
             word.push(ch);
             chars.next();
         }
-        
+
         if word.is_empty() {
             continue;
         }
@@ -118,7 +121,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 continue;
             },
             // NIL
-            "NIL" => {
+            "NIL" | "nil" => { // nilも受け入れる
                 tokens.push(Token::Nil);
                 continue;
             },
