@@ -1632,57 +1632,67 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
 
     // 新しいメソッドの実装
     fn op_tables_info(&mut self) -> Result<(), String> {
-        web_sys::console::log_1(&"TABLES-INFO: Displaying all tables info".into());
-        
-        if self.tables.is_empty() {
-            self.append_output("No tables found.\n");
-        } else {
-            self.append_output(&format!("Total tables: {}\n", self.tables.len()));
-            
-            for (name, table) in &self.tables {
-                self.append_output(&format!(
-                    "Table '{}': {} records, schema: {:?}\n",
-                    name, table.records.len(), table.schema
-                ));
-            }
+    web_sys::console::log_1(&"TABLES-INFO: Displaying all tables info".into());
+
+    if self.tables.is_empty() {
+        self.append_output("No tables found.\n");
+    } else {
+        // First, build the complete output string
+        let mut output_string = format!("Total tables: {}\n", self.tables.len());
+        for (name, table) in &self.tables {
+            output_string.push_str(&format!(
+                "Table '{}': {} records, schema: {:?}\n",
+                name, table.records.len(), table.schema
+            ));
         }
-        Ok(())
+        // Then, call the mutable method once
+        self.append_output(&output_string);
     }
+    Ok(())
+}
 
     fn op_table_info(&mut self) -> Result<(), String> {
-        if let Some(val) = self.stack.pop() {
-            match val.val_type {
-                ValueType::String(name) => {
-                    if let Some(table) = self.tables.get(&name) {
-                        self.append_output(&format!(
-                            "Table '{}'\n  Schema: {:?}\n  Records: {}\n",
-                            name, table.schema, table.records.len()
-                        ));
-                        
-                        // 最初の3レコードをサンプルとして表示
-                        for (i, record) in table.records.iter().take(3).enumerate() {
-                            self.append_output(&format!("  Record {}: ", i));
-                            for (j, field) in record.iter().enumerate() {
-                                if j > 0 { self.append_output(", "); }
-                                self.append_output(&field.to_string());
+    if let Some(val) = self.stack.pop() {
+        match val.val_type {
+            ValueType::String(name) => {
+                if let Some(table) = self.tables.get(&name) {
+                    // Build the complete output string for the table
+                    let mut output_string = format!(
+                        "Table '{}'\n  Schema: {:?}\n  Records: {}\n",
+                        name, table.schema, table.records.len()
+                    );
+
+                    // Append sample records to the local string
+                    for (i, record) in table.records.iter().take(3).enumerate() {
+                        output_string.push_str(&format!("  Record {}: ", i));
+                        for (j, field) in record.iter().enumerate() {
+                            if j > 0 {
+                                output_string.push_str(", ");
                             }
-                            self.append_output("\n");
+                            output_string.push_str(&field.to_string());
                         }
-                        
-                        if table.records.len() > 3 {
-                            self.append_output(&format!("  ... and {} more records\n", table.records.len() - 3));
-                        }
-                    } else {
-                        self.append_output(&format!("Table '{}' not found\n", name));
+                        output_string.push('\n');
                     }
-                    Ok(())
-                },
-                _ => Err("TABLE-INFO requires a string".to_string()),
+
+                    if table.records.len() > 3 {
+                        output_string.push_str(&format!(
+                            "  ... and {} more records\n",
+                            table.records.len() - 3
+                        ));
+                    }
+                    // Call the mutable method once with the final string
+                    self.append_output(&output_string);
+                } else {
+                    self.append_output(&format!("Table '{}' not found\n", name));
+                }
+                Ok(())
             }
-        } else {
-            Err("Stack underflow".to_string())
+            _ => Err("TABLE-INFO requires a string".to_string()),
         }
+    } else {
+        Err("Stack underflow".to_string())
     }
+}
 
     fn op_table_size(&mut self) -> Result<(), String> {
         if let Some(val) = self.stack.pop() {
