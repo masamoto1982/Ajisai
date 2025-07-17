@@ -267,6 +267,9 @@ impl AjisaiInterpreter {
             format!("{} \"{}\" DEF", definition, name)
         };
         
+        // デバッグ用にコンソールにログを出力
+        web_sys::console::log_1(&format!("Restoring word with code: {}", code).into());
+        
         self.interpreter.execute(&code)?;
         Ok(())
     }
