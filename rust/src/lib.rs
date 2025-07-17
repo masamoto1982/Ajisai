@@ -284,6 +284,7 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
         ValueType::Vector(_) => "vector",
+        ValueType::Quotation(_) => "quotation",  // 追加
         ValueType::Nil => "nil",
     };
     
@@ -292,12 +293,9 @@ fn value_to_js(value: &Value) -> JsValue {
     let val = match &value.val_type {
         ValueType::Number(n) => {
             if n.denominator == 1 {
-                // i64をf64に変換してからJsValueに変換
-                // JavaScriptの数値として安全に扱える範囲内であることを確認
                 if n.numerator >= -(1i64 << 53) && n.numerator <= (1i64 << 53) {
                     JsValue::from_f64(n.numerator as f64)
                 } else {
-                    // 大きすぎる数値は文字列として返す
                     JsValue::from_str(&n.numerator.to_string())
                 }
             } else {
@@ -313,6 +311,13 @@ fn value_to_js(value: &Value) -> JsValue {
                 arr.push(&value_to_js(item));
             }
             arr.into()
+        },
+        ValueType::Quotation(tokens) => {
+            // Quotationをオブジェクトとして表現
+            let quot_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&quot_obj, &"type".into(), &"quotation".into()).unwrap();
+            js_sys::Reflect::set(&quot_obj, &"length".into(), &JsValue::from_f64(tokens.len() as f64)).unwrap();
+            quot_obj.into()
         },
         ValueType::Nil => JsValue::NULL,
     };
