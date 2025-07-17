@@ -2230,33 +2230,53 @@ fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<(), St
    pub fn get_word_definition(&self, name: &str) -> Option<String> {
        if let Some(def) = self.dictionary.get(name) {
            if !def.is_builtin {
-               // トークンを文字列に変換
-               let mut result = String::new();
-               for token in &def.tokens {
+               // トークンを文字列に変換する、より堅牢な方法
+               let mut result_parts: Vec<String> = Vec::new();
+               let mut i = 0;
+               while i < def.tokens.len() {
+                   let token = &def.tokens[i];
                    match token {
-                       Token::Number(n, d) => {
-                           if *d == 1 {
-                               result.push_str(&n.to_string());
-                           } else {
-                               result.push_str(&format!("{}/{}", n, d));
+                       Token::VectorStart => {
+                           // ネストされたベクターを正しく処理
+                           let mut nested_parts: Vec<String> = Vec::new();
+                           let mut depth = 1;
+                           let mut j = i + 1;
+                           while j < def.tokens.len() {
+                               if let Token::VectorStart = &def.tokens[j] { depth += 1; }
+                               if let Token::VectorEnd = &def.tokens[j] { depth -= 1; }
+                               if depth == 0 { break; }
+                               nested_parts.push(self.token_to_string(&def.tokens[j]));
+                               j += 1;
                            }
+                           result_parts.push(format!("[ {} ]", nested_parts.join(" ")));
+                           i = j;
                        },
-                       Token::String(s) => result.push_str(&format!("\"{}\"", s)),
-                       Token::Boolean(b) => result.push_str(if *b { "true" } else { "false" }),
-                       Token::Nil => result.push_str("nil"),
-                       Token::Symbol(s) => result.push_str(s),
-                       Token::VectorStart => result.push_str("["),
-                       Token::VectorEnd => result.push_str("]"),
-                       Token::Description(d) => result.push_str(&format!("({})", d)),
+                       _ => {
+                           result_parts.push(self.token_to_string(token));
+                       }
                    }
-                   result.push(' ');
+                   i += 1;
                }
-               Some(result.trim().to_string())
+               Some(result_parts.join(" "))
            } else {
                None
            }
        } else {
            None
+       }
+   }
+
+   // tokenを文字列に変換するヘルパー関数を追加
+   fn token_to_string(&self, token: &Token) -> String {
+       match token {
+           Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
+           Token::String(s) => format!("\"{}\"", s),
+           Token::Boolean(b) => if *b { "true".to_string() } else { "false".to_string() },
+           Token::Nil => "nil".to_string(),
+           Token::Symbol(s) => s.clone(),
+           Token::VectorStart => "[".to_string(),
+           Token::VectorEnd => "]".to_string(),
+           Token::Description(d) => format!("({})", d),
        }
    }
 }
