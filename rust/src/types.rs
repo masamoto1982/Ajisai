@@ -1,5 +1,20 @@
 use std::fmt;
 
+// Tokenの定義をtokenizer.rsからこちらに移動
+#[derive(Debug, Clone, PartialEq)]
+pub enum Token {
+    Number(i64, i64),
+    String(String),
+    Boolean(bool),
+    Symbol(String),
+    VectorStart,      // [
+    VectorEnd,        // ]
+    BlockStart,       // {
+    BlockEnd,         // }
+    Nil,
+    Description(String),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub val_type: ValueType,
@@ -12,6 +27,7 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>),
+    Quotation(Vec<Token>), // <-- 新しくQuotation型を追加
     Nil,
 }
 
@@ -114,6 +130,13 @@ impl fmt::Display for Value {
                     write!(f, "{}", item)?;
                 }
                 write!(f, " ]")
+            },
+            // Quotationの表示方法を定義
+            ValueType::Quotation(tokens) => {
+                write!(f, "{{ ")?;
+                // ここでは簡易的にトークン数を表示（詳細は後述の関数で文字列化）
+                write!(f, "...")?;
+                write!(f, " }}")
             },
             ValueType::Nil => write!(f, "nil"),
         }
