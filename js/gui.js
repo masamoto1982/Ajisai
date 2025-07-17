@@ -50,13 +50,15 @@ const GUI = {
     // 現在の状態を保存
     async saveCurrentState() {
         try {
-            if (!window.ajisaiInterpreter) return;
+            if (!window.ajisaiInterpreter) {
+                console.warn('Interpreter not available for saving state.');
+                return;
+            }
             
             // スタック、レジスタ、カスタムワード、テーブルを保存
             const state = {
                 stack: window.ajisaiInterpreter.get_stack(),
                 register: window.ajisaiInterpreter.get_register(),
-                customWords: window.ajisaiInterpreter.get_custom_words_info(),
                 tables: {}
             };
             
@@ -82,6 +84,22 @@ const GUI = {
                     console.warn(`Failed to load table ${name} during auto-save:`, tableError);
                 }
             }
+
+            // カスタムワードも取得し、定義本体も保存
+            const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
+            const customWordsToSave = [];
+            for (const wordData of customWordsInfo) {
+                if (Array.isArray(wordData)) {
+                    const name = wordData[0];
+                    const description = wordData[1] || null;
+                    const isProtected = wordData[2] || false;
+                    
+                    // 定義本体を取得
+                    const definition = window.ajisaiInterpreter.get_word_definition(name);
+                    customWordsToSave.push({ name, definition, description, protected: isProtected });
+                }
+            }
+            state.customWords = customWordsToSave; // 更新されたカスタムワード情報をstateに追加
             
             await window.AjisaiDB.saveAllState(state.tables, {
                 stack: state.stack,
@@ -89,8 +107,10 @@ const GUI = {
                 customWords: state.customWords
             });
             
+            this.elements.outputDisplay.textContent = 'State saved automatically.';
             console.log('State saved automatically');
         } catch (error) {
+            this.elements.outputDisplay.textContent = `Error saving state: ${error.message || error}`;
             console.error('Failed to save state:', error);
         }
     },
@@ -113,27 +133,38 @@ const GUI = {
             // データベース連携用のイベントリスナーを設定
             this.setupDatabaseListeners();
             
-            // 自動読み込みを一時的に無効化（手動でLOAD-DBを実行）
-            console.log('Auto-loading disabled. Use LOAD-DB command to restore data.');
+            // 自動読み込みを有効化
+            console.log('Attempting to auto-load database...');
             
-            // WASMロード後にイベントリスナーのみ設定
-            if (!window.ajisaiInterpreter) {
+            // WASMが既にロードされている場合はすぐに読み込みを開始
+            if (window.ajisaiInterpreter) {
+                this.loadDatabaseData();
+            } else {
+                // WASMロード後に読み込みを開始
                 window.addEventListener('wasmLoaded', () => {
-                    console.log('WASM loaded, database functions are now available');
+                    console.log('WASM loaded, now loading database data...');
+                    this.loadDatabaseData();
                 });
             }
         } catch (error) {
             console.error('Failed to initialize database:', error);
-            console.error('Error details:', error.message, error.stack);
+            this.elements.outputDisplay.textContent = `Error initializing database: ${error.message || error}`;
         }
     },
     
     // データベースからデータを読み込む
     async loadDatabaseData() {
         try {
+            if (!window.ajisaiInterpreter) {
+                console.error('Interpreter not available for loading database data.');
+                this.elements.outputDisplay.textContent = 'Error: Interpreter not ready to load data.';
+                return;
+            }
+
             // テーブルを読み込み
             const tableNames = await window.AjisaiDB.getAllTableNames();
             console.log(`Loading ${tableNames.length} tables from database...`);
+            this.elements.outputDisplay.textContent = `Loading ${tableNames.length} tables...`;
             
             for (const tableName of tableNames) {
                 const tableData = await window.AjisaiDB.loadTable(tableName);
@@ -150,43 +181,76 @@ const GUI = {
             // インタープリタの状態を読み込み
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
-                console.log('Loading interpreter state...');
-                console.log('Note: Stack and register restoration is not yet implemented in WASM');
+                console.log('Loading interpreter state (stack, register, custom words)...');
                 
-                // 現在のWASMインタープリタで利用可能なメソッドを確認
-                console.log('Available interpreter methods:', Object.getOwnPropertyNames(window.ajisaiInterpreter));
-                
-                // スタックとレジスタの復元は現在未実装のため、表示のみ更新
+                // スタックとレジスタの復元
                 if (state.stack && state.stack.length > 0) {
-                    console.log(`Found saved stack with ${state.stack.length} items (display only)`);
-                    // 表示のみ更新（実際の復元は未実装）
-                    this.updateStackDisplay(this.convertWasmStack(state.stack));
+                    console.log(`Restoring stack with ${state.stack.length} items.`);
+                    window.ajisaiInterpreter.restore_stack(state.stack);
+                    this.updateStackDisplay(this.convertWasmStack(window.ajisaiInterpreter.get_stack())); // 復元後のスタックを取得して表示
+                } else {
+                    window.ajisaiInterpreter.restore_stack([]); // スタックがなければクリア
+                    this.updateStackDisplay([]);
                 }
                 
                 if (state.register !== null && state.register !== undefined) {
-                    console.log('Found saved register (display only)');
-                    // 表示のみ更新（実際の復元は未実装）
-                    this.updateRegisterDisplay(this.convertWasmValue(state.register));
+                    console.log('Restoring register.');
+                    window.ajisaiInterpreter.restore_register(state.register);
+                    this.updateRegisterDisplay(this.convertWasmValue(window.ajisaiInterpreter.get_register())); // 復元後のレジスタを取得して表示
+                } else {
+                    window.ajisaiInterpreter.restore_register(null); // レジスタがなければクリア
+                    this.updateRegisterDisplay(null);
                 }
                 
                 // カスタムワードを復元
                 if (state.customWords && state.customWords.length > 0) {
-                    console.log(`Found ${state.customWords.length} saved custom words`);
+                    console.log(`Restoring ${state.customWords.length} saved custom words.`);
                     
                     // 保存されているカスタムワードの定義を取得して復元
-                    for (const [name, description, _protected] of state.customWords) {
-                        // 注: 現在の実装では定義本体は保存されていないため、
-                        // ワードの名前と説明のみが復元されます
-                        console.log(`Note: Word '${name}' definition needs to be saved separately`);
+                    for (const wordInfo of state.customWords) {
+                        // 新しい保存形式: { name: ..., definition: ..., description: ..., protected: ... }
+                        // 古い保存形式 (name, description, protectedの配列) にも対応
+                        const name = wordInfo.name || wordInfo[0];
+                        const definition = wordInfo.definition; // 新しい形式でのみ存在する
+                        const description = wordInfo.description || wordInfo[1] || null;
+                        const isProtected = wordInfo.protected || wordInfo[2] || false;
+                        
+                        if (definition) {
+                            try {
+                                window.ajisaiInterpreter.restore_word(name, definition, description);
+                                console.log(`Restored custom word: '${name}'`);
+                            } catch (wordRestoreError) {
+                                console.warn(`Failed to restore custom word '${name}':`, wordRestoreError);
+                            }
+                        } else {
+                            console.warn(`Definition not found for custom word '${name}', restoring only name/description.`);
+                        }
                     }
                     
-                    // カスタムワード表示を更新
-                    this.renderWordButtons(this.elements.customWordsDisplay, state.customWords, true);
+                    // 復元されたカスタムワード情報を再取得して表示を更新
+                    const currentCustomWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
+                    const customWordInfosForDisplay = currentCustomWordsInfo.map(wordData => {
+                        if (Array.isArray(wordData)) {
+                            return {
+                                name: wordData[0],
+                                description: wordData[1] || null,
+                                protected: wordData[2] || false
+                            };
+                        } else {
+                            return wordData;
+                        }
+                    });
+                    this.renderWordButtons(this.elements.customWordsDisplay, customWordInfosForDisplay, true);
+                } else {
+                    // カスタムワードが保存されていなければ表示をクリア
+                    this.renderWordButtons(this.elements.customWordsDisplay, [], true);
                 }
             }
             
+            this.elements.outputDisplay.textContent = 'Database loaded successfully.';
             console.log('Database loaded successfully');
         } catch (error) {
+            this.elements.outputDisplay.textContent = `Error loading database: ${error.message || error}`;
             console.error('Failed to load database:', error);
         }
     },
@@ -198,9 +262,11 @@ const GUI = {
         // SAVE-DBワード実行時のイベント
         window.addEventListener('ajisai-save-db', async (event) => {
             console.log('ajisai-save-db event received!');
+            this.elements.outputDisplay.textContent = 'Database save initiated by SAVE-DB command.';
             try {
                 if (!window.ajisaiInterpreter) {
                     console.error('No interpreter available');
+                    this.elements.outputDisplay.textContent += '\nError: No interpreter available to save.';
                     return;
                 }
                 
@@ -227,8 +293,10 @@ const GUI = {
                     }
                 }
                 
+                this.elements.outputDisplay.textContent += '\nDatabase saved via SAVE-DB command.';
                 console.log('Database save completed');
             } catch (error) {
+                this.elements.outputDisplay.textContent += `\nError saving database via SAVE-DB: ${error.message || error}`;
                 console.error('Failed to save database:', error);
             }
         });
@@ -236,9 +304,11 @@ const GUI = {
         // LOAD-DBワード実行時のイベント
         window.addEventListener('ajisai-load-db', async (event) => {
             console.log('ajisai-load-db event received!');
+            this.elements.outputDisplay.textContent = 'Database load initiated by LOAD-DB command.';
             try {
                 if (!window.ajisaiInterpreter) {
                     console.error('No interpreter available');
+                    this.elements.outputDisplay.textContent += '\nError: No interpreter available to load.';
                     return;
                 }
                 
@@ -257,8 +327,10 @@ const GUI = {
                     }
                 }
                 
+                this.elements.outputDisplay.textContent += '\nDatabase loaded via LOAD-DB command.';
                 console.log('Database loaded successfully');
             } catch (error) {
+                this.elements.outputDisplay.textContent += `\nError loading database via LOAD-DB: ${error.message || error}`;
                 console.error('Failed to load database:', error);
             }
         });
