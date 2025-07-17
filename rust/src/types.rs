@@ -132,12 +132,11 @@ impl fmt::Display for Value {
                 write!(f, " ]")
             },
             // Quotationの表示方法を定義
-            ValueType::Quotation(tokens) => {
-                write!(f, "{{ ")?;
-                // ここでは簡易的にトークン数を表示（詳細は後述の関数で文字列化）
-                write!(f, "...")?;
-                write!(f, " }}")
-            },
+            ValueType::Quotation(_tokens) => {
+    write!(f, "{{ ")?;
+    write!(f, "...")?;
+    write!(f, " }}")
+},
             ValueType::Nil => write!(f, "nil"),
         }
     }
