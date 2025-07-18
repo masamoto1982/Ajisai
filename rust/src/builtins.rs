@@ -31,6 +31,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     // 制御構造
     register_builtin(dictionary, "DEF", "新しいワードを定義 ( vec str -- )");
     register_builtin(dictionary, "IF", "条件分岐 ( bool vec vec -- ... )");
+    register_builtin(dictionary, "CALL", "Quotationを実行 ( quot -- ... )");  // 新規追加
     
     // 辞書操作
     register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
