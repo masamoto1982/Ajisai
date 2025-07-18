@@ -1,5 +1,5 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType, Fraction};
+use crate::types::ValueType;
 
 pub fn op_dot(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop()
