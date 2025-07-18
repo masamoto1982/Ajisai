@@ -577,6 +577,8 @@ const GUI = {
             { name: 'DEF', description: '新しいワードを定義 ( vec str -- )' },
             { name: 'IF', description: '条件分岐 ( bool vec vec -- ... )' },
             { name: 'DEL', description: 'カスタムワードを削除 ( str -- )' },
+            { name: 'ZIP', description: '2つのベクトルを組み合わせ ( vec vec -- vec )' },
+　　　　　　{ name: 'FILTER-VEC', description: 'ベクトルの要素をフィルタ ( vec vec-bool -- vec )' },
             // Nil関連
             { name: 'NIL?', description: 'nilかどうかをチェック ( a -- bool )' },
             { name: 'NOT-NIL?', description: 'nilでないかをチェック ( a -- bool )' },
