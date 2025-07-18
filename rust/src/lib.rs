@@ -468,7 +468,3 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
         }
     }
 }
-pub struct TableData {
-    pub schema: Vec<String>,
-    pub records: Vec<Vec<Value>>,
-}
