@@ -4,7 +4,7 @@ pub mod vector_ops;
 pub mod control;
 pub mod database;
 pub mod io;
-pub mod error;
+pub mod error; // <- この行を `pub mod error;` に変更
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Value, ValueType, Stack, Register, Token, TableData};
