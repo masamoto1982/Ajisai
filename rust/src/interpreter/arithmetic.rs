@@ -1,5 +1,5 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType, Fraction};
+use crate::types::{Value, ValueType};
 
 // ヘルパー関数：値の型を文字列で取得
 fn value_type_name(val_type: &ValueType) -> &'static str {
