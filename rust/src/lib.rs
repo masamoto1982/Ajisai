@@ -179,7 +179,7 @@ impl AjisaiInterpreter {
         } else {
             return Err("Records must be an array".to_string());
         };
-        
+        web_sys::console::log_1(&format!("DEBUG: lib.rs save_table - records_vec (from JS to Rust) for '{}': {:?}", name, records_vec).into()); // ★追加
         self.interpreter.save_table(name, schema_vec, records_vec);
         Ok(())
     }
