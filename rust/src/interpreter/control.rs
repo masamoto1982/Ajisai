@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use crate::interpreter::{Interpreter, WordDefinition, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType, Token};
+use crate::types::{ValueType, Token};
 
 pub fn op_def(interp: &mut Interpreter, description: Option<String>) -> Result<()> {
     if interp.stack.len() < 2 {
