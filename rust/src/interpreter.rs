@@ -455,11 +455,24 @@ impl Interpreter {
     
     fn op_to_r(&mut self) -> Result<(), String> {
         if let Some(val) = self.stack.pop() {
-            self.register = Some(val);
-            Ok(())
-        } else {
-            Err("Stack underflow".to_string())
-        }
+    match val.val_type {
+        ValueType::String(name) => {
+            if let Some(table) = self.tables.get(&name) {
+                web_sys::console::log_1(&format!("DEBUG: op_table found '{}', records: {:?}", name, table.records).into()); // ★追加
+                let table_vec = self.table_to_vector(table);
+                self.stack.push(table_vec);
+                self.current_table = Some(name);
+                Ok(())
+            } else {
+                web_sys::console::log_1(&format!("DEBUG: op_table: Table '{}' not found in internal map.", name).into()); // ★追加
+                Err(format!("Table '{}' not found", name))
+            }
+        },
+        _ => Err("TABLE requires a string".to_string()),
+    }
+} else {
+    Err("Stack underflow".to_string())
+}
     }
     
     fn op_from_r(&mut self) -> Result<(), String> {
