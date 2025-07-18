@@ -6,7 +6,7 @@ mod interpreter;
 mod builtins;
 
 use types::*;
-use interpreter::*;
+use interpreter::{Interpreter, error::AjisaiError};
 
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
@@ -270,7 +270,9 @@ impl AjisaiInterpreter {
         // デバッグ用にコンソールにログを出力
         web_sys::console::log_1(&format!("Restoring word with code: {}", code).into());
         
-        self.interpreter.execute(&code)?;
+        // ★★★ ここを修正 ★★★
+        // `?` を使うために、AjisaiErrorをStringに変換する
+        self.interpreter.execute(&code).map_err(|e| e.to_string())?;
         Ok(())
     }
 }
