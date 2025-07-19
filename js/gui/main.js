@@ -1,205 +1,51 @@
-import { Editor } from './editor.js';
-import { Display } from './display.js';
-import { Dictionary } from './dictionary.js';
-import { MobileHandler } from './mobile.js';
-import { Persistence } from './persistence.js';
-import { Stepper } from './stepper.js';
+// js/main.js
 
-export class GUI {
-    constructor() {
-        this.mode = 'input';
-        this.elements = {};
-        
-        // サブモジュール
-        this.editor = new Editor();
-        this.display = new Display();
-        this.dictionary = new Dictionary();
-        this.mobile = new MobileHandler();
-        this.persistence = new Persistence();
-        this.stepper = new Stepper();
+import { GUI } from './gui/main.js';
+import { initWasm } from './wasm-loader.js';
+
+/**
+ * DOM（ページの構造）の読み込みが完了したときに実行されるメインの処理です。
+ * ここでGUIの初期化を行います。
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    // GUIのインスタンスは ./gui/main.js で生成され、
+    // window.GUI に格納されています。
+    // その初期化メソッドを呼び出します。
+    GUI.init();
+});
+
+/**
+ * WASMモジュールの読み込みが完了したことを知らせる 'wasmLoaded' イベントを監視します。
+ * このイベントは、WASMの非同期読み込みが成功した後に発火します。
+ */
+window.addEventListener('wasmLoaded', () => {
+    // window.HolonWasm にWASMモジュールが格納されていることを確認します。
+    if (window.HolonWasm) {
+        // Ajisaiのインタープリタ（コード解釈・実行エンジン）を作成し、
+        // グローバル変数 window.ajisaiInterpreter に格納します。
+        // これにより、アプリケーションのどこからでもインタープリタにアクセスできるようになります。
+        window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
+        console.log('Ajisai interpreter initialized');
     }
+});
 
-    init() {
-        this.cacheElements();
-        
-        // 各モジュールを初期化
-        this.editor.init(this.elements.codeInput);
-        this.display.init({
-            outputDisplay: this.elements.outputDisplay,
-            stackDisplay: this.elements.stackDisplay,
-            registerDisplay: this.elements.registerDisplay
-        });
-        this.dictionary.init({
-            builtinWordsDisplay: this.elements.builtinWordsDisplay,
-            customWordsDisplay: this.elements.customWordsDisplay
-        });
-        this.mobile.init({
-            workspacePanel: this.elements.workspacePanel,
-            statePanel: this.elements.statePanel,
-            inputArea: this.elements.inputArea,
-            outputArea: this.elements.outputArea,
-            memoryArea: this.elements.memoryArea,
-            dictionaryArea: this.elements.dictionaryArea
-        });
-        this.stepper.init();
-        
-        this.setupEventListeners();
-        this.setupModuleListeners();
-        
-        // 初期表示
-        this.display.updateStack([]);
-        this.display.updateRegister(null);
-        this.dictionary.renderBuiltinWords();
-        this.dictionary.renderCustomWords([]);
-        
-        // 永続化の初期化
-        this.persistence.init();
+/**
+ * WASMモジュールの初期化を非同期で開始します。
+ * この処理はページの読み込みと並行して行われます。
+ */
+initWasm().then(wasm => {
+    // 読み込みが成功した場合
+    if (wasm) {
+        // 読み込んだWASMモジュールをグローバル変数 window.HolonWasm に格納します。
+        window.HolonWasm = wasm;
+        console.log('WASM loaded successfully');
+
+        // 'wasmLoaded' という名前のカスタムイベントを作成し、
+        // アプリケーション全体にWASMの準備ができたことを通知します。
+        window.dispatchEvent(new Event('wasmLoaded'));
     }
-
-    cacheElements() {
-        this.elements = {
-            workspacePanel: document.getElementById('workspace-panel'),
-            statePanel: document.getElementById('state-panel'),
-            inputArea: document.querySelector('.input-area'),
-            outputArea: document.querySelector('.output-area'),
-            memoryArea: document.querySelector('.memory-area'),
-            dictionaryArea: document.querySelector('.dictionary-area'),
-            codeInput: document.getElementById('code-input'),
-            outputDisplay: document.getElementById('output-display'),
-            stackDisplay: document.getElementById('stack-display'),
-            registerDisplay: document.getElementById('register-display'),
-            builtinWordsDisplay: document.getElementById('builtin-words-display'),
-            customWordsDisplay: document.getElementById('custom-words-display')
-        };
-    }
-
-    setupEventListeners() {
-        // Runボタン
-        document.getElementById('run-btn').addEventListener('click', () => {
-            this.executeCode();
-        });
-        
-        // Clearボタン
-        document.getElementById('clear-btn').addEventListener('click', () => {
-            this.editor.clear();
-        });
-        
-        // キーボードショートカット
-        this.elements.codeInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                if (event.shiftKey) {
-                    event.preventDefault();
-                    this.executeCode();
-                } else if (event.ctrlKey) {
-                    event.preventDefault();
-                    this.handleStepExecution();
-                }
-            }
-        });
-        
-        // モバイル用のメモリエリアタッチ
-        this.elements.memoryArea.addEventListener('click', () => {
-            if (this.mobile.isMobile() && this.mode === 'execution') {
-                this.setMode('input');
-            }
-        });
-        
-        // ウィンドウリサイズ
-        window.addEventListener('resize', () => {
-            this.mobile.updateView(this.mode);
-        });
-    }
-
-    setupModuleListeners() {
-        // エディタからのワード挿入イベント
-        window.addEventListener('insert-word', (event) => {
-            this.editor.insertWord(event.detail.word);
-        });
-        
-        // ステップ実行の状態変化
-        window.addEventListener('step-mode-changed', (event) => {
-            if (event.detail.active) {
-                this.display.showOutput('Step mode: Press Ctrl+Enter to continue...');
-            }
-        });
-        
-        // 永続化完了通知
-        window.addEventListener('persistence-complete', (event) => {
-            console.log(event.detail.message);
-        });
-    }
-
-    async executeCode() {
-        const code = this.editor.getValue();
-        if (!code) return;
-        
-        // ステップモードを終了
-        this.stepper.reset();
-        
-        if (!window.ajisaiInterpreter) {
-            this.display.showError('WASM not loaded');
-            return;
-        }
-        
-        try {
-            const result = window.ajisaiInterpreter.execute(code);
-            this.handleExecutionResult(result);
-        } catch (error) {
-            this.display.showError(error);
-        }
-    }
-
-    handleExecutionResult(result) {
-        if (result.status === 'OK') {
-            this.display.showOutput(result.output || 'OK');
-            this.updateInterpreterState();
-            this.editor.clear();
-            
-            if (this.mobile.isMobile()) {
-                this.setMode('execution');
-            }
-            
-            // 自動保存
-            this.persistence.saveCurrentState();
-        } else {
-            this.display.showOutput(result);
-        }
-    }
-
-    updateInterpreterState() {
-        const stack = window.ajisaiInterpreter.get_stack();
-        const register = window.ajisaiInterpreter.get_register();
-        const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
-        
-        this.display.updateStack(stack);
-        this.display.updateRegister(register);
-        this.dictionary.updateCustomWords(customWordsInfo);
-    }
-
-    handleStepExecution() {
-        if (!this.stepper.isActive()) {
-            const code = this.editor.getValue();
-            this.stepper.start(code, (result) => {
-                this.display.showStepInfo(result);
-                this.updateInterpreterState();
-                
-                if (!result.hasMore) {
-                    this.editor.clear();
-                    if (this.mobile.isMobile()) {
-                        this.setMode('execution');
-                    }
-                }
-            });
-        } else {
-            this.stepper.step();
-        }
-    }
-
-    setMode(mode) {
-        this.mode = mode;
-        this.mobile.updateView(mode);
-    }
-}
-
-// グローバルに公開
-window.GUI = new GUI();
+}).catch(error => {
+    // 読み込みに失敗した場合は、コンソールに警告メッセージを表示します。
+    // これにより、WASMがなくても限定的ながら動作を継続できる可能性があります。
+    console.warn('WASM loading failed, continuing without WASM:', error);
+});
