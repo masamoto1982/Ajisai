@@ -1,51 +1,27 @@
+// js/gui/stepper.js
+
 export class Stepper {
-    constructor() {
-        this.active = false;
-        this.callback = null;
+    init(getInterpreter) {
+        this.getInterpreter = getInterpreter;
     }
 
-    init() {
-        this.active = false;
-    }
-
-    isActive() {
-        return this.active;
-    }
-
-    async start(code, callback) {
-        if (!window.ajisaiInterpreter) {
-            throw new Error('WASM not loaded');
-        }
-        
-        this.callback = callback;
-        
+    async start(code) {
         try {
-            const result = window.ajisaiInterpreter.init_step(code);
+            const result = this.getInterpreter().init_step(code);
             if (result === 'OK') {
-                this.active = true;
-                window.dispatchEvent(new CustomEvent('step-mode-changed', {
-                    detail: { active: true }
-                }));
-                this.step();
+                return { ok: true };
             } else {
-                this.callback({ output: result, hasMore: false });
+                return { ok: false, error: result };
             }
         } catch (error) {
-            this.reset();
-            throw error;
+            return { ok: false, error };
         }
     }
 
     async step() {
-        if (!this.active) return;
-        
         try {
-            const stepResult = window.ajisaiInterpreter.step();
-            this.callback(stepResult);
-            
-            if (!stepResult.hasMore) {
-                this.reset();
-            }
+            const result = this.getInterpreter().step();
+            return result; // { hasMore, output, position, total }
         } catch (error) {
             this.reset();
             throw error;
@@ -53,9 +29,6 @@ export class Stepper {
     }
 
     reset() {
-        this.active = false;
-        window.dispatchEvent(new CustomEvent('step-mode-changed', {
-            detail: { active: false }
-        }));
+        // 現在は状態を持たないためリセット処理は不要だが、将来のために残す
     }
 }
