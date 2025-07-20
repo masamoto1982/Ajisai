@@ -1,11 +1,8 @@
-export class MobileHandler {
-    constructor() {
-        this.elements = {};
-    }
+// js/gui/mobile.js
 
+export class MobileHandler {
     init(elements) {
         this.elements = elements;
-        this.updateView('input');
     }
 
     isMobile() {
@@ -16,7 +13,7 @@ export class MobileHandler {
         if (!this.isMobile()) {
             // デスクトップモードでは全て表示
             Object.values(this.elements).forEach(el => {
-                if (el) el.style.display = '';
+                if (el && el.style) el.style.display = '';
             });
             return;
         }
@@ -27,7 +24,7 @@ export class MobileHandler {
             this.elements.outputArea.style.display = 'none';
             this.elements.memoryArea.style.display = 'none';
             this.elements.dictionaryArea.style.display = 'block';
-        } else {
+        } else { // 'execution' mode
             this.elements.inputArea.style.display = 'none';
             this.elements.outputArea.style.display = 'block';
             this.elements.memoryArea.style.display = 'block';
