@@ -1,150 +1,116 @@
+// js/gui/persistence.js
+
 export class Persistence {
-    constructor() {
-        this.autoSaveEnabled = true;
-        this.db = null;
+    constructor(gui) {
+        this.gui = gui; // GUIのメインインスタンスへの参照
     }
 
     async init() {
         try {
-            await this.initDatabase();
+            await window.AjisaiDB.open();
+            console.log('Database initialized successfully for Persistence.');
             this.setupDatabaseListeners();
-            
-            // WASMロード後に自動読み込み
-            if (window.ajisaiInterpreter) {
-                await this.loadDatabaseData();
-            } else {
-                window.addEventListener('wasmLoaded', async () => {
-                    await this.loadDatabaseData();
-                });
-            }
         } catch (error) {
-            console.error('Failed to initialize persistence:', error);
+            console.error('Failed to initialize persistence database:', error);
         }
-    }
-
-    async initDatabase() {
-        if (!window.AjisaiDB) {
-            throw new Error('AjisaiDB is not defined');
-        }
-        
-        await window.AjisaiDB.open();
-        console.log('Database initialized successfully');
     }
 
     setupDatabaseListeners() {
-        // SAVE-DBワード実行時
         window.addEventListener('ajisai-save-db', async () => {
-            await this.saveToDatabase();
+            console.log('SAVE-DB command caught.');
+            this.gui.display.showInfo('Saving database via SAVE-DB command...');
+            try {
+                const tableNames = window.ajisaiInterpreter.get_all_tables();
+                const tables = {};
+                for (const name of tableNames) {
+                    const tableData = window.ajisaiInterpreter.load_table(name);
+                    if (tableData) {
+                        tables[name] = { schema: tableData[0], records: tableData[1] };
+                    }
+                }
+                await window.AjisaiDB.saveAllState(tables, {}); // テーブルのみ保存
+                this.gui.display.showInfo('Database tables saved via SAVE-DB.', true);
+            } catch(error) {
+                this.gui.display.showError(error);
+            }
         });
         
-        // LOAD-DBワード実行時
         window.addEventListener('ajisai-load-db', async () => {
-            await this.loadFromDatabase();
+            console.log('LOAD-DB command caught.');
+            this.gui.display.showInfo('Loading database via LOAD-DB command...');
+            await this.loadDatabaseData(true); // isCommand = true
+            this.gui.updateAllDisplays();
+            this.gui.display.showInfo('Database tables loaded via LOAD-DB.', true);
         });
     }
 
     async saveCurrentState() {
-        if (!this.autoSaveEnabled || !window.ajisaiInterpreter) return;
+        if (!window.ajisaiInterpreter) return;
         
         try {
-            const state = {
-                stack: window.ajisaiInterpreter.get_stack(),
-                register: window.ajisaiInterpreter.get_register(),
-                tables: {},
-                customWords: []
-            };
-            
-            // テーブルを収集
+            const tables = {};
             const tableNames = window.ajisaiInterpreter.get_all_tables();
             for (const name of tableNames) {
                 const tableData = window.ajisaiInterpreter.load_table(name);
                 if (tableData) {
-                    state.tables[name] = {
-                        schema: tableData[0],
-                        records: tableData[1]
-                    };
+                    tables[name] = { schema: tableData[0], records: tableData[1] };
                 }
             }
-            
-            // カスタムワードを収集
+
             const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
-            for (const wordData of customWordsInfo) {
-                if (Array.isArray(wordData)) {
-                    const name = wordData[0];
-                    const description = wordData[1] || null;
-                    const definition = window.ajisaiInterpreter.get_word_definition(name);
-                    state.customWords.push({ name, definition, description });
-                }
-            }
-            
-            await window.AjisaiDB.saveAllState(state.tables, {
-                stack: state.stack,
-                register: state.register,
-                customWords: state.customWords
-            });
-            
-            window.dispatchEvent(new CustomEvent('persistence-complete', {
-                detail: { message: 'State saved automatically' }
+            const customWords = customWordsInfo.map(wordData => ({
+                name: wordData[0],
+                description: wordData[1],
+                definition: window.ajisaiInterpreter.get_word_definition(wordData[0])
             }));
+
+            const interpreterState = {
+                stack: window.ajisaiInterpreter.get_stack(),
+                register: window.ajisaiInterpreter.get_register(),
+                customWords: customWords,
+            };
+
+            await window.AjisaiDB.saveAllState(tables, interpreterState);
+            console.log('State saved automatically.');
         } catch (error) {
-            console.error('Failed to save state:', error);
+            console.error('Failed to auto-save state:', error);
         }
     }
 
-    async loadDatabaseData() {
+    async loadDatabaseData(isCommand = false) {
+        if (!window.ajisaiInterpreter) return;
+        
         try {
-            // テーブルを読み込み
             const tableNames = await window.AjisaiDB.getAllTableNames();
             for (const tableName of tableNames) {
                 const tableData = await window.AjisaiDB.loadTable(tableName);
                 if (tableData) {
-                    window.ajisaiInterpreter.save_table(
-                        tableName,
-                        tableData.schema,
-                        tableData.records
-                    );
+                    window.ajisaiInterpreter.save_table(tableName, tableData.schema, tableData.records);
                 }
             }
-            
-            // インタープリタの状態を読み込み
+            console.log(`${tableNames.length} tables loaded.`);
+
+            // LOAD-DBコマンドの時はスタックやレジスタは復元しない
+            if (isCommand) return;
+
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
-                if (state.stack && state.stack.length > 0) {
-                    window.ajisaiInterpreter.restore_stack(state.stack);
-                }
-                
-                if (state.register !== null && state.register !== undefined) {
-                    window.ajisaiInterpreter.restore_register(state.register);
-                }
-                
-                if (state.customWords && state.customWords.length > 0) {
-                    for (const wordInfo of state.customWords) {
-                        const name = wordInfo.name || wordInfo[0];
-                        const definition = wordInfo.definition;
-                        const description = wordInfo.description || wordInfo[1] || null;
-                        
-                        if (definition) {
-                            window.ajisaiInterpreter.restore_word(name, definition, description);
+                if (state.stack) window.ajisaiInterpreter.restore_stack(state.stack);
+                if (state.register) window.ajisaiInterpreter.restore_register(state.register);
+                if (state.customWords) {
+                    for (const word of state.customWords) {
+                        if (word.name && word.definition) {
+                            window.ajisaiInterpreter.restore_word(word.name, word.definition, word.description);
                         }
                     }
                 }
+                console.log('Interpreter state restored.');
             }
-            
-            window.dispatchEvent(new CustomEvent('persistence-complete', {
-                detail: { message: 'Database loaded successfully' }
-            }));
         } catch (error) {
-            console.error('Failed to load database:', error);
+            console.error('Failed to load database data:', error);
+            if (this.gui) {
+                this.gui.display.showError(error);
+            }
         }
-    }
-
-    async saveToDatabase() {
-        // SAVE-DBコマンド用
-        await this.saveCurrentState();
-    }
-
-    async loadFromDatabase() {
-        // LOAD-DBコマンド用
-        await this.loadDatabaseData();
     }
 }
