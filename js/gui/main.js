@@ -17,6 +17,7 @@ export class GUI {
         this.mobile = new MobileHandler();
         this.persistence = new Persistence();
         this.elements = {};
+        this.lastEvent = null;  // イベントを保存するプロパティを追加
     }
 
     init() {
@@ -59,16 +60,20 @@ export class GUI {
     }
 
     setupEventListeners() {
-        // 実行ボタン
-        this.elements.runBtn.addEventListener('click', () => this.run());
+        // 実行ボタン - イベントオブジェクトを保存
+        this.elements.runBtn.addEventListener('click', (e) => {
+            this.lastEvent = e;
+            this.run();
+        });
         
         // クリアボタン
         this.elements.clearBtn.addEventListener('click', () => this.clear());
         
-        // キーボードショートカット
+        // キーボードショートカット - イベントオブジェクトを保存
         this.elements.codeInput.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
+                this.lastEvent = e;
                 this.run();
             }
         });
@@ -80,6 +85,7 @@ export class GUI {
 
         // WASMロード完了時
         window.addEventListener('wasmLoaded', () => {
+            console.log('GUI: wasmLoaded event received');
             this.updateDisplay();
         });
 
@@ -113,12 +119,21 @@ export class GUI {
                     this.updateDisplay();
                 });
             } else {
+                console.log('Executing code:', code);
                 const result = window.ajisaiInterpreter.execute(code);
-                this.display.showOutput(result.output || 'OK');
+                console.log('Execution result:', result);
+                
+                if (result && result.output !== undefined) {
+                    this.display.showOutput(result.output || 'OK');
+                } else {
+                    this.display.showOutput('OK');
+                }
+                
                 this.updateDisplay();
                 await this.persistence.saveCurrentState();
             }
         } catch (error) {
+            console.error('Execution error:', error);
             this.display.showError(error);
             this.stepper.reset();
         }
@@ -130,23 +145,30 @@ export class GUI {
     }
 
     shouldUseStepMode() {
-        return event.ctrlKey || event.metaKey;
+        // 保存されたイベントオブジェクトを使用
+        return this.lastEvent && (this.lastEvent.ctrlKey || this.lastEvent.metaKey);
     }
 
     updateDisplay() {
-        if (!window.ajisaiInterpreter) return;
+        if (!window.ajisaiInterpreter) {
+            console.log('updateDisplay: interpreter not ready');
+            return;
+        }
 
         try {
             // スタックの更新
             const stack = window.ajisaiInterpreter.get_stack();
+            console.log('Stack:', stack);
             this.display.updateStack(stack);
 
             // レジスタの更新
             const register = window.ajisaiInterpreter.get_register();
+            console.log('Register:', register);
             this.display.updateRegister(register);
 
             // カスタムワードの更新
             const customWords = window.ajisaiInterpreter.get_custom_words_info();
+            console.log('Custom words:', customWords);
             this.dictionary.updateCustomWords(customWords);
         } catch (error) {
             console.error('Failed to update display:', error);
