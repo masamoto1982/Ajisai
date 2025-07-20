@@ -3,40 +3,44 @@
 import { GUI_INSTANCE } from './gui/main.js';
 import { initWasm } from './wasm-loader.js';
 
+/**
+ * アプリケーションのメインエントリーポイント
+ */
 async function main() {
     try {
+        console.log('Application starting...');
+
         // 1. WASMモジュールの初期化を待つ
         const wasm = await initWasm();
         if (!wasm) {
-            console.error('WASM initialization failed. Aborting application startup.');
-            // ユーザーにエラーメッセージを表示する処理などをここに追加
-            return;
+            throw new Error('WASM initialization failed. Application cannot start.');
         }
         window.HolonWasm = wasm;
         console.log('WASM loaded and initialized successfully.');
 
-        // 2. Ajisaiインタープリタを作成
+        // 2. Ajisaiインタープリタを作成し、グローバルに公開
         window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
         console.log('Ajisai interpreter created.');
-
+        
         // 3. GUIを初期化（この時点でajisaiInterpreterは利用可能）
+        // GUI.init()は同期的にDOM要素のキャッシュとイベントリスナーの設定を行う
         GUI_INSTANCE.init();
         console.log('GUI initialized.');
-        
-        // 4. (オプション) データベースからのデータ読み込み完了を待ってから最終表示更新
-        // Persistence.init()内でデータロードまで完了させるように改修するとより堅牢になります。
-        // await GUI_INSTANCE.persistence.loadDatabaseData();
-        // GUI_INSTANCE.updateDisplay();
+
+        // 4. データベースから非同期でデータを読み込み、完了後にGUIを更新
+        await GUI_INSTANCE.persistence.loadDatabaseData();
+        GUI_INSTANCE.updateAllDisplays(); // データベース読み込み後に表示を完全に更新
+        GUI_INSTANCE.display.showInfo('Ready.'); // 準備完了を通知
 
     } catch (error) {
         console.error('An error occurred during application startup:', error);
         // ユーザー向けのエラー表示
         const outputDisplay = document.getElementById('output-display');
         if (outputDisplay) {
-            outputDisplay.textContent = 'アプリケーションの起動に失敗しました。詳細はコンソールを確認してください。';
+            outputDisplay.textContent = `アプリケーションの起動に失敗しました: ${error.message}`;
         }
     }
 }
 
 // アプリケーションの実行開始
-main();
+document.addEventListener('DOMContentLoaded', main);
