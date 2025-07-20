@@ -65,27 +65,36 @@
     </div>
     
     <!-- JavaScript files -->
- <script src="js/types.js"></script>
+    <script src="js/types.js"></script>
     <script src="js/db.js"></script>
 
-    <script type="module" src="js/main.js"></script>
-    
-    <!-- WASM初期化（別途） -->
-<script type="module">
-    import { initWasm } from './js/wasm-loader.js';
-    
-    // WASMの初期化（非同期）
-    initWasm().then(wasm => {
-        if (wasm) {
-            window.HolonWasm = wasm;
-            console.log('WASM loaded successfully');
-            
-            // カスタムイベントを発火
-            window.dispatchEvent(new Event('wasmLoaded'));
-        }
-    }).catch(error => {
-        console.warn('WASM loading failed, continuing without WASM:', error);
-    });
-</script>
+    <!-- メインアプリケーションとGUIの初期化 -->
+    <script type="module">
+        import { initWasm } from './js/wasm-loader.js';
+        import { GUI_INSTANCE } from './js/gui/main.js';
+        
+        // DOM読み込み完了時にGUIを初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOMContentLoaded - initializing GUI from index.html');
+            GUI_INSTANCE.init();
+        });
+        
+        // WASMの初期化（非同期）
+        initWasm().then(wasm => {
+            if (wasm) {
+                window.HolonWasm = wasm;
+                console.log('WASM loaded successfully');
+                
+                // Ajisaiインタープリタを作成
+                window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
+                console.log('Ajisai interpreter initialized');
+                
+                // カスタムイベントを発火
+                window.dispatchEvent(new Event('wasmLoaded'));
+            }
+        }).catch(error => {
+            console.warn('WASM loading failed, continuing without WASM:', error);
+        });
+    </script>
 </body>
 </html>
