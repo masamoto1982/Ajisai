@@ -3,49 +3,40 @@
 import { GUI_INSTANCE } from './gui/main.js';
 import { initWasm } from './wasm-loader.js';
 
-/**
- * DOM（ページの構造）の読み込みが完了したときに実行されるメインの処理です。
- * HTMLの解析が終わった直後にこの中のコードが動きます。
- */
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded - initializing GUI');
-    // インポートしたGUIインスタンスの初期化メソッド `init()` を呼び出します。
-    // これにより、画面のボタンや表示エリアなどの設定が行われます。
-    GUI_INSTANCE.init();
-});
-
-/**
- * WASMモジュールの読み込みが完了したことを知らせる 'wasmLoaded' イベントを監視します。
- * このイベントは、WASMの非同期読み込みが成功した後に発火します。
- */
-window.addEventListener('wasmLoaded', () => {
-    // グローバル変数 `window.HolonWasm` にWASMモジュールが格納されていることを確認します。
-    if (window.HolonWasm) {
-        // Ajisaiのインタープリタ（コード解釈・実行エンジン）を作成し、
-        // グローバル変数 `window.ajisaiInterpreter` に格納します。
-        // これにより、アプリケーションのどこからでもインタープリタにアクセスできるようになります。
-        window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
-        console.log('Ajisai interpreter initialized');
-    }
-});
-
-/**
- * WASMモジュールの初期化を非同期で開始します。
- * この処理はページの読み込みと並行して行われます。
- */
-initWasm().then(wasm => {
-    // 読み込みが成功した場合
-    if (wasm) {
-        // 読み込んだWASMモジュールをグローバル変数 `window.HolonWasm` に格納します。
+async function main() {
+    try {
+        // 1. WASMモジュールの初期化を待つ
+        const wasm = await initWasm();
+        if (!wasm) {
+            console.error('WASM initialization failed. Aborting application startup.');
+            // ユーザーにエラーメッセージを表示する処理などをここに追加
+            return;
+        }
         window.HolonWasm = wasm;
-        console.log('WASM loaded successfully from main.js');
+        console.log('WASM loaded and initialized successfully.');
 
-        // 'wasmLoaded' という名前のカスタムイベントを作成し、
-        // アプリケーション全体にWASMの準備ができたことを通知します。
-        window.dispatchEvent(new Event('wasmLoaded'));
+        // 2. Ajisaiインタープリタを作成
+        window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
+        console.log('Ajisai interpreter created.');
+
+        // 3. GUIを初期化（この時点でajisaiInterpreterは利用可能）
+        GUI_INSTANCE.init();
+        console.log('GUI initialized.');
+        
+        // 4. (オプション) データベースからのデータ読み込み完了を待ってから最終表示更新
+        // Persistence.init()内でデータロードまで完了させるように改修するとより堅牢になります。
+        // await GUI_INSTANCE.persistence.loadDatabaseData();
+        // GUI_INSTANCE.updateDisplay();
+
+    } catch (error) {
+        console.error('An error occurred during application startup:', error);
+        // ユーザー向けのエラー表示
+        const outputDisplay = document.getElementById('output-display');
+        if (outputDisplay) {
+            outputDisplay.textContent = 'アプリケーションの起動に失敗しました。詳細はコンソールを確認してください。';
+        }
     }
-}).catch(error => {
-    // 読み込みに失敗した場合は、コンソールに警告メッセージを表示します。
-    // これにより、WASMがなくても限定的ながら動作を継続できる可能性があります。
-    console.warn('WASM loading failed, continuing without WASM:', error);
-});
+}
+
+// アプリケーションの実行開始
+main();
