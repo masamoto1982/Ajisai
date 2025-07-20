@@ -11,11 +11,10 @@
     <div class="container">
         <header>
             <h1>Ajisai</h1>
-            <span class="version">ver.202507190932</span>
+            <span class="version">ver.202507201848</span>
         </header>
         
         <main class="main-layout">
-            <!-- 作業領域パネル -->
             <div id="workspace-panel" class="panel">
                 <section class="output-area">
                     <h2>Output</h2>
@@ -23,7 +22,7 @@
                 </section>
                 <section class="input-area">
                     <h2>Input</h2>
-                    <textarea id="code-input" placeholder="Enter Ajisai code here..."></textarea>
+                    <textarea id="code-input" placeholder="Enter Ajisai code here... (Shift+Enter to run, Ctrl+Enter to step)"></textarea>
                     <div class="controls">
                         <button id="run-btn">Run</button>
                         <button id="clear-btn">Clear</button>
@@ -31,7 +30,6 @@
                 </section>
             </div>
             
-            <!-- 状態表示パネル -->
             <div id="state-panel" class="panel">
                 <section class="memory-area">
                     <h2>Memory</h2>
@@ -64,41 +62,9 @@
         </main>
     </div>
     
-    <!-- JavaScript files -->
     <script src="js/types.js"></script>
     <script src="js/db.js"></script>
 
     <script type="module" src="js/main.js"></script>
-</body>
-</html>
-
-    <!-- メインアプリケーションとGUIの初期化 -->
-    <script type="module">
-        import { initWasm } from './js/wasm-loader.js';
-        import { GUI_INSTANCE } from './js/gui/main.js';
-        
-        // DOM読み込み完了時にGUIを初期化
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOMContentLoaded - initializing GUI from index.html');
-            GUI_INSTANCE.init();
-        });
-        
-        // WASMの初期化（非同期）
-        initWasm().then(wasm => {
-            if (wasm) {
-                window.HolonWasm = wasm;
-                console.log('WASM loaded successfully');
-                
-                // Ajisaiインタープリタを作成
-                window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
-                console.log('Ajisai interpreter initialized');
-                
-                // カスタムイベントを発火
-                window.dispatchEvent(new Event('wasmLoaded'));
-            }
-        }).catch(error => {
-            console.warn('WASM loading failed, continuing without WASM:', error);
-        });
-    </script>
 </body>
 </html>
