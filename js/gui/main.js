@@ -8,22 +8,40 @@ import { MobileHandler } from './mobile.js';
 import { Persistence } from './persistence.js';
 
 // GUIクラスの定義
-export class GUI {
+class GUI {
     constructor() {
         this.display = new Display();
         this.dictionary = new Dictionary();
         this.editor = new Editor();
         this.stepper = new Stepper();
         this.mobile = new MobileHandler();
-        this.persistence = new Persistence();
+        this.persistence = new Persistence(this); // GUIインスタンスを渡す
+
         this.elements = {};
-        this.lastEvent = null;  // イベントを保存するプロパティを追加
+        this.mode = 'input';      // 'input' or 'execution' (for mobile)
+        this.stepMode = false;    // ステップ実行モード
     }
 
     init() {
         console.log('GUI.init() called');
-        
-        // DOM要素の取得
+        this.cacheElements();
+
+        // 各モジュールの初期化
+        this.display.init(this.elements);
+        this.dictionary.init(this.elements, (word) => this.editor.insertWord(word + ' '));
+        this.editor.init(this.elements.codeInput);
+        this.stepper.init(() => window.ajisaiInterpreter); // インタープリタを渡す
+        this.mobile.init(this.elements);
+        this.persistence.init();
+
+        this.setupEventListeners();
+
+        // 初期表示
+        this.dictionary.renderBuiltinWords();
+        this.updateAllDisplays();
+    }
+
+    cacheElements() {
         this.elements = {
             codeInput: document.getElementById('code-input'),
             runBtn: document.getElementById('run-btn'),
@@ -38,146 +56,135 @@ export class GUI {
             memoryArea: document.querySelector('.memory-area'),
             dictionaryArea: document.querySelector('.dictionary-area')
         };
-
-        // 各モジュールの初期化
-        this.display.init(this.elements);
-        this.dictionary.init(this.elements);
-        this.editor.init(this.elements.codeInput);
-        this.stepper.init();
-        this.mobile.init(this.elements);
-        this.persistence.init();
-
-        // イベントリスナーの設定
-        this.setupEventListeners();
-
-        // 初期表示
-        this.updateDisplay();
-        
-        // 組み込みワードを表示
-        this.dictionary.renderBuiltinWords();
-        
-        console.log('GUI initialization complete');
     }
-
+    
     setupEventListeners() {
-        // 実行ボタン - イベントオブジェクトを保存
-        this.elements.runBtn.addEventListener('click', (e) => {
-            this.lastEvent = e;
-            this.run();
-        });
-        
-        // クリアボタン
-        this.elements.clearBtn.addEventListener('click', () => this.clear());
-        
-        // キーボードショートカット - イベントオブジェクトを保存
+        this.elements.runBtn.addEventListener('click', () => this.runNormal());
+        this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
+
         this.elements.codeInput.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                e.preventDefault();
-                this.lastEvent = e;
-                this.run();
+            if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    this.runNormal();
+                } else if (e.ctrlKey) {
+                    e.preventDefault();
+                    this.runStep();
+                }
             }
         });
 
-        // ワード挿入イベント
-        window.addEventListener('insert-word', (e) => {
-            this.editor.insertWord(e.detail.word + ' ');
+        // Memoryエリアのクリックで入力モードに戻る（モバイルのみ）
+        this.elements.memoryArea.addEventListener('click', () => {
+            if (this.mobile.isMobile() && this.mode === 'execution') {
+                this.setMode('input');
+            }
         });
 
-        // WASMロード完了時
-        window.addEventListener('wasmLoaded', () => {
-            console.log('GUI: wasmLoaded event received');
-            this.updateDisplay();
-        });
-
-        // 永続化完了通知
-        window.addEventListener('persistence-complete', (e) => {
-            console.log(e.detail.message);
-            this.updateDisplay();
-        });
-
-        // ステップモード変更
-        window.addEventListener('step-mode-changed', (e) => {
-            this.elements.runBtn.textContent = e.detail.active ? 'Step' : 'Run';
-        });
+        window.addEventListener('resize', () => this.mobile.updateView(this.mode));
     }
 
-    async run() {
+    setMode(newMode) {
+        this.mode = newMode;
+        this.mobile.updateView(this.mode);
+    }
+    
+    // 通常実行
+    async runNormal() {
         const code = this.editor.getValue();
         if (!code) return;
 
-        if (!window.ajisaiInterpreter) {
-            this.display.showError('WASM not loaded yet. Please wait...');
-            return;
-        }
+        this.stepMode = false;
+        this.updateRunButton();
 
         try {
-            if (this.stepper.isActive()) {
-                await this.stepper.step();
-            } else if (this.shouldUseStepMode()) {
-                await this.stepper.start(code, (result) => {
-                    this.display.showStepInfo(result);
-                    this.updateDisplay();
-                });
-            } else {
-                console.log('Executing code:', code);
-                const result = window.ajisaiInterpreter.execute(code);
-                console.log('Execution result:', result);
-                
-                if (result && result.output !== undefined) {
-                    this.display.showOutput(result.output || 'OK');
-                } else {
-                    this.display.showOutput('OK');
+            const result = window.ajisaiInterpreter.execute(code);
+            if (result.status === 'OK') {
+                this.display.showOutput(result.output || 'OK');
+                this.editor.clear();
+                if (this.mobile.isMobile()) {
+                    this.setMode('execution');
                 }
-                
-                this.updateDisplay();
-                await this.persistence.saveCurrentState();
+            } else {
+                this.display.showError(result);
             }
         } catch (error) {
-            console.error('Execution error:', error);
             this.display.showError(error);
-            this.stepper.reset();
         }
+        
+        this.updateAllDisplays();
+        await this.persistence.saveCurrentState();
+        this.display.showInfo('State saved.', true); // 追記モードで保存メッセージを表示
     }
 
-    clear() {
-        this.editor.clear();
-        this.editor.focus();
-    }
-
-    shouldUseStepMode() {
-        // 保存されたイベントオブジェクトを使用
-        return this.lastEvent && (this.lastEvent.ctrlKey || this.lastEvent.metaKey);
-    }
-
-    updateDisplay() {
-        if (!window.ajisaiInterpreter) {
-            console.log('updateDisplay: interpreter not ready');
-            return;
-        }
+    // ステップ実行（開始または継続）
+    async runStep() {
+        const code = this.editor.getValue();
+        if (!code && !this.stepMode) return;
 
         try {
-            // スタックの更新
-            const stack = window.ajisaiInterpreter.get_stack();
-            console.log('Stack:', stack);
-            this.display.updateStack(stack);
+            if (!this.stepMode) {
+                // ステップ実行の開始
+                const result = await this.stepper.start(code);
+                if (result.ok) {
+                    this.stepMode = true;
+                    this.updateRunButton();
+                    await this.continueStep(); // 最初のステップを実行
+                } else {
+                    this.display.showError(result.error);
+                }
+            } else {
+                // ステップ実行の継続
+                await this.continueStep();
+            }
+        } catch(error) {
+            this.display.showError(error);
+            this.resetStepMode();
+        }
+    }
 
-            // レジスタの更新
-            const register = window.ajisaiInterpreter.get_register();
-            console.log('Register:', register);
-            this.display.updateRegister(register);
+    async continueStep() {
+        const result = await this.stepper.step();
+        
+        if (result.output) {
+            this.display.showOutput(result.output);
+        }
 
-            // カスタムワードの更新
-            const customWords = window.ajisaiInterpreter.get_custom_words_info();
-            console.log('Custom words:', customWords);
-            this.dictionary.updateCustomWords(customWords);
+        if (result.hasMore) {
+            this.display.showInfo(`Step ${result.position}/${result.total}: Press Ctrl+Enter to continue...`);
+        } else {
+            this.display.showInfo('Step execution completed.');
+            this.resetStepMode();
+        }
+        
+        this.updateAllDisplays();
+    }
+    
+    resetStepMode() {
+        this.stepMode = false;
+        this.stepper.reset();
+        this.updateRunButton();
+    }
+
+    updateRunButton() {
+        this.elements.runBtn.textContent = this.stepMode ? 'Step' : 'Run';
+    }
+
+    // 全ての表示エリアを更新
+    updateAllDisplays() {
+        if (!window.ajisaiInterpreter) {
+            return;
+        }
+        try {
+            this.display.updateStack(window.ajisaiInterpreter.get_stack());
+            this.display.updateRegister(window.ajisaiInterpreter.get_register());
+            this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
         } catch (error) {
             console.error('Failed to update display:', error);
+            this.display.showError('Failed to update display.');
         }
     }
 }
 
 // GUIインスタンスを作成してエクスポート
 export const GUI_INSTANCE = new GUI();
-
-// グローバルに公開（後方互換性のため）
-window.GUI = GUI_INSTANCE;
