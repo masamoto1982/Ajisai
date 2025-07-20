@@ -1,19 +1,22 @@
+// js/gui/dictionary.js
+
 export class Dictionary {
-    constructor() {
-        this.elements = {};
+    init(elements, onWordClick) {
+        this.elements = elements;
+        this.onWordClick = onWordClick;
         this.builtinWords = [
-            { name: '+', description: '加算 - 暗黙の反復対応 ( a b -- a+b )' },
-            { name: '-', description: '減算 - 暗黙の反復対応 ( a b -- a-b )' },
-            { name: '*', description: '乗算 - 暗黙の反復対応 ( a b -- a*b )' },
-            { name: '/', description: '除算 - 暗黙の反復対応 ( a b -- a/b )' },
+            { name: '+', description: '加算 ( a b -- a+b )' },
+            { name: '-', description: '減算 ( a b -- a-b )' },
+            { name: '*', description: '乗算 ( a b -- a*b )' },
+            { name: '/', description: '除算 ( a b -- a/b )' },
             { name: '=', description: '等しい ( a b -- bool )' },
-            { name: '>', description: 'より大きい - 暗黙の反復対応 ( a b -- bool )' },
-            { name: '>=', description: '以上 - 暗黙の反復対応 ( a b -- bool )' },
-            { name: '<', description: 'より小さい - 暗黙の反復対応 ( a b -- bool )' },
-            { name: '<=', description: '以下 - 暗黙の反復対応 ( a b -- bool )' },
-            { name: 'NOT', description: '論理否定 - 暗黙の反復対応 ( bool -- bool )' },
-            { name: 'AND', description: '論理積 - 三値論理対応 ( bool bool -- bool )' },
-            { name: 'OR', description: '論理和 - 三値論理対応 ( bool bool -- bool )' },
+            { name: '>', description: 'より大きい ( a b -- bool )' },
+            { name: '>=', description: '以上 ( a b -- bool )' },
+            { name: '<', description: 'より小さい ( a b -- bool )' },
+            { name: '<=', description: '以下 ( a b -- bool )' },
+            { name: 'NOT', description: '論理否定 ( bool -- bool )' },
+            { name: 'AND', description: '論理積 ( bool bool -- bool )' },
+            { name: 'OR', description: '論理和 ( bool bool -- bool )' },
             { name: 'DUP', description: 'スタックトップを複製 ( a -- a a )' },
             { name: 'DROP', description: 'スタックトップを削除 ( a -- )' },
             { name: 'SWAP', description: '上位2つを交換 ( a b -- b a )' },
@@ -64,58 +67,39 @@ export class Dictionary {
         ];
     }
 
-    init(elements) {
-        this.elements = elements;
-    }
-
     renderBuiltinWords() {
         this.renderWordButtons(this.elements.builtinWordsDisplay, this.builtinWords, false);
     }
 
-    renderCustomWords(customWords) {
-        this.renderWordButtons(this.elements.customWordsDisplay, customWords, true);
-    }
-
     updateCustomWords(customWordsInfo) {
-        const words = customWordsInfo.map(wordData => {
-            if (Array.isArray(wordData)) {
-                return {
-                    name: wordData[0],
-                    description: wordData[1] || null,
-                    protected: wordData[2] || false
-                };
-            }
-            return wordData;
-        });
-        this.renderCustomWords(words);
+        const words = (customWordsInfo || []).map(wordData => ({
+            name: wordData[0],
+            description: wordData[1] || null,
+            protected: wordData[2] || false
+        }));
+        this.renderWordButtons(this.elements.customWordsDisplay, words, true);
     }
 
-    renderWordButtons(container, words, isCustom = false) {
+    renderWordButtons(container, words, isCustom) {
         container.innerHTML = '';
-        
         words.forEach(wordInfo => {
-            const word = typeof wordInfo === 'string' ? wordInfo : wordInfo.name;
-            const description = typeof wordInfo === 'object' ? wordInfo.description : null;
-            const isProtected = typeof wordInfo === 'object' ? wordInfo.protected : false;
-            
             const button = document.createElement('button');
-            button.textContent = word;
+            button.textContent = wordInfo.name;
             button.className = 'word-button';
+            button.title = wordInfo.description || wordInfo.name;
             
             if (!isCustom) {
                 button.classList.add('builtin');
-            } else if (isProtected) {
+            } else if (wordInfo.protected) {
                 button.classList.add('protected');
             } else {
                 button.classList.add('deletable');
             }
             
-            button.title = description || word;
-            
             button.addEventListener('click', () => {
-                window.dispatchEvent(new CustomEvent('insert-word', {
-                    detail: { word, isCustom }
-                }));
+                if (this.onWordClick) {
+                    this.onWordClick(wordInfo.name);
+                }
             });
             
             container.appendChild(button);
