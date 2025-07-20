@@ -93,30 +93,48 @@ export class Display {
     }
 
     formatValue(item) {
-        if (!item || !item.val_type) return 'undefined';
+        // 直接値を確認（WASMからの値の場合）
+        if (!item) return 'undefined';
         
-        const val = this.convertWasmValue(item);
-        
-        switch (val.type) {
-            case 'number':
-                return typeof val.value === 'string' ? val.value : val.value.toString();
-            case 'string':
-                return `"${val.value}"`;
-            case 'symbol':
-                return val.value;
-            case 'boolean':
-                return val.value ? 'true' : 'false';
-            case 'vector':
-                if (Array.isArray(val.value)) {
-                    const elements = val.value.map(v => this.formatValue(v)).join(' ');
-                    return `[ ${elements} ]`;
-                }
-                return '[ ]';
-            case 'nil':
-                return 'nil';
-            default:
-                return JSON.stringify(val.value);
+        // typeプロパティがある場合（新しい形式）
+        if (item.type) {
+            switch (item.type) {
+                case 'number':
+                    return typeof item.value === 'string' ? item.value : item.value.toString();
+                case 'string':
+                    return `"${item.value}"`;
+                case 'symbol':
+                    return item.value;
+                case 'boolean':
+                    return item.value ? 'true' : 'false';
+                case 'vector':
+                    if (Array.isArray(item.value)) {
+                        const elements = item.value.map(v => this.formatValue(v)).join(' ');
+                        return `[ ${elements} ]`;
+                    }
+                    return '[ ]';
+                case 'nil':
+                    return 'nil';
+                case 'quotation':
+                    return '{ ... }';
+                default:
+                    return JSON.stringify(item.value);
+            }
         }
+        
+        // val_typeプロパティがある場合（古い形式）
+        if (item.val_type) {
+            const val = this.convertWasmValue(item);
+            return this.formatValue(val);
+        }
+        
+        // プリミティブ値の場合
+        if (typeof item === 'number') return item.toString();
+        if (typeof item === 'string') return `"${item}"`;
+        if (typeof item === 'boolean') return item ? 'true' : 'false';
+        if (item === null) return 'nil';
+        
+        return JSON.stringify(item);
     }
 
     convertWasmValue(wasmValue) {
@@ -134,7 +152,8 @@ export class Display {
             'string': 'string',
             'boolean': 'boolean',
             'symbol': 'symbol',
-            'nil': 'nil'
+            'nil': 'nil',
+            'quotation': 'quotation'
         };
         
         return {
