@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajisai Language Reference</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        header {
+            background-color: #fff;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #ddd;
+            padding-bottom: 0.5rem;
+        }
+        
+        h2 {
+            color: #555;
+            margin-top: 2rem;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 0.3rem;
+        }
+        
+        h3 {
+            color: #666;
+            margin-top: 1.5rem;
+        }
+        
+        .toc {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .toc ul {
+            list-style-type: none;
+            padding-left: 1rem;
+        }
+        
+        .toc > ul {
+            padding-left: 0;
+        }
+        
+        .toc a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .word-section {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .word-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .word-name {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #d73a49;
+        }
+        
+        .stack-notation {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .description {
+            margin: 0.5rem 0;
+            color: #555;
+        }
+        
+        .example {
+            background-color: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .example-title {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        
+        .code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background-color: #f0f0f0;
+            padding: 0.8rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            white-space: pre-wrap;
+            border-left: 3px solid #007bff;
+        }
+        
+        .output {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background-color: #e8f5e9;
+            padding: 0.8rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            border-left: 3px solid #4caf50;
+        }
+        
+        .stack-state {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0.3rem 0;
+        }
+        
+        .note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 0.8rem;
+            margin: 1rem 0;
+        }
+        
+        .note::before {
+            content: "📝 注意: ";
+            font-weight: bold;
+        }
+        
+        .category-header {
+            background-color: #e3f2fd;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 2rem 0 1rem 0;
+        }
+        
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background-color: #f0f0f0;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        
+        .implicit-iteration {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            padding: 0.8rem;
+            margin: 1rem 0;
+        }
+        
+        .implicit-iteration::before {
+            content: "🔄 暗黙の反復: ";
+            font-weight: bold;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Ajisai Language Reference</h1>
+        <p>Ajisaiは、FORTHにインスパイアされたスタックベースのプログラミング言語です。</p>
+    </header>
+
+    <nav class="toc">
+        <h2>目次</h2>
+        <ul>
+            <li><a href="#introduction">はじめに</a></li>
+            <li><a href="#data-types">データ型</a></li>
+            <li><a href="#stack-operations">スタック操作</a></li>
+            <li><a href="#arithmetic">算術演算</a></li>
+            <li><a href="#comparison">比較演算</a></li>
+            <li><a href="#logical">論理演算</a></li>
+            <li><a href="#vector-operations">ベクトル操作</a></li>
+            <li><a href="#control-structures">制御構造</a></li>
+            <li><a href="#io-operations">入出力</a></li>
+            <li><a href="#register-operations">レジスタ操作</a></li>
+            <li><a href="#nil-operations">Nil操作</a></li>
+        </ul>
+    </nav>
+
+    <section id="introduction">
+        <h2>はじめに</h2>
+        <div class="word-section">
+            <h3>基本的な使い方</h3>
+            <p>Ajisaiはスタックベースの言語で、値をスタックに積んで演算を行います。</p>
+            <div class="example">
+                <div class="example-title">例: 基本的な計算</div>
+                <div class="code">2 3 +</div>
+                <div class="stack-state">スタック: 2 → 2 3 → 5</div>
+                <div class="output">結果: スタックトップに 5</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="data-types">
+        <h2>データ型</h2>
+        <div class="word-section">
+            <h3>数値 (Number)</h3>
+            <div class="example">
+                <div class="code">42        # 整数
+3.14      # 小数（内部的に分数として扱われる）
+1/2       # 分数</div>
+            </div>
+            
+            <h3>文字列 (String)</h3>
+            <div class="example">
+                <div class="code">"Hello, World!"
+"Ajisai"</div>
+            </div>
+            
+            <h3>真偽値 (Boolean)</h3>
+            <div class="example">
+                <div class="code">true
+false</div>
+            </div>
+            
+            <h3>ベクトル (Vector)</h3>
+            <div class="example">
+                <div class="code">[ 1 2 3 ]
+[ "hello" true 42 ]  # 異なる型を混在可能</div>
+            </div>
+            
+            <h3>Quotation (コードブロック)</h3>
+            <div class="example">
+                <div class="code">{ 2 * }          # 2倍にする処理
+{ DUP * }        # 二乗する処理</div>
+            </div>
+            
+            <h3>Nil</h3>
+            <div class="example">
+                <div class="code">nil              # 値なし</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="stack-operations">
+        <h2>スタック操作</h2>
+        
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">DUP</span>
+                <span class="stack-notation">( a -- a a )</span>
+            </div>
+            <p class="description">スタックトップの値を複製します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">5 DUP</div>
+                <div class="stack-state">スタック: 5 → 5 5</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">DROP</span>
+                <span class="stack-notation">( a -- )</span>
+            </div>
+            <p class="description">スタックトップの値を削除します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">1 2 3 DROP</div>
+                <div class="stack-state">スタック: 1 2 3 → 1 2</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">SWAP</span>
+                <span class="stack-notation">( a b -- b a )</span>
+            </div>
+            <p class="description">スタックトップの2つの値を交換します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">10 20 SWAP</div>
+                <div class="stack-state">スタック: 10 20 → 20 10</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">OVER</span>
+                <span class="stack-notation">( a b -- a b a )</span>
+            </div>
+            <p class="description">スタックの2番目の値をコピーしてトップに積みます。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">10 20 OVER</div>
+                <div class="stack-state">スタック: 10 20 → 10 20 10</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">ROT</span>
+                <span class="stack-notation">( a b c -- b c a )</span>
+            </div>
+            <p class="description">スタックの3番目の値を最上位に移動します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">1 2 3 ROT</div>
+                <div class="stack-state">スタック: 1 2 3 → 2 3 1</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">NIP</span>
+                <span class="stack-notation">( a b -- b )</span>
+            </div>
+            <p class="description">スタックの2番目の値を削除します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">10 20 NIP</div>
+                <div class="stack-state">スタック: 10 20 → 20</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="arithmetic">
+        <h2>算術演算</h2>
+        
+        <div class="implicit-iteration">
+            すべての算術演算子は暗黙の反復に対応しています。ベクトルと数値、またはベクトル同士の演算が可能です。
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">+</span>
+                <span class="stack-notation">( a b -- a+b )</span>
+            </div>
+            <p class="description">加算を行います。</p>
+            <div class="example">
+                <div class="example-title">例1: 数値の加算</div>
+                <div class="code">3 4 +</div>
+                <div class="output">結果: 7</div>
+            </div>
+            <div class="example">
+                <div class="example-title">例2: ベクトルと数値</div>
+                <div class="code">[ 1 2 3 ] 10 +</div>
+                <div class="output">結果: [ 11 12 13 ]</div>
+            </div>
+            <div class="example">
+                <div class="example-title">例3: ベクトル同士</div>
+                <div class="code">[ 1 2 3 ] [ 10 20 30 ] +</div>
+                <div class="output">結果: [ 11 22 33 ]</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">-</span>
+                <span class="stack-notation">( a b -- a-b )</span>
+            </div>
+            <p class="description">減算を行います。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">10 3 -</div>
+                <div class="output">結果: 7</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">*</span>
+                <span class="stack-notation">( a b -- a*b )</span>
+            </div>
+            <p class="description">乗算を行います。</p>
+            <div class="example">
+                <div class="example-title">例1: 数値の乗算</div>
+                <div class="code">6 7 *</div>
+                <div class="output">結果: 42</div>
+            </div>
+            <div class="example">
+                <div class="example-title">例2: ベクトルのスカラー倍</div>
+                <div class="code">[ 1 2 3 ] 2 *</div>
+                <div class="output">結果: [ 2 4 6 ]</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">/</span>
+                <span class="stack-notation">( a b -- a/b )</span>
+            </div>
+            <p class="description">除算を行います（分数として正確に計算）。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">1 2 /</div>
+                <div class="output">結果: 1/2</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="comparison">
+        <h2>比較演算</h2>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">&gt;</span>
+                <span class="stack-notation">( a b -- bool )</span>
+            </div>
+            <p class="description">aがbより大きいかを判定します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">5 3 ></div>
+                <div class="output">結果: true</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">=</span>
+                <span class="stack-notation">( a b -- bool )</span>
+            </div>
+            <p class="description">aとbが等しいかを判定します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">42 42 =</div>
+                <div class="output">結果: true</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="logical">
+        <h2>論理演算</h2>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">NOT</span>
+                <span class="stack-notation">( bool -- bool )</span>
+            </div>
+            <p class="description">論理否定を行います。nilの場合はnilを返します（三値論理）。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">true NOT</div>
+                <div class="output">結果: false</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">AND</span>
+                <span class="stack-notation">( bool bool -- bool )</span>
+            </div>
+            <p class="description">論理積を計算します（三値論理対応）。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">true true AND</div>
+                <div class="output">結果: true</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="vector-operations">
+        <h2>ベクトル操作</h2>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">LENGTH</span>
+                <span class="stack-notation">( vec -- n )</span>
+            </div>
+            <p class="description">ベクトルの長さを返します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">[ 1 2 3 4 5 ] LENGTH</div>
+                <div class="output">結果: 5</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">HEAD</span>
+                <span class="stack-notation">( vec -- elem )</span>
+            </div>
+            <p class="description">ベクトルの最初の要素を返します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">[ 10 20 30 ] HEAD</div>
+                <div class="output">結果: 10</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">TAIL</span>
+                <span class="stack-notation">( vec -- vec' )</span>
+            </div>
+            <p class="description">最初の要素を除いた残りのベクトルを返します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">[ 10 20 30 ] TAIL</div>
+                <div class="output">結果: [ 20 30 ]</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">CONS</span>
+                <span class="stack-notation">( elem vec -- vec' )</span>
+            </div>
+            <p class="description">要素をベクトルの先頭に追加します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">0 [ 1 2 3 ] CONS</div>
+                <div class="output">結果: [ 0 1 2 3 ]</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">APPEND</span>
+                <span class="stack-notation">( vec elem -- vec' )</span>
+            </div>
+            <p class="description">要素をベクトルの末尾に追加します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">[ 1 2 3 ] 4 APPEND</div>
+                <div class="output">結果: [ 1 2 3 4 ]</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">NTH</span>
+                <span class="stack-notation">( n vec -- elem )</span>
+            </div>
+            <p class="description">N番目の要素を取得します（0始まり、負数は末尾から）。</p>
+            <div class="example">
+                <div class="example-title">例1: 正のインデックス</div>
+                <div class="code">1 [ 10 20 30 ] NTH</div>
+                <div class="output">結果: 20</div>
+            </div>
+            <div class="example">
+                <div class="example-title">例2: 負のインデックス</div>
+                <div class="code">-1 [ 10 20 30 ] NTH</div>
+                <div class="output">結果: 30</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="control-structures">
+        <h2>制御構造</h2>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">DEF</span>
+                <span class="stack-notation">( quotation str -- )</span>
+            </div>
+            <p class="description">新しいワード（関数）を定義します。</p>
+            <div class="example">
+                <div class="example-title">例: 二乗を計算するワードを定義</div>
+                <div class="code">{ DUP * } "SQUARE" DEF
+5 SQUARE</div>
+                <div class="output">結果: 25</div>
+            </div>
+            <div class="example">
+                <div class="example-title">例: 説明付きの定義</div>
+                <div class="code">(二乗を計算) { DUP * } "SQUARE" DEF</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">IF</span>
+                <span class="stack-notation">( bool then-quot else-quot -- ... )</span>
+            </div>
+            <p class="description">条件分岐を行います。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">5 3 > { "大きい" } { "小さい" } IF</div>
+                <div class="output">結果: "大きい"</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">CALL</span>
+                <span class="stack-notation">( quot -- ... )</span>
+            </div>
+            <p class="description">Quotationを実行します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">5 { 2 * } CALL</div>
+                <div class="output">結果: 10</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="io-operations">
+        <h2>入出力</h2>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">.</span>
+                <span class="stack-notation">( a -- )</span>
+            </div>
+            <p class="description">値を出力してスタックから削除します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">42 .</div>
+                <div class="output">出力: 42</div>
+                <div class="stack-state">スタック: 空</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">PRINT</span>
+                <span class="stack-notation">( a -- a )</span>
+            </div>
+            <p class="description">値を出力しますが、スタックには残します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">42 PRINT</div>
+                <div class="output">出力: 42</div>
+                <div class="stack-state">スタック: 42</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">CR</span>
+                <span class="stack-notation">( -- )</span>
+            </div>
+            <p class="description">改行を出力します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">"Hello" . CR "World" .</div>
+                <div class="output">出力: Hello
+World</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="register-operations">
+        <h2>レジスタ操作</h2>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">&gt;R</span>
+                <span class="stack-notation">( a -- )</span>
+            </div>
+            <p class="description">スタックからレジスタへ値を移動します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">42 >R</div>
+                <div class="stack-state">スタック: 空、レジスタ: 42</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">R&gt;</span>
+                <span class="stack-notation">( -- a )</span>
+            </div>
+            <p class="description">レジスタからスタックへ値を移動します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">42 >R R></div>
+                <div class="output">結果: 42</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">R@</span>
+                <span class="stack-notation">( -- a )</span>
+            </div>
+            <p class="description">レジスタの値をコピーしてスタックに積みます。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">42 >R R@ R@</div>
+                <div class="output">結果: 42 42（レジスタには42が残る）</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="nil-operations">
+        <h2>Nil操作</h2>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">NIL?</span>
+                <span class="stack-notation">( a -- bool )</span>
+            </div>
+            <p class="description">値がnilかどうかを判定します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">nil NIL?</div>
+                <div class="output">結果: true</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <div class="word-header">
+                <span class="word-name">DEFAULT</span>
+                <span class="stack-notation">( a b -- a | nil b -- b )</span>
+            </div>
+            <p class="description">最初の値がnilの場合、デフォルト値（2番目の値）を使用します。</p>
+            <div class="example">
+                <div class="example-title">例</div>
+                <div class="code">nil 42 DEFAULT</div>
+                <div class="output">結果: 42</div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>応用例</h2>
+
+        <div class="word-section">
+            <h3>階乗の計算</h3>
+            <div class="example">
+                <div class="code"># 階乗を計算するワードを定義
+{ DUP 1 <= { DROP 1 } { DUP 1 - FACTORIAL * } IF } "FACTORIAL" DEF
+
+5 FACTORIAL</div>
+                <div class="output">結果: 120</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <h3>ベクトルの合計</h3>
+            <div class="example">
+                <div class="code"># ベクトルの要素を合計するワード
+{ 0 SWAP { + } REDUCE } "SUM" DEF
+
+[ 1 2 3 4 5 ] SUM</div>
+                <div class="output">結果: 15</div>
+                <div class="note">REDUCEは実装されていない場合は、再帰で実装する必要があります。</div>
+            </div>
+        </div>
+
+        <div class="word-section">
+            <h3>フィボナッチ数列</h3>
+            <div class="example">
+                <div class="code"># N番目のフィボナッチ数を計算
+{ DUP 2 < { } { DUP 1 - FIB SWAP 2 - FIB + } IF } "FIB" DEF
+
+10 FIB</div>
+                <div class="output">結果: 55</div>
+            </div>
+        </div>
+    </section>
+
+</body>
+</html>
