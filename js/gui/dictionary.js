@@ -57,11 +57,11 @@ export class Dictionary {
             { name: 'TABLES-INFO', description: '全テーブルの詳細情報を表示 ( -- )' },
             { name: 'TABLE-INFO', description: '指定テーブルの情報を表示 ( str -- )' },
             { name: 'TABLE-SIZE', description: 'テーブルのレコード数を取得 ( str -- n )' },
-            */
             { name: 'SAVE-DB', description: 'データベースを保存 ( -- )' },
             { name: 'LOAD-DB', description: 'データベースを読み込み ( -- )' },
             { name: 'MATCH?', description: 'ワイルドカードマッチング ( str str -- bool )' },
             { name: 'WILDCARD', description: 'ワイルドカードパターンを作成 ( str -- pattern )' },
+            */
             { name: '.', description: '値を出力してドロップ ( a -- )' },
             { name: 'PRINT', description: '値を出力（ドロップしない） ( a -- a )' },
             { name: 'CR', description: '改行を出力 ( -- )' },
