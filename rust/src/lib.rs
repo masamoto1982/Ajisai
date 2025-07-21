@@ -6,7 +6,7 @@ mod interpreter;
 mod builtins;
 
 use types::*;
-use interpreter::{Interpreter, error::AjisaiError};
+use interpreter::Interpreter;
 
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
