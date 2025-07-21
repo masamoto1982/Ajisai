@@ -27,7 +27,6 @@ body {
     margin: 0 auto;
 }
 
-/* ヘッダー部分を以下のように修正 */
 header {
     background-color: #fff;
     padding: 1rem 2rem;
@@ -36,12 +35,21 @@ header {
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
-    position: relative; /* 追加 */
+    position: relative;
 }
 
-/* header-actionsを追加 */
+header h1 {
+    font-size: 1.5rem;
+}
+
+.version {
+    font-size: 0.875rem;
+    color: #666;
+}
+
+/* ヘッダーアクション */
 .header-actions {
-    margin-left: auto; /* 右端に配置 */
+    margin-left: auto;
     display: flex;
     gap: 0.5rem;
 }
@@ -70,15 +78,6 @@ header {
 .reference-btn svg {
     width: 16px;
     height: 16px;
-}
-
-header h1 {
-    font-size: 1.5rem;
-}
-
-.version {
-    font-size: 0.875rem;
-    color: #666;
 }
 
 /* デスクトップレイアウト */
@@ -287,7 +286,7 @@ button:hover {
         top: 0;
         z-index: 100;
         background-color: #fff;
-        flex-wrap: wrap; /* 追加 */
+        flex-wrap: wrap;
     }
 
     header h1 {
@@ -295,20 +294,20 @@ button:hover {
     }
     
     .version {
-        font-size: 0.75rem; /* 追加 */
+        font-size: 0.75rem;
     }
     
     .header-actions {
-        width: 100%; /* モバイルでは幅いっぱいに */
-        margin-top: 0.5rem; /* 追加 */
-        justify-content: flex-end; /* 右寄せ */
+        width: 100%;
+        margin-top: 0.5rem;
+        justify-content: flex-end;
     }
     
     .reference-btn {
-        padding: 0.4rem 0.8rem; /* モバイルでは少し小さく */
+        padding: 0.4rem 0.8rem;
         font-size: 0.8rem;
     }
-}
+
     .main-layout {
         flex-direction: column;
         padding: 0.5rem;
