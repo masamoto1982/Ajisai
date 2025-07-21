@@ -1,79 +1,64 @@
 name: Build and Deploy Ajisai
 
 on:
+  # mainブランチにプッシュされた時のみ実行
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
-env:
-  CARGO_TERM_COLOR: always
-
+# ワークフローの実行に必要な権限を設定
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
+# 同じブランチで複数のデプロイが走った場合に、古いものを自動でキャンセルする設定
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
-  build-and-deploy:
+  # ビルド用のジョブ
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM artifacts
+        run: |
+          cd rust
+          wasm-pack build --target web --out-dir ../js/pkg
+
+      - name: Create .nojekyll file
+        run: touch .nojekyll
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # ビルド成果物を含んだリポジトリ全体をアップロード
+          path: .
+
+  # デプロイ用のジョブ
+  deploy:
+    # buildジョブの完了を待つ
+    needs: build
     runs-on: ubuntu-latest
     
+    # デプロイ環境を指定
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        persist-credentials: true
-    
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-    
-    - name: Install wasm-pack
-      run: |
-        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-    
-    - name: Build WASM
-      run: |
-        cd rust
-        wasm-pack build --target web --out-dir ../js/pkg
-        
-        # 生成されたファイルを確認
-        echo "=== Generated files in js/pkg ==="
-        ls -la ../js/pkg/
-    
-    - name: Create .nojekyll
-      run: touch .nojekyll
-    
-    - name: Configure Git
-      run: |
-        git config --global user.email "action@github.com"
-        git config --global user.name "GitHub Action"
-    
-    - name: Check and commit files
-      run: |
-        # 現在の状態を確認
-        echo "=== Git status before ==="
-        git status
-        
-        # pkgフォルダを強制的に追加
-        git add -f js/pkg/
-        git add .nojekyll
-        
-        # 変更があるか確認
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
-          echo "=== Files to be committed ==="
-          git diff --staged --name-only
-          
-          # コミット
-          git commit -m "Add WASM build artifacts [skip ci]"
-          
-          # ★★★ ここを修正 ★★★
-          # pushする前にリモートの変更を取り込む
-          # コンフリクトを避けるためrebase戦略を使用
-          git pull --rebase origin main
-          
-          # プッシュ
-          git push origin main
-        fi
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
