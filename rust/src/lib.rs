@@ -6,7 +6,8 @@ mod interpreter;
 mod builtins;
 
 use types::*;
-use interpreter::{Interpreter, error::AjisaiError};
+// ★★★ 修正点1: 不要なインポートを削除 ★★★
+use interpreter::Interpreter;
 
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
@@ -29,7 +30,6 @@ impl AjisaiInterpreter {
                 let obj = js_sys::Object::new();
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 
-                // 出力を取得
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
@@ -59,7 +59,6 @@ impl AjisaiInterpreter {
                     js_sys::Reflect::set(&obj, &"total".into(), &JsValue::from_f64(total as f64)).unwrap();
                 }
                 
-                // 出力を取得
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
@@ -243,22 +242,15 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
-        // ★★★ 修正点 ★★★
-        // データベースから復元する際に、インタープリタが解釈できる正しい構文の文字列を生成する
         let code = if let Some(desc) = description {
-            // コメントがある場合は、DEFの後ろに `(コメント)` の形で追加
             format!("{} \"{}\" DEF ({})", definition, name, desc)
         } else {
-            // コメントがなければDEFで終わり
             format!("{} \"{}\" DEF", definition, name)
         };
         
-        // 生成したコードでインタープリタを実行し、ワードを復元
         self.interpreter.execute(&code).map_err(|e| e.to_string())
     }
 }
-
-// --- 以下、ヘルパー関数 (変更なし) ---
 
 fn value_to_js(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
@@ -291,7 +283,8 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::Symbol(s) => JsValue::from_str(s),
         ValueType::Vector(v) => {
             let arr = js_sys::Array::new();
-            v.iter().for_each(|item| arr.push(&value_to_js(item)));
+            // ★★★ 修正点2: .for_eachにセミコロンを追加 ★★★
+            v.iter().for_each(|item| { arr.push(&value_to_js(item)); });
             arr.into()
         },
         ValueType::Quotation(tokens) => {
@@ -354,7 +347,7 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
             "nil" => Ok(Value { val_type: ValueType::Nil }),
             _ => Err(format!("Unknown type: {}", type_str)),
         }
-    } else { // Fallback for simple values
+    } else {
         if let Some(b) = js_val.as_bool() { Ok(Value { val_type: ValueType::Boolean(b) }) }
         else if let Some(n) = js_val.as_f64() {
             if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
