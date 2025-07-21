@@ -72,37 +72,6 @@ header {
     height: 16px;
 }
 
-/* モバイル対応を更新 */
-@media (max-width: 768px) {
-    header {
-        padding: 0.75rem 1rem;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background-color: #fff;
-        flex-wrap: wrap; /* 追加 */
-    }
-
-    header h1 {
-        font-size: 1.25rem;
-    }
-    
-    .version {
-        font-size: 0.75rem; /* 追加 */
-    }
-    
-    .header-actions {
-        width: 100%; /* モバイルでは幅いっぱいに */
-        margin-top: 0.5rem; /* 追加 */
-        justify-content: flex-end; /* 右寄せ */
-    }
-    
-    .reference-btn {
-        padding: 0.4rem 0.8rem; /* モバイルでは少し小さく */
-        font-size: 0.8rem;
-    }
-}
-
 header h1 {
     font-size: 1.5rem;
 }
@@ -318,12 +287,28 @@ button:hover {
         top: 0;
         z-index: 100;
         background-color: #fff;
+        flex-wrap: wrap; /* 追加 */
     }
 
     header h1 {
         font-size: 1.25rem;
     }
-
+    
+    .version {
+        font-size: 0.75rem; /* 追加 */
+    }
+    
+    .header-actions {
+        width: 100%; /* モバイルでは幅いっぱいに */
+        margin-top: 0.5rem; /* 追加 */
+        justify-content: flex-end; /* 右寄せ */
+    }
+    
+    .reference-btn {
+        padding: 0.4rem 0.8rem; /* モバイルでは少し小さく */
+        font-size: 0.8rem;
+    }
+}
     .main-layout {
         flex-direction: column;
         padding: 0.5rem;
