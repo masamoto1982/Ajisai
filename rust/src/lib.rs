@@ -251,29 +251,25 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
-    pub fn get_word_definition(&self, name: &str) -> JsValue {
+    pub fn get_word_definition(&self, name: &str) -> Option<String> {
         match self.interpreter.get_word_definition(name) {
-            Some(def) => JsValue::from_str(&def),
-            None => JsValue::NULL,
+            Some(def) => Some(def),
+            None => None,
         }
     }
     
     #[wasm_bindgen]
     pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
-        // 説明があれば先に追加
+        // 本来の構文に修正: DEFの後にコメントを置く
         let code = if let Some(desc) = description {
-            format!("({}) {} \"{}\" DEF", desc, definition, name)
+            format!("{} \"{}\" DEF ({})", definition, name, desc)
         } else {
             format!("{} \"{}\" DEF", definition, name)
         };
         
-        // デバッグ用にコンソールにログを出力
         web_sys::console::log_1(&format!("Restoring word with code: {}", code).into());
         
-        // ★★★ ここを修正 ★★★
-        // `?` を使うために、AjisaiErrorをStringに変換する
-        self.interpreter.execute(&code).map_err(|e| e.to_string())?;
-        Ok(())
+        self.interpreter.execute(&code).map_err(|e| e.to_string())
     }
 }
 
