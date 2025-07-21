@@ -43,27 +43,26 @@ pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
                 i = next_index -1;
             },
             Token::Symbol(name) => {
-                if name == "DEF" {
-                    // DEFの後のDescriptionトークンを探す
-                    let mut description = None;
-                    if i + 1 < tokens.len() {
-                        if let Token::Description(text) = &tokens[i + 1] {
-                            description = Some(text.clone());
-                            i += 1; // Descriptionトークンをスキップ
-                        }
-                    }
-                    control::op_def(self, description)?;
-                    pending_description = None; // DEF処理後は保留中の説明をクリア
-                } else if let Some(def) = self.dictionary.get(name).cloned() {
-                    if def.is_builtin {
-                        self.execute_builtin(name)?;
-                    } else {
-                        self.execute_custom_word(name, &def.tokens)?;
-                    }
-                } else {
-                    return Err(AjisaiError::UnknownWord(name.clone()));
-                }
-            },
+    if name == "DEF" {
+        // DEFの後のDescriptionトークンを探す
+        let mut description = None;
+        if i + 1 < tokens.len() {
+            if let Token::Description(text) = &tokens[i + 1] {
+                description = Some(text.clone());
+                i += 1; // Descriptionトークンをスキップ
+            }
+        }
+        control::op_def(self, description)?;
+    } else if let Some(def) = self.dictionary.get(name).cloned() {
+        if def.is_builtin {
+            self.execute_builtin(name)?;
+        } else {
+            self.execute_custom_word(name, &def.tokens)?;
+        }
+    } else {
+        return Err(AjisaiError::UnknownWord(name.clone()));
+    }
+},
             Token::VectorEnd | Token::BlockEnd => return Err(AjisaiError::from("Unexpected closing delimiter found.")),
         }
         i += 1;
