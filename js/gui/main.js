@@ -15,11 +15,11 @@ class GUI {
         this.editor = new Editor();
         this.stepper = new Stepper();
         this.mobile = new MobileHandler();
-        this.persistence = new Persistence(this); // GUIインスタンスを渡す
+        this.persistence = new Persistence(this);
 
         this.elements = {};
-        this.mode = 'input';      // 'input' or 'execution' (for mobile)
-        this.stepMode = false;    // ステップ実行モード
+        this.mode = 'input';
+        this.stepMode = false;
     }
 
     init() {
@@ -28,9 +28,11 @@ class GUI {
 
         // 各モジュールの初期化
         this.display.init(this.elements);
-        this.dictionary.init(this.elements, (word) => this.editor.insertWord(word + ' '));
+        // ★★★ 修正点 ★★★
+        // ワードクリック時にスペースを追加しないように修正
+        this.dictionary.init(this.elements, (word) => this.editor.insertWord(word));
         this.editor.init(this.elements.codeInput);
-        this.stepper.init(() => window.ajisaiInterpreter); // インタープリタを渡す
+        this.stepper.init(() => window.ajisaiInterpreter);
         this.mobile.init(this.elements);
         this.persistence.init();
 
@@ -39,9 +41,6 @@ class GUI {
         // 初期表示
         this.dictionary.renderBuiltinWords();
         this.updateAllDisplays();
-
-        // ★★★ 修正点 ★★★
-        // 初回読み込み時にモバイル表示を正しく設定する
         this.mobile.updateView(this.mode);
     }
 
@@ -78,7 +77,6 @@ class GUI {
             }
         });
 
-        // Memoryエリアのクリックで入力モードに戻る（モバイルのみ）
         this.elements.memoryArea.addEventListener('click', () => {
             if (this.mobile.isMobile() && this.mode === 'execution') {
                 this.setMode('input');
@@ -93,7 +91,6 @@ class GUI {
         this.mobile.updateView(this.mode);
     }
     
-    // 通常実行
     async runNormal() {
         const code = this.editor.getValue();
         if (!code) return;
@@ -118,27 +115,24 @@ class GUI {
         
         this.updateAllDisplays();
         await this.persistence.saveCurrentState();
-        this.display.showInfo('State saved.', true); // 追記モードで保存メッセージを表示
+        this.display.showInfo('State saved.', true);
     }
 
-    // ステップ実行（開始または継続）
     async runStep() {
         const code = this.editor.getValue();
         if (!code && !this.stepMode) return;
 
         try {
             if (!this.stepMode) {
-                // ステップ実行の開始
                 const result = await this.stepper.start(code);
                 if (result.ok) {
                     this.stepMode = true;
                     this.updateRunButton();
-                    await this.continueStep(); // 最初のステップを実行
+                    await this.continueStep();
                 } else {
                     this.display.showError(result.error);
                 }
             } else {
-                // ステップ実行の継続
                 await this.continueStep();
             }
         } catch(error) {
@@ -174,11 +168,8 @@ class GUI {
         this.elements.runBtn.textContent = this.stepMode ? 'Step' : 'Run';
     }
 
-    // 全ての表示エリアを更新
     updateAllDisplays() {
-        if (!window.ajisaiInterpreter) {
-            return;
-        }
+        if (!window.ajisaiInterpreter) return;
         try {
             this.display.updateStack(window.ajisaiInterpreter.get_stack());
             this.display.updateRegister(window.ajisaiInterpreter.get_register());
