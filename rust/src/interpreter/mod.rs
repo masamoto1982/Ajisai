@@ -293,7 +293,7 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, database::*, io::*};
+        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, /*database::*,*/ io::*};
         
         match name {
             // スタック操作
@@ -358,10 +358,10 @@ impl Interpreter {
             "TABLE-SIZE" => op_table_size(self),
             */
             // データベース永続化機能は残す（IndexedDB連携のため）
-            "SAVE-DB" => op_save_db(self),
+            /*"SAVE-DB" => op_save_db(self),
             "LOAD-DB" => op_load_db(self),
             "MATCH?" => op_match(self),
-            "WILDCARD" => op_wildcard(self),
+            "WILDCARD" => op_wildcard(self),*/
             
             // 入出力
             "." => op_dot(self),
