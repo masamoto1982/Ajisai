@@ -39,6 +39,10 @@ class GUI {
         // 初期表示
         this.dictionary.renderBuiltinWords();
         this.updateAllDisplays();
+
+        // ★★★ 修正点 ★★★
+        // 初回読み込み時にモバイル表示を正しく設定する
+        this.mobile.updateView(this.mode);
     }
 
     cacheElements() {
