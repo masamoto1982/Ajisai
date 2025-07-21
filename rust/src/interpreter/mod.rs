@@ -2,7 +2,7 @@ pub mod stack_ops;
 pub mod arithmetic;
 pub mod vector_ops;
 pub mod control;
-pub mod database;
+// pub mod database; // テーブル機能完成後に再有効化予定
 pub mod io;
 pub mod error;
 
