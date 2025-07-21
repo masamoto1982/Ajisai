@@ -7,7 +7,7 @@ pub mod io;
 pub mod error;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Value, ValueType, Stack, Register, Token, TableData};
+use crate::types::{Value, ValueType, Stack, Register, Token}; // TableData は一時的にコメントアウト
 use crate::tokenizer::tokenize;
 use self::error::{AjisaiError, Result};
 
@@ -21,8 +21,11 @@ pub struct Interpreter {
     step_position: usize,
     step_mode: bool,
     pub(crate) output_buffer: String,
+    // テーブル関連フィールド（Vector機能完成後に再有効化予定）
+    /*
     pub(crate) current_table: Option<String>,
     pub(crate) tables: HashMap<String, TableData>,
+    */
 }
 
 #[derive(Clone)]
@@ -44,8 +47,11 @@ impl Interpreter {
             step_position: 0,
             step_mode: false,
             output_buffer: String::new(),
+            // テーブル関連フィールドの初期化（Vector機能完成後に再有効化予定）
+            /*
             current_table: None,
             tables: HashMap::new(),
+            */
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
@@ -337,7 +343,8 @@ impl Interpreter {
             "KNOWN?" => op_not_nil_check(self),
             "DEFAULT" => op_default(self),
             
-            // データベース
+            // データベース (一時的にコメントアウト - Vector機能完成後に再有効化予定)
+            /*
             "TABLE" => op_table(self),
             "TABLE-CREATE" => op_table_create(self),
             "FILTER" => op_filter(self),
@@ -349,6 +356,8 @@ impl Interpreter {
             "TABLES-INFO" => op_tables_info(self),
             "TABLE-INFO" => op_table_info(self),
             "TABLE-SIZE" => op_table_size(self),
+            */
+            // データベース永続化機能は残す（IndexedDB連携のため）
             "SAVE-DB" => op_save_db(self),
             "LOAD-DB" => op_load_db(self),
             "MATCH?" => op_match(self),
@@ -394,6 +403,8 @@ impl Interpreter {
             .collect()
     }
    
+    // テーブル関連メソッド（Vector機能完成後に再有効化予定）
+    /*
     pub fn save_table(&mut self, name: String, schema: Vec<String>, records: Vec<Vec<Value>>) {
         self.tables.insert(name, TableData { schema, records });
     }
@@ -405,6 +416,7 @@ impl Interpreter {
     pub fn get_all_tables(&self) -> Vec<String> {
         self.tables.keys().cloned().collect()
     }
+    */
    
     pub fn set_stack(&mut self, stack: Stack) {
         self.stack = stack;

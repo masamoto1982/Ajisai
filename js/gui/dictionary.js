@@ -44,6 +44,8 @@ export class Dictionary {
             { name: 'NOT-NIL?', description: 'nilでないかをチェック ( a -- bool )' },
             { name: 'KNOWN?', description: 'nil以外の値かチェック ( a -- bool )' },
             { name: 'DEFAULT', description: 'nilならデフォルト値を使用 ( a b -- a | nil b -- b )' },
+            // テーブル関連機能（Vector機能完成後に再有効化予定）
+            /*
             { name: 'TABLE', description: 'テーブルをスタックに載せる ( str -- table )' },
             { name: 'TABLE-CREATE', description: '新しいテーブルを作成 ( vec str -- )' },
             { name: 'FILTER', description: '条件でレコードをフィルタ ( table vec -- table\' )' },
@@ -55,6 +57,7 @@ export class Dictionary {
             { name: 'TABLES-INFO', description: '全テーブルの詳細情報を表示 ( -- )' },
             { name: 'TABLE-INFO', description: '指定テーブルの情報を表示 ( str -- )' },
             { name: 'TABLE-SIZE', description: 'テーブルのレコード数を取得 ( str -- n )' },
+            */
             { name: 'SAVE-DB', description: 'データベースを保存 ( -- )' },
             { name: 'LOAD-DB', description: 'データベースを読み込み ( -- )' },
             { name: 'MATCH?', description: 'ワイルドカードマッチング ( str str -- bool )' },

@@ -60,7 +60,8 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック（NOT-NIL?のエイリアス） ( a -- bool )");
     register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a b -- a | nil b -- b )");
 
-    // データベース操作
+    // データベース操作 (一時的にコメントアウト - Vector機能完成後に再有効化予定)
+    /*
     register_builtin(dictionary, "TABLE", "テーブルをスタックに載せる ( str -- table )");
     register_builtin(dictionary, "TABLE-CREATE", "新しいテーブルを作成 ( vec str -- )");
     register_builtin(dictionary, "FILTER", "条件でレコードをフィルタ ( table vec -- table' )");
@@ -69,11 +70,13 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "UPDATE", "レコードを更新 ( table vec -- )");
     register_builtin(dictionary, "DELETE", "レコードを削除 ( table -- )");
     register_builtin(dictionary, "TABLES", "テーブル名をパターンで検索 ( str -- vec )");
-    register_builtin(dictionary, "SAVE-DB", "データベースを保存 ( -- )");
-    register_builtin(dictionary, "LOAD-DB", "データベースを読み込み ( -- )");
     register_builtin(dictionary, "TABLES-INFO", "全テーブルの詳細情報を表示 ( -- )");
     register_builtin(dictionary, "TABLE-INFO", "指定テーブルの情報を表示 ( str -- )");
     register_builtin(dictionary, "TABLE-SIZE", "テーブルのレコード数を取得 ( str -- n )");
+    */
+    // データベース永続化機能は残す（IndexedDB連携のため）
+    register_builtin(dictionary, "SAVE-DB", "データベースを保存 ( -- )");
+    register_builtin(dictionary, "LOAD-DB", "データベースを読み込み ( -- )");
 
     // ワイルドカード・パターンマッチング
     register_builtin(dictionary, "MATCH?", "ワイルドカードマッチング ( str str -- bool )");

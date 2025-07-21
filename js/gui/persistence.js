@@ -20,6 +20,8 @@ export class Persistence {
             console.log('SAVE-DB command caught.');
             this.gui.display.showInfo('Saving database via SAVE-DB command...');
             try {
+                // テーブル関連機能（Vector機能完成後に再有効化予定）
+                /*
                 const tableNames = window.ajisaiInterpreter.get_all_tables();
                 const tables = {};
                 for (const name of tableNames) {
@@ -29,7 +31,10 @@ export class Persistence {
                     }
                 }
                 await window.AjisaiDB.saveAllState(tables, {}); // テーブルのみ保存
-                this.gui.display.showInfo('Database tables saved via SAVE-DB.', true);
+                */
+                // 現在はテーブル機能無効化のため、空のテーブルで保存
+                await window.AjisaiDB.saveAllState({}, {});
+                this.gui.display.showInfo('Database saved via SAVE-DB (tables disabled).', true);
             } catch(error) {
                 this.gui.display.showError(error);
             }
@@ -40,7 +45,7 @@ export class Persistence {
             this.gui.display.showInfo('Loading database via LOAD-DB command...');
             await this.loadDatabaseData(true); // isCommand = true
             this.gui.updateAllDisplays();
-            this.gui.display.showInfo('Database tables loaded via LOAD-DB.', true);
+            this.gui.display.showInfo('Database loaded via LOAD-DB (tables disabled).', true);
         });
     }
 
@@ -48,6 +53,8 @@ export class Persistence {
         if (!window.ajisaiInterpreter) return;
         
         try {
+            // テーブル関連機能（Vector機能完成後に再有効化予定）
+            /*
             const tables = {};
             const tableNames = window.ajisaiInterpreter.get_all_tables();
             for (const name of tableNames) {
@@ -56,12 +63,15 @@ export class Persistence {
                     tables[name] = { schema: tableData[0], records: tableData[1] };
                 }
             }
+            */
+            const tables = {}; // 現在はテーブル機能無効化
 
             const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
             const customWords = customWordsInfo.map(wordData => ({
                 name: wordData[0],
                 description: wordData[1],
-                definition: window.ajisaiInterpreter.get_word_definition(wordData[0])
+                definition: window.ajisaiInterpreter.get_word_definition ? 
+                    window.ajisaiInterpreter.get_word_definition(wordData[0]) : null
             }));
 
             const interpreterState = {
@@ -81,6 +91,8 @@ export class Persistence {
         if (!window.ajisaiInterpreter) return;
         
         try {
+            // テーブル関連機能（Vector機能完成後に再有効化予定）
+            /*
             const tableNames = await window.AjisaiDB.getAllTableNames();
             for (const tableName of tableNames) {
                 const tableData = await window.AjisaiDB.loadTable(tableName);
@@ -89,6 +101,8 @@ export class Persistence {
                 }
             }
             console.log(`${tableNames.length} tables loaded.`);
+            */
+            console.log('Table loading disabled (Vector機能完成後に再有効化予定).');
 
             // LOAD-DBコマンドの時はスタックやレジスタは復元しない
             if (isCommand) return;

@@ -133,6 +133,8 @@ impl AjisaiInterpreter {
         self.interpreter = Interpreter::new();
     }
 
+    // テーブル関連のWASMバインディング (一時的にコメントアウト - Vector機能完成後に再有効化予定)
+    /*
     #[wasm_bindgen]
     pub fn save_table(&mut self, name: String, schema: JsValue, records: JsValue) -> Result<(), String> {
         // スキーマの変換
@@ -219,6 +221,7 @@ impl AjisaiInterpreter {
     pub fn get_all_tables(&self) -> Vec<String> {
         self.interpreter.get_all_tables()
     }
+    */
     
     #[wasm_bindgen]
     pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
