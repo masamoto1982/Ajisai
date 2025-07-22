@@ -1,64 +1,37 @@
-name: Build and Deploy Ajisai
-
+name: Build and Deploy
 on:
-  # mainブランチにプッシュされた時のみ実行
   push:
-    branches: [ main ]
-
-# ワークフローの実行に必要な権限を設定
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# 同じブランチで複数のデプロイが走った場合に、古いものを自動でキャンセルする設定
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-
+    branches:
+      - main
 jobs:
-  # ビルド用のジョブ
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-      - name: Build WASM artifacts
+      - name: Install and Build
         run: |
-          cd rust
-          wasm-pack build --target web --out-dir ../js/pkg
+          (cd rust && wasm-pack build --target web --out-dir ../www/pkg)
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Install JS dependencies
+        run: npm install
+        working-directory: www
+      - name: Build JS
+        run: npm run build
+        working-directory: www
 
-      - name: Create .nojekyll file
-        run: touch .nojekyll
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+      # ▼▼▼ CNAMEファイルを作成するステップをここに追加 ▼▼▼
+      - name: Create CNAME file
+        run: echo "ajisai.tech" > ./www/dist/CNAME
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v1
         with:
-          # ビルド成果物を含んだリポジトリ全体をアップロード
-          path: .
-
-  # デプロイ用のジョブ
-  deploy:
-    # buildジョブの完了を待つ
-    needs: build
-    runs-on: ubuntu-latest
-    
-    # デプロイ環境を指定
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-      
-    steps:
+          # Upload entire repository
+          path: './www/dist'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v1
