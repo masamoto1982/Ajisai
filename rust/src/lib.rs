@@ -352,12 +352,40 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                             val_type: ValueType::Number(Fraction::new(n as i64, 1))
                         })
                     } else {
-                        // 小数を分数に変換（簡易版）
-                        let denominator = 1000000; // 6桁精度
-                        let numerator = (n * denominator as f64).round() as i64;
-                        Ok(Value {
-                            val_type: ValueType::Number(Fraction::new(numerator, denominator))
-                        })
+                        // 浮動小数点数を文字列経由で正確に分数化
+                        let s = n.to_string();
+                        if let Some(dot_pos) = s.find('.') {
+                            let integer_part = s[..dot_pos].parse::<i64>().unwrap_or(0);
+                            let decimal_part_str = &s[dot_pos + 1..];
+                            
+                            // 末尾の0を除去
+                            let decimal_part_str = decimal_part_str.trim_end_matches('0');
+                            
+                            if decimal_part_str.is_empty() {
+                                // 実質的に整数
+                                Ok(Value {
+                                    val_type: ValueType::Number(Fraction::new(integer_part, 1))
+                                })
+                            } else {
+                                let decimal_part = decimal_part_str.parse::<i64>()
+                                    .map_err(|_| "Invalid decimal part")?;
+                                let decimal_places = decimal_part_str.len() as u32;
+                                let denominator = 10_i64.pow(decimal_places);
+                                let numerator = if integer_part < 0 {
+                                    integer_part * denominator - decimal_part
+                                } else {
+                                    integer_part * denominator + decimal_part
+                                };
+                                Ok(Value {
+                                    val_type: ValueType::Number(Fraction::new(numerator, denominator))
+                                })
+                            }
+                        } else {
+                            // 整数の場合
+                            Ok(Value {
+                                val_type: ValueType::Number(Fraction::new(n as i64, 1))
+                            })
+                        }
                     }
                 } else if let Some(s) = value_field.as_string() {
                     // 分数文字列の場合
@@ -442,12 +470,40 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                     val_type: ValueType::Number(Fraction::new(n as i64, 1))
                 })
             } else {
-                // 小数を分数に変換（簡易版）
-                let denominator = 1000000; // 6桁精度
-                let numerator = (n * denominator as f64).round() as i64;
-                Ok(Value {
-                    val_type: ValueType::Number(Fraction::new(numerator, denominator))
-                })
+                // 浮動小数点数を文字列経由で正確に分数化
+                let s = n.to_string();
+                if let Some(dot_pos) = s.find('.') {
+                    let integer_part = s[..dot_pos].parse::<i64>().unwrap_or(0);
+                    let decimal_part_str = &s[dot_pos + 1..];
+                    
+                    // 末尾の0を除去
+                    let decimal_part_str = decimal_part_str.trim_end_matches('0');
+                    
+                    if decimal_part_str.is_empty() {
+                        // 実質的に整数
+                        Ok(Value {
+                            val_type: ValueType::Number(Fraction::new(integer_part, 1))
+                        })
+                    } else {
+                        let decimal_part = decimal_part_str.parse::<i64>()
+                            .map_err(|_| "Invalid decimal part")?;
+                        let decimal_places = decimal_part_str.len() as u32;
+                        let denominator = 10_i64.pow(decimal_places);
+                        let numerator = if integer_part < 0 {
+                            integer_part * denominator - decimal_part
+                        } else {
+                            integer_part * denominator + decimal_part
+                        };
+                        Ok(Value {
+                            val_type: ValueType::Number(Fraction::new(numerator, denominator))
+                        })
+                    }
+                } else {
+                    // 整数の場合
+                    Ok(Value {
+                        val_type: ValueType::Number(Fraction::new(n as i64, 1))
+                    })
+                }
             }
         } else if let Some(s) = js_val.as_string() {
             Ok(Value {
