@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ajisai</title>
     <link rel="stylesheet" href="style.css">
-    </head>
+</head>
+
 <body>
     <div class="container">
         <header>
@@ -14,13 +16,13 @@
             <div class="header-actions">
                 <a href="reference.html" class="reference-btn" target="_blank">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+                        <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
                     </svg>
                     Reference
                 </a>
             </div>
         </header>
-        
+
         <main class="main-layout">
             <div id="workspace-panel" class="panel">
                 <section class="output-area">
@@ -29,14 +31,15 @@
                 </section>
                 <section class="input-area">
                     <h2>Input</h2>
-                    <textarea id="code-input" placeholder="Enter Ajisai code here... (Shift+Enter to run, Ctrl+Enter to step)"></textarea>
+                    <textarea id="code-input"
+                        placeholder="Enter Ajisai code here... (Shift+Enter to run, Ctrl+Enter to step)"></textarea>
                     <div class="controls">
                         <button id="run-btn">Run</button>
                         <button id="clear-btn">Clear</button>
                     </div>
                 </section>
             </div>
-            
+
             <div id="state-panel" class="panel">
                 <section class="memory-area">
                     <h2>Memory</h2>
@@ -51,7 +54,7 @@
                         </div>
                     </div>
                 </section>
-                
+
                 <section class="dictionary-area">
                     <h2>Dictionary</h2>
                     <div class="dictionary-container">
@@ -68,10 +71,11 @@
             </div>
         </main>
     </div>
-    
+
     <script src="js/types.js"></script>
     <script src="js/db.js"></script>
 
     <script type="module" src="js/main.js"></script>
 </body>
+
 </html>

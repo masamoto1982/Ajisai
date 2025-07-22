@@ -2,7 +2,6 @@ pub mod stack_ops;
 pub mod arithmetic;
 pub mod vector_ops;
 pub mod control;
-// pub mod database; // テーブル機能完成後に再有効化予定
 pub mod io;
 pub mod error;
 
@@ -21,11 +20,7 @@ pub struct Interpreter {
     step_position: usize,
     step_mode: bool,
     pub(crate) output_buffer: String,
-    // テーブル関連フィールド（Vector機能完成後に再有効化予定）
-    /*
-    pub(crate) current_table: Option<String>,
-    pub(crate) tables: HashMap<String, TableData>,
-    */
+
 }
 
 #[derive(Clone)]
@@ -47,11 +42,7 @@ impl Interpreter {
             step_position: 0,
             step_mode: false,
             output_buffer: String::new(),
-            // テーブル関連フィールドの初期化（Vector機能完成後に再有効化予定）
-            /*
-            current_table: None,
-            tables: HashMap::new(),
-            */
+
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
@@ -293,7 +284,7 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, /*database::*,*/ io::*};
+        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, io::*};
         
         match name {
             // スタック操作
@@ -343,25 +334,11 @@ impl Interpreter {
             "KNOWN?" => op_not_nil_check(self),
             "DEFAULT" => op_default(self),
             
-            // データベース (一時的にコメントアウト - Vector機能完成後に再有効化予定)
-            /*
-            "TABLE" => op_table(self),
-            "TABLE-CREATE" => op_table_create(self),
-            "FILTER" => op_filter(self),
-            "PROJECT" => op_project(self),
-            "INSERT" => op_insert(self),
-            "UPDATE" => op_update(self),
-            "DELETE" => op_delete(self),
-            "TABLES" => op_tables(self),
-            "TABLES-INFO" => op_tables_info(self),
-            "TABLE-INFO" => op_table_info(self),
-            "TABLE-SIZE" => op_table_size(self),
-            */
-            // データベース永続化機能は残す（IndexedDB連携のため）
-            /*"SAVE-DB" => op_save_db(self),
+            // データベース永続化機能（IndexedDB連携のため）
+            "SAVE-DB" => op_save_db(self),
             "LOAD-DB" => op_load_db(self),
             "MATCH?" => op_match(self),
-            "WILDCARD" => op_wildcard(self),*/
+            "WILDCARD" => op_wildcard(self),
             
             // 入出力
             "." => op_dot(self),
@@ -403,20 +380,7 @@ impl Interpreter {
             .collect()
     }
    
-    // テーブル関連メソッド（Vector機能完成後に再有効化予定）
-    /*
-    pub fn save_table(&mut self, name: String, schema: Vec<String>, records: Vec<Vec<Value>>) {
-        self.tables.insert(name, TableData { schema, records });
-    }
-   
-    pub fn load_table(&self, name: &str) -> Option<(Vec<String>, Vec<Vec<Value>>)> {
-        self.tables.get(name).map(|t| (t.schema.clone(), t.records.clone()))
-    }
-   
-    pub fn get_all_tables(&self) -> Vec<String> {
-        self.tables.keys().cloned().collect()
-    }
-    */
+
    
     pub fn set_stack(&mut self, stack: Stack) {
         self.stack = stack;

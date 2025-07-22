@@ -60,3 +60,64 @@ pub fn op_emit(interp: &mut Interpreter) -> Result<()> {
         _ => Err(AjisaiError::type_error("number", "other type")),
     }
 }
+// データベース永続化関数
+pub fn op_save_db(_interp: &mut Interpreter) -> Result<()> {
+    if let Some(window) = web_sys::window() {
+        let event = web_sys::CustomEvent::new("ajisai-save-db")
+            .map_err(|_| AjisaiError::from("Failed to create save event"))?;
+        window.dispatch_event(&event)
+            .map_err(|_| AjisaiError::from("Failed to dispatch save event"))?;
+    }
+    Ok(())
+}
+
+pub fn op_load_db(_interp: &mut Interpreter) -> Result<()> {
+    if let Some(window) = web_sys::window() {
+        let event = web_sys::CustomEvent::new("ajisai-load-db")
+            .map_err(|_| AjisaiError::from("Failed to create load event"))?;
+        window.dispatch_event(&event)
+            .map_err(|_| AjisaiError::from("Failed to dispatch load event"))?;
+    }
+    Ok(())
+}
+
+// ワイルドカード関数（簡易実装）
+pub fn op_match(interp: &mut Interpreter) -> Result<()> {
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+    
+    let pattern = interp.stack.pop().unwrap();
+    let value = interp.stack.pop().unwrap();
+    
+    match (value.val_type, pattern.val_type) {
+        (ValueType::String(s), ValueType::String(p)) => {
+            let result = wildcard_match(&s, &p);
+            interp.stack.push(crate::types::Value { 
+                val_type: ValueType::Boolean(result) 
+            });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("two strings", "other types")),
+    }
+}
+
+pub fn op_wildcard(_interp: &mut Interpreter) -> Result<()> {
+    // パターンをそのまま使うので、特に処理は不要
+    Ok(())
+}
+
+// ヘルパー関数
+fn wildcard_match(text: &str, pattern: &str) -> bool {
+    if pattern.is_empty() {
+        return text.is_empty();
+    }
+    
+    if !pattern.contains('*') && !pattern.contains('?') {
+        return text == pattern;
+    }
+    
+    // 簡易実装
+    let pattern_without_wildcards = pattern.replace("*", "").replace("?", "");
+    text.contains(&pattern_without_wildcards)
+}
