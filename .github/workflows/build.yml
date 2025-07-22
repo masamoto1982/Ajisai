@@ -21,28 +21,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ▼▼▼ このステップを追加 ▼▼▼
       - name: Install wasm-pack
         uses: taiki-e/install-action@v2
         with:
           tool: wasm-pack
 
       - name: Install and Build Rust
-        run: |
-          (cd rust && wasm-pack build --target web --out-dir ../www/pkg)
+        # `cd`を使わず、パスを直接指定するように変更
+        run: wasm-pack build ./rust --target web --out-dir ./www/pkg
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '14'
 
-      - name: Install JS dependencies
-        run: npm install
-        working-directory: www
-
-      - name: Build JS
-        run: npm run build
-        working-directory: www
+      - name: Install and Build JS
+        # `working-directory`の代わりに`--prefix`で場所を明示的に指定
+        run: |
+          npm install --prefix www
+          npm run build --prefix www
 
       - name: Create CNAME file
         run: echo "ajisai.tech" > ./www/dist/CNAME
