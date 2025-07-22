@@ -3,35 +3,55 @@ on:
   push:
     branches:
       - main
+
+# pagesビルドを許可する
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build-and-deploy:
+    # デプロイは1つずつ実行
+    concurrency:
+      group: "pages"
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        # v2 -> v4 に更新
+        uses: actions/checkout@v4
 
-      - name: Install and Build
+      - name: Install and Build Rust
         run: |
           (cd rust && wasm-pack build --target web --out-dir ../www/pkg)
-      - uses: actions/setup-node@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '14'
+
       - name: Install JS dependencies
         run: npm install
         working-directory: www
+
       - name: Build JS
         run: npm run build
         working-directory: www
 
-      # ▼▼▼ CNAMEファイルを作成するステップをここに追加 ▼▼▼
       - name: Create CNAME file
         run: echo "ajisai.tech" > ./www/dist/CNAME
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        # v1 -> v3 に更新
+        uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: './www/dist'
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        # v1 -> v4 に更新
+        uses: actions/deploy-pages@v4
