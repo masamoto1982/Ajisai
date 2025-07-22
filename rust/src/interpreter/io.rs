@@ -60,26 +60,7 @@ pub fn op_emit(interp: &mut Interpreter) -> Result<()> {
         _ => Err(AjisaiError::type_error("number", "other type")),
     }
 }
-// データベース永続化関数
-pub fn op_save_db(_interp: &mut Interpreter) -> Result<()> {
-    if let Some(window) = web_sys::window() {
-        let event = web_sys::CustomEvent::new("ajisai-save-db")
-            .map_err(|_| AjisaiError::from("Failed to create save event"))?;
-        window.dispatch_event(&event)
-            .map_err(|_| AjisaiError::from("Failed to dispatch save event"))?;
-    }
-    Ok(())
-}
 
-pub fn op_load_db(_interp: &mut Interpreter) -> Result<()> {
-    if let Some(window) = web_sys::window() {
-        let event = web_sys::CustomEvent::new("ajisai-load-db")
-            .map_err(|_| AjisaiError::from("Failed to create load event"))?;
-        window.dispatch_event(&event)
-            .map_err(|_| AjisaiError::from("Failed to dispatch load event"))?;
-    }
-    Ok(())
-}
 
 // ワイルドカード関数（簡易実装）
 pub fn op_match(interp: &mut Interpreter) -> Result<()> {

@@ -334,9 +334,7 @@ impl Interpreter {
             "KNOWN?" => op_not_nil_check(self),
             "DEFAULT" => op_default(self),
             
-            // データベース永続化機能（IndexedDB連携のため）
-            "SAVE-DB" => op_save_db(self),
-            "LOAD-DB" => op_load_db(self),
+
             "MATCH?" => op_match(self),
             "WILDCARD" => op_wildcard(self),
             

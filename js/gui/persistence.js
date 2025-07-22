@@ -16,25 +16,8 @@ export class Persistence {
     }
 
     setupDatabaseListeners() {
-        window.addEventListener('ajisai-save-db', async () => {
-            console.log('SAVE-DB command caught.');
-            this.gui.display.showInfo('Saving database via SAVE-DB command...');
-            try {
-                // 現在はテーブル機能無効化のため、空のテーブルで保存
-                await window.AjisaiDB.saveAllState({}, {});
-                this.gui.display.showInfo('Database saved via SAVE-DB.', true);
-            } catch(error) {
-                this.gui.display.showError(error);
-            }
-        });
-        
-        window.addEventListener('ajisai-load-db', async () => {
-            console.log('LOAD-DB command caught.');
-            this.gui.display.showInfo('Loading database via LOAD-DB command...');
-            await this.loadDatabaseData(true); // isCommand = true
-            this.gui.updateAllDisplays();
-            this.gui.display.showInfo('Database loaded via LOAD-DB (tables disabled).', true);
-        });
+        // SAVE-DB/LOAD-DBコマンドは削除されました
+        // 自動保存機能のみが動作します
     }
 
     async saveCurrentState() {
@@ -64,14 +47,11 @@ export class Persistence {
         }
     }
 
-    async loadDatabaseData(isCommand = false) {
+    async loadDatabaseData() {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            console.log('Table loading disabled.');
-
-            // LOAD-DBコマンドの時はスタックやレジスタは復元しない
-            if (isCommand) return;
+            console.log('Loading saved interpreter state...');
 
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
