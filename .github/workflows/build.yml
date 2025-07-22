@@ -1,57 +1,64 @@
-name: Build and Deploy
-on:
-  push:
-    branches:
-      - main
+name: Build and Deploy Ajisai
 
-# pagesビルドを許可する
+on:
+  # mainブランチにプッシュされた時のみ実行
+  push:
+    branches: [ main ]
+
+# ワークフローの実行に必要な権限を設定
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# 同じブランチで複数のデプロイが走った場合に、古いものを自動でキャンセルする設定
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
-  build-and-deploy:
-    # デプロイは1つずつ実行
-    concurrency:
-      group: "pages"
-      cancel-in-progress: true
+  # ビルド用のジョブ
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install wasm-pack
-        uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-      - name: Install and Build Rust
-        # `cd`を使わず、パスを直接指定するように変更
-        run: wasm-pack build ./rust --target web --out-dir ./www/pkg
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '14'
-
-      - name: Install and Build JS
-        # `working-directory`の代わりに`--prefix`で場所を明示的に指定
+      - name: Build WASM artifacts
         run: |
-          npm install --prefix www
-          npm run build --prefix www
+          cd rust
+          wasm-pack build --target web --out-dir ../js/pkg
 
-      - name: Create CNAME file
-        run: echo "ajisai.tech" > ./www/dist/CNAME
+      - name: Create .nojekyll file
+        run: touch .nojekyll
 
-      - name: Setup Pages
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './www/dist'
+          # ビルド成果物を含んだリポジトリ全体をアップロード
+          path: .
 
+  # デプロイ用のジョブ
+  deploy:
+    # buildジョブの完了を待つ
+    needs: build
+    runs-on: ubuntu-latest
+    
+    # デプロイ環境を指定
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
