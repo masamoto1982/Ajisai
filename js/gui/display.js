@@ -77,25 +77,34 @@ export class Display {
     }
 
     formatValue(item) {
-        if (!item) return 'undefined';
-        
-        switch (item.type) {
-            case 'number':
-                return typeof item.value === 'string' ? item.value : item.value.toString();
-            case 'string':
-                return `"${item.value}"`;
-            case 'symbol':
-                return item.value;
-            case 'boolean':
-                return item.value ? 'true' : 'false';
-            case 'vector':
-                return `[ ${item.value.map(v => this.formatValue(v)).join(' ')} ]`;
-            case 'nil':
-                return 'nil';
-            case 'quotation':
-                return '{ ... }';
-            default:
-                return JSON.stringify(item.value);
-        }
+    if (!item) return 'undefined';
+    
+    switch (item.type) {
+        case 'number':
+            // 修正箇所：分数オブジェクトを正しく処理する
+            if (typeof item.value === 'object' && item.value !== null && 'numerator' in item.value && 'denominator' in item.value) {
+                if (item.value.denominator === 1) {
+                    return item.value.numerator.toString();
+                } else {
+                    return `${item.value.numerator}/${item.value.denominator}`;
+                }
+            }
+            // 従来の数値や文字列形式の数値も念のため残す
+            return typeof item.value === 'string' ? item.value : item.value.toString();
+        case 'string':
+            return `"${item.value}"`;
+        case 'symbol':
+            return item.value;
+        case 'boolean':
+            return item.value ? 'true' : 'false';
+        case 'vector':
+            return `[ ${item.value.map(v => this.formatValue(v)).join(' ')} ]`;
+        case 'nil':
+            return 'nil';
+        case 'quotation':
+            return '{ ... }';
+        default:
+            return JSON.stringify(item.value);
     }
+}
 }
