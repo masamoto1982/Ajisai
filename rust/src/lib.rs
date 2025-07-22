@@ -297,15 +297,8 @@ fn value_to_js(value: &Value) -> JsValue {
     
     let val = match &value.val_type {
         ValueType::Number(n) => {
-            if n.denominator == 1 {
-                if n.numerator >= -(1i64 << 53) && n.numerator <= (1i64 << 53) {
-                    JsValue::from_f64(n.numerator as f64)
-                } else {
-                    JsValue::from_str(&n.numerator.to_string())
-                }
-            } else {
-                JsValue::from_str(&format!("{}/{}", n.numerator, n.denominator))
-            }
+            // 常に文字列として出力（JavaScriptの浮動小数点数を避ける）
+            JsValue::from_str(&format!("{}/{}", n.numerator, n.denominator))
         },
         ValueType::String(s) => JsValue::from_str(s),
         ValueType::Boolean(b) => JsValue::from_bool(*b),
@@ -332,6 +325,69 @@ fn value_to_js(value: &Value) -> JsValue {
     obj.into()
 }
 
+// 数値文字列を解析して分数を作成するヘルパー関数
+fn parse_number_string(s: &str) -> Result<Value, String> {
+    // 分数形式 (例: "1/2", "3/4")
+    if s.contains('/') {
+        let parts: Vec<&str> = s.split('/').collect();
+        if parts.len() == 2 {
+            let num = parts[0].trim().parse::<i64>()
+                .map_err(|_| format!("Invalid fraction numerator: {}", parts[0]))?;
+            let den = parts[1].trim().parse::<i64>()
+                .map_err(|_| format!("Invalid fraction denominator: {}", parts[1]))?;
+            if den == 0 {
+                return Err("Division by zero in fraction".to_string());
+            }
+            Ok(Value {
+                val_type: ValueType::Number(Fraction::new(num, den))
+            })
+        } else {
+            Err("Invalid fraction format".to_string())
+        }
+    }
+    // 小数形式 (例: "0.1", "3.14")
+    else if s.contains('.') {
+        let parts: Vec<&str> = s.split('.').collect();
+        if parts.len() == 2 {
+            let integer_part = if parts[0].is_empty() { 
+                0 
+            } else { 
+                parts[0].parse::<i64>()
+                    .map_err(|_| format!("Invalid integer part: {}", parts[0]))? 
+            };
+            
+            // 小数部分の処理
+            let decimal_part_str = parts[1];
+            if decimal_part_str.is_empty() {
+                // "1." のような場合
+                Ok(Value {
+                    val_type: ValueType::Number(Fraction::new(integer_part, 1))
+                })
+            } else {
+                let decimal_part = decimal_part_str.parse::<i64>()
+                    .map_err(|_| format!("Invalid decimal part: {}", decimal_part_str))?;
+                let decimal_places = decimal_part_str.len() as u32;
+                let denominator = 10_i64.pow(decimal_places);
+                let numerator = integer_part * denominator + 
+                              if integer_part < 0 { -decimal_part } else { decimal_part };
+                Ok(Value {
+                    val_type: ValueType::Number(Fraction::new(numerator, denominator))
+                })
+            }
+        } else {
+            Err("Invalid decimal format".to_string())
+        }
+    }
+    // 整数形式 (例: "42", "-123")
+    else {
+        let num = s.parse::<i64>()
+            .map_err(|_| format!("Invalid integer: {}", s))?;
+        Ok(Value {
+            val_type: ValueType::Number(Fraction::new(num, 1))
+        })
+    }
+}
+
 fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
     // JavaScriptオブジェクトの場合（{type: ..., value: ...}形式）
     if js_sys::Reflect::has(js_val, &"type".into()).unwrap_or(false) {
@@ -345,73 +401,11 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
         
         match type_str.as_str() {
             "number" => {
-                if let Some(n) = value_field.as_f64() {
-                    // 整数かどうかチェック
-                    if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                        Ok(Value {
-                            val_type: ValueType::Number(Fraction::new(n as i64, 1))
-                        })
-                    } else {
-                        // 浮動小数点数を文字列経由で正確に分数化
-                        let s = n.to_string();
-                        if let Some(dot_pos) = s.find('.') {
-                            let integer_part = s[..dot_pos].parse::<i64>().unwrap_or(0);
-                            let decimal_part_str = &s[dot_pos + 1..];
-                            
-                            // 末尾の0を除去
-                            let decimal_part_str = decimal_part_str.trim_end_matches('0');
-                            
-                            if decimal_part_str.is_empty() {
-                                // 実質的に整数
-                                Ok(Value {
-                                    val_type: ValueType::Number(Fraction::new(integer_part, 1))
-                                })
-                            } else {
-                                let decimal_part = decimal_part_str.parse::<i64>()
-                                    .map_err(|_| "Invalid decimal part")?;
-                                let decimal_places = decimal_part_str.len() as u32;
-                                let denominator = 10_i64.pow(decimal_places);
-                                let numerator = if integer_part < 0 {
-                                    integer_part * denominator - decimal_part
-                                } else {
-                                    integer_part * denominator + decimal_part
-                                };
-                                Ok(Value {
-                                    val_type: ValueType::Number(Fraction::new(numerator, denominator))
-                                })
-                            }
-                        } else {
-                            // 整数の場合
-                            Ok(Value {
-                                val_type: ValueType::Number(Fraction::new(n as i64, 1))
-                            })
-                        }
-                    }
-                } else if let Some(s) = value_field.as_string() {
-                    // 分数文字列の場合
-                    if s.contains('/') {
-                        let parts: Vec<&str> = s.split('/').collect();
-                        if parts.len() == 2 {
-                            let num = parts[0].parse::<i64>()
-                                .map_err(|_| "Invalid fraction numerator")?;
-                            let den = parts[1].parse::<i64>()
-                                .map_err(|_| "Invalid fraction denominator")?;
-                            Ok(Value {
-                                val_type: ValueType::Number(Fraction::new(num, den))
-                            })
-                        } else {
-                            Err("Invalid fraction format".to_string())
-                        }
-                    } else {
-                        // 大きな整数の場合
-                        let num = s.parse::<i64>()
-                            .map_err(|_| "Invalid number string")?;
-                        Ok(Value {
-                            val_type: ValueType::Number(Fraction::new(num, 1))
-                        })
-                    }
+                // 数値は必ず文字列として渡されなければならない
+                if let Some(s) = value_field.as_string() {
+                    parse_number_string(&s)
                 } else {
-                    Err("Invalid number value".to_string())
+                    Err("Numbers must be passed as strings to preserve precision. Use format like '0.1', '1/3', or '42'.".to_string())
                 }
             },
             "string" => {
@@ -463,48 +457,9 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
             Ok(Value {
                 val_type: ValueType::Boolean(b)
             })
-        } else if let Some(n) = js_val.as_f64() {
-            // 整数かどうかチェック
-            if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                Ok(Value {
-                    val_type: ValueType::Number(Fraction::new(n as i64, 1))
-                })
-            } else {
-                // 浮動小数点数を文字列経由で正確に分数化
-                let s = n.to_string();
-                if let Some(dot_pos) = s.find('.') {
-                    let integer_part = s[..dot_pos].parse::<i64>().unwrap_or(0);
-                    let decimal_part_str = &s[dot_pos + 1..];
-                    
-                    // 末尾の0を除去
-                    let decimal_part_str = decimal_part_str.trim_end_matches('0');
-                    
-                    if decimal_part_str.is_empty() {
-                        // 実質的に整数
-                        Ok(Value {
-                            val_type: ValueType::Number(Fraction::new(integer_part, 1))
-                        })
-                    } else {
-                        let decimal_part = decimal_part_str.parse::<i64>()
-                            .map_err(|_| "Invalid decimal part")?;
-                        let decimal_places = decimal_part_str.len() as u32;
-                        let denominator = 10_i64.pow(decimal_places);
-                        let numerator = if integer_part < 0 {
-                            integer_part * denominator - decimal_part
-                        } else {
-                            integer_part * denominator + decimal_part
-                        };
-                        Ok(Value {
-                            val_type: ValueType::Number(Fraction::new(numerator, denominator))
-                        })
-                    }
-                } else {
-                    // 整数の場合
-                    Ok(Value {
-                        val_type: ValueType::Number(Fraction::new(n as i64, 1))
-                    })
-                }
-            }
+        } else if js_val.as_f64().is_some() {
+            // 浮動小数点数は受け付けない
+            Err("Floating-point numbers are not allowed. Please pass numbers as strings to preserve precision (e.g., '0.1' instead of 0.1).".to_string())
         } else if let Some(s) = js_val.as_string() {
             Ok(Value {
                 val_type: ValueType::String(s)
