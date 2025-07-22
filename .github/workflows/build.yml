@@ -19,8 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        # v2 -> v4 に更新
         uses: actions/checkout@v4
+
+      # ▼▼▼ このステップを追加 ▼▼▼
+      - name: Install wasm-pack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
 
       - name: Install and Build Rust
         run: |
@@ -46,12 +51,10 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
-        # v1 -> v3 に更新
         uses: actions/upload-pages-artifact@v3
         with:
           path: './www/dist'
 
       - name: Deploy to GitHub Pages
         id: deployment
-        # v1 -> v4 に更新
         uses: actions/deploy-pages@v4
