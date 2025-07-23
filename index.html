@@ -72,10 +72,24 @@
         </main>
     </div>
 
+    <!-- JavaScript files - temporarily disabled for debugging -->
+    <!--
     <script src="js/types.js"></script>
     <script src="js/db.js"></script>
-
     <script type="module" src="js/main.js"></script>
+    -->
+    
+    <!-- Debug script -->
+    <script>
+        console.log('HTML loaded successfully');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded successfully');
+            const outputDisplay = document.getElementById('output-display');
+            if (outputDisplay) {
+                outputDisplay.textContent = 'Debug mode: JavaScript disabled';
+            }
+        });
+    </script>
 </body>
 
 </html>
