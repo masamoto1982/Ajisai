@@ -1,67 +1,146 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::fmt;
+use serde::{Serialize, Deserialize};
 
-use rug::Rational;
-
-use crate::interpreter::Interpreter;
-
-// --- 意味記憶 (Semantic Memory) ---
-#[derive(Clone)]
-pub enum Word {
-    Builtin(WordFunc),
-    UserDefined(Rc<Vec<Token>>),
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Fraction {
+    pub numerator: i64,
+    pub denominator: i64,
 }
 
-impl std::fmt::Debug for Word {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Word::Builtin(_) => write!(f, "Builtin"),
-            Word::UserDefined(tokens) => write!(f, "UserDefined({:?})", tokens),
+impl Fraction {
+    pub fn new(numerator: i64, denominator: i64) -> Self {
+        if denominator == 0 {
+            panic!("Division by zero");
+        }
+        let gcd = Self::gcd(numerator.abs(), denominator.abs());
+        let sign = if (numerator < 0) ^ (denominator < 0) { -1 } else { 1 };
+        Fraction {
+            numerator: sign * numerator.abs() / gcd,
+            denominator: denominator.abs() / gcd,
+        }
+    }
+
+    fn gcd(mut a: i64, mut b: i64) -> i64 {
+        while b != 0 {
+            let temp = b;
+            b = a % b;
+            a = temp;
+        }
+        a
+    }
+
+    pub fn add(&self, other: &Fraction) -> Fraction {
+        let num = self.numerator * other.denominator + other.numerator * self.denominator;
+        let den = self.denominator * other.denominator;
+        Fraction::new(num, den)
+    }
+
+    pub fn sub(&self, other: &Fraction) -> Fraction {
+        let num = self.numerator * other.denominator - other.numerator * self.denominator;
+        let den = self.denominator * other.denominator;
+        Fraction::new(num, den)
+    }
+
+    pub fn mul(&self, other: &Fraction) -> Fraction {
+        Fraction::new(self.numerator * other.numerator, self.denominator * other.denominator)
+    }
+
+    pub fn div(&self, other: &Fraction) -> Fraction {
+        Fraction::new(self.numerator * other.denominator, self.denominator * other.numerator)
+    }
+
+    pub fn gt(&self, other: &Fraction) -> bool {
+        self.numerator * other.denominator > other.numerator * self.denominator
+    }
+
+    pub fn ge(&self, other: &Fraction) -> bool {
+        self.numerator * other.denominator >= other.numerator * self.denominator
+    }
+
+    pub fn lt(&self, other: &Fraction) -> bool {
+        self.numerator * other.denominator < other.numerator * self.denominator
+    }
+
+    pub fn le(&self, other: &Fraction) -> bool {
+        self.numerator * other.denominator <= other.numerator * self.denominator
+    }
+
+    pub fn to_f64(&self) -> f64 {
+        self.numerator as f64 / self.denominator as f64
+    }
+}
+
+impl fmt::Display for Fraction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.denominator == 1 {
+            write!(f, "{}", self.numerator)
+        } else {
+            write!(f, "{}/{}", self.numerator, self.denominator)
         }
     }
 }
 
-// Corrected manual implementation of PartialEq for Word
-impl PartialEq for Word {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Word::Builtin(f1), Word::Builtin(f2)) => std::ptr::eq(*f1 as *const (), *f2 as *const ()),
-            (Word::UserDefined(v1), Word::UserDefined(v2)) => Rc::ptr_eq(v1, v2),
-            _ => false,
-        }
+impl From<i64> for Fraction {
+    fn from(n: i64) -> Self {
+        Fraction::new(n, 1)
     }
 }
 
-
-pub type WordFunc = fn(&mut Interpreter) -> Result<(), String>;
-pub type Dictionary = HashMap<String, Rc<Word>>;
-
-// --- トークン ---
+// トークン型
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Word(String),
-    Number(Rational),
+    Number(Fraction),
     String(String),
-    VectorStart, // `[`
-    VectorEnd,   // `]`
-    BlockStart,  // `{`
-    BlockEnd,    // `}`
+    VectorStart,
+    VectorEnd,
+    QuotationStart,
+    QuotationEnd,
 }
 
-// --- スタック上の型 ---
-#[derive(Debug, Clone, PartialEq)]
-pub enum Type {
-    // --- データ型 (エピソード記憶) ---
-    Number(Rc<Rational>),
-    String(Rc<String>),
-    Bool(bool),
-    Symbol(Rc<String>),
-    Vector(Rc<RefCell<Vec<Type>>>),
+// 値型
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ValueType {
+    Number(Fraction),
+    String(String),
+    Boolean(bool),
+    Symbol(String),
+    Vector(Vec<Value>),
+    Quotation(Vec<Token>),
+    Nil,
+}
 
-    // --- 手続き記憶 (実行可能な計画) ---
-    Quotation(Rc<Vec<Token>>),
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Value {
+    pub val_type: ValueType,
+}
 
-    // --- 意味記憶への参照 ---
-    Word(Rc<Word>),
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.val_type {
+            ValueType::Number(n) => write!(f, "{}", n),
+            ValueType::String(s) => write!(f, "\"{}\"", s),
+            ValueType::Boolean(b) => write!(f, "{}", b),
+            ValueType::Symbol(s) => write!(f, "{}", s),
+            ValueType::Vector(v) => {
+                write!(f, "[ ")?;
+                for (i, item) in v.iter().enumerate() {
+                    if i > 0 { write!(f, " ")?; }
+                    write!(f, "{}", item)?;
+                }
+                write!(f, " ]")
+            },
+            ValueType::Quotation(_) => write!(f, "{{ ... }}"),
+            ValueType::Nil => write!(f, "nil"),
+        }
+    }
+}
+
+// ワード定義
+#[derive(Debug, Clone)]
+pub struct WordDefinition {
+    pub tokens: Vec<Token>,
+    pub is_builtin: bool,
+    pub description: Option<String>,
 }
