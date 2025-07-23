@@ -1,135 +1,64 @@
-use std::collections::HashSet;
-use crate::interpreter::{Interpreter, WordDefinition, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Token};
+use std::rc::Rc;
 
-pub fn op_def(interp: &mut Interpreter, description: Option<String>) -> Result<()> {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+use crate::{
+    interpreter::Interpreter,
+    types::{Token, Type, Word},
+};
+
+// 「記憶の固定化」を行うDEFワードの新しい実装
+pub fn op_def(interpreter: &mut Interpreter) -> Result<(), String> {
+    // 1. スタックから名前(String)とエピソード記憶(Vector)をポップ
+    let name = interpreter.stack.pop_string()?;
+    let episode_vec = interpreter.stack.pop_vector()?;
+
+    let mut tokens: Vec<Token> = Vec::new();
+
+    // 2. Vector(データ)をToken(コード)に変換（コンパイル）
+    for data in episode_vec.borrow().iter() {
+        let token = match data {
+            Type::Number(n) => Token::Number(n.as_ref().clone()),
+            Type::String(s) => Token::String(s.as_ref().clone()),
+            Type::Symbol(s) => Token::Word(s.as_ref().clone()), // SymbolをWord Tokenに変換
+            Type::Vector(v) => {
+                 // Vectorリテラルをコード内で再現するために、
+                 // Vectorをスタックに積むための命令列を生成する。
+                tokens.push(Token::VectorStart);
+                // ネストしたVectorの中身も再帰的にTokenに変換する必要があるが、
+                // この実装をシンプルに保つため、ここではサポートしない。
+                // 実際には、この部分で再帰的な変換ロジックが必要になる。
+                 if !v.borrow().is_empty() {
+                    return Err("Defining non-empty vectors inside a user-defined word is not yet supported.".to_string());
+                 }
+                tokens.push(Token::VectorEnd);
+                continue; // 次のデータへ
+            }
+            _ => return Err(format!("Cannot define a word from type {:?}", data)),
+        };
+        tokens.push(token);
     }
 
-    let name_val = interp.stack.pop().unwrap();
-    let body_val = interp.stack.pop().unwrap();
+    // 3. 変換したトークン列を新しいワードとして辞書に登録
+    let word = Word::UserDefined(Rc::new(tokens));
+    interpreter.dictionary.insert(name, Rc::new(word));
 
-    match (&name_val.val_type, &body_val.val_type) {
-        (ValueType::String(name), ValueType::Quotation(body_tokens)) => {
-            let name = name.to_uppercase();
-
-            // ビルトインワードは再定義不可
-            if let Some(existing) = interp.dictionary.get(&name) {
-                if existing.is_builtin {
-                    return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-                }
-            }
-
-            // 依存関係チェック
-            if interp.dictionary.contains_key(&name) {
-                if let Some(dependents) = interp.dependencies.get(&name) {
-                    if !dependents.is_empty() {
-                        let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                        return Err(AjisaiError::ProtectedWord {
-                            name: name.clone(),
-                            dependents: dependent_list,
-                        });
-                    }
-                }
-            }
-
-            // 新しい依存関係を収集
-            let mut new_dependencies = HashSet::new();
-            for token in body_tokens {
-                if let Token::Symbol(s) = token {
-                    if interp.dictionary.contains_key(s) {
-                        new_dependencies.insert(s.clone());
-                    }
-                }
-            }
-
-            // 依存関係を更新
-            for dep_name in &new_dependencies {
-                interp.dependencies
-                    .entry(dep_name.clone())
-                    .or_insert_with(HashSet::new)
-                    .insert(name.clone());
-            }
-
-            // 新しいワードを登録
-            interp.dictionary.insert(name.clone(), WordDefinition {
-                tokens: body_tokens.clone(),
-                is_builtin: false,
-                description,
-            });
-
-            Ok(())
-        }
-        _ => Err(AjisaiError::type_error("quotation and string", "other types")),
-    }
+    Ok(())
 }
 
-pub fn op_if(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 3 {
-        return Err(AjisaiError::StackUnderflow);
+pub fn op_if(interpreter: &mut Interpreter) -> Result<(), String> {
+    let false_branch = interpreter.stack.pop_quotation()?;
+    let true_branch = interpreter.stack.pop_quototation()?;
+    let cond = interpreter.stack.pop_bool()?;
+
+    if cond {
+        interpreter.run_tokens(true_branch);
+    } else {
+        interpreter.run_tokens(false_branch);
     }
-    
-    let else_branch = interp.stack.pop().unwrap();
-    let then_branch = interp.stack.pop().unwrap();
-    let condition = interp.stack.pop().unwrap();
-
-    let (then_tokens, else_tokens) = match (&then_branch.val_type, &else_branch.val_type) {
-        (ValueType::Quotation(t), ValueType::Quotation(e)) => (t, e),
-        _ => return Err(AjisaiError::type_error("two quotations", "other types")),
-    };
-
-    let tokens_to_execute = match condition.val_type {
-        ValueType::Boolean(true) => then_tokens,
-        ValueType::Boolean(false) | ValueType::Nil => else_tokens,
-        _ => return Err(AjisaiError::type_error("boolean or nil", "other type")),
-    };
-    
-    interp.execute_tokens_with_context(tokens_to_execute)
+    Ok(())
 }
 
-pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
-        .ok_or(AjisaiError::StackUnderflow)?;
-    
-    match val.val_type {
-        ValueType::String(name) => {
-            let name = name.to_uppercase();
-            
-            // ビルトインワードは削除不可
-            if let Some(def) = interp.dictionary.get(&name) {
-                if def.is_builtin {
-                    return Err(AjisaiError::from(format!("Cannot delete builtin word: {}", name)));
-                }
-            }
-            
-            // 依存関係チェック
-            if let Some(dependents) = interp.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(AjisaiError::ProtectedWord {
-                        name: name.clone(),
-                        dependents: dependent_list,
-                    });
-                }
-            }
-            
-            interp.dictionary.remove(&name);
-            interp.dependencies.remove(&name);
-            Ok(())
-        },
-        _ => Err(AjisaiError::type_error("string", "other type")),
-    }
-}
-
-pub fn op_call(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
-        .ok_or(AjisaiError::StackUnderflow)?;
-    
-    match val.val_type {
-        ValueType::Quotation(tokens) => {
-            interp.execute_tokens_with_context(&tokens)
-        },
-        _ => Err(AjisaiError::type_error("quotation", "other type")),
-    }
+pub fn op_call(interpreter: &mut Interpreter) -> Result<(), String> {
+    let quot = interpreter.stack.pop_quotation()?;
+    interpreter.run_tokens(quot);
+    Ok(())
 }
