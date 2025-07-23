@@ -10,27 +10,30 @@ async function main() {
     try {
         console.log('Application starting...');
 
-        // 1. WASMモジュールの初期化を待つ
-        const wasm = await initWasm();
-        if (!wasm) {
-            throw new Error('WASM initialization failed. Application cannot start.');
-        }
-        window.HolonWasm = wasm;
-        console.log('WASM loaded and initialized successfully.');
-
-        // 2. Ajisaiインタープリタを作成し、グローバルに公開
-        window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
-        console.log('Ajisai interpreter created.');
+        // WASM読み込みを一時的に無効化してデバッグ
+        console.log('WASM loading temporarily disabled for debugging');
         
-        // 3. GUIを初期化（この時点でajisaiInterpreterは利用可能）
-        // GUI.init()は同期的にDOM要素のキャッシュとイベントリスナーの設定を行う
+        // モックインタープリタを作成
+        window.ajisaiInterpreter = {
+            execute: () => ({ status: 'OK', output: 'WASM disabled for debugging' }),
+            get_stack: () => [],
+            get_register: () => null,
+            get_custom_words_info: () => [],
+            init_step: () => 'OK',
+            step: () => ({ hasMore: false, output: '', position: 0, total: 0 })
+        };
+        console.log('Mock interpreter created.');
+        
+        // GUIを初期化
         GUI_INSTANCE.init();
         console.log('GUI initialized.');
 
-        // 4. データベースから非同期でデータを読み込み、完了後にGUIを更新
-        await GUI_INSTANCE.persistence.loadDatabaseData();
-        GUI_INSTANCE.updateAllDisplays(); // データベース読み込み後に表示を完全に更新
-        GUI_INSTANCE.display.showInfo('Ready.'); // 準備完了を通知
+        // データベース読み込みをスキップ
+        console.log('Database loading skipped for debugging');
+        
+        // 基本的な表示更新
+        GUI_INSTANCE.updateAllDisplays();
+        GUI_INSTANCE.display.showInfo('Ready (Debug mode - WASM disabled).');
 
     } catch (error) {
         console.error('An error occurred during application startup:', error);
