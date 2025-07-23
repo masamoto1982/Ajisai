@@ -1,276 +1,129 @@
-pub mod stack_ops;
 pub mod arithmetic;
-pub mod vector_ops;
 pub mod control;
-pub mod io;
-pub mod error;
+pub mod stack_ops;
+// Other modules like io, vector_ops might need updating if used.
 
-use std::collections::{HashMap, HashSet};
-use crate::types::{Value, ValueType, Stack, Register, Token};
-use crate::tokenizer::tokenize;
-use self::error::{AjisaiError, Result};
+use std::cell::RefCell;
+use std::collections::VecDeque;
+use std::rc::Rc;
+
+use crate::{
+    builtins::make_std_dictionary,
+    stack::Stack,
+    tokenizer::tokenize,
+    types::{Token, Type},
+};
 
 pub struct Interpreter {
-    pub(crate) stack: Stack,
-    pub(crate) register: Register,
-    pub(crate) dictionary: HashMap<String, WordDefinition>,
-    pub(crate) dependencies: HashMap<String, HashSet<String>>,
-    pub(crate) call_stack: Vec<String>,
-    step_tokens: Vec<Token>,
-    step_position: usize,
-    step_mode: bool,
-    pub(crate) output_buffer: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct WordDefinition {
-    pub tokens: Vec<Token>,
-    pub is_builtin: bool,
-    pub description: Option<String>,
+    pub stack: Stack,
+    pub dictionary: crate::types::Dictionary,
+    tokens: VecDeque<Token>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut interpreter = Interpreter {
-            stack: Vec::new(),
-            register: None,
-            dictionary: HashMap::new(),
-            dependencies: HashMap::new(),
-            call_stack: Vec::new(),
-            step_tokens: Vec::new(),
-            step_position: 0,
-            step_mode: false,
-            output_buffer: String::new(),
-        };
-        
-        // 組み込みワードを登録
-        crate::builtins::register_builtins(&mut interpreter.dictionary);
-        
-        interpreter
-    }
-
-    pub fn execute(&mut self, input: &str) -> Result<String> {
-        self.output_buffer.clear();
-        let tokens = tokenize(input)?;
-        self.execute_tokens(&tokens)?;
-        Ok(self.output_buffer.clone())
-    }
-
-    pub fn init_step(&mut self, input: &str) -> Result<()> {
-        self.output_buffer.clear();
-        self.step_tokens = tokenize(input)?;
-        self.step_position = 0;
-        self.step_mode = true;
-        Ok(())
-    }
-
-    pub fn step(&mut self) -> Result<(String, bool)> {
-        if !self.step_mode || self.step_position >= self.step_tokens.len() {
-            self.step_mode = false;
-            return Ok((self.output_buffer.clone(), false));
+        Interpreter {
+            stack: Stack::new(),
+            dictionary: make_std_dictionary(),
+            tokens: VecDeque::new(),
         }
-
-        let token = &self.step_tokens[self.step_position].clone();
-        self.execute_token(token)?;
-        self.step_position += 1;
-
-        let has_more = self.step_position < self.step_tokens.len();
-        if !has_more {
-            self.step_mode = false;
-        }
-
-        Ok((self.output_buffer.clone(), has_more))
     }
 
-    pub fn reset_step(&mut self) {
-        self.step_mode = false;
-        self.step_tokens.clear();
-        self.step_position = 0;
-    }
+    pub fn run(&mut self, code: &str) -> Result<(), String> {
+        let new_tokens = tokenize(code);
+        self.tokens.extend(new_tokens);
 
-    fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        for token in tokens {
-            self.execute_token(token)?;
-        }
-        Ok(())
-    }
-
-    pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
-        self.execute_tokens(tokens)
-    }
-
-    fn execute_token(&mut self, token: &Token) -> Result<()> {
-        match token {
-            Token::Number(n) => {
-                self.stack.push(Value { val_type: ValueType::Number(n.clone()) });
-            },
-            Token::String(s) => {
-                self.stack.push(Value { val_type: ValueType::String(s.clone()) });
-            },
-            Token::Symbol(s) => {
-                self.stack.push(Value { val_type: ValueType::Symbol(s.clone()) });
-            },
-            Token::Vector(tokens) => {
-                let mut elements = Vec::new();
-                for token in tokens {
-                    match token {
-                        Token::Number(n) => elements.push(Value { val_type: ValueType::Number(n.clone()) }),
-                        Token::String(s) => elements.push(Value { val_type: ValueType::String(s.clone()) }),
-                        Token::Symbol(s) => elements.push(Value { val_type: ValueType::Symbol(s.clone()) }),
-                        Token::Vector(_) => {
-                            // ネストしたベクトルの処理
-                            self.execute_token(token)?;
-                            if let Some(val) = self.stack.pop() {
-                                elements.push(val);
+        while let Some(token) = self.tokens.pop_front() {
+            match token {
+                Token::BlockStart => {
+                    let block_tokens = self.collect_block_tokens();
+                    self.stack.push(Type::Quotation(Rc::new(block_tokens)));
+                }
+                Token::VectorStart => {
+                    let vector_body = self.collect_vector_as_data()?;
+                    self.stack
+                        .push(Type::Vector(Rc::new(RefCell::new(vector_body))));
+                }
+                Token::Number(val) => {
+                    self.stack.push(Type::Number(Rc::new(val)));
+                }
+                Token::String(val) => {
+                    self.stack.push(Type::String(Rc::new(val)));
+                }
+                Token::Word(word) => {
+                    if let Some(word_def) = self.dictionary.get(&word).cloned() {
+                        match word_def.as_ref() {
+                            crate::types::Word::Builtin(f) => f(self)?,
+                            crate::types::Word::UserDefined(tokens) => {
+                                self.run_tokens(tokens.clone());
                             }
-                        },
-                        Token::Word(w) => {
-                            // ベクトル内のワードは実行せずにQuotationとして扱う
-                            let quotation_tokens = vec![token.clone()];
-                            elements.push(Value { val_type: ValueType::Quotation(quotation_tokens) });
-                        },
-                        Token::Nil => elements.push(Value { val_type: ValueType::Nil }),
-                    }
-                }
-                self.stack.push(Value { val_type: ValueType::Vector(elements) });
-            },
-            Token::Word(word) => {
-                if let Some(definition) = self.dictionary.get(word).cloned() {
-                    if definition.is_builtin {
-                        self.execute_builtin(word)?;
+                        }
                     } else {
-                        self.call_stack.push(word.clone());
-                        let result = self.execute_tokens(&definition.tokens);
-                        self.call_stack.pop();
-                        result?;
+                        return Err(format!("Unknown word: {}", word));
                     }
-                } else {
-                    return Err(AjisaiError::from(format!("Unknown word: {}", word)));
                 }
-            },
-            Token::Nil => {
-                self.stack.push(Value { val_type: ValueType::Nil });
-            },
+                Token::BlockEnd => return Err("Unexpected '}'".to_string()),
+                Token::VectorEnd => return Err("Unexpected ']'".to_string()),
+            }
         }
         Ok(())
     }
-
-    fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, io::*};
-
-        match name {
-            // スタック操作
-            "DUP" => op_dup(self),
-            "DROP" => op_drop(self),
-            "SWAP" => op_swap(self),
-            "OVER" => op_over(self),
-            "ROT" => op_rot(self),
-            "NIP" => op_nip(self),
-            
-            // レジスタ操作
-            ">R" => op_to_r(self),
-            "R>" => op_r_from(self),
-            "R@" => op_r_fetch(self),
-            
-            // 算術演算
-            "+" => op_add(self),
-            "-" => op_sub(self),
-            "*" => op_mul(self),
-            "/" => op_div(self),
-            
-            // 比較演算
-            "=" => op_eq(self),
-            ">" => op_gt(self),
-            ">=" => op_gte(self),
-            "<" => op_lt(self),
-            "<=" => op_lte(self),
-            
-            // 論理演算
-            "NOT" => op_not(self),
-            "AND" => op_and(self),
-            "OR" => op_or(self),
-            
-            // ベクトル操作
-            "LENGTH" => op_length(self),
-            "HEAD" => op_head(self),
-            "TAIL" => op_tail(self),
-            "CONS" => op_cons(self),
-            "APPEND" => op_append(self),
-            "REVERSE" => op_reverse(self),
-            "NTH" => op_nth(self),
-            "UNCONS" => op_uncons(self),
-            "EMPTY?" => op_empty_check(self),
-            
-            // 制御構造
-            "DEF" => op_def(self),
-            "IF" => op_if(self),
-            "CALL" => op_call(self),
-            "DEL" => op_del(self),
-            
-            // Nil関連
-            "NIL?" => op_nil_check(self),
-            "NOT-NIL?" => op_not_nil_check(self),
-            "KNOWN?" => op_not_nil_check(self),
-            "DEFAULT" => op_default(self),
-            
-            "MATCH?" => op_match(self),
-            "WILDCARD" => op_wildcard(self),
-            
-            // 入出力
-            "." => op_dot(self),
-            "PRINT" => op_print(self),
-            "CR" => op_cr(self),
-            "SPACE" => op_space(self),
-            "SPACES" => op_spaces(self),
-            "EMIT" => op_emit(self),
-            
-            _ => Err(AjisaiError::from(format!("Unknown builtin: {}", name))),
+    
+    fn collect_block_tokens(&mut self) -> Vec<Token> {
+        let mut block_tokens = Vec::new();
+        let mut depth = 1;
+        while let Some(token) = self.tokens.pop_front() {
+            match token {
+                Token::BlockStart => {
+                    depth += 1;
+                    block_tokens.push(token);
+                }
+                Token::BlockEnd => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                    block_tokens.push(token);
+                }
+                _ => {
+                    block_tokens.push(token);
+                }
+            }
         }
+        block_tokens
     }
 
-    pub fn append_output(&mut self, text: &str) {
-        self.output_buffer.push_str(text);
+    fn collect_vector_as_data(&mut self) -> Result<Vec<Type>, String> {
+        let mut vector_contents: Vec<Type> = Vec::new();
+        while let Some(token) = self.tokens.pop_front() {
+            match token {
+                Token::VectorEnd => return Ok(vector_contents),
+                Token::VectorStart => {
+                    let nested_vector = self.collect_vector_as_data()?;
+                    vector_contents.push(Type::Vector(Rc::new(RefCell::new(nested_vector))));
+                }
+                Token::Number(val) => {
+                    vector_contents.push(Type::Number(Rc::new(val)));
+                }
+                Token::String(val) => {
+                    vector_contents.push(Type::String(Rc::new(val)));
+                }
+                Token::Word(name) => {
+                    vector_contents.push(Type::Symbol(Rc::new(name)));
+                }
+                Token::BlockStart | Token::BlockEnd => {
+                    return Err(
+                        "Quotation `{}` cannot be placed in a data vector.".to_string(),
+                    );
+                }
+            }
+        }
+        Err("Unclosed vector literal `[`.".to_string())
     }
 
-    pub fn get_stack(&self) -> &Stack {
-        &self.stack
-    }
-
-    pub fn get_register(&self) -> &Register {
-        &self.register
-    }
-
-    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
-        self.dictionary
-            .iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, def)| {
-                let is_protected = self.dependencies.values()
-                    .any(|deps| deps.contains(name));
-                (name.clone(), def.description.clone(), is_protected)
-            })
-            .collect()
-    }
-
-    pub fn get_word_definition(&self, name: &str) -> Option<Vec<Token>> {
-        self.dictionary.get(name)
-            .filter(|def| !def.is_builtin)
-            .map(|def| def.tokens.clone())
-    }
-
-    pub fn restore_stack(&mut self, stack: Vec<Value>) {
-        self.stack = stack;
-    }
-
-    pub fn restore_register(&mut self, register: Option<Value>) {
-        self.register = register;
-    }
-
-    pub fn restore_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) {
-        self.dictionary.insert(name, WordDefinition {
-            tokens,
-            is_builtin: false,
-            description,
-        });
+    pub fn run_tokens(&mut self, tokens: Rc<Vec<Token>>) {
+        for token in tokens.iter().rev() {
+            self.tokens.push_front(token.clone());
+        }
     }
 }
