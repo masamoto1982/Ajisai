@@ -9,8 +9,12 @@ crate-type = ["cdylib"]
 [dependencies]
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1.7"
-# Add the 'rug' crate for arbitrary-precision rational numbers
 rug = { version = "1.12", features = ["serde"] }
+
+# `rug`が依存するgmp-mpfr-sysを直接追加し、
+# WebAssemblyへのクロスコンパイルを強制する機能を有効にする
+gmp-mpfr-sys = { version = "1.6.5", features = ["force-cross"] }
+
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
