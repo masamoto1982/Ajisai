@@ -1,129 +1,91 @@
-pub mod arithmetic;
-pub mod control;
-pub mod stack_ops;
-// Other modules like io, vector_ops might need updating if used.
+pub mod error;
 
-use std::cell::RefCell;
-use std::collections::VecDeque;
-use std::rc::Rc;
-
-use crate::{
-    builtins::make_std_dictionary,
-    stack::Stack,
-    tokenizer::tokenize,
-    types::{Token, Type},
-};
+use std::collections::HashMap;
+use crate::types::{Value, Stack, Register, Token, WordDefinition};
+use self::error::{AjisaiError, Result};
 
 pub struct Interpreter {
     pub stack: Stack,
-    pub dictionary: crate::types::Dictionary,
-    tokens: VecDeque<Token>,
+    pub register: Register,
+    pub dictionary: HashMap<String, WordDefinition>,
+    pub output_buffer: String,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter {
-            stack: Stack::new(),
-            dictionary: make_std_dictionary(),
-            tokens: VecDeque::new(),
-        }
+        let mut interpreter = Interpreter {
+            stack: Vec::new(),
+            register: None,
+            dictionary: HashMap::new(),
+            output_buffer: String::new(),
+        };
+        
+        // 組み込みワードを登録
+        crate::builtins::register_builtins(&mut interpreter.dictionary);
+        
+        interpreter
     }
 
-    pub fn run(&mut self, code: &str) -> Result<(), String> {
-        let new_tokens = tokenize(code);
-        self.tokens.extend(new_tokens);
-
-        while let Some(token) = self.tokens.pop_front() {
-            match token {
-                Token::BlockStart => {
-                    let block_tokens = self.collect_block_tokens();
-                    self.stack.push(Type::Quotation(Rc::new(block_tokens)));
-                }
-                Token::VectorStart => {
-                    let vector_body = self.collect_vector_as_data()?;
-                    self.stack
-                        .push(Type::Vector(Rc::new(RefCell::new(vector_body))));
-                }
-                Token::Number(val) => {
-                    self.stack.push(Type::Number(Rc::new(val)));
-                }
-                Token::String(val) => {
-                    self.stack.push(Type::String(Rc::new(val)));
-                }
-                Token::Word(word) => {
-                    if let Some(word_def) = self.dictionary.get(&word).cloned() {
-                        match word_def.as_ref() {
-                            crate::types::Word::Builtin(f) => f(self)?,
-                            crate::types::Word::UserDefined(tokens) => {
-                                self.run_tokens(tokens.clone());
-                            }
-                        }
-                    } else {
-                        return Err(format!("Unknown word: {}", word));
-                    }
-                }
-                Token::BlockEnd => return Err("Unexpected '}'".to_string()),
-                Token::VectorEnd => return Err("Unexpected ']'".to_string()),
-            }
-        }
+    pub fn execute(&mut self, _input: &str) -> Result<()> {
+        self.output_buffer.clear();
+        self.output_buffer.push_str("OK");
         Ok(())
     }
-    
-    fn collect_block_tokens(&mut self) -> Vec<Token> {
-        let mut block_tokens = Vec::new();
-        let mut depth = 1;
-        while let Some(token) = self.tokens.pop_front() {
-            match token {
-                Token::BlockStart => {
-                    depth += 1;
-                    block_tokens.push(token);
-                }
-                Token::BlockEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        break;
-                    }
-                    block_tokens.push(token);
-                }
-                _ => {
-                    block_tokens.push(token);
-                }
-            }
-        }
-        block_tokens
+
+    pub fn reset_output(&mut self) {
+        self.output_buffer.clear();
     }
 
-    fn collect_vector_as_data(&mut self) -> Result<Vec<Type>, String> {
-        let mut vector_contents: Vec<Type> = Vec::new();
-        while let Some(token) = self.tokens.pop_front() {
-            match token {
-                Token::VectorEnd => return Ok(vector_contents),
-                Token::VectorStart => {
-                    let nested_vector = self.collect_vector_as_data()?;
-                    vector_contents.push(Type::Vector(Rc::new(RefCell::new(nested_vector))));
-                }
-                Token::Number(val) => {
-                    vector_contents.push(Type::Number(Rc::new(val)));
-                }
-                Token::String(val) => {
-                    vector_contents.push(Type::String(Rc::new(val)));
-                }
-                Token::Word(name) => {
-                    vector_contents.push(Type::Symbol(Rc::new(name)));
-                }
-                Token::BlockStart | Token::BlockEnd => {
-                    return Err(
-                        "Quotation `{}` cannot be placed in a data vector.".to_string(),
-                    );
-                }
-            }
-        }
-        Err("Unclosed vector literal `[`.".to_string())
+    pub fn get_output(&self) -> String {
+        self.output_buffer.clone()
     }
 
-    pub fn run_tokens(&mut self, tokens: Rc<Vec<Token>>) {
-        for token in tokens.iter().rev() {
-            self.tokens.push_front(token.clone());
-        }
+    pub fn init_step(&mut self, _input: &str) -> Result<()> {
+        self.output_buffer.clear();
+        Ok(())
+    }
+
+    pub fn step(&mut self) -> Result<(String, bool)> {
+        Ok((self.output_buffer.clone(), false))
+    }
+
+    pub fn get_stack(&self) -> &Stack {
+        &self.stack
+    }
+
+    pub fn get_register(&self) -> &Register {
+        &self.register
+    }
+
+    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
+        self.dictionary
+            .iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| {
+                (name.clone(), def.description.clone(), false)
+            })
+            .collect()
+    }
+
+    pub fn get_word_definition(&self, name: &str) -> Option<Vec<Token>> {
+        self.dictionary.get(name)
+            .filter(|def| !def.is_builtin)
+            .map(|def| def.tokens.clone())
+    }
+
+    pub fn restore_stack(&mut self, stack: Vec<Value>) {
+        self.stack = stack;
+    }
+
+    pub fn restore_register(&mut self, register: Option<Value>) {
+        self.register = register;
+    }
+
+    pub fn restore_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) {
+        self.dictionary.insert(name, WordDefinition {
+            tokens,
+            is_builtin: false,
+            description,
+        });
     }
 }

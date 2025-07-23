@@ -1,6 +1,6 @@
 use crate::types::{Token, Fraction};
 
-pub fn tokenize(input: &str) -> Vec<Token> {
+pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();
     
@@ -19,19 +19,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             },
             '[' => {
                 chars.next();
-                tokens.push(Token::VectorStart);
-            },
-            ']' => {
-                chars.next();
-                tokens.push(Token::VectorEnd);
-            },
-            '{' => {
-                chars.next();
-                tokens.push(Token::QuotationStart);
-            },
-            '}' => {
-                chars.next();
-                tokens.push(Token::QuotationEnd);
+                let vector_tokens = parse_vector(&mut chars)?;
+                tokens.push(Token::Vector(vector_tokens));
             },
             '"' => {
                 chars.next();
@@ -58,7 +47,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         }
     }
     
-    tokens
+    Ok(tokens)
 }
 
 fn read_string(chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
@@ -106,27 +95,58 @@ fn read_word(chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
     word
 }
 
+fn parse_vector(chars: &mut std::iter::Peekable<std::str::Chars>) -> Result<Vec<Token>, String> {
+    let mut vector_tokens = Vec::new();
+    
+    while let Some(&ch) = chars.peek() {
+        match ch {
+            ' ' | '\t' | '\n' | '\r' => {
+                chars.next();
+            },
+            ']' => {
+                chars.next();
+                return Ok(vector_tokens);
+            },
+            '[' => {
+                chars.next();
+                let nested_vector = parse_vector(chars)?;
+                vector_tokens.push(Token::Vector(nested_vector));
+            },
+            '"' => {
+                chars.next();
+                let s = read_string(chars);
+                vector_tokens.push(Token::String(s));
+            },
+            _ => {
+                let word = read_word(chars);
+                if let Some(token) = parse_word(&word) {
+                    vector_tokens.push(token);
+                }
+            }
+        }
+    }
+    
+    Err("Unclosed vector".to_string())
+}
+
 fn parse_word(word: &str) -> Option<Token> {
     if word.is_empty() {
         return None;
     }
     
-    // Boolean
-    if word == "true" {
-        return Some(Token::Word(word.to_string()));
-    }
-    if word == "false" {
-        return Some(Token::Word(word.to_string()));
-    }
-    
     // nil
     if word == "nil" {
-        return Some(Token::Word(word.to_string()));
+        return Some(Token::Nil);
     }
     
     // 数値のパース
     if let Some(frac) = parse_fraction(word) {
         return Some(Token::Number(frac));
+    }
+    
+    // シンボル（大文字で始まる）
+    if word.chars().next().unwrap().is_uppercase() {
+        return Some(Token::Symbol(word.to_string()));
     }
     
     // それ以外はワード

@@ -88,15 +88,14 @@ impl From<i64> for Fraction {
 }
 
 // トークン型
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Token {
     Word(String),
     Number(Fraction),
     String(String),
-    VectorStart,
-    VectorEnd,
-    QuotationStart,
-    QuotationEnd,
+    Symbol(String),
+    Vector(Vec<Token>),
+    Nil,
 }
 
 // 値型
@@ -144,3 +143,6 @@ pub struct WordDefinition {
     pub is_builtin: bool,
     pub description: Option<String>,
 }
+// 型エイリアス
+pub type Stack = Vec<Value>;
+pub type Register = Option<Value>;

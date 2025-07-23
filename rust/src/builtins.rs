@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::interpreter::WordDefinition;
+use crate::types::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     // スタック操作

@@ -42,7 +42,7 @@ impl AjisaiInterpreter {
             Err(e) => {
                 let result = serde_json::json!({
                     "status": "ERROR",
-                    "message": e.to_string()
+                    "message": format!("{:?}", e)
                 });
                 serde_wasm_bindgen::to_value(&result).unwrap()
             }
@@ -60,16 +60,16 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn step(&mut self) -> Result<JsValue, JsValue> {
         match self.interpreter.step() {
-            Ok(step_result) => {
+            Ok((output, has_more)) => {
                 let result = serde_json::json!({
-                    "hasMore": step_result.has_more,
-                    "output": step_result.output,
-                    "position": step_result.position,
-                    "total": step_result.total,
+                    "hasMore": has_more,
+                    "output": output,
+                    "position": 0,
+                    "total": 0,
                 });
                 Ok(serde_wasm_bindgen::to_value(&result).unwrap())
             },
-            Err(e) => Err(JsValue::from_str(&e.to_string())),
+            Err(e) => Err(JsValue::from_str(&format!("{:?}", e))),
         }
     }
 
@@ -192,7 +192,7 @@ impl AjisaiInterpreter {
     pub fn get_custom_words(&self) -> js_sys::Array {
         let words = js_sys::Array::new();
         
-        for (name, def) in &self.interpreter.custom_words {
+        for (name, def) in &self.interpreter.dictionary {
             if !def.is_builtin {
                 words.push(&JsValue::from_str(name));
             }
@@ -205,7 +205,7 @@ impl AjisaiInterpreter {
     pub fn get_custom_words_with_descriptions(&self) -> JsValue {
         let mut words = Vec::new();
         
-        for (name, def) in &self.interpreter.custom_words {
+        for (name, def) in &self.interpreter.dictionary {
             if !def.is_builtin {
                 let word_info = serde_json::json!({
                     "name": name,
@@ -220,20 +220,7 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
-        let mut words = Vec::new();
-        
-        for (name, def) in &self.interpreter.custom_words {
-            if !def.is_builtin {
-                let protected = self.interpreter.is_word_protected(name);
-                let word_data = vec![
-                    serde_json::Value::String(name.clone()),
-                    serde_json::Value::String(def.description.clone().unwrap_or_default()),
-                    serde_json::Value::Bool(protected),
-                ];
-                words.push(word_data);
-            }
-        }
-        
+        let words = self.interpreter.get_custom_words_info();
         serde_wasm_bindgen::to_value(&words).unwrap()
     }
 
@@ -285,13 +272,9 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
-        if let Some(def) = self.interpreter.custom_words.get(name) {
-            if !def.is_builtin {
-                let tokens_str: Vec<String> = def.tokens.iter().map(|t| format!("{:?}", t)).collect();
-                JsValue::from_str(&tokens_str.join(" "))
-            } else {
-                JsValue::NULL
-            }
+        if let Some(tokens) = self.interpreter.get_word_definition(name) {
+            let tokens_str: Vec<String> = tokens.iter().map(|t| format!("{:?}", t)).collect();
+            JsValue::from_str(&tokens_str.join(" "))
         } else {
             JsValue::NULL
         }
@@ -300,14 +283,13 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn restore_word(&mut self, name: &str, definition: &str, description: Option<String>) -> Result<(), JsValue> {
         // 簡易的な実装：定義文字列からトークンを復元
-        let tokens = tokenizer::tokenize(definition);
-        self.interpreter.custom_words.insert(name.to_string(), types::WordDefinition {
-            tokens,
-            is_builtin: false,
-            description,
-        });
-        self.interpreter.update_dependencies();
-        Ok(())
+        match tokenizer::tokenize(definition) {
+            Ok(tokens) => {
+                self.interpreter.restore_word(name.to_string(), tokens, description);
+                Ok(())
+            },
+            Err(e) => Err(JsValue::from_str(&e)),
+        }
     }
 
     // ヘルパー関数
