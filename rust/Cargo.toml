@@ -7,11 +7,13 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
-js-sys = "0.3"
-serde = { version = "1.0", features = ["derive"] }
-serde-wasm-bindgen = "0.6"
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1.7"
+# Add the 'rug' crate for arbitrary-precision rational numbers
+rug = { version = "1.12", features = ["serde"] }
 
-[dependencies.web-sys]
-version = "0.3"
-features = ["console", "Window", "CustomEvent", "EventTarget", "Event"]
+[dev-dependencies]
+wasm-bindgen-test = "0.3.34"
+
+[profile.release]
+lto = true
