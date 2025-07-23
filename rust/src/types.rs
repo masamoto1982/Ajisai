@@ -1,153 +1,72 @@
-use std::fmt;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
-// Tokenの定義をtokenizer.rsからこちらに移動
+use rug::Rational;
+
+use crate::interpreter::Interpreter;
+
+// --- 意味記憶 (Semantic Memory) ---
+// 辞書に登録される実行可能なエンティティ
+#[derive(Clone)]
+pub enum Word {
+    Builtin(WordFunc),
+    UserDefined(Rc<Vec<Token>>),
+}
+
+impl std::fmt::Debug for Word {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Word::Builtin(_) => write!(f, "Builtin"),
+            Word::UserDefined(tokens) => write!(f, "UserDefined({:?})", tokens),
+        }
+    }
+}
+
+// WordがPartialEqを実装するため、手動で比較ロジックを定義
+impl PartialEq for Word {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Word::Builtin(f1), Word::Builtin(f2)) => (f1 as *const ()) == (f2 as *const ()),
+            (Word::UserDefined(v1), Word::UserDefined(v2)) => Rc::ptr_eq(v1, v2),
+            _ => false,
+        }
+    }
+}
+
+pub type WordFunc = fn(&mut Interpreter) -> Result<(), String>;
+pub type Dictionary = HashMap<String, Rc<Word>>;
+
+// --- トークン ---
+// ソースコードを解析した結果の最小単位
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    Number(i64, i64),
+    Word(String),
+    Number(Rational),
     String(String),
-    Boolean(bool),
-    Symbol(String),
-    VectorStart,      // [
-    VectorEnd,        // ]
-    BlockStart,       // {
-    BlockEnd,         // }
-    Nil,
-    Description(String),
+    VectorStart, // `[`
+    VectorEnd,   // `]`
+    BlockStart,  // `{`
+    BlockEnd,    // `}`
 }
 
+// --- スタック上の型 ---
+// スタックに積まれる情報の種類
 #[derive(Debug, Clone, PartialEq)]
-pub struct Value {
-    pub val_type: ValueType,
-}
+pub enum Type {
+    // --- データ型 (エピソード記憶) ---
+    // これらは純粋なデータとしてスタックに積まれる
+    Number(Rc<Rational>),
+    String(Rc<String>),
+    Bool(bool),
+    Symbol(Rc<String>), // ワード名そのものをデータとして扱う
+    Vector(Rc<RefCell<Vec<Type>>>),
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ValueType {
-    Number(Fraction),
-    String(String),
-    Boolean(bool),
-    Symbol(String),
-    Vector(Vec<Value>),
-    Quotation(Vec<Token>), // <-- 新しくQuotation型を追加
-    Nil,
-}
+    // --- 手続き記憶 (実行可能な計画) ---
+    // IFやCALLなどの制御構造で使われる、即時実行可能なコードブロック
+    Quotation(Rc<Vec<Token>>),
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Fraction {
-    pub numerator: i64,
-    pub denominator: i64,
-}
-
-impl Fraction {
-    pub fn new(numerator: i64, denominator: i64) -> Self {
-        if denominator == 0 {
-            panic!("Division by zero");
-        }
-        
-        let gcd = Self::gcd(numerator.abs(), denominator.abs());
-        let mut num = numerator / gcd;
-        let mut den = denominator / gcd;
-        
-        if den < 0 {
-            num = -num;
-            den = -den;
-        }
-        
-        Fraction {
-            numerator: num,
-            denominator: den,
-        }
-    }
-    
-    fn gcd(a: i64, b: i64) -> i64 {
-        if b == 0 { a } else { Self::gcd(b, a % b) }
-    }
-    
-    pub fn add(&self, other: &Fraction) -> Fraction {
-        let num = self.numerator * other.denominator + other.numerator * self.denominator;
-        let den = self.denominator * other.denominator;
-        Fraction::new(num, den)
-    }
-    
-    pub fn sub(&self, other: &Fraction) -> Fraction {
-        let num = self.numerator * other.denominator - other.numerator * self.denominator;
-        let den = self.denominator * other.denominator;
-        Fraction::new(num, den)
-    }
-    
-    pub fn mul(&self, other: &Fraction) -> Fraction {
-        let num = self.numerator * other.numerator;
-        let den = self.denominator * other.denominator;
-        Fraction::new(num, den)
-    }
-    
-    pub fn div(&self, other: &Fraction) -> Fraction {
-        if other.numerator == 0 {
-            panic!("Division by zero");
-        }
-        let num = self.numerator * other.denominator;
-        let den = self.denominator * other.numerator;
-        Fraction::new(num, den)
-    }
-    
-    pub fn gt(&self, other: &Fraction) -> bool {
-        self.numerator * other.denominator > other.numerator * self.denominator
-    }
-    
-    pub fn ge(&self, other: &Fraction) -> bool {
-        self.numerator * other.denominator >= other.numerator * self.denominator
-    }
-    
-    pub fn eq(&self, other: &Fraction) -> bool {
-        self.numerator * other.denominator == other.numerator * self.denominator
-    }
-    
-    pub fn lt(&self, other: &Fraction) -> bool {
-        self.numerator * other.denominator < other.numerator * self.denominator
-    }
-    
-    pub fn le(&self, other: &Fraction) -> bool {
-        self.numerator * other.denominator <= other.numerator * self.denominator
-    }
-}
-
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.val_type {
-            ValueType::Number(n) => {
-                if n.denominator == 1 {
-                    write!(f, "{}", n.numerator)
-                } else {
-                    write!(f, "{}/{}", n.numerator, n.denominator)
-                }
-            },
-            ValueType::String(s) => write!(f, "\"{}\"", s),
-            ValueType::Boolean(b) => write!(f, "{}", b),
-            ValueType::Symbol(s) => write!(f, "{}", s),
-            ValueType::Vector(v) => {
-                write!(f, "[ ")?;
-                for (i, item) in v.iter().enumerate() {
-                    if i > 0 { write!(f, " ")?; }
-                    write!(f, "{}", item)?;
-                }
-                write!(f, " ]")
-            },
-            // Quotationの表示方法を定義
-            ValueType::Quotation(_tokens) => {
-    write!(f, "{{ ")?;
-    write!(f, "...")?;
-    write!(f, " }}")
-},
-            ValueType::Nil => write!(f, "nil"),
-        }
-    }
-}
-
-pub type Stack = Vec<Value>;
-pub type Register = Option<Value>;
-
-// types.rs の最後に以下を追加
-#[derive(Debug, Clone)]
-pub struct TableData {
-    pub schema: Vec<String>,
-    pub records: Vec<Vec<Value>>,
+    // --- 意味記憶への参照 ---
+    // 辞書に登録されたワードそのもの
+    Word(Rc<Word>),
 }
