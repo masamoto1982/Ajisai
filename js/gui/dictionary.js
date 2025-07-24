@@ -48,8 +48,9 @@ export class Dictionary {
     }
 
     renderBuiltinWords() {
-        this.renderWordButtons(this.elements.builtinWordsDisplay, this.builtinWords, false);
-    }
+    // ワーキングメモリモードではビルトインワードを表示しない
+    this.elements.builtinWordsDisplay.innerHTML = '<p style="color: #999;">Working Memory Mode - No built-in words</p>';
+}
 
     updateCustomWords(customWordsInfo) {
         const words = (customWordsInfo || []).map(wordData => ({
