@@ -27,7 +27,7 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>),
-    Quotation(Vec<Token>), // <-- 新しくQuotation型を追加
+    Quotation(Vec<Token>),
     Nil,
 }
 
@@ -131,12 +131,11 @@ impl fmt::Display for Value {
                 }
                 write!(f, " ]")
             },
-            // Quotationの表示方法を定義
             ValueType::Quotation(_tokens) => {
-    write!(f, "{{ ")?;
-    write!(f, "...")?;
-    write!(f, " }}")
-},
+                write!(f, "{{ ")?;
+                write!(f, "...")?;
+                write!(f, " }}")
+            },
             ValueType::Nil => write!(f, "nil"),
         }
     }
@@ -144,10 +143,3 @@ impl fmt::Display for Value {
 
 pub type Stack = Vec<Value>;
 pub type Register = Option<Value>;
-
-// types.rs の最後に以下を追加
-#[derive(Debug, Clone)]
-pub struct TableData {
-    pub schema: Vec<String>,
-    pub records: Vec<Vec<Value>>,
-}
