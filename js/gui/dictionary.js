@@ -53,38 +53,31 @@ export class Dictionary {
 }
 
     updateCustomWords(customWordsInfo) {
-        const words = (customWordsInfo || []).map(wordData => ({
-            name: wordData[0],
-            description: wordData[1] || null,
-            protected: wordData[2] || false
-        }));
-        this.renderWordButtons(this.elements.customWordsDisplay, words, true);
-    }
+    const words = (customWordsInfo || []).map(wordData => ({
+        name: wordData[0],
+        description: wordData[1] || 'User defined word',  // 説明文を使用
+        protected: wordData[2] || false
+    }));
+    this.renderWordButtons(this.elements.customWordsDisplay, words, true);
+}
 
-    renderWordButtons(container, words, isCustom) {
-        container.innerHTML = '';
+renderWordButtons(container, words, isCustom) {
+    container.innerHTML = '';
 
-        words.forEach(wordInfo => {
-            const button = document.createElement('button');
-            button.textContent = wordInfo.name;
-            button.className = 'word-button';
-            button.title = wordInfo.description || wordInfo.name;
-            
-            if (!isCustom) {
-                button.classList.add('builtin');
-            } else if (wordInfo.protected) {
-                button.classList.add('protected');
-            } else {
-                button.classList.add('deletable');
+    words.forEach(wordInfo => {
+        const button = document.createElement('button');
+        button.textContent = wordInfo.name;
+        button.className = 'word-button';
+        button.title = wordInfo.description;  // ホバー時に説明を表示
+        
+        // ... 既存のスタイル設定
+        
+        button.addEventListener('click', () => {
+            if (this.onWordClick) {
+                this.onWordClick(wordInfo.name);
             }
-            
-            button.addEventListener('click', () => {
-                if (this.onWordClick) {
-                    this.onWordClick(wordInfo.name);
-                }
-            });
-            
-            container.appendChild(button);
         });
-    }
+        
+        container.appendChild(button);
+    });
 }
