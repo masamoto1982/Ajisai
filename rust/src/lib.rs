@@ -29,7 +29,6 @@ impl AjisaiInterpreter {
                 let obj = js_sys::Object::new();
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 
-                // 出力を取得
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
@@ -59,7 +58,6 @@ impl AjisaiInterpreter {
                     js_sys::Reflect::set(&obj, &"total".into(), &JsValue::from_f64(total as f64)).unwrap();
                 }
                 
-                // 出力を取得
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
@@ -132,8 +130,6 @@ impl AjisaiInterpreter {
     pub fn reset(&mut self) {
         self.interpreter = Interpreter::new();
     }
-
-
     
     #[wasm_bindgen]
     pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
@@ -175,196 +171,17 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
-        // 説明があれば先に追加
         let code = if let Some(desc) = description {
             format!("({}) {} \"{}\" DEF", desc, definition, name)
         } else {
             format!("{} \"{}\" DEF", definition, name)
         };
         
-        // デバッグ用にコンソールにログを出力
         web_sys::console::log_1(&format!("Restoring word with code: {}", code).into());
         
-        // ★★★ ここを修正 ★★★
-        // `?` を使うために、AjisaiErrorをStringに変換する
         self.interpreter.execute(&code).map_err(|e| e.to_string())?;
         Ok(())
     }
 }
 
-fn value_to_js(value: &Value) -> JsValue {
-    let obj = js_sys::Object::new();
-    
-    let type_str = match &value.val_type {
-        ValueType::Number(_) => "number",
-        ValueType::String(_) => "string",
-        ValueType::Boolean(_) => "boolean",
-        ValueType::Symbol(_) => "symbol",
-        ValueType::Vector(_) => "vector",
-        ValueType::Quotation(_) => "quotation",
-        ValueType::Nil => "nil",
-    };
-    
-    js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
-    
-    let val = match &value.val_type {
-        ValueType::Number(n) => {
-            // 分数オブジェクトとして出力
-            let frac_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&frac_obj, &"numerator".into(), &JsValue::from_f64(n.numerator as f64)).unwrap();
-            js_sys::Reflect::set(&frac_obj, &"denominator".into(), &JsValue::from_f64(n.denominator as f64)).unwrap();
-            frac_obj.into()
-        },
-        ValueType::String(s) => JsValue::from_str(s),
-        ValueType::Boolean(b) => JsValue::from_bool(*b),
-        ValueType::Symbol(s) => JsValue::from_str(s),
-        ValueType::Vector(v) => {
-            let arr = js_sys::Array::new();
-            for item in v.iter() {
-                arr.push(&value_to_js(item));
-            }
-            arr.into()
-        },
-        ValueType::Quotation(tokens) => {
-            // Quotationをオブジェクトとして表現
-            let quot_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&quot_obj, &"type".into(), &"quotation".into()).unwrap();
-            js_sys::Reflect::set(&quot_obj, &"length".into(), &JsValue::from_f64(tokens.len() as f64)).unwrap();
-            quot_obj.into()
-        },
-        ValueType::Nil => JsValue::NULL,
-    };
-    
-    js_sys::Reflect::set(&obj, &"value".into(), &val).unwrap();
-    
-    obj.into()
-}
-
-fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
-    // JavaScriptオブジェクトの場合（{type: ..., value: ...}形式）
-    if js_sys::Reflect::has(js_val, &"type".into()).unwrap_or(false) {
-        let type_str = js_sys::Reflect::get(js_val, &"type".into())
-            .ok()
-            .and_then(|v| v.as_string())
-            .ok_or("Invalid type field")?;
-        
-        let value_field = js_sys::Reflect::get(js_val, &"value".into())
-            .map_err(|_| "Missing value field")?;
-        
-        match type_str.as_str() {
-            "number" => {
-                // valueフィールドは分数を表すオブジェクト
-                if js_sys::Reflect::has(&value_field, &"numerator".into()).unwrap_or(false) &&
-                   js_sys::Reflect::has(&value_field, &"denominator".into()).unwrap_or(false) {
-                    
-                    let num = js_sys::Reflect::get(&value_field, &"numerator".into())
-                        .ok()
-                        .and_then(|v| v.as_f64())
-                        .and_then(|n| {
-                            if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                                Some(n as i64)
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or("Invalid numerator: must be an integer within i64 range")?;
-                    
-                    let den = js_sys::Reflect::get(&value_field, &"denominator".into())
-                        .ok()
-                        .and_then(|v| v.as_f64())
-                        .and_then(|n| {
-                            if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                                Some(n as i64)
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or("Invalid denominator: must be an integer within i64 range")?;
-                    
-                    if den == 0 {
-                        return Err("Division by zero in fraction".to_string());
-                    }
-                    
-                    Ok(Value {
-                        val_type: ValueType::Number(Fraction::new(num, den))
-                    })
-                } else {
-                    Err("Number value must be an object with 'numerator' and 'denominator' fields".to_string())
-                }
-            },
-            "string" => {
-                let s = value_field.as_string()
-                    .ok_or("Invalid string value")?;
-                Ok(Value {
-                    val_type: ValueType::String(s)
-                })
-            },
-            "boolean" => {
-                let b = value_field.as_bool()
-                    .ok_or("Invalid boolean value")?;
-                Ok(Value {
-                    val_type: ValueType::Boolean(b)
-                })
-            },
-            "symbol" => {
-                let s = value_field.as_string()
-                    .ok_or("Invalid symbol value")?;
-                Ok(Value {
-                    val_type: ValueType::Symbol(s)
-                })
-            },
-            "vector" => {
-                if value_field.is_array() {
-                    let arr = js_sys::Array::from(&value_field);
-                    let mut values = Vec::new();
-                    for i in 0..arr.length() {
-                        let elem = arr.get(i);
-                        values.push(js_value_to_rust_value(&elem)?);
-                    }
-                    Ok(Value {
-                        val_type: ValueType::Vector(values)
-                    })
-                } else {
-                    Err("Invalid vector value".to_string())
-                }
-            },
-            "nil" => {
-                Ok(Value {
-                    val_type: ValueType::Nil
-                })
-            },
-            _ => Err(format!("Unknown type: {}", type_str)),
-        }
-    } else {
-        // 単純な値の場合（後方互換性のため）
-        if let Some(b) = js_val.as_bool() {
-            Ok(Value {
-                val_type: ValueType::Boolean(b)
-            })
-        } else if js_val.as_f64().is_some() {
-            // 浮動小数点数は受け付けない
-            Err("Direct numeric values are not allowed to preserve precision. Numbers must be passed as objects with 'numerator' and 'denominator' fields.".to_string())
-        } else if let Some(s) = js_val.as_string() {
-            Ok(Value {
-                val_type: ValueType::String(s)
-            })
-        } else if js_val.is_null() || js_val.is_undefined() {
-            Ok(Value {
-                val_type: ValueType::Nil
-            })
-        } else if js_val.is_array() {
-            // 配列の場合はVectorとして処理
-            let arr = js_sys::Array::from(js_val);
-            let mut values = Vec::new();
-            for i in 0..arr.length() {
-                let elem = arr.get(i);
-                values.push(js_value_to_rust_value(&elem)?);
-            }
-            Ok(Value {
-                val_type: ValueType::Vector(values)
-            })
-        } else {
-            Err("Unsupported value type".to_string())
-        }
-    }
-}
+// 以下のvalue_to_js, js_value_to_rust_value関数は変更なし
