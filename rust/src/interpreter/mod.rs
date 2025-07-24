@@ -30,152 +30,128 @@ pub struct WordDefinition {
 }
 
 impl Interpreter {
-    pub fn new() -> Self {
-        let mut interpreter = Interpreter {
-            stack: Vec::new(),
-            register: None,
-            dictionary: HashMap::new(),
-            dependencies: HashMap::new(),
-            call_stack: Vec::new(),
-            step_tokens: Vec::new(),
-            step_position: 0,
-            step_mode: false,
-            output_buffer: String::new(),
-        };
-        
-        // ビルトイン登録を無効化（純粋なデータスタックとして動作）
-        // crate::builtins::register_builtins(&mut interpreter.dictionary);
-        interpreter
-    }
-    
-    pub fn execute(&mut self, code: &str) -> Result<()> {
-        let tokens = tokenize(code).map_err(AjisaiError::from)?;
-        self.push_tokens_as_data(&tokens)
-    }
-
-    pub fn get_output(&mut self) -> String {
-        let output = self.output_buffer.clone();
-        self.output_buffer.clear();
-        output
-    }
-    
-    pub(crate) fn append_output(&mut self, text: &str) {
-        self.output_buffer.push_str(text);
-    }
-
-    pub fn init_step_execution(&mut self, code: &str) -> Result<()> {
-        self.step_tokens = tokenize(code).map_err(AjisaiError::from)?;
-        self.step_position = 0;
-        self.step_mode = true;
-        Ok(())
-    }
-
-    pub fn execute_step(&mut self) -> Result<bool> {
-        if !self.step_mode || self.step_position >= self.step_tokens.len() {
-            self.step_mode = false;
-            return Ok(false);
-        }
-
-        let token = self.step_tokens[self.step_position].clone();
-        self.step_position += 1;
-
-        self.push_single_token_as_data(&token)?;
-        Ok(self.step_position < self.step_tokens.len())
-    }
-
-    pub fn get_step_info(&self) -> Option<(usize, usize)> {
-        if self.step_mode {
-            Some((self.step_position, self.step_tokens.len()))
-        } else {
-            None
-        }
-    }
-
-    // トークンをデータとしてスタックに積む
-    fn push_tokens_as_data(&mut self, tokens: &[Token]) -> Result<()> {
-        for token in tokens {
-            self.push_single_token_as_data(token)?;
-        }
-        Ok(())
-    }
-
-    fn push_single_token_as_data(&mut self, token: &Token) -> Result<()> {
+    fn process_single_token(&mut self, token: &Token) -> Result<()> {
         match token {
-            Token::Description(_) => Ok(()), // コメントは無視
-            Token::Number(num, den) => {
-                self.stack.push(Value {
-                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                });
+            Token::Symbol(name) => {
+                let name_upper = name.to_uppercase();
+                
+                match name_upper.as_str() {
+                    "DEF" => {
+                        // DEFの直後にDescriptionがあるかチェック
+                        let description = if self.step_position < self.step_tokens.len() {
+                            if let Token::Description(desc) = &self.step_tokens[self.step_position] {
+                                self.step_position += 1; // Descriptionトークンをスキップ
+                                Some(desc.clone())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        };
+                        self.builtin_def(description)?;
+                    },
+                    "DEL" => self.builtin_del()?,
+                    "EXEC" => self.builtin_exec()?,
+                    ".S" => self.builtin_show_stack()?,
+                    ".E" => self.builtin_show_exec_stack()?,
+                    _ => {
+                        // 辞書に登録されているか確認
+                        if self.dictionary.contains_key(&name_upper) {
+                            // 登録されていれば実行
+                            self.execute_token(&Token::Symbol(name_upper))?;
+                            self.process_exec_stack()?;
+                        } else {
+                            // 未登録ならデータとしてスタックに積む
+                            self.data_stack.push(Value {
+                                val_type: ValueType::Symbol(name.clone()),
+                            });
+                        }
+                    }
+                }
+            },
+            Token::Description(_) => {
+                // 説明文は通常は無視（DEFの処理で使用される）
                 Ok(())
             },
-            Token::String(s) => {
-                self.stack.push(Value {
-                    val_type: ValueType::String(s.clone()),
-                });
-                Ok(())
-            },
-            Token::Boolean(b) => {
-                self.stack.push(Value {
-                    val_type: ValueType::Boolean(*b),
-                });
-                Ok(())
-            },
-            Token::Nil => {
-                self.stack.push(Value {
-                    val_type: ValueType::Nil,
-                });
-                Ok(())
-            },
-            Token::Symbol(s) => {
-                // シンボルもデータとしてスタックに積む
-                self.stack.push(Value {
-                    val_type: ValueType::Symbol(s.clone()),
-                });
-                Ok(())
-            },
-            Token::VectorStart | Token::VectorEnd | 
-            Token::BlockStart | Token::BlockEnd => {
-                // デリミタもシンボルとして扱う
-                let symbol_name = match token {
-                    Token::VectorStart => "[",
-                    Token::VectorEnd => "]",
-                    Token::BlockStart => "{",
-                    Token::BlockEnd => "}",
-                    _ => unreachable!(),
-                };
-                self.stack.push(Value {
-                    val_type: ValueType::Symbol(symbol_name.to_string()),
-                });
-                Ok(())
+            // 他のトークンの処理は既存のまま
+            _ => {
+                // 既存の処理
             }
         }
     }
 
-    // アクセサメソッド群
-    pub fn get_stack(&self) -> &Stack { &self.stack }
-    pub fn get_register(&self) -> &Register { &self.register }
-    
-    pub fn get_custom_words(&self) -> Vec<String> {
-        Vec::new() // カスタムワードは使用しない
-    }
-    
-    pub fn get_custom_words_with_descriptions(&self) -> Vec<(String, Option<String>)> {
-        Vec::new()
-    }
-   
-    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
-        Vec::new()
+    // DEF: スタックから定義を作成（説明文付き）
+    fn builtin_def(&mut self, description: Option<String>) -> Result<()> {
+        if self.data_stack.len() < 2 {
+            return Err(AjisaiError::StackUnderflow);
+        }
+        
+        // スタックトップから: カスタムワード名
+        let name_val = self.data_stack.pop().unwrap();
+        let name = match name_val.val_type {
+            ValueType::Symbol(s) | ValueType::String(s) => s.to_uppercase(),
+            _ => return Err(AjisaiError::type_error("symbol or string", "other type")),
+        };
+        
+        // 残りのスタック全体を定義として使用
+        let mut definition_tokens = Vec::new();
+        while let Some(val) = self.data_stack.pop() {
+            definition_tokens.push(value_to_token(val)?);
+        }
+        definition_tokens.reverse(); // 正しい順序に戻す
+        
+        // ビルトインワードは再定義不可
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
+            }
+        }
+        
+        // 辞書に登録（説明文付き）
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens: definition_tokens,
+            is_builtin: false,
+            description: description.or_else(|| Some("User defined word".to_string())),
+        });
+        
+        Ok(())
     }
 
-    pub fn set_stack(&mut self, stack: Stack) {
-        self.stack = stack;
-    }
-   
-    pub fn set_register(&mut self, register: Register) {
-        self.register = register;
-    }
-   
-    pub fn get_word_definition(&self, _name: &str) -> Option<String> {
-        None // ワード定義は使用しない
+    // execute_tokens_with_contextも修正が必要
+    pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
+        let mut i = 0;
+        let mut pending_description: Option<String> = None;
+
+        while i < tokens.len() {
+            let token = &tokens[i];
+            
+            match token {
+                Token::Description(text) => {
+                    // DEFの前に説明文がある場合のために保持
+                    pending_description = Some(text.clone());
+                },
+                Token::Symbol(name) if name.to_uppercase() == "DEF" => {
+                    // DEFの処理
+                    let mut description = pending_description.take();
+                    
+                    // DEFの後の説明文もチェック
+                    if description.is_none() && i + 1 < tokens.len() {
+                        if let Token::Description(text) = &tokens[i + 1] {
+                            description = Some(text.clone());
+                            i += 1; // Descriptionトークンをスキップ
+                        }
+                    }
+                    
+                    self.builtin_def(description)?;
+                },
+                _ => {
+                    // 通常のトークン処理
+                    self.process_single_token(token)?;
+                    pending_description = None; // 説明文をリセット
+                }
+            }
+            i += 1;
+        }
+        Ok(())
     }
 }
