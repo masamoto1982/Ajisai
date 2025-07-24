@@ -1,10 +1,7 @@
-// js/gui/dictionary.js
-
 export class Dictionary {
     init(elements, onWordClick) {
         this.elements = elements;
         this.onWordClick = onWordClick;
-        // データを元のフラットな配列構造に戻す
         this.builtinWords = [
             { name: '+', description: '加算 ( a b -- a+b )' },
             { name: '-', description: '減算 ( a b -- a-b )' },
@@ -44,20 +41,13 @@ export class Dictionary {
             { name: 'NOT-NIL?', description: 'nilでないかをチェック ( a -- bool )' },
             { name: 'KNOWN?', description: 'nil以外の値かチェック ( a -- bool )' },
             { name: 'DEFAULT', description: 'nilならデフォルト値を使用 ( a b -- a | nil b -- b )' },
-
-            { name: 'MATCH?', description: 'ワイルドカードマッチング ( str str -- bool )' },
-            { name: 'WILDCARD', description: 'ワイルドカードパターンを作成 ( str -- pattern )' },
             { name: '.', description: '値を出力してドロップ ( a -- )' },
             { name: 'PRINT', description: '値を出力（ドロップしない） ( a -- a )' },
-            { name: 'CR', description: '改行を出力 ( -- )' },
-            { name: 'SPACE', description: 'スペースを出力 ( -- )' },
-            { name: 'SPACES', description: 'N個のスペースを出力 ( n -- )' },
-            { name: 'EMIT', description: '文字コードを文字として出力 ( n -- )' }
+            { name: 'CR', description: '改行を出力 ( -- )' }
         ];
     }
 
     renderBuiltinWords() {
-        // カテゴリ分けのロジックを削除し、直接renderWordButtonsを呼び出す
         this.renderWordButtons(this.elements.builtinWordsDisplay, this.builtinWords, false);
     }
 
@@ -71,7 +61,6 @@ export class Dictionary {
     }
 
     renderWordButtons(container, words, isCustom) {
-        // 描画の前に必ずコンテナをクリアする
         container.innerHTML = '';
 
         words.forEach(wordInfo => {
