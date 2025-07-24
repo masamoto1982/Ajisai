@@ -129,52 +129,52 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
         
         // 数値の判定（整数）
-        if let Ok(num) = word.parse::<i64>() {
-            tokens.push(Token::Number(num, 1));
-        } else if word.contains('.') && !word.starts_with('.') && !word.ends_with('.') {
-            // 小数点を含む場合、分数に変換
-            let parts: Vec<&str> = word.split('.').collect();
-            if parts.len() == 2 {
-                // 整数部と小数部を別々に処理
-                let integer_part = if parts[0].is_empty() { 0 } else { 
-                    parts[0].parse::<i64>().map_err(|_| format!("Invalid number: {}", word))? 
-                };
-                let decimal_part = if parts[1].is_empty() { 0 } else {
-                    parts[1].parse::<i64>().map_err(|_| format!("Invalid number: {}", word))?
-                };
-                
-                let decimal_places = parts[1].len() as u32;
-                let denominator = 10_i64.pow(decimal_places);
-                let numerator = integer_part * denominator + decimal_part;
-                
-                web_sys::console::log_1(&format!("Parsed decimal {} as fraction {}/{}", word, numerator, denominator).into());
-                tokens.push(Token::Number(numerator, denominator));
-            } else {
-                return Err(format!("Invalid number: {}", word));
-            }
-        } else if word.contains('/') && word != "/" {
-            // 分数記法（例: 1/2）- 単独の / は既に処理済み
-            let parts: Vec<&str> = word.split('/').collect();
-            if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
-                let numerator = parts[0].parse::<i64>()
-                    .map_err(|_| format!("Invalid fraction numerator: {}", word))?;
-                let denominator = parts[1].parse::<i64>()
-                    .map_err(|_| format!("Invalid fraction denominator: {}", word))?;
-                
-                if denominator == 0 {
-                    return Err("Division by zero in fraction".to_string());
-                }
-                
+        // 数値の判定部分の修正
+// まず数値として解析を試みる
+if let Ok(num) = word.parse::<i64>() {
+    tokens.push(Token::Number(num, 1));
+} else if word.contains('.') && !word.starts_with('.') && !word.ends_with('.') {
+    // 小数点を含む場合、分数に変換
+    let parts: Vec<&str> = word.split('.').collect();
+    if parts.len() == 2 {
+        if let (Ok(integer_part), Ok(decimal_part)) = (
+            parts[0].parse::<i64>().or_else(|_| if parts[0].is_empty() { Ok(0) } else { Err(()) }),
+            parts[1].parse::<i64>().or_else(|_| if parts[1].is_empty() { Ok(0) } else { Err(()) })
+        ) {
+            let decimal_places = parts[1].len() as u32;
+            let denominator = 10_i64.pow(decimal_places);
+            let numerator = integer_part * denominator + decimal_part;
+            
+            web_sys::console::log_1(&format!("Parsed decimal {} as fraction {}/{}", word, numerator, denominator).into());
+            tokens.push(Token::Number(numerator, denominator));
+        } else {
+            // 数値として解析できない場合はシンボルとして扱う
+            tokens.push(Token::Symbol(word.to_uppercase()));
+        }
+    } else {
+        tokens.push(Token::Symbol(word.to_uppercase()));
+    }
+} else if word.contains('/') && word != "/" {
+    // 分数記法の処理（既存のまま）
+    let parts: Vec<&str> = word.split('/').collect();
+    if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
+        if let (Ok(numerator), Ok(denominator)) = (parts[0].parse::<i64>(), parts[1].parse::<i64>()) {
+            if denominator != 0 {
                 web_sys::console::log_1(&format!("Parsed fraction {} as {}/{}", word, numerator, denominator).into());
                 tokens.push(Token::Number(numerator, denominator));
             } else {
-                // 分数として解析できない場合はシンボルとして扱う
                 tokens.push(Token::Symbol(word.to_uppercase()));
             }
         } else {
-            // その他はすべてシンボル
             tokens.push(Token::Symbol(word.to_uppercase()));
         }
+    } else {
+        tokens.push(Token::Symbol(word.to_uppercase()));
+    }
+} else {
+    // その他はすべてシンボル
+    tokens.push(Token::Symbol(word.to_uppercase()));
+}
     }
     
     Ok(tokens)
