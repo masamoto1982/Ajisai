@@ -2,12 +2,11 @@ pub mod stack_ops;
 pub mod arithmetic;
 pub mod vector_ops;
 pub mod control;
-// pub mod database; // テーブル機能完成後に再有効化予定
 pub mod io;
 pub mod error;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Value, ValueType, Stack, StackEntry, Register, Token}; // StackEntry を追加
+use crate::types::{Value, ValueType, Stack, StackEntry, Register, Token};
 use crate::tokenizer::tokenize;
 use self::error::{AjisaiError, Result};
 
@@ -305,7 +304,7 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, /*database::*,*/ io::*};
+        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, io::*};
         
         match name {
             // スタック操作
