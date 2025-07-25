@@ -7,9 +7,11 @@ pub mod io;
 pub mod error;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Value, ValueType, Stack, Register, Token}; // TableData は一時的にコメントアウト
+use crate::types::{Value, ValueType, Stack, StackEntry, Register, Token}; // StackEntry を追加
 use crate::tokenizer::tokenize;
 use self::error::{AjisaiError, Result};
+
+const STACK_TIMEOUT_SECONDS: u64 = 200; // タイムアウト時間の定数
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
@@ -21,11 +23,6 @@ pub struct Interpreter {
     step_position: usize,
     step_mode: bool,
     pub(crate) output_buffer: String,
-    // テーブル関連フィールド（Vector機能完成後に再有効化予定）
-    /*
-    pub(crate) current_table: Option<String>,
-    pub(crate) tables: HashMap<String, TableData>,
-    */
 }
 
 #[derive(Clone)]
@@ -47,15 +44,30 @@ impl Interpreter {
             step_position: 0,
             step_mode: false,
             output_buffer: String::new(),
-            // テーブル関連フィールドの初期化（Vector機能完成後に再有効化予定）
-            /*
-            current_table: None,
-            tables: HashMap::new(),
-            */
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
+    }
+    
+    // タイムアウトした要素を削除
+    pub fn cleanup_expired_stack_entries(&mut self) {
+        self.stack.retain(|entry| !entry.is_expired(STACK_TIMEOUT_SECONDS));
+    }
+    
+    // スタックに値をプッシュ（タイムスタンプ付き）
+    pub(crate) fn push_value(&mut self, value: Value) {
+        self.stack.push(StackEntry::new(value));
+    }
+    
+    // スタックから値をポップ
+    pub(crate) fn pop_value(&mut self) -> Option<Value> {
+        self.stack.pop().map(|entry| entry.value)
+    }
+    
+    // スタックのトップを参照
+    pub(crate) fn peek_value(&self) -> Option<&Value> {
+        self.stack.last().map(|entry| &entry.value)
     }
     
     pub fn execute(&mut self, code: &str) -> Result<()> {
@@ -110,39 +122,39 @@ impl Interpreter {
         match token {
             Token::Description(_) => Ok(()),
             Token::Number(num, den) => {
-                self.stack.push(Value {
+                self.push_value(Value {
                     val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
                 });
                 Ok(())
             },
             Token::String(s) => {
-                self.stack.push(Value {
+                self.push_value(Value {
                     val_type: ValueType::String(s.clone()),
                 });
                 Ok(())
             },
             Token::Boolean(b) => {
-                self.stack.push(Value {
+                self.push_value(Value {
                     val_type: ValueType::Boolean(*b),
                 });
                 Ok(())
             },
             Token::Nil => {
-                self.stack.push(Value {
+                self.push_value(Value {
                     val_type: ValueType::Nil,
                 });
                 Ok(())
             },
             Token::VectorStart => {
                 let (vector_values, _) = self.collect_vector_as_data(&self.step_tokens[self.step_position - 1..])?;
-                self.stack.push(Value {
+                self.push_value(Value {
                     val_type: ValueType::Vector(vector_values),
                 });
                 Ok(())
             },
             Token::BlockStart => {
                 let (block_tokens, _) = self.collect_block_tokens(&self.step_tokens, self.step_position - 1)?;
-                self.stack.push(Value {
+                self.push_value(Value {
                     val_type: ValueType::Quotation(block_tokens),
                 });
                 Ok(())
@@ -223,35 +235,35 @@ impl Interpreter {
                     pending_description = Some(text.clone());
                 },
                 Token::Number(num, den) => {
-                    self.stack.push(Value {
+                    self.push_value(Value {
                         val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
                     });
                 },
                 Token::String(s) => {
-                    self.stack.push(Value {
+                    self.push_value(Value {
                         val_type: ValueType::String(s.clone()),
                     });
                 },
                 Token::Boolean(b) => {
-                    self.stack.push(Value {
+                    self.push_value(Value {
                         val_type: ValueType::Boolean(*b),
                     });
                 },
                 Token::Nil => {
-                    self.stack.push(Value {
+                    self.push_value(Value {
                         val_type: ValueType::Nil,
                     });
                 },
                 Token::VectorStart => {
                     let (vector_values, consumed) = self.collect_vector_as_data(&tokens[i..])?;
-                    self.stack.push(Value {
+                    self.push_value(Value {
                         val_type: ValueType::Vector(vector_values),
                     });
                     i += consumed - 1;
                 },
                 Token::BlockStart => {
                     let (block_tokens, next_index) = self.collect_block_tokens(tokens, i)?;
-                    self.stack.push(Value {
+                    self.push_value(Value {
                         val_type: ValueType::Quotation(block_tokens),
                     });
                     i = next_index -1;
@@ -343,26 +355,6 @@ impl Interpreter {
             "KNOWN?" => op_not_nil_check(self),
             "DEFAULT" => op_default(self),
             
-            // データベース (一時的にコメントアウト - Vector機能完成後に再有効化予定)
-            /*
-            "TABLE" => op_table(self),
-            "TABLE-CREATE" => op_table_create(self),
-            "FILTER" => op_filter(self),
-            "PROJECT" => op_project(self),
-            "INSERT" => op_insert(self),
-            "UPDATE" => op_update(self),
-            "DELETE" => op_delete(self),
-            "TABLES" => op_tables(self),
-            "TABLES-INFO" => op_tables_info(self),
-            "TABLE-INFO" => op_table_info(self),
-            "TABLE-SIZE" => op_table_size(self),
-            */
-            // データベース永続化機能は残す（IndexedDB連携のため）
-            /*"SAVE-DB" => op_save_db(self),
-            "LOAD-DB" => op_load_db(self),
-            "MATCH?" => op_match(self),
-            "WILDCARD" => op_wildcard(self),*/
-            
             // 入出力
             "." => op_dot(self),
             "PRINT" => op_print(self),
@@ -375,8 +367,11 @@ impl Interpreter {
         }
     }
     
-    // アクセサメソッド群
-    pub fn get_stack(&self) -> &Stack { &self.stack }
+    // アクセサメソッド群（値のみを返すように修正）
+    pub fn get_stack(&self) -> Vec<Value> {
+        self.stack.iter().map(|entry| entry.value.clone()).collect()
+    }
+    
     pub fn get_register(&self) -> &Register { &self.register }
     
     pub fn get_custom_words(&self) -> Vec<String> {
@@ -403,23 +398,8 @@ impl Interpreter {
             .collect()
     }
    
-    // テーブル関連メソッド（Vector機能完成後に再有効化予定）
-    /*
-    pub fn save_table(&mut self, name: String, schema: Vec<String>, records: Vec<Vec<Value>>) {
-        self.tables.insert(name, TableData { schema, records });
-    }
-   
-    pub fn load_table(&self, name: &str) -> Option<(Vec<String>, Vec<Vec<Value>>)> {
-        self.tables.get(name).map(|t| (t.schema.clone(), t.records.clone()))
-    }
-   
-    pub fn get_all_tables(&self) -> Vec<String> {
-        self.tables.keys().cloned().collect()
-    }
-    */
-   
-    pub fn set_stack(&mut self, stack: Stack) {
-        self.stack = stack;
+    pub fn set_stack(&mut self, values: Vec<Value>) {
+        self.stack = values.into_iter().map(StackEntry::new).collect();
     }
    
     pub fn set_register(&mut self, register: Register) {
