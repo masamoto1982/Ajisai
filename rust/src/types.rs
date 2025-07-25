@@ -144,7 +144,7 @@ impl fmt::Display for Value {
 }
 
 // タイムスタンプ付きのスタック要素
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StackEntry {
     pub value: Value,
     pub timestamp: u64, // Unix timestamp in seconds
@@ -168,12 +168,11 @@ impl StackEntry {
     }
 }
 
+impl fmt::Display for StackEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
 pub type Stack = Vec<StackEntry>;
 pub type Register = Option<Value>;
-
-// types.rs の最後に以下を追加
-#[derive(Debug, Clone)]
-pub struct TableData {
-    pub schema: Vec<String>,
-    pub records: Vec<Vec<Value>>,
-}
