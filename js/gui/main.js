@@ -62,29 +62,37 @@ class GUI {
     }
     
     setupEventListeners() {
-        this.elements.runBtn.addEventListener('click', () => this.runNormal());
-        this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
+    this.elements.runBtn.addEventListener('click', () => this.runNormal());
+    this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
 
-        this.elements.codeInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                if (e.shiftKey) {
-                    e.preventDefault();
-                    this.runNormal();
-                } else if (e.ctrlKey) {
-                    e.preventDefault();
-                    this.runStep();
-                }
+    this.elements.codeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            if (e.shiftKey) {
+                e.preventDefault();
+                this.runNormal();
+            } else if (e.ctrlKey) {
+                e.preventDefault();
+                this.runStep();
             }
-        });
+        }
+    });
 
-        this.elements.memoryArea.addEventListener('click', () => {
-            if (this.mobile.isMobile() && this.mode === 'execution') {
-                this.setMode('input');
-            }
-        });
+    this.elements.memoryArea.addEventListener('click', () => {
+        if (this.mobile.isMobile() && this.mode === 'execution') {
+            this.setMode('input');
+        }
+    });
 
-        window.addEventListener('resize', () => this.mobile.updateView(this.mode));
-    }
+    window.addEventListener('resize', () => this.mobile.updateView(this.mode));
+    
+    // タイムアウトチェック用のタイマーを設定（10秒ごとに実行）
+    setInterval(() => {
+        if (window.ajisaiInterpreter) {
+            window.ajisaiInterpreter.cleanup_expired_entries();
+            this.updateAllDisplays();
+        }
+    }, 10000); // 10秒ごとにチェック
+}
 
     setMode(newMode) {
         this.mode = newMode;
