@@ -2,7 +2,7 @@ use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::ValueType;
 
 pub fn op_dot(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
+    let val = interp.pop_value()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     interp.append_output(&format!("{} ", val));
@@ -10,7 +10,7 @@ pub fn op_dot(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.last()
+    let val = interp.peek_value()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     interp.append_output(&format!("{} ", val));
@@ -28,7 +28,7 @@ pub fn op_space(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
+    let val = interp.pop_value()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
@@ -45,7 +45,7 @@ pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_emit(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
+    let val = interp.pop_value()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
