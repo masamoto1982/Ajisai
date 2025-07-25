@@ -43,4 +43,26 @@ async function main() {
 }
 
 // アプリケーションの実行開始
-document.addEventListener('DOMContentLoaded', main);
+// js/main.js
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await window.initWasm();
+        console.log('WASM module initialized.');
+
+        await window.persistence.loadDatabaseData(); // DBのロードを待つ
+        console.log('Database data loaded.');
+
+        window.gui.updateAllDisplays(); // DBロード後にUIを更新
+        console.log('Initial display updated.');
+
+        // 定期的な処理
+        setInterval(() => {
+            window.ajisaiInterpreter.cleanup_expired_entries();
+            window.gui.updateAllDisplays();
+        }, 10000);
+
+    } catch (error) {
+        console.error("Error during initialization:", error);
+    }
+});
