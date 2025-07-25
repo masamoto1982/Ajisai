@@ -70,6 +70,11 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn cleanup_expired_entries(&mut self) {
+        self.interpreter.cleanup_expired_stack_entries();
+    }
+
+    #[wasm_bindgen]
     pub fn get_stack(&self) -> JsValue {
         let stack_values: Vec<JsValue> = self.interpreter
             .get_stack()
