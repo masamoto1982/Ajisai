@@ -42,9 +42,6 @@ async function main() {
     }
 }
 
-// アプリケーションの実行開始
-// js/main.js
-
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await window.initWasm();
