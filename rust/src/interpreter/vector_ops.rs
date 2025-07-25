@@ -2,12 +2,12 @@ use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction};
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
         ValueType::Vector(v) => {
-            interp.push_value(Value { 
+            interp.stack.push(Value { 
                 val_type: ValueType::Number(Fraction::new(v.len() as i64, 1)) 
             });
             Ok(())
@@ -17,13 +17,13 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_head(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
         ValueType::Vector(v) => {
             if let Some(first) = v.first() {
-                interp.push_value(first.clone());
+                interp.stack.push(first.clone());
                 Ok(())
             } else {
                 Err(AjisaiError::from("HEAD on empty vector"))
@@ -34,7 +34,7 @@ pub fn op_head(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_tail(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
@@ -42,7 +42,7 @@ pub fn op_tail(interp: &mut Interpreter) -> Result<()> {
             if v.is_empty() {
                 Err(AjisaiError::from("TAIL on empty vector"))
             } else {
-                interp.push_value(Value { 
+                interp.stack.push(Value { 
                     val_type: ValueType::Vector(v[1..].to_vec()) 
                 });
                 Ok(())
@@ -57,13 +57,13 @@ pub fn op_cons(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let vec_val = interp.pop_value().unwrap();
-    let elem = interp.pop_value().unwrap();
+    let vec_val = interp.stack.pop().unwrap();
+    let elem = interp.stack.pop().unwrap();
     
     match vec_val.val_type {
         ValueType::Vector(mut v) => {
             v.insert(0, elem);
-            interp.push_value(Value { val_type: ValueType::Vector(v) });
+            interp.stack.push(Value { val_type: ValueType::Vector(v) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -75,13 +75,13 @@ pub fn op_append(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let elem = interp.pop_value().unwrap();
-    let vec_val = interp.pop_value().unwrap();
+    let elem = interp.stack.pop().unwrap();
+    let vec_val = interp.stack.pop().unwrap();
     
     match vec_val.val_type {
         ValueType::Vector(mut v) => {
             v.push(elem);
-            interp.push_value(Value { val_type: ValueType::Vector(v) });
+            interp.stack.push(Value { val_type: ValueType::Vector(v) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -89,13 +89,13 @@ pub fn op_append(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
         ValueType::Vector(mut v) => {
             v.reverse();
-            interp.push_value(Value { val_type: ValueType::Vector(v) });
+            interp.stack.push(Value { val_type: ValueType::Vector(v) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -107,8 +107,8 @@ pub fn op_nth(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let vec_val = interp.pop_value().unwrap();
-    let index_val = interp.pop_value().unwrap();
+    let vec_val = interp.stack.pop().unwrap();
+    let index_val = interp.stack.pop().unwrap();
     
     match (index_val.val_type, vec_val.val_type) {
         (ValueType::Number(n), ValueType::Vector(v)) => {
@@ -123,7 +123,7 @@ pub fn op_nth(interp: &mut Interpreter) -> Result<()> {
             };
             
             if index >= 0 && (index as usize) < v.len() {
-                interp.push_value(v[index as usize].clone());
+                interp.stack.push(v[index as usize].clone());
                 Ok(())
             } else {
                 Err(AjisaiError::IndexOutOfBounds {
@@ -137,7 +137,7 @@ pub fn op_nth(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_uncons(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
@@ -145,8 +145,8 @@ pub fn op_uncons(interp: &mut Interpreter) -> Result<()> {
             if v.is_empty() {
                 return Err(AjisaiError::from("UNCONS on empty vector"));
             }
-            interp.push_value(v[0].clone());
-            interp.push_value(Value { 
+            interp.stack.push(v[0].clone());
+            interp.stack.push(Value { 
                 val_type: ValueType::Vector(v[1..].to_vec()) 
             });
             Ok(())
@@ -156,12 +156,12 @@ pub fn op_uncons(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_empty(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
         ValueType::Vector(v) => {
-            interp.push_value(Value { 
+            interp.stack.push(Value { 
                 val_type: ValueType::Boolean(v.is_empty()) 
             });
             Ok(())

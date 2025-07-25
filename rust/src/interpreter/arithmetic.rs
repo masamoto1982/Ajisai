@@ -44,8 +44,8 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         // 数値同士
@@ -96,7 +96,7 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -105,8 +105,8 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -153,7 +153,7 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -162,8 +162,8 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -210,7 +210,7 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -219,8 +219,8 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
     // ゼロ除算チェック
     match &b.val_type {
@@ -282,7 +282,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -292,8 +292,8 @@ pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -340,7 +340,7 @@ pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -350,8 +350,8 @@ pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -394,7 +394,7 @@ pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -403,10 +403,10 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
-    interp.push_value(Value { val_type: ValueType::Boolean(a == b) });
+    interp.stack.push(Value { val_type: ValueType::Boolean(a == b) });
     Ok(())
 }
 
@@ -415,8 +415,8 @@ pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -459,7 +459,7 @@ pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -468,8 +468,8 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b = interp.pop_value().unwrap();
-    let a = interp.pop_value().unwrap();
+    let b = interp.stack.pop().unwrap();
+    let a = interp.stack.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -512,13 +512,13 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
 // 論理演算（暗黙の反復対応・三値論理）
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     let result = match val.val_type {
@@ -540,7 +540,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -549,8 +549,8 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b_val = interp.pop_value().unwrap();
-    let a_val = interp.pop_value().unwrap();
+    let b_val = interp.stack.pop().unwrap();
+    let a_val = interp.stack.pop().unwrap();
     
     let result = match (a_val.val_type, b_val.val_type) {
         (ValueType::Boolean(a), ValueType::Boolean(b)) => {
@@ -568,7 +568,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -577,8 +577,8 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let b_val = interp.pop_value().unwrap();
-    let a_val = interp.pop_value().unwrap();
+    let b_val = interp.stack.pop().unwrap();
+    let a_val = interp.stack.pop().unwrap();
     
     let result = match (a_val.val_type, b_val.val_type) {
         (ValueType::Boolean(a), ValueType::Boolean(b)) => {
@@ -596,26 +596,26 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
         )),
     };
     
-    interp.push_value(result);
+    interp.stack.push(result);
     Ok(())
 }
 
 // Nil関連
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
-    interp.push_value(Value { 
+    interp.stack.push(Value { 
         val_type: ValueType::Boolean(matches!(val.val_type, ValueType::Nil)) 
     });
     Ok(())
 }
 
 pub fn op_not_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
-    interp.push_value(Value { 
+    interp.stack.push(Value { 
         val_type: ValueType::Boolean(!matches!(val.val_type, ValueType::Nil)) 
     });
     Ok(())
@@ -626,13 +626,13 @@ pub fn op_default(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let default_val = interp.pop_value().unwrap();
-    let val = interp.pop_value().unwrap();
+    let default_val = interp.stack.pop().unwrap();
+    let val = interp.stack.pop().unwrap();
     
     if matches!(val.val_type, ValueType::Nil) {
-        interp.push_value(default_val);
+        interp.stack.push(default_val);
     } else {
-        interp.push_value(val);
+        interp.stack.push(val);
     }
     Ok(())
 }

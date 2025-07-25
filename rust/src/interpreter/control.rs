@@ -7,8 +7,8 @@ pub fn op_def(interp: &mut Interpreter, description: Option<String>) -> Result<(
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let name_val = interp.pop_value().unwrap();
-    let body_val = interp.pop_value().unwrap();
+    let name_val = interp.stack.pop().unwrap();
+    let body_val = interp.stack.pop().unwrap();
 
     match (&name_val.val_type, &body_val.val_type) {
         (ValueType::String(name), ValueType::Quotation(body_tokens)) => {
@@ -70,9 +70,9 @@ pub fn op_if(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let else_branch = interp.pop_value().unwrap();
-    let then_branch = interp.pop_value().unwrap();
-    let condition = interp.pop_value().unwrap();
+    let else_branch = interp.stack.pop().unwrap();
+    let then_branch = interp.stack.pop().unwrap();
+    let condition = interp.stack.pop().unwrap();
 
     let (then_tokens, else_tokens) = match (&then_branch.val_type, &else_branch.val_type) {
         (ValueType::Quotation(t), ValueType::Quotation(e)) => (t, e),
@@ -89,7 +89,7 @@ pub fn op_if(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
@@ -123,7 +123,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_call(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.pop_value()
+    let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
     match val.val_type {
