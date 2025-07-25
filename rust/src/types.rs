@@ -1,5 +1,4 @@
 use std::fmt;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 // Tokenの定義をtokenizer.rsからこちらに移動
 #[derive(Debug, Clone, PartialEq)]
@@ -143,36 +142,12 @@ impl fmt::Display for Value {
     }
 }
 
-// タイムスタンプ付きのスタック要素
-#[derive(Debug, Clone, PartialEq)]
-pub struct StackEntry {
-    pub value: Value,
-    pub timestamp: u64, // Unix timestamp in seconds
-}
-
-impl StackEntry {
-    pub fn new(value: Value) -> Self {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        StackEntry { value, timestamp }
-    }
-    
-    pub fn is_expired(&self, timeout_seconds: u64) -> bool {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        now - self.timestamp > timeout_seconds
-    }
-}
-
-impl fmt::Display for StackEntry {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-pub type Stack = Vec<StackEntry>;
+pub type Stack = Vec<Value>;
 pub type Register = Option<Value>;
+
+// types.rs の最後に以下を追加
+#[derive(Debug, Clone)]
+pub struct TableData {
+    pub schema: Vec<String>,
+    pub records: Vec<Vec<Value>>,
+}
