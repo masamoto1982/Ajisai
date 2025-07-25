@@ -14,6 +14,10 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, ">R", "スタックからレジスタへ移動 ( a -- )");
     register_builtin(dictionary, "R>", "レジスタからスタックへ移動 ( -- a )");
     register_builtin(dictionary, "R@", "レジスタの値をコピー ( -- a )");
+    register_builtin(dictionary, "R+", "レジスタとの加算 ( a -- a+r )");
+　　register_builtin(dictionary, "R-", "レジスタとの減算 ( a -- a-r )");
+　　register_builtin(dictionary, "R*", "レジスタとの乗算 ( a -- a*r )");
+　　register_builtin(dictionary, "R/", "レジスタとの除算 ( a -- a/r )");
     
     // ベクトル操作
     register_builtin(dictionary, "LENGTH", "ベクトルの長さ ( vec -- n )");
