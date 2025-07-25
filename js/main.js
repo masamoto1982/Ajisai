@@ -1,23 +1,4 @@
-// js/main.js の先頭に追加
-class AsyncLock {
-    constructor() {
-        this.disable = () => {};
-        this.promise = Promise.resolve();
-    }
-
-    acquire() {
-        let oldDisable = this.disable;
-        this.promise = new Promise(resolve => {
-            this.disable = () => {
-                oldDisable();
-                resolve();
-            };
-        });
-        return this.disable;
-    }
-}
-window.interpreterLock = new AsyncLock();
-
+// js/main.js
 
 import { GUI_INSTANCE } from './gui/main.js';
 import { initWasm } from './wasm-loader.js';
@@ -34,11 +15,11 @@ async function main() {
         if (!wasm) {
             throw new Error('WASM initialization failed. Application cannot start.');
         }
-        window.AjisaiWasm = wasm;
+        window.HolonWasm = wasm;
         console.log('WASM loaded and initialized successfully.');
 
         // 2. Ajisaiインタープリタを作成し、グローバルに公開
-        window.ajisaiInterpreter = new window.AjisaiWasm.AjisaiInterpreter();
+        window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
         console.log('Ajisai interpreter created.');
         
         // 3. GUIを初期化（この時点でajisaiInterpreterは利用可能）
@@ -61,24 +42,5 @@ async function main() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await window.initWasm();
-        console.log('WASM module initialized.');
-
-        await window.persistence.loadDatabaseData(); // DBのロードを待つ
-        console.log('Database data loaded.');
-
-        window.gui.updateAllDisplays(); // DBロード後にUIを更新
-        console.log('Initial display updated.');
-
-        // 定期的な処理
-        setInterval(() => {
-            window.ajisaiInterpreter.cleanup_expired_entries();
-            window.gui.updateAllDisplays();
-        }, 10000);
-
-    } catch (error) {
-        console.error("Error during initialization:", error);
-    }
-});
+// アプリケーションの実行開始
+document.addEventListener('DOMContentLoaded', main);
