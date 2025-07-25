@@ -15,11 +15,11 @@ async function main() {
         if (!wasm) {
             throw new Error('WASM initialization failed. Application cannot start.');
         }
-        window.HolonWasm = wasm;
+        window.AjisaiWasm = wasm;
         console.log('WASM loaded and initialized successfully.');
 
         // 2. Ajisaiインタープリタを作成し、グローバルに公開
-        window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
+        window.ajisaiInterpreter = new window.AjisaiWasm.AjisaiInterpreter();
         console.log('Ajisai interpreter created.');
         
         // 3. GUIを初期化（この時点でajisaiInterpreterは利用可能）
