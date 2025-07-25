@@ -1,4 +1,23 @@
-// js/main.js
+// js/main.js の先頭に追加
+class AsyncLock {
+    constructor() {
+        this.disable = () => {};
+        this.promise = Promise.resolve();
+    }
+
+    acquire() {
+        let oldDisable = this.disable;
+        this.promise = new Promise(resolve => {
+            this.disable = () => {
+                oldDisable();
+                resolve();
+            };
+        });
+        return this.disable;
+    }
+}
+window.interpreterLock = new AsyncLock();
+
 
 import { GUI_INSTANCE } from './gui/main.js';
 import { initWasm } from './wasm-loader.js';
