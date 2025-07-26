@@ -33,6 +33,8 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )");
     
     // 制御構造
+    register_builtin(dictionary, "DEF", "新しいワードを定義 ( ... str -- )");
+    register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
     register_builtin(dictionary, "IF", "条件値をスタックに戻す ( bool -- bool )");
     
     // 算術演算子（暗黙の反復対応）
