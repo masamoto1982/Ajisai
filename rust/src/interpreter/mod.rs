@@ -111,22 +111,29 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Symbol(name) => {
-    if name == "DEF" {
-        // DEFの新しい実装（ワード定義）
-        control::op_def(self, &self.current_tokens, pending_description.take())?;
-    } else if name == "DEL" {
-        // DELは通常の組み込みワードとして実行
-        control::op_del(self)?;
-    } else if let Some(def) = self.dictionary.get(name).cloned() {
-        if def.is_builtin {
-            self.execute_builtin(name)?;
-        } else {
-            self.execute_custom_word(name, &def.tokens)?;
-        }
-    } else {
-        return Err(AjisaiError::UnknownWord(name.clone()));
-    }
-},
+                    // DEFは特別扱い
+                    if name == "DEF" {
+                        // DEFが見つかったら、現在までの値とワードをすべて処理
+                        let mut result = values.clone();
+                        result.extend(words.clone());
+                        result.push(tokens[i].clone());
+                        
+                        // DEF以降のトークンも処理
+                        i += 1;
+                        if i < tokens.len() {
+                            let remaining = self.rearrange_tokens(&tokens[i..])?;
+                            result.extend(remaining);
+                        }
+                        return Ok(result);
+                    }
+                    
+                    if self.dictionary.contains_key(name) {
+                        words.push(tokens[i].clone());
+                    } else {
+                        // 未知のシンボルは値として扱う
+                        values.push(tokens[i].clone());
+                    }
+                },
                 Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
                     values.push(tokens[i].clone());
                 },
@@ -213,22 +220,19 @@ impl Interpreter {
                 Ok(())
             },
             Token::Symbol(name) => {
-    if name == "DEF" {
-        // DEFの新しい実装（ワード定義）
-        control::op_def(self, &self.current_tokens, pending_description.take())?;
-    } else if name == "DEL" {
-        // DELは通常の組み込みワードとして実行
-        control::op_del(self)?;
-    } else if let Some(def) = self.dictionary.get(name).cloned() {
-        if def.is_builtin {
-            self.execute_builtin(name)?;
-        } else {
-            self.execute_custom_word(name, &def.tokens)?;
-        }
-    } else {
-        return Err(AjisaiError::UnknownWord(name.clone()));
-    }
-},
+                if let Some(def) = self.dictionary.get(name).cloned() {
+                    if def.is_builtin {
+                        self.execute_builtin(name)?;
+                    } else {
+                        // カスタムワードも並び替えて実行
+                        let rearranged = self.rearrange_tokens(&def.tokens)?;
+                        self.execute_tokens_with_context(&rearranged)?;
+                    }
+                } else {
+                    return Err(AjisaiError::UnknownWord(name.clone()));
+                }
+                Ok(())
+            },
             Token::VectorEnd => Err(AjisaiError::from("Unexpected closing delimiter found.")),
         }
     }
@@ -297,9 +301,12 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
-                    if name == "DEL" {
-                        // DELの新しい実装（ワード定義）
-                        control::op_del_define(self, &self.current_tokens, pending_description.take())?;
+                    if name == "DEF" {
+                        // DEFの新しい実装（ワード定義）
+                        control::op_def(self, &self.current_tokens, pending_description.take())?;
+                    } else if name == "DEL" {
+                        // DELは通常の組み込みワードとして実行
+                        control::op_del(self)?;
                     } else if let Some(def) = self.dictionary.get(name).cloned() {
                         if def.is_builtin {
                             self.execute_builtin(name)?;
