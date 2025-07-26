@@ -28,8 +28,6 @@ class GUI {
 
         // 各モジュールの初期化
         this.display.init(this.elements);
-        // ★★★ 修正点 ★★★
-        // ワードクリック時にスペースを追加しないように修正
         this.dictionary.init(this.elements, (word) => this.editor.insertWord(word));
         this.editor.init(this.elements.codeInput);
         this.stepper.init(() => window.ajisaiInterpreter);
