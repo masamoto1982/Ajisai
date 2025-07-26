@@ -33,12 +33,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )");
     
     // 制御構造
-    register_builtin(dictionary, "DEF", "新しいワードを定義 ( vec str -- )");
-    register_builtin(dictionary, "IF", "条件分岐 ( bool vec vec -- ... )");
-    register_builtin(dictionary, "CALL", "Quotationを実行 ( quot -- ... )");  // 新規追加
-    
-    // 辞書操作
-    register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
+    register_builtin(dictionary, "IF", "条件値をスタックに戻す ( bool -- bool )");
     
     // 算術演算子（暗黙の反復対応）
     register_builtin(dictionary, "+", "加算 - 暗黙の反復対応 ( a b -- a+b )");
@@ -63,14 +58,6 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "NOT-NIL?", "nilでないかをチェック ( a -- bool )");
     register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック（NOT-NIL?のエイリアス） ( a -- bool )");
     register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a b -- a | nil b -- b )");
-
-    // データベース操作
-    register_builtin(dictionary, "SAVE-DB", "データベースを保存 ( -- )");
-    register_builtin(dictionary, "LOAD-DB", "データベースを読み込み ( -- )");
-
-    // ワイルドカード・パターンマッチング
-    register_builtin(dictionary, "MATCH?", "ワイルドカードマッチング ( str str -- bool )");
-    register_builtin(dictionary, "WILDCARD", "ワイルドカードパターンを作成 ( str -- pattern )");
 
     // 出力
     register_builtin(dictionary, ".", "値を出力してドロップ ( a -- )");
