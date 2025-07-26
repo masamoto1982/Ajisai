@@ -2,13 +2,12 @@ pub mod stack_ops;
 pub mod arithmetic;
 pub mod vector_ops;
 pub mod control;
-// pub mod database; // テーブル機能完成後に再有効化予定
 pub mod io;
 pub mod error;
-pub mod register_ops;  // 追加
+pub mod register_ops;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Value, ValueType, Stack, Register, Token}; // TableData は一時的にコメントアウト
+use crate::types::{Value, ValueType, Stack, Register, Token};
 use crate::tokenizer::tokenize;
 use self::error::{AjisaiError, Result};
 
@@ -22,11 +21,7 @@ pub struct Interpreter {
     step_position: usize,
     step_mode: bool,
     pub(crate) output_buffer: String,
-    // テーブル関連フィールド（Vector機能完成後に再有効化予定）
-    /*
-    pub(crate) current_table: Option<String>,
-    pub(crate) tables: HashMap<String, TableData>,
-    */
+    current_tokens: Vec<Token>,  // 現在処理中のトークン列を保持
 }
 
 #[derive(Clone)]
@@ -48,11 +43,7 @@ impl Interpreter {
             step_position: 0,
             step_mode: false,
             output_buffer: String::new(),
-            // テーブル関連フィールドの初期化（Vector機能完成後に再有効化予定）
-            /*
-            current_table: None,
-            tables: HashMap::new(),
-            */
+            current_tokens: Vec::new(),
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
@@ -61,7 +52,9 @@ impl Interpreter {
     
     pub fn execute(&mut self, code: &str) -> Result<()> {
         let tokens = tokenize(code).map_err(AjisaiError::from)?;
-        self.execute_tokens_with_context(&tokens)
+        self.current_tokens = tokens.clone();
+        let rearranged = self.rearrange_tokens(&tokens)?;
+        self.execute_tokens_with_context(&rearranged)
     }
 
     pub fn get_output(&mut self) -> String {
@@ -75,7 +68,9 @@ impl Interpreter {
     }
 
     pub fn init_step_execution(&mut self, code: &str) -> Result<()> {
-        self.step_tokens = tokenize(code).map_err(AjisaiError::from)?;
+        let tokens = tokenize(code).map_err(AjisaiError::from)?;
+        self.current_tokens = tokens.clone();
+        self.step_tokens = self.rearrange_tokens(&tokens)?;
         self.step_position = 0;
         self.step_mode = true;
         Ok(())
@@ -105,6 +100,89 @@ impl Interpreter {
         } else {
             None
         }
+    }
+
+    // トークンを並び替える（値を先に、ワードを後に）
+    fn rearrange_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+        let mut values = Vec::new();
+        let mut words = Vec::new();
+        let mut i = 0;
+        
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::Symbol(name) => {
+                    // DELは特別扱い
+                    if name == "DEL" {
+                        // DELが見つかったら、現在までの値とワードをすべて処理
+                        let mut result = values.clone();
+                        result.extend(words.clone());
+                        result.push(tokens[i].clone());
+                        
+                        // DEL以降のトークンも処理
+                        i += 1;
+                        if i < tokens.len() {
+                            let remaining = self.rearrange_tokens(&tokens[i..])?;
+                            result.extend(remaining);
+                        }
+                        return Ok(result);
+                    }
+                    
+                    if self.dictionary.contains_key(name) {
+                        words.push(tokens[i].clone());
+                    } else {
+                        // 未知のシンボルは値として扱う
+                        values.push(tokens[i].clone());
+                    }
+                },
+                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
+                    values.push(tokens[i].clone());
+                },
+                Token::VectorStart => {
+                    // ベクトル全体を1つの値として扱う
+                    let (vector_tokens, consumed) = self.collect_vector_tokens(&tokens[i..])?;
+                    values.extend(vector_tokens);
+                    i += consumed - 1;
+                },
+                Token::Description(_) => {
+                    // 説明は値として扱う
+                    values.push(tokens[i].clone());
+                },
+                _ => {
+                    values.push(tokens[i].clone());
+                }
+            }
+            i += 1;
+        }
+        
+        // 値を先に、ワードを後に配置
+        values.extend(words);
+        Ok(values)
+    }
+
+    fn collect_vector_tokens(&self, tokens: &[Token]) -> Result<(Vec<Token>, usize)> {
+        let mut result = Vec::new();
+        let mut depth = 0;
+        let mut i = 0;
+        
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::VectorStart => {
+                    depth += 1;
+                    result.push(tokens[i].clone());
+                },
+                Token::VectorEnd => {
+                    depth -= 1;
+                    result.push(tokens[i].clone());
+                    if depth == 0 {
+                        return Ok((result, i + 1));
+                    }
+                },
+                _ => result.push(tokens[i].clone()),
+            }
+            i += 1;
+        }
+        
+        Err(AjisaiError::from("Unclosed vector"))
     }
 
     fn execute_single_token(&mut self, token: &Token) -> Result<()> {
@@ -141,26 +219,21 @@ impl Interpreter {
                 });
                 Ok(())
             },
-            Token::BlockStart => {
-                let (block_tokens, _) = self.collect_block_tokens(&self.step_tokens, self.step_position - 1)?;
-                self.stack.push(Value {
-                    val_type: ValueType::Quotation(block_tokens),
-                });
-                Ok(())
-            }
             Token::Symbol(name) => {
                 if let Some(def) = self.dictionary.get(name).cloned() {
                     if def.is_builtin {
                         self.execute_builtin(name)?;
                     } else {
-                        self.execute_tokens_with_context(&def.tokens)?;
+                        // カスタムワードも並び替えて実行
+                        let rearranged = self.rearrange_tokens(&def.tokens)?;
+                        self.execute_tokens_with_context(&rearranged)?;
                     }
                 } else {
                     return Err(AjisaiError::UnknownWord(name.clone()));
                 }
                 Ok(())
             },
-            Token::VectorEnd | Token::BlockEnd => Err(AjisaiError::from("Unexpected closing delimiter found.")),
+            Token::VectorEnd => Err(AjisaiError::from("Unexpected closing delimiter found.")),
         }
     }
 
@@ -188,29 +261,6 @@ impl Interpreter {
         }
 
         Err(AjisaiError::from("Unclosed vector"))
-    }
-
-    fn collect_block_tokens(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Token>, usize)> {
-        let mut block_tokens = Vec::new();
-        let mut depth = 1;
-        let mut i = start_index + 1;
-
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::BlockStart => depth += 1,
-                Token::BlockEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Ok((block_tokens, i + 1));
-                    }
-                },
-                _ => {}
-            }
-            block_tokens.push(tokens[i].clone());
-            i += 1;
-        }
-
-        Err(AjisaiError::from("Unclosed block"))
     }
     
     pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
@@ -250,24 +300,10 @@ impl Interpreter {
                     });
                     i += consumed - 1;
                 },
-                Token::BlockStart => {
-                    let (block_tokens, next_index) = self.collect_block_tokens(tokens, i)?;
-                    self.stack.push(Value {
-                        val_type: ValueType::Quotation(block_tokens),
-                    });
-                    i = next_index -1;
-                },
                 Token::Symbol(name) => {
-                    if name == "DEF" {
-                        // DEFの後のDescriptionトークンを探す
-                        let mut description = pending_description.take();
-                        if description.is_none() && i + 1 < tokens.len() {
-                            if let Token::Description(text) = &tokens[i + 1] {
-                                description = Some(text.clone());
-                                i += 1; // Descriptionトークンをスキップ
-                            }
-                        }
-                        control::op_def(self, description)?;
+                    if name == "DEL" {
+                        // DELの新しい実装（ワード定義）
+                        control::op_del_define(self, &self.current_tokens, pending_description.take())?;
                     } else if let Some(def) = self.dictionary.get(name).cloned() {
                         if def.is_builtin {
                             self.execute_builtin(name)?;
@@ -278,7 +314,7 @@ impl Interpreter {
                         return Err(AjisaiError::UnknownWord(name.clone()));
                     }
                 },
-                Token::VectorEnd | Token::BlockEnd => return Err(AjisaiError::from("Unexpected closing delimiter found.")),
+                Token::VectorEnd => return Err(AjisaiError::from("Unexpected closing delimiter found.")),
             }
             i += 1;
         }
@@ -287,14 +323,15 @@ impl Interpreter {
 
     fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
         self.call_stack.push(name.to_string());
-        let result = self.execute_tokens_with_context(tokens);
+        let rearranged = self.rearrange_tokens(tokens)?;
+        let result = self.execute_tokens_with_context(&rearranged);
         self.call_stack.pop();
         
         result.map_err(|e| e.with_context(&self.call_stack))
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, /*database::*,*/ io::*, register_ops::*};
+        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, io::*, register_ops::*};
         
         match name {
             // スタック操作
@@ -341,7 +378,6 @@ impl Interpreter {
             
             // 制御構造
             "IF" => op_if(self),
-            "DEL" => op_del(self),
             "CALL" => op_call(self),
             
             // Nil関連
@@ -349,26 +385,6 @@ impl Interpreter {
             "NOT-NIL?" => op_not_nil_check(self),
             "KNOWN?" => op_not_nil_check(self),
             "DEFAULT" => op_default(self),
-            
-            // データベース (一時的にコメントアウト - Vector機能完成後に再有効化予定)
-            /*
-            "TABLE" => op_table(self),
-            "TABLE-CREATE" => op_table_create(self),
-            "FILTER" => op_filter(self),
-            "PROJECT" => op_project(self),
-            "INSERT" => op_insert(self),
-            "UPDATE" => op_update(self),
-            "DELETE" => op_delete(self),
-            "TABLES" => op_tables(self),
-            "TABLES-INFO" => op_tables_info(self),
-            "TABLE-INFO" => op_table_info(self),
-            "TABLE-SIZE" => op_table_size(self),
-            */
-            // データベース永続化機能は残す（IndexedDB連携のため）
-            /*"SAVE-DB" => op_save_db(self),
-            "LOAD-DB" => op_load_db(self),
-            "MATCH?" => op_match(self),
-            "WILDCARD" => op_wildcard(self),*/
             
             // 入出力
             "." => op_dot(self),
@@ -410,21 +426,6 @@ impl Interpreter {
             .collect()
     }
    
-    // テーブル関連メソッド（Vector機能完成後に再有効化予定）
-    /*
-    pub fn save_table(&mut self, name: String, schema: Vec<String>, records: Vec<Vec<Value>>) {
-        self.tables.insert(name, TableData { schema, records });
-    }
-   
-    pub fn load_table(&self, name: &str) -> Option<(Vec<String>, Vec<Vec<Value>>)> {
-        self.tables.get(name).map(|t| (t.schema.clone(), t.records.clone()))
-    }
-   
-    pub fn get_all_tables(&self) -> Vec<String> {
-        self.tables.keys().cloned().collect()
-    }
-    */
-   
     pub fn set_stack(&mut self, stack: Stack) {
         self.stack = stack;
     }
@@ -440,7 +441,7 @@ impl Interpreter {
                     .map(|token| self.token_to_string(token))
                     .collect::<Vec<String>>()
                     .join(" ");
-                return Some(format!("{{ {} }}", body_string));
+                return Some(body_string);
             }
         }
         None
@@ -455,8 +456,6 @@ impl Interpreter {
             Token::Symbol(s) => s.clone(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::BlockStart => "{".to_string(),
-            Token::BlockEnd => "}".to_string(),
             Token::Description(d) => format!("({})", d),
         }
     }
