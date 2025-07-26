@@ -48,9 +48,6 @@ export class Dictionary {
             { name: 'NOT-NIL?', description: 'nilでないかをチェック ( a -- bool )' },
             { name: 'KNOWN?', description: 'nil以外の値かチェック ( a -- bool )' },
             { name: 'DEFAULT', description: 'nilならデフォルト値を使用 ( a b -- a | nil b -- b )' },
-
-            { name: 'MATCH?', description: 'ワイルドカードマッチング ( str str -- bool )' },
-            { name: 'WILDCARD', description: 'ワイルドカードパターンを作成 ( str -- pattern )' },
             { name: '.', description: '値を出力してドロップ ( a -- )' },
             { name: 'PRINT', description: '値を出力（ドロップしない） ( a -- a )' },
             { name: 'CR', description: '改行を出力 ( -- )' },

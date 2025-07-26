@@ -16,15 +16,31 @@ export class Persistence {
     }
 
     setupDatabaseListeners() {
-        // SAVE-DB/LOAD-DBコマンドは削除されました
-        // 自動保存機能のみが動作します
+        window.addEventListener('ajisai-save-db', async () => {
+            console.log('SAVE-DB command caught.');
+            this.gui.display.showInfo('Saving database via SAVE-DB command...');
+            try {
+                await window.AjisaiDB.saveAllState({}, {});
+                this.gui.display.showInfo('Database saved via SAVE-DB (tables disabled).', true);
+            } catch(error) {
+                this.gui.display.showError(error);
+            }
+        });
+        
+        window.addEventListener('ajisai-load-db', async () => {
+            console.log('LOAD-DB command caught.');
+            this.gui.display.showInfo('Loading database via LOAD-DB command...');
+            await this.loadDatabaseData(true); // isCommand = true
+            this.gui.updateAllDisplays();
+            this.gui.display.showInfo('Database loaded via LOAD-DB (tables disabled).', true);
+        });
     }
 
     async saveCurrentState() {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            const tables = {}; // テーブル機能は無効化
+            const tables = {}; // 現在はテーブル機能無効化
 
             const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
             const customWords = customWordsInfo.map(wordData => ({
@@ -47,11 +63,14 @@ export class Persistence {
         }
     }
 
-    async loadDatabaseData() {
+    async loadDatabaseData(isCommand = false) {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            console.log('Loading saved interpreter state...');
+            console.log('Table loading disabled (Vector機能完成後に再有効化予定).');
+
+            // LOAD-DBコマンドの時はスタックやレジスタは復元しない
+            if (isCommand) return;
 
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {

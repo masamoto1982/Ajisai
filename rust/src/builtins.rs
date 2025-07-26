@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::types::WordDefinition;
+use crate::interpreter::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     // スタック操作
@@ -64,7 +64,9 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック（NOT-NIL?のエイリアス） ( a -- bool )");
     register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a b -- a | nil b -- b )");
 
-
+    // データベース操作
+    register_builtin(dictionary, "SAVE-DB", "データベースを保存 ( -- )");
+    register_builtin(dictionary, "LOAD-DB", "データベースを読み込み ( -- )");
 
     // ワイルドカード・パターンマッチング
     register_builtin(dictionary, "MATCH?", "ワイルドカードマッチング ( str str -- bool )");

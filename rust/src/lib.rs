@@ -1,339 +1,368 @@
-mod interpreter;
-mod tokenizer;
+use wasm_bindgen::prelude::*;
+
 mod types;
+mod tokenizer;
+mod interpreter;
 mod builtins;
 
-use wasm_bindgen::prelude::*;
-use std::panic;
-
-// panicをコンソールに出力するための設定
-pub fn set_panic_hook() {
-    panic::set_hook(Box::new(console_error_panic_hook::hook));
-}
+use types::*;
+use interpreter::Interpreter;
 
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
-    interpreter: interpreter::Interpreter,
+    interpreter: Interpreter,
 }
 
 #[wasm_bindgen]
 impl AjisaiInterpreter {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        set_panic_hook();
         AjisaiInterpreter {
-            interpreter: interpreter::Interpreter::new(),
+            interpreter: Interpreter::new(),
         }
     }
 
     #[wasm_bindgen]
-    pub fn execute(&mut self, code: &str) -> JsValue {
-        self.interpreter.reset_output();
-        
+    pub fn execute(&mut self, code: &str) -> Result<JsValue, String> {
         match self.interpreter.execute(code) {
-            Ok(_) => {
+            Ok(()) => {
+                let obj = js_sys::Object::new();
+                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                
+                // 出力を取得
                 let output = self.interpreter.get_output();
-                let result = serde_json::json!({
-                    "status": "OK",
-                    "output": output
-                });
-                serde_wasm_bindgen::to_value(&result).unwrap()
-            },
-            Err(e) => {
-                let result = serde_json::json!({
-                    "status": "ERROR",
-                    "message": format!("{:?}", e)
-                });
-                serde_wasm_bindgen::to_value(&result).unwrap()
+                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
+                
+                Ok(obj.into())
             }
+            Err(e) => Err(e.to_string()),
         }
     }
 
     #[wasm_bindgen]
-    pub fn init_step(&mut self, code: &str) -> Result<String, JsValue> {
-        match self.interpreter.init_step(code) {
-            Ok(_) => Ok("OK".to_string()),
-            Err(e) => Err(JsValue::from_str(&e.to_string())),
+    pub fn init_step(&mut self, code: &str) -> Result<String, String> {
+        match self.interpreter.init_step_execution(code) {
+            Ok(()) => Ok("OK".to_string()),
+            Err(e) => Err(e.to_string()),
         }
     }
 
     #[wasm_bindgen]
-    pub fn step(&mut self) -> Result<JsValue, JsValue> {
-        match self.interpreter.step() {
-            Ok((output, has_more)) => {
-                let result = serde_json::json!({
-                    "hasMore": has_more,
-                    "output": output,
-                    "position": 0,
-                    "total": 0,
-                });
-                Ok(serde_wasm_bindgen::to_value(&result).unwrap())
-            },
-            Err(e) => Err(JsValue::from_str(&format!("{:?}", e))),
+    pub fn step(&mut self) -> Result<JsValue, String> {
+        match self.interpreter.execute_step() {
+            Ok(has_more) => {
+                let obj = js_sys::Object::new();
+                js_sys::Reflect::set(&obj, &"hasMore".into(), &JsValue::from_bool(has_more)).unwrap();
+                
+                if let Some((position, total)) = self.interpreter.get_step_info() {
+                    js_sys::Reflect::set(&obj, &"position".into(), &JsValue::from_f64(position as f64)).unwrap();
+                    js_sys::Reflect::set(&obj, &"total".into(), &JsValue::from_f64(total as f64)).unwrap();
+                }
+                
+                // 出力を取得
+                let output = self.interpreter.get_output();
+                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
+                
+                Ok(obj.into())
+            }
+            Err(e) => Err(e.to_string()),
         }
     }
 
     #[wasm_bindgen]
     pub fn get_stack(&self) -> JsValue {
-        let stack: Vec<_> = self.interpreter.stack.iter()
-            .map(|val| {
-                let js_val = match &val.val_type {
-                    types::ValueType::Number(n) => {
-                        serde_json::json!({
-                            "type": "number",
-                            "value": {
-                                "numerator": n.numerator,
-                                "denominator": n.denominator
-                            }
-                        })
-                    },
-                    types::ValueType::String(s) => {
-                        serde_json::json!({
-                            "type": "string",
-                            "value": s
-                        })
-                    },
-                    types::ValueType::Boolean(b) => {
-                        serde_json::json!({
-                            "type": "boolean",
-                            "value": b
-                        })
-                    },
-                    types::ValueType::Symbol(s) => {
-                        serde_json::json!({
-                            "type": "symbol",
-                            "value": s
-                        })
-                    },
-                    types::ValueType::Vector(v) => {
-                        serde_json::json!({
-                            "type": "vector",
-                            "value": v
-                        })
-                    },
-                    types::ValueType::Quotation(_) => {
-                        serde_json::json!({
-                            "type": "quotation",
-                            "value": "{ ... }"
-                        })
-                    },
-                    types::ValueType::Nil => {
-                        serde_json::json!({
-                            "type": "nil",
-                            "value": null
-                        })
-                    },
-                };
-                js_val
-            })
+        let stack_values: Vec<JsValue> = self.interpreter
+            .get_stack()
+            .iter()
+            .map(|v| value_to_js(v))
             .collect();
         
-        serde_wasm_bindgen::to_value(&stack).unwrap()
+        let arr = js_sys::Array::new();
+        for val in stack_values {
+            arr.push(&val);
+        }
+        arr.into()
     }
 
     #[wasm_bindgen]
     pub fn get_register(&self) -> JsValue {
-        match &self.interpreter.register {
-            Some(val) => {
-                let js_val = match &val.val_type {
-                    types::ValueType::Number(n) => {
-                        serde_json::json!({
-                            "type": "number",
-                            "value": {
-                                "numerator": n.numerator,
-                                "denominator": n.denominator
-                            }
-                        })
-                    },
-                    types::ValueType::String(s) => {
-                        serde_json::json!({
-                            "type": "string",
-                            "value": s
-                        })
-                    },
-                    types::ValueType::Boolean(b) => {
-                        serde_json::json!({
-                            "type": "boolean",
-                            "value": b
-                        })
-                    },
-                    types::ValueType::Symbol(s) => {
-                        serde_json::json!({
-                            "type": "symbol",
-                            "value": s
-                        })
-                    },
-                    types::ValueType::Vector(v) => {
-                        serde_json::json!({
-                            "type": "vector",
-                            "value": v
-                        })
-                    },
-                    types::ValueType::Quotation(_) => {
-                        serde_json::json!({
-                            "type": "quotation",
-                            "value": "{ ... }"
-                        })
-                    },
-                    types::ValueType::Nil => {
-                        serde_json::json!({
-                            "type": "nil",
-                            "value": null
-                        })
-                    },
-                };
-                serde_wasm_bindgen::to_value(&js_val).unwrap()
-            },
+        match self.interpreter.get_register() {
+            Some(v) => value_to_js(v),
             None => JsValue::NULL,
         }
     }
 
     #[wasm_bindgen]
-    pub fn get_custom_words(&self) -> js_sys::Array {
-        let words = js_sys::Array::new();
-        
-        for (name, def) in &self.interpreter.dictionary {
-            if !def.is_builtin {
-                words.push(&JsValue::from_str(name));
-            }
-        }
-        
-        words
+    pub fn get_custom_words(&self) -> Vec<String> {
+        self.interpreter.get_custom_words()
     }
 
     #[wasm_bindgen]
     pub fn get_custom_words_with_descriptions(&self) -> JsValue {
-        let mut words = Vec::new();
+        let words = self.interpreter.get_custom_words_with_descriptions();
+        let arr = js_sys::Array::new();
         
-        for (name, def) in &self.interpreter.dictionary {
-            if !def.is_builtin {
-                let word_info = serde_json::json!({
-                    "name": name,
-                    "description": def.description,
-                });
-                words.push(word_info);
-            }
+        for (name, desc) in words {
+            let word_arr = js_sys::Array::new();
+            word_arr.push(&JsValue::from_str(&name));
+            word_arr.push(&desc.map(|d| JsValue::from_str(&d)).unwrap_or(JsValue::NULL));
+            arr.push(&word_arr);
         }
         
-        serde_wasm_bindgen::to_value(&words).unwrap()
+        arr.into()
     }
 
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
-        let words = self.interpreter.get_custom_words_info();
-        serde_wasm_bindgen::to_value(&words).unwrap()
+        let words_info = self.interpreter.get_custom_words_info();
+        let arr = js_sys::Array::new();
+        
+        for (name, desc, protected) in words_info {
+            let word_arr = js_sys::Array::new();
+            word_arr.push(&JsValue::from_str(&name));
+            word_arr.push(&desc.map(|d| JsValue::from_str(&d)).unwrap_or(JsValue::NULL));
+            word_arr.push(&JsValue::from_bool(protected));
+            arr.push(&word_arr);
+        }
+        
+        arr.into()
     }
 
     #[wasm_bindgen]
     pub fn reset(&mut self) {
-        self.interpreter = interpreter::Interpreter::new();
+        self.interpreter = Interpreter::new();
     }
-
+    
     #[wasm_bindgen]
-    pub fn save_table(&mut self, name: &str, schema: JsValue, records: JsValue) -> Result<(), JsValue> {
-        Err(JsValue::from_str("Table feature is not implemented"))
-    }
-
-    #[wasm_bindgen]
-    pub fn load_table(&self, name: &str) -> JsValue {
-        JsValue::NULL
-    }
-
-    #[wasm_bindgen]
-    pub fn get_all_tables(&self) -> js_sys::Array {
-        js_sys::Array::new()
-    }
-
-    #[wasm_bindgen]
-    pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), JsValue> {
-        let stack_data: Vec<serde_json::Value> = serde_wasm_bindgen::from_value(stack_js)?;
-        self.interpreter.stack.clear();
-        
-        for item in stack_data {
-            if let Some(val) = Self::js_value_to_value(&item) {
-                self.interpreter.stack.push(val);
-            }
+    pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
+        if !stack_js.is_array() {
+            return Err("Stack must be an array".to_string());
         }
         
+        let arr = js_sys::Array::from(&stack_js);
+        let mut new_stack = Vec::new();
+        
+        for i in 0..arr.length() {
+            let item = arr.get(i);
+            let value = js_value_to_rust_value(&item)?;
+            new_stack.push(value);
+        }
+        
+        self.interpreter.set_stack(new_stack);
         Ok(())
     }
-
+    
     #[wasm_bindgen]
-    pub fn restore_register(&mut self, register_js: JsValue) -> Result<(), JsValue> {
+    pub fn restore_register(&mut self, register_js: JsValue) -> Result<(), String> {
         if register_js.is_null() || register_js.is_undefined() {
-            self.interpreter.register = None;
+            self.interpreter.set_register(None);
         } else {
-            let reg_data: serde_json::Value = serde_wasm_bindgen::from_value(register_js)?;
-            self.interpreter.register = Self::js_value_to_value(&reg_data);
+            let value = js_value_to_rust_value(&register_js)?;
+            self.interpreter.set_register(Some(value));
         }
-        
         Ok(())
     }
-
+    
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
-        if let Some(tokens) = self.interpreter.get_word_definition(name) {
-            let tokens_str: Vec<String> = tokens.iter().map(|t| format!("{:?}", t)).collect();
-            JsValue::from_str(&tokens_str.join(" "))
-        } else {
-            JsValue::NULL
+        match self.interpreter.get_word_definition(name) {
+            Some(def) => JsValue::from_str(&def),
+            None => JsValue::NULL,
         }
     }
-
+    
     #[wasm_bindgen]
-    pub fn restore_word(&mut self, name: &str, definition: &str, description: Option<String>) -> Result<(), JsValue> {
-        // 簡易的な実装：定義文字列からトークンを復元
-        match tokenizer::tokenize(definition) {
-            Ok(tokens) => {
-                self.interpreter.restore_word(name.to_string(), tokens, description);
-                Ok(())
-            },
-            Err(e) => Err(JsValue::from_str(&e)),
-        }
-    }
-
-    // ヘルパー関数
-    fn js_value_to_value(js_val: &serde_json::Value) -> Option<types::Value> {
-        let obj = js_val.as_object()?;
-        let type_str = obj.get("type")?.as_str()?;
+    pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
+        // 説明があれば先に追加
+        let code = if let Some(desc) = description {
+            format!("({}) {} \"{}\" DEF", desc, definition, name)
+        } else {
+            format!("{} \"{}\" DEF", definition, name)
+        };
         
-        match type_str {
+        // デバッグ用にコンソールにログを出力
+        web_sys::console::log_1(&format!("Restoring word with code: {}", code).into());
+        
+        // ★★★ ここを修正 ★★★
+        // `?` を使うために、AjisaiErrorをStringに変換する
+        self.interpreter.execute(&code).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
+fn value_to_js(value: &Value) -> JsValue {
+    let obj = js_sys::Object::new();
+    
+    let type_str = match &value.val_type {
+        ValueType::Number(_) => "number",
+        ValueType::String(_) => "string",
+        ValueType::Boolean(_) => "boolean",
+        ValueType::Symbol(_) => "symbol",
+        ValueType::Vector(_) => "vector",
+        ValueType::Quotation(_) => "quotation",
+        ValueType::Nil => "nil",
+    };
+    
+    js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
+    
+    let val = match &value.val_type {
+        ValueType::Number(n) => {
+            // 分数オブジェクトとして出力
+            let frac_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&frac_obj, &"numerator".into(), &JsValue::from_f64(n.numerator as f64)).unwrap();
+            js_sys::Reflect::set(&frac_obj, &"denominator".into(), &JsValue::from_f64(n.denominator as f64)).unwrap();
+            frac_obj.into()
+        },
+        ValueType::String(s) => JsValue::from_str(s),
+        ValueType::Boolean(b) => JsValue::from_bool(*b),
+        ValueType::Symbol(s) => JsValue::from_str(s),
+        ValueType::Vector(v) => {
+            let arr = js_sys::Array::new();
+            for item in v.iter() {
+                arr.push(&value_to_js(item));
+            }
+            arr.into()
+        },
+        ValueType::Quotation(tokens) => {
+            // Quotationをオブジェクトとして表現
+            let quot_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&quot_obj, &"type".into(), &"quotation".into()).unwrap();
+            js_sys::Reflect::set(&quot_obj, &"length".into(), &JsValue::from_f64(tokens.len() as f64)).unwrap();
+            quot_obj.into()
+        },
+        ValueType::Nil => JsValue::NULL,
+    };
+    
+    js_sys::Reflect::set(&obj, &"value".into(), &val).unwrap();
+    
+    obj.into()
+}
+
+fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
+    // JavaScriptオブジェクトの場合（{type: ..., value: ...}形式）
+    if js_sys::Reflect::has(js_val, &"type".into()).unwrap_or(false) {
+        let type_str = js_sys::Reflect::get(js_val, &"type".into())
+            .ok()
+            .and_then(|v| v.as_string())
+            .ok_or("Invalid type field")?;
+        
+        let value_field = js_sys::Reflect::get(js_val, &"value".into())
+            .map_err(|_| "Missing value field")?;
+        
+        match type_str.as_str() {
             "number" => {
-                let value = obj.get("value")?;
-                if let Some(value_obj) = value.as_object() {
-                    let numerator = value_obj.get("numerator")?.as_i64()?;
-                    let denominator = value_obj.get("denominator")?.as_i64()?;
-                    Some(types::Value {
-                        val_type: types::ValueType::Number(types::Fraction::new(numerator, denominator))
+                // valueフィールドは分数を表すオブジェクト
+                if js_sys::Reflect::has(&value_field, &"numerator".into()).unwrap_or(false) &&
+                   js_sys::Reflect::has(&value_field, &"denominator".into()).unwrap_or(false) {
+                    
+                    let num = js_sys::Reflect::get(&value_field, &"numerator".into())
+                        .ok()
+                        .and_then(|v| v.as_f64())
+                        .and_then(|n| {
+                            if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
+                                Some(n as i64)
+                            } else {
+                                None
+                            }
+                        })
+                        .ok_or("Invalid numerator: must be an integer within i64 range")?;
+                    
+                    let den = js_sys::Reflect::get(&value_field, &"denominator".into())
+                        .ok()
+                        .and_then(|v| v.as_f64())
+                        .and_then(|n| {
+                            if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
+                                Some(n as i64)
+                            } else {
+                                None
+                            }
+                        })
+                        .ok_or("Invalid denominator: must be an integer within i64 range")?;
+                    
+                    if den == 0 {
+                        return Err("Division by zero in fraction".to_string());
+                    }
+                    
+                    Ok(Value {
+                        val_type: ValueType::Number(Fraction::new(num, den))
                     })
                 } else {
-                    None
+                    Err("Number value must be an object with 'numerator' and 'denominator' fields".to_string())
                 }
             },
             "string" => {
-                let value = obj.get("value")?.as_str()?;
-                Some(types::Value {
-                    val_type: types::ValueType::String(value.to_string())
+                let s = value_field.as_string()
+                    .ok_or("Invalid string value")?;
+                Ok(Value {
+                    val_type: ValueType::String(s)
                 })
             },
             "boolean" => {
-                let value = obj.get("value")?.as_bool()?;
-                Some(types::Value {
-                    val_type: types::ValueType::Boolean(value)
+                let b = value_field.as_bool()
+                    .ok_or("Invalid boolean value")?;
+                Ok(Value {
+                    val_type: ValueType::Boolean(b)
                 })
             },
             "symbol" => {
-                let value = obj.get("value")?.as_str()?;
-                Some(types::Value {
-                    val_type: types::ValueType::Symbol(value.to_string())
+                let s = value_field.as_string()
+                    .ok_or("Invalid symbol value")?;
+                Ok(Value {
+                    val_type: ValueType::Symbol(s)
                 })
+            },
+            "vector" => {
+                if value_field.is_array() {
+                    let arr = js_sys::Array::from(&value_field);
+                    let mut values = Vec::new();
+                    for i in 0..arr.length() {
+                        let elem = arr.get(i);
+                        values.push(js_value_to_rust_value(&elem)?);
+                    }
+                    Ok(Value {
+                        val_type: ValueType::Vector(values)
+                    })
+                } else {
+                    Err("Invalid vector value".to_string())
+                }
             },
             "nil" => {
-                Some(types::Value {
-                    val_type: types::ValueType::Nil
+                Ok(Value {
+                    val_type: ValueType::Nil
                 })
             },
-            _ => None,
+            _ => Err(format!("Unknown type: {}", type_str)),
+        }
+    } else {
+        // 単純な値の場合（後方互換性のため）
+        if let Some(b) = js_val.as_bool() {
+            Ok(Value {
+                val_type: ValueType::Boolean(b)
+            })
+        } else if js_val.as_f64().is_some() {
+            // 浮動小数点数は受け付けない
+            Err("Direct numeric values are not allowed to preserve precision. Numbers must be passed as objects with 'numerator' and 'denominator' fields.".to_string())
+        } else if let Some(s) = js_val.as_string() {
+            Ok(Value {
+                val_type: ValueType::String(s)
+            })
+        } else if js_val.is_null() || js_val.is_undefined() {
+            Ok(Value {
+                val_type: ValueType::Nil
+            })
+        } else if js_val.is_array() {
+            // 配列の場合はVectorとして処理
+            let arr = js_sys::Array::from(js_val);
+            let mut values = Vec::new();
+            for i in 0..arr.length() {
+                let elem = arr.get(i);
+                values.push(js_value_to_rust_value(&elem)?);
+            }
+            Ok(Value {
+                val_type: ValueType::Vector(values)
+            })
+        } else {
+            Err("Unsupported value type".to_string())
         }
     }
 }
