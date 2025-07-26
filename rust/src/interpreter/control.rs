@@ -2,8 +2,8 @@ use crate::interpreter::{Interpreter, WordDefinition, error::{AjisaiError, Resul
 use crate::types::{Value, ValueType, Token};
 use std::collections::HashSet;
 
-// 新しいDEL実装（ワード定義）
-pub fn op_del_define(interp: &mut Interpreter, all_tokens: &[Token], description: Option<String>) -> Result<()> {
+// 新しいDEF実装（Quotationなしでワード定義）
+pub fn op_def(interp: &mut Interpreter, all_tokens: &[Token], description: Option<String>) -> Result<()> {
     // スタックからワード名を取得
     let name_val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
@@ -13,28 +13,28 @@ pub fn op_del_define(interp: &mut Interpreter, all_tokens: &[Token], description
         _ => return Err(AjisaiError::type_error("string", "other type")),
     };
     
-    // DELトークンとワード名の位置を特定
-    let mut del_index = None;
+    // DEFトークンとワード名の位置を特定
+    let mut def_index = None;
     let mut name_index = None;
     
     for (i, token) in all_tokens.iter().enumerate() {
         if let Token::Symbol(sym) = token {
-            if sym == "DEL" {
-                del_index = Some(i);
+            if sym == "DEF" {
+                def_index = Some(i);
             }
         }
         if let Token::String(s) = token {
             if s == &name && name_index.is_none() {
-                // DELより前の最後の出現を探す
-                if del_index.is_none() || i < del_index.unwrap() {
+                // DEFより前の最後の出現を探す
+                if def_index.is_none() || i < def_index.unwrap() {
                     name_index = Some(i);
                 }
             }
         }
     }
     
-    let del_idx = del_index.ok_or("DEL token not found")?;
-    let name_idx = name_index.ok_or("Word name not found before DEL")?;
+    let def_idx = def_index.ok_or("DEF token not found")?;
+    let name_idx = name_index.ok_or("Word name not found before DEF")?;
     
     // ワード名より前のトークンをすべて定義内容とする
     let definition_tokens: Vec<Token> = all_tokens[..name_idx].to_vec();
@@ -84,7 +84,7 @@ pub fn op_del_define(interp: &mut Interpreter, all_tokens: &[Token], description
     Ok(())
 }
 
-// 従来のDEL（ワード削除）は別名に
+// DEL（ワード削除）
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let name_val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
