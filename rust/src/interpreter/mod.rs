@@ -5,6 +5,7 @@ pub mod control;
 // pub mod database; // テーブル機能完成後に再有効化予定
 pub mod io;
 pub mod error;
+pub mod register_ops;  // 追加
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Value, ValueType, Stack, Register, Token}; // TableData は一時的にコメントアウト
@@ -293,7 +294,7 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, /*database::*,*/ io::*};
+        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, /*database::*,*/ io::*, register_ops::*};
         
         match name {
             // スタック操作
@@ -320,6 +321,12 @@ impl Interpreter {
             "NOT" => op_not(self),
             "AND" => op_and(self),
             "OR" => op_or(self),
+            
+            // レジスタ演算
+            "R+" => op_r_add(self),
+            "R-" => op_r_sub(self),
+            "R*" => op_r_mul(self),
+            "R/" => op_r_div(self),
             
             // ベクトル操作
             "LENGTH" => op_length(self),
