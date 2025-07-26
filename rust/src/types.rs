@@ -90,12 +90,14 @@ impl From<i64> for Fraction {
 // トークン型
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Token {
-    Word(String),
-    Number(Fraction),
+    Number(i64, i64),  // numerator, denominator
     String(String),
+    Boolean(bool),
     Symbol(String),
-    Vector(Vec<Token>),
+    VectorStart,
+    VectorEnd,
     Nil,
+    Description(String),
 }
 
 // 値型
@@ -106,7 +108,6 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>),
-    Quotation(Vec<Token>),
     Nil,
 }
 
@@ -130,19 +131,11 @@ impl fmt::Display for Value {
                 }
                 write!(f, " ]")
             },
-            ValueType::Quotation(_) => write!(f, "{{ ... }}"),
             ValueType::Nil => write!(f, "nil"),
         }
     }
 }
 
-// ワード定義
-#[derive(Debug, Clone)]
-pub struct WordDefinition {
-    pub tokens: Vec<Token>,
-    pub is_builtin: bool,
-    pub description: Option<String>,
-}
 // 型エイリアス
 pub type Stack = Vec<Value>;
 pub type Register = Option<Value>;
