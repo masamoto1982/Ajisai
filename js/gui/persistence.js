@@ -2,7 +2,7 @@
 
 export class Persistence {
     constructor(gui) {
-        this.gui = gui; // GUIのメインインスタンスへの参照
+        this.gui = gui;
     }
 
     async init() {
@@ -20,8 +20,8 @@ export class Persistence {
             console.log('SAVE-DB command caught.');
             this.gui.display.showInfo('Saving database via SAVE-DB command...');
             try {
-                await window.AjisaiDB.saveAllState({}, {});
-                this.gui.display.showInfo('Database saved via SAVE-DB (tables disabled).', true);
+                await this.saveCurrentState();
+                this.gui.display.showInfo('Database saved via SAVE-DB.', true);
             } catch(error) {
                 this.gui.display.showError(error);
             }
@@ -30,9 +30,9 @@ export class Persistence {
         window.addEventListener('ajisai-load-db', async () => {
             console.log('LOAD-DB command caught.');
             this.gui.display.showInfo('Loading database via LOAD-DB command...');
-            await this.loadDatabaseData(true); // isCommand = true
+            await this.loadDatabaseData(true);
             this.gui.updateAllDisplays();
-            this.gui.display.showInfo('Database loaded via LOAD-DB (tables disabled).', true);
+            this.gui.display.showInfo('Database loaded via LOAD-DB.', true);
         });
     }
 
@@ -40,8 +40,6 @@ export class Persistence {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            const tables = {}; // 現在はテーブル機能無効化
-
             const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
             const customWords = customWordsInfo.map(wordData => ({
                 name: wordData[0],
@@ -56,7 +54,7 @@ export class Persistence {
                 customWords: customWords,
             };
 
-            await window.AjisaiDB.saveAllState(tables, interpreterState);
+            await window.AjisaiDB.saveInterpreterState(interpreterState);
             console.log('State saved automatically.');
         } catch (error) {
             console.error('Failed to auto-save state:', error);
@@ -67,9 +65,6 @@ export class Persistence {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            console.log('Table loading disabled (Vector機能完成後に再有効化予定).');
-
-            // LOAD-DBコマンドの時はスタックやレジスタは復元しない
             if (isCommand) return;
 
             const state = await window.AjisaiDB.loadInterpreterState();
