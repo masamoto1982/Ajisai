@@ -4,7 +4,6 @@ export class Dictionary {
     init(elements, onWordClick) {
         this.elements = elements;
         this.onWordClick = onWordClick;
-        // データを元のフラットな配列構造に戻す
         this.builtinWords = [
             { name: '+', description: '加算 ( a b -- a+b )' },
             { name: '-', description: '減算 ( a b -- a-b )' },
@@ -28,51 +27,66 @@ export class Dictionary {
             { name: 'R>', description: 'レジスタからスタックへ移動 ( -- a )' },
             { name: 'R@', description: 'レジスタの値をコピー ( -- a )' },
             { name: 'R+', description: 'レジスタとの加算 ( a -- a+r )' },
-　　　　　　 { name: 'R-', description: 'レジスタとの減算 ( a -- a-r )' },
-　　　　　　 { name: 'R*', description: 'レジスタとの乗算 ( a -- a*r )' },
-　　　　　　 { name: 'R/', description: 'レジスタとの除算 ( a -- a/r )' },
+            { name: 'R-', description: 'レジスタとの減算 ( a -- a-r )' },
+            { name: 'R*', description: 'レジスタとの乗算 ( a -- a*r )' },
+            { name: 'R/', description: 'レジスタとの除算 ( a -- a/r )' },
             { name: 'LENGTH', description: 'ベクトルの長さ ( vec -- n )' },
             { name: 'HEAD', description: '最初の要素 ( vec -- elem )' },
             { name: 'TAIL', description: '最初以外の要素 ( vec -- vec\' )' },
             { name: 'CONS', description: '要素を先頭に追加 ( elem vec -- vec\' )' },
             { name: 'APPEND', description: '要素を末尾に追加 ( vec elem -- vec\' )' },
             { name: 'REVERSE', description: 'ベクトルを逆順に ( vec -- vec\' )' },
-            { name: 'NTH', description: 'N番目の要素を取得（負数は末尾から） ( n vec -- elem )' },
-            { name: 'UNCONS', description: 'ベクトルを先頭要素と残りに分解 ( vec -- elem vec\' )' },
-            { name: 'EMPTY?', description: 'ベクトルが空かチェック ( vec -- bool )' },
-            { name: 'DEF', description: '新しいワードを定義 ( vec str -- )' },
-            { name: 'IF', description: '条件分岐 ( bool vec vec -- ... )' },
+            { name: 'NTH', description: 'N番目の要素を取得 ( n vec -- elem )' },
+            { name: 'UNCONS', description: 'ベクトルを分解 ( vec -- elem vec\' )' },
+            { name: 'EMPTY?', description: 'ベクトルが空か ( vec -- bool )' },
+            { name: 'IF', description: '条件分岐 ( bool quot quot -- ... )' },
             { name: 'CALL', description: 'Quotationを実行 ( quot -- ... )' },
             { name: 'DEL', description: 'カスタムワードを削除 ( str -- )' },
-            { name: 'NIL?', description: 'nilかどうかをチェック ( a -- bool )' },
-            { name: 'NOT-NIL?', description: 'nilでないかをチェック ( a -- bool )' },
-            { name: 'KNOWN?', description: 'nil以外の値かチェック ( a -- bool )' },
-            { name: 'DEFAULT', description: 'nilならデフォルト値を使用 ( a b -- a | nil b -- b )' },
-            { name: '.', description: '値を出力してドロップ ( a -- )' },
-            { name: 'PRINT', description: '値を出力（ドロップしない） ( a -- a )' },
+            { name: 'NIL?', description: 'nilかどうか ( a -- bool )' },
+            { name: 'NOT-NIL?', description: 'nilでないか ( a -- bool )' },
+            { name: 'KNOWN?', description: 'nil以外の値か ( a -- bool )' },
+            { name: 'DEFAULT', description: 'nilならデフォルト値 ( a b -- a|b )' },
+            { name: '.', description: '値を出力 ( a -- )' },
+            { name: 'PRINT', description: '値を出力 ( a -- a )' },
             { name: 'CR', description: '改行を出力 ( -- )' },
             { name: 'SPACE', description: 'スペースを出力 ( -- )' },
-            { name: 'SPACES', description: 'N個のスペースを出力 ( n -- )' },
-            { name: 'EMIT', description: '文字コードを文字として出力 ( n -- )' }
+            { name: 'SPACES', description: 'N個のスペース ( n -- )' },
+            { name: 'EMIT', description: '文字を出力 ( n -- )' }
         ];
     }
 
     renderBuiltinWords() {
-        // カテゴリ分けのロジックを削除し、直接renderWordButtonsを呼び出す
         this.renderWordButtons(this.elements.builtinWordsDisplay, this.builtinWords, false);
     }
 
     updateCustomWords(customWordsInfo) {
         const words = (customWordsInfo || []).map(wordData => ({
             name: wordData[0],
-            description: wordData[1] || null,
+            description: this.decodeWordName(wordData[0]) || wordData[1],
             protected: wordData[2] || false
         }));
         this.renderWordButtons(this.elements.customWordsDisplay, words, true);
     }
 
+    decodeWordName(name) {
+        // 内容ベースの名前を人間が読みやすい形に変換
+        if (name.includes('_')) {
+            const parts = name.split('_');
+            const decoded = parts.map(part => {
+                if (part === 'VSTART') return '[';
+                if (part === 'VEND') return ']';
+                if (part === 'BSTART') return '{';
+                if (part === 'BEND') return '}';
+                if (part === 'NIL') return 'nil';
+                if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
+                return part.toLowerCase();
+            }).join(' ');
+            return `≈ ${decoded}`;
+        }
+        return null;
+    }
+
     renderWordButtons(container, words, isCustom) {
-        // 描画の前に必ずコンテナをクリアする
         container.innerHTML = '';
 
         words.forEach(wordInfo => {
