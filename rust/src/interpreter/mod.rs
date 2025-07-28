@@ -19,6 +19,10 @@ pub struct Interpreter {
     pub(crate) call_stack: Vec<String>,
     pub(crate) output_buffer: String,
     word_properties: HashMap<String, WordProperty>,
+    // ステップ実行用のフィールド
+    step_tokens: Vec<Token>,
+    step_position: usize,
+    step_mode: bool,
 }
 
 #[derive(Clone)]
@@ -43,6 +47,9 @@ impl Interpreter {
             call_stack: Vec::new(),
             output_buffer: String::new(),
             word_properties: HashMap::new(),
+            step_tokens: Vec::new(),
+            step_position: 0,
+            step_mode: false,
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
@@ -77,14 +84,98 @@ impl Interpreter {
         Ok(())
     }
 
+    // ステップ実行の初期化
+    pub fn init_step_execution(&mut self, code: &str) -> Result<()> {
+        // 改行で分割して処理すべき行を収集
+        let lines: Vec<&str> = code.split('\n')
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .collect();
+
+        // 各行をトークン化して、ステップ実行用に保存
+        self.step_tokens.clear();
+        for line in lines {
+            let tokens = tokenize(line).map_err(AjisaiError::from)?;
+            if !tokens.is_empty() {
+                // 行の区切りを示す特殊なトークンを追加
+                if !self.step_tokens.is_empty() {
+                    self.step_tokens.push(Token::Symbol("__LINE_BREAK__".to_string()));
+                }
+                self.step_tokens.extend(tokens);
+            }
+        }
+        
+        self.step_position = 0;
+        self.step_mode = true;
+        Ok(())
+    }
+
+    // ステップ実行
+    pub fn execute_step(&mut self) -> Result<bool> {
+        if !self.step_mode || self.step_position >= self.step_tokens.len() {
+            self.step_mode = false;
+            return Ok(false);
+        }
+
+        // 現在の行のトークンを収集
+        let mut line_tokens = Vec::new();
+        while self.step_position < self.step_tokens.len() {
+            let token = &self.step_tokens[self.step_position];
+            if let Token::Symbol(name) = token {
+                if name == "__LINE_BREAK__" {
+                    self.step_position += 1;
+                    break;
+                }
+            }
+            line_tokens.push(token.clone());
+            self.step_position += 1;
+        }
+
+        // 行末に達した場合も処理
+        if line_tokens.is_empty() && self.step_position >= self.step_tokens.len() {
+            self.step_mode = false;
+            return Ok(false);
+        }
+
+        // 収集したトークンで1行分の処理を実行
+        if !line_tokens.is_empty() {
+            self.process_line_from_tokens(&line_tokens)?;
+        }
+
+        Ok(self.step_position < self.step_tokens.len())
+    }
+
+    // ステップ情報の取得
+    pub fn get_step_info(&self) -> Option<(usize, usize)> {
+        if self.step_mode {
+            // 行数をカウント
+            let total_lines = self.step_tokens.iter()
+                .filter(|t| matches!(t, Token::Symbol(s) if s == "__LINE_BREAK__"))
+                .count() + 1;
+            
+            let current_line = self.step_tokens[..self.step_position.min(self.step_tokens.len())]
+                .iter()
+                .filter(|t| matches!(t, Token::Symbol(s) if s == "__LINE_BREAK__"))
+                .count() + 1;
+            
+            Some((current_line, total_lines))
+        } else {
+            None
+        }
+    }
+
     fn process_line(&mut self, line: &str) -> Result<()> {
         let tokens = tokenize(line).map_err(AjisaiError::from)?;
         if tokens.is_empty() {
             return Ok(());
         }
 
+        self.process_line_from_tokens(&tokens)
+    }
+
+    fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         // トークンを並び替え
-        let rearranged = self.rearrange_tokens(&tokens);
+        let rearranged = self.rearrange_tokens(tokens);
         
         // 単一のシンボルで、既存のワードと一致する場合は実行
         if rearranged.len() == 1 {
@@ -96,7 +187,7 @@ impl Interpreter {
         }
 
         // それ以外は新しいワードとして定義
-        self.define_from_tokens(&tokens)?;
+        self.define_from_tokens(tokens)?;
         
         Ok(())
     }
