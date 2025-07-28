@@ -28,7 +28,7 @@ class GUI {
 
         // 各モジュールの初期化
         this.display.init(this.elements);
-        this.dictionary.init(this.elements, (word) => this.editor.insertWord(word));
+        this.dictionary.init(this.elements, (word) => this.insertWord(word));
         this.editor.init(this.elements.codeInput);
         this.stepper.init(() => window.ajisaiInterpreter);
         this.mobile.init(this.elements);
@@ -71,6 +71,8 @@ class GUI {
                 } else if (e.ctrlKey) {
                     e.preventDefault();
                     this.runStep();
+                } else {
+                    // 通常のEnterは改行（デフォルト動作）
                 }
             }
         });
@@ -87,6 +89,10 @@ class GUI {
     setMode(newMode) {
         this.mode = newMode;
         this.mobile.updateView(this.mode);
+    }
+
+    insertWord(word) {
+        this.editor.insertWord(word + ' ');
     }
     
     async runNormal() {
