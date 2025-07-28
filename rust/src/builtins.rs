@@ -26,55 +26,42 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "CONS", "要素を先頭に追加 ( elem vec -- vec' )");
     register_builtin(dictionary, "APPEND", "要素をベクトルの末尾に追加 ( vec elem -- vec' )");
     register_builtin(dictionary, "REVERSE", "ベクトルを逆順に ( vec -- vec' )");
-    register_builtin(dictionary, "NTH", "N番目の要素を取得（負数は末尾から） ( n vec -- elem )");
-    
-    // スタックベース反復サポート（再帰の構成要素）
-    register_builtin(dictionary, "UNCONS", "ベクトルを先頭要素と残りに分解 ( vec -- elem vec' )");
+    register_builtin(dictionary, "NTH", "N番目の要素を取得 ( n vec -- elem )");
+    register_builtin(dictionary, "UNCONS", "ベクトルを分解 ( vec -- elem vec' )");
     register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )");
     
-    // 制御構造
-    register_builtin(dictionary, "DEF", "新しいワードを定義 ( vec str -- )");
+    // 制御構造（DEFは内部使用のみなので削除）
     register_builtin(dictionary, "IF", "条件分岐 ( bool vec vec -- ... )");
-    register_builtin(dictionary, "CALL", "Quotationを実行 ( quot -- ... )");  // 新規追加
-    
-    // 辞書操作
+    register_builtin(dictionary, "CALL", "Quotationを実行 ( quot -- ... )");
     register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
     
-    // 算術演算子（暗黙の反復対応）
-    register_builtin(dictionary, "+", "加算 - 暗黙の反復対応 ( a b -- a+b )");
-    register_builtin(dictionary, "-", "減算 - 暗黙の反復対応 ( a b -- a-b )");
-    register_builtin(dictionary, "*", "乗算 - 暗黙の反復対応 ( a b -- a*b )");
-    register_builtin(dictionary, "/", "除算 - 暗黙の反復対応 ( a b -- a/b )");
+    // 算術演算子
+    register_builtin(dictionary, "+", "加算 ( a b -- a+b )");
+    register_builtin(dictionary, "-", "減算 ( a b -- a-b )");
+    register_builtin(dictionary, "*", "乗算 ( a b -- a*b )");
+    register_builtin(dictionary, "/", "除算 ( a b -- a/b )");
     
-    // 比較演算子（暗黙の反復対応）
-    register_builtin(dictionary, ">", "より大きい - 暗黙の反復対応 ( a b -- bool )");
-    register_builtin(dictionary, ">=", "以上 - 暗黙の反復対応 ( a b -- bool )");
+    // 比較演算子
+    register_builtin(dictionary, ">", "より大きい ( a b -- bool )");
+    register_builtin(dictionary, ">=", "以上 ( a b -- bool )");
     register_builtin(dictionary, "=", "等しい ( a b -- bool )");
-    register_builtin(dictionary, "<", "より小さい - 暗黙の反復対応 ( a b -- bool )");
-    register_builtin(dictionary, "<=", "以下 - 暗黙の反復対応 ( a b -- bool )");
+    register_builtin(dictionary, "<", "より小さい ( a b -- bool )");
+    register_builtin(dictionary, "<=", "以下 ( a b -- bool )");
 
-    // 論理演算子（暗黙の反復対応、三値論理対応）
-    register_builtin(dictionary, "NOT", "論理否定 - 暗黙の反復対応 ( bool -- bool )");
-    register_builtin(dictionary, "AND", "論理積 - 三値論理対応 ( bool bool -- bool )");
-    register_builtin(dictionary, "OR", "論理和 - 三値論理対応 ( bool bool -- bool )");
+    // 論理演算子
+    register_builtin(dictionary, "NOT", "論理否定 ( bool -- bool )");
+    register_builtin(dictionary, "AND", "論理積 ( bool bool -- bool )");
+    register_builtin(dictionary, "OR", "論理和 ( bool bool -- bool )");
 
     // Nil関連
     register_builtin(dictionary, "NIL?", "nilかどうかをチェック ( a -- bool )");
     register_builtin(dictionary, "NOT-NIL?", "nilでないかをチェック ( a -- bool )");
-    register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック（NOT-NIL?のエイリアス） ( a -- bool )");
-    register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a b -- a | nil b -- b )");
-
-    // データベース操作
-    register_builtin(dictionary, "SAVE-DB", "データベースを保存 ( -- )");
-    register_builtin(dictionary, "LOAD-DB", "データベースを読み込み ( -- )");
-
-    // ワイルドカード・パターンマッチング
-    register_builtin(dictionary, "MATCH?", "ワイルドカードマッチング ( str str -- bool )");
-    register_builtin(dictionary, "WILDCARD", "ワイルドカードパターンを作成 ( str -- pattern )");
+    register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック ( a -- bool )");
+    register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a b -- a | b )");
 
     // 出力
     register_builtin(dictionary, ".", "値を出力してドロップ ( a -- )");
-    register_builtin(dictionary, "PRINT", "値を出力（ドロップしない） ( a -- a )");
+    register_builtin(dictionary, "PRINT", "値を出力 ( a -- a )");
     register_builtin(dictionary, "CR", "改行を出力 ( -- )");
     register_builtin(dictionary, "SPACE", "スペースを出力 ( -- )");
     register_builtin(dictionary, "SPACES", "N個のスペースを出力 ( n -- )");
