@@ -2,13 +2,12 @@ pub mod stack_ops;
 pub mod arithmetic;
 pub mod vector_ops;
 pub mod control;
-// pub mod database; // テーブル機能完成後に再有効化予定
 pub mod io;
 pub mod error;
-pub mod register_ops;  // 追加
+pub mod register_ops;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Value, ValueType, Stack, Register, Token}; // TableData は一時的にコメントアウト
+use crate::types::{Value, ValueType, Stack, Register, Token};
 use crate::tokenizer::tokenize;
 use self::error::{AjisaiError, Result};
 
@@ -18,15 +17,8 @@ pub struct Interpreter {
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) dependencies: HashMap<String, HashSet<String>>,
     pub(crate) call_stack: Vec<String>,
-    step_tokens: Vec<Token>,
-    step_position: usize,
-    step_mode: bool,
     pub(crate) output_buffer: String,
-    // テーブル関連フィールド（Vector機能完成後に再有効化予定）
-    /*
-    pub(crate) current_table: Option<String>,
-    pub(crate) tables: HashMap<String, TableData>,
-    */
+    word_properties: HashMap<String, WordProperty>,
 }
 
 #[derive(Clone)]
@@ -34,6 +26,11 @@ pub struct WordDefinition {
     pub tokens: Vec<Token>,
     pub is_builtin: bool,
     pub description: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct WordProperty {
+    pub is_value_producer: bool,
 }
 
 impl Interpreter {
@@ -44,24 +41,205 @@ impl Interpreter {
             dictionary: HashMap::new(),
             dependencies: HashMap::new(),
             call_stack: Vec::new(),
-            step_tokens: Vec::new(),
-            step_position: 0,
-            step_mode: false,
             output_buffer: String::new(),
-            // テーブル関連フィールドの初期化（Vector機能完成後に再有効化予定）
-            /*
-            current_table: None,
-            tables: HashMap::new(),
-            */
+            word_properties: HashMap::new(),
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
+        interpreter.initialize_word_properties();
         interpreter
+    }
+
+    fn initialize_word_properties(&mut self) {
+        // ビルトインワードの性質を定義
+        let value_producers = vec![
+            "R>", "R@", "DUP", "OVER", "ROT",
+        ];
+        
+        for name in value_producers {
+            self.word_properties.insert(name.to_string(), WordProperty {
+                is_value_producer: true,
+            });
+        }
     }
     
     pub fn execute(&mut self, code: &str) -> Result<()> {
-        let tokens = tokenize(code).map_err(AjisaiError::from)?;
-        self.execute_tokens_with_context(&tokens)
+        // 改行で分割して各行を処理
+        let lines: Vec<&str> = code.split('\n')
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .collect();
+
+        for line in lines {
+            self.process_line(line)?;
+        }
+        
+        Ok(())
+    }
+
+    fn process_line(&mut self, line: &str) -> Result<()> {
+        let tokens = tokenize(line).map_err(AjisaiError::from)?;
+        if tokens.is_empty() {
+            return Ok(());
+        }
+
+        // トークンを並び替え
+        let rearranged = self.rearrange_tokens(&tokens);
+        
+        // 単一のシンボルで、既存のワードと一致する場合は実行
+        if rearranged.len() == 1 {
+            if let Token::Symbol(name) = &rearranged[0] {
+                if self.dictionary.contains_key(name) {
+                    return self.execute_tokens_with_context(&rearranged);
+                }
+            }
+        }
+
+        // それ以外は新しいワードとして定義
+        self.define_from_tokens(&tokens)?;
+        
+        Ok(())
+    }
+
+    fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
+        let mut literals = Vec::new();
+        let mut value_producers = Vec::new();
+        let mut value_consumers = Vec::new();
+        let mut others = Vec::new();
+
+        for token in tokens {
+            match token {
+                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | 
+                Token::Nil | Token::VectorStart | Token::VectorEnd |
+                Token::BlockStart | Token::BlockEnd => {
+                    literals.push(token.clone());
+                },
+                Token::Symbol(name) => {
+                    if let Some(prop) = self.word_properties.get(name) {
+                        if prop.is_value_producer {
+                            value_producers.push(token.clone());
+                        } else {
+                            value_consumers.push(token.clone());
+                        }
+                    } else if self.dictionary.contains_key(name) {
+                        // 未知のカスタムワードは判定する
+                        if self.check_if_value_producer(name) {
+                            value_producers.push(token.clone());
+                        } else {
+                            value_consumers.push(token.clone());
+                        }
+                    } else {
+                        others.push(token.clone());
+                    }
+                },
+            }
+        }
+
+        // 順序: リテラル値 → 値生産ワード → 値消費ワード → その他
+        let mut result = Vec::new();
+        result.extend(literals);
+        result.extend(value_producers);
+        result.extend(value_consumers);
+        result.extend(others);
+        
+        result
+    }
+
+    fn check_if_value_producer(&self, word_name: &str) -> bool {
+        // ダミーのインタープリタでシミュレーション
+        let mut dummy = Interpreter::new();
+        dummy.dictionary = self.dictionary.clone();
+        
+        // 空のスタックで実行してみる
+        if let Some(def) = self.dictionary.get(word_name) {
+            if !def.is_builtin {
+                match dummy.execute_tokens_with_context(&def.tokens) {
+                    Ok(_) => !dummy.stack.is_empty(), // スタックに値が残れば値生産
+                    Err(_) => false, // エラーなら値消費
+                }
+            } else {
+                false // ビルトインは個別に定義済み
+            }
+        } else {
+            false
+        }
+    }
+
+    fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        // 内容ベースの名前を生成
+        let name = self.generate_word_name(tokens);
+        
+        // 既存ワードの依存関係チェック
+        if self.dictionary.contains_key(&name) {
+            if let Some(dependents) = self.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(AjisaiError::ProtectedWord {
+                        name: name.clone(),
+                        dependents: dependent_list,
+                    });
+                }
+            }
+        }
+
+        // 新しい依存関係を収集
+        let mut new_dependencies = HashSet::new();
+        for token in tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) {
+                    new_dependencies.insert(s.clone());
+                }
+            }
+        }
+
+        // 依存関係を更新
+        for dep_name in &new_dependencies {
+            self.dependencies
+                .entry(dep_name.clone())
+                .or_insert_with(HashSet::new)
+                .insert(name.clone());
+        }
+
+        // ワードを定義
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens: tokens.to_vec(),
+            is_builtin: false,
+            description: None,
+        });
+
+        // ワードの性質を判定して記録
+        let is_producer = self.check_if_value_producer(&name);
+        self.word_properties.insert(name.clone(), WordProperty {
+            is_value_producer: is_producer,
+        });
+
+        // 定義成功を出力
+        self.append_output(&format!("Defined: {}\n", name));
+
+        Ok(())
+    }
+
+    fn generate_word_name(&self, tokens: &[Token]) -> String {
+        tokens.iter()
+            .map(|token| match token {
+                Token::Number(n, d) => {
+                    if *d == 1 {
+                        n.to_string()
+                    } else {
+                        format!("{}_{}", n, d)
+                    }
+                },
+                Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
+                Token::Boolean(b) => b.to_string(),
+                Token::Symbol(s) => s.clone(),
+                Token::Nil => "NIL".to_string(),
+                Token::VectorStart => "VSTART".to_string(),
+                Token::VectorEnd => "VEND".to_string(),
+                Token::BlockStart => "BSTART".to_string(),
+                Token::BlockEnd => "BEND".to_string(),
+            })
+            .collect::<Vec<String>>()
+            .join("_")
     }
 
     pub fn get_output(&mut self) -> String {
@@ -74,94 +252,72 @@ impl Interpreter {
         self.output_buffer.push_str(text);
     }
 
-    pub fn init_step_execution(&mut self, code: &str) -> Result<()> {
-        self.step_tokens = tokenize(code).map_err(AjisaiError::from)?;
-        self.step_position = 0;
-        self.step_mode = true;
+    pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
+        let mut i = 0;
+
+        while i < tokens.len() {
+            let token = &tokens[i];
+            match token {
+                Token::Number(num, den) => {
+                    self.stack.push(Value {
+                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                    });
+                },
+                Token::String(s) => {
+                    self.stack.push(Value {
+                        val_type: ValueType::String(s.clone()),
+                    });
+                },
+                Token::Boolean(b) => {
+                    self.stack.push(Value {
+                        val_type: ValueType::Boolean(*b),
+                    });
+                },
+                Token::Nil => {
+                    self.stack.push(Value {
+                        val_type: ValueType::Nil,
+                    });
+                },
+                Token::VectorStart => {
+                    let (vector_values, consumed) = self.collect_vector_as_data(&tokens[i..])?;
+                    self.stack.push(Value {
+                        val_type: ValueType::Vector(vector_values),
+                    });
+                    i += consumed - 1;
+                },
+                Token::BlockStart => {
+                    let (block_tokens, next_index) = self.collect_block_tokens(tokens, i)?;
+                    self.stack.push(Value {
+                        val_type: ValueType::Quotation(block_tokens),
+                    });
+                    i = next_index - 1;
+                },
+                Token::Symbol(name) => {
+                    if let Some(def) = self.dictionary.get(name).cloned() {
+                        if def.is_builtin {
+                            self.execute_builtin(name)?;
+                        } else {
+                            self.execute_custom_word(name, &def.tokens)?;
+                        }
+                    } else {
+                        return Err(AjisaiError::UnknownWord(name.clone()));
+                    }
+                },
+                Token::VectorEnd | Token::BlockEnd => {
+                    return Err(AjisaiError::from("Unexpected closing delimiter found."));
+                },
+            }
+            i += 1;
+        }
         Ok(())
     }
 
-    pub fn execute_step(&mut self) -> Result<bool> {
-        if !self.step_mode || self.step_position >= self.step_tokens.len() {
-            self.step_mode = false;
-            return Ok(false);
-        }
-
-        let token = self.step_tokens[self.step_position].clone();
-        self.step_position += 1;
-
-        match self.execute_single_token(&token) {
-            Ok(_) => Ok(self.step_position < self.step_tokens.len()),
-            Err(e) => {
-                self.step_mode = false;
-                Err(e)
-            }
-        }
-    }
-
-    pub fn get_step_info(&self) -> Option<(usize, usize)> {
-        if self.step_mode {
-            Some((self.step_position, self.step_tokens.len()))
-        } else {
-            None
-        }
-    }
-
-    fn execute_single_token(&mut self, token: &Token) -> Result<()> {
-        match token {
-            Token::Description(_) => Ok(()),
-            Token::Number(num, den) => {
-                self.stack.push(Value {
-                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                });
-                Ok(())
-            },
-            Token::String(s) => {
-                self.stack.push(Value {
-                    val_type: ValueType::String(s.clone()),
-                });
-                Ok(())
-            },
-            Token::Boolean(b) => {
-                self.stack.push(Value {
-                    val_type: ValueType::Boolean(*b),
-                });
-                Ok(())
-            },
-            Token::Nil => {
-                self.stack.push(Value {
-                    val_type: ValueType::Nil,
-                });
-                Ok(())
-            },
-            Token::VectorStart => {
-                let (vector_values, _) = self.collect_vector_as_data(&self.step_tokens[self.step_position - 1..])?;
-                self.stack.push(Value {
-                    val_type: ValueType::Vector(vector_values),
-                });
-                Ok(())
-            },
-            Token::BlockStart => {
-                let (block_tokens, _) = self.collect_block_tokens(&self.step_tokens, self.step_position - 1)?;
-                self.stack.push(Value {
-                    val_type: ValueType::Quotation(block_tokens),
-                });
-                Ok(())
-            }
-            Token::Symbol(name) => {
-                if let Some(def) = self.dictionary.get(name).cloned() {
-                    if def.is_builtin {
-                        self.execute_builtin(name)?;
-                    } else {
-                        self.execute_tokens_with_context(&def.tokens)?;
-                    }
-                } else {
-                    return Err(AjisaiError::UnknownWord(name.clone()));
-                }
-                Ok(())
-            },
-            Token::VectorEnd | Token::BlockEnd => Err(AjisaiError::from("Unexpected closing delimiter found.")),
-        }
+    fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+        self.call_stack.push(name.to_string());
+        let result = self.execute_tokens_with_context(tokens);
+        self.call_stack.pop();
+        
+        result.map_err(|e| e.with_context(&self.call_stack))
     }
 
     fn collect_vector_as_data(&self, tokens: &[Token]) -> Result<(Vec<Value>, usize)> {
@@ -177,7 +333,9 @@ impl Interpreter {
                     i += consumed;
                     continue;
                 },
-                Token::Number(num, den) => values.push(Value { val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)) }),
+                Token::Number(num, den) => values.push(Value { 
+                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)) 
+                }),
                 Token::String(s) => values.push(Value { val_type: ValueType::String(s.clone()) }),
                 Token::Boolean(b) => values.push(Value { val_type: ValueType::Boolean(*b) }),
                 Token::Nil => values.push(Value { val_type: ValueType::Nil }),
@@ -212,89 +370,9 @@ impl Interpreter {
 
         Err(AjisaiError::from("Unclosed block"))
     }
-    
-    pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
-        let mut i = 0;
-        let mut pending_description: Option<String> = None;
-
-        while i < tokens.len() {
-            let token = &tokens[i];
-            match token {
-                Token::Description(text) => {
-                    pending_description = Some(text.clone());
-                },
-                Token::Number(num, den) => {
-                    self.stack.push(Value {
-                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                    });
-                },
-                Token::String(s) => {
-                    self.stack.push(Value {
-                        val_type: ValueType::String(s.clone()),
-                    });
-                },
-                Token::Boolean(b) => {
-                    self.stack.push(Value {
-                        val_type: ValueType::Boolean(*b),
-                    });
-                },
-                Token::Nil => {
-                    self.stack.push(Value {
-                        val_type: ValueType::Nil,
-                    });
-                },
-                Token::VectorStart => {
-                    let (vector_values, consumed) = self.collect_vector_as_data(&tokens[i..])?;
-                    self.stack.push(Value {
-                        val_type: ValueType::Vector(vector_values),
-                    });
-                    i += consumed - 1;
-                },
-                Token::BlockStart => {
-                    let (block_tokens, next_index) = self.collect_block_tokens(tokens, i)?;
-                    self.stack.push(Value {
-                        val_type: ValueType::Quotation(block_tokens),
-                    });
-                    i = next_index -1;
-                },
-                Token::Symbol(name) => {
-                    if name == "DEF" {
-                        // DEFの後のDescriptionトークンを探す
-                        let mut description = pending_description.take();
-                        if description.is_none() && i + 1 < tokens.len() {
-                            if let Token::Description(text) = &tokens[i + 1] {
-                                description = Some(text.clone());
-                                i += 1; // Descriptionトークンをスキップ
-                            }
-                        }
-                        control::op_def(self, description)?;
-                    } else if let Some(def) = self.dictionary.get(name).cloned() {
-                        if def.is_builtin {
-                            self.execute_builtin(name)?;
-                        } else {
-                            self.execute_custom_word(name, &def.tokens)?;
-                        }
-                    } else {
-                        return Err(AjisaiError::UnknownWord(name.clone()));
-                    }
-                },
-                Token::VectorEnd | Token::BlockEnd => return Err(AjisaiError::from("Unexpected closing delimiter found.")),
-            }
-            i += 1;
-        }
-        Ok(())
-    }
-
-    fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
-        self.call_stack.push(name.to_string());
-        let result = self.execute_tokens_with_context(tokens);
-        self.call_stack.pop();
-        
-        result.map_err(|e| e.with_context(&self.call_stack))
-    }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, /*database::*,*/ io::*, register_ops::*};
+        use self::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, io::*, register_ops::*};
         
         match name {
             // スタック操作
@@ -343,32 +421,13 @@ impl Interpreter {
             "IF" => op_if(self),
             "DEL" => op_del(self),
             "CALL" => op_call(self),
+            "DEF" => control::op_def(self, None), // 内部使用のみ
             
             // Nil関連
             "NIL?" => op_nil_check(self),
             "NOT-NIL?" => op_not_nil_check(self),
             "KNOWN?" => op_not_nil_check(self),
             "DEFAULT" => op_default(self),
-            
-            // データベース (一時的にコメントアウト - Vector機能完成後に再有効化予定)
-            /*
-            "TABLE" => op_table(self),
-            "TABLE-CREATE" => op_table_create(self),
-            "FILTER" => op_filter(self),
-            "PROJECT" => op_project(self),
-            "INSERT" => op_insert(self),
-            "UPDATE" => op_update(self),
-            "DELETE" => op_delete(self),
-            "TABLES" => op_tables(self),
-            "TABLES-INFO" => op_tables_info(self),
-            "TABLE-INFO" => op_table_info(self),
-            "TABLE-SIZE" => op_table_size(self),
-            */
-            // データベース永続化機能は残す（IndexedDB連携のため）
-            /*"SAVE-DB" => op_save_db(self),
-            "LOAD-DB" => op_load_db(self),
-            "MATCH?" => op_match(self),
-            "WILDCARD" => op_wildcard(self),*/
             
             // 入出力
             "." => op_dot(self),
@@ -410,21 +469,6 @@ impl Interpreter {
             .collect()
     }
    
-    // テーブル関連メソッド（Vector機能完成後に再有効化予定）
-    /*
-    pub fn save_table(&mut self, name: String, schema: Vec<String>, records: Vec<Vec<Value>>) {
-        self.tables.insert(name, TableData { schema, records });
-    }
-   
-    pub fn load_table(&self, name: &str) -> Option<(Vec<String>, Vec<Vec<Value>>)> {
-        self.tables.get(name).map(|t| (t.schema.clone(), t.records.clone()))
-    }
-   
-    pub fn get_all_tables(&self) -> Vec<String> {
-        self.tables.keys().cloned().collect()
-    }
-    */
-   
     pub fn set_stack(&mut self, stack: Stack) {
         self.stack = stack;
     }
@@ -457,7 +501,6 @@ impl Interpreter {
             Token::VectorEnd => "]".to_string(),
             Token::BlockStart => "{".to_string(),
             Token::BlockEnd => "}".to_string(),
-            Token::Description(d) => format!("({})", d),
         }
     }
 }
