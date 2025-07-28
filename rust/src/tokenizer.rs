@@ -1,5 +1,3 @@
-// in: masamoto1982/ajisai/Ajisai-e4b1951ad8cf96ca24706236c945342f04c7cf22/rust/src/tokenizer.rs
-
 use crate::types::Token;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
@@ -22,21 +20,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                     break;
                 }
             }
-            continue;
-        }
-
-        // 説明文処理（DEF用）
-        if ch == '(' {
-            chars.next();
-            let mut description = String::new();
-            while let Some(&ch) = chars.peek() {
-                chars.next();
-                if ch == ')' {
-                    break;
-                }
-                description.push(ch);
-            }
-            tokens.push(Token::Description(description.trim().to_string()));
             continue;
         }
 
@@ -90,7 +73,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // その他のトークン（数値、真偽値、NIL、シンボル）
         let mut word = String::new();
         while let Some(&ch) = chars.peek() {
-            if ch.is_whitespace() || ['(', ')', '[', ']', '{', '}', '"', '#'].contains(&ch) {
+            if ch.is_whitespace() || ['[', ']', '{', '}', '"', '#'].contains(&ch) {
                 break;
             }
             word.push(ch);
@@ -100,9 +83,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         if word.is_empty() {
             continue;
         }
-        
-        // デバッグログ
-        web_sys::console::log_1(&format!("Tokenizing word: '{}'", word).into());
         
         // まず特殊なケースを処理
         match word.as_str() {
@@ -121,7 +101,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 continue;
             },
             // NIL
-            "NIL" | "nil" => { // nilも受け入れる
+            "NIL" | "nil" => {
                 tokens.push(Token::Nil);
                 continue;
             },
@@ -135,7 +115,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             // 小数点を含む場合、分数に変換
             let parts: Vec<&str> = word.split('.').collect();
             if parts.len() == 2 {
-                // 整数部と小数部を別々に処理
                 let integer_part = if parts[0].is_empty() { 0 } else { 
                     parts[0].parse::<i64>().map_err(|_| format!("Invalid number: {}", word))? 
                 };
@@ -147,13 +126,12 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 let denominator = 10_i64.pow(decimal_places);
                 let numerator = integer_part * denominator + decimal_part;
                 
-                web_sys::console::log_1(&format!("Parsed decimal {} as fraction {}/{}", word, numerator, denominator).into());
                 tokens.push(Token::Number(numerator, denominator));
             } else {
                 return Err(format!("Invalid number: {}", word));
             }
         } else if word.contains('/') && word != "/" {
-            // 分数記法（例: 1/2）- 単独の / は既に処理済み
+            // 分数記法（例: 1/2）
             let parts: Vec<&str> = word.split('/').collect();
             if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
                 let numerator = parts[0].parse::<i64>()
@@ -165,10 +143,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                     return Err("Division by zero in fraction".to_string());
                 }
                 
-                web_sys::console::log_1(&format!("Parsed fraction {} as {}/{}", word, numerator, denominator).into());
                 tokens.push(Token::Number(numerator, denominator));
             } else {
-                // 分数として解析できない場合はシンボルとして扱う
                 tokens.push(Token::Symbol(word.to_uppercase()));
             }
         } else {
