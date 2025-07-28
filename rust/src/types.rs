@@ -1,18 +1,16 @@
 use std::fmt;
 
-// Tokenの定義をtokenizer.rsからこちらに移動
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Number(i64, i64),
     String(String),
     Boolean(bool),
     Symbol(String),
-    VectorStart,      // [
-    VectorEnd,        // ]
-    BlockStart,       // {
-    BlockEnd,         // }
+    VectorStart,
+    VectorEnd,
+    BlockStart,
+    BlockEnd,
     Nil,
-    Description(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -27,7 +25,7 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>),
-    Quotation(Vec<Token>), // <-- 新しくQuotation型を追加
+    Quotation(Vec<Token>),
     Nil,
 }
 
@@ -131,12 +129,9 @@ impl fmt::Display for Value {
                 }
                 write!(f, " ]")
             },
-            // Quotationの表示方法を定義
             ValueType::Quotation(_tokens) => {
-    write!(f, "{{ ")?;
-    write!(f, "...")?;
-    write!(f, " }}")
-},
+                write!(f, "{{ ... }}")
+            },
             ValueType::Nil => write!(f, "nil"),
         }
     }
@@ -145,7 +140,6 @@ impl fmt::Display for Value {
 pub type Stack = Vec<Value>;
 pub type Register = Option<Value>;
 
-// types.rs の最後に以下を追加
 #[derive(Debug, Clone)]
 pub struct TableData {
     pub schema: Vec<String>,
