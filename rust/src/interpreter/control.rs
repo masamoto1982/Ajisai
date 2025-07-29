@@ -2,8 +2,8 @@ use std::collections::HashSet;
 use crate::interpreter::{Interpreter, WordDefinition, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token};
 
-pub fn op_def(interp: &mut Interpreter, _description: Option<String>) -> Result<()> {
-    // 内部処理用のDEF（ユーザーは直接使わない）
+pub fn op_def(interp: &mut Interpreter) -> Result<()> {
+    // ユーザーが使えるDEF（明示的な名前付け）
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
@@ -59,6 +59,9 @@ pub fn op_def(interp: &mut Interpreter, _description: Option<String>) -> Result<
                 is_builtin: false,
                 description: None,
             });
+
+            // 定義成功を出力
+            interp.append_output(&format!("Defined: {}\n", name));
 
             Ok(())
         }
