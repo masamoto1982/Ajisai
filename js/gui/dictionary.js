@@ -41,6 +41,8 @@ export class Dictionary {
             { name: 'EMPTY?', description: 'ベクトルが空か ( vec -- bool )' },
             { name: 'IF', description: '条件分岐 ( bool quot quot -- ... )' },
             { name: 'CALL', description: 'Quotationを実行 ( quot -- ... )' },
+            { name: 'DEF', description: 'カスタムワードを定義 ( quot str -- )' },
+            { name: 'AMNESIA', description: 'IndexedDBを初期化 ( -- )' },
             { name: 'DEL', description: 'カスタムワードを削除 ( str -- )' },
             { name: 'NIL?', description: 'nilかどうか ( a -- bool )' },
             { name: 'NOT-NIL?', description: 'nilでないか ( a -- bool )' },
