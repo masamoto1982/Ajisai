@@ -172,22 +172,24 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
-    pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
-        // 説明があれば先に追加
-        let code = if let Some(desc) = description {
-            format!("({}) {} \"{}\" DEF", desc, definition, name)
-        } else {
-            format!("{} \"{}\" DEF", definition, name)
-        };
-        
-        // デバッグ用にコンソールにログを出力
-        web_sys::console::log_1(&format!("Restoring word with code: {}", code).into());
-        
-        // ★★★ ここを修正 ★★★
-        // `?` を使うために、AjisaiErrorをStringに変換する
-        self.interpreter.execute(&code).map_err(|e| e.to_string())?;
-        Ok(())
+pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
+    // DEFコマンドを使わず、直接辞書に登録する
+    
+    // 定義文字列（"{ ... }"形式）からトークンを抽出
+    let definition = definition.trim();
+    if !definition.starts_with('{') || !definition.ends_with('}') {
+        return Err("Invalid word definition format".to_string());
     }
+    
+    // 中身のトークンを取得
+    let inner = &definition[1..definition.len()-1].trim();
+    let tokens = crate::tokenizer::tokenize(inner)
+        .map_err(|e| format!("Failed to tokenize definition: {}", e))?;
+    
+    // 直接辞書に登録
+    self.interpreter.restore_custom_word(name, tokens, description)
+        .map_err(|e| e.to_string())
+}
 }
 
 fn value_to_js(value: &Value) -> JsValue {
