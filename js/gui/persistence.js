@@ -62,29 +62,38 @@ export class Persistence {
     }
 
     async loadDatabaseData(isCommand = false) {
-        if (!window.ajisaiInterpreter) return;
-        
-        try {
-            if (isCommand) return;
+    if (!window.ajisaiInterpreter) return;
+    
+    try {
+        if (isCommand) return;
 
-            const state = await window.AjisaiDB.loadInterpreterState();
-            if (state) {
-                if (state.stack) window.ajisaiInterpreter.restore_stack(state.stack);
-                if (state.register) window.ajisaiInterpreter.restore_register(state.register);
-                if (state.customWords) {
-                    for (const word of state.customWords) {
-                        if (word.name && word.definition) {
-                            window.ajisaiInterpreter.restore_word(word.name, word.definition, word.description);
+        const state = await window.AjisaiDB.loadInterpreterState();
+        if (state) {
+            if (state.stack) window.ajisaiInterpreter.restore_stack(state.stack);
+            if (state.register) window.ajisaiInterpreter.restore_register(state.register);
+            if (state.customWords) {
+                for (const word of state.customWords) {
+                    if (word.name && word.definition) {
+                        try {
+                            // 直接復元（DEFを使わない）
+                            window.ajisaiInterpreter.restore_word(
+                                word.name, 
+                                word.definition, 
+                                word.description
+                            );
+                        } catch (error) {
+                            console.error(`Failed to restore word ${word.name}:`, error);
                         }
                     }
                 }
-                console.log('Interpreter state restored.');
             }
-        } catch (error) {
-            console.error('Failed to load database data:', error);
-            if (this.gui) {
-                this.gui.display.showError(error);
-            }
+            console.log('Interpreter state restored.');
+        }
+    } catch (error) {
+        console.error('Failed to load database data:', error);
+        if (this.gui) {
+            this.gui.display.showError(error);
         }
     }
+}
 }
