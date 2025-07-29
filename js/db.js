@@ -263,6 +263,26 @@ const DB = {
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
         });
+    },
+
+    async clearAll() {
+        if (!this.db) await this.open();
+        
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([this.storeName, this.stateStoreName], 'readwrite');
+            
+            const tableStore = transaction.objectStore(this.storeName);
+            const stateStore = transaction.objectStore(this.stateStoreName);
+            
+            tableStore.clear();
+            stateStore.clear();
+            
+            transaction.oncomplete = () => {
+                console.log('All data cleared from IndexedDB');
+                resolve();
+            };
+            transaction.onerror = () => reject(transaction.error);
+        });
     }
 };
 
