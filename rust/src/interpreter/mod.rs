@@ -174,24 +174,33 @@ impl Interpreter {
     }
 
     fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-    // トークンを並び替え（逆ポーランド記法に正規化）
-    let rearranged = self.rearrange_tokens(tokens);
-    
-    // 単一のシンボルで、既存のワードと一致する場合は実行
-    if rearranged.len() == 1 {
-        if let Token::Symbol(name) = &rearranged[0] {
-            if self.dictionary.contains_key(name) {
-                return self.execute_tokens_with_context(&rearranged);
+        // 最後のトークンがDEFかチェック
+        if tokens.len() >= 3 {
+            if let Some(Token::Symbol(last)) = tokens.last() {
+                if last == "DEF" {
+                    // DEF形式の定義
+                    return self.execute_tokens_with_context(tokens);
+                }
             }
         }
-    }
+        
+        // 通常の処理（自動命名または即時実行）
+        let rearranged = self.rearrange_tokens(tokens);
+        
+        // 単一のシンボルで、既存のワードと一致する場合は実行
+        if rearranged.len() == 1 {
+            if let Token::Symbol(name) = &rearranged[0] {
+                if self.dictionary.contains_key(name) {
+                    return self.execute_tokens_with_context(&rearranged);
+                }
+            }
+        }
 
-    // それ以外は新しいワードとして定義
-    // ★ 重要：並び替えたトークンを使って定義する
-    self.define_from_tokens(&rearranged)?;
-    
-    Ok(())
-}
+        // それ以外は新しいワードとして定義（自動命名）
+        self.define_from_tokens(&rearranged)?;
+        
+        Ok(())
+    }
 
     fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
         let mut literals = Vec::new();
@@ -258,61 +267,61 @@ impl Interpreter {
     }
 
     fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-    // 内容ベースの名前を生成（並び替え済みトークンから）
-    let name = self.generate_word_name(tokens);
-    
-    // 既存ワードの依存関係チェック
-    if self.dictionary.contains_key(&name) {
-        if let Some(dependents) = self.dependencies.get(&name) {
-            if !dependents.is_empty() {
-                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                return Err(AjisaiError::ProtectedWord {
-                    name: name.clone(),
-                    dependents: dependent_list,
-                });
+        // 内容ベースの名前を生成（並び替え済みトークンから）
+        let name = self.generate_word_name(tokens);
+        
+        // 既存ワードの依存関係チェック
+        if self.dictionary.contains_key(&name) {
+            if let Some(dependents) = self.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(AjisaiError::ProtectedWord {
+                        name: name.clone(),
+                        dependents: dependent_list,
+                    });
+                }
+            }
+            // 依存されていなければ、同じ定義の再入力として扱い、エラーにしない
+            self.append_output(&format!("Word '{}' already exists.\n", name));
+            return Ok(());
+        }
+
+        // 新しい依存関係を収集
+        let mut new_dependencies = HashSet::new();
+        for token in tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) {
+                    new_dependencies.insert(s.clone());
+                }
             }
         }
-        // 依存されていなければ、同じ定義の再入力として扱い、エラーにしない
-        self.append_output(&format!("Word '{}' already exists.\n", name));
-        return Ok(());
-    }
 
-    // 新しい依存関係を収集
-    let mut new_dependencies = HashSet::new();
-    for token in tokens {
-        if let Token::Symbol(s) = token {
-            if self.dictionary.contains_key(s) {
-                new_dependencies.insert(s.clone());
-            }
+        // 依存関係を更新
+        for dep_name in &new_dependencies {
+            self.dependencies
+                .entry(dep_name.clone())
+                .or_insert_with(HashSet::new)
+                .insert(name.clone());
         }
+
+        // ワードを定義（並び替え済みトークンを保存）
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens: tokens.to_vec(),
+            is_builtin: false,
+            description: None,
+        });
+
+        // ワードの性質を判定して記録
+        let is_producer = self.check_if_value_producer(&name);
+        self.word_properties.insert(name.clone(), WordProperty {
+            is_value_producer: is_producer,
+        });
+
+        // 定義成功を出力
+        self.append_output(&format!("Defined: {}\n", name));
+
+        Ok(())
     }
-
-    // 依存関係を更新
-    for dep_name in &new_dependencies {
-        self.dependencies
-            .entry(dep_name.clone())
-            .or_insert_with(HashSet::new)
-            .insert(name.clone());
-    }
-
-    // ワードを定義（並び替え済みトークンを保存）
-    self.dictionary.insert(name.clone(), WordDefinition {
-        tokens: tokens.to_vec(),
-        is_builtin: false,
-        description: None,
-    });
-
-    // ワードの性質を判定して記録
-    let is_producer = self.check_if_value_producer(&name);
-    self.word_properties.insert(name.clone(), WordProperty {
-        is_value_producer: is_producer,
-    });
-
-    // 定義成功を出力
-    self.append_output(&format!("Defined: {}\n", name));
-
-    Ok(())
-}
 
     fn generate_word_name(&self, tokens: &[Token]) -> String {
         tokens.iter()
@@ -516,7 +525,7 @@ impl Interpreter {
             "IF" => op_if(self),
             "DEL" => op_del(self),
             "CALL" => op_call(self),
-            "DEF" => control::op_def(self, None), // 内部使用のみ
+            "DEF" => control::op_def(self),
             
             // Nil関連
             "NIL?" => op_nil_check(self),
@@ -531,6 +540,9 @@ impl Interpreter {
             "SPACE" => op_space(self),
             "SPACES" => op_spaces(self),
             "EMIT" => op_emit(self),
+            
+            // データベース操作
+            "AMNESIA" => op_amnesia(self),
             
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
@@ -642,4 +654,15 @@ impl Interpreter {
             Token::BlockEnd => "}".to_string(),
         }
     }
+}
+
+// AMNESIA操作の実装
+fn op_amnesia(_interp: &mut Interpreter) -> Result<()> {
+    if let Some(window) = web_sys::window() {
+        let event = web_sys::CustomEvent::new("ajisai-amnesia")
+            .map_err(|_| AjisaiError::from("Failed to create amnesia event"))?;
+        window.dispatch_event(&event)
+            .map_err(|_| AjisaiError::from("Failed to dispatch amnesia event"))?;
+    }
+    Ok(())
 }
