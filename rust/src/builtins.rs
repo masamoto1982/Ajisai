@@ -30,10 +30,11 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "UNCONS", "ベクトルを分解 ( vec -- elem vec' )");
     register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )");
     
-    // 制御構造（DEFは内部使用のみなので削除）
+    // 制御構造
     register_builtin(dictionary, "IF", "条件分岐 ( bool vec vec -- ... )");
     register_builtin(dictionary, "CALL", "Quotationを実行 ( quot -- ... )");
     register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
+    register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )");
     
     // 算術演算子
     register_builtin(dictionary, "+", "加算 ( a b -- a+b )");
@@ -66,6 +67,9 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "SPACE", "スペースを出力 ( -- )");
     register_builtin(dictionary, "SPACES", "N個のスペースを出力 ( n -- )");
     register_builtin(dictionary, "EMIT", "文字コードを文字として出力 ( n -- )");
+    
+    // データベース
+    register_builtin(dictionary, "AMNESIA", "IndexedDBを初期化 ( -- )");
 }
 
 fn register_builtin(dictionary: &mut HashMap<String, WordDefinition>, name: &str, description: &str) {
