@@ -571,6 +571,50 @@ impl Interpreter {
     pub fn set_register(&mut self, register: Register) {
         self.register = register;
     }
+
+　　 pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+        let name = name.to_uppercase();
+        
+        // ビルトインワードは復元不可
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(AjisaiError::from(format!("Cannot restore builtin word: {}", name)));
+            }
+        }
+
+        // 新しい依存関係を収集
+        let mut new_dependencies = HashSet::new();
+        for token in &tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) {
+                    new_dependencies.insert(s.clone());
+                }
+            }
+        }
+
+        // 依存関係を更新
+        for dep_name in &new_dependencies {
+            self.dependencies
+                .entry(dep_name.clone())
+                .or_insert_with(HashSet::new)
+                .insert(name.clone());
+        }
+
+        // ワードを定義
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens,
+            is_builtin: false,
+            description,
+        });
+
+        // ワードの性質を判定して記録
+        let is_producer = self.check_if_value_producer(&name);
+        self.word_properties.insert(name.clone(), WordProperty {
+            is_value_producer: is_producer,
+        });
+
+        Ok(())
+    }
    
     pub fn get_word_definition(&self, name: &str) -> Option<String> {
         if let Some(def) = self.dictionary.get(name) {
