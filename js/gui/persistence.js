@@ -16,25 +16,6 @@ export class Persistence {
     }
 
     setupDatabaseListeners() {
-        window.addEventListener('ajisai-save-db', async () => {
-            console.log('SAVE-DB command caught.');
-            this.gui.display.showInfo('Saving database via SAVE-DB command...');
-            try {
-                await this.saveCurrentState();
-                this.gui.display.showInfo('Database saved via SAVE-DB.', true);
-            } catch(error) {
-                this.gui.display.showError(error);
-            }
-        });
-        
-        window.addEventListener('ajisai-load-db', async () => {
-            console.log('LOAD-DB command caught.');
-            this.gui.display.showInfo('Loading database via LOAD-DB command...');
-            await this.loadDatabaseData(true);
-            this.gui.updateAllDisplays();
-            this.gui.display.showInfo('Database loaded via LOAD-DB.', true);
-        });
-
         window.addEventListener('ajisai-amnesia', async () => {
             console.log('AMNESIA command caught.');
             this.gui.display.showInfo('Clearing all database...');
