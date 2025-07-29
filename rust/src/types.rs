@@ -139,9 +139,3 @@ impl fmt::Display for Value {
 
 pub type Stack = Vec<Value>;
 pub type Register = Option<Value>;
-
-#[derive(Debug, Clone)]
-pub struct TableData {
-    pub schema: Vec<String>,
-    pub records: Vec<Vec<Value>>,
-}
