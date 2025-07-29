@@ -572,7 +572,7 @@ impl Interpreter {
         self.register = register;
     }
 
-　　 pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+    pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
         let name = name.to_uppercase();
         
         // ビルトインワードは復元不可
