@@ -34,6 +34,21 @@ export class Persistence {
             this.gui.updateAllDisplays();
             this.gui.display.showInfo('Database loaded via LOAD-DB.', true);
         });
+
+        window.addEventListener('ajisai-amnesia', async () => {
+            console.log('AMNESIA command caught.');
+            this.gui.display.showInfo('Clearing all database...');
+            try {
+                // IndexedDBを完全にクリア
+                await window.AjisaiDB.clearAll();
+                // インタープリタをリセット
+                window.ajisaiInterpreter.reset();
+                this.gui.updateAllDisplays();
+                this.gui.display.showInfo('All memory has been cleared.', true);
+            } catch(error) {
+                this.gui.display.showError(error);
+            }
+        });
     }
 
     async saveCurrentState() {
