@@ -277,6 +277,67 @@ impl Interpreter {
         }
     }
 
+    // 名前付きワードの定義
+    fn define_named_word(&mut self, name: String, body_tokens: Vec<Token>) -> Result<()> {
+        let name = name.to_uppercase();
+
+        // ビルトインワードは再定義不可
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
+            }
+        }
+
+        // 依存関係チェック
+        if self.dictionary.contains_key(&name) {
+            if let Some(dependents) = self.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(AjisaiError::ProtectedWord {
+                        name: name.clone(),
+                        dependents: dependent_list,
+                    });
+                }
+            }
+        }
+
+        // 新しい依存関係を収集
+        let mut new_dependencies = HashSet::new();
+        for token in &body_tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) {
+                    new_dependencies.insert(s.clone());
+                }
+            }
+        }
+
+        // 依存関係を更新
+        for dep_name in &new_dependencies {
+            self.dependencies
+                .entry(dep_name.clone())
+                .or_insert_with(HashSet::new)
+                .insert(name.clone());
+        }
+
+        // 新しいワードを登録
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens: body_tokens,
+            is_builtin: false,
+            description: None,
+        });
+
+        // ワードの性質を判定
+        let is_producer = self.check_if_value_producer(&name);
+        self.word_properties.insert(name.clone(), WordProperty {
+            is_value_producer: is_producer,
+        });
+
+        // 定義成功を出力
+        self.append_output(&format!("Defined: {}\n", name));
+
+        Ok(())
+    }
+    
     fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         // 内容ベースの名前を生成（並び替え済みトークンから）
         let name = self.generate_word_name(tokens);
