@@ -396,26 +396,37 @@ impl Interpreter {
     }
 
     fn generate_word_name(&self, tokens: &[Token]) -> String {
-        tokens.iter()
+        // RPN順序でトークンを処理してから命名
+        let rpn_tokens = self.get_canonical_rpn_order(tokens);
+        
+        rpn_tokens.iter()
             .map(|token| match token {
                 Token::Number(n, d) => {
                     if *d == 1 {
                         n.to_string()
                     } else {
-                        format!("{}_{}", n, d)
+                        format!("{}/{}", n, d)  // 分数は/で表現
                     }
                 },
                 Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
-                Token::Boolean(b) => b.to_string(),
+                Token::Boolean(b) => b.to_string().to_uppercase(),
                 Token::Symbol(s) => s.clone(),
                 Token::Nil => "NIL".to_string(),
-                Token::VectorStart => "VSTART".to_string(),
-                Token::VectorEnd => "VEND".to_string(),
-                Token::BlockStart => "BSTART".to_string(),
-                Token::BlockEnd => "BEND".to_string(),
+                Token::VectorStart => "[".to_string(),
+                Token::VectorEnd => "]".to_string(),
+                Token::BlockStart => "{".to_string(),
+                Token::BlockEnd => "}".to_string(),
             })
             .collect::<Vec<String>>()
             .join("_")
+    }
+
+    // 新しいメソッド: RPN順序を取得
+    fn get_canonical_rpn_order(&self, tokens: &[Token]) -> Vec<Token> {
+        // 既に並び替え済みのトークンが来ることを想定
+        // （process_line_from_tokensでrearrange_tokensが呼ばれているため）
+        // ここでは単純にコピーを返す
+        tokens.to_vec()
     }
 
     pub fn get_output(&mut self) -> String {
