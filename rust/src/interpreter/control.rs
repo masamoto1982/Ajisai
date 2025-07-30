@@ -3,70 +3,9 @@ use crate::interpreter::{Interpreter, WordDefinition, error::{AjisaiError, Resul
 use crate::types::{ValueType, Token};
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
-    // ユーザーが使えるDEF（明示的な名前付け）
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
-    }
-
-    let name_val = interp.stack.pop().unwrap();
-    let body_val = interp.stack.pop().unwrap();
-
-    match (&name_val.val_type, &body_val.val_type) {
-        (ValueType::String(name), ValueType::Quotation(body_tokens)) => {
-            let name = name.to_uppercase();
-
-            // ビルトインワードは再定義不可
-            if let Some(existing) = interp.dictionary.get(&name) {
-                if existing.is_builtin {
-                    return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-                }
-            }
-
-            // 依存関係チェック
-            if interp.dictionary.contains_key(&name) {
-                if let Some(dependents) = interp.dependencies.get(&name) {
-                    if !dependents.is_empty() {
-                        let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                        return Err(AjisaiError::ProtectedWord {
-                            name: name.clone(),
-                            dependents: dependent_list,
-                        });
-                    }
-                }
-            }
-
-            // 新しい依存関係を収集
-            let mut new_dependencies = HashSet::new();
-            for token in body_tokens {
-                if let Token::Symbol(s) = token {
-                    if interp.dictionary.contains_key(s) {
-                        new_dependencies.insert(s.clone());
-                    }
-                }
-            }
-
-            // 依存関係を更新
-            for dep_name in &new_dependencies {
-                interp.dependencies
-                    .entry(dep_name.clone())
-                    .or_insert_with(HashSet::new)
-                    .insert(name.clone());
-            }
-
-            // 新しいワードを登録
-            interp.dictionary.insert(name.clone(), WordDefinition {
-                tokens: body_tokens.clone(),
-                is_builtin: false,
-                description: None,
-            });
-
-            // 定義成功を出力
-            interp.append_output(&format!("Defined: {}\n", name));
-
-            Ok(())
-        }
-        _ => Err(AjisaiError::type_error("quotation and string", "other types")),
-    }
+    // DEFは行末での特殊な構文として処理されるため、
+    // 通常の実行フローでここに到達した場合はエラー
+    Err(AjisaiError::from("DEF must be used at the end of a line with a string name: <words> \"NAME\" DEF"))
 }
 
 pub fn op_if(interp: &mut Interpreter) -> Result<()> {
