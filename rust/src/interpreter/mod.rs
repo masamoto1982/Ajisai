@@ -174,12 +174,23 @@ impl Interpreter {
     }
 
     fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        // 最後のトークンがDEFかチェック
-        if tokens.len() >= 3 {
-            if let Some(Token::Symbol(last)) = tokens.last() {
-                if last == "DEF" {
-                    // DEF形式の定義
-                    return self.execute_tokens_with_context(tokens);
+        // 最後が "文字列" DEF のパターンをチェック
+        if tokens.len() >= 2 {
+            let last_idx = tokens.len() - 1;
+            if let (Some(Token::Symbol(def_sym)), Some(Token::String(name))) = 
+                (tokens.get(last_idx), tokens.get(last_idx - 1)) {
+                if def_sym == "DEF" {
+                    // 明示的な名前付き定義
+                    let body_tokens = &tokens[..last_idx - 1];
+                    if body_tokens.is_empty() {
+                        return Err(AjisaiError::from("DEF requires a body"));
+                    }
+                    
+                    // トークンをRPN順序に並び替える
+                    let rpn_tokens = self.rearrange_tokens(body_tokens);
+                    
+                    // カスタムワードとして定義
+                    return self.define_named_word(name.clone(), rpn_tokens);
                 }
             }
         }
