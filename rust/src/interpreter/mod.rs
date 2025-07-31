@@ -220,53 +220,16 @@ impl Interpreter {
     }
 
     fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
-        console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
-        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
+    console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
+    console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
 
-        let mut literals = Vec::new();
-        let mut value_producers = Vec::new();
-        let mut value_consumers = Vec::new();
-        let mut others = Vec::new();
-
-        for token in tokens {
-            match token {
-                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | 
-                Token::Nil | Token::VectorStart | Token::VectorEnd |
-                Token::BlockStart | Token::BlockEnd => {
-                    literals.push(token.clone());
-                },
-                Token::Symbol(name) => {
-                    if let Some(prop) = self.word_properties.get(name) {
-                        if prop.is_value_producer {
-                            value_producers.push(token.clone());
-                        } else {
-                            value_consumers.push(token.clone());
-                        }
-                    } else if self.dictionary.contains_key(name) {
-                        // 未知のカスタムワードは判定する
-                        if self.check_if_value_producer(name) {
-                            value_producers.push(token.clone());
-                        } else {
-                            value_consumers.push(token.clone());
-                        }
-                    } else {
-                        others.push(token.clone());
-                    }
-                },
-            }
-        }
-
-        // 順序: リテラル値 → 値生産ワード → 値消費ワード → その他
-        let mut result = Vec::new();
-        result.extend(literals);
-        result.extend(value_producers);
-        result.extend(value_consumers);
-        result.extend(others);
-        
-        console::log_1(&JsValue::from_str(&format!("Output tokens (RPN): {:?}", result)));
-        console::log_1(&JsValue::from_str("--- end rearrange_tokens ---"));
-        result
-    }
+    // 真のRPN順序に変換
+    let result = self.convert_to_true_rpn(tokens);
+    
+    console::log_1(&JsValue::from_str(&format!("Output tokens (True RPN): {:?}", result)));
+    console::log_1(&JsValue::from_str("--- end rearrange_tokens ---"));
+    result
+}
 
     fn check_if_value_producer(&self, word_name: &str) -> bool {
         // ダミーのインタープリタでシミュレーション
@@ -421,45 +384,87 @@ impl Interpreter {
     }
 
     fn generate_word_name(&self, tokens: &[Token]) -> String {
-        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
-        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+    console::log_1(&JsValue::from_str("--- generate_word_name ---"));
+    console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-        // まずカスタムワードを展開
-        let expanded_tokens = self.expand_tokens_for_naming(tokens);
-        console::log_1(&JsValue::from_str(&format!("Expanded tokens: {:?}", expanded_tokens)));
-        
-        // 展開後のトークンをRPN順序に並び替え
-        let rpn_tokens = self.rearrange_tokens(&expanded_tokens);
-        console::log_1(&JsValue::from_str(&format!("RPN tokens for naming: {:?}", rpn_tokens)));
-        
-        let final_name = rpn_tokens.iter()
-            .map(|token| match token {
-                Token::Number(n, d) => {
-                    if *d == 1 {
-                        n.to_string()
-                    } else {
-                        format!("{}_{}", n, d)  // 分数は_で表現
+    // まずカスタムワードを展開
+    let expanded_tokens = self.expand_tokens_for_naming(tokens);
+    console::log_1(&JsValue::from_str(&format!("Expanded tokens: {:?}", expanded_tokens)));
+    
+    // 展開後のトークンを真のRPN順序に変換
+    let rpn_tokens = self.convert_to_true_rpn(&expanded_tokens);
+    console::log_1(&JsValue::from_str(&format!("True RPN tokens for naming: {:?}", rpn_tokens)));
+    
+    let final_name = rpn_tokens.iter()
+        .map(|token| match token {
+            Token::Number(n, d) => {
+                if *d == 1 {
+                    n.to_string()
+                } else {
+                    format!("{}_{}", n, d)  // 分数は_で表現
+                }
+            },
+            Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
+            Token::Boolean(b) => b.to_string().to_uppercase(),
+            Token::Symbol(s) => s.clone(),
+            Token::Nil => "NIL".to_string(),
+            Token::VectorStart => "VSTART".to_string(),
+            Token::VectorEnd => "VEND".to_string(),
+            Token::BlockStart => "BSTART".to_string(),
+            Token::BlockEnd => "BEND".to_string(),
+        })
+        .collect::<Vec<String>>()
+        .join("_")
+        .trim_end_matches('_')  // 末尾の_を除去
+        .to_string();
+
+    console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
+    console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
+    
+    final_name
+}
+
+// 真のRPN順序に変換する新しいメソッド
+fn convert_to_true_rpn(&self, tokens: &[Token]) -> Vec<Token> {
+    // シンプルなRPN変換アルゴリズム
+    // このバージョンは演算子の優先順位を考慮せず、左から右に処理する
+    let mut output = Vec::new();
+    let mut operators = Vec::new();
+    
+    for token in tokens {
+        match token {
+            Token::Symbol(name) => {
+                // 演算子またはワードの場合
+                if self.is_operator_or_word(name) {
+                    // 既存の演算子をすべて出力に移動
+                    while let Some(op) = operators.pop() {
+                        output.push(op);
                     }
-                },
-                Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
-                Token::Boolean(b) => b.to_string().to_uppercase(),
-                Token::Symbol(s) => s.clone(),
-                Token::Nil => "NIL".to_string(),
-                Token::VectorStart => "VSTART".to_string(),
-                Token::VectorEnd => "VEND".to_string(),
-                Token::BlockStart => "BSTART".to_string(),
-                Token::BlockEnd => "BEND".to_string(),
-            })
-            .collect::<Vec<String>>()
-            .join("_")
-            .trim_end_matches('_')  // 末尾の_を除去
-            .to_string();
-
-        console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
-        console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
-        
-        final_name
+                    operators.push(token.clone());
+                } else {
+                    // 通常のシンボル（未定義のワード等）
+                    output.push(token.clone());
+                }
+            },
+            // リテラル値とその他のトークンは即座に出力
+            _ => output.push(token.clone()),
+        }
     }
+    
+    // 残った演算子をすべて出力
+    while let Some(op) = operators.pop() {
+        output.push(op);
+    }
+    
+    output
+}
+
+// 演算子またはワードかどうかを判定
+fn is_operator_or_word(&self, name: &str) -> bool {
+    // 辞書に登録されているワード、または基本的な演算子
+    self.dictionary.contains_key(name) || 
+    matches!(name, "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=")
+}
 
     // カスタムワードを再帰的に展開する
     fn expand_tokens_for_naming(&self, tokens: &[Token]) -> Vec<Token> {
