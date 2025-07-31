@@ -358,7 +358,7 @@ impl Interpreter {
         console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
         console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
 
-        // 内容ベースの名前を生成
+        // 内容ベースの名前を生成（元のトークンから）
         let name = self.generate_word_name(tokens);
         console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
         
@@ -379,10 +379,8 @@ impl Interpreter {
             return Ok(());
         }
 
-        // **[修正箇所]** 名前の生成ロジックと同様に、保存するトークンも
-        // **先に展開してからRPNに並び替える**
-        let expanded_for_storage = self.expand_tokens_for_naming(tokens);
-        let storage_tokens = self.rearrange_tokens(&expanded_for_storage);
+        // 保存用のトークンは並び替え済みのものを使用
+        let storage_tokens = self.rearrange_tokens(tokens);
         console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
 
         // 新しい依存関係を収集
@@ -403,7 +401,7 @@ impl Interpreter {
                 .insert(name.clone());
         }
 
-        // ワードを定義（展開・並び替え済みのトークンを保存）
+        // ワードを定義（並び替え済みトークンを保存）
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: storage_tokens,
             is_builtin: false,
@@ -419,7 +417,6 @@ impl Interpreter {
         // 定義成功を出力
         self.append_output(&format!("Defined: {}\n", name));
         console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
-
         Ok(())
     }
 
@@ -427,24 +424,21 @@ impl Interpreter {
         console::log_1(&JsValue::from_str("--- generate_word_name ---"));
         console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-        // **[修正箇所]**
-        // 1. 先にカスタムワードを再帰的にすべて展開する
+        // まずカスタムワードを展開
         let expanded_tokens = self.expand_tokens_for_naming(tokens);
         console::log_1(&JsValue::from_str(&format!("Expanded tokens: {:?}", expanded_tokens)));
         
-        // 2. 展開後のトークンリストをRPN順序に並び替え
+        // 展開後のトークンをRPN順序に並び替え
         let rpn_tokens = self.rearrange_tokens(&expanded_tokens);
-        console::log_1(&JsValue::from_str(&format!("RPN tokens after expansion: {:?}", rpn_tokens)));
-
-        // 3. RPN順のトークンリストから名前を生成
+        console::log_1(&JsValue::from_str(&format!("RPN tokens for naming: {:?}", rpn_tokens)));
+        
         let final_name = rpn_tokens.iter()
             .map(|token| match token {
                 Token::Number(n, d) => {
                     if *d == 1 {
                         n.to_string()
                     } else {
-                        // 分数の表現を "n/d" から "n_d" へ変更
-                        format!("{}_{}", n, d)
+                        format!("{}_{}", n, d)  // 分数は_で表現
                     }
                 },
                 Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
@@ -458,7 +452,7 @@ impl Interpreter {
             })
             .collect::<Vec<String>>()
             .join("_")
-            .trim_end_matches('_')
+            .trim_end_matches('_')  // 末尾の_を除去
             .to_string();
 
         console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
@@ -467,7 +461,7 @@ impl Interpreter {
         final_name
     }
 
-    // カスタムワードを再帰的に展開する（変更なし）
+    // カスタムワードを再帰的に展開する
     fn expand_tokens_for_naming(&self, tokens: &[Token]) -> Vec<Token> {
         let mut expanded = Vec::new();
         
