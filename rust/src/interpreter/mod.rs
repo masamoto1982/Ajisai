@@ -425,12 +425,8 @@ impl Interpreter {
     console::log_1(&JsValue::from_str("--- generate_word_name ---"));
     console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-    // まずカスタムワードを展開
-    let expanded_tokens = self.expand_tokens_for_naming(tokens);
-    console::log_1(&JsValue::from_str(&format!("Expanded tokens: {:?}", expanded_tokens)));
-    
-    // 展開後のトークンをRPN順序に並び替え
-    let rpn_tokens = self.rearrange_tokens(&expanded_tokens);
+    // トークンをRPN順序に並び替え（展開せずに）
+    let rpn_tokens = self.rearrange_tokens(tokens);
     console::log_1(&JsValue::from_str(&format!("RPN tokens for naming: {:?}", rpn_tokens)));
     
     let final_name = rpn_tokens.iter()
@@ -439,7 +435,7 @@ impl Interpreter {
                 if *d == 1 {
                     n.to_string()
                 } else {
-                    format!("{}_{}", n, d)  // 分数は_で表現
+                    format!("{}_{}", n, d)
                 }
             },
             Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
@@ -453,7 +449,7 @@ impl Interpreter {
         })
         .collect::<Vec<String>>()
         .join("_")
-        .trim_end_matches('_')  // 末尾の_を除去
+        .trim_end_matches('_')
         .to_string();
 
     console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
