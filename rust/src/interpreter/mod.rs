@@ -425,11 +425,16 @@ impl Interpreter {
     console::log_1(&JsValue::from_str("--- generate_word_name ---"));
     console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-    // トークンをRPN順序に並び替え（展開せずに）
+    // 先にRPN順序に並び替え
     let rpn_tokens = self.rearrange_tokens(tokens);
-    console::log_1(&JsValue::from_str(&format!("RPN tokens for naming: {:?}", rpn_tokens)));
+    console::log_1(&JsValue::from_str(&format!("RPN tokens: {:?}", rpn_tokens)));
     
-    let final_name = rpn_tokens.iter()
+    // その後でカスタムワードを展開（順序は保持）
+    let expanded_tokens = self.expand_tokens_for_naming(&rpn_tokens);
+    console::log_1(&JsValue::from_str(&format!("Expanded tokens: {:?}", expanded_tokens)));
+    
+    // 展開後は並び替えずにそのまま名前に変換
+    let final_name = expanded_tokens.iter()
         .map(|token| match token {
             Token::Number(n, d) => {
                 if *d == 1 {
