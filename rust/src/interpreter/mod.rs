@@ -387,13 +387,9 @@ impl Interpreter {
     console::log_1(&JsValue::from_str("--- generate_word_name ---"));
     console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-    // まずカスタムワードを展開
-    let expanded_tokens = self.expand_tokens_for_naming(tokens);
-    console::log_1(&JsValue::from_str(&format!("Expanded tokens: {:?}", expanded_tokens)));
-    
-    // 展開後のトークンを真のRPN順序に変換
-    let rpn_tokens = self.convert_to_true_rpn(&expanded_tokens);
-    console::log_1(&JsValue::from_str(&format!("True RPN tokens for naming: {:?}", rpn_tokens)));
+    // 元のトークンの構造を保持したままRPN変換し、その後で展開
+    let rpn_tokens = self.convert_to_rpn_then_expand(tokens);
+    console::log_1(&JsValue::from_str(&format!("Final RPN tokens for naming: {:?}", rpn_tokens)));
     
     let final_name = rpn_tokens.iter()
         .map(|token| match token {
@@ -401,7 +397,7 @@ impl Interpreter {
                 if *d == 1 {
                     n.to_string()
                 } else {
-                    format!("{}_{}", n, d)  // 分数は_で表現
+                    format!("{}_{}", n, d)
                 }
             },
             Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
@@ -415,7 +411,7 @@ impl Interpreter {
         })
         .collect::<Vec<String>>()
         .join("_")
-        .trim_end_matches('_')  // 末尾の_を除去
+        .trim_end_matches('_')
         .to_string();
 
     console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
@@ -424,45 +420,75 @@ impl Interpreter {
     final_name
 }
 
-// 真のRPN順序に変換する新しいメソッド
-fn convert_to_true_rpn(&self, tokens: &[Token]) -> Vec<Token> {
-    // シンプルなRPN変換アルゴリズム
-    // このバージョンは演算子の優先順位を考慮せず、左から右に処理する
-    let mut output = Vec::new();
-    let mut operators = Vec::new();
+// RPN変換してから展開する新しいメソッド
+fn convert_to_rpn_then_expand(&self, tokens: &[Token]) -> Vec<Token> {
+    // まずRPN順序に変換
+    let rpn_ordered = self.convert_to_rpn_structure(tokens);
     
-    for token in tokens {
-        match token {
+    // その後、各シンボルを展開
+    let mut expanded = Vec::new();
+    for token in rpn_ordered {
+        match &token {
             Token::Symbol(name) => {
-                // 演算子またはワードの場合
-                if self.is_operator_or_word(name) {
-                    // 既存の演算子をすべて出力に移動
-                    while let Some(op) = operators.pop() {
-                        output.push(op);
+                if let Some(def) = self.dictionary.get(name) {
+                    if !def.is_builtin {
+                        // カスタムワードの内容を展開（既にRPN順序）
+                        expanded.extend(def.tokens.clone());
+                    } else {
+                        expanded.push(token);
                     }
-                    operators.push(token.clone());
                 } else {
-                    // 通常のシンボル（未定義のワード等）
-                    output.push(token.clone());
+                    expanded.push(token);
                 }
             },
-            // リテラル値とその他のトークンは即座に出力
-            _ => output.push(token.clone()),
+            _ => expanded.push(token),
         }
     }
     
-    // 残った演算子をすべて出力
-    while let Some(op) = operators.pop() {
-        output.push(op);
-    }
-    
-    output
+    expanded
 }
 
-// 演算子またはワードかどうかを判定
-fn is_operator_or_word(&self, name: &str) -> bool {
-    // 辞書に登録されているワード、または基本的な演算子
-    self.dictionary.contains_key(name) || 
+// 構造を解析してRPN順序に変換
+fn convert_to_rpn_structure(&self, tokens: &[Token]) -> Vec<Token> {
+    // 演算子の位置を特定
+    let mut operator_positions = Vec::new();
+    for (i, token) in tokens.iter().enumerate() {
+        if let Token::Symbol(name) = token {
+            if self.is_operator(name) {
+                operator_positions.push(i);
+            }
+        }
+    }
+    
+    if operator_positions.is_empty() {
+        return tokens.to_vec();
+    }
+    
+    // 単一の二項演算子の場合
+    if operator_positions.len() == 1 {
+        let op_pos = operator_positions[0];
+        let op = &tokens[op_pos];
+        
+        // 前置記法: + a b
+        if op_pos == 0 && tokens.len() >= 3 {
+            return vec![tokens[1].clone(), tokens[2].clone(), op.clone()];
+        }
+        // 中置記法: a + b
+        else if op_pos == 1 && tokens.len() == 3 {
+            return vec![tokens[0].clone(), tokens[2].clone(), op.clone()];
+        }
+        // 後置記法: a b +
+        else if op_pos == 2 && tokens.len() == 3 {
+            return tokens.to_vec(); // 既にRPN
+        }
+    }
+    
+    // それ以外の場合は元の順序を保持
+    tokens.to_vec()
+}
+
+// 演算子かどうかを判定（ビルトインの二項演算子のみ）
+fn is_operator(&self, name: &str) -> bool {
     matches!(name, "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=")
 }
 
