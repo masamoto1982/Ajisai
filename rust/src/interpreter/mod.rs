@@ -355,90 +355,91 @@ impl Interpreter {
     }
     
     fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
-        console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
+    console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
+    console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
 
-        // 内容ベースの名前を生成（元のトークンから）
-        let name = self.generate_word_name(tokens);
-        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
-        
-        // 既存ワードの依存関係チェック
-        if self.dictionary.contains_key(&name) {
-            if let Some(dependents) = self.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(AjisaiError::ProtectedWord {
-                        name: name.clone(),
-                        dependents: dependent_list,
-                    });
-                }
-            }
-            // 依存されていなければ、同じ定義の再入力として扱い、エラーにしない
-            self.append_output(&format!("Word '{}' already exists.\n", name));
-            console::log_1(&JsValue::from_str("--- end define_from_tokens (already exists) ---"));
-            return Ok(());
-        }
-
-        // 保存用のトークンは並び替え済みのものを使用
-        let storage_tokens = self.rearrange_tokens(tokens);
-        console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
-
-        // 新しい依存関係を収集
-        let mut new_dependencies = HashSet::new();
-        for token in &storage_tokens {
-            if let Token::Symbol(s) = token {
-                if self.dictionary.contains_key(s) {
-                    new_dependencies.insert(s.clone());
-                }
+    // 内容ベースの名前を生成（元のトークンから）
+    let name = self.generate_word_name(tokens);
+    console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
+    
+    // 既存ワードの依存関係チェック
+    if self.dictionary.contains_key(&name) {
+        if let Some(dependents) = self.dependencies.get(&name) {
+            if !dependents.is_empty() {
+                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                return Err(AjisaiError::ProtectedWord {
+                    name: name.clone(),
+                    dependents: dependent_list,
+                });
             }
         }
-
-        // 依存関係を更新
-        for dep_name in &new_dependencies {
-            self.dependencies
-                .entry(dep_name.clone())
-                .or_insert_with(HashSet::new)
-                .insert(name.clone());
-        }
-
-        // ワードを定義（並び替え済みトークンを保存）
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens: storage_tokens,
-            is_builtin: false,
-            description: None,
-        });
-
-        // ワードの性質を判定して記録
-        let is_producer = self.check_if_value_producer(&name);
-        self.word_properties.insert(name.clone(), WordProperty {
-            is_value_producer: is_producer,
-        });
-
-        // 定義成功を出力
-        self.append_output(&format!("Defined: {}\n", name));
-        console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
-        Ok(())
+        // 依存されていなければ、同じ定義の再入力として扱い、エラーにしない
+        self.append_output(&format!("Word '{}' already exists.\n", name));
+        console::log_1(&JsValue::from_str("--- end define_from_tokens (already exists) ---"));
+        return Ok(());
     }
+
+    // 保存用のトークンは並び替え済みのものを使用
+    let storage_tokens = self.rearrange_tokens(tokens);
+    console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
+
+    // 新しい依存関係を収集
+    let mut new_dependencies = HashSet::new();
+    for token in &storage_tokens {
+        if let Token::Symbol(s) = token {
+            if self.dictionary.contains_key(s) {
+                new_dependencies.insert(s.clone());
+            }
+        }
+    }
+
+    // 依存関係を更新
+    for dep_name in &new_dependencies {
+        self.dependencies
+            .entry(dep_name.clone())
+            .or_insert_with(HashSet::new)
+            .insert(name.clone());
+    }
+
+    // ワードを定義（並び替え済みトークンを保存）
+    self.dictionary.insert(name.clone(), WordDefinition {
+        tokens: storage_tokens,
+        is_builtin: false,
+        description: None,
+    });
+
+    // ワードの性質を判定して記録
+    let is_producer = self.check_if_value_producer(&name);
+    self.word_properties.insert(name.clone(), WordProperty {
+        is_value_producer: is_producer,
+    });
+
+    // 定義成功を出力
+    self.append_output(&format!("Defined: {}\n", name));
+    console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
+
+    Ok(())
+}
 
     fn generate_word_name(&self, tokens: &[Token]) -> String {
     console::log_1(&JsValue::from_str("--- generate_word_name ---"));
     console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-    // 先にRPN順序に並べ替え
-    let rpn_tokens = self.rearrange_tokens(tokens);
-    console::log_1(&JsValue::from_str(&format!("RPN tokens: {:?}", rpn_tokens)));
-    
-    // その後でカスタムワードを展開
-    let expanded_tokens = self.expand_tokens_for_naming(&rpn_tokens);
+    // まずカスタムワードを展開
+    let expanded_tokens = self.expand_tokens_for_naming(tokens);
     console::log_1(&JsValue::from_str(&format!("Expanded tokens: {:?}", expanded_tokens)));
     
-    let final_name = expanded_tokens.iter()
+    // 展開後のトークンをRPN順序に並び替え
+    let rpn_tokens = self.rearrange_tokens(&expanded_tokens);
+    console::log_1(&JsValue::from_str(&format!("RPN tokens for naming: {:?}", rpn_tokens)));
+    
+    let final_name = rpn_tokens.iter()
         .map(|token| match token {
             Token::Number(n, d) => {
                 if *d == 1 {
                     n.to_string()
                 } else {
-                    format!("{}_{}", n, d)
+                    format!("{}_{}", n, d)  // 分数は_で表現
                 }
             },
             Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
@@ -452,7 +453,7 @@ impl Interpreter {
         })
         .collect::<Vec<String>>()
         .join("_")
-        .trim_end_matches('_')
+        .trim_end_matches('_')  // 末尾の_を除去
         .to_string();
 
     console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
