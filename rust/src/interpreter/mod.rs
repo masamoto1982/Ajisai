@@ -396,37 +396,61 @@ impl Interpreter {
     }
 
     fn generate_word_name(&self, tokens: &[Token]) -> String {
-        // RPN順序でトークンを処理してから命名
-        let rpn_tokens = self.get_canonical_rpn_order(tokens);
+        // トークンを完全に展開してから命名
+        let expanded_tokens = self.expand_tokens_for_naming(tokens);
         
-        rpn_tokens.iter()
+        expanded_tokens.iter()
             .map(|token| match token {
                 Token::Number(n, d) => {
                     if *d == 1 {
                         n.to_string()
                     } else {
-                        format!("{}/{}", n, d)  // 分数は/で表現
+                        format!("{}_{}", n, d)  // 分数は_で表現（/は名前に使えないため）
                     }
                 },
                 Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
                 Token::Boolean(b) => b.to_string().to_uppercase(),
                 Token::Symbol(s) => s.clone(),
                 Token::Nil => "NIL".to_string(),
-                Token::VectorStart => "[".to_string(),
-                Token::VectorEnd => "]".to_string(),
-                Token::BlockStart => "{".to_string(),
-                Token::BlockEnd => "}".to_string(),
+                Token::VectorStart => "VSTART".to_string(),
+                Token::VectorEnd => "VEND".to_string(),
+                Token::BlockStart => "BSTART".to_string(),
+                Token::BlockEnd => "BEND".to_string(),
             })
             .collect::<Vec<String>>()
             .join("_")
     }
 
-    // 新しいメソッド: RPN順序を取得
-    fn get_canonical_rpn_order(&self, tokens: &[Token]) -> Vec<Token> {
-        // 既に並び替え済みのトークンが来ることを想定
-        // （process_line_from_tokensでrearrange_tokensが呼ばれているため）
-        // ここでは単純にコピーを返す
-        tokens.to_vec()
+    // カスタムワードを再帰的に展開する新しいメソッド
+    fn expand_tokens_for_naming(&self, tokens: &[Token]) -> Vec<Token> {
+        let mut expanded = Vec::new();
+        
+        for token in tokens {
+            match token {
+                Token::Symbol(name) => {
+                    // カスタムワードの場合、その定義を展開
+                    if let Some(def) = self.dictionary.get(name) {
+                        if !def.is_builtin {
+                            // カスタムワードの定義を再帰的に展開
+                            let inner_expanded = self.expand_tokens_for_naming(&def.tokens);
+                            expanded.extend(inner_expanded);
+                        } else {
+                            // ビルトインワードはそのまま
+                            expanded.push(token.clone());
+                        }
+                    } else {
+                        // 未知のシンボルもそのまま
+                        expanded.push(token.clone());
+                    }
+                },
+                _ => {
+                    // その他のトークンはそのまま
+                    expanded.push(token.clone());
+                }
+            }
+        }
+        
+        expanded
     }
 
     pub fn get_output(&mut self) -> String {
