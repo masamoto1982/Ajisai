@@ -12,6 +12,9 @@ use std::collections::{HashMap, HashSet};
 use crate::types::{Value, ValueType, Stack, Register, Token};
 use crate::tokenizer::tokenize;
 use self::error::{AjisaiError, Result};
+// コンソールログ出力のために追加
+use wasm_bindgen::JsValue;
+use web_sys::console;
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
@@ -217,6 +220,9 @@ impl Interpreter {
     }
 
     fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
+        console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
+        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
+
         let mut literals = Vec::new();
         let mut value_producers = Vec::new();
         let mut value_consumers = Vec::new();
@@ -257,6 +263,8 @@ impl Interpreter {
         result.extend(value_consumers);
         result.extend(others);
         
+        console::log_1(&JsValue::from_str(&format!("Output tokens (RPN): {:?}", result)));
+        console::log_1(&JsValue::from_str("--- end rearrange_tokens ---"));
         result
     }
 
@@ -282,6 +290,10 @@ impl Interpreter {
 
     // 名前付きワードの定義
     fn define_named_word(&mut self, name: String, body_tokens: Vec<Token>) -> Result<()> {
+        console::log_1(&JsValue::from_str("--- define_named_word ---"));
+        console::log_1(&JsValue::from_str(&format!("Defining word: {}", name)));
+        console::log_1(&JsValue::from_str(&format!("Body tokens (RPN): {:?}", body_tokens)));
+        
         let name = name.to_uppercase();
 
         // ビルトインワードは再定義不可
@@ -337,13 +349,18 @@ impl Interpreter {
 
         // 定義成功を出力
         self.append_output(&format!("Defined: {}\n", name));
+        console::log_1(&JsValue::from_str("--- end define_named_word ---"));
 
         Ok(())
     }
     
     fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
+        console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
+
         // 内容ベースの名前を生成（元のトークンから）
         let name = self.generate_word_name(tokens);
+        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
         
         // 既存ワードの依存関係チェック
         if self.dictionary.contains_key(&name) {
@@ -358,11 +375,13 @@ impl Interpreter {
             }
             // 依存されていなければ、同じ定義の再入力として扱い、エラーにしない
             self.append_output(&format!("Word '{}' already exists.\n", name));
+            console::log_1(&JsValue::from_str("--- end define_from_tokens (already exists) ---"));
             return Ok(());
         }
 
         // 保存用のトークンは並び替え済みのものを使用
         let storage_tokens = self.rearrange_tokens(tokens);
+        console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
 
         // 新しい依存関係を収集
         let mut new_dependencies = HashSet::new();
@@ -397,18 +416,23 @@ impl Interpreter {
 
         // 定義成功を出力
         self.append_output(&format!("Defined: {}\n", name));
-
+        console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
         Ok(())
     }
 
     fn generate_word_name(&self, tokens: &[Token]) -> String {
+        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
+        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+
         // まずカスタムワードを展開
         let expanded_tokens = self.expand_tokens_for_naming(tokens);
+        console::log_1(&JsValue::from_str(&format!("Expanded tokens: {:?}", expanded_tokens)));
         
         // 展開後のトークンをRPN順序に並び替え
         let rpn_tokens = self.rearrange_tokens(&expanded_tokens);
+        console::log_1(&JsValue::from_str(&format!("RPN tokens for naming: {:?}", rpn_tokens)));
         
-        rpn_tokens.iter()
+        let final_name = rpn_tokens.iter()
             .map(|token| match token {
                 Token::Number(n, d) => {
                     if *d == 1 {
@@ -429,7 +453,12 @@ impl Interpreter {
             .collect::<Vec<String>>()
             .join("_")
             .trim_end_matches('_')  // 末尾の_を除去
-            .to_string()
+            .to_string();
+
+        console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
+        console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
+        
+        final_name
     }
 
     // カスタムワードを再帰的に展開する
