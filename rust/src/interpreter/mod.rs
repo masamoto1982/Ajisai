@@ -1,3 +1,5 @@
+// rust/src/interpreter/mod.rs
+
 pub mod stack_ops;
 pub mod arithmetic;
 pub mod vector_ops;
@@ -208,7 +210,8 @@ impl Interpreter {
         }
 
         // それ以外は新しいワードとして定義（自動命名）
-        self.define_from_tokens(&rearranged)?;
+        // ここで元のトークン（並び替え前）を渡す
+        self.define_from_tokens(tokens)?;
         
         Ok(())
     }
@@ -339,7 +342,7 @@ impl Interpreter {
     }
     
     fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        // 内容ベースの名前を生成（並び替え済みトークンから）
+        // 内容ベースの名前を生成（元のトークンから）
         let name = self.generate_word_name(tokens);
         
         // 既存ワードの依存関係チェック
@@ -358,9 +361,12 @@ impl Interpreter {
             return Ok(());
         }
 
+        // 保存用のトークンは並び替え済みのものを使用
+        let storage_tokens = self.rearrange_tokens(tokens);
+
         // 新しい依存関係を収集
         let mut new_dependencies = HashSet::new();
-        for token in tokens {
+        for token in &storage_tokens {
             if let Token::Symbol(s) = token {
                 if self.dictionary.contains_key(s) {
                     new_dependencies.insert(s.clone());
@@ -378,7 +384,7 @@ impl Interpreter {
 
         // ワードを定義（並び替え済みトークンを保存）
         self.dictionary.insert(name.clone(), WordDefinition {
-            tokens: tokens.to_vec(),
+            tokens: storage_tokens,
             is_builtin: false,
             description: None,
         });
@@ -396,16 +402,19 @@ impl Interpreter {
     }
 
     fn generate_word_name(&self, tokens: &[Token]) -> String {
-        // トークンを完全に展開してから命名
+        // まずカスタムワードを展開
         let expanded_tokens = self.expand_tokens_for_naming(tokens);
         
-        expanded_tokens.iter()
+        // 展開後のトークンをRPN順序に並び替え
+        let rpn_tokens = self.rearrange_tokens(&expanded_tokens);
+        
+        rpn_tokens.iter()
             .map(|token| match token {
                 Token::Number(n, d) => {
                     if *d == 1 {
                         n.to_string()
                     } else {
-                        format!("{}_{}", n, d)  // 分数は_で表現（/は名前に使えないため）
+                        format!("{}_{}", n, d)  // 分数は_で表現
                     }
                 },
                 Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
@@ -419,9 +428,11 @@ impl Interpreter {
             })
             .collect::<Vec<String>>()
             .join("_")
+            .trim_end_matches('_')  // 末尾の_を除去
+            .to_string()
     }
 
-    // カスタムワードを再帰的に展開する新しいメソッド
+    // カスタムワードを再帰的に展開する
     fn expand_tokens_for_naming(&self, tokens: &[Token]) -> Vec<Token> {
         let mut expanded = Vec::new();
         
