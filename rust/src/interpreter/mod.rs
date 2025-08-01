@@ -508,6 +508,17 @@ fn convert_to_rpn_structure(&self, tokens: &[Token]) -> Vec<Token> {
         
         // 前置記法: + a b
         if op_pos == 0 && tokens.len() >= 3 {
+            // 可換演算子の場合、カスタムワードを優先
+            if let Token::Symbol(op_name) = op {
+                if self.is_commutative_operator(op_name) {
+                    // 第2引数がカスタムワードなら順序を入れ替える
+                    if let Token::Symbol(name) = &tokens[2] {
+                        if self.dictionary.contains_key(name) && !self.dictionary.get(name).unwrap().is_builtin {
+                            return vec![tokens[2].clone(), tokens[1].clone(), op.clone()];
+                        }
+                    }
+                }
+            }
             return vec![tokens[1].clone(), tokens[2].clone(), op.clone()];
         }
         // 中置記法: a + b
@@ -522,6 +533,11 @@ fn convert_to_rpn_structure(&self, tokens: &[Token]) -> Vec<Token> {
     
     // それ以外の場合は元の順序を保持
     tokens.to_vec()
+}
+
+// 可換演算子かどうかを判定
+fn is_commutative_operator(&self, name: &str) -> bool {
+    matches!(name, "+" | "*" | "=")
 }
 
 // 演算子かどうかを判定（ビルトインの二項演算子のみ）
