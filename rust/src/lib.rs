@@ -33,6 +33,10 @@ impl AjisaiInterpreter {
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
+                // 自動命名フラグを追加
+                let auto_named = self.interpreter.was_auto_named();
+                js_sys::Reflect::set(&obj, &"autoNamed".into(), &JsValue::from_bool(auto_named)).unwrap();
+                
                 Ok(obj.into())
             }
             Err(e) => Err(e.to_string()),
