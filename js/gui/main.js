@@ -92,8 +92,8 @@ class GUI {
     }
 
     insertWord(word) {
-        this.editor.insertWord(word + ' ');
-    }
+    this.editor.insertWord(word);  // 空白文字を追加しない
+}
     
     async runNormal() {
         const code = this.editor.getValue();
