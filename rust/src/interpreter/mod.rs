@@ -424,9 +424,9 @@ impl Interpreter {
     console::log_1(&JsValue::from_str("--- generate_word_name ---"));
     console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-    // 元のトークンの構造を保持したままRPN変換し、その後で展開
-    let rpn_tokens = self.convert_to_rpn_then_expand(tokens);
-    console::log_1(&JsValue::from_str(&format!("Final RPN tokens for naming: {:?}", rpn_tokens)));
+    // トークンの構造を保持したままRPN変換（展開しない）
+    let rpn_tokens = self.convert_to_rpn_structure(tokens);
+    console::log_1(&JsValue::from_str(&format!("RPN tokens for naming (not expanded): {:?}", rpn_tokens)));
     
     let final_name = rpn_tokens.iter()
         .map(|token| match token {
@@ -439,7 +439,7 @@ impl Interpreter {
             },
             Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
             Token::Boolean(b) => b.to_string().to_uppercase(),
-            Token::Symbol(s) => s.clone(),
+            Token::Symbol(s) => s.clone(),  // カスタムワード名をそのまま使用
             Token::Nil => "NIL".to_string(),
             Token::VectorStart => "VSTART".to_string(),
             Token::VectorEnd => "VEND".to_string(),
@@ -457,33 +457,7 @@ impl Interpreter {
     final_name
 }
 
-// RPN変換してから展開する新しいメソッド
-fn convert_to_rpn_then_expand(&self, tokens: &[Token]) -> Vec<Token> {
-    // まずRPN順序に変換
-    let rpn_ordered = self.convert_to_rpn_structure(tokens);
-    
-    // その後、各シンボルを展開
-    let mut expanded = Vec::new();
-    for token in rpn_ordered {
-        match &token {
-            Token::Symbol(name) => {
-                if let Some(def) = self.dictionary.get(name) {
-                    if !def.is_builtin {
-                        // カスタムワードの内容を展開（既にRPN順序）
-                        expanded.extend(def.tokens.clone());
-                    } else {
-                        expanded.push(token);
-                    }
-                } else {
-                    expanded.push(token);
-                }
-            },
-            _ => expanded.push(token),
-        }
-    }
-    
-    expanded
-}
+
 
 // 構造を解析してRPN順序に変換
 fn convert_to_rpn_structure(&self, tokens: &[Token]) -> Vec<Token> {
@@ -561,38 +535,6 @@ fn is_commutative_operator(&self, name: &str) -> bool {
 fn is_operator(&self, name: &str) -> bool {
     matches!(name, "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=")
 }
-
-    // カスタムワードを再帰的に展開する
-    fn expand_tokens_for_naming(&self, tokens: &[Token]) -> Vec<Token> {
-        let mut expanded = Vec::new();
-        
-        for token in tokens {
-            match token {
-                Token::Symbol(name) => {
-                    // カスタムワードの場合、その定義を展開
-                    if let Some(def) = self.dictionary.get(name) {
-                        if !def.is_builtin {
-                            // カスタムワードの定義を再帰的に展開
-                            let inner_expanded = self.expand_tokens_for_naming(&def.tokens);
-                            expanded.extend(inner_expanded);
-                        } else {
-                            // ビルトインワードはそのまま
-                            expanded.push(token.clone());
-                        }
-                    } else {
-                        // 未知のシンボルもそのまま
-                        expanded.push(token.clone());
-                    }
-                },
-                _ => {
-                    // その他のトークンはそのまま
-                    expanded.push(token.clone());
-                }
-            }
-        }
-        
-        expanded
-    }
 
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
