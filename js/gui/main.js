@@ -96,31 +96,36 @@ class GUI {
 }
     
     async runNormal() {
-        const code = this.editor.getValue();
-        if (!code) return;
+    const code = this.editor.getValue();
+    if (!code) return;
 
-        this.stepMode = false;
-        this.updateRunButton();
+    this.stepMode = false;
+    this.updateRunButton();
 
-        try {
-            const result = window.ajisaiInterpreter.execute(code);
-            if (result.status === 'OK') {
-                this.display.showOutput(result.output || 'OK');
+    try {
+        const result = window.ajisaiInterpreter.execute(code);
+        if (result.status === 'OK') {
+            this.display.showOutput(result.output || 'OK');
+            
+            // 自動命名でない場合のみエディタをクリア
+            if (!result.autoNamed) {
                 this.editor.clear();
-                if (this.mobile.isMobile()) {
-                    this.setMode('execution');
-                }
-            } else {
-                this.display.showError(result);
             }
-        } catch (error) {
-            this.display.showError(error);
+            
+            if (this.mobile.isMobile()) {
+                this.setMode('execution');
+            }
+        } else {
+            this.display.showError(result);
         }
-        
-        this.updateAllDisplays();
-        await this.persistence.saveCurrentState();
-        this.display.showInfo('State saved.', true);
+    } catch (error) {
+        this.display.showError(error);
     }
+    
+    this.updateAllDisplays();
+    await this.persistence.saveCurrentState();
+    this.display.showInfo('State saved.', true);
+}
 
     async runStep() {
         const code = this.editor.getValue();
