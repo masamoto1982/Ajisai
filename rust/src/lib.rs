@@ -33,9 +33,15 @@ impl AjisaiInterpreter {
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
-                // 自動命名フラグを追加
+                // 自動命名フラグと名前を追加
                 let auto_named = self.interpreter.was_auto_named();
                 js_sys::Reflect::set(&obj, &"autoNamed".into(), &JsValue::from_bool(auto_named)).unwrap();
+                
+                if auto_named {
+                    if let Some(name) = self.interpreter.get_last_auto_named_word() {
+                        js_sys::Reflect::set(&obj, &"autoNamedWord".into(), &JsValue::from_str(&name)).unwrap();
+                    }
+                }
                 
                 Ok(obj.into())
             }
