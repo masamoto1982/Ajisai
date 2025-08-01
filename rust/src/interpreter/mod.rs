@@ -223,10 +223,47 @@ impl Interpreter {
     console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
     console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
 
-    // 真のRPN順序に変換
-    let result = self.convert_to_true_rpn(tokens);
+    let mut literals = Vec::new();
+    let mut value_producers = Vec::new();
+    let mut value_consumers = Vec::new();
+    let mut others = Vec::new();
+
+    for token in tokens {
+        match token {
+            Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | 
+            Token::Nil | Token::VectorStart | Token::VectorEnd |
+            Token::BlockStart | Token::BlockEnd => {
+                literals.push(token.clone());
+            },
+            Token::Symbol(name) => {
+                if let Some(prop) = self.word_properties.get(name) {
+                    if prop.is_value_producer {
+                        value_producers.push(token.clone());
+                    } else {
+                        value_consumers.push(token.clone());
+                    }
+                } else if self.dictionary.contains_key(name) {
+                    // 未知のカスタムワードは判定する
+                    if self.check_if_value_producer(name) {
+                        value_producers.push(token.clone());
+                    } else {
+                        value_consumers.push(token.clone());
+                    }
+                } else {
+                    others.push(token.clone());
+                }
+            },
+        }
+    }
+
+    // 順序: リテラル値 → 値生産ワード → 値消費ワード → その他
+    let mut result = Vec::new();
+    result.extend(literals);
+    result.extend(value_producers);
+    result.extend(value_consumers);
+    result.extend(others);
     
-    console::log_1(&JsValue::from_str(&format!("Output tokens (True RPN): {:?}", result)));
+    console::log_1(&JsValue::from_str(&format!("Output tokens (RPN): {:?}", result)));
     console::log_1(&JsValue::from_str("--- end rearrange_tokens ---"));
     result
 }
