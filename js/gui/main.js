@@ -107,8 +107,12 @@ class GUI {
         if (result.status === 'OK') {
             this.display.showOutput(result.output || 'OK');
             
-            // 自動命名でない場合のみエディタをクリア
-            if (!result.autoNamed) {
+            // 自動命名された場合の処理
+            if (result.autoNamed && result.autoNamedWord) {
+                // エディタの内容を新しいワード名に置き換える
+                this.editor.setValue(result.autoNamedWord);
+            } else if (!result.autoNamed) {
+                // 自動命名でない場合のみエディタをクリア
                 this.editor.clear();
             }
             
