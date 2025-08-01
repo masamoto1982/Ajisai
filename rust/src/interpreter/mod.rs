@@ -28,6 +28,7 @@ pub struct Interpreter {
     step_tokens: Vec<Token>,
     step_position: usize,
     step_mode: bool,
+    auto_named: bool,  // 自動命名が行われたかを記録
 }
 
 #[derive(Clone)]
@@ -55,6 +56,7 @@ impl Interpreter {
             step_tokens: Vec::new(),
             step_position: 0,
             step_mode: false,
+            auto_named: false,
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
@@ -76,6 +78,8 @@ impl Interpreter {
     }
     
     pub fn execute(&mut self, code: &str) -> Result<()> {
+        self.auto_named = false;  // 実行開始時にリセット
+        
         // 改行で分割して各行を処理
         let lines: Vec<&str> = code.split('\n')
             .map(|line| line.trim())
@@ -87,6 +91,11 @@ impl Interpreter {
         }
         
         Ok(())
+    }
+
+    // 自動命名フラグのゲッター
+    pub fn was_auto_named(&self) -> bool {
+        self.auto_named
     }
 
     // ステップ実行の初期化
@@ -220,53 +229,53 @@ impl Interpreter {
     }
 
     fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
-    console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
-    console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
+        console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
+        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
 
-    let mut literals = Vec::new();
-    let mut value_producers = Vec::new();
-    let mut value_consumers = Vec::new();
-    let mut others = Vec::new();
+        let mut literals = Vec::new();
+        let mut value_producers = Vec::new();
+        let mut value_consumers = Vec::new();
+        let mut others = Vec::new();
 
-    for token in tokens {
-        match token {
-            Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | 
-            Token::Nil | Token::VectorStart | Token::VectorEnd |
-            Token::BlockStart | Token::BlockEnd => {
-                literals.push(token.clone());
-            },
-            Token::Symbol(name) => {
-                if let Some(prop) = self.word_properties.get(name) {
-                    if prop.is_value_producer {
-                        value_producers.push(token.clone());
+        for token in tokens {
+            match token {
+                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | 
+                Token::Nil | Token::VectorStart | Token::VectorEnd |
+                Token::BlockStart | Token::BlockEnd => {
+                    literals.push(token.clone());
+                },
+                Token::Symbol(name) => {
+                    if let Some(prop) = self.word_properties.get(name) {
+                        if prop.is_value_producer {
+                            value_producers.push(token.clone());
+                        } else {
+                            value_consumers.push(token.clone());
+                        }
+                    } else if self.dictionary.contains_key(name) {
+                        // 未知のカスタムワードは判定する
+                        if self.check_if_value_producer(name) {
+                            value_producers.push(token.clone());
+                        } else {
+                            value_consumers.push(token.clone());
+                        }
                     } else {
-                        value_consumers.push(token.clone());
+                        others.push(token.clone());
                     }
-                } else if self.dictionary.contains_key(name) {
-                    // 未知のカスタムワードは判定する
-                    if self.check_if_value_producer(name) {
-                        value_producers.push(token.clone());
-                    } else {
-                        value_consumers.push(token.clone());
-                    }
-                } else {
-                    others.push(token.clone());
-                }
-            },
+                },
+            }
         }
-    }
 
-    // 順序: リテラル値 → 値生産ワード → 値消費ワード → その他
-    let mut result = Vec::new();
-    result.extend(literals);
-    result.extend(value_producers);
-    result.extend(value_consumers);
-    result.extend(others);
-    
-    console::log_1(&JsValue::from_str(&format!("Output tokens (RPN): {:?}", result)));
-    console::log_1(&JsValue::from_str("--- end rearrange_tokens ---"));
-    result
-}
+        // 順序: リテラル値 → 値生産ワード → 値消費ワード → その他
+        let mut result = Vec::new();
+        result.extend(literals);
+        result.extend(value_producers);
+        result.extend(value_consumers);
+        result.extend(others);
+        
+        console::log_1(&JsValue::from_str(&format!("Output tokens (RPN): {:?}", result)));
+        console::log_1(&JsValue::from_str("--- end rearrange_tokens ---"));
+        result
+    }
 
     fn check_if_value_producer(&self, word_name: &str) -> bool {
         // ダミーのインタープリタでシミュレーション
@@ -358,6 +367,8 @@ impl Interpreter {
         console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
         console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
 
+        self.auto_named = true;  // 自動命名フラグを設定
+
         // 内容ベースの名前を生成（元のトークンから）
         let name = self.generate_word_name(tokens);
         console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
@@ -421,120 +432,118 @@ impl Interpreter {
     }
 
     fn generate_word_name(&self, tokens: &[Token]) -> String {
-    console::log_1(&JsValue::from_str("--- generate_word_name ---"));
-    console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
+        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-    // トークンの構造を保持したままRPN変換（展開しない）
-    let rpn_tokens = self.convert_to_rpn_structure(tokens);
-    console::log_1(&JsValue::from_str(&format!("RPN tokens for naming (not expanded): {:?}", rpn_tokens)));
-    
-    let final_name = rpn_tokens.iter()
-        .map(|token| match token {
-            Token::Number(n, d) => {
-                if *d == 1 {
-                    n.to_string()
-                } else {
-                    format!("{}_{}", n, d)
-                }
-            },
-            Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
-            Token::Boolean(b) => b.to_string().to_uppercase(),
-            Token::Symbol(s) => s.clone(),  // カスタムワード名をそのまま使用
-            Token::Nil => "NIL".to_string(),
-            Token::VectorStart => "VSTART".to_string(),
-            Token::VectorEnd => "VEND".to_string(),
-            Token::BlockStart => "BSTART".to_string(),
-            Token::BlockEnd => "BEND".to_string(),
-        })
-        .collect::<Vec<String>>()
-        .join("_")
-        .trim_end_matches('_')
-        .to_string();
-
-    console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
-    console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
-    
-    final_name
-}
-
-
-
-// 構造を解析してRPN順序に変換
-fn convert_to_rpn_structure(&self, tokens: &[Token]) -> Vec<Token> {
-    // 演算子の位置を特定
-    let mut operator_positions = Vec::new();
-    for (i, token) in tokens.iter().enumerate() {
-        if let Token::Symbol(name) = token {
-            if self.is_operator(name) {
-                operator_positions.push(i);
-            }
-        }
-    }
-    
-    if operator_positions.is_empty() {
-        return tokens.to_vec();
-    }
-    
-    // 単一の二項演算子の場合
-    if operator_positions.len() == 1 {
-        let op_pos = operator_positions[0];
-        let op = &tokens[op_pos];
+        // トークンの構造を保持したままRPN変換（展開しない）
+        let rpn_tokens = self.convert_to_rpn_structure(tokens);
+        console::log_1(&JsValue::from_str(&format!("RPN tokens for naming (not expanded): {:?}", rpn_tokens)));
         
-        // 前置記法: + a b
-        if op_pos == 0 && tokens.len() >= 3 {
-            // 可換演算子の場合、カスタムワードを優先
-            if let Token::Symbol(op_name) = op {
-                if self.is_commutative_operator(op_name) {
-                    // 第2引数がカスタムワードなら順序を入れ替える
-                    if let Token::Symbol(name) = &tokens[2] {
-                        if self.dictionary.contains_key(name) && !self.dictionary.get(name).unwrap().is_builtin {
-                            return vec![tokens[2].clone(), tokens[1].clone(), op.clone()];
-                        }
+        let final_name = rpn_tokens.iter()
+            .map(|token| match token {
+                Token::Number(n, d) => {
+                    if *d == 1 {
+                        n.to_string()
+                    } else {
+                        format!("{}_{}", n, d)
                     }
+                },
+                Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
+                Token::Boolean(b) => b.to_string().to_uppercase(),
+                Token::Symbol(s) => s.clone(),  // カスタムワード名をそのまま使用
+                Token::Nil => "NIL".to_string(),
+                Token::VectorStart => "VSTART".to_string(),
+                Token::VectorEnd => "VEND".to_string(),
+                Token::BlockStart => "BSTART".to_string(),
+                Token::BlockEnd => "BEND".to_string(),
+            })
+            .collect::<Vec<String>>()
+            .join("_")
+            .trim_end_matches('_')
+            .to_string();
+
+        console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
+        console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
+        
+        final_name
+    }
+
+    // 構造を解析してRPN順序に変換
+    fn convert_to_rpn_structure(&self, tokens: &[Token]) -> Vec<Token> {
+        // 演算子の位置を特定
+        let mut operator_positions = Vec::new();
+        for (i, token) in tokens.iter().enumerate() {
+            if let Token::Symbol(name) = token {
+                if self.is_operator(name) {
+                    operator_positions.push(i);
                 }
             }
-            return vec![tokens[1].clone(), tokens[2].clone(), op.clone()];
         }
-        // 中置記法: a + b
-        else if op_pos == 1 && tokens.len() == 3 {
-            // 可換演算子の場合、カスタムワードを優先的に左側に
-            if let Token::Symbol(op_name) = op {
-                if self.is_commutative_operator(op_name) {
-                    // 右側がカスタムワード、左側がリテラルの場合は順序を入れ替える
-                    if let Token::Symbol(name) = &tokens[2] {
-                        if self.dictionary.contains_key(name) && !self.dictionary.get(name).unwrap().is_builtin {
-                            // 左側がリテラル値の場合のみ入れ替え
-                            match &tokens[0] {
-                                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
-                                    return vec![tokens[2].clone(), tokens[0].clone(), op.clone()];
-                                }
-                                _ => {}
+        
+        if operator_positions.is_empty() {
+            return tokens.to_vec();
+        }
+        
+        // 単一の二項演算子の場合
+        if operator_positions.len() == 1 {
+            let op_pos = operator_positions[0];
+            let op = &tokens[op_pos];
+            
+            // 前置記法: + a b
+            if op_pos == 0 && tokens.len() >= 3 {
+                // 可換演算子の場合、カスタムワードを優先
+                if let Token::Symbol(op_name) = op {
+                    if self.is_commutative_operator(op_name) {
+                        // 第2引数がカスタムワードなら順序を入れ替える
+                        if let Token::Symbol(name) = &tokens[2] {
+                            if self.dictionary.contains_key(name) && !self.dictionary.get(name).unwrap().is_builtin {
+                                return vec![tokens[2].clone(), tokens[1].clone(), op.clone()];
                             }
                         }
                     }
                 }
+                return vec![tokens[1].clone(), tokens[2].clone(), op.clone()];
             }
-            return vec![tokens[0].clone(), tokens[2].clone(), op.clone()];
+            // 中置記法: a + b
+            else if op_pos == 1 && tokens.len() == 3 {
+                // 可換演算子の場合、カスタムワードを優先的に左側に
+                if let Token::Symbol(op_name) = op {
+                    if self.is_commutative_operator(op_name) {
+                        // 右側がカスタムワード、左側がリテラルの場合は順序を入れ替える
+                        if let Token::Symbol(name) = &tokens[2] {
+                            if self.dictionary.contains_key(name) && !self.dictionary.get(name).unwrap().is_builtin {
+                                // 左側がリテラル値の場合のみ入れ替え
+                                match &tokens[0] {
+                                    Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
+                                        return vec![tokens[2].clone(), tokens[0].clone(), op.clone()];
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                }
+                return vec![tokens[0].clone(), tokens[2].clone(), op.clone()];
+            }
+            // 後置記法: a b +
+            else if op_pos == 2 && tokens.len() == 3 {
+                return tokens.to_vec(); // 既にRPN
+            }
         }
-        // 後置記法: a b +
-        else if op_pos == 2 && tokens.len() == 3 {
-            return tokens.to_vec(); // 既にRPN
-        }
+        
+        // それ以外の場合は元の順序を保持
+        tokens.to_vec()
     }
-    
-    // それ以外の場合は元の順序を保持
-    tokens.to_vec()
-}
 
-// 可換演算子かどうかを判定
-fn is_commutative_operator(&self, name: &str) -> bool {
-    matches!(name, "+" | "*" | "=")
-}
+    // 演算子かどうかを判定（ビルトインの二項演算子のみ）
+    fn is_operator(&self, name: &str) -> bool {
+        matches!(name, "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=")
+    }
 
-// 演算子かどうかを判定（ビルトインの二項演算子のみ）
-fn is_operator(&self, name: &str) -> bool {
-    matches!(name, "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=")
-}
+    // 可換演算子かどうかを判定
+    fn is_commutative_operator(&self, name: &str) -> bool {
+        matches!(name, "+" | "*" | "=")
+    }
 
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
