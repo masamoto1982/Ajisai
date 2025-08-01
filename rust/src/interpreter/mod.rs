@@ -29,6 +29,7 @@ pub struct Interpreter {
     step_position: usize,
     step_mode: bool,
     auto_named: bool,  // 自動命名が行われたかを記録
+    last_auto_named_word: Option<String>,  // 最後に自動命名されたワード名
 }
 
 #[derive(Clone)]
@@ -57,6 +58,7 @@ impl Interpreter {
             step_position: 0,
             step_mode: false,
             auto_named: false,
+            last_auto_named_word: None,
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
@@ -79,6 +81,7 @@ impl Interpreter {
     
     pub fn execute(&mut self, code: &str) -> Result<()> {
         self.auto_named = false;  // 実行開始時にリセット
+        self.last_auto_named_word = None;  // リセット
         
         // 改行で分割して各行を処理
         let lines: Vec<&str> = code.split('\n')
@@ -96,6 +99,10 @@ impl Interpreter {
     // 自動命名フラグのゲッター
     pub fn was_auto_named(&self) -> bool {
         self.auto_named
+    }
+
+    pub fn get_last_auto_named_word(&self) -> Option<String> {
+        self.last_auto_named_word.clone()
     }
 
     // ステップ実行の初期化
@@ -367,8 +374,6 @@ impl Interpreter {
         console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
         console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
 
-        self.auto_named = true;  // 自動命名フラグを設定
-
         // 内容ベースの名前を生成（元のトークンから）
         let name = self.generate_word_name(tokens);
         console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
@@ -389,6 +394,9 @@ impl Interpreter {
             console::log_1(&JsValue::from_str("--- end define_from_tokens (already exists) ---"));
             return Ok(());
         }
+
+        self.auto_named = true;  // 自動命名フラグを設定
+        self.last_auto_named_word = Some(name.clone());  // 自動命名されたワード名を保存
 
         // 保存用のトークンは並び替え済みのものを使用
         let storage_tokens = self.rearrange_tokens(tokens);
