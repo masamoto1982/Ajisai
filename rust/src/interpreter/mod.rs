@@ -523,6 +523,23 @@ fn convert_to_rpn_structure(&self, tokens: &[Token]) -> Vec<Token> {
         }
         // 中置記法: a + b
         else if op_pos == 1 && tokens.len() == 3 {
+            // 可換演算子の場合、カスタムワードを優先的に左側に
+            if let Token::Symbol(op_name) = op {
+                if self.is_commutative_operator(op_name) {
+                    // 右側がカスタムワード、左側がリテラルの場合は順序を入れ替える
+                    if let Token::Symbol(name) = &tokens[2] {
+                        if self.dictionary.contains_key(name) && !self.dictionary.get(name).unwrap().is_builtin {
+                            // 左側がリテラル値の場合のみ入れ替え
+                            match &tokens[0] {
+                                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
+                                    return vec![tokens[2].clone(), tokens[0].clone(), op.clone()];
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
             return vec![tokens[0].clone(), tokens[2].clone(), op.clone()];
         }
         // 後置記法: a b +
