@@ -2,6 +2,7 @@
 
 import { GUI_INSTANCE } from './gui/main';
 import { initWasm } from './wasm-loader';
+import './db'; // IndexedDBモジュールをインポート
 import type { WasmModule, AjisaiInterpreter } from './wasm-types';
 
 declare global {
