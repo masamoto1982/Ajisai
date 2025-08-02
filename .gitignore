@@ -2,6 +2,16 @@
 rust/target/
 rust/Cargo.lock
 
+# Node.js
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# TypeScript/Vite
+dist/
+*.tsbuildinfo
+
 # ビルド生成物は含めない（GitHub Actionsでビルドするため）
 # js/pkg/  ← この行をコメントアウトまたは削除
 
