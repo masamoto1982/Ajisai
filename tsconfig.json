@@ -21,8 +21,11 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "./pkg/*": ["./pkg/*"]
+    }
   },
   "include": ["js/**/*"],
-  "exclude": ["node_modules", "dist", "js/pkg"]
+  "exclude": ["node_modules", "dist", "js/pkg/*.js", "js/types.js", "js/db.js"]
 }
