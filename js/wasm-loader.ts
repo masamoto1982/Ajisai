@@ -15,7 +15,7 @@ export async function initWasm(): Promise<WasmModule | null> {
         console.log('Expected module path:', baseUrl + '/pkg/ajisai_core.js');
         
         // @ts-ignore - Dynamic import of generated WASM module
-        const module = await import('./pkg/ajisai_core.js');
+        const module = await import('./pkg/ajisai_core.js') as WasmModule;
         console.log('Module loaded:', module);
         
         // init関数を呼び出す（wasm-bindgen 0.2.92以降の場合）
@@ -27,7 +27,7 @@ export async function initWasm(): Promise<WasmModule | null> {
             console.log('WASM initialized via init function');
         }
         
-        wasmModule = module as WasmModule;
+        wasmModule = module;
         return module;
     } catch (error) {
         console.error('Failed to load WASM:', error);
