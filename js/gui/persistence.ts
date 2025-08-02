@@ -2,6 +2,7 @@
 
 import type { GUI } from './main';
 import type { AjisaiInterpreter, Value } from '../wasm-types';
+import type { AjisaiDB } from '../db';
 
 interface CustomWord {
     name: string;
@@ -17,13 +18,8 @@ interface InterpreterState {
 
 declare global {
     interface Window {
-        AjisaiDB: {
-            open(): Promise<void>;
-            clearAll(): Promise<void>;
-            saveInterpreterState(state: InterpreterState): Promise<void>;
-            loadInterpreterState(): Promise<InterpreterState | null>;
-        };
         ajisaiInterpreter: AjisaiInterpreter;
+        // AjisaiDBの型定義は db.ts で行っているので、ここでは削除
     }
 }
 
