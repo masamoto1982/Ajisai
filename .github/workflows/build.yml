@@ -1,23 +1,19 @@
 name: Build and Deploy Ajisai
 
 on:
-  # mainブランチにプッシュされた時のみ実行
   push:
     branches: [ main ]
 
-# ワークフローの実行に必要な権限を設定
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# 同じブランチで複数のデプロイが走った場合に、古いものを自動でキャンセルする設定
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
-  # ビルド用のジョブ
   build:
     runs-on: ubuntu-latest
     steps:
@@ -30,13 +26,27 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
       - name: Build WASM artifacts
         run: |
           cd rust
           wasm-pack build --target web --out-dir ../js/pkg
 
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Build with Vite
+        run: npx vite build
+
       - name: Create .nojekyll file
-        run: touch .nojekyll
+        run: touch dist/.nojekyll
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -44,16 +54,12 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # ビルド成果物を含んだリポジトリ全体をアップロード
-          path: .
+          path: dist
 
-  # デプロイ用のジョブ
   deploy:
-    # buildジョブの完了を待つ
     needs: build
     runs-on: ubuntu-latest
     
-    # デプロイ環境を指定
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
