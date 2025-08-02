@@ -2,7 +2,6 @@
 
 import type { GUI } from './main';
 import type { AjisaiInterpreter, Value } from '../wasm-types';
-import type { AjisaiDB } from '../db';
 
 interface CustomWord {
     name: string;
