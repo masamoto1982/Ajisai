@@ -287,9 +287,17 @@ class AjisaiDB {
     }
 }
 
-// グローバルに公開
+// シングルトンインスタンスをエクスポート
 const DB = new AjisaiDB();
-(window as any).AjisaiDB = DB;
+
+// グローバルに公開
+declare global {
+    interface Window {
+        AjisaiDB: AjisaiDB;
+    }
+}
+
+window.AjisaiDB = DB;
 
 // デバッグ用
 console.log('AjisaiDB initialized:', DB);
