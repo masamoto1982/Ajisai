@@ -1,7 +1,10 @@
 // js/wasm-types.ts
 
-export interface AjisaiInterpreter {
+export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
+}
+
+export interface AjisaiInterpreter {
     execute(code: string): ExecuteResult;
     init_step(code: string): string;
     step(): StepResult;
@@ -25,6 +28,7 @@ export interface ExecuteResult {
     output?: string;
     autoNamed?: boolean;
     autoNamedWord?: string;
+    message?: string; // エラーの場合のメッセージ
 }
 
 export interface StepResult {
@@ -40,5 +44,7 @@ export interface Value {
 }
 
 export interface WasmModule {
-    AjisaiInterpreter: typeof AjisaiInterpreter;
+    AjisaiInterpreter: AjisaiInterpreterClass;
+    default?: () => Promise<void>;
+    init?: () => Promise<void>;
 }
