@@ -125,41 +125,129 @@ impl Interpreter {
         Ok(())
     }
 
-    pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
-        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
-        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+    // rust/src/interpreter/word_def.rs のgenerate_word_nameメソッドを置き換え
 
-        let rpn_tokens = self.convert_to_rpn_structure(tokens);
-        console::log_1(&JsValue::from_str(&format!("RPN tokens for naming (not expanded): {:?}", rpn_tokens)));
-        
-        let final_name = rpn_tokens.iter()
-            .map(|token| match token {
-                Token::Number(n, d) => {
-                    if *d == 1 {
-                        n.to_string()
-                    } else {
-                        format!("{}_{}", n, d)
+pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
+    console::log_1(&JsValue::from_str("--- generate_word_name ---"));
+    console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+
+    // 統一的なRPN変換を使用
+    let rpn_tokens = self.convert_to_rpn(tokens);
+    console::log_1(&JsValue::from_str(&format!("RPN tokens for naming: {:?}", rpn_tokens)));
+    
+    // Vectorをグループ化して処理
+    let grouped_tokens = self.group_vectors_for_naming(&rpn_tokens);
+    
+    let final_name = grouped_tokens.join("_");
+
+    console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
+    console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
+    
+    final_name
+}
+
+// 新しいヘルパーメソッド（word_def.rsに追加）
+fn group_vectors_for_naming(&self, tokens: &[Token]) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut i = 0;
+    
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::VectorStart => {
+                // Vectorの開始を検出
+                let mut vector_parts = vec!["[".to_string()];
+                i += 1;
+                
+                // VectorEndまでの要素を収集
+                let mut depth = 1;
+                while i < tokens.len() && depth > 0 {
+                    match &tokens[i] {
+                        Token::VectorStart => {
+                            depth += 1;
+                            vector_parts.push("[".to_string());
+                        }
+                        Token::VectorEnd => {
+                            depth -= 1;
+                            if depth == 0 {
+                                vector_parts.push("]".to_string());
+                            } else {
+                                vector_parts.push("]".to_string());
+                            }
+                        }
+                        Token::Number(n, d) => {
+                            if *d == 1 {
+                                vector_parts.push(n.to_string());
+                            } else {
+                                vector_parts.push(format!("{}_{}", n, d));
+                            }
+                        }
+                        Token::String(s) => {
+                            vector_parts.push(format!("STR_{}", s.replace(" ", "_")));
+                        }
+                        Token::Boolean(b) => {
+                            vector_parts.push(b.to_string().to_uppercase());
+                        }
+                        Token::Symbol(s) => {
+                            vector_parts.push(s.clone());
+                        }
+                        Token::Nil => {
+                            vector_parts.push("NIL".to_string());
+                        }
+                        Token::BlockStart => {
+                            vector_parts.push("{".to_string());
+                        }
+                        Token::BlockEnd => {
+                            vector_parts.push("}".to_string());
+                        }
                     }
-                },
-                Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
-                Token::Boolean(b) => b.to_string().to_uppercase(),
-                Token::Symbol(s) => s.clone(),
-                Token::Nil => "NIL".to_string(),
-                Token::VectorStart => "VSTART".to_string(),
-                Token::VectorEnd => "VEND".to_string(),
-                Token::BlockStart => "BSTART".to_string(),
-                Token::BlockEnd => "BEND".to_string(),
-            })
-            .collect::<Vec<String>>()
-            .join("_")
-            .trim_end_matches('_')
-            .to_string();
-
-        console::log_1(&JsValue::from_str(&format!("Generated final name: {}", final_name)));
-        console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
-        
-        final_name
+                    i += 1;
+                }
+                
+                // Vector全体を一つの要素として結合
+                result.push(vector_parts.join("_"));
+            }
+            Token::Number(n, d) => {
+                if *d == 1 {
+                    result.push(n.to_string());
+                } else {
+                    result.push(format!("{}_{}", n, d));
+                }
+                i += 1;
+            }
+            Token::String(s) => {
+                result.push(format!("STR_{}", s.replace(" ", "_")));
+                i += 1;
+            }
+            Token::Boolean(b) => {
+                result.push(b.to_string().to_uppercase());
+                i += 1;
+            }
+            Token::Symbol(s) => {
+                result.push(s.clone());
+                i += 1;
+            }
+            Token::Nil => {
+                result.push("NIL".to_string());
+                i += 1;
+            }
+            Token::BlockStart => {
+                // ブロックも同様にグループ化可能（必要に応じて）
+                result.push("BSTART".to_string());
+                i += 1;
+            }
+            Token::BlockEnd => {
+                result.push("BEND".to_string());
+                i += 1;
+            }
+            Token::VectorEnd => {
+                // 単独のVectorEnd（エラーケース）はスキップ
+                i += 1;
+            }
+        }
     }
+    
+    result
+}
 
     pub(super) fn check_if_value_producer(&self, word_name: &str) -> bool {
         let mut dummy = Interpreter::new();
