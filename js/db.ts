@@ -20,7 +20,7 @@ interface ExportData {
     interpreterState: InterpreterState | null;
 }
 
-export class AjisaiDB {
+class AjisaiDB {
     private dbName = 'AjisaiDB';
     private version = 2;
     private storeName = 'tables';
@@ -303,4 +303,3 @@ window.AjisaiDB = DB;
 console.log('AjisaiDB initialized:', DB);
 
 export default DB;
-export type { InterpreterState };
