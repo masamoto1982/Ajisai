@@ -57,54 +57,12 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed block"))
     }
 
-    pub(super) fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
-        console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
+    // 新しい統一的なRPN変換メソッド
+    pub(super) fn convert_to_rpn(&self, tokens: &[Token]) -> Vec<Token> {
+        console::log_1(&JsValue::from_str("--- convert_to_rpn ---"));
         console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
 
-        let mut literals = Vec::new();
-        let mut value_producers = Vec::new();
-        let mut value_consumers = Vec::new();
-        let mut others = Vec::new();
-
-        for token in tokens {
-            match token {
-                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | 
-                Token::Nil | Token::VectorStart | Token::VectorEnd |
-                Token::BlockStart | Token::BlockEnd => {
-                    literals.push(token.clone());
-                },
-                Token::Symbol(name) => {
-                    if let Some(prop) = self.word_properties.get(name) {
-                        if prop.is_value_producer {
-                            value_producers.push(token.clone());
-                        } else {
-                            value_consumers.push(token.clone());
-                        }
-                    } else if self.dictionary.contains_key(name) {
-                        if self.check_if_value_producer(name) {
-                            value_producers.push(token.clone());
-                        } else {
-                            value_consumers.push(token.clone());
-                        }
-                    } else {
-                        others.push(token.clone());
-                    }
-                },
-            }
-        }
-
-        let mut result = Vec::new();
-        result.extend(literals);
-        result.extend(value_producers);
-        result.extend(value_consumers);
-        result.extend(others);
-        
-        console::log_1(&JsValue::from_str(&format!("Output tokens (RPN): {:?}", result)));
-        console::log_1(&JsValue::from_str("--- end rearrange_tokens ---"));
-        result
-    }
-
-    pub(super) fn convert_to_rpn_structure(&self, tokens: &[Token]) -> Vec<Token> {
+        // 演算子の位置を特定
         let mut operator_positions = Vec::new();
         for (i, token) in tokens.iter().enumerate() {
             if let Token::Symbol(name) = token {
@@ -115,59 +73,121 @@ impl Interpreter {
         }
         
         if operator_positions.is_empty() {
+            // 演算子がない場合はそのまま返す
             return tokens.to_vec();
         }
         
+        // 演算子が1つの場合の処理
         if operator_positions.len() == 1 {
             let op_pos = operator_positions[0];
             let op = &tokens[op_pos];
             
             // 前置記法: + a b
             if op_pos == 0 && tokens.len() >= 3 {
-                if let Token::Symbol(op_name) = op {
-                    if self.is_commutative_operator(op_name) {
-                        if let Token::Symbol(name) = &tokens[2] {
-                            if self.dictionary.contains_key(name) && !self.dictionary.get(name).unwrap().is_builtin {
-                                return vec![tokens[2].clone(), tokens[1].clone(), op.clone()];
-                            }
-                        }
-                    }
+                // Vector/Blockを含む任意のオペランドに対応
+                let operands = self.collect_operands(&tokens[1..], 2);
+                if operands.len() >= 2 {
+                    let mut result = operands;
+                    result.push(op.clone());
+                    console::log_1(&JsValue::from_str(&format!("Prefix notation converted to RPN: {:?}", result)));
+                    return result;
                 }
-                return vec![tokens[1].clone(), tokens[2].clone(), op.clone()];
             }
             // 中置記法: a + b
-            else if op_pos == 1 && tokens.len() == 3 {
-                if let Token::Symbol(op_name) = op {
-                    if self.is_commutative_operator(op_name) {
-                        if let Token::Symbol(name) = &tokens[2] {
-                            if self.dictionary.contains_key(name) && !self.dictionary.get(name).unwrap().is_builtin {
-                                match &tokens[0] {
-                                    Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
-                                        return vec![tokens[2].clone(), tokens[0].clone(), op.clone()];
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        }
-                    }
-                }
-                return vec![tokens[0].clone(), tokens[2].clone(), op.clone()];
+            else if op_pos > 0 && op_pos < tokens.len() - 1 {
+                let left_operand = self.collect_operand(&tokens[..op_pos]);
+                let right_operand = self.collect_operand(&tokens[op_pos + 1..]);
+                
+                let mut result = left_operand;
+                result.extend(right_operand);
+                result.push(op.clone());
+                console::log_1(&JsValue::from_str(&format!("Infix notation converted to RPN: {:?}", result)));
+                return result;
             }
             // 後置記法: a b +
-            else if op_pos == 2 && tokens.len() == 3 {
+            else if op_pos == tokens.len() - 1 && tokens.len() >= 3 {
+                // すでにRPN形式
                 return tokens.to_vec();
             }
         }
         
+        // 複数の演算子がある場合や他のパターンはそのまま返す
         tokens.to_vec()
+    }
+
+    // オペランドを1つ収集（Vectorやブロックを含む）
+    fn collect_operand(&self, tokens: &[Token]) -> Vec<Token> {
+        let mut result = Vec::new();
+        let mut i = 0;
+        let mut depth = 0;
+        
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::VectorStart | Token::BlockStart => {
+                    if depth == 0 && !result.is_empty() {
+                        // 新しい構造の開始なので、前のオペランドで終了
+                        break;
+                    }
+                    depth += 1;
+                    result.push(tokens[i].clone());
+                }
+                Token::VectorEnd | Token::BlockEnd => {
+                    result.push(tokens[i].clone());
+                    depth -= 1;
+                    if depth == 0 {
+                        // 構造が完結したので終了
+                        i += 1;
+                        break;
+                    }
+                }
+                _ => {
+                    result.push(tokens[i].clone());
+                    if depth == 0 {
+                        // 単一トークンのオペランドなので終了
+                        i += 1;
+                        break;
+                    }
+                }
+            }
+            i += 1;
+        }
+        
+        result
+    }
+
+    // 指定された数のオペランドを収集
+    fn collect_operands(&self, tokens: &[Token], count: usize) -> Vec<Token> {
+        let mut result = Vec::new();
+        let mut pos = 0;
+        
+        for _ in 0..count {
+            if pos >= tokens.len() {
+                break;
+            }
+            let operand = self.collect_operand(&tokens[pos..]);
+            let operand_len = operand.len();
+            result.extend(operand);
+            pos += operand_len;
+        }
+        
+        result
+    }
+
+    // rearrange_tokensを統一的なconvert_to_rpnを使うように修正
+    pub(super) fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
+        console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
+        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
+        
+        // 統一的なRPN変換を使用
+        let result = self.convert_to_rpn(tokens);
+        
+        console::log_1(&JsValue::from_str(&format!("Output tokens (RPN): {:?}", result)));
+        console::log_1(&JsValue::from_str("--- end rearrange_tokens ---"));
+        result
     }
 
     fn is_operator(&self, name: &str) -> bool {
         matches!(name, "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=")
-    }
-
-    fn is_commutative_operator(&self, name: &str) -> bool {
-        matches!(name, "+" | "*" | "=")
     }
 
     pub(super) fn token_to_string(&self, token: &Token) -> String {
@@ -183,4 +203,7 @@ impl Interpreter {
             Token::BlockEnd => "}".to_string(),
         }
     }
+
+    // 以下の2つのメソッドは削除（convert_to_rpn_structureとis_commutative_operator）
+    // これらの機能はconvert_to_rpnに統合されました
 }
