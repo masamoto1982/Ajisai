@@ -75,31 +75,38 @@ export class Dictionary {
         this.renderWordButtons(this.elements.builtinWordsDisplay, this.builtinWords, false);
     }
 
-    updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
-        const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
-            name: wordData[0],
-            description: this.decodeWordName(wordData[0]) || wordData[1],
-            protected: wordData[2] || false
-        }));
-        this.renderWordButtons(this.elements.customWordsDisplay, words, true);
-    }
+    // js/gui/dictionary.ts の updateCustomWords メソッドを修正
 
-    private decodeWordName(name: string): string | null {
-        if (name.includes('_')) {
-            const parts = name.split('_');
-            const decoded = parts.map(part => {
-                if (part === 'VSTART') return '[';
-                if (part === 'VEND') return ']';
-                if (part === 'BSTART') return '{';
-                if (part === 'BEND') return '}';
-                if (part === 'NIL') return 'nil';
-                if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
-                return part.toLowerCase();
-            }).join(' ');
-            return `≈ ${decoded}`;
-        }
+updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
+    const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
+        name: wordData[0],
+        description: wordData[1] || this.decodeWordName(wordData[0]) || wordData[0],  // 優先順位を変更
+        protected: wordData[2] || false
+    }));
+    this.renderWordButtons(this.elements.customWordsDisplay, words, true);
+}
+
+private decodeWordName(name: string): string | null {
+    // W_で始まるタイムスタンプ形式の自動生成名は処理しない
+    if (name.match(/^W_[0-9A-F]+$/)) {
         return null;
     }
+    
+    if (name.includes('_')) {
+        const parts = name.split('_');
+        const decoded = parts.map(part => {
+            if (part === 'VSTART') return '[';
+            if (part === 'VEND') return ']';
+            if (part === 'BSTART') return '{';
+            if (part === 'BEND') return '}';
+            if (part === 'NIL') return 'nil';
+            if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
+            return part.toLowerCase();
+        }).join(' ');
+        return `≈ ${decoded}`;
+    }
+    return null;
+}
 
     private renderWordButtons(container: HTMLElement, words: WordInfo[], isCustom: boolean): void {
         container.innerHTML = '';
