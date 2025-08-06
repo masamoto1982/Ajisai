@@ -134,23 +134,58 @@ impl Interpreter {
         Ok(())
     }
 
-    pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
-        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
-        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+    // rust/src/interpreter/word_def.rs のgenerate_word_nameメソッドを修正
 
-        // タイムスタンプベースの名前生成
-        // WASMではSystemTimeが使えないため、js_sys::Dateを使用
-        let timestamp = js_sys::Date::now() as u64;
-        
-        // ミリ秒単位のタイムスタンプを短縮形式に変換（下位の桁を使用）
-        // 例: W_12345678 形式
-        let name = format!("W_{:08X}", timestamp & 0xFFFFFFFF);
+pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
+    console::log_1(&JsValue::from_str("--- generate_word_name ---"));
+    console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
-        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
-        console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
-        
-        name
-    }
+    // RPN形式に変換
+    let rpn_tokens = self.convert_to_rpn(tokens);
+    console::log_1(&JsValue::from_str(&format!("RPN tokens for naming: {:?}", rpn_tokens)));
+    
+    // トークンを文字列化して名前を生成
+    let name_parts: Vec<String> = rpn_tokens.iter()
+        .map(|token| match token {
+            Token::Number(n, d) => {
+                if *d == 1 {
+                    n.to_string()
+                } else {
+                    format!("{}D{}", n, d)  // 分数は「/」の代わりに「D」を使用
+                }
+            },
+            Token::String(s) => format!("S_{}", s.replace(" ", "_")),  // 文字列は「S_」プレフィックス
+            Token::Boolean(b) => b.to_string().to_uppercase(),
+            Token::Symbol(s) => {
+                // 演算子記号を安全な文字に置換
+                match s.as_str() {
+                    "+" => "ADD".to_string(),
+                    "-" => "SUB".to_string(),
+                    "*" => "MUL".to_string(),
+                    "/" => "DIV".to_string(),
+                    ">" => "GT".to_string(),
+                    ">=" => "GE".to_string(),
+                    "=" => "EQ".to_string(),
+                    "<" => "LT".to_string(),
+                    "<=" => "LE".to_string(),
+                    _ => s.clone()
+                }
+            },
+            Token::Nil => "NIL".to_string(),
+            Token::VectorStart => "V".to_string(),  // Vectorの開始
+            Token::VectorEnd => "V".to_string(),    // Vectorの終了
+            Token::BlockStart => "B".to_string(),   // Blockの開始
+            Token::BlockEnd => "B".to_string(),     // Blockの終了
+        })
+        .collect();
+    
+    let name = name_parts.join("_");
+
+    console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
+    console::log_1(&JsValue::from_str("--- end generate_word_name ---"));
+    
+    name
+}
 
     pub(super) fn check_if_value_producer(&self, word_name: &str) -> bool {
         let mut dummy = Interpreter::new();
