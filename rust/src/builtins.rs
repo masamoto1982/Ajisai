@@ -30,9 +30,13 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "UNCONS", "ベクトルを分解 ( vec -- elem vec' )");
     register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )");
     
-    // 制御構造（簡略化）
+    // 制御構造
     register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
     register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )");
+    
+    // 条件演算
+    register_builtin(dictionary, "IFS", "条件で値を選択 ( cond true false -- result )");
+    register_builtin(dictionary, "WHEN", "条件がtrueなら値をプッシュ ( val cond -- val? )");
     
     // 算術演算子
     register_builtin(dictionary, "+", "加算 ( a b -- a+b )");
