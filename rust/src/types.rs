@@ -8,8 +8,6 @@ pub enum Token {
     Symbol(String),
     VectorStart,
     VectorEnd,
-    BlockStart,
-    BlockEnd,
     Nil,
 }
 
@@ -25,7 +23,6 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>),
-    Quotation(Vec<Token>),
     Nil,
 }
 
@@ -128,9 +125,6 @@ impl fmt::Display for Value {
                     write!(f, "{}", item)?;
                 }
                 write!(f, " ]")
-            },
-            ValueType::Quotation(_tokens) => {
-                write!(f, "{{ ... }}")
             },
             ValueType::Nil => write!(f, "nil"),
         }
