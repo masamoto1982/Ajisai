@@ -1,8 +1,7 @@
-use std::collections::HashSet;
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::ValueType;
 
-pub fn op_def(interp: &mut Interpreter) -> Result<()> {
+pub fn op_def(_interp: &mut Interpreter) -> Result<()> {
     // DEFは行末での特殊な構文として処理されるため、
     // 通常の実行フローでここに到達した場合はエラー
     Err(AjisaiError::from("DEF must be used at the end of a line with a string name: <words> \"NAME\" DEF"))
