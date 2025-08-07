@@ -57,23 +57,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             tokens.push(Token::VectorEnd);
             continue;
         }
-        
-        // ブロック開始/終了
-        if ch == '{' {
-            chars.next();
-            tokens.push(Token::BlockStart);
-            continue;
-        }
-        if ch == '}' {
-            chars.next();
-            tokens.push(Token::BlockEnd);
-            continue;
-        }
 
         // その他のトークン（数値、真偽値、NIL、シンボル）
         let mut word = String::new();
         while let Some(&ch) = chars.peek() {
-            if ch.is_whitespace() || ['[', ']', '{', '}', '"', '#'].contains(&ch) {
+            if ch.is_whitespace() || ['[', ']', '"', '#'].contains(&ch) {
                 break;
             }
             word.push(ch);
