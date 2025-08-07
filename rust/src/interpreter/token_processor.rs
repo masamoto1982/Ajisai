@@ -85,40 +85,40 @@ impl Interpreter {
     }
 
     fn collect_operand(&self, tokens: &[Token]) -> Vec<Token> {
-        let mut result = Vec::new();
-        let mut i = 0;
-        let mut depth = 0;
-        
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::VectorStart => {
-                    if depth == 0 && !result.is_empty() {
-                        break;
-                    }
-                    depth += 1;
-                    result.push(tokens[i].clone());
+    let mut result = Vec::new();
+    let mut i = 0;
+    let mut depth = 0;
+    
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::VectorStart => {
+                if depth == 0 && !result.is_empty() {
+                    break;
                 }
-                Token::VectorEnd => {
-                    result.push(tokens[i].clone());
-                    depth -= 1;
-                    if depth == 0 {
-                        i += 1;
-                        break;
-                    }
-                }
-                _ => {
-                    result.push(tokens[i].clone());
-                    if depth == 0 {
-                        i += 1;
-                        break;
-                    }
+                depth += 1;
+                result.push(tokens[i].clone());
+            }
+            Token::VectorEnd => {
+                result.push(tokens[i].clone());
+                depth -= 1;
+                if depth == 0 {
+                    // 構造が完結したので終了
+                    break;  // i += 1 を削除
                 }
             }
-            i += 1;
+            _ => {
+                result.push(tokens[i].clone());
+                if depth == 0 {
+                    // 単一トークンのオペランドなので終了
+                    break;  // i += 1 を削除
+                }
+            }
         }
-        
-        result
+        i += 1;
     }
+    
+    result
+}
 
     fn collect_operands(&self, tokens: &[Token], count: usize) -> Vec<Token> {
         let mut result = Vec::new();
