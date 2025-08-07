@@ -211,7 +211,6 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
         ValueType::Vector(_) => "vector",
-        ValueType::Quotation(_) => "quotation",
         ValueType::Nil => "nil",
     };
     
@@ -234,13 +233,6 @@ fn value_to_js(value: &Value) -> JsValue {
                 arr.push(&value_to_js(item));
             }
             arr.into()
-        },
-        ValueType::Quotation(tokens) => {
-            // Quotationをオブジェクトとして表現
-            let quot_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&quot_obj, &"type".into(), &"quotation".into()).unwrap();
-            js_sys::Reflect::set(&quot_obj, &"length".into(), &JsValue::from_f64(tokens.len() as f64)).unwrap();
-            quot_obj.into()
         },
         ValueType::Nil => JsValue::NULL,
     };
