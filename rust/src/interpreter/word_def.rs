@@ -134,11 +134,7 @@ impl Interpreter {
         Ok(())
     }
 
-    // rust/src/interpreter/word_def.rs のgenerate_word_nameメソッドを修正
-
-// rust/src/interpreter/word_def.rs のgenerate_word_nameメソッドを修正
-
-pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
+    pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
     console::log_1(&JsValue::from_str("--- generate_word_name ---"));
     console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
 
@@ -168,8 +164,6 @@ pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
             },
             Token::VectorStart => "V".to_string(),
             Token::VectorEnd => "V".to_string(),
-            Token::BlockStart => "B".to_string(),
-            Token::BlockEnd => "B".to_string(),
             Token::String(s) => format!("S_{}", s.replace(" ", "_")),
             Token::Boolean(b) => b.to_string().to_uppercase(),
             Token::Nil => "NIL".to_string(),
