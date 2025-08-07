@@ -13,7 +13,7 @@ pub mod step;
 pub mod token_processor;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Value, Stack, Register};
+use crate::types::{Stack, Register};  // Valueを削除
 use self::error::Result;
 
 pub struct Interpreter {
@@ -31,6 +31,7 @@ pub struct Interpreter {
     pub(crate) auto_named: bool,
     pub(crate) last_auto_named_word: Option<String>,
 }
+
 
 #[derive(Clone)]
 pub struct WordDefinition {
