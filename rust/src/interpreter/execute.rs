@@ -30,36 +30,68 @@ impl Interpreter {
     }
 
     pub(super) fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        // 最後が "文字列" DEF のパターンをチェック
-        if tokens.len() >= 2 {
-            let last_idx = tokens.len() - 1;
-            if let (Some(Token::Symbol(def_sym)), Some(Token::String(name))) = 
-                (tokens.get(last_idx), tokens.get(last_idx - 1)) {
-                if def_sym == "DEF" {
-                    let body_tokens = &tokens[..last_idx - 1];
-                    if body_tokens.is_empty() {
-                        return Err(AjisaiError::from("DEF requires a body"));
-                    }
-                    
-                    let rpn_tokens = self.rearrange_tokens(body_tokens);
-                    return self.define_named_word(name.clone(), rpn_tokens);
+    // 最後が "文字列" DEF のパターンをチェック
+    if tokens.len() >= 2 {
+        let last_idx = tokens.len() - 1;
+        if let (Some(Token::Symbol(def_sym)), Some(Token::String(name))) = 
+            (tokens.get(last_idx), tokens.get(last_idx - 1)) {
+            if def_sym == "DEF" {
+                let body_tokens = &tokens[..last_idx - 1];
+                if body_tokens.is_empty() {
+                    return Err(AjisaiError::from("DEF requires a body"));
                 }
+                
+                let rpn_tokens = self.rearrange_tokens(body_tokens);
+                return self.define_named_word(name.clone(), rpn_tokens);
             }
         }
-        
-        let rearranged = self.rearrange_tokens(tokens);
-        
-        if rearranged.len() == 1 {
-            if let Token::Symbol(name) = &rearranged[0] {
-                if self.dictionary.contains_key(name) {
-                    return self.execute_tokens_with_context(&rearranged);
-                }
-            }
-        }
-
-        self.define_from_tokens(tokens)?;
-        Ok(())
     }
+    
+    let rearranged = self.rearrange_tokens(tokens);
+    
+    // 単一トークンの場合の処理
+    if rearranged.len() == 1 {
+        match &rearranged[0] {
+            Token::Symbol(name) if self.dictionary.contains_key(name) => {
+                // 既存のワードなら実行
+                return self.execute_tokens_with_context(&rearranged);
+            },
+            Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
+                // リテラル値なら実行
+                return self.execute_tokens_with_context(&rearranged);
+            },
+            Token::Symbol(_) => {
+                // 未定義のシンボルは自動定義へ
+            },
+            _ => {}
+        }
+    }
+    
+    // 複数トークンの場合、すべてが既知の要素かチェック
+    let mut all_executable = true;
+    for token in &rearranged {
+        match token {
+            Token::Symbol(name) => {
+                if !self.dictionary.contains_key(name) {
+                    all_executable = false;
+                    break;
+                }
+            },
+            Token::Number(_,_) | Token::String(_) | Token::Boolean(_) | 
+            Token::Nil | Token::VectorStart | Token::VectorEnd => {
+                // これらは実行可能
+            },
+        }
+    }
+    
+    if all_executable {
+        // すべてが実行可能なら実行
+        self.execute_tokens_with_context(&rearranged)
+    } else {
+        // 未知のシンボルが含まれるなら自動定義
+        self.define_from_tokens(tokens)
+    }
+}
 
     pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
