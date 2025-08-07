@@ -1,5 +1,3 @@
-// rust/src/interpreter/execute.rs
-
 use crate::types::{Value, ValueType, Token};
 use crate::tokenizer::tokenize;
 use super::{Interpreter, error::{AjisaiError, Result}};
@@ -96,13 +94,6 @@ impl Interpreter {
                     });
                     i += consumed - 1;
                 },
-                Token::BlockStart => {
-                    let (block_tokens, next_index) = self.collect_block_tokens(tokens, i)?;
-                    self.stack.push(Value {
-                        val_type: ValueType::Quotation(block_tokens),
-                    });
-                    i = next_index - 1;
-                },
                 Token::Symbol(name) => {
                     if let Some(def) = self.dictionary.get(name).cloned() {
                         if def.is_builtin {
@@ -114,7 +105,7 @@ impl Interpreter {
                         return Err(AjisaiError::UnknownWord(name.clone()));
                     }
                 },
-                Token::VectorEnd | Token::BlockEnd => {
+                Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected closing delimiter found."));
                 },
             }
@@ -176,9 +167,7 @@ impl Interpreter {
             "EMPTY?" => op_empty(self),
             
             // 制御構造
-            "IF" => op_if(self),
             "DEL" => op_del(self),
-            "CALL" => op_call(self),
             "DEF" => op_def(self),
             
             // Nil関連
