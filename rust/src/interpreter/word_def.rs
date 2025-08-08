@@ -140,7 +140,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+    pub(super) fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
         self.call_stack.push(name.to_string());
         let result = self.execute_tokens_with_context(tokens);
         self.call_stack.pop();
