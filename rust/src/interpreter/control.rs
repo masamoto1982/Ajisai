@@ -7,7 +7,7 @@ pub fn op_def(_interp: &mut Interpreter) -> Result<()> {
     Err(AjisaiError::from("DEF must be used at the end of a line with a string name: <words> \"NAME\" DEF"))
 }
 
-// 新規追加: IFS（暗黙の反復対応）
+// 条件選択
 pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 3 {
         return Err(AjisaiError::StackUnderflow);
@@ -17,29 +17,28 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
     let true_val = interp.stack.pop().unwrap();
     let condition = interp.stack.pop().unwrap();
     
-    let result = match condition.val_type {
-        ValueType::Boolean(b) => {
-            if b { true_val } else { false_val }
-        },
-        ValueType::Nil => false_val,
-        ValueType::Vector(v) => {
-            // ベクトルの各要素に条件適用
-            let results: Vec<Value> = v.into_iter().map(|elem| {
-                match elem.val_type {
-                    ValueType::Boolean(b) => {
-                        if b { true_val.clone() } else { false_val.clone() }
-                    },
-                    ValueType::Nil => false_val.clone(),
-                    _ => elem,  // その他の型はそのまま
-                }
-            }).collect();
-            Value { val_type: ValueType::Vector(results) }
-        },
-        _ => return Err(AjisaiError::type_error("boolean, nil, or vector", "other type")),
-    };
+    let result = apply_if_select(&condition, &true_val, &false_val);
     
     interp.stack.push(result);
     Ok(())
+}
+
+// 再帰的なヘルパー関数
+fn apply_if_select(condition: &Value, true_val: &Value, false_val: &Value) -> Value {
+    match &condition.val_type {
+        ValueType::Boolean(b) => {
+            if *b { true_val.clone() } else { false_val.clone() }
+        },
+        ValueType::Nil => false_val.clone(),
+        ValueType::Vector(v) => {
+            // ベクトルの各要素に再帰的に適用
+            let results: Vec<Value> = v.iter().map(|elem| {
+                apply_if_select(elem, true_val, false_val)
+            }).collect();
+            Value { val_type: ValueType::Vector(results) }
+        },
+        _ => condition.clone(),  // その他の型はそのまま返す
+    }
 }
 
 // 新規追加: WHEN（条件付き実行）
