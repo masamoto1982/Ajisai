@@ -13,7 +13,7 @@ pub mod step;
 pub mod token_processor;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Register};  // Valueを削除
+use crate::types::{Stack, Register};
 use self::error::Result;
 
 pub struct Interpreter {
@@ -30,13 +30,15 @@ pub struct Interpreter {
     pub(crate) step_mode: bool,
     pub(crate) auto_named: bool,
     pub(crate) last_auto_named_word: Option<String>,
+    // 実行後削除予定のワードを追跡
+    pub(crate) words_to_delete: Vec<String>,
 }
-
 
 #[derive(Clone)]
 pub struct WordDefinition {
     pub tokens: Vec<crate::types::Token>,
     pub is_builtin: bool,
+    pub is_temporary: bool,  // 追加: 一時的なワードかどうか
     pub description: Option<String>,
 }
 
@@ -60,6 +62,7 @@ impl Interpreter {
             step_mode: false,
             auto_named: false,
             last_auto_named_word: None,
+            words_to_delete: Vec::new(),  // 追加
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
@@ -76,6 +79,23 @@ impl Interpreter {
             self.word_properties.insert(name.to_string(), WordProperty {
                 is_value_producer: true,
             });
+        }
+    }
+    
+    // 一時的なワードをクリーンアップ
+    pub(crate) fn cleanup_temporary_words(&mut self) {
+        for word_name in self.words_to_delete.drain(..) {
+            // 依存関係もクリーンアップ
+            if let Some(deps) = self.dependencies.get(&word_name) {
+                for dep in deps.clone() {
+                    if let Some(dep_set) = self.dependencies.get_mut(&dep) {
+                        dep_set.remove(&word_name);
+                    }
+                }
+            }
+            self.dependencies.remove(&word_name);
+            self.dictionary.remove(&word_name);
+            self.word_properties.remove(&word_name);
         }
     }
     
@@ -103,21 +123,21 @@ impl Interpreter {
     
     pub fn get_custom_words(&self) -> Vec<String> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
+            .filter(|(_, def)| !def.is_builtin && !def.is_temporary)  // 一時的なワードを除外
             .map(|(name, _)| name.clone())
             .collect()
     }
     
     pub fn get_custom_words_with_descriptions(&self) -> Vec<(String, Option<String>)> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
+            .filter(|(_, def)| !def.is_builtin && !def.is_temporary)  // 一時的なワードを除外
             .map(|(name, def)| (name.clone(), def.description.clone()))
             .collect()
     }
    
     pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
+            .filter(|(_, def)| !def.is_builtin && !def.is_temporary)  // 一時的なワードを除外
             .map(|(name, def)| {
                 let is_protected = self.dependencies.get(name).map_or(false, |deps| !deps.is_empty());
                 (name.clone(), def.description.clone(), is_protected)
