@@ -51,6 +51,7 @@ impl Interpreter {
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: body_tokens,
             is_builtin: false,
+            is_temporary: false,  // 明示的に命名されたワードは永続的
             description: None,
         });
 
@@ -73,18 +74,16 @@ impl Interpreter {
         console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
         
         if self.dictionary.contains_key(&name) {
-            if let Some(dependents) = self.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(AjisaiError::ProtectedWord {
-                        name: name.clone(),
-                        dependents: dependent_list,
-                    });
-                }
+            // 既存のワードがある場合は、それを実行するように変更
+            console::log_1(&JsValue::from_str(&format!("Word '{}' already exists, executing it", name)));
+            
+            // 既存のワードを実行
+            let def = self.dictionary.get(&name).cloned().unwrap();
+            if def.is_temporary {
+                // 一時的なワードの場合は削除予約
+                self.words_to_delete.push(name.clone());
             }
-            self.append_output(&format!("Word '{}' already exists.\n", name));
-            console::log_1(&JsValue::from_str("--- end define_from_tokens (already exists) ---"));
-            return Ok(());
+            return self.execute_custom_word(&name, &def.tokens);
         }
 
         self.auto_named = true;
@@ -119,8 +118,9 @@ impl Interpreter {
         ));
 
         self.dictionary.insert(name.clone(), WordDefinition {
-            tokens: storage_tokens,
+            tokens: storage_tokens.clone(),
             is_builtin: false,
+            is_temporary: true,  // 自動命名されたワードは一時的
             description,
         });
 
@@ -129,51 +129,36 @@ impl Interpreter {
             is_value_producer: is_producer,
         });
 
-        self.append_output(&format!("Defined: {}\n", name));
+        // 自動命名されたワードを即座に実行
+        console::log_1(&JsValue::from_str(&format!("Executing auto-named word: {}", name)));
+        self.execute_custom_word(&name, &storage_tokens)?;
+        
+        // 実行後に削除予約
+        self.words_to_delete.push(name.clone());
+        
         console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
         Ok(())
     }
 
-    pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
-    console::log_1(&JsValue::from_str("--- generate_word_name ---"));
-    console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+    fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+        self.call_stack.push(name.to_string());
+        let result = self.execute_tokens_with_context(tokens);
+        self.call_stack.pop();
+        
+        result.map_err(|e| e.with_context(&self.call_stack))
+    }
 
-    // 入力順序のまま名前を生成（RPN変換せず）
-    let name_parts: Vec<String> = tokens.iter()
-        .map(|token| match token {
-            Token::Number(n, d) => {
-                if *d == 1 {
-                    n.to_string()
-                } else {
-                    format!("{}D{}", n, d)
-                }
-            },
-            Token::Symbol(s) => {
-                match s.as_str() {
-                    "+" => "ADD".to_string(),
-                    "-" => "SUB".to_string(),
-                    "*" => "MUL".to_string(),
-                    "/" => "DIV".to_string(),
-                    ">" => "GT".to_string(),
-                    ">=" => "GE".to_string(),
-                    "=" => "EQ".to_string(),
-                    "<" => "LT".to_string(),
-                    "<=" => "LE".to_string(),
-                    _ => s.clone()
-                }
-            },
-            Token::VectorStart => "V".to_string(),
-            Token::VectorEnd => "V".to_string(),
-            Token::String(s) => format!("S_{}", s.replace(" ", "_")),
-            Token::Boolean(b) => b.to_string().to_uppercase(),
-            Token::Nil => "NIL".to_string(),
-        })
-        .collect();
-    
-    let name = name_parts.join("_");
-    console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
-    name
-}
+    pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
+        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
+        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+
+        // タイムスタンプベースのユニークな名前を生成
+        let timestamp = js_sys::Date::now() as u64;
+        let name = format!("W_{:X}", timestamp);
+        
+        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
+        name
+    }
 
     pub(super) fn check_if_value_producer(&self, word_name: &str) -> bool {
         let mut dummy = Interpreter::new();
@@ -221,6 +206,7 @@ impl Interpreter {
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens,
             is_builtin: false,
+            is_temporary: false,  // 復元されたワードは永続的
             description,
         });
 
