@@ -19,9 +19,6 @@ impl Interpreter {
             self.process_line(line)?;
         }
         
-        // 実行後に一時的なワードをクリーンアップ
-        self.cleanup_temporary_words();
-        
         Ok(())
     }
 
@@ -61,10 +58,21 @@ impl Interpreter {
                 },
                 // 既存のワードは実行
                 Token::Symbol(name) => {
-                    if let Some(def) = self.dictionary.get(name).cloned() {
-                        if def.is_temporary {
-                            // 一時的なワードの場合は削除予約
-                            self.words_to_delete.push(name.clone());
+                    if self.dictionary.contains_key(name) {
+                        // 一時的なワードの実行と削除はdefine_from_tokensで処理
+                        if let Some(def) = self.dictionary.get(name).cloned() {
+                            if def.is_temporary {
+                                // 一時ワードの実行と削除
+                                self.execute_custom_word(name, &def.tokens)?;
+                                self.dictionary.remove(name);
+                                self.dependencies.remove(name);
+                                self.word_properties.remove(name);
+                                // 依存関係のクリーンアップ
+                                for (_, deps) in self.dependencies.iter_mut() {
+                                    deps.remove(name);
+                                }
+                                return Ok(());
+                            }
                         }
                         return self.execute_tokens_with_context(tokens);
                     } else {
@@ -126,12 +134,7 @@ impl Interpreter {
                         if def.is_builtin {
                             self.execute_builtin(name)?;
                         } else {
-                            // execute_custom_wordを呼び出す（word_def.rsで定義）
                             self.execute_custom_word(name, &def.tokens)?;
-                            // 一時的なワードの場合は削除予約
-                            if def.is_temporary {
-                                self.words_to_delete.push(name.clone());
-                            }
                         }
                     } else {
                         return Err(AjisaiError::UnknownWord(name.clone()));
@@ -145,8 +148,6 @@ impl Interpreter {
         }
         Ok(())
     }
-
-    // execute_custom_wordメソッドの定義を削除（word_def.rsで定義されているため）
 
     pub(super) fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
