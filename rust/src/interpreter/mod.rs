@@ -123,23 +123,28 @@ impl Interpreter {
     
     pub fn get_custom_words(&self) -> Vec<String> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin && !def.is_temporary)  // 一時的なワードを除外
+            .filter(|(_, def)| !def.is_builtin)  // 一時的なワードも含める
             .map(|(name, _)| name.clone())
             .collect()
     }
     
     pub fn get_custom_words_with_descriptions(&self) -> Vec<(String, Option<String>)> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin && !def.is_temporary)  // 一時的なワードを除外
+            .filter(|(_, def)| !def.is_builtin)  // 一時的なワードも含める
             .map(|(name, def)| (name.clone(), def.description.clone()))
             .collect()
     }
    
     pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin && !def.is_temporary)  // 一時的なワードを除外
+            .filter(|(_, def)| !def.is_builtin)  // 一時的なワードも含める
             .map(|(name, def)| {
-                let is_protected = self.dependencies.get(name).map_or(false, |deps| !deps.is_empty());
+                // 一時的なワードは保護されていないものとして扱う（削除可能）
+                let is_protected = if def.is_temporary {
+                    false
+                } else {
+                    self.dependencies.get(name).map_or(false, |deps| !deps.is_empty())
+                };
                 (name.clone(), def.description.clone(), is_protected)
             })
             .collect()
