@@ -187,7 +187,7 @@ impl Interpreter {
             // 制御構造
             "DEL" => op_del(self),
             "DEF" => op_def(self),
-            "IFS" => op_if_select(self),
+            "?" => op_if_select(self),
             "WHEN" => op_when(self),
             
             // Nil関連
