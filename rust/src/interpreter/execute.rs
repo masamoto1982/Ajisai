@@ -126,6 +126,7 @@ impl Interpreter {
                         if def.is_builtin {
                             self.execute_builtin(name)?;
                         } else {
+                            // execute_custom_wordを呼び出す（word_def.rsで定義）
                             self.execute_custom_word(name, &def.tokens)?;
                             // 一時的なワードの場合は削除予約
                             if def.is_temporary {
@@ -145,13 +146,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
-        self.call_stack.push(name.to_string());
-        let result = self.execute_tokens_with_context(tokens);
-        self.call_stack.pop();
-        
-        result.map_err(|e| e.with_context(&self.call_stack))
-    }
+    // execute_custom_wordメソッドの定義を削除（word_def.rsで定義されているため）
 
     pub(super) fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
