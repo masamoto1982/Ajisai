@@ -35,7 +35,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )");
     
     // 条件演算
-    register_builtin(dictionary, "IFS", "条件で値を選択 ( cond true false -- result )");
+    register_builtin(dictionary, "?", "条件で値を選択 ( cond true false -- result )");
     register_builtin(dictionary, "WHEN", "条件がtrueなら値をプッシュ ( val cond -- val? )");
     
     // 算術演算子
