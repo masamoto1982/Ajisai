@@ -1,3 +1,5 @@
+// rust/src/interpreter/execute.rs
+
 use crate::types::{Value, ValueType, Token};
 use crate::tokenizer::tokenize;
 use super::{Interpreter, error::{AjisaiError, Result}};
@@ -17,6 +19,9 @@ impl Interpreter {
             self.process_line(line)?;
         }
         
+        // 実行後に一時的なワードをクリーンアップ
+        self.cleanup_temporary_words();
+        
         Ok(())
     }
 
@@ -30,54 +35,58 @@ impl Interpreter {
     }
 
     pub(super) fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-    // 最後が "文字列" DEF のパターンをチェック（明示的な命名）
-    if tokens.len() >= 2 {
-        let last_idx = tokens.len() - 1;
-        if let (Some(Token::Symbol(def_sym)), Some(Token::String(name))) = 
-            (tokens.get(last_idx), tokens.get(last_idx - 1)) {
-            if def_sym == "DEF" {
-                let body_tokens = &tokens[..last_idx - 1];
-                if body_tokens.is_empty() {
-                    return Err(AjisaiError::from("DEF requires a body"));
+        // 最後が "文字列" DEF のパターンをチェック（明示的な命名）
+        if tokens.len() >= 2 {
+            let last_idx = tokens.len() - 1;
+            if let (Some(Token::Symbol(def_sym)), Some(Token::String(name))) = 
+                (tokens.get(last_idx), tokens.get(last_idx - 1)) {
+                if def_sym == "DEF" {
+                    let body_tokens = &tokens[..last_idx - 1];
+                    if body_tokens.is_empty() {
+                        return Err(AjisaiError::from("DEF requires a body"));
+                    }
+                    
+                    let rpn_tokens = self.rearrange_tokens(body_tokens);
+                    return self.define_named_word(name.clone(), rpn_tokens);
                 }
-                
-                let rpn_tokens = self.rearrange_tokens(body_tokens);
-                return self.define_named_word(name.clone(), rpn_tokens);
             }
         }
-    }
-    
-    // 単一トークンの場合
-    if tokens.len() == 1 {
-        match &tokens[0] {
-            // リテラル値は直接実行
-            Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
-                return self.execute_tokens_with_context(tokens);
-            },
-            // 既存のワードは実行
-            Token::Symbol(name) => {
-                if self.dictionary.contains_key(name) {
+        
+        // 単一トークンの場合
+        if tokens.len() == 1 {
+            match &tokens[0] {
+                // リテラル値は直接実行
+                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
                     return self.execute_tokens_with_context(tokens);
-                } else {
-                    return Err(AjisaiError::UnknownWord(name.clone()));
+                },
+                // 既存のワードは実行
+                Token::Symbol(name) => {
+                    if let Some(def) = self.dictionary.get(name).cloned() {
+                        if def.is_temporary {
+                            // 一時的なワードの場合は削除予約
+                            self.words_to_delete.push(name.clone());
+                        }
+                        return self.execute_tokens_with_context(tokens);
+                    } else {
+                        return Err(AjisaiError::UnknownWord(name.clone()));
+                    }
+                },
+                // ベクトルの開始/終了だけならエラー
+                Token::VectorStart | Token::VectorEnd => {
+                    return Err(AjisaiError::from("Incomplete vector notation"));
                 }
-            },
-            // ベクトルの開始/終了だけならエラー
-            Token::VectorStart | Token::VectorEnd => {
-                return Err(AjisaiError::from("Incomplete vector notation"));
             }
         }
+        
+        // ベクトルリテラルの特別処理（[ ... ]は直接実行）
+        if tokens.first() == Some(&Token::VectorStart) && 
+           tokens.last() == Some(&Token::VectorEnd) {
+            return self.execute_tokens_with_context(tokens);
+        }
+        
+        // 複数トークンの式は必ず自動定義（Ajisaiのコンセプト）
+        self.define_from_tokens(tokens)
     }
-    
-    // ベクトルリテラルの特別処理（[ ... ]は直接実行）
-    if tokens.first() == Some(&Token::VectorStart) && 
-       tokens.last() == Some(&Token::VectorEnd) {
-        return self.execute_tokens_with_context(tokens);
-    }
-    
-    // 複数トークンの式は必ず自動定義（Ajisaiのコンセプト）
-    self.define_from_tokens(tokens)
-}
 
     pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
@@ -118,6 +127,10 @@ impl Interpreter {
                             self.execute_builtin(name)?;
                         } else {
                             self.execute_custom_word(name, &def.tokens)?;
+                            // 一時的なワードの場合は削除予約
+                            if def.is_temporary {
+                                self.words_to_delete.push(name.clone());
+                            }
                         }
                     } else {
                         return Err(AjisaiError::UnknownWord(name.clone()));
