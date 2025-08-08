@@ -1,3 +1,5 @@
+// rust/src/builtins.rs
+
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
 
@@ -60,7 +62,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "NIL?", "nilかどうかをチェック ( a -- bool )");
     register_builtin(dictionary, "NOT-NIL?", "nilでないかをチェック ( a -- bool )");
     register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック ( a -- bool )");
-    register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a b -- a | b )");
+    register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a | b -- a | b )");
 
     // 出力
     register_builtin(dictionary, ".", "値を出力してドロップ ( a -- )");
@@ -78,6 +80,7 @@ fn register_builtin(dictionary: &mut HashMap<String, WordDefinition>, name: &str
     dictionary.insert(name.to_string(), WordDefinition {
         tokens: vec![],
         is_builtin: true,
+        is_temporary: false,  // ビルトインは永続的
         description: Some(description.to_string()),
     });
 }
