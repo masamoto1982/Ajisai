@@ -90,8 +90,61 @@ impl Interpreter {
             return self.execute_tokens_with_context(tokens);
         }
         
+        // ベクトルとカスタムワードの組み合わせをチェック
+        if self.is_vector_and_word_combination(tokens) {
+            // 暗黙の反復として実行する
+            return self.execute_tokens_with_context(tokens);
+        }
+        
         // 複数トークンの式は必ず自動定義（Ajisaiのコンセプト）
         self.define_from_tokens(tokens)
+    }
+    
+    // ベクトルとカスタムワードの組み合わせかどうかをチェック
+    fn is_vector_and_word_combination(&self, tokens: &[Token]) -> bool {
+        // パターン1: [ ... ] WORD
+        if tokens.len() >= 2 {
+            if tokens.first() == Some(&Token::VectorStart) {
+                // ベクトルの終端を探す
+                let mut depth = 0;
+                let mut vec_end_idx = None;
+                for (i, token) in tokens.iter().enumerate() {
+                    match token {
+                        Token::VectorStart => depth += 1,
+                        Token::VectorEnd => {
+                            depth -= 1;
+                            if depth == 0 {
+                                vec_end_idx = Some(i);
+                                break;
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+                
+                // ベクトルの後に単一のワードがある場合
+                if let Some(end_idx) = vec_end_idx {
+                    if end_idx == tokens.len() - 2 {
+                        if let Token::Symbol(name) = &tokens[tokens.len() - 1] {
+                            return self.dictionary.contains_key(name);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // パターン2: WORD [ ... ]
+        if tokens.len() >= 2 {
+            if let Token::Symbol(name) = &tokens[0] {
+                if tokens[1] == Token::VectorStart && 
+                   tokens.last() == Some(&Token::VectorEnd) &&
+                   self.dictionary.contains_key(name) {
+                    return true;
+                }
+            }
+        }
+        
+        false
     }
 
     pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
@@ -149,184 +202,46 @@ impl Interpreter {
 
     // 暗黙の反復機能を持つカスタムワード実行
     pub(super) fn execute_custom_word_with_iteration(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
-        // アリティ（引数の数）を推定
-        let arity = self.estimate_word_arity(name, tokens);
-        
-        // スタックから必要な数の引数を確認
-        if self.stack.len() < arity {
-            // 引数が足りない場合は通常の実行を試みる
-            return self.execute_custom_word_simple(name, tokens);
-        }
-        
-        // 引数の中にベクトルがあるかチェック
-        let mut has_vector = false;
-        let mut vector_positions = Vec::new();
-        let mut vector_lengths = Vec::new();
-        
-        for i in 0..arity {
-            let idx = self.stack.len() - arity + i;
-            if let ValueType::Vector(v) = &self.stack[idx].val_type {
-                has_vector = true;
-                vector_positions.push(i);
-                vector_lengths.push(v.len());
-            }
-        }
-        
-        if !has_vector {
-            // ベクトルがない場合は通常の実行
-            return self.execute_custom_word_simple(name, tokens);
-        }
-        
-        // すべてのベクトルが同じ長さかチェック
-        if !vector_lengths.is_empty() {
-            let first_len = vector_lengths[0];
-            if !vector_lengths.iter().all(|&len| len == first_len) {
-                // 長さが異なる場合はエラー
-                return Err(AjisaiError::from("Vector length mismatch in implicit iteration"));
-            }
-        }
-        
-        // ベクトルがある場合は暗黙の反復を適用
-        self.apply_implicit_iteration(name, tokens, arity, vector_positions)
-    }
-    
-    fn apply_implicit_iteration(
-        &mut self, 
-        name: &str, 
-        tokens: &[Token], 
-        arity: usize,
-        vector_positions: Vec<usize>
-    ) -> Result<()> {
-        // 引数を取得
-        let mut args = Vec::new();
-        for _ in 0..arity {
-            args.push(self.stack.pop().unwrap());
-        }
-        args.reverse();
-        
-        // ベクトルの長さを取得（すべて同じ長さのはず）
-        let vec_len = args.iter()
-            .enumerate()
-            .filter_map(|(idx, arg)| {
-                if vector_positions.contains(&idx) {
-                    if let ValueType::Vector(v) = &arg.val_type {
-                        Some(v.len())
+        // スタックトップがベクトルかチェック（単項演算として処理）
+        if let Some(top_value) = self.stack.last() {
+            if let ValueType::Vector(elements) = &top_value.val_type.clone() {
+                // ベクトルをポップ
+                self.stack.pop();
+                
+                // 各要素に対してワードを適用
+                let mut results = Vec::new();
+                for elem in elements {
+                    // 要素をスタックにプッシュ
+                    self.stack.push(elem.clone());
+                    
+                    // ワードを実行
+                    self.call_stack.push(name.to_string());
+                    self.execute_tokens_with_context(tokens)?;
+                    self.call_stack.pop();
+                    
+                    // 結果を収集（スタックトップから取得）
+                    if let Some(result) = self.stack.pop() {
+                        results.push(result);
                     } else {
-                        None
+                        // 結果がない場合はnilを追加
+                        results.push(Value { val_type: ValueType::Nil });
                     }
-                } else {
-                    None
                 }
-            })
-            .next()
-            .unwrap_or(0);
-        
-        // 各インデックスに対して処理
-        let mut results = Vec::new();
-        for i in 0..vec_len {
-            // 引数を準備
-            for (arg_idx, arg) in args.iter().enumerate() {
-                if vector_positions.contains(&arg_idx) {
-                    // ベクトル引数から要素を取得
-                    if let ValueType::Vector(v) = &arg.val_type {
-                        self.stack.push(v[i].clone());
-                    }
-                } else {
-                    // スカラー引数はそのまま使用（ブロードキャスト）
-                    self.stack.push(arg.clone());
-                }
-            }
-            
-            // ワードを実行
-            self.call_stack.push(name.to_string());
-            let exec_result = self.execute_tokens_with_context(tokens);
-            self.call_stack.pop();
-            
-            exec_result.map_err(|e| e.with_context(&self.call_stack))?;
-            
-            // 結果を収集（スタックトップから取得）
-            if let Some(result) = self.stack.pop() {
-                results.push(result);
-            } else {
-                // 結果がない場合はnilを追加
-                results.push(Value { val_type: ValueType::Nil });
+                
+                // 結果のベクトルをスタックにプッシュ
+                self.stack.push(Value {
+                    val_type: ValueType::Vector(results)
+                });
+                
+                return Ok(());
             }
         }
         
-        // 結果をスタックにプッシュ
-        self.stack.push(Value {
-            val_type: ValueType::Vector(results)
-        });
-        
-        Ok(())
-    }
-    
-    // 通常のカスタムワード実行（暗黙の反復なし）
-    fn execute_custom_word_simple(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+        // ベクトルでない場合は通常の実行
         self.call_stack.push(name.to_string());
         let result = self.execute_tokens_with_context(tokens);
         self.call_stack.pop();
         result.map_err(|e| e.with_context(&self.call_stack))
-    }
-    
-    fn estimate_word_arity(&self, _name: &str, tokens: &[Token]) -> usize {
-        // トークンをシミュレーション実行してアリティを推定
-        let mut dummy_stack: Vec<()> = Vec::new();
-        let mut consumed = 0usize;
-        
-        for token in tokens {
-            match token {
-                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
-                    dummy_stack.push(());
-                },
-                Token::Symbol(sym) => {
-                    // 既知の演算子のアリティ
-                    let arity = match sym.as_str() {
-                        "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=" | "AND" | "OR" => {
-                            consumed = consumed.saturating_add(2);
-                            if dummy_stack.len() >= 2 {
-                                dummy_stack.pop();
-                                dummy_stack.pop();
-                                dummy_stack.push(());
-                            }
-                            2
-                        },
-                        "DUP" | "NOT" | "NIL?" | "NOT-NIL?" => {
-                            consumed = consumed.saturating_add(1);
-                            if !dummy_stack.is_empty() {
-                                dummy_stack.push(());
-                            }
-                            1
-                        },
-                        "DROP" => {
-                            consumed = consumed.saturating_add(1);
-                            dummy_stack.pop();
-                            1
-                        },
-                        "SWAP" | "OVER" => {
-                            consumed = consumed.saturating_add(2);
-                            2
-                        },
-                        "ROT" | "?" => {
-                            consumed = consumed.saturating_add(3);
-                            3
-                        },
-                        _ => {
-                            // カスタムワードの場合、デフォルトで1引数と仮定
-                            consumed = consumed.saturating_add(1);
-                            1
-                        }
-                    };
-                    
-                    // 最大値を記録
-                    consumed = consumed.max(arity);
-                },
-                _ => {}
-            }
-        }
-        
-        // スタックに追加された要素の数と消費された要素の数から推定
-        consumed.saturating_sub(dummy_stack.len()).max(1)
     }
 
     pub(super) fn execute_builtin(&mut self, name: &str) -> Result<()> {
