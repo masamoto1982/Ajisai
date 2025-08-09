@@ -30,7 +30,6 @@ pub struct Interpreter {
     pub(crate) step_mode: bool,
     pub(crate) auto_named: bool,
     pub(crate) last_auto_named_word: Option<String>,
-    // words_to_deleteフィールドは削除
 }
 
 #[derive(Clone)]
@@ -61,7 +60,6 @@ impl Interpreter {
             step_mode: false,
             auto_named: false,
             last_auto_named_word: None,
-            // words_to_deleteの初期化も削除
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
@@ -81,22 +79,7 @@ impl Interpreter {
         }
     }
     
-    // 一時的なワードをクリーンアップ
-    pub(crate) fn cleanup_temporary_words(&mut self) {
-        for word_name in self.words_to_delete.drain(..) {
-            // 依存関係もクリーンアップ
-            if let Some(deps) = self.dependencies.get(&word_name) {
-                for dep in deps.clone() {
-                    if let Some(dep_set) = self.dependencies.get_mut(&dep) {
-                        dep_set.remove(&word_name);
-                    }
-                }
-            }
-            self.dependencies.remove(&word_name);
-            self.dictionary.remove(&word_name);
-            self.word_properties.remove(&word_name);
-        }
-    }
+    // cleanup_temporary_words メソッドは削除
     
     // 基本的なアクセサメソッド
     pub fn get_output(&mut self) -> String {
