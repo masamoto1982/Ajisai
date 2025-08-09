@@ -30,8 +30,7 @@ pub struct Interpreter {
     pub(crate) step_mode: bool,
     pub(crate) auto_named: bool,
     pub(crate) last_auto_named_word: Option<String>,
-    // 実行後削除予定のワードを追跡
-    pub(crate) words_to_delete: Vec<String>,
+    // words_to_deleteフィールドは削除
 }
 
 #[derive(Clone)]
@@ -62,7 +61,7 @@ impl Interpreter {
             step_mode: false,
             auto_named: false,
             last_auto_named_word: None,
-            words_to_delete: Vec::new(),  // 追加
+            // words_to_deleteの初期化も削除
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
