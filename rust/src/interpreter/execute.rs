@@ -62,16 +62,14 @@ impl Interpreter {
                         // 一時的なワードの実行と削除
                         if let Some(def) = self.dictionary.get(name).cloned() {
                             if def.is_temporary {
-                                // 一時ワードの実行
-                                self.execute_custom_word(name, &def.tokens)?;
+                                // 一時ワードの実行（暗黙の反復あり）
+                                self.execute_custom_word_with_iteration(name, &def.tokens)?;
                                 // 連鎖削除
                                 self.delete_temporary_word_cascade(name);
                                 return Ok(());
-                            } else {
+                            } else if !def.is_builtin {
                                 // 永続的なカスタムワードの場合、暗黙の反復を試みる
-                                if !def.is_builtin {
-                                    return self.execute_custom_word(name, &def.tokens);
-                                }
+                                return self.execute_custom_word_with_iteration(name, &def.tokens);
                             }
                         }
                         return self.execute_tokens_with_context(tokens);
@@ -134,7 +132,7 @@ impl Interpreter {
                         if def.is_builtin {
                             self.execute_builtin(name)?;
                         } else {
-                            self.execute_custom_word(name, &def.tokens)?;
+                            self.execute_custom_word_with_iteration(name, &def.tokens)?;
                         }
                     } else {
                         return Err(AjisaiError::UnknownWord(name.clone()));
@@ -149,14 +147,15 @@ impl Interpreter {
         Ok(())
     }
 
-    pub(super) fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+    // 暗黙の反復機能を持つカスタムワード実行
+    pub(super) fn execute_custom_word_with_iteration(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
         // アリティ（引数の数）を推定
         let arity = self.estimate_word_arity(name, tokens);
         
         // スタックから必要な数の引数を確認
         if self.stack.len() < arity {
             // 引数が足りない場合は通常の実行を試みる
-            return self.execute_custom_word_normal(name, tokens);
+            return self.execute_custom_word_simple(name, tokens);
         }
         
         // 引数の中にベクトルがあるかチェック
@@ -175,7 +174,7 @@ impl Interpreter {
         
         if !has_vector {
             // ベクトルがない場合は通常の実行
-            return self.execute_custom_word_normal(name, tokens);
+            return self.execute_custom_word_simple(name, tokens);
         }
         
         // すべてのベクトルが同じ長さかチェック
@@ -262,7 +261,8 @@ impl Interpreter {
         Ok(())
     }
     
-    fn execute_custom_word_normal(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+    // 通常のカスタムワード実行（暗黙の反復なし）
+    fn execute_custom_word_simple(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
         self.call_stack.push(name.to_string());
         let result = self.execute_tokens_with_context(tokens);
         self.call_stack.pop();
