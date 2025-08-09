@@ -24,6 +24,7 @@ pub enum ValueType {
     Symbol(String),
     Vector(Vec<Value>),
     Nil,
+    Quotation(Vec<Token>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
