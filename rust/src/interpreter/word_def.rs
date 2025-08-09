@@ -1,6 +1,6 @@
 // rust/src/interpreter/word_def.rs
 
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use crate::types::{Token};
 use super::{Interpreter, WordDefinition, WordProperty, error::{AjisaiError, Result}};
 use wasm_bindgen::JsValue;
@@ -66,6 +66,54 @@ impl Interpreter {
         Ok(())
     }
     
+    // 一時的なワードとその依存関係を再帰的に削除するメソッド
+    pub(super) fn delete_temporary_word_cascade(&mut self, word_name: &str) {
+        // 削除対象のワードを収集
+        let mut words_to_delete = HashSet::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(word_name.to_string());
+        
+        while let Some(current_word) = queue.pop_front() {
+            // すでに処理済みならスキップ
+            if !words_to_delete.insert(current_word.clone()) {
+                continue;
+            }
+            
+            // このワードが使用しているワードを探す
+            if let Some(def) = self.dictionary.get(&current_word) {
+                // 一時的なワードのみ対象
+                if def.is_temporary {
+                    // トークンから依存しているワードを抽出
+                    for token in &def.tokens {
+                        if let Token::Symbol(dep_name) = token {
+                            if let Some(dep_def) = self.dictionary.get(dep_name) {
+                                // 依存先も一時的なワードなら削除対象に追加
+                                if dep_def.is_temporary {
+                                    queue.push_back(dep_name.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 収集したワードをすべて削除
+        for word in words_to_delete {
+            console::log_1(&JsValue::from_str(&format!("Deleting temporary word: {}", word)));
+            
+            // 辞書から削除
+            self.dictionary.remove(&word);
+            self.word_properties.remove(&word);
+            
+            // 依存関係のクリーンアップ
+            self.dependencies.remove(&word);
+            for (_, deps) in self.dependencies.iter_mut() {
+                deps.remove(&word);
+            }
+        }
+    }
+    
     pub(super) fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
         console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
@@ -79,14 +127,8 @@ impl Interpreter {
                 if def.is_temporary {
                     console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
                     self.execute_custom_word(&name, &def.tokens)?;
-                    // 実行後に削除
-                    self.dictionary.remove(&name);
-                    self.dependencies.remove(&name);
-                    self.word_properties.remove(&name);
-                    // 依存関係のクリーンアップ
-                    for (_, deps) in self.dependencies.iter_mut() {
-                        deps.remove(&name);
-                    }
+                    // 実行後に連鎖削除
+                    self.delete_temporary_word_cascade(&name);
                 } else {
                     // 永続的なワードの場合は単に実行
                     console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
