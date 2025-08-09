@@ -59,18 +59,13 @@ impl Interpreter {
                 // 既存のワードは実行
                 Token::Symbol(name) => {
                     if self.dictionary.contains_key(name) {
-                        // 一時的なワードの実行と削除はdefine_from_tokensで処理
+                        // 一時的なワードの実行と削除
                         if let Some(def) = self.dictionary.get(name).cloned() {
                             if def.is_temporary {
-                                // 一時ワードの実行と削除
+                                // 一時ワードの実行
                                 self.execute_custom_word(name, &def.tokens)?;
-                                self.dictionary.remove(name);
-                                self.dependencies.remove(name);
-                                self.word_properties.remove(name);
-                                // 依存関係のクリーンアップ
-                                for (_, deps) in self.dependencies.iter_mut() {
-                                    deps.remove(name);
-                                }
+                                // 連鎖削除
+                                self.delete_temporary_word_cascade(name);
                                 return Ok(());
                             }
                         }
