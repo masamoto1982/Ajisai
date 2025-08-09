@@ -125,15 +125,15 @@ impl Interpreter {
             // 既存のワードがある場合、それが一時的なワードなら実行して削除
             if let Some(def) = self.dictionary.get(&name).cloned() {
                 if def.is_temporary {
-                    console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
-                    self.execute_custom_word(&name, &def.tokens)?;
-                    // 実行後に連鎖削除
-                    self.delete_temporary_word_cascade(&name);
-                } else {
-                    // 永続的なワードの場合は単に実行
-                    console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
-                    self.execute_custom_word(&name, &def.tokens)?;
-                }
+    console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
+    self.execute_custom_word_with_iteration(&name, &def.tokens)?;
+    // 実行後に連鎖削除
+    self.delete_temporary_word_cascade(&name);
+} else {
+    // 永続的なワードの場合は単に実行
+    console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
+    self.execute_custom_word_with_iteration(&name, &def.tokens)?;
+}
             }
             return Ok(());
         }
@@ -185,14 +185,6 @@ impl Interpreter {
         self.append_output(&format!("Defined: {}\n", name));
         console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
         Ok(())
-    }
-
-    pub(super) fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
-        self.call_stack.push(name.to_string());
-        let result = self.execute_tokens_with_context(tokens);
-        self.call_stack.pop();
-        
-        result.map_err(|e| e.with_context(&self.call_stack))
     }
 
     pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
