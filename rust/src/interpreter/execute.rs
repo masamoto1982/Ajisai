@@ -19,8 +19,6 @@ impl Interpreter {
             self.process_line(line)?;
         }
         
-        // cleanup_temporary_words の呼び出しを削除
-        
         Ok(())
     }
 
@@ -69,6 +67,11 @@ impl Interpreter {
                                 // 連鎖削除
                                 self.delete_temporary_word_cascade(name);
                                 return Ok(());
+                            } else {
+                                // 永続的なカスタムワードの場合、暗黙の反復を試みる
+                                if !def.is_builtin {
+                                    return self.execute_custom_word(name, &def.tokens);
+                                }
                             }
                         }
                         return self.execute_tokens_with_context(tokens);
@@ -144,6 +147,186 @@ impl Interpreter {
             i += 1;
         }
         Ok(())
+    }
+
+    pub(super) fn execute_custom_word(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+        // アリティ（引数の数）を推定
+        let arity = self.estimate_word_arity(name, tokens);
+        
+        // スタックから必要な数の引数を確認
+        if self.stack.len() < arity {
+            // 引数が足りない場合は通常の実行を試みる
+            return self.execute_custom_word_normal(name, tokens);
+        }
+        
+        // 引数の中にベクトルがあるかチェック
+        let mut has_vector = false;
+        let mut vector_positions = Vec::new();
+        let mut vector_lengths = Vec::new();
+        
+        for i in 0..arity {
+            let idx = self.stack.len() - arity + i;
+            if let ValueType::Vector(v) = &self.stack[idx].val_type {
+                has_vector = true;
+                vector_positions.push(i);
+                vector_lengths.push(v.len());
+            }
+        }
+        
+        if !has_vector {
+            // ベクトルがない場合は通常の実行
+            return self.execute_custom_word_normal(name, tokens);
+        }
+        
+        // すべてのベクトルが同じ長さかチェック
+        if !vector_lengths.is_empty() {
+            let first_len = vector_lengths[0];
+            if !vector_lengths.iter().all(|&len| len == first_len) {
+                // 長さが異なる場合はエラー
+                return Err(AjisaiError::from("Vector length mismatch in implicit iteration"));
+            }
+        }
+        
+        // ベクトルがある場合は暗黙の反復を適用
+        self.apply_implicit_iteration(name, tokens, arity, vector_positions)
+    }
+    
+    fn apply_implicit_iteration(
+        &mut self, 
+        name: &str, 
+        tokens: &[Token], 
+        arity: usize,
+        vector_positions: Vec<usize>
+    ) -> Result<()> {
+        // 引数を取得
+        let mut args = Vec::new();
+        for _ in 0..arity {
+            args.push(self.stack.pop().unwrap());
+        }
+        args.reverse();
+        
+        // ベクトルの長さを取得（すべて同じ長さのはず）
+        let vec_len = args.iter()
+            .enumerate()
+            .filter_map(|(idx, arg)| {
+                if vector_positions.contains(&idx) {
+                    if let ValueType::Vector(v) = &arg.val_type {
+                        Some(v.len())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .next()
+            .unwrap_or(0);
+        
+        // 各インデックスに対して処理
+        let mut results = Vec::new();
+        for i in 0..vec_len {
+            // 引数を準備
+            for (arg_idx, arg) in args.iter().enumerate() {
+                if vector_positions.contains(&arg_idx) {
+                    // ベクトル引数から要素を取得
+                    if let ValueType::Vector(v) = &arg.val_type {
+                        self.stack.push(v[i].clone());
+                    }
+                } else {
+                    // スカラー引数はそのまま使用（ブロードキャスト）
+                    self.stack.push(arg.clone());
+                }
+            }
+            
+            // ワードを実行
+            self.call_stack.push(name.to_string());
+            let exec_result = self.execute_tokens_with_context(tokens);
+            self.call_stack.pop();
+            
+            exec_result.map_err(|e| e.with_context(&self.call_stack))?;
+            
+            // 結果を収集（スタックトップから取得）
+            if let Some(result) = self.stack.pop() {
+                results.push(result);
+            } else {
+                // 結果がない場合はnilを追加
+                results.push(Value { val_type: ValueType::Nil });
+            }
+        }
+        
+        // 結果をスタックにプッシュ
+        self.stack.push(Value {
+            val_type: ValueType::Vector(results)
+        });
+        
+        Ok(())
+    }
+    
+    fn execute_custom_word_normal(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+        self.call_stack.push(name.to_string());
+        let result = self.execute_tokens_with_context(tokens);
+        self.call_stack.pop();
+        result.map_err(|e| e.with_context(&self.call_stack))
+    }
+    
+    fn estimate_word_arity(&self, _name: &str, tokens: &[Token]) -> usize {
+        // トークンをシミュレーション実行してアリティを推定
+        let mut dummy_stack: Vec<()> = Vec::new();
+        let mut consumed = 0usize;
+        
+        for token in tokens {
+            match token {
+                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
+                    dummy_stack.push(());
+                },
+                Token::Symbol(sym) => {
+                    // 既知の演算子のアリティ
+                    let arity = match sym.as_str() {
+                        "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=" | "AND" | "OR" => {
+                            consumed = consumed.saturating_add(2);
+                            if dummy_stack.len() >= 2 {
+                                dummy_stack.pop();
+                                dummy_stack.pop();
+                                dummy_stack.push(());
+                            }
+                            2
+                        },
+                        "DUP" | "NOT" | "NIL?" | "NOT-NIL?" => {
+                            consumed = consumed.saturating_add(1);
+                            if !dummy_stack.is_empty() {
+                                dummy_stack.push(());
+                            }
+                            1
+                        },
+                        "DROP" => {
+                            consumed = consumed.saturating_add(1);
+                            dummy_stack.pop();
+                            1
+                        },
+                        "SWAP" | "OVER" => {
+                            consumed = consumed.saturating_add(2);
+                            2
+                        },
+                        "ROT" | "?" => {
+                            consumed = consumed.saturating_add(3);
+                            3
+                        },
+                        _ => {
+                            // カスタムワードの場合、デフォルトで1引数と仮定
+                            consumed = consumed.saturating_add(1);
+                            1
+                        }
+                    };
+                    
+                    // 最大値を記録
+                    consumed = consumed.max(arity);
+                },
+                _ => {}
+            }
+        }
+        
+        // スタックに追加された要素の数と消費された要素の数から推定
+        consumed.saturating_sub(dummy_stack.len()).max(1)
     }
 
     pub(super) fn execute_builtin(&mut self, name: &str) -> Result<()> {
