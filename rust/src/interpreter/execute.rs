@@ -19,6 +19,8 @@ impl Interpreter {
             self.process_line(line)?;
         }
         
+        // cleanup_temporary_words の呼び出しを削除
+        
         Ok(())
     }
 
