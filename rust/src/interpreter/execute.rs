@@ -188,19 +188,19 @@ impl Interpreter {
     }
 
     // ワード実行の統一インターフェース（暗黙の反復を適用）
-    fn execute_word_with_implicit_iteration(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(name)
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
-            .clone();
-        
-        if def.is_builtin {
-            // ビルトインは既に暗黙の反復が実装されている
-            self.execute_builtin(name)
-        } else {
-            // カスタムワードに暗黙の反復を適用
-            self.execute_custom_word_with_iteration(name, &def.tokens)
-        }
+    pub(super) fn execute_word_with_implicit_iteration(&mut self, name: &str) -> Result<()> {
+    let def = self.dictionary.get(name)
+        .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
+        .clone();
+    
+    if def.is_builtin {
+        // ビルトインは既に暗黙の反復が実装されている
+        self.execute_builtin(name)
+    } else {
+        // カスタムワードに暗黙の反復を適用
+        self.execute_custom_word_with_iteration(name, &def.tokens)
     }
+}
 
     // 暗黙の反復機能を持つカスタムワード実行（ネスト対応版）
     pub(super) fn execute_custom_word_with_iteration(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
