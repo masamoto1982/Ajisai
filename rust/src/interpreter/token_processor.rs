@@ -31,7 +31,7 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
-    pub(super) fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
+pub(super) fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
     console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
     console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
     
@@ -40,20 +40,13 @@ impl Interpreter {
     for (i, token) in tokens.iter().enumerate() {
         if let Token::Symbol(name) = token {
             if self.is_operator(name) {
-                // 演算子の前後が適切な要素かチェック
-                let valid_prefix = i == 0 || self.is_valid_operand(&tokens[i-1]);
-                let valid_suffix = i == tokens.len() - 1 || self.is_valid_operand(&tokens[i+1]);
-                
-                // 前置記法または中置記法として有効な場合のみ
-                if (i == 0 && tokens.len() >= 3 && valid_suffix) ||  // 前置
-                   (i > 0 && i < tokens.len() - 1 && valid_prefix && valid_suffix) {  // 中置
-                    operator_positions.push(i);
-                }
+                operator_positions.push(i);
             }
         }
     }
     
     if operator_positions.is_empty() {
+        console::log_1(&JsValue::from_str("No operators found, returning as-is"));
         return tokens.to_vec();
     }
     
@@ -61,6 +54,12 @@ impl Interpreter {
     if operator_positions.len() == 1 {
         let op_pos = operator_positions[0];
         let op = &tokens[op_pos];
+        
+        // 後置記法: a b + (既にRPN)
+        if op_pos == tokens.len() - 1 && tokens.len() >= 2 {
+            console::log_1(&JsValue::from_str("Already in RPN format"));
+            return tokens.to_vec();
+        }
         
         // 前置記法: + a b
         if op_pos == 0 && tokens.len() >= 3 {
@@ -72,18 +71,30 @@ impl Interpreter {
             console::log_1(&JsValue::from_str(&format!("Prefix notation converted to RPN: {:?}", result)));
             return result;
         }
+        
         // 中置記法: a + b
-        else if op_pos > 0 && op_pos < tokens.len() - 1 {
+        if op_pos > 0 && op_pos < tokens.len() - 1 {
             let mut result = vec![tokens[op_pos - 1].clone(), tokens[op_pos + 1].clone(), op.clone()];
-            // 残りのトークンを追加
+            // 残りのトークンを追加（前の部分）
+            for i in 0..op_pos-1 {
+                result.insert(i, tokens[i].clone());
+            }
+            // 残りのトークンを追加（後の部分）
             for i in op_pos + 2..tokens.len() {
                 result.push(tokens[i].clone());
             }
             console::log_1(&JsValue::from_str(&format!("Infix notation converted to RPN: {:?}", result)));
             return result;
         }
+        
+        // 部分的な式: "2 +" → そのまま（スタックにある値と組み合わせる）
+        if op_pos == tokens.len() - 1 && tokens.len() == 2 {
+            console::log_1(&JsValue::from_str("Partial expression (value op), keeping as-is"));
+            return tokens.to_vec();
+        }
     }
     
+    console::log_1(&JsValue::from_str("Default: returning as-is"));
     tokens.to_vec()
 }
 
