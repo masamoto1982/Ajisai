@@ -1,7 +1,7 @@
 // rust/src/interpreter/word_def.rs
 
 use std::collections::{HashSet, VecDeque};
-use crate::types::{Token, Value, ValueType};
+use crate::types::Token;
 use super::{Interpreter, WordDefinition, WordProperty, error::{AjisaiError, Result}};
 use wasm_bindgen::JsValue;
 use web_sys::console;
