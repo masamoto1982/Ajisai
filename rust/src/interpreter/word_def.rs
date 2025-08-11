@@ -118,6 +118,7 @@ impl Interpreter {
         console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
         console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
 
+        // 名前は元のトークンから生成
         let name = self.generate_word_name(tokens);
         console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
         
@@ -126,8 +127,6 @@ impl Interpreter {
             if let Some(def) = self.dictionary.get(&name).cloned() {
                 if def.is_temporary {
                     console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
-                    // execute_custom_word_with_iteration は execute.rs で定義されているので
-                    // ここではワード実行のための統一メソッドを呼ぶ
                     self.execute_word_with_implicit_iteration(&name)?;
                     // 実行後に連鎖削除
                     self.delete_temporary_word_cascade(&name);
@@ -144,7 +143,11 @@ impl Interpreter {
         self.auto_named = true;
         self.last_auto_named_word = Some(name.clone());
 
-        let storage_tokens = self.rearrange_tokens(tokens);
+        // 定数式の事前評価を行う
+        let processed_tokens = self.preprocess_constant_expressions(tokens)?;
+        
+        // 処理済みトークンをRPNに変換
+        let storage_tokens = self.rearrange_tokens(&processed_tokens);
         console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
 
         // 依存関係の記録
@@ -178,6 +181,81 @@ impl Interpreter {
 
         console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
         Ok(())
+    }
+    
+    // 定数式を事前評価するメソッド
+    fn preprocess_constant_expressions(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+        // カスタムワードを含む場合は事前評価しない
+        for token in tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) && !self.is_operator(s) {
+                    // カスタムワードが含まれている場合は、そのまま返す
+                    return Ok(tokens.to_vec());
+                }
+            }
+        }
+        
+        // 純粋な定数式のみ事前評価
+        if tokens.len() == 3 {
+            // 中置記法: n1 op n2
+            if let (Token::Number(n1, d1), Token::Symbol(op), Token::Number(n2, d2)) = 
+                (&tokens[0], &tokens[1], &tokens[2]) {
+                if self.is_operator(op) {
+                    if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
+                        console::log_1(&JsValue::from_str(&format!(
+                            "Pre-evaluated (infix): {} {} {} = {}/{}", 
+                            n1, op, n2, result_num, result_den
+                        )));
+                        // 結果を「値をスタックに加える」形式に変換
+                        return Ok(vec![
+                            Token::Number(result_num, result_den),
+                            Token::Symbol("+".to_string())
+                        ]);
+                    }
+                }
+            }
+            
+            // RPN記法: n1 n2 op
+            if let (Token::Number(n1, d1), Token::Number(n2, d2), Token::Symbol(op)) = 
+                (&tokens[0], &tokens[1], &tokens[2]) {
+                if self.is_operator(op) {
+                    if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
+                        console::log_1(&JsValue::from_str(&format!(
+                            "Pre-evaluated (RPN): {} {} {} = {}/{}", 
+                            n1, n2, op, result_num, result_den
+                        )));
+                        return Ok(vec![
+                            Token::Number(result_num, result_den),
+                            Token::Symbol("+".to_string())
+                        ]);
+                    }
+                }
+            }
+        }
+        
+        Ok(tokens.to_vec())
+    }
+    
+    fn evaluate_constant_expression(&self, n1: i64, d1: i64, op: &str, n2: i64, d2: i64) -> Option<(i64, i64)> {
+        use crate::types::Fraction;
+        
+        let f1 = Fraction::new(n1, d1);
+        let f2 = Fraction::new(n2, d2);
+        
+        let result = match op {
+            "+" => f1.add(&f2),
+            "-" => f1.sub(&f2),
+            "*" => f1.mul(&f2),
+            "/" => {
+                if f2.numerator == 0 {
+                    return None;
+                }
+                f1.div(&f2)
+            },
+            _ => return None,
+        };
+        
+        Some((result.numerator, result.denominator))
     }
 
     pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
