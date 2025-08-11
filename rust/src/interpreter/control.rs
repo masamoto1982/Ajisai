@@ -63,6 +63,8 @@ pub fn op_when(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+// rust/src/interpreter/control.rs
+
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
@@ -76,21 +78,42 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
                 if def.is_builtin {
                     return Err(AjisaiError::from(format!("Cannot delete builtin word: {}", name)));
                 }
+            } else {
+                return Err(AjisaiError::from(format!("Word not found: {}", name)));
             }
             
-            // 依存関係チェック
-            if let Some(dependents) = interp.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(AjisaiError::ProtectedWord {
-                        name: name.clone(),
-                        dependents: dependent_list,
-                    });
+            // 依存関係チェック（他のワードから使われていないか）
+            let mut dependents = Vec::new();
+            for (word_name, word_def) in &interp.dictionary {
+                if word_name != &name && !word_def.is_builtin {
+                    for token in &word_def.tokens {
+                        if let crate::types::Token::Symbol(s) = token {
+                            if s == &name {
+                                dependents.push(word_name.clone());
+                            }
+                        }
+                    }
                 }
             }
             
+            if !dependents.is_empty() {
+                return Err(AjisaiError::ProtectedWord {
+                    name: name.clone(),
+                    dependents,
+                });
+            }
+            
+            // ワードを削除
             interp.dictionary.remove(&name);
             interp.dependencies.remove(&name);
+            interp.word_properties.remove(&name);
+            
+            // 他のワードの依存関係からも削除
+            for (_, deps) in interp.dependencies.iter_mut() {
+                deps.remove(&name);
+            }
+            
+            interp.append_output(&format!("Deleted: {}\n", name));
             Ok(())
         },
         _ => Err(AjisaiError::type_error("string", "other type")),
