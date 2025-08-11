@@ -71,6 +71,11 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         ValueType::String(name) => {
             let name = name.to_uppercase();
             
+            // ワードが存在するかチェック
+            if !interp.dictionary.contains_key(&name) {
+                return Err(AjisaiError::from(format!("Word not found: {}", name)));
+            }
+            
             // ビルトインワードは削除不可
             if let Some(def) = interp.dictionary.get(&name) {
                 if def.is_builtin {
@@ -78,7 +83,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
                 }
             }
             
-            // 依存関係チェック
+            // 依存関係チェック（このワードを使っている他のワードがあるか）
             if let Some(dependents) = interp.dependencies.get(&name) {
                 if !dependents.is_empty() {
                     let dependent_list: Vec<String> = dependents.iter().cloned().collect();
@@ -89,10 +94,69 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
                 }
             }
             
+            // このワードが依存している他のワードから、依存関係を削除
+            if let Some(def) = interp.dictionary.get(&name) {
+                for token in &def.tokens {
+                    if let crate::types::Token::Symbol(dep_name) = token {
+                        // 正しい構文に修正
+                        if let Some(deps) = interp.dependencies.get_mut(dep_name) {
+                            deps.remove(&name);
+                        }
+                    }
+                }
+            }
+            
+            // ワードを削除
             interp.dictionary.remove(&name);
             interp.dependencies.remove(&name);
+            interp.word_properties.remove(&name);
+            
+            interp.append_output(&format!("Deleted: {}\n", name));
             Ok(())
         },
-        _ => Err(AjisaiError::type_error("string", "other type")),
+        ValueType::Symbol(name) => {
+            // シンボルの場合も処理（後方互換性のため）
+            let name = name.to_uppercase();
+            
+            if !interp.dictionary.contains_key(&name) {
+                return Err(AjisaiError::from(format!("Word not found: {}", name)));
+            }
+            
+            if let Some(def) = interp.dictionary.get(&name) {
+                if def.is_builtin {
+                    return Err(AjisaiError::from(format!("Cannot delete builtin word: {}", name)));
+                }
+            }
+            
+            if let Some(dependents) = interp.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(AjisaiError::ProtectedWord {
+                        name: name.clone(),
+                        dependents: dependent_list,
+                    });
+                }
+            }
+            
+            // このワードが依存している他のワードから、依存関係を削除
+            if let Some(def) = interp.dictionary.get(&name) {
+                for token in &def.tokens {
+                    if let crate::types::Token::Symbol(dep_name) = token {
+                        // 正しい構文に修正
+                        if let Some(deps) = interp.dependencies.get_mut(dep_name) {
+                            deps.remove(&name);
+                        }
+                    }
+                }
+            }
+            
+            interp.dictionary.remove(&name);
+            interp.dependencies.remove(&name);
+            interp.word_properties.remove(&name);
+            
+            interp.append_output(&format!("Deleted: {}\n", name));
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("string or symbol", "other type")),
     }
 }
