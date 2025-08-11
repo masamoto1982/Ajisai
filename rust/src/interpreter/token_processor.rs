@@ -108,9 +108,9 @@ fn is_valid_operand(&self, token: &Token) -> bool {
     }
 }
 
-    fn is_operator(&self, name: &str) -> bool {
-        matches!(name, "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=")
-    }
+    pub(super) fn is_operator(&self, name: &str) -> bool {
+    matches!(name, "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=")
+}
 
     fn collect_operand(&self, tokens: &[Token]) -> Vec<Token> {
     let mut result = Vec::new();
