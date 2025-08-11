@@ -98,7 +98,8 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             if let Some(def) = interp.dictionary.get(&name) {
                 for token in &def.tokens {
                     if let crate::types::Token::Symbol(dep_name) = token {
-                        if let Some(deps) in interp.dependencies.get_mut(dep_name) {
+                        // 正しい構文に修正
+                        if let Some(deps) = interp.dependencies.get_mut(dep_name) {
                             deps.remove(&name);
                         }
                     }
@@ -141,7 +142,8 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             if let Some(def) = interp.dictionary.get(&name) {
                 for token in &def.tokens {
                     if let crate::types::Token::Symbol(dep_name) = token {
-                        if let Some(deps) in interp.dependencies.get_mut(dep_name) {
+                        // 正しい構文に修正
+                        if let Some(deps) = interp.dependencies.get_mut(dep_name) {
                             deps.remove(&name);
                         }
                     }
