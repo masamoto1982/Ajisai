@@ -32,115 +32,140 @@ impl Interpreter {
     }
 
     pub(super) fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        // 最後が "文字列" DEF のパターンをチェック（明示的な命名）
-        if tokens.len() >= 2 {
-            let last_idx = tokens.len() - 1;
-            if let (Some(Token::Symbol(def_sym)), Some(Token::String(name))) = 
-                (tokens.get(last_idx), tokens.get(last_idx - 1)) {
-                if def_sym == "DEF" {
-                    let body_tokens = &tokens[..last_idx - 1];
-                    if body_tokens.is_empty() {
-                        return Err(AjisaiError::from("DEF requires a body"));
-                    }
-                    
-                    let rpn_tokens = self.rearrange_tokens(body_tokens);
-                    return self.define_named_word(name.clone(), rpn_tokens);
-                }
-            }
-        }
-        
-        // 単一トークンの場合
-        if tokens.len() == 1 {
-            match &tokens[0] {
-                // リテラル値は直接実行
-                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
-                    return self.execute_tokens_with_context(tokens);
-                },
-                // 既存のワードは実行
-                Token::Symbol(name) => {
-                    if self.dictionary.contains_key(name) {
-                        // 一時的なワードの実行と削除
-                        if let Some(def) = self.dictionary.get(name).cloned() {
-                            if def.is_temporary {
-                                // 一時ワードの実行（暗黙の反復あり）
-                                self.execute_word_with_implicit_iteration(name)?;
-                                // 連鎖削除
-                                self.delete_temporary_word_cascade(name);
-                                return Ok(());
-                            } else if !def.is_builtin {
-                                // 永続的なカスタムワードの場合、暗黙の反復を試みる
-                                return self.execute_word_with_implicit_iteration(name);
-                            }
-                        }
-                        return self.execute_tokens_with_context(tokens);
-                    } else {
-                        return Err(AjisaiError::UnknownWord(name.clone()));
-                    }
-                },
-                // ベクトルの開始/終了だけならエラー
-                Token::VectorStart | Token::VectorEnd => {
-                    return Err(AjisaiError::from("Incomplete vector notation"));
-                }
-            }
-        }
-        
-        // ベクトルリテラルの特別処理（[ ... ]は直接実行）
-        if tokens.first() == Some(&Token::VectorStart) && 
-           tokens.last() == Some(&Token::VectorEnd) {
-            return self.execute_tokens_with_context(tokens);
-        }
-        
-        // パターン: WORD [ ... ] の場合、特別処理
-        if tokens.len() >= 2 {
-            if let Token::Symbol(name) = &tokens[0] {
-                if tokens[1] == Token::VectorStart && 
-                   tokens.last() == Some(&Token::VectorEnd) &&
-                   self.dictionary.contains_key(name) {
-                    // まずベクトルを評価
-                    self.execute_tokens_with_context(&tokens[1..])?;
-                    // その後ワードを実行（暗黙の反復が適用される）
-                    return self.execute_word_with_implicit_iteration(name);
-                }
-            }
-        }
-        
-        // パターン: [ ... ] WORD の場合、通常通り実行（暗黙の反復が適用される）
-        if tokens.len() >= 2 {
-            if tokens.first() == Some(&Token::VectorStart) {
-                // ベクトルの終端を探す
-                let mut depth = 0;
-                let mut vec_end_idx = None;
-                for (i, token) in tokens.iter().enumerate() {
-                    match token {
-                        Token::VectorStart => depth += 1,
-                        Token::VectorEnd => {
-                            depth -= 1;
-                            if depth == 0 {
-                                vec_end_idx = Some(i);
-                                break;
-                            }
-                        },
-                        _ => {}
-                    }
+    // 最後が "文字列" DEF のパターンをチェック（明示的な命名）
+    if tokens.len() >= 2 {
+        let last_idx = tokens.len() - 1;
+        if let (Some(Token::Symbol(def_sym)), Some(Token::String(name))) = 
+            (tokens.get(last_idx), tokens.get(last_idx - 1)) {
+            if def_sym == "DEF" {
+                let body_tokens = &tokens[..last_idx - 1];
+                if body_tokens.is_empty() {
+                    return Err(AjisaiError::from("DEF requires a body"));
                 }
                 
-                // ベクトルの後に単一のワードがある場合
-                if let Some(end_idx) = vec_end_idx {
-                    if end_idx == tokens.len() - 2 {
-                        if let Token::Symbol(name) = &tokens[tokens.len() - 1] {
-                            if self.dictionary.contains_key(name) {
-                                // 通常の実行（暗黙の反復が自動的に適用される）
-                                return self.execute_tokens_with_context(tokens);
+                let rpn_tokens = self.rearrange_tokens(body_tokens);
+                return self.define_named_word(name.clone(), rpn_tokens);
+            }
+        }
+    }
+    
+    // 単一トークンの場合
+    if tokens.len() == 1 {
+        match &tokens[0] {
+            // リテラル値は直接実行
+            Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
+                return self.execute_tokens_with_context(tokens);
+            },
+            // 既存のワードは実行
+            Token::Symbol(name) => {
+                if self.dictionary.contains_key(name) {
+                    // 一時的なワードの実行と削除
+                    if let Some(def) = self.dictionary.get(name).cloned() {
+                        if def.is_temporary {
+                            // 一時ワードの実行（暗黙の反復あり）
+                            self.execute_word_with_implicit_iteration(name)?;
+                            // 連鎖削除
+                            self.delete_temporary_word_cascade(name);
+                            return Ok(());
+                        } else if !def.is_builtin {
+                            // 永続的なカスタムワードの場合、暗黙の反復を試みる
+                            return self.execute_word_with_implicit_iteration(name);
+                        }
+                    }
+                    return self.execute_tokens_with_context(tokens);
+                } else {
+                    return Err(AjisaiError::UnknownWord(name.clone()));
+                }
+            },
+            // ベクトルの開始/終了だけならエラー
+            Token::VectorStart | Token::VectorEnd => {
+                return Err(AjisaiError::from("Incomplete vector notation"));
+            }
+        }
+    }
+    
+    // ベクトルリテラルの特別処理（[ ... ]は直接実行）
+    if tokens.first() == Some(&Token::VectorStart) && 
+       tokens.last() == Some(&Token::VectorEnd) {
+        return self.execute_tokens_with_context(tokens);
+    }
+    
+    // パターン: WORD [ ... ] の場合
+    if tokens.len() >= 2 {
+        if let Token::Symbol(name) = &tokens[0] {
+            if tokens[1] == Token::VectorStart && 
+               tokens.last() == Some(&Token::VectorEnd) &&
+               self.dictionary.contains_key(name) {
+                
+                // 一時的なワードかチェック
+                let is_temporary = self.dictionary.get(name)
+                    .map(|def| def.is_temporary)
+                    .unwrap_or(false);
+                
+                // まずベクトルを評価
+                self.execute_tokens_with_context(&tokens[1..])?;
+                // その後ワードを実行（暗黙の反復が適用される）
+                self.execute_word_with_implicit_iteration(name)?;
+                
+                // 一時的なワードなら削除
+                if is_temporary {
+                    self.delete_temporary_word_cascade(name);
+                }
+                
+                return Ok(());
+            }
+        }
+    }
+    
+    // パターン: [ ... ] WORD の場合
+    if tokens.len() >= 2 {
+        if tokens.first() == Some(&Token::VectorStart) {
+            // ベクトルの終端を探す
+            let mut depth = 0;
+            let mut vec_end_idx = None;
+            for (i, token) in tokens.iter().enumerate() {
+                match token {
+                    Token::VectorStart => depth += 1,
+                    Token::VectorEnd => {
+                        depth -= 1;
+                        if depth == 0 {
+                            vec_end_idx = Some(i);
+                            break;
+                        }
+                    },
+                    _ => {}
+                }
+            }
+            
+            // ベクトルの後に単一のワードがある場合
+            if let Some(end_idx) = vec_end_idx {
+                if end_idx == tokens.len() - 2 {
+                    if let Token::Symbol(name) = &tokens[tokens.len() - 1] {
+                        if self.dictionary.contains_key(name) {
+                            // 一時的なワードかチェック
+                            let is_temporary = self.dictionary.get(name)
+                                .map(|def| def.is_temporary)
+                                .unwrap_or(false);
+                            
+                            // 通常の実行（暗黙の反復が自動的に適用される）
+                            self.execute_tokens_with_context(tokens)?;
+                            
+                            // 一時的なワードなら削除
+                            if is_temporary {
+                                self.delete_temporary_word_cascade(name);
                             }
+                            
+                            return Ok(());
                         }
                     }
                 }
             }
         }
-        
-        // 複数トークンの式は必ず自動定義（Ajisaiのコンセプト）
-        self.define_from_tokens(tokens)
     }
+    
+    // 複数トークンの式は必ず自動定義（Ajisaiのコンセプト）
+    self.define_from_tokens(tokens)
+}
 
     pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
