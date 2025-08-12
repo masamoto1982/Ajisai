@@ -139,7 +139,7 @@ impl Interpreter {
         return Ok(());
     }
 
-    // 新規の自動命名ワードを定義
+    // 新規の自動命名ワードを定義（実行はしない）
     self.auto_named = true;
     self.last_auto_named_word = Some(name.clone());
 
@@ -168,7 +168,7 @@ impl Interpreter {
     }
 
     self.dictionary.insert(name.clone(), WordDefinition {
-        tokens: storage_tokens.clone(),  // clone追加
+        tokens: storage_tokens,
         is_builtin: false,
         is_temporary: true,  // 自動生成されたワードは一時的
         description: None,
@@ -178,13 +178,6 @@ impl Interpreter {
     self.word_properties.insert(name.clone(), WordProperty {
         is_value_producer: is_producer,
     });
-
-    // ★ここが重要：新規定義したワードを実行する
-    console::log_1(&JsValue::from_str(&format!("Executing newly defined word: {}", name)));
-    self.execute_word_with_implicit_iteration(&name)?;
-    
-    // 実行後に一時ワードを削除
-    self.delete_temporary_word_cascade(&name);
 
     console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
     Ok(())
