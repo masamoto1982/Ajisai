@@ -151,3 +151,7 @@ pub fn op_amnesia(_interp: &mut Interpreter) -> Result<()> {
     }
     Ok(())
 }
+
+// テストモジュール
+#[cfg(test)]
+mod tests;
