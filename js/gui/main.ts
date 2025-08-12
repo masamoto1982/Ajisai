@@ -7,6 +7,7 @@ import { Stepper } from './stepper';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
+import { TestUI } from './test-ui';
 
 declare global {
     interface Window {
@@ -40,6 +41,7 @@ export class GUI {
     private elements: GUIElements = {} as GUIElements;
     private mode: 'input' | 'execution' = 'input';
     private stepMode = false;
+    private testUI: TestUI;
 
     constructor() {
         this.display = new Display();
@@ -48,11 +50,13 @@ export class GUI {
         this.stepper = new Stepper();
         this.mobile = new MobileHandler();
         this.persistence = new Persistence(this);
+        this.testUI = new TestUI();
     }
 
     init(): void {
         console.log('GUI.init() called');
         this.cacheElements();
+        this.testUI.init();
 
         // 各モジュールの初期化
         this.display.init({
