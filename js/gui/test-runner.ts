@@ -209,7 +209,7 @@ export class TestRunner {
         }
     ];
 
-    // Ajisai言語の値をフォーマットする関数（display.tsから移植）
+    // Ajisai言語の値をフォーマットする関数
     private formatValue(value: any): string {
         if (!value) return 'undefined';
         
@@ -232,7 +232,7 @@ export class TestRunner {
                 return value.value ? 'true' : 'false';
             case 'vector':
                 if (Array.isArray(value.value)) {
-                    return `[ ${value.value.map(v => this.formatValue(v)).join(' ')} ]`;
+                    return `[ ${value.value.map((v: any) => this.formatValue(v)).join(' ')} ]`;
                 }
                 return '[ ]';
             case 'nil':
