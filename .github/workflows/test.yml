@@ -23,19 +23,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
 
       - name: Run tests
         working-directory: rust
         run: cargo test --verbose
-
-      - name: Run tests with coverage
-        working-directory: rust
-        run: |
-          cargo install cargo-tarpaulin
-          cargo tarpaulin --out xml
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: rust/cobertura.xml
