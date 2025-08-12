@@ -24,11 +24,12 @@ export interface AjisaiInterpreter {
 }
 
 export interface ExecuteResult {
-    status: string;
+    status: 'OK' | 'ERROR';  // より明確な型定義
     output?: string;
     autoNamed?: boolean;
     autoNamedWord?: string;
-    message?: string; // エラーの場合のメッセージ
+    message?: string;  // エラーメッセージ
+    error?: boolean;   // エラーフラグを追加
 }
 
 export interface StepResult {
