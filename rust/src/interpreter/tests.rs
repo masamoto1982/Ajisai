@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::interpreter::Interpreter;  // 正しいインポートパスに修正
     use crate::types::{Value, ValueType, Fraction};
 
     fn create_test_interpreter() -> Interpreter {
@@ -15,7 +15,7 @@ mod tests {
         match &top.val_type {
             ValueType::Number(frac) => {
                 let expected = Fraction::new(expected_num, expected_den);
-                assert_eq!(*frac, expected, "Expected {}/{}, got {}/{}", 
+                assert_eq!(frac, &expected, "Expected {}/{}, got {}/{}", 
                           expected.numerator, expected.denominator,
                           frac.numerator, frac.denominator);
             }
@@ -27,7 +27,7 @@ mod tests {
         assert!(!interp.stack.is_empty(), "Stack is empty");
         let top = interp.stack.last().unwrap();
         match &top.val_type {
-            ValueType::Boolean(b) => assert_eq!(*b, expected),
+            ValueType::Boolean(b) => assert_eq!(b, &expected),
             _ => panic!("Expected boolean, got {:?}", top.val_type),
         }
     }
@@ -260,7 +260,7 @@ mod tests {
         let mut interp = create_test_interpreter();
         
         // 自動定義: 3 4 +
-        let result = interp.execute("3 4 +").unwrap();
+        let _result = interp.execute("3 4 +").unwrap();
         
         // 自動命名されたワードが実行できることを確認
         assert!(interp.auto_named);
