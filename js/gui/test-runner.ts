@@ -286,64 +286,69 @@ export class TestRunner {
     }
 
     async runSingleTest(testCase: TestCase): Promise<TestResult> {
-        try {
-            // インタープリターをリセット
-            window.ajisaiInterpreter.reset();
+    try {
+        // インタープリターをリセット
+        window.ajisaiInterpreter.reset();
+        
+        // コードを実行（常にオブジェクトが返される）
+        const executeResult = window.ajisaiInterpreter.execute(testCase.code);
+        
+        const result: TestResult = {
+            name: testCase.name,
+            description: testCase.description || "",
+            code: testCase.code,
+            passed: false,
+            error: null,
+            actual: "",
+            expected: "",
+            actualValue: {},
+            expectedValue: testCase.expectedResult || {}
+        };
+
+        // エラーステータスのチェック
+        if (executeResult.status === 'ERROR' || executeResult.error === true) {
+            // エラーが発生した場合
+            result.actualValue = { 
+                error: true, 
+                message: executeResult.message || 'Unknown error' 
+            };
+            result.passed = testCase.expectedResult?.error === true;
+        } else if (executeResult.status === 'OK') {
+            // 成功した場合の検証
+            const stack = window.ajisaiInterpreter.get_stack();
+            const output = executeResult.output || "";
             
-            // コードを実行
-            const executeResult = window.ajisaiInterpreter.execute(testCase.code);
-            
-            const result: TestResult = {
-                name: testCase.name,
-                description: testCase.description || "",
-                code: testCase.code,
-                passed: false,
-                error: null,
-                actual: "",
-                expected: "",
-                actualValue: {},
-                expectedValue: testCase.expectedResult || {}
+            result.actualValue = {
+                stackTop: stack.length > 0 ? stack[stack.length - 1] : null,
+                stackLength: stack.length,
+                output: output,
+                error: false
             };
 
-            if (executeResult.status === 'OK') {
-                // 成功した場合の検証
-                const stack = window.ajisaiInterpreter.get_stack();
-                const output = executeResult.output || "";
-                
-                result.actualValue = {
-                    stackTop: stack.length > 0 ? stack[stack.length - 1] : null,
-                    stackLength: stack.length,
-                    output: output,
-                    error: false
-                };
-
-                // 期待値との比較
-                result.passed = this.compareResults(result.expectedValue, result.actualValue);
-            } else {
-                // エラーが発生した場合
-                result.actualValue = { error: true, message: executeResult.message };
-                result.passed = testCase.expectedResult?.error === true;
-            }
-
-            // フォーマットされた文字列を設定
-            result.actual = this.formatTestValue(result.actualValue);
-            result.expected = this.formatTestValue(result.expectedValue);
-
-            return result;
-        } catch (error) {
-            return {
-                name: testCase.name,
-                description: testCase.description || "",
-                code: testCase.code,
-                passed: testCase.expectedResult?.error === true,
-                error: error as Error,
-                actual: `エラー: ${(error as Error).message}`,
-                expected: this.formatTestValue(testCase.expectedResult || {}),
-                actualValue: { error: true, message: (error as Error).message },
-                expectedValue: testCase.expectedResult || {}
-            };
+            // 期待値との比較
+            result.passed = this.compareResults(result.expectedValue, result.actualValue);
         }
+
+        // フォーマットされた文字列を設定
+        result.actual = this.formatTestValue(result.actualValue);
+        result.expected = this.formatTestValue(result.expectedValue);
+
+        return result;
+    } catch (error) {
+        // 予期しない例外が発生した場合のフォールバック
+        return {
+            name: testCase.name,
+            description: testCase.description || "",
+            code: testCase.code,
+            passed: testCase.expectedResult?.error === true,
+            error: error as Error,
+            actual: `予期しないエラー: ${(error as Error).message}`,
+            expected: this.formatTestValue(testCase.expectedResult || {}),
+            actualValue: { error: true, message: (error as Error).message },
+            expectedValue: testCase.expectedResult || {}
+        };
     }
+}
 
     private compareResults(expected: any, actual: any): boolean {
         if (expected.error !== undefined) {
