@@ -23,10 +23,11 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn execute(&mut self, code: &str) -> Result<JsValue, String> {
+    pub fn execute(&mut self, code: &str) -> JsValue {  // Result<JsValue, String>から変更
+        let obj = js_sys::Object::new();
+        
         match self.interpreter.execute(code) {
             Ok(()) => {
-                let obj = js_sys::Object::new();
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 
                 // 出力を取得
@@ -42,11 +43,16 @@ impl AjisaiInterpreter {
                         js_sys::Reflect::set(&obj, &"autoNamedWord".into(), &JsValue::from_str(&name)).unwrap();
                     }
                 }
-                
-                Ok(obj.into())
             }
-            Err(e) => Err(e.to_string()),
+            Err(e) => {
+                // エラーの場合もオブジェクトとして返す
+                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"message".into(), &JsValue::from_str(&e.to_string())).unwrap();
+                js_sys::Reflect::set(&obj, &"error".into(), &JsValue::from_bool(true)).unwrap();
+            }
         }
+        
+        obj.into()
     }
 
     #[wasm_bindgen]
