@@ -314,19 +314,47 @@ export class TestRunner {
             };
             result.passed = testCase.expectedResult?.error === true;
         } else if (executeResult.status === 'OK') {
-            // 成功した場合の検証
-            const stack = window.ajisaiInterpreter.get_stack();
-            const output = executeResult.output || "";
-            
-            result.actualValue = {
-                stackTop: stack.length > 0 ? stack[stack.length - 1] : null,
-                stackLength: stack.length,
-                output: output,
-                error: false
-            };
+            // 自動命名されたワードがある場合、それを実行する
+            if (executeResult.autoNamed && executeResult.autoNamedWord) {
+                // 自動生成されたワードを実行
+                const secondResult = window.ajisaiInterpreter.execute(executeResult.autoNamedWord);
+                
+                if (secondResult.status === 'ERROR') {
+                    result.actualValue = { 
+                        error: true, 
+                        message: secondResult.message || 'Unknown error' 
+                    };
+                    result.passed = testCase.expectedResult?.error === true;
+                } else {
+                    // 成功した場合の検証
+                    const stack = window.ajisaiInterpreter.get_stack();
+                    const output = secondResult.output || "";
+                    
+                    result.actualValue = {
+                        stackTop: stack.length > 0 ? stack[stack.length - 1] : null,
+                        stackLength: stack.length,
+                        output: output,
+                        error: false
+                    };
+                    
+                    // 期待値との比較
+                    result.passed = this.compareResults(result.expectedValue, result.actualValue);
+                }
+            } else {
+                // 自動命名されていない場合（単一ワードの実行など）
+                const stack = window.ajisaiInterpreter.get_stack();
+                const output = executeResult.output || "";
+                
+                result.actualValue = {
+                    stackTop: stack.length > 0 ? stack[stack.length - 1] : null,
+                    stackLength: stack.length,
+                    output: output,
+                    error: false
+                };
 
-            // 期待値との比較
-            result.passed = this.compareResults(result.expectedValue, result.actualValue);
+                // 期待値との比較
+                result.passed = this.compareResults(result.expectedValue, result.actualValue);
+            }
         }
 
         // フォーマットされた文字列を設定
