@@ -184,57 +184,56 @@ impl Interpreter {
 }
     
     // 定数式を事前評価するメソッド
-    fn preprocess_constant_expressions(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-        // カスタムワードを含む場合は事前評価しない
-        for token in tokens {
-            if let Token::Symbol(s) = token {
-                if self.dictionary.contains_key(s) && !self.is_operator(s) {
-                    // カスタムワードが含まれている場合は、そのまま返す
-                    return Ok(tokens.to_vec());
-                }
+fn preprocess_constant_expressions(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+    // カスタムワードを含む場合は事前評価しない
+    for token in tokens {
+        if let Token::Symbol(s) = token {
+            if self.dictionary.contains_key(s) && !self.is_operator(s) {
+                // カスタムワードが含まれている場合は、そのまま返す
+                return Ok(tokens.to_vec());
             }
         }
-        
-        // 純粋な定数式のみ事前評価
-        if tokens.len() == 3 {
-            // 中置記法: n1 op n2
-            if let (Token::Number(n1, d1), Token::Symbol(op), Token::Number(n2, d2)) = 
-                (&tokens[0], &tokens[1], &tokens[2]) {
-                if self.is_operator(op) {
-                    if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
-                        console::log_1(&JsValue::from_str(&format!(
-                            "Pre-evaluated (infix): {} {} {} = {}/{}", 
-                            n1, op, n2, result_num, result_den
-                        )));
-                        // 結果を「値をスタックに加える」形式に変換
-                        return Ok(vec![
-                            Token::Number(result_num, result_den),
-                            Token::Symbol("+".to_string())
-                        ]);
-                    }
-                }
-            }
-            
-            // RPN記法: n1 n2 op
-            if let (Token::Number(n1, d1), Token::Number(n2, d2), Token::Symbol(op)) = 
-                (&tokens[0], &tokens[1], &tokens[2]) {
-                if self.is_operator(op) {
-                    if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
-                        console::log_1(&JsValue::from_str(&format!(
-                            "Pre-evaluated (RPN): {} {} {} = {}/{}", 
-                            n1, n2, op, result_num, result_den
-                        )));
-                        return Ok(vec![
-                            Token::Number(result_num, result_den),
-                            Token::Symbol("+".to_string())
-                        ]);
-                    }
-                }
-            }
-        }
-        
-        Ok(tokens.to_vec())
     }
+    
+    // 純粋な定数式のみ事前評価
+    if tokens.len() == 3 {
+        // 中置記法: n1 op n2
+        if let (Token::Number(n1, d1), Token::Symbol(op), Token::Number(n2, d2)) = 
+            (&tokens[0], &tokens[1], &tokens[2]) {
+            if self.is_operator(op) {
+                if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
+                    console::log_1(&JsValue::from_str(&format!(
+                        "Pre-evaluated (infix): {} {} {} = {}/{}", 
+                        n1, op, n2, result_num, result_den
+                    )));
+                    // 結果を単一の値として返す（+を付けない）
+                    return Ok(vec![
+                        Token::Number(result_num, result_den)
+                    ]);
+                }
+            }
+        }
+        
+        // RPN記法: n1 n2 op
+        if let (Token::Number(n1, d1), Token::Number(n2, d2), Token::Symbol(op)) = 
+            (&tokens[0], &tokens[1], &tokens[2]) {
+            if self.is_operator(op) {
+                if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
+                    console::log_1(&JsValue::from_str(&format!(
+                        "Pre-evaluated (RPN): {} {} {} = {}/{}", 
+                        n1, n2, op, result_num, result_den
+                    )));
+                    // 結果を単一の値として返す（+を付けない）
+                    return Ok(vec![
+                        Token::Number(result_num, result_den)
+                    ]);
+                }
+            }
+        }
+    }
+    
+    Ok(tokens.to_vec())
+}
     
     fn evaluate_constant_expression(&self, n1: i64, d1: i64, op: &str, n2: i64, d2: i64) -> Option<(i64, i64)> {
         use crate::types::Fraction;
