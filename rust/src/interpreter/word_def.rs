@@ -115,73 +115,80 @@ impl Interpreter {
     }
 
     pub(super) fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
-        console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
+    console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
+    console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
 
-        // 名前は元のトークンから生成
-        let name = self.generate_word_name(tokens);
-        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
-        
-        if self.dictionary.contains_key(&name) {
-            // 既存のワードがある場合
-            if let Some(def) = self.dictionary.get(&name).cloned() {
-                if def.is_temporary {
-                    console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
-                    self.execute_word_with_implicit_iteration(&name)?;
-                    // 実行後に連鎖削除
-                    self.delete_temporary_word_cascade(&name);
-                } else {
-                    // 永続的なワードの場合は単に実行
-                    console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
-                    self.execute_word_with_implicit_iteration(&name)?;
-                }
-            }
-            return Ok(());
-        }
-
-        // 新規の自動命名ワードを定義（実行はしない）
-        self.auto_named = true;
-        self.last_auto_named_word = Some(name.clone());
-
-        // 定数式の事前評価を行う
-        let processed_tokens = self.preprocess_constant_expressions(tokens)?;
-        
-        // 処理済みトークンをRPNに変換
-        let storage_tokens = self.rearrange_tokens(&processed_tokens);
-        console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
-
-        // 依存関係の記録
-        let mut new_dependencies = HashSet::new();
-        for token in &storage_tokens {
-            if let Token::Symbol(s) = token {
-                if self.dictionary.contains_key(s) {
-                    new_dependencies.insert(s.clone());
-                }
+    // 名前は元のトークンから生成
+    let name = self.generate_word_name(tokens);
+    console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
+    
+    if self.dictionary.contains_key(&name) {
+        // 既存のワードがある場合
+        if let Some(def) = self.dictionary.get(&name).cloned() {
+            if def.is_temporary {
+                console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
+                self.execute_word_with_implicit_iteration(&name)?;
+                // 実行後に連鎖削除
+                self.delete_temporary_word_cascade(&name);
+            } else {
+                // 永続的なワードの場合は単に実行
+                console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
+                self.execute_word_with_implicit_iteration(&name)?;
             }
         }
-
-        for dep_name in &new_dependencies {
-            self.dependencies
-                .entry(dep_name.clone())
-                .or_insert_with(HashSet::new)
-                .insert(name.clone());
-        }
-
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens: storage_tokens,
-            is_builtin: false,
-            is_temporary: true,  // 自動生成されたワードは一時的
-            description: None,
-        });
-
-        let is_producer = self.check_if_value_producer(&name);
-        self.word_properties.insert(name.clone(), WordProperty {
-            is_value_producer: is_producer,
-        });
-
-        console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
-        Ok(())
+        return Ok(());
     }
+
+    // 新規の自動命名ワードを定義
+    self.auto_named = true;
+    self.last_auto_named_word = Some(name.clone());
+
+    // 定数式の事前評価を行う
+    let processed_tokens = self.preprocess_constant_expressions(tokens)?;
+    
+    // 処理済みトークンをRPNに変換
+    let storage_tokens = self.rearrange_tokens(&processed_tokens);
+    console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
+
+    // 依存関係の記録
+    let mut new_dependencies = HashSet::new();
+    for token in &storage_tokens {
+        if let Token::Symbol(s) = token {
+            if self.dictionary.contains_key(s) {
+                new_dependencies.insert(s.clone());
+            }
+        }
+    }
+
+    for dep_name in &new_dependencies {
+        self.dependencies
+            .entry(dep_name.clone())
+            .or_insert_with(HashSet::new)
+            .insert(name.clone());
+    }
+
+    self.dictionary.insert(name.clone(), WordDefinition {
+        tokens: storage_tokens.clone(),  // clone追加
+        is_builtin: false,
+        is_temporary: true,  // 自動生成されたワードは一時的
+        description: None,
+    });
+
+    let is_producer = self.check_if_value_producer(&name);
+    self.word_properties.insert(name.clone(), WordProperty {
+        is_value_producer: is_producer,
+    });
+
+    // ★ここが重要：新規定義したワードを実行する
+    console::log_1(&JsValue::from_str(&format!("Executing newly defined word: {}", name)));
+    self.execute_word_with_implicit_iteration(&name)?;
+    
+    // 実行後に一時ワードを削除
+    self.delete_temporary_word_cascade(&name);
+
+    console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
+    Ok(())
+}
     
     // 定数式を事前評価するメソッド
     fn preprocess_constant_expressions(&self, tokens: &[Token]) -> Result<Vec<Token>> {
