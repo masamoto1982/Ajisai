@@ -400,15 +400,15 @@ impl Interpreter {
         }
     }
 
-    // 二項演算に基づくワード定義
+    // 二項演算に基づくワード定義（修正版）
     fn define_binary_operation(&mut self, left: &str, operator: &str, right: &str) -> Result<String> {
         console::log_1(&JsValue::from_str(&format!("--- define_binary_operation: {} {} {} ---", left, operator, right)));
         
         // 演算子を標準名に変換
         let op_name = self.get_operator_name(operator);
 
-        // ワード名を生成
-        let word_name = format!("{}_{_{}", left, right, op_name);
+        // ワード名を生成（修正：フォーマット文字列を修正）
+        let word_name = format!("{}_{}_{}", left, right, op_name);
         console::log_1(&JsValue::from_str(&format!("Generated word name: {}", word_name)));
 
         // RPN形式でトークンを構築
@@ -443,7 +443,7 @@ impl Interpreter {
         Ok(word_name)
     }
 
-    // 単項演算子の処理
+    // 単項演算子の処理（修正版）
     fn handle_unary_operation(&mut self, operator: &str, operand: &str) -> Result<String> {
         console::log_1(&JsValue::from_str(&format!("--- handle_unary_operation: {} {} ---", operator, operand)));
         
@@ -464,29 +464,49 @@ impl Interpreter {
         Ok(word_name)
     }
 
-    // 演算子名の標準化
-    fn get_operator_name(&self, operator: &str) -> &str {
+    // 演算子名の標準化（修正版：Stringを返す）
+    fn get_operator_name(&self, operator: &str) -> String {
         match operator {
             // 算術
-            "+" => "ADD", "-" => "SUB", "*" => "MUL", "/" => "DIV",
+            "+" => "ADD".to_string(), 
+            "-" => "SUB".to_string(), 
+            "*" => "MUL".to_string(), 
+            "/" => "DIV".to_string(),
             // 比較
-            ">" => "GT", ">=" => "GE", "=" => "EQ", "<" => "LT", "<=" => "LE",
+            ">" => "GT".to_string(), 
+            ">=" => "GE".to_string(), 
+            "=" => "EQ".to_string(), 
+            "<" => "LT".to_string(), 
+            "<=" => "LE".to_string(),
             // 論理
-            "AND" => "AND", "OR" => "OR", "NOT" => "NOT",
+            "AND" => "AND".to_string(), 
+            "OR" => "OR".to_string(), 
+            "NOT" => "NOT".to_string(),
             // ベクトル
-            "CONS" => "CONS", "APPEND" => "APPEND", "NTH" => "NTH",
+            "CONS" => "CONS".to_string(), 
+            "APPEND" => "APPEND".to_string(), 
+            "NTH" => "NTH".to_string(),
             // レジスタ
-            "R+" => "RADD", "R-" => "RSUB", "R*" => "RMUL", "R/" => "RDIV",
+            "R+" => "RADD".to_string(), 
+            "R-" => "RSUB".to_string(), 
+            "R*" => "RMUL".to_string(), 
+            "R/" => "RDIV".to_string(),
             // 条件
-            "WHEN" => "WHEN", "DEFAULT" => "DEFAULT",
+            "WHEN" => "WHEN".to_string(), 
+            "DEFAULT" => "DEFAULT".to_string(),
             // 数学
-            "POW" => "POW", "MOD" => "MOD", "MAX" => "MAX", "MIN" => "MIN",
+            "POW" => "POW".to_string(), 
+            "MOD" => "MOD".to_string(), 
+            "MAX" => "MAX".to_string(), 
+            "MIN" => "MIN".to_string(),
             // 文字列
-            "CONCAT" => "CONCAT", "CONTAINS" => "CONTAINS",
+            "CONCAT" => "CONCAT".to_string(), 
+            "CONTAINS" => "CONTAINS".to_string(),
             // 型
-            "AS" => "AS", "IS" => "IS",
+            "AS" => "AS".to_string(), 
+            "IS" => "IS".to_string(),
             // デフォルト
-            _ => operator
+            _ => operator.to_string()
         }
     }
 
