@@ -4,13 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
-
-# テスト用の設定を追加
-[[bin]]
-name = "test-runner"
-path = "src/bin/test_runner.rs"
-required-features = ["testing"]
+crate-type = ["cdylib", "rlib"]  # rlibを追加してテストを可能にする
 
 [features]
 testing = []
@@ -24,3 +18,7 @@ serde-wasm-bindgen = "0.6"
 [dependencies.web-sys]
 version = "0.3"
 features = ["console", "Window", "CustomEvent", "EventTarget", "Event"]
+
+# テスト用の開発依存関係を追加
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
