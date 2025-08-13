@@ -6,15 +6,6 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]  # rlibを追加してテストを可能にする
 
-# テスト用の設定を削除（不要だった）
-# [[bin]]
-# name = "test-runner"
-# path = "src/bin/test_runner.rs"
-# required-features = ["testing"]
-
-# [features]
-# testing = []
-
 [dependencies]
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 js-sys = "0.3"
