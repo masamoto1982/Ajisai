@@ -153,5 +153,11 @@ pub fn op_amnesia(_interp: &mut Interpreter) -> Result<()> {
 }
 
 // テストモジュール
+
 #[cfg(test)]
-mod tests;
+impl Interpreter {
+    // テスト用にパブリックフィールドへのアクセスを提供
+    pub fn test_stack(&self) -> &Stack { &self.stack }
+    pub fn test_register(&self) -> &Register { &self.register }
+    pub fn test_dictionary(&self) -> &HashMap<String, WordDefinition> { &self.dictionary }
+}
