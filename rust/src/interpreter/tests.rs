@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::interpreter::Interpreter;  // 正しいインポートパスに修正
+    use super::*;
     use crate::types::{Value, ValueType, Fraction};
 
     fn create_test_interpreter() -> Interpreter {
@@ -15,7 +15,7 @@ mod tests {
         match &top.val_type {
             ValueType::Number(frac) => {
                 let expected = Fraction::new(expected_num, expected_den);
-                assert_eq!(frac, &expected, "Expected {}/{}, got {}/{}", 
+                assert_eq!(*frac, expected, "Expected {}/{}, got {}/{}", 
                           expected.numerator, expected.denominator,
                           frac.numerator, frac.denominator);
             }
@@ -27,7 +27,7 @@ mod tests {
         assert!(!interp.stack.is_empty(), "Stack is empty");
         let top = interp.stack.last().unwrap();
         match &top.val_type {
-            ValueType::Boolean(b) => assert_eq!(b, &expected),
+            ValueType::Boolean(b) => assert_eq!(*b, expected),
             _ => panic!("Expected boolean, got {:?}", top.val_type),
         }
     }
@@ -100,8 +100,6 @@ mod tests {
         assert_stack_top_number(&interp, 42, 1);
     }
 
-    // === 分数のテスト ===
-
     #[test]
     fn test_fractions() {
         let mut interp = create_test_interpreter();
@@ -116,8 +114,6 @@ mod tests {
         interp.execute("0.5 0.25 +").unwrap();
         assert_stack_top_number(&interp, 3, 4);
     }
-
-    // === ベクトル操作のテスト ===
 
     #[test]
     fn test_vector_literals() {
@@ -155,8 +151,6 @@ mod tests {
         }
     }
 
-    // === スタック操作のテスト ===
-
     #[test]
     fn test_stack_operations() {
         let mut interp = create_test_interpreter();
@@ -176,8 +170,6 @@ mod tests {
         assert_eq!(interp.stack.len(), 2);
         assert_stack_top_number(&interp, 42, 1);
     }
-
-    // === レジスタ操作のテスト ===
 
     #[test]
     fn test_register_operations() {
@@ -200,8 +192,6 @@ mod tests {
         assert!(interp.register.is_none());
     }
 
-    // === 条件演算のテスト ===
-
     #[test]
     fn test_conditional_operations() {
         let mut interp = create_test_interpreter();
@@ -216,8 +206,6 @@ mod tests {
         interp.execute("false 10 20 ?").unwrap();
         assert_stack_top_number(&interp, 20, 1);
     }
-
-    // === 比較演算のテスト ===
 
     #[test]
     fn test_comparison_operations() {
@@ -239,8 +227,6 @@ mod tests {
         interp.execute("5 5 =").unwrap();
         assert_stack_top_boolean(&interp, true);
     }
-
-    // === カスタムワード定義のテスト ===
 
     #[test]
     fn test_custom_word_definition() {
@@ -270,8 +256,6 @@ mod tests {
             assert!(interp.dictionary.contains_key(word_name));
         }
     }
-
-    // === ベクトル操作関数のテスト ===
 
     #[test]
     fn test_vector_operations() {
@@ -305,8 +289,6 @@ mod tests {
         interp.execute("[ 10 20 ] 30 APPEND").unwrap();
         assert_stack_top_vector_length(&interp, 3);
     }
-
-    // === エラーケースのテスト ===
 
     #[test]
     fn test_division_by_zero() {
@@ -344,8 +326,6 @@ mod tests {
         }
     }
 
-    // === 複雑な式のテスト ===
-
     #[test]
     fn test_complex_expressions() {
         let mut interp = create_test_interpreter();
@@ -360,8 +340,6 @@ mod tests {
         interp.execute("2 3 + 4 *").unwrap(); // (2 + 3) * 4 = 20
         assert_stack_top_number(&interp, 20, 1);
     }
-
-    // === Nil関連のテスト ===
 
     #[test]
     fn test_nil_operations() {
@@ -387,8 +365,6 @@ mod tests {
         interp.execute("10 42 DEFAULT").unwrap();
         assert_stack_top_number(&interp, 10, 1);
     }
-
-    // === 論理演算のテスト ===
 
     #[test]
     fn test_logical_operations() {
@@ -420,8 +396,6 @@ mod tests {
         interp.execute("true NOT").unwrap();
         assert_stack_top_boolean(&interp, false);
     }
-
-    // === ステップ実行のテスト ===
 
     #[test]
     fn test_step_execution() {
