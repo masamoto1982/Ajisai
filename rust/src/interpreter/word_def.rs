@@ -51,7 +51,7 @@ impl Interpreter {
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: body_tokens,
             is_builtin: false,
-            is_temporary: false,  // 明示的に命名されたワードは永続的
+            is_temporary: true,  // 二項演算で生成されたワードは一時的
             description: None,
         });
 
@@ -114,208 +114,6 @@ impl Interpreter {
         }
     }
 
-    pub(super) fn define_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-    console::log_1(&JsValue::from_str("--- define_from_tokens (auto-naming) ---"));
-    console::log_1(&JsValue::from_str(&format!("Original tokens: {:?}", tokens)));
-
-    // 名前は元のトークンから生成
-    let name = self.generate_word_name(tokens);
-    console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
-    
-    if self.dictionary.contains_key(&name) {
-        // 既存のワードがある場合
-        if let Some(def) = self.dictionary.get(&name).cloned() {
-            if def.is_temporary {
-                console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
-                self.execute_word_with_implicit_iteration(&name)?;
-                // 実行後に連鎖削除
-                self.delete_temporary_word_cascade(&name);
-            } else {
-                // 永続的なワードの場合は単に実行
-                console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
-                self.execute_word_with_implicit_iteration(&name)?;
-            }
-        }
-        return Ok(());
-    }
-
-    // 新規の自動命名ワードを定義（実行はしない）
-    self.auto_named = true;
-    self.last_auto_named_word = Some(name.clone());
-
-    // 定数式の事前評価を行う
-    let processed_tokens = self.preprocess_constant_expressions(tokens)?;
-    
-    // 処理済みトークンをRPNに変換
-    let storage_tokens = self.rearrange_tokens(&processed_tokens);
-    console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
-
-    // 依存関係の記録
-    let mut new_dependencies = HashSet::new();
-    for token in &storage_tokens {
-        if let Token::Symbol(s) = token {
-            if self.dictionary.contains_key(s) {
-                new_dependencies.insert(s.clone());
-            }
-        }
-    }
-
-    for dep_name in &new_dependencies {
-        self.dependencies
-            .entry(dep_name.clone())
-            .or_insert_with(HashSet::new)
-            .insert(name.clone());
-    }
-
-    self.dictionary.insert(name.clone(), WordDefinition {
-        tokens: storage_tokens,
-        is_builtin: false,
-        is_temporary: true,  // 自動生成されたワードは一時的
-        description: None,
-    });
-
-    let is_producer = self.check_if_value_producer(&name);
-    self.word_properties.insert(name.clone(), WordProperty {
-        is_value_producer: is_producer,
-    });
-
-    console::log_1(&JsValue::from_str("--- end define_from_tokens ---"));
-    Ok(())
-}
-    
-    // 定数式を事前評価するメソッド
-fn preprocess_constant_expressions(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-    // カスタムワードを含む場合は事前評価しない
-    for token in tokens {
-        if let Token::Symbol(s) = token {
-            if self.dictionary.contains_key(s) && !self.is_operator(s) {
-                // カスタムワードが含まれている場合は、そのまま返す
-                return Ok(tokens.to_vec());
-            }
-        }
-    }
-    
-    // 純粋な定数式のみ事前評価
-    if tokens.len() == 3 {
-        // 中置記法: n1 op n2
-        if let (Token::Number(n1, d1), Token::Symbol(op), Token::Number(n2, d2)) = 
-            (&tokens[0], &tokens[1], &tokens[2]) {
-            if self.is_operator(op) {
-                if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
-                    console::log_1(&JsValue::from_str(&format!(
-                        "Pre-evaluated (infix): {} {} {} = {}/{}", 
-                        n1, op, n2, result_num, result_den
-                    )));
-                    // 結果を単一の値として返す（+を付けない）
-                    return Ok(vec![
-                        Token::Number(result_num, result_den)
-                    ]);
-                }
-            }
-        }
-        
-        // RPN記法: n1 n2 op
-        if let (Token::Number(n1, d1), Token::Number(n2, d2), Token::Symbol(op)) = 
-            (&tokens[0], &tokens[1], &tokens[2]) {
-            if self.is_operator(op) {
-                if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
-                    console::log_1(&JsValue::from_str(&format!(
-                        "Pre-evaluated (RPN): {} {} {} = {}/{}", 
-                        n1, n2, op, result_num, result_den
-                    )));
-                    // 結果を単一の値として返す（+を付けない）
-                    return Ok(vec![
-                        Token::Number(result_num, result_den)
-                    ]);
-                }
-            }
-        }
-    }
-    
-    Ok(tokens.to_vec())
-}
-    
-    fn evaluate_constant_expression(&self, n1: i64, d1: i64, op: &str, n2: i64, d2: i64) -> Option<(i64, i64)> {
-        use crate::types::Fraction;
-        
-        let f1 = Fraction::new(n1, d1);
-        let f2 = Fraction::new(n2, d2);
-        
-        let result = match op {
-            "+" => f1.add(&f2),
-            "-" => f1.sub(&f2),
-            "*" => f1.mul(&f2),
-            "/" => {
-                if f2.numerator == 0 {
-                    return None;
-                }
-                f1.div(&f2)
-            },
-            _ => return None,
-        };
-        
-        Some((result.numerator, result.denominator))
-    }
-
-    pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
-        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
-        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
-
-        // 入力順序のまま名前を生成（RPN変換せず）
-        let name_parts: Vec<String> = tokens.iter()
-            .map(|token| match token {
-                Token::Number(n, d) => {
-                    if *d == 1 {
-                        n.to_string()
-                    } else {
-                        format!("{}D{}", n, d)
-                    }
-                },
-                Token::Symbol(s) => {
-                    match s.as_str() {
-                        "+" => "ADD".to_string(),
-                        "-" => "SUB".to_string(),
-                        "*" => "MUL".to_string(),
-                        "/" => "DIV".to_string(),
-                        ">" => "GT".to_string(),
-                        ">=" => "GE".to_string(),
-                        "=" => "EQ".to_string(),
-                        "<" => "LT".to_string(),
-                        "<=" => "LE".to_string(),
-                        _ => s.clone()
-                    }
-                },
-                Token::VectorStart => "VSTART".to_string(),
-                Token::VectorEnd => "VEND".to_string(),
-                Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
-                Token::Boolean(b) => b.to_string().to_uppercase(),
-                Token::Nil => "NIL".to_string(),
-            })
-            .collect();
-        
-        let name = name_parts.join("_");
-        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
-        name
-    }
-
-    pub(super) fn check_if_value_producer(&self, word_name: &str) -> bool {
-        let mut dummy = Interpreter::new();
-        dummy.dictionary = self.dictionary.clone();
-        
-        if let Some(def) = self.dictionary.get(word_name) {
-            if !def.is_builtin {
-                match dummy.execute_tokens_with_context(&def.tokens) {
-                    Ok(_) => !dummy.stack.is_empty(),
-                    Err(_) => false,
-                }
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
-
     pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
         let name = name.to_uppercase();
         
@@ -367,5 +165,17 @@ fn preprocess_constant_expressions(&self, tokens: &[Token]) -> Result<Vec<Token>
             }
         }
         None
+    }
+
+    pub(super) fn token_to_string(&self, token: &Token) -> String {
+        match token {
+            Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
+            Token::String(s) => format!("\"{}\"", s),
+            Token::Boolean(b) => b.to_string(),
+            Token::Nil => "nil".to_string(),
+            Token::Symbol(s) => s.clone(),
+            Token::VectorStart => "[".to_string(),
+            Token::VectorEnd => "]".to_string(),
+        }
     }
 }
