@@ -28,7 +28,7 @@ export interface TestResult {
 
 export class TestRunner {
     private testCases: TestCase[] = [
-        // === 自動ワード定義のテスト（四則演算） ===
+        // === 加算（+）- 全6パターン ===
         {
             name: "加算_前置記法_自動定義",
             code: "+ 3 4",
@@ -48,6 +48,26 @@ export class TestRunner {
             description: "後置記法による加算の自動ワード定義: 3 4 +"
         },
         {
+            name: "加算_混合パターン1_自動定義",
+            code: "+ 2 3 5 +",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "前置と後置の混合による加算の自動ワード定義: + 2 3 5 +"
+        },
+        {
+            name: "加算_混合パターン2_自動定義",
+            code: "1 + 2 3 +",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "中置と後置の混合による加算の自動ワード定義: 1 + 2 3 +"
+        },
+        {
+            name: "加算_混合パターン3_自動定義",
+            code: "+ 1 2 3 + 4",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "前置と中置の混合による加算の自動ワード定義: + 1 2 3 + 4"
+        },
+
+        // === 減算（-）- 全6パターン ===
+        {
             name: "減算_前置記法_自動定義",
             code: "- 10 3",
             expectedResult: { autoNamed: true, stackLength: 0 },
@@ -65,6 +85,26 @@ export class TestRunner {
             expectedResult: { autoNamed: true, stackLength: 0 },
             description: "後置記法による減算の自動ワード定義: 10 3 -"
         },
+        {
+            name: "減算_混合パターン1_自動定義",
+            code: "- 15 5 2 -",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "前置と後置の混合による減算の自動ワード定義: - 15 5 2 -"
+        },
+        {
+            name: "減算_混合パターン2_自動定義",
+            code: "20 - 5 3 -",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "中置と後置の混合による減算の自動ワード定義: 20 - 5 3 -"
+        },
+        {
+            name: "減算_混合パターン3_自動定義",
+            code: "- 20 5 10 - 3",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "前置と中置の混合による減算の自動ワード定義: - 20 5 10 - 3"
+        },
+
+        // === 乗算（*）- 全6パターン ===
         {
             name: "乗算_前置記法_自動定義",
             code: "* 6 7",
@@ -84,6 +124,26 @@ export class TestRunner {
             description: "後置記法による乗算の自動ワード定義: 6 7 *"
         },
         {
+            name: "乗算_混合パターン1_自動定義",
+            code: "* 2 3 4 *",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "前置と後置の混合による乗算の自動ワード定義: * 2 3 4 *"
+        },
+        {
+            name: "乗算_混合パターン2_自動定義",
+            code: "2 * 3 4 *",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "中置と後置の混合による乗算の自動ワード定義: 2 * 3 4 *"
+        },
+        {
+            name: "乗算_混合パターン3_自動定義",
+            code: "* 2 3 4 * 5",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "前置と中置の混合による乗算の自動ワード定義: * 2 3 4 * 5"
+        },
+
+        // === 除算（/）- 全6パターン ===
+        {
             name: "除算_前置記法_自動定義",
             code: "/ 15 3",
             expectedResult: { autoNamed: true, stackLength: 0 },
@@ -100,6 +160,64 @@ export class TestRunner {
             code: "15 3 /",
             expectedResult: { autoNamed: true, stackLength: 0 },
             description: "後置記法による除算の自動ワード定義: 15 3 /"
+        },
+        {
+            name: "除算_混合パターン1_自動定義",
+            code: "/ 20 4 2 /",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "前置と後置の混合による除算の自動ワード定義: / 20 4 2 /"
+        },
+        {
+            name: "除算_混合パターン2_自動定義",
+            code: "20 / 4 2 /",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "中置と後置の混合による除算の自動ワード定義: 20 / 4 2 /"
+        },
+        {
+            name: "除算_混合パターン3_自動定義",
+            code: "/ 60 3 15 / 5",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "前置と中置の混合による除算の自動ワード定義: / 60 3 15 / 5"
+        },
+
+        // === 分数での記法テスト（自動定義） ===
+        {
+            name: "分数_前置記法_自動定義",
+            code: "+ 1/2 1/3",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "分数の前置加算の自動ワード定義: + 1/2 1/3"
+        },
+        {
+            name: "分数_中置記法_自動定義",
+            code: "1/2 + 1/3",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "分数の中置加算の自動ワード定義: 1/2 + 1/3"
+        },
+        {
+            name: "分数_後置記法_自動定義",
+            code: "1/2 1/3 +",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "分数の後置加算の自動ワード定義: 1/2 1/3 +"
+        },
+
+        // === 小数点記法での演算テスト（自動定義） ===
+        {
+            name: "小数_前置記法_自動定義",
+            code: "+ 0.5 0.25",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "小数の前置加算の自動ワード定義: + 0.5 0.25"
+        },
+        {
+            name: "小数_中置記法_自動定義",
+            code: "0.5 + 0.25",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "小数の中置加算の自動ワード定義: 0.5 + 0.25"
+        },
+        {
+            name: "小数_後置記法_自動定義",
+            code: "0.5 0.25 +",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "小数の後置加算の自動ワード定義: 0.5 0.25 +"
         },
 
         // === 単一値の直接実行（リテラル） ===
@@ -185,9 +303,19 @@ export class TestRunner {
             description: "明示的なカスタムワード定義"
         },
 
-        // === 既存カスタムワードの実行 ===
-        // 注意：このテストは前のテストでSEVENが定義されていることを前提とする
-        // 実際のテストでは個別に定義が必要
+        // === 複雑な自動ワード定義 ===
+        {
+            name: "複雑な式_自動定義",
+            code: "2 + 3 4 *",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "複雑な式の自動ワード定義: 2 + 3 4 *"
+        },
+        {
+            name: "四則混合_自動定義",
+            code: "/ 20 - 10 6 + 2 3",
+            expectedResult: { autoNamed: true, stackLength: 0 },
+            description: "四則混合演算の自動ワード定義: / 20 - 10 6 + 2 3"
+        },
 
         // === エラーケースのテスト ===
         {
@@ -207,24 +335,10 @@ export class TestRunner {
             code: "[ ] HEAD",
             expectedResult: { error: true },
             description: "空ベクトルのHEADエラー"
-        },
-
-        // === 複雑な自動ワード定義 ===
-        {
-            name: "複雑な式_自動定義",
-            code: "2 + 3 4 *",
-            expectedResult: { autoNamed: true, stackLength: 0 },
-            description: "複雑な式の自動ワード定義: 2 + 3 4 *"
-        },
-        {
-            name: "分数演算_自動定義",
-            code: "1/2 + 1/3",
-            expectedResult: { autoNamed: true, stackLength: 0 },
-            description: "分数演算の自動ワード定義: 1/2 + 1/3"
         }
     ];
 
-    // 既存のメソッドは同じなので省略...
+    // 既存のメソッドは変更なし
     private formatValue(value: any): string {
         if (!value) return 'undefined';
         
