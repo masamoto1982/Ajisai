@@ -130,59 +130,6 @@ impl Interpreter {
         }
     }
 
-    // 明示的ワード定義（任意の内容を許可）
-    fn define_explicit_word(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
-        let name = name.to_uppercase();
-        
-        // 既存チェック（ビルトイン保護など）
-        if let Some(existing) = self.dictionary.get(&name) {
-            if existing.is_builtin {
-                return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-            }
-        }
-
-        // 依存関係の記録
-        let mut new_dependencies = HashSet::new();
-        for token in &body_tokens {
-            if let Token::Symbol(s) = token {
-                if self.dictionary.contains_key(s) {
-                    new_dependencies.insert(s.clone());
-                }
-            }
-        }
-
-        for dep_name in &new_dependencies {
-            self.dependencies
-                .entry(dep_name.clone())
-                .or_insert_with(HashSet::new)
-                .insert(name.clone());
-        }
-
-        // 機能説明が省略された場合は、ワード内容を使用
-        let final_description = description.or_else(|| {
-            let body_string = body_tokens.iter()
-                .map(|token| self.token_to_string(token))
-                .collect::<Vec<String>>()
-                .join(" ");
-            Some(format!("{{ {} }}", body_string))
-        });
-
-        // 永続的なワードとして定義
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens: body_tokens,
-            is_builtin: false,
-            is_temporary: false,
-            description: final_description,  // 機能説明を保存
-        });
-
-        self.word_properties.insert(name.clone(), WordProperty {
-            is_value_producer: self.check_if_value_producer(&name),
-        });
-
-        self.append_output(&format!("Defined: {}\n", name));
-        Ok(())
-    }
-
     // 二項演算として自動定義を試行
     fn try_binary_operation_auto_define(&mut self, tokens: &[Token]) -> Result<()> {
         // 既存のprocess_binary_operationsロジックを使用
@@ -459,7 +406,7 @@ impl Interpreter {
 
         console::log_1(&JsValue::from_str(&format!("RPN tokens: {:?}", rpn_tokens)));
 
-        // ワード定義を実行
+        // ワード定義を実行（既存メソッドを使用）
         self.define_named_word(word_name.clone(), rpn_tokens)?;
         
         Ok(word_name)
@@ -482,6 +429,7 @@ impl Interpreter {
         
         rpn_tokens.push(Token::Symbol(operator.to_string()));
 
+        // 既存メソッドを使用
         self.define_named_word(word_name.clone(), rpn_tokens)?;
         Ok(word_name)
     }
@@ -570,47 +518,6 @@ impl Interpreter {
         
         // シンボルの場合
         Ok(vec![Token::Symbol(operand.to_string())])
-    }
-
-    pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
-        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
-        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
-
-        // 入力順序のまま名前を生成（RPN変換せず）
-        let name_parts: Vec<String> = tokens.iter()
-            .map(|token| match token {
-                Token::Number(n, d) => {
-                    if *d == 1 {
-                        n.to_string()
-                    } else {
-                        format!("{}D{}", n, d)
-                    }
-                },
-                Token::Symbol(s) => {
-                    match s.as_str() {
-                        "+" => "ADD".to_string(),
-                        "-" => "SUB".to_string(),
-                        "*" => "MUL".to_string(),
-                        "/" => "DIV".to_string(),
-                        ">" => "GT".to_string(),
-                        ">=" => "GE".to_string(),
-                        "=" => "EQ".to_string(),
-                        "<" => "LT".to_string(),
-                        "<=" => "LE".to_string(),
-                        _ => s.clone()
-                    }
-                },
-                Token::VectorStart => "VSTART".to_string(),
-                Token::VectorEnd => "VEND".to_string(),
-                Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
-                Token::Boolean(b) => b.to_string().to_uppercase(),
-                Token::Nil => "NIL".to_string(),
-            })
-            .collect();
-        
-        let name = name_parts.join("_");
-        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
-        name
     }
 
     pub(super) fn check_if_value_producer(&self, word_name: &str) -> bool {
@@ -872,219 +779,6 @@ impl Interpreter {
             "AMNESIA" => super::op_amnesia(self),
             
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
-        }
-    }
-
-    pub(super) fn rearrange_tokens(&self, tokens: &[Token]) -> Vec<Token> {
-        console::log_1(&JsValue::from_str("--- rearrange_tokens ---"));
-        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
-        
-        // 演算子の位置を特定
-        let mut operator_positions = Vec::new();
-        for (i, token) in tokens.iter().enumerate() {
-            if let Token::Symbol(name) = token {
-                if self.is_operator(name) {
-                    operator_positions.push(i);
-                }
-            }
-        }
-        
-        if operator_positions.is_empty() {
-            console::log_1(&JsValue::from_str("No operators found, returning as-is"));
-            return tokens.to_vec();
-        }
-        
-        // 演算子が1つの場合の処理
-        if operator_positions.len() == 1 {
-            let op_pos = operator_positions[0];
-            let op = &tokens[op_pos];
-            
-            // 後置記法: a b + (既にRPN)
-            if op_pos == tokens.len() - 1 && tokens.len() >= 2 {
-                console::log_1(&JsValue::from_str("Already in RPN format"));
-                return tokens.to_vec();
-            }
-            
-            // 前置記法: + a b
-            if op_pos == 0 && tokens.len() >= 3 {
-                let mut result = vec![tokens[1].clone(), tokens[2].clone(), op.clone()];
-                // 残りのトークンを追加
-                for i in 3..tokens.len() {
-                    result.push(tokens[i].clone());
-                }
-                console::log_1(&JsValue::from_str(&format!("Prefix notation converted to RPN: {:?}", result)));
-                return result;
-            }
-            
-            // 中置記法: a + b
-            if op_pos > 0 && op_pos < tokens.len() - 1 {
-                let mut result = vec![tokens[op_pos - 1].clone(), tokens[op_pos + 1].clone(), op.clone()];
-                // 残りのトークンを追加（前の部分）
-                for i in 0..op_pos-1 {
-                    result.insert(i, tokens[i].clone());
-                }
-                // 残りのトークンを追加（後の部分）
-                for i in op_pos + 2..tokens.len() {
-                    result.push(tokens[i].clone());
-                }
-                console::log_1(&JsValue::from_str(&format!("Infix notation converted to RPN: {:?}", result)));
-                return result;
-            }
-            
-            // 部分的な式: "2 +" → そのまま（スタックにある値と組み合わせる）
-            if op_pos == tokens.len() - 1 && tokens.len() == 2 {
-                console::log_1(&JsValue::from_str("Partial expression (value op), keeping as-is"));
-                return tokens.to_vec();
-            }
-        }
-        
-        console::log_1(&JsValue::from_str("Default: returning as-is"));
-        tokens.to_vec()
-    }
-
-    pub(super) fn collect_vector_as_data(&self, tokens: &[Token]) -> Result<(Vec<Value>, usize)> {
-        let mut values = Vec::new();
-        let mut i = 1;
-
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::VectorEnd => return Ok((values, i + 1)),
-                Token::VectorStart => {
-                    let (nested_values, consumed) = self.collect_vector_as_data(&tokens[i..])?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values) });
-                    i += consumed;
-                    continue;
-                },
-                Token::Number(num, den) => values.push(Value { 
-                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)) 
-                }),
-                Token::String(s) => values.push(Value { val_type: ValueType::String(s.clone()) }),
-                Token::Boolean(b) => values.push(Value { val_type: ValueType::Boolean(*b) }),
-                Token::Nil => values.push(Value { val_type: ValueType::Nil }),
-                Token::Symbol(s) => values.push(Value { val_type: ValueType::Symbol(s.clone()) }),
-            }
-            i += 1;
-        }
-
-        Err(AjisaiError::from("Unclosed vector"))
-    }
-
-    pub(super) fn define_named_word(&mut self, name: String, body_tokens: Vec<Token>) -> Result<()> {
-        console::log_1(&JsValue::from_str("--- define_named_word ---"));
-        console::log_1(&JsValue::from_str(&format!("Defining word: {}", name)));
-        console::log_1(&JsValue::from_str(&format!("Body tokens (RPN): {:?}", body_tokens)));
-        
-        let name = name.to_uppercase();
-
-        if let Some(existing) = self.dictionary.get(&name) {
-            if existing.is_builtin {
-                return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-            }
-        }
-
-        if self.dictionary.contains_key(&name) {
-            if let Some(dependents) = self.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(AjisaiError::ProtectedWord {
-                        name: name.clone(),
-                        dependents: dependent_list,
-                    });
-                }
-            }
-        }
-
-        let mut new_dependencies = HashSet::new();
-        for token in &body_tokens {
-            if let Token::Symbol(s) = token {
-                if self.dictionary.contains_key(s) {
-                    new_dependencies.insert(s.clone());
-                }
-            }
-        }
-
-        for dep_name in &new_dependencies {
-            self.dependencies
-                .entry(dep_name.clone())
-                .or_insert_with(HashSet::new)
-                .insert(name.clone());
-        }
-
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens: body_tokens,
-            is_builtin: false,
-            is_temporary: true,  // 二項演算で生成されたワードは一時的
-            description: None,
-        });
-
-        let is_producer = self.check_if_value_producer(&name);
-        self.word_properties.insert(name.clone(), WordProperty {
-            is_value_producer: is_producer,
-        });
-
-        self.append_output(&format!("Defined: {}\n", name));
-        console::log_1(&JsValue::from_str("--- end define_named_word ---"));
-
-        Ok(())
-    }
-    
-    // 一時的なワードとその依存関係を再帰的に削除するメソッド
-    pub(super) fn delete_temporary_word_cascade(&mut self, word_name: &str) {
-        // 削除対象のワードを収集
-        let mut words_to_delete = HashSet::new();
-        let mut queue = std::collections::VecDeque::new();
-        queue.push_back(word_name.to_string());
-        
-        while let Some(current_word) = queue.pop_front() {
-            // すでに処理済みならスキップ
-            if !words_to_delete.insert(current_word.clone()) {
-                continue;
-            }
-            
-            // このワードが使用しているワードを探す
-            if let Some(def) = self.dictionary.get(&current_word) {
-                // 一時的なワードのみ対象
-                if def.is_temporary {
-                    // トークンから依存しているワードを抽出
-                    for token in &def.tokens {
-                        if let Token::Symbol(dep_name) = token {
-                            if let Some(dep_def) = self.dictionary.get(dep_name) {
-                                // 依存先も一時的なワードなら削除対象に追加
-                                if dep_def.is_temporary {
-                                    queue.push_back(dep_name.clone());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 収集したワードをすべて削除
-        for word in words_to_delete {
-            console::log_1(&JsValue::from_str(&format!("Deleting temporary word: {}", word)));
-            
-            // 辞書から削除
-            self.dictionary.remove(&word);
-            self.word_properties.remove(&word);
-            
-            // 依存関係のクリーンアップ
-            self.dependencies.remove(&word);
-            for (_, deps) in self.dependencies.iter_mut() {
-                deps.remove(&word);
-            }
-        }
-    }
-
-    pub(super) fn token_to_string(&self, token: &Token) -> String {
-        match token {
-            Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
-            Token::String(s) => format!("\"{}\"", s),
-            Token::Boolean(b) => b.to_string(),
-            Token::Nil => "nil".to_string(),
-            Token::Symbol(s) => s.clone(),
-            Token::VectorStart => "[".to_string(),
-            Token::VectorEnd => "]".to_string(),
         }
     }
 }
