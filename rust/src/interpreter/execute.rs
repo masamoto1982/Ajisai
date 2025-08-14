@@ -827,20 +827,28 @@ fn should_execute_immediately(&self, tokens: &[Token]) -> bool {
         Ok(())
     }
 
-    // ワード実行の統一インターフェース（暗黙の反復を適用）
-    pub(super) fn execute_word_with_implicit_iteration(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(name)
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
-            .clone();
+   // ワード実行の統一インターフェース（暗黙の反復を適用）
+pub(super) fn execute_word_with_implicit_iteration(&mut self, name: &str) -> Result<()> {
+    let def = self.dictionary.get(name)
+        .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
+        .clone();
+    
+    if def.is_builtin {
+        // ビルトインは既に暗黙の反復が実装されている
+        self.execute_builtin(name)
+    } else {
+        // カスタムワードに暗黙の反復を適用
+        let result = self.execute_custom_word_with_iteration(name, &def.tokens);
         
-        if def.is_builtin {
-            // ビルトインは既に暗黙の反復が実装されている
-            self.execute_builtin(name)
-        } else {
-            // カスタムワードに暗黙の反復を適用
-            self.execute_custom_word_with_iteration(name, &def.tokens)
+        // 一時的なワードの場合、実行後に連鎖削除
+        if def.is_temporary {
+            console::log_1(&JsValue::from_str(&format!("Executing and deleting temporary word: {}", name)));
+            self.delete_temporary_word_cascade(name);
         }
+        
+        result
     }
+}
 
     // 暗黙の反復機能を持つカスタムワード実行（ネスト対応版）
     pub(super) fn execute_custom_word_with_iteration(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
@@ -888,56 +896,56 @@ fn should_execute_immediately(&self, tokens: &[Token]) -> bool {
     }
     
     // カスタムワードのトークンを実行（内部の暗黙の反復を維持）
-    fn execute_custom_word_tokens(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
-        self.call_stack.push(name.to_string());
-        
-        // トークンを1つずつ実行（Symbol トークンも暗黙の反復を適用）
-        let mut i = 0;
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::Number(num, den) => {
-                    self.stack.push(Value {
-                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                    });
-                },
-                Token::String(s) => {
-                    self.stack.push(Value {
-                        val_type: ValueType::String(s.clone()),
-                    });
-                },
-                Token::Boolean(b) => {
-                    self.stack.push(Value {
-                        val_type: ValueType::Boolean(*b),
-                    });
-                },
-                Token::Nil => {
-                    self.stack.push(Value {
-                        val_type: ValueType::Nil,
-                    });
-                },
-                Token::VectorStart => {
-                    let (vector_values, consumed) = self.collect_vector_as_data(&tokens[i..])?;
-                    self.stack.push(Value {
-                        val_type: ValueType::Vector(vector_values),
-                    });
-                    i += consumed - 1;
-                },
-                Token::Symbol(sym_name) => {
-                    // 内部のワードも暗黙の反復を適用
-                    self.execute_word_with_implicit_iteration(sym_name)
-                        .map_err(|e| e.with_context(&self.call_stack))?;
-                },
-                Token::VectorEnd => {
-                    self.call_stack.pop();
-                    return Err(AjisaiError::from("Unexpected closing delimiter found."));
-                },
-            }
-            i += 1;
+fn execute_custom_word_tokens(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
+    self.call_stack.push(name.to_string());
+    
+    // トークンを1つずつ実行（Symbol トークンも暗黙の反復を適用）
+    let mut i = 0;
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::Number(num, den) => {
+                self.stack.push(Value {
+                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                });
+            },
+            Token::String(s) => {
+                self.stack.push(Value {
+                    val_type: ValueType::String(s.clone()),
+                });
+            },
+            Token::Boolean(b) => {
+                self.stack.push(Value {
+                    val_type: ValueType::Boolean(*b),
+                });
+            },
+            Token::Nil => {
+                self.stack.push(Value {
+                    val_type: ValueType::Nil,
+                });
+            },
+            Token::VectorStart => {
+                let (vector_values, consumed) = self.collect_vector_as_data(&tokens[i..])?;
+                self.stack.push(Value {
+                    val_type: ValueType::Vector(vector_values),
+                });
+                i += consumed - 1;
+            },
+            Token::Symbol(sym_name) => {
+                // 内部のワードも暗黙の反復を適用（一時ワードの削除も含む）
+                self.execute_word_with_implicit_iteration(sym_name)
+                    .map_err(|e| e.with_context(&self.call_stack))?;
+            },
+            Token::VectorEnd => {
+                self.call_stack.pop();
+                return Err(AjisaiError::from("Unexpected closing delimiter found."));
+            },
         }
-        
-        self.call_stack.pop();
-        Ok(())
+        i += 1;
     }
+    
+    self.call_stack.pop();
+    Ok(())
+}
     
     // 通常のカスタムワード実行（暗黙の反復なし）
     fn execute_custom_word_normal(&mut self, name: &str, tokens: &[Token]) -> Result<()> {
