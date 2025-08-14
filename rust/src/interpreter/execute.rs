@@ -175,7 +175,7 @@ impl Interpreter {
             } else {
                 // 複数トークンで二項演算が検出されない場合はエラー
                 let token_strs: Vec<String> = tokens.iter()
-                    .map(|t| self.token_to_string(t))
+                    .map(|t| self.token_to_string(t))  // ← 既存のメソッドを呼び出し
                     .collect();
                 return Err(AjisaiError::from(format!(
                     "Cannot parse input as binary operations: [{}]. \
@@ -216,19 +216,6 @@ impl Interpreter {
         self.last_auto_named_word = Some(current_result);
         
         Ok(())
-    }
-
-    // token_to_string メソッドを追加（既存の実装から移動）
-    fn token_to_string(&self, token: &Token) -> String {
-        match token {
-            Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
-            Token::String(s) => format!("\"{}\"", s),
-            Token::Boolean(b) => b.to_string(),
-            Token::Nil => "nil".to_string(),
-            Token::Symbol(s) => s.clone(),
-            Token::VectorStart => "[".to_string(),
-            Token::VectorEnd => "]".to_string(),
-        }
     }
 }
 
@@ -396,7 +383,7 @@ impl Interpreter {
         // 完全性チェック：すべてのトークンが消費されたか確認
         if !operations.is_empty() && consumed_tokens < tokens.len() {
             let remaining_tokens: Vec<String> = tokens[consumed_tokens..].iter()
-                .map(|t| self.token_to_string(t))
+                .map(|t| self.token_to_string(t))  // ← 既存のメソッドを呼び出し
                 .collect();
             
             return Err(AjisaiError::from(format!(
