@@ -175,7 +175,7 @@ impl Interpreter {
             } else {
                 // 複数トークンで二項演算が検出されない場合はエラー
                 let token_strs: Vec<String> = tokens.iter()
-                    .map(|t| self.token_to_string(t))  // ← 既存のメソッドを呼び出し
+                    .map(|t| self.token_to_string(t))
                     .collect();
                 return Err(AjisaiError::from(format!(
                     "Cannot parse input as binary operations: [{}]. \
@@ -215,76 +215,6 @@ impl Interpreter {
         self.auto_named = true;
         self.last_auto_named_word = Some(current_result);
         
-        Ok(())
-    }
-}
-
-    // フォールバック：従来の方式でのワード定義
-    fn fallback_word_definition(&mut self, tokens: &[Token]) -> Result<()> {
-        console::log_1(&JsValue::from_str("--- fallback_word_definition ---"));
-        
-        // 名前は元のトークンから生成
-        let name = self.generate_word_name(tokens);
-        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
-        
-        if self.dictionary.contains_key(&name) {
-            // 既存のワードがある場合
-            if let Some(def) = self.dictionary.get(&name).cloned() {
-                if def.is_temporary {
-                    console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
-                    self.execute_word_with_implicit_iteration(&name)?;
-                    // 実行後に連鎖削除
-                    self.delete_temporary_word_cascade(&name);
-                } else {
-                    // 永続的なワードの場合は単に実行
-                    console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
-                    self.execute_word_with_implicit_iteration(&name)?;
-                }
-            }
-            return Ok(());
-        }
-
-        // 新規の自動命名ワードを定義（実行はしない）
-        self.auto_named = true;
-        self.last_auto_named_word = Some(name.clone());
-
-        // 定数式の事前評価を行う
-        let processed_tokens = self.preprocess_constant_expressions(tokens)?;
-        
-        // 処理済みトークンをRPNに変換
-        let storage_tokens = self.rearrange_tokens(&processed_tokens);
-        console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
-
-        // 依存関係の記録
-        let mut new_dependencies = std::collections::HashSet::new();
-        for token in &storage_tokens {
-            if let Token::Symbol(s) = token {
-                if self.dictionary.contains_key(s) {
-                    new_dependencies.insert(s.clone());
-                }
-            }
-        }
-
-        for dep_name in &new_dependencies {
-            self.dependencies
-                .entry(dep_name.clone())
-                .or_insert_with(std::collections::HashSet::new)
-                .insert(name.clone());
-        }
-
-        self.dictionary.insert(name.clone(), super::WordDefinition {
-            tokens: storage_tokens,
-            is_builtin: false,
-            is_temporary: true,
-            description: None,
-        });
-
-        let is_producer = self.check_if_value_producer(&name);
-        self.word_properties.insert(name.clone(), super::WordProperty {
-            is_value_producer: is_producer,
-        });
-
-        console::log_1(&JsValue::from_str("--- end fallback_word_definition ---"));
         Ok(())
     }
 
@@ -383,7 +313,7 @@ impl Interpreter {
         // 完全性チェック：すべてのトークンが消費されたか確認
         if !operations.is_empty() && consumed_tokens < tokens.len() {
             let remaining_tokens: Vec<String> = tokens[consumed_tokens..].iter()
-                .map(|t| self.token_to_string(t))  // ← 既存のメソッドを呼び出し
+                .map(|t| self.token_to_string(t))
                 .collect();
             
             return Err(AjisaiError::from(format!(
@@ -439,14 +369,14 @@ impl Interpreter {
         }
     }
 
-    // 二項演算に基づくワード定義（修正版）
+    // 二項演算に基づくワード定義
     fn define_binary_operation(&mut self, left: &str, operator: &str, right: &str) -> Result<String> {
         console::log_1(&JsValue::from_str(&format!("--- define_binary_operation: {} {} {} ---", left, operator, right)));
         
         // 演算子を標準名に変換
         let op_name = self.get_operator_name(operator);
 
-        // ワード名を生成（修正：フォーマット文字列を修正）
+        // ワード名を生成
         let word_name = format!("{}_{}_{}", left, right, op_name);
         console::log_1(&JsValue::from_str(&format!("Generated word name: {}", word_name)));
 
@@ -482,7 +412,7 @@ impl Interpreter {
         Ok(word_name)
     }
 
-    // 単項演算子の処理（修正版）
+    // 単項演算子の処理
     fn handle_unary_operation(&mut self, operator: &str, operand: &str) -> Result<String> {
         console::log_1(&JsValue::from_str(&format!("--- handle_unary_operation: {} {} ---", operator, operand)));
         
@@ -503,7 +433,7 @@ impl Interpreter {
         Ok(word_name)
     }
 
-    // 演算子名の標準化（修正版：Stringを返す）
+    // 演算子名の標準化
     fn get_operator_name(&self, operator: &str) -> String {
         match operator {
             // 算術
@@ -587,6 +517,75 @@ impl Interpreter {
         
         // シンボルの場合
         Ok(vec![Token::Symbol(operand.to_string())])
+    }
+
+    // フォールバック：従来の方式でのワード定義
+    fn fallback_word_definition(&mut self, tokens: &[Token]) -> Result<()> {
+        console::log_1(&JsValue::from_str("--- fallback_word_definition ---"));
+        
+        // 名前は元のトークンから生成
+        let name = self.generate_word_name(tokens);
+        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
+        
+        if self.dictionary.contains_key(&name) {
+            // 既存のワードがある場合
+            if let Some(def) = self.dictionary.get(&name).cloned() {
+                if def.is_temporary {
+                    console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
+                    self.execute_word_with_implicit_iteration(&name)?;
+                    // 実行後に連鎖削除
+                    self.delete_temporary_word_cascade(&name);
+                } else {
+                    // 永続的なワードの場合は単に実行
+                    console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
+                    self.execute_word_with_implicit_iteration(&name)?;
+                }
+            }
+            return Ok(());
+        }
+
+        // 新規の自動命名ワードを定義（実行はしない）
+        self.auto_named = true;
+        self.last_auto_named_word = Some(name.clone());
+
+        // 定数式の事前評価を行う
+        let processed_tokens = self.preprocess_constant_expressions(tokens)?;
+        
+        // 処理済みトークンをRPNに変換
+        let storage_tokens = self.rearrange_tokens(&processed_tokens);
+        console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
+
+        // 依存関係の記録
+        let mut new_dependencies = std::collections::HashSet::new();
+        for token in &storage_tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) {
+                    new_dependencies.insert(s.clone());
+                }
+            }
+        }
+
+        for dep_name in &new_dependencies {
+            self.dependencies
+                .entry(dep_name.clone())
+                .or_insert_with(std::collections::HashSet::new)
+                .insert(name.clone());
+        }
+
+        self.dictionary.insert(name.clone(), super::WordDefinition {
+            tokens: storage_tokens,
+            is_builtin: false,
+            is_temporary: true,
+            description: None,
+        });
+
+        let is_producer = self.check_if_value_producer(&name);
+        self.word_properties.insert(name.clone(), super::WordProperty {
+            is_value_producer: is_producer,
+        });
+
+        console::log_1(&JsValue::from_str("--- end fallback_word_definition ---"));
+        Ok(())
     }
 
     // 定数式を事前評価するメソッド
@@ -722,8 +721,6 @@ impl Interpreter {
             false
         }
     }
-
-    // 以下は既存のメソッド（変更なし）
 
     pub fn execute_tokens_with_context(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
