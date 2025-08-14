@@ -4,6 +4,8 @@ use crate::types::{Value, ValueType, Token};
 use crate::tokenizer::tokenize;
 use super::{Interpreter, error::{AjisaiError, Result}};
 use super::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, io::*, register_ops::*};
+use super::{WordDefinition, WordProperty};  // 追加
+use std::collections::HashSet;              // 追加
 use wasm_bindgen::JsValue;
 use web_sys::console;
 
