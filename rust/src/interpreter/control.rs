@@ -89,8 +89,17 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
                 }
             }
             
+            // 辞書から削除
             interp.dictionary.remove(&name);
+            
+            // 依存関係のクリーンアップ
             interp.dependencies.remove(&name);
+            
+            // 重要：他のワードの依存関係から削除対象ワードを除去
+            for (_, deps) in interp.dependencies.iter_mut() {
+                deps.remove(&name);
+            }
+            
             Ok(())
         },
         _ => Err(AjisaiError::type_error("string", "other type")),
