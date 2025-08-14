@@ -8,7 +8,12 @@ use web_sys::console;
 
 impl Interpreter {
     pub(super) fn define_named_word(&mut self, name: String, body_tokens: Vec<Token>) -> Result<()> {
-        console::log_1(&JsValue::from_str("--- define_named_word ---"));
+        self.define_named_word_with_description(name, body_tokens, None)
+    }
+
+    // 機能説明付きワード定義（新規追加）
+    pub(super) fn define_named_word_with_description(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+        console::log_1(&JsValue::from_str("--- define_named_word_with_description ---"));
         console::log_1(&JsValue::from_str(&format!("Defining word: {}", name)));
         console::log_1(&JsValue::from_str(&format!("Body tokens (RPN): {:?}", body_tokens)));
         
@@ -48,11 +53,20 @@ impl Interpreter {
                 .insert(name.clone());
         }
 
+        // 機能説明が省略された場合は、ワード内容を使用
+        let final_description = description.or_else(|| {
+            let body_string = body_tokens.iter()
+                .map(|token| self.token_to_string(token))
+                .collect::<Vec<String>>()
+                .join(" ");
+            Some(format!("{{ {} }}", body_string))
+        });
+
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: body_tokens,
             is_builtin: false,
             is_temporary: true,  // 二項演算で生成されたワードは一時的
-            description: None,
+            description: final_description,
         });
 
         let is_producer = self.check_if_value_producer(&name);
@@ -61,8 +75,61 @@ impl Interpreter {
         });
 
         self.append_output(&format!("Defined: {}\n", name));
-        console::log_1(&JsValue::from_str("--- end define_named_word ---"));
+        console::log_1(&JsValue::from_str("--- end define_named_word_with_description ---"));
 
+        Ok(())
+    }
+
+    // 明示的ワード定義（永続的）
+    pub(super) fn define_explicit_word(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+        let name = name.to_uppercase();
+        
+        // 既存チェック（ビルトイン保護など）
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
+            }
+        }
+
+        // 依存関係の記録
+        let mut new_dependencies = HashSet::new();
+        for token in &body_tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) {
+                    new_dependencies.insert(s.clone());
+                }
+            }
+        }
+
+        for dep_name in &new_dependencies {
+            self.dependencies
+                .entry(dep_name.clone())
+                .or_insert_with(HashSet::new)
+                .insert(name.clone());
+        }
+
+        // 機能説明が省略された場合は、ワード内容を使用
+        let final_description = description.or_else(|| {
+            let body_string = body_tokens.iter()
+                .map(|token| self.token_to_string(token))
+                .collect::<Vec<String>>()
+                .join(" ");
+            Some(format!("{{ {} }}", body_string))
+        });
+
+        // 永続的なワードとして定義
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens: body_tokens,
+            is_builtin: false,
+            is_temporary: false,  // 明示的定義は永続的
+            description: final_description,  // 機能説明を保存
+        });
+
+        self.word_properties.insert(name.clone(), WordProperty {
+            is_value_producer: self.check_if_value_producer(&name),
+        });
+
+        self.append_output(&format!("Defined: {}\n", name));
         Ok(())
     }
     
@@ -114,6 +181,7 @@ impl Interpreter {
         }
     }
 
+    // 残りのメソッドは既存のまま...
     pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
         let name = name.to_uppercase();
         
