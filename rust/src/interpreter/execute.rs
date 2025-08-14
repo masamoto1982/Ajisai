@@ -119,7 +119,7 @@ fn extract_description_from_line(&self, line: &str, tokens: &[Token]) -> Option<
 }
 
 // 明示的ワード定義（任意の内容を許可）
-fn define_explicit_word(&mut self, name: String, body_tokens: Vec<Token>) -> Result<()> {
+fn define_explicit_word(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
     let name = name.to_uppercase();
     
     // 既存チェック（ビルトイン保護など）
@@ -146,12 +146,21 @@ fn define_explicit_word(&mut self, name: String, body_tokens: Vec<Token>) -> Res
             .insert(name.clone());
     }
 
+    // 機能説明が省略された場合は、ワード内容を使用
+    let final_description = description.or_else(|| {
+        let body_string = body_tokens.iter()
+            .map(|token| self.token_to_string(token))
+            .collect::<Vec<String>>()
+            .join(" ");
+        Some(format!("{{ {} }}", body_string))
+    });
+
     // 永続的なワードとして定義
     self.dictionary.insert(name.clone(), WordDefinition {
         tokens: body_tokens,
         is_builtin: false,
-        is_temporary: false,  // 明示的定義は永続的
-        description: None,
+        is_temporary: false,
+        description: final_description,  // 機能説明を保存
     });
 
     self.word_properties.insert(name.clone(), WordProperty {
