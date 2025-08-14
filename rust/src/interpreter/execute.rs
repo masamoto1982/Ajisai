@@ -4,8 +4,6 @@ use crate::types::{Value, ValueType, Token};
 use crate::tokenizer::tokenize;
 use super::{Interpreter, error::{AjisaiError, Result}};
 use super::{stack_ops::*, arithmetic::*, vector_ops::*, control::*, io::*, register_ops::*};
-use super::{WordDefinition, WordProperty};
-use std::collections::HashSet;
 use wasm_bindgen::JsValue;
 use web_sys::console;
 
@@ -40,187 +38,114 @@ impl Interpreter {
             return Ok(());
         }
 
-        // 明示的DEF構文を最優先でチェック（行全体を渡す）
-        if let Some((name, body_tokens, description)) = self.parse_explicit_def(&tokens, line) {
-            return self.define_explicit_word(name, body_tokens, description);
-        }
-
         self.process_line_from_tokens(&tokens)
     }
 
-  if tokens.len() >= 2 {
-    // DEFの位置を探す
-    let def_position = tokens.iter().rposition(|t| {
-        if let Token::Symbol(s) = t {
-            s == "DEF"
-        } else {
-            false
-        }
-    });
-    
-    if let Some(def_idx) = def_position {
-        // DEFの前に文字列（名前）があるかチェック
-        if def_idx > 0 {
-            if let Token::String(name) = &tokens[def_idx - 1] {
-                // DEFの後に説明文字列があるかチェック
-                let description = if def_idx + 1 < tokens.len() {
-                    if let Token::String(desc) = &tokens[def_idx + 1] {
-                        Some(desc.clone())
-                    } else {
-                        // DEFの後が文字列でない場合はエラー
-                        return Err(AjisaiError::from("DEF can be followed only by a description string"));
-                    }
-                } else {
-                    None
-                };
-                
-                // 本体のトークンを取得
-                let body_tokens = &tokens[..def_idx - 1];
-                if body_tokens.is_empty() {
-                    return Err(AjisaiError::from("DEF requires a body"));
-                }
-                
-                let rpn_tokens = self.rearrange_tokens(body_tokens);
-                return self.define_named_word_with_description(name.clone(), rpn_tokens, description);
-            }
-        }
-    }
-}
-                        if let Token::String(desc) = &tokens[def_idx + 1] {
-                            Some(desc.clone())
-                        } else {
-                            // DEFの後が文字列でない場合はエラー
-                            return Err(AjisaiError::from("DEF can be followed only by a description string"));
-                        }
-                    } else {
-                        None
-                    };
-                    
-                    // 本体のトークンを取得
-                    let body_tokens = &tokens[..def_idx - 1];
-                    if body_tokens.is_empty() {
-                        return Err(AjisaiError::from("DEF requires a body"));
-                    }
-                    
-                    let rpn_tokens = self.rearrange_tokens(body_tokens);
-                    return self.define_named_word_with_description(name.clone(), rpn_tokens, description);
-                }
-            }
-        }
-    }
+    pub(super) fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        console::log_1(&JsValue::from_str("--- process_line_from_tokens ---"));
+        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
 
-    // 明示的DEF構文の解析（行全体と機能説明対応）
-    fn parse_explicit_def(&self, tokens: &[Token], line: &str) -> Option<(String, Vec<Token>, Option<String>)> {
+        // DEFパターンのチェック（説明付きも対応）
         if tokens.len() >= 2 {
-            let last_idx = tokens.len() - 1;
-            if let (Some(Token::String(name)), Some(Token::Symbol(def_sym))) = 
-                (tokens.get(last_idx - 1), tokens.get(last_idx)) {
-                if def_sym == "DEF" {
-                    let body_tokens = tokens[..last_idx - 1].to_vec();
-                    
-                    // DEF以降の機能説明を抽出
-                    let description = self.extract_description_from_line(line, tokens);
-                    
-                    return Some((name.clone(), body_tokens, description));
+            // DEFの位置を探す
+            let def_position = tokens.iter().rposition(|t| {
+                if let Token::Symbol(s) = t {
+                    s == "DEF"
+                } else {
+                    false
+                }
+            });
+            
+            if let Some(def_idx) = def_position {
+                // DEFの前に文字列（名前）があるかチェック
+                if def_idx > 0 {
+                    if let Token::String(name) = &tokens[def_idx - 1] {
+                        // DEFの後に説明文字列があるかチェック
+                        let description = if def_idx + 1 < tokens.len() {
+                            if let Token::String(desc) = &tokens[def_idx + 1] {
+                                Some(desc.clone())
+                            } else {
+                                // DEFの後が文字列でない場合はエラー
+                                return Err(AjisaiError::from("DEF can be followed only by a description string"));
+                            }
+                        } else {
+                            None
+                        };
+                        
+                        // 本体のトークンを取得
+                        let body_tokens = &tokens[..def_idx - 1];
+                        if body_tokens.is_empty() {
+                            return Err(AjisaiError::from("DEF requires a body"));
+                        }
+                        
+                        let rpn_tokens = self.rearrange_tokens(body_tokens);
+                        return self.define_named_word_with_description(name.clone(), rpn_tokens, description);
+                    }
                 }
             }
         }
-        None
-    }
-
-    fn extract_description_from_line(&self, line: &str, tokens: &[Token]) -> Option<String> {
-        // DEF の位置を特定
-        let def_position = self.find_def_position_in_line(line, tokens)?;
         
-        // DEF以降のテキストを取得
-        let after_def_start = def_position + 3; // "DEF"の3文字分
-        if after_def_start >= line.len() {
-            return None;
-        }
-        
-        let after_def = line[after_def_start..].trim();
-        if after_def.is_empty() {
-            return None;
-        }
-        
-        // #コメントを除去
-        let description = if let Some(comment_pos) = after_def.find('#') {
-            after_def[..comment_pos].trim()
-        } else {
-            after_def.trim()
-        };
-        
-        if description.is_empty() {
-            None
-        } else {
-            Some(description.to_string())
-        }
-    }
-
-    fn find_def_position_in_line(&self, line: &str, _tokens: &[Token]) -> Option<usize> {
-        // 行内で "DEF" キーワードの位置を検索
-        // " DEF " または行末の " DEF" を探す
-        if let Some(pos) = line.rfind(" DEF ") {
-            Some(pos + 1) // " DEF "の開始位置
-        } else if line.ends_with(" DEF") {
-            Some(line.len() - 3) // "DEF"の開始位置
-        } else {
-            None
-        }
-    }
-
-    // 二項演算として自動定義を試行
-    fn try_binary_operation_auto_define(&mut self, tokens: &[Token]) -> Result<()> {
-        // 既存のprocess_binary_operationsロジックを使用
-        let operations = self.parse_binary_operations(tokens)?;
-        
-        if operations.is_empty() {
-            return Err(AjisaiError::from("Not a binary operation pattern"));
-        }
-
-        // 二項演算として処理（既存ロジック）
-        let mut current_result = String::new();
-        
-        for (i, op) in operations.iter().enumerate() {
-            let word_name = if op.left.is_empty() {
-                if i == 0 {
-                    self.handle_unary_operation(&op.operator, &op.right)?
-                } else {
-                    self.handle_unary_operation(&op.operator, &current_result)?
-                }
-            } else {
-                if i == 0 {
-                    self.define_binary_operation(&op.left, &op.operator, &op.right)?
-                } else {
-                    self.define_binary_operation(&current_result, &op.operator, &op.right)?
-                }
-            };
-            current_result = word_name;
-        }
-
-        self.auto_named = true;
-        self.last_auto_named_word = Some(current_result);
-        Ok(())
-    }
-
-    // 即時実行判定
-    fn should_execute_immediately(&self, tokens: &[Token]) -> bool {
-        // 単一リテラル値
+        // 単一トークンの場合
         if tokens.len() == 1 {
-            match &tokens[0] {
-                Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => true,
-                Token::Symbol(name) => self.dictionary.contains_key(name),
-                _ => false,
+            return self.handle_single_token(&tokens[0]);
+        }
+        
+        // ベクトルリテラルの特別処理（[ ... ]は直接実行）
+        if tokens.first() == Some(&Token::VectorStart) && 
+           tokens.last() == Some(&Token::VectorEnd) {
+            return self.execute_tokens_with_context(tokens);
+        }
+        
+        // パターン: WORD [ ... ] の場合、特別処理
+        if tokens.len() >= 2 {
+            if let Token::Symbol(name) = &tokens[0] {
+                if tokens[1] == Token::VectorStart && 
+                   tokens.last() == Some(&Token::VectorEnd) &&
+                   self.dictionary.contains_key(name) {
+                    // まずベクトルを評価
+                    self.execute_tokens_with_context(&tokens[1..])?;
+                    // その後ワードを実行（暗黙の反復が適用される）
+                    return self.execute_word_with_implicit_iteration(name);
+                }
             }
         }
-        // ベクトルリテラル
-        else if tokens.first() == Some(&Token::VectorStart) && 
-                tokens.last() == Some(&Token::VectorEnd) {
-            true
+        
+        // パターン: [ ... ] WORD の場合、通常通り実行（暗黙の反復が適用される）
+        if tokens.len() >= 2 {
+            if tokens.first() == Some(&Token::VectorStart) {
+                // ベクトルの終端を探す
+                let mut depth = 0;
+                let mut vec_end_idx = None;
+                for (i, token) in tokens.iter().enumerate() {
+                    match token {
+                        Token::VectorStart => depth += 1,
+                        Token::VectorEnd => {
+                            depth -= 1;
+                            if depth == 0 {
+                                vec_end_idx = Some(i);
+                                break;
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+                
+                // ベクトルの後に単一のワードがある場合
+                if let Some(end_idx) = vec_end_idx {
+                    if end_idx == tokens.len() - 2 {
+                        if let Token::Symbol(name) = &tokens[tokens.len() - 1] {
+                            if self.dictionary.contains_key(name) {
+                                // 通常の実行（暗黙の反復が自動的に適用される）
+                                return self.execute_tokens_with_context(tokens);
+                            }
+                        }
+                    }
+                }
+            }
         }
-        else {
-            false
-        }
+        
+        // 二項演算の段階的処理（メインロジック）
+        self.process_binary_operations(tokens)
     }
 
     fn handle_single_token(&mut self, token: &Token) -> Result<()> {
@@ -255,6 +180,65 @@ impl Interpreter {
                 return Err(AjisaiError::from("Incomplete vector notation"));
             }
         }
+    }
+
+    // 二項演算の段階的処理（エラーハンドリング強化）
+    fn process_binary_operations(&mut self, tokens: &[Token]) -> Result<()> {
+        console::log_1(&JsValue::from_str("--- process_binary_operations ---"));
+        
+        // 二項演算のパターンを検出して段階的に処理
+        let operations = self.parse_binary_operations(tokens)?;
+        console::log_1(&JsValue::from_str(&format!("Parsed operations: {:?}", operations)));
+        
+        if operations.is_empty() {
+            // 二項演算が検出されない場合、単一要素かチェック
+            if tokens.len() == 1 {
+                // 単一トークンは別途処理
+                return self.handle_single_token(&tokens[0]);
+            } else {
+                // 複数トークンで二項演算が検出されない場合はエラー
+                let token_strs: Vec<String> = tokens.iter()
+                    .map(|t| self.token_to_string(t))
+                    .collect();
+                return Err(AjisaiError::from(format!(
+                    "Cannot parse input as binary operations: [{}]. \
+                     Input must be either a single value/word or complete binary operations.",
+                    token_strs.join(" ")
+                )));
+            }
+        }
+
+        // 段階的にワード定義を実行
+        let mut current_result = String::new();
+        
+        for (i, op) in operations.iter().enumerate() {
+            console::log_1(&JsValue::from_str(&format!("Processing operation {}: {:?}", i, op)));
+            
+            let word_name = if op.left.is_empty() {
+                // 単項演算の場合
+                if i == 0 {
+                    self.handle_unary_operation(&op.operator, &op.right)?
+                } else {
+                    self.handle_unary_operation(&op.operator, &current_result)?
+                }
+            } else {
+                // 二項演算の場合
+                if i == 0 {
+                    self.define_binary_operation(&op.left, &op.operator, &op.right)?
+                } else {
+                    self.define_binary_operation(&current_result, &op.operator, &op.right)?
+                }
+            };
+            
+            current_result = word_name;
+            console::log_1(&JsValue::from_str(&format!("Generated word: {}", current_result)));
+        }
+
+        // 最終的なワード名を記録
+        self.auto_named = true;
+        self.last_auto_named_word = Some(current_result);
+        
+        Ok(())
     }
 
     // 二項演算のパースロジック（完全性チェック付き）
@@ -445,7 +429,7 @@ impl Interpreter {
 
         console::log_1(&JsValue::from_str(&format!("RPN tokens: {:?}", rpn_tokens)));
 
-        // ワード定義を実行（既存メソッドを使用）
+        // ワード定義を実行
         self.define_named_word(word_name.clone(), rpn_tokens)?;
         
         Ok(word_name)
@@ -468,7 +452,6 @@ impl Interpreter {
         
         rpn_tokens.push(Token::Symbol(operator.to_string()));
 
-        // 既存メソッドを使用
         self.define_named_word(word_name.clone(), rpn_tokens)?;
         Ok(word_name)
     }
@@ -559,6 +542,191 @@ impl Interpreter {
         Ok(vec![Token::Symbol(operand.to_string())])
     }
 
+    // フォールバック：従来の方式でのワード定義
+    fn fallback_word_definition(&mut self, tokens: &[Token]) -> Result<()> {
+        console::log_1(&JsValue::from_str("--- fallback_word_definition ---"));
+        
+        // 名前は元のトークンから生成
+        let name = self.generate_word_name(tokens);
+        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
+        
+        if self.dictionary.contains_key(&name) {
+            // 既存のワードがある場合
+            if let Some(def) = self.dictionary.get(&name).cloned() {
+                if def.is_temporary {
+                    console::log_1(&JsValue::from_str(&format!("Executing temporary word: {}", name)));
+                    self.execute_word_with_implicit_iteration(&name)?;
+                    // 実行後に連鎖削除
+                    self.delete_temporary_word_cascade(&name);
+                } else {
+                    // 永続的なワードの場合は単に実行
+                    console::log_1(&JsValue::from_str(&format!("Executing permanent word: {}", name)));
+                    self.execute_word_with_implicit_iteration(&name)?;
+                }
+            }
+            return Ok(());
+        }
+
+        // 新規の自動命名ワードを定義（実行はしない）
+        self.auto_named = true;
+        self.last_auto_named_word = Some(name.clone());
+
+        // 定数式の事前評価を行う
+        let processed_tokens = self.preprocess_constant_expressions(tokens)?;
+        
+        // 処理済みトークンをRPNに変換
+        let storage_tokens = self.rearrange_tokens(&processed_tokens);
+        console::log_1(&JsValue::from_str(&format!("Storage tokens (RPN): {:?}", storage_tokens)));
+
+        // 依存関係の記録
+        let mut new_dependencies = std::collections::HashSet::new();
+        for token in &storage_tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) {
+                    new_dependencies.insert(s.clone());
+                }
+            }
+        }
+
+        for dep_name in &new_dependencies {
+            self.dependencies
+                .entry(dep_name.clone())
+                .or_insert_with(std::collections::HashSet::new)
+                .insert(name.clone());
+        }
+
+        self.dictionary.insert(name.clone(), super::WordDefinition {
+            tokens: storage_tokens,
+            is_builtin: false,
+            is_temporary: true,
+            description: None,
+        });
+
+        let is_producer = self.check_if_value_producer(&name);
+        self.word_properties.insert(name.clone(), super::WordProperty {
+            is_value_producer: is_producer,
+        });
+
+        console::log_1(&JsValue::from_str("--- end fallback_word_definition ---"));
+        Ok(())
+    }
+
+    // 定数式を事前評価するメソッド
+    fn preprocess_constant_expressions(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+        // カスタムワードを含む場合は事前評価しない
+        for token in tokens {
+            if let Token::Symbol(s) = token {
+                if self.dictionary.contains_key(s) && !self.is_operator(s) {
+                    // カスタムワードが含まれている場合は、そのまま返す
+                    return Ok(tokens.to_vec());
+                }
+            }
+        }
+        
+        // 純粋な定数式のみ事前評価
+        if tokens.len() == 3 {
+            // 中置記法: n1 op n2
+            if let (Token::Number(n1, d1), Token::Symbol(op), Token::Number(n2, d2)) = 
+                (&tokens[0], &tokens[1], &tokens[2]) {
+                if self.is_operator(op) {
+                    if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
+                        console::log_1(&JsValue::from_str(&format!(
+                            "Pre-evaluated (infix): {} {} {} = {}/{}", 
+                            n1, op, n2, result_num, result_den
+                        )));
+                        // 結果を「値をスタックに加える」形式に変換
+                        return Ok(vec![
+                            Token::Number(result_num, result_den),
+                            Token::Symbol("+".to_string())
+                        ]);
+                    }
+                }
+            }
+            
+            // RPN記法: n1 n2 op
+            if let (Token::Number(n1, d1), Token::Number(n2, d2), Token::Symbol(op)) = 
+                (&tokens[0], &tokens[1], &tokens[2]) {
+                if self.is_operator(op) {
+                    if let Some((result_num, result_den)) = self.evaluate_constant_expression(*n1, *d1, op, *n2, *d2) {
+                        console::log_1(&JsValue::from_str(&format!(
+                            "Pre-evaluated (RPN): {} {} {} = {}/{}", 
+                            n1, n2, op, result_num, result_den
+                        )));
+                        return Ok(vec![
+                            Token::Number(result_num, result_den),
+                            Token::Symbol("+".to_string())
+                        ]);
+                    }
+                }
+            }
+        }
+        
+        Ok(tokens.to_vec())
+    }
+    
+    fn evaluate_constant_expression(&self, n1: i64, d1: i64, op: &str, n2: i64, d2: i64) -> Option<(i64, i64)> {
+        use crate::types::Fraction;
+        
+        let f1 = Fraction::new(n1, d1);
+        let f2 = Fraction::new(n2, d2);
+        
+        let result = match op {
+            "+" => f1.add(&f2),
+            "-" => f1.sub(&f2),
+            "*" => f1.mul(&f2),
+            "/" => {
+                if f2.numerator == 0 {
+                    return None;
+                }
+                f1.div(&f2)
+            },
+            _ => return None,
+        };
+        
+        Some((result.numerator, result.denominator))
+    }
+
+    pub(super) fn generate_word_name(&self, tokens: &[Token]) -> String {
+        console::log_1(&JsValue::from_str("--- generate_word_name ---"));
+        console::log_1(&JsValue::from_str(&format!("Input tokens for naming: {:?}", tokens)));
+
+        // 入力順序のまま名前を生成（RPN変換せず）
+        let name_parts: Vec<String> = tokens.iter()
+            .map(|token| match token {
+                Token::Number(n, d) => {
+                    if *d == 1 {
+                        n.to_string()
+                    } else {
+                        format!("{}D{}", n, d)
+                    }
+                },
+                Token::Symbol(s) => {
+                    match s.as_str() {
+                        "+" => "ADD".to_string(),
+                        "-" => "SUB".to_string(),
+                        "*" => "MUL".to_string(),
+                        "/" => "DIV".to_string(),
+                        ">" => "GT".to_string(),
+                        ">=" => "GE".to_string(),
+                        "=" => "EQ".to_string(),
+                        "<" => "LT".to_string(),
+                        "<=" => "LE".to_string(),
+                        _ => s.clone()
+                    }
+                },
+                Token::VectorStart => "VSTART".to_string(),
+                Token::VectorEnd => "VEND".to_string(),
+                Token::String(s) => format!("STR_{}", s.replace(" ", "_")),
+                Token::Boolean(b) => b.to_string().to_uppercase(),
+                Token::Nil => "NIL".to_string(),
+            })
+            .collect();
+        
+        let name = name_parts.join("_");
+        console::log_1(&JsValue::from_str(&format!("Generated name: {}", name)));
+        name
+    }
+
     pub(super) fn check_if_value_producer(&self, word_name: &str) -> bool {
         let mut dummy = Interpreter::new();
         dummy.dictionary = self.dictionary.clone();
@@ -633,15 +801,7 @@ impl Interpreter {
             self.execute_builtin(name)
         } else {
             // カスタムワードに暗黙の反復を適用
-            let result = self.execute_custom_word_with_iteration(name, &def.tokens);
-            
-            // 一時的なワードの場合、実行後に連鎖削除
-            if def.is_temporary {
-                console::log_1(&JsValue::from_str(&format!("Executing and deleting temporary word: {}", name)));
-                self.delete_temporary_word_cascade(name);
-            }
-            
-            result
+            self.execute_custom_word_with_iteration(name, &def.tokens)
         }
     }
 
@@ -726,7 +886,7 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::Symbol(sym_name) => {
-                    // 内部のワードも暗黙の反復を適用（一時ワードの削除も含む）
+                    // 内部のワードも暗黙の反復を適用
                     self.execute_word_with_implicit_iteration(sym_name)
                         .map_err(|e| e.with_context(&self.call_stack))?;
                 },
