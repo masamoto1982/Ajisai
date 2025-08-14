@@ -42,88 +42,146 @@ impl Interpreter {
     }
 
     pub(super) fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        console::log_1(&JsValue::from_str("--- process_line_from_tokens ---"));
-        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
+    console::log_1(&JsValue::from_str("--- process_line_from_tokens ---"));
+    console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
 
-        // 最後が "文字列" DEF のパターンをチェック（明示的な命名）
-        if tokens.len() >= 2 {
-            let last_idx = tokens.len() - 1;
-            if let (Some(Token::Symbol(def_sym)), Some(Token::String(name))) = 
-                (tokens.get(last_idx), tokens.get(last_idx - 1)) {
-                if def_sym == "DEF" {
-                    let body_tokens = &tokens[..last_idx - 1];
-                    if body_tokens.is_empty() {
-                        return Err(AjisaiError::from("DEF requires a body"));
-                    }
-                    
-                    let rpn_tokens = self.rearrange_tokens(body_tokens);
-                    return self.define_named_word(name.clone(), rpn_tokens);
-                }
-            }
-        }
-        
-        // 単一トークンの場合
-        if tokens.len() == 1 {
-            return self.handle_single_token(&tokens[0]);
-        }
-        
-        // ベクトルリテラルの特別処理（[ ... ]は直接実行）
-        if tokens.first() == Some(&Token::VectorStart) && 
-           tokens.last() == Some(&Token::VectorEnd) {
-            return self.execute_tokens_with_context(tokens);
-        }
-        
-        // パターン: WORD [ ... ] の場合、特別処理
-        if tokens.len() >= 2 {
-            if let Token::Symbol(name) = &tokens[0] {
-                if tokens[1] == Token::VectorStart && 
-                   tokens.last() == Some(&Token::VectorEnd) &&
-                   self.dictionary.contains_key(name) {
-                    // まずベクトルを評価
-                    self.execute_tokens_with_context(&tokens[1..])?;
-                    // その後ワードを実行（暗黙の反復が適用される）
-                    return self.execute_word_with_implicit_iteration(name);
-                }
-            }
-        }
-        
-        // パターン: [ ... ] WORD の場合、通常通り実行（暗黙の反復が適用される）
-        if tokens.len() >= 2 {
-            if tokens.first() == Some(&Token::VectorStart) {
-                // ベクトルの終端を探す
-                let mut depth = 0;
-                let mut vec_end_idx = None;
-                for (i, token) in tokens.iter().enumerate() {
-                    match token {
-                        Token::VectorStart => depth += 1,
-                        Token::VectorEnd => {
-                            depth -= 1;
-                            if depth == 0 {
-                                vec_end_idx = Some(i);
-                                break;
-                            }
-                        },
-                        _ => {}
-                    }
-                }
-                
-                // ベクトルの後に単一のワードがある場合
-                if let Some(end_idx) = vec_end_idx {
-                    if end_idx == tokens.len() - 2 {
-                        if let Token::Symbol(name) = &tokens[tokens.len() - 1] {
-                            if self.dictionary.contains_key(name) {
-                                // 通常の実行（暗黙の反復が自動的に適用される）
-                                return self.execute_tokens_with_context(tokens);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 二項演算の段階的処理（メインロジック）
-        self.process_binary_operations(tokens)
+    if tokens.is_empty() {
+        return Ok(());
     }
+
+    // 1. 明示的DEF構文を最優先でチェック
+    if let Some((name, body_tokens)) = self.parse_explicit_def(tokens) {
+        return self.define_explicit_word(name, body_tokens);
+    }
+
+    // 2. 単一トークンまたは即時実行パターン
+    if self.should_execute_immediately(tokens) {
+        return self.execute_tokens_with_context(tokens);
+    }
+
+    // 3. 二項演算パターンとして自動ワード定義を試行
+    if let Ok(()) = self.try_binary_operation_auto_define(tokens) {
+        return Ok(());
+    }
+
+    // 4. フォールバック：通常実行
+    self.execute_tokens_with_context(tokens)
+}
+
+// 明示的DEF構文の解析
+fn parse_explicit_def(&self, tokens: &[Token]) -> Option<(String, Vec<Token>)> {
+    if tokens.len() >= 2 {
+        let last_idx = tokens.len() - 1;
+        if let (Some(Token::String(name)), Some(Token::Symbol(def_sym))) = 
+            (tokens.get(last_idx - 1), tokens.get(last_idx)) {
+            if def_sym == "DEF" {
+                let body_tokens = tokens[..last_idx - 1].to_vec();
+                return Some((name.clone(), body_tokens));
+            }
+        }
+    }
+    None
+}
+
+// 明示的ワード定義（任意の内容を許可）
+fn define_explicit_word(&mut self, name: String, body_tokens: Vec<Token>) -> Result<()> {
+    let name = name.to_uppercase();
+    
+    // 既存チェック（ビルトイン保護など）
+    if let Some(existing) = self.dictionary.get(&name) {
+        if existing.is_builtin {
+            return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
+        }
+    }
+
+    // 依存関係の記録
+    let mut new_dependencies = HashSet::new();
+    for token in &body_tokens {
+        if let Token::Symbol(s) = token {
+            if self.dictionary.contains_key(s) {
+                new_dependencies.insert(s.clone());
+            }
+        }
+    }
+
+    for dep_name in &new_dependencies {
+        self.dependencies
+            .entry(dep_name.clone())
+            .or_insert_with(HashSet::new)
+            .insert(name.clone());
+    }
+
+    // 永続的なワードとして定義
+    self.dictionary.insert(name.clone(), WordDefinition {
+        tokens: body_tokens,
+        is_builtin: false,
+        is_temporary: false,  // 明示的定義は永続的
+        description: None,
+    });
+
+    self.word_properties.insert(name.clone(), WordProperty {
+        is_value_producer: self.check_if_value_producer(&name),
+    });
+
+    self.append_output(&format!("Defined: {}\n", name));
+    Ok(())
+}
+
+// 二項演算として自動定義を試行
+fn try_binary_operation_auto_define(&mut self, tokens: &[Token]) -> Result<()> {
+    // 既存のprocess_binary_operationsロジックを使用
+    // ただし、失敗時はエラーを返すのではなく、Errを返して
+    // フォールバックできるようにする
+    let operations = self.parse_binary_operations(tokens)?;
+    
+    if operations.is_empty() {
+        return Err(AjisaiError::from("Not a binary operation pattern"));
+    }
+
+    // 二項演算として処理（既存ロジック）
+    let mut current_result = String::new();
+    
+    for (i, op) in operations.iter().enumerate() {
+        let word_name = if op.left.is_empty() {
+            if i == 0 {
+                self.handle_unary_operation(&op.operator, &op.right)?
+            } else {
+                self.handle_unary_operation(&op.operator, &current_result)?
+            }
+        } else {
+            if i == 0 {
+                self.define_binary_operation(&op.left, &op.operator, &op.right)?
+            } else {
+                self.define_binary_operation(&current_result, &op.operator, &op.right)?
+            }
+        };
+        current_result = word_name;
+    }
+
+    self.auto_named = true;
+    self.last_auto_named_word = Some(current_result);
+    Ok(())
+}
+
+// 即時実行判定
+fn should_execute_immediately(&self, tokens: &[Token]) -> bool {
+    // 単一リテラル値
+    if tokens.len() == 1 {
+        match &tokens[0] {
+            Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => true,
+            Token::Symbol(name) => self.dictionary.contains_key(name),
+            _ => false,
+        }
+    }
+    // ベクトルリテラル
+    else if tokens.first() == Some(&Token::VectorStart) && 
+            tokens.last() == Some(&Token::VectorEnd) {
+        true
+    }
+    else {
+        false
+    }
+}
 
     fn handle_single_token(&mut self, token: &Token) -> Result<()> {
         match token {
