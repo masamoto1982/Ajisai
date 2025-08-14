@@ -35,13 +35,18 @@ impl Interpreter {
     }
 
     pub(super) fn process_line(&mut self, line: &str) -> Result<()> {
-        let tokens = tokenize(line).map_err(AjisaiError::from)?;
-        if tokens.is_empty() {
-            return Ok(());
-        }
-
-        self.process_line_from_tokens(&tokens)
+    let tokens = tokenize(line).map_err(AjisaiError::from)?;
+    if tokens.is_empty() {
+        return Ok(());
     }
+
+    // 明示的DEF構文を最優先でチェック（行全体を渡す）
+    if let Some((name, body_tokens, description)) = self.parse_explicit_def(&tokens, line) {
+        return self.define_explicit_word(name, body_tokens, description);
+    }
+
+    self.process_line_from_tokens(&tokens)
+}
 
     pub(super) fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
     console::log_1(&JsValue::from_str("--- process_line_from_tokens ---"));
@@ -71,7 +76,6 @@ impl Interpreter {
 }
 
 // 明示的DEF構文の解析
-// parse_explicit_def メソッドを拡張
 fn parse_explicit_def(&self, tokens: &[Token], line: &str) -> Option<(String, Vec<Token>, Option<String>)> {
     if tokens.len() >= 2 {
         let last_idx = tokens.len() - 1;
