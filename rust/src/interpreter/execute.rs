@@ -48,27 +48,44 @@ impl Interpreter {
         self.process_line_from_tokens(&tokens)
     }
 
-   pub(super) fn process_line_from_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-    console::log_1(&JsValue::from_str("--- process_line_from_tokens ---"));
-    console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
-
-    // DEFパターンのチェック（説明付きも対応）
-    if tokens.len() >= 2 {
-        // DEFの位置を探す
-        let def_position = tokens.iter().rposition(|t| {
-            if let Token::Symbol(s) = t {
-                s == "DEF"
-            } else {
-                false
+  if tokens.len() >= 2 {
+    // DEFの位置を探す
+    let def_position = tokens.iter().rposition(|t| {
+        if let Token::Symbol(s) = t {
+            s == "DEF"
+        } else {
+            false
+        }
+    });
+    
+    if let Some(def_idx) = def_position {
+        // DEFの前に文字列（名前）があるかチェック
+        if def_idx > 0 {
+            if let Token::String(name) = &tokens[def_idx - 1] {
+                // DEFの後に説明文字列があるかチェック
+                let description = if def_idx + 1 < tokens.len() {
+                    if let Token::String(desc) = &tokens[def_idx + 1] {
+                        Some(desc.clone())
+                    } else {
+                        // DEFの後が文字列でない場合はエラー
+                        return Err(AjisaiError::from("DEF can be followed only by a description string"));
+                    }
+                } else {
+                    None
+                };
+                
+                // 本体のトークンを取得
+                let body_tokens = &tokens[..def_idx - 1];
+                if body_tokens.is_empty() {
+                    return Err(AjisaiError::from("DEF requires a body"));
+                }
+                
+                let rpn_tokens = self.rearrange_tokens(body_tokens);
+                return self.define_named_word_with_description(name.clone(), rpn_tokens, description);
             }
-        });
-        
-        if let Some(def_idx) = def_position {
-            // DEFの前に文字列（名前）があるかチェック
-            if def_idx > 0 {
-                if let Token::String(name) = &tokens[def_idx - 1] {
-                    // DEFの後に説明文字列があるかチェック
-                    let description = if def_idx + 1 < tokens.len() {
+        }
+    }
+}
                         if let Token::String(desc) = &tokens[def_idx + 1] {
                             Some(desc.clone())
                         } else {
