@@ -109,29 +109,35 @@ private decodeWordName(name: string): string | null {
 }
 
     private renderWordButtons(container: HTMLElement, words: WordInfo[], isCustom: boolean): void {
-        container.innerHTML = '';
+    container.innerHTML = '';
 
-        words.forEach(wordInfo => {
-            const button = document.createElement('button');
-            button.textContent = wordInfo.name;
-            button.className = 'word-button';
-            button.title = wordInfo.description || wordInfo.name;
-            
-            if (!isCustom) {
-                button.classList.add('builtin');
-            } else if (wordInfo.protected) {
-                button.classList.add('protected');
-            } else {
-                button.classList.add('deletable');
+    words.forEach(wordInfo => {
+        const button = document.createElement('button');
+        button.textContent = wordInfo.name;
+        button.className = 'word-button';
+        
+        // ホバー時のタイトル設定
+        if (wordInfo.description) {
+            button.title = wordInfo.description;
+        } else {
+            button.title = wordInfo.name;  // フォールバック
+        }
+        
+        if (!isCustom) {
+            button.classList.add('builtin');
+        } else if (wordInfo.protected) {
+            button.classList.add('protected');
+        } else {
+            button.classList.add('deletable');
+        }
+        
+        button.addEventListener('click', () => {
+            if (this.onWordClick) {
+                this.onWordClick(wordInfo.name);
             }
-            
-            button.addEventListener('click', () => {
-                if (this.onWordClick) {
-                    this.onWordClick(wordInfo.name);
-                }
-            });
-            
-            container.appendChild(button);
         });
-    }
+        
+        container.appendChild(button);
+    });
+}
 }
