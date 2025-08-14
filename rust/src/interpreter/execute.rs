@@ -159,7 +159,7 @@ impl Interpreter {
         }
     }
 
-    // 新しいメソッド：二項演算の段階的処理
+    // 二項演算の段階的処理（エラーハンドリング強化）
     fn process_binary_operations(&mut self, tokens: &[Token]) -> Result<()> {
         console::log_1(&JsValue::from_str("--- process_binary_operations ---"));
         
@@ -168,8 +168,21 @@ impl Interpreter {
         console::log_1(&JsValue::from_str(&format!("Parsed operations: {:?}", operations)));
         
         if operations.is_empty() {
-            // 二項演算が検出されない場合は従来の方式でワード定義
-            return self.fallback_word_definition(tokens);
+            // 二項演算が検出されない場合、単一要素かチェック
+            if tokens.len() == 1 {
+                // 単一トークンは別途処理
+                return self.handle_single_token(&tokens[0]);
+            } else {
+                // 複数トークンで二項演算が検出されない場合はエラー
+                let token_strs: Vec<String> = tokens.iter()
+                    .map(|t| self.token_to_string(t))
+                    .collect();
+                return Err(AjisaiError::from(format!(
+                    "Cannot parse input as binary operations: [{}]. \
+                     Input must be either a single value/word or complete binary operations.",
+                    token_strs.join(" ")
+                )));
+            }
         }
 
         // 段階的にワード定義を実行
@@ -204,6 +217,20 @@ impl Interpreter {
         
         Ok(())
     }
+
+    // token_to_string メソッドを追加（既存の実装から移動）
+    fn token_to_string(&self, token: &Token) -> String {
+        match token {
+            Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
+            Token::String(s) => format!("\"{}\"", s),
+            Token::Boolean(b) => b.to_string(),
+            Token::Nil => "nil".to_string(),
+            Token::Symbol(s) => s.clone(),
+            Token::VectorStart => "[".to_string(),
+            Token::VectorEnd => "]".to_string(),
+        }
+    }
+}
 
     // フォールバック：従来の方式でのワード定義
     fn fallback_word_definition(&mut self, tokens: &[Token]) -> Result<()> {
@@ -274,25 +301,29 @@ impl Interpreter {
         Ok(())
     }
 
-    // 二項演算のパースロジック
+    // 二項演算のパースロジック（完全性チェック付き）
     fn parse_binary_operations(&self, tokens: &[Token]) -> Result<Vec<BinaryOperation>> {
         console::log_1(&JsValue::from_str("--- parse_binary_operations ---"));
         
         let mut operations = Vec::new();
+        let mut consumed_tokens = 0;
         let mut i = 0;
 
         while i < tokens.len() {
+            let initial_i = i;
+            
             // 単項演算のチェック: NOT a
             if i + 1 < tokens.len() {
                 if let Token::Symbol(op) = &tokens[i] {
                     if op == "NOT" {
                         let operand = self.token_to_operand_name(&tokens[i + 1]);
                         operations.push(BinaryOperation {
-                            left: "".to_string(), // 単項演算では左オペランドは空
+                            left: "".to_string(),
                             operator: op.clone(),
                             right: operand,
                         });
                         i += 2;
+                        consumed_tokens += 2;
                         continue;
                     }
                 }
@@ -310,6 +341,7 @@ impl Interpreter {
                             right,
                         });
                         i += 3;
+                        consumed_tokens += 3;
                         continue;
                     }
                 }
@@ -327,6 +359,7 @@ impl Interpreter {
                             right,
                         });
                         i += 3;
+                        consumed_tokens += 3;
                         continue;
                     }
                 }
@@ -344,16 +377,35 @@ impl Interpreter {
                             right,
                         });
                         i += 3;
+                        consumed_tokens += 3;
                         continue;
                     }
                 }
             }
 
-            // 二項演算が検出されない場合は次のトークンへ
-            i += 1;
+            // 二項演算が検出されなかった場合
+            if i == initial_i {
+                // 進歩がない場合、処理できないトークンがある
+                break;
+            }
         }
 
-        console::log_1(&JsValue::from_str(&format!("Found {} operations", operations.len())));
+        console::log_1(&JsValue::from_str(&format!("Found {} operations, consumed {} tokens out of {}", 
+            operations.len(), consumed_tokens, tokens.len())));
+
+        // 完全性チェック：すべてのトークンが消費されたか確認
+        if !operations.is_empty() && consumed_tokens < tokens.len() {
+            let remaining_tokens: Vec<String> = tokens[consumed_tokens..].iter()
+                .map(|t| self.token_to_string(t))
+                .collect();
+            
+            return Err(AjisaiError::from(format!(
+                "Incomplete binary operation detected. Remaining unprocessed tokens: [{}]. \
+                 All input must form complete binary operations.",
+                remaining_tokens.join(" ")
+            )));
+        }
+
         Ok(operations)
     }
 
