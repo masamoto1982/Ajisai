@@ -71,18 +71,47 @@ impl Interpreter {
 }
 
 // 明示的DEF構文の解析
-fn parse_explicit_def(&self, tokens: &[Token]) -> Option<(String, Vec<Token>)> {
+// parse_explicit_def メソッドを拡張
+fn parse_explicit_def(&self, tokens: &[Token], line: &str) -> Option<(String, Vec<Token>, Option<String>)> {
     if tokens.len() >= 2 {
         let last_idx = tokens.len() - 1;
         if let (Some(Token::String(name)), Some(Token::Symbol(def_sym))) = 
             (tokens.get(last_idx - 1), tokens.get(last_idx)) {
             if def_sym == "DEF" {
                 let body_tokens = tokens[..last_idx - 1].to_vec();
-                return Some((name.clone(), body_tokens));
+                
+                // DEF以降の機能説明を抽出
+                let description = self.extract_description_from_line(line, tokens)?;
+                
+                return Some((name.clone(), body_tokens, description));
             }
         }
     }
     None
+}
+
+fn extract_description_from_line(&self, line: &str, tokens: &[Token]) -> Option<String> {
+    // "name" DEF の位置を特定
+    let def_position = self.find_def_position_in_line(line, tokens)?;
+    
+    // DEF以降のテキストを取得
+    let after_def = &line[def_position..].trim();
+    if after_def.is_empty() {
+        return None;
+    }
+    
+    // #コメントを除去
+    let description = if let Some(comment_pos) = after_def.find('#') {
+        after_def[..comment_pos].trim()
+    } else {
+        after_def.trim()
+    };
+    
+    if description.is_empty() {
+        None
+    } else {
+        Some(description.to_string())
+    }
 }
 
 // 明示的ワード定義（任意の内容を許可）
