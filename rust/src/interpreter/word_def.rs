@@ -11,20 +11,27 @@ impl Interpreter {
         self.define_named_word_with_description(name, body_tokens, None)
     }
 
-    // 機能説明付きワード定義（新規追加）
-    pub(super) fn define_named_word_with_description(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+    // 説明付きのワード定義メソッドを追加
+    pub(super) fn define_named_word_with_description(
+        &mut self, 
+        name: String, 
+        body_tokens: Vec<Token>,
+        description: Option<String>
+    ) -> Result<()> {
         console::log_1(&JsValue::from_str("--- define_named_word_with_description ---"));
-        console::log_1(&JsValue::from_str(&format!("Defining word: {}", name)));
+        console::log_1(&JsValue::from_str(&format!("Defining word: {} with description: {:?}", name, description)));
         console::log_1(&JsValue::from_str(&format!("Body tokens (RPN): {:?}", body_tokens)));
         
         let name = name.to_uppercase();
 
+        // ビルトインワードのチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
 
+        // 依存関係のチェック
         if self.dictionary.contains_key(&name) {
             if let Some(dependents) = self.dependencies.get(&name) {
                 if !dependents.is_empty() {
@@ -37,6 +44,7 @@ impl Interpreter {
             }
         }
 
+        // 依存関係の記録
         let mut new_dependencies = HashSet::new();
         for token in &body_tokens {
             if let Token::Symbol(s) = token {
@@ -53,20 +61,12 @@ impl Interpreter {
                 .insert(name.clone());
         }
 
-        // 機能説明が省略された場合は、ワード内容を使用
-        let final_description = description.or_else(|| {
-            let body_string = body_tokens.iter()
-                .map(|token| self.token_to_string(token))
-                .collect::<Vec<String>>()
-                .join(" ");
-            Some(format!("{{ {} }}", body_string))
-        });
-
+        // ワード定義を保存（説明付き）
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: body_tokens,
             is_builtin: false,
-            is_temporary: true,  // 二項演算で生成されたワードは一時的
-            description: final_description,
+            is_temporary: false,  // 明示的に定義されたワードは永続的
+            description,  // 説明を保存
         });
 
         let is_producer = self.check_if_value_producer(&name);
@@ -74,10 +74,21 @@ impl Interpreter {
             is_value_producer: is_producer,
         });
 
-        self.append_output(&format!("Defined: {}\n", name));
+        // 出力メッセージに説明も含める
+        if let Some(desc) = &description {
+            self.append_output(&format!("Defined: {} - {}\n", name, desc));
+        } else {
+            self.append_output(&format!("Defined: {}\n", name));
+        }
+        
         console::log_1(&JsValue::from_str("--- end define_named_word_with_description ---"));
 
         Ok(())
+    }
+    
+    // 既存のdefine_named_wordを修正して、descriptionなしで新しいメソッドを呼ぶ
+    pub(super) fn define_named_word(&mut self, name: String, body_tokens: Vec<Token>) -> Result<()> {
+        self.define_named_word_with_description(name, body_tokens, None)
     }
 
     // 明示的ワード定義（永続的）
