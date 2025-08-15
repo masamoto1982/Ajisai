@@ -13,6 +13,7 @@ export interface AjisaiInterpreter {
     get_custom_words(): string[];
     get_custom_words_with_descriptions(): Array<[string, string | null]>;
     get_custom_words_info(): Array<[string, string | null, boolean]>;
+    get_builtin_words_info(): Array<[string, string | null]>;  // 追加
     reset(): void;
     save_table(name: string, schema: any, records: any): void;
     load_table(name: string): any;
