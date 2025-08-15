@@ -144,6 +144,25 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
+     #[wasm_bindgen]
+    pub fn get_builtin_words_info(&self) -> JsValue {
+        let builtin_words_info: Vec<(String, Option<String>)> = self.interpreter.dictionary.iter()
+            .filter(|(_, def)| def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.description.clone()))
+            .collect();
+        
+        let arr = js_sys::Array::new();
+        
+        for (name, desc) in builtin_words_info {
+            let word_arr = js_sys::Array::new();
+            word_arr.push(&JsValue::from_str(&name));
+            word_arr.push(&desc.map(|d| JsValue::from_str(&d)).unwrap_or(JsValue::NULL));
+            arr.push(&word_arr);
+        }
+        
+        arr.into()
+    }
+
     #[wasm_bindgen]
     pub fn reset(&mut self) {
         self.interpreter = Interpreter::new();
