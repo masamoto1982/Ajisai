@@ -1,3 +1,5 @@
+// rust/src/tokenizer.rs (完全書き直し)
+
 use crate::types::Token;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
@@ -18,6 +20,24 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 chars.next();
                 if ch == '\n' {
                     break;
+                }
+            }
+            continue;
+        }
+
+        // 括弧コメント処理（( から ) まで）
+        if ch == '(' {
+            chars.next();
+            let mut depth = 1;
+            while let Some(&ch) = chars.peek() {
+                chars.next();
+                if ch == '(' {
+                    depth += 1;
+                } else if ch == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
                 }
             }
             continue;
@@ -58,10 +78,22 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // その他のトークン（数値、真偽値、NIL、シンボル）
+        // クオーテーション開始/終了
+        if ch == '{' {
+            chars.next();
+            tokens.push(Token::QuotationStart);
+            continue;
+        }
+        if ch == '}' {
+            chars.next();
+            tokens.push(Token::QuotationEnd);
+            continue;
+        }
+
+        // ワード（数値、真偽値、NIL、シンボル、タイムスタンプラベル）
         let mut word = String::new();
         while let Some(&ch) = chars.peek() {
-            if ch.is_whitespace() || ['[', ']', '"', '#'].contains(&ch) {
+            if ch.is_whitespace() || ['[', ']', '{', '}', '"', '#', '(', ')'].contains(&ch) {
                 break;
             }
             word.push(ch);
@@ -71,73 +103,71 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         if word.is_empty() {
             continue;
         }
-        
-        // まず特殊なケースを処理
-        match word.as_str() {
-            // 単独の演算子はシンボルとして処理
-            "+" | "-" | "*" | "/" | ">" | ">=" | "=" | "<" | "<=" => {
-                tokens.push(Token::Symbol(word.to_uppercase()));
+
+        // タイムスタンプラベル（コロン付き）
+        if word.ends_with(':') && word.len() > 1 {
+            let label = word[..word.len()-1].to_string();
+            // タイムスタンプ形式チェック（YYYYMMDDHHMM）
+            if label.len() == 12 && label.chars().all(|c| c.is_ascii_digit()) {
+                tokens.push(Token::Label(label));
                 continue;
-            },
-            // 真偽値
-            "true" => {
-                tokens.push(Token::Boolean(true));
-                continue;
-            },
-            "false" => {
-                tokens.push(Token::Boolean(false));
-                continue;
-            },
-            // NIL
-            "NIL" | "nil" => {
-                tokens.push(Token::Nil);
-                continue;
-            },
-            _ => {}
+            }
         }
-        
-        // 数値の判定（整数）
-        if let Ok(num) = word.parse::<i64>() {
-            tokens.push(Token::Number(num, 1));
-        } else if word.contains('.') && !word.starts_with('.') && !word.ends_with('.') {
-            // 小数点を含む場合、分数に変換
-            let parts: Vec<&str> = word.split('.').collect();
-            if parts.len() == 2 {
-                let integer_part = if parts[0].is_empty() { 0 } else { 
-                    parts[0].parse::<i64>().map_err(|_| format!("Invalid number: {}", word))? 
-                };
-                let decimal_part = if parts[1].is_empty() { 0 } else {
-                    parts[1].parse::<i64>().map_err(|_| format!("Invalid number: {}", word))?
-                };
-                
-                let decimal_places = parts[1].len() as u32;
-                let denominator = 10_i64.pow(decimal_places);
-                let numerator = integer_part * denominator + decimal_part;
-                
-                tokens.push(Token::Number(numerator, denominator));
-            } else {
-                return Err(format!("Invalid number: {}", word));
-            }
-        } else if word.contains('/') && word != "/" {
-            // 分数記法（例: 1/2）
-            let parts: Vec<&str> = word.split('/').collect();
-            if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
-                let numerator = parts[0].parse::<i64>()
-                    .map_err(|_| format!("Invalid fraction numerator: {}", word))?;
-                let denominator = parts[1].parse::<i64>()
-                    .map_err(|_| format!("Invalid fraction denominator: {}", word))?;
-                
-                if denominator == 0 {
-                    return Err("Division by zero in fraction".to_string());
+
+        // 特殊ワード
+        match word.as_str() {
+            "true" => tokens.push(Token::Boolean(true)),
+            "false" => tokens.push(Token::Boolean(false)),
+            "NIL" | "nil" => tokens.push(Token::Nil),
+            _ => {
+                // 数値判定
+                if let Ok(num) = word.parse::<i64>() {
+                    tokens.push(Token::Number(num, 1));
+                } else if word.contains('/') {
+                    // 分数記法
+                    let parts: Vec<&str> = word.split('/').collect();
+                    if parts.len() == 2 {
+                        if let (Ok(num), Ok(den)) = (parts[0].parse::<i64>(), parts[1].parse::<i64>()) {
+                            if den != 0 {
+                                tokens.push(Token::Number(num, den));
+                            } else {
+                                return Err("Division by zero in fraction".to_string());
+                            }
+                        } else {
+                            tokens.push(Token::Symbol(word.to_uppercase()));
+                        }
+                    } else {
+                        tokens.push(Token::Symbol(word.to_uppercase()));
+                    }
+                } else if word.contains('.') {
+                    // 小数点記法
+                    let parts: Vec<&str> = word.split('.').collect();
+                    if parts.len() == 2 {
+                        let integer_part = if parts[0].is_empty() { 0 } else { 
+                            parts[0].parse::<i64>().unwrap_or_else(|_| {
+                                tokens.push(Token::Symbol(word.to_uppercase()));
+                                return;
+                            })
+                        };
+                        let decimal_part = if parts[1].is_empty() { 0 } else {
+                            parts[1].parse::<i64>().unwrap_or_else(|_| {
+                                tokens.push(Token::Symbol(word.to_uppercase()));
+                                return;
+                            })
+                        };
+                        
+                        let decimal_places = parts[1].len() as u32;
+                        let denominator = 10_i64.pow(decimal_places);
+                        let numerator = integer_part * denominator + decimal_part;
+                        
+                        tokens.push(Token::Number(numerator, denominator));
+                    } else {
+                        tokens.push(Token::Symbol(word.to_uppercase()));
+                    }
+                } else {
+                    tokens.push(Token::Symbol(word.to_uppercase()));
                 }
-                
-                tokens.push(Token::Number(numerator, denominator));
-            } else {
-                tokens.push(Token::Symbol(word.to_uppercase()));
             }
-        } else {
-            // その他はすべてシンボル
-            tokens.push(Token::Symbol(word.to_uppercase()));
         }
     }
     
