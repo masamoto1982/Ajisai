@@ -1,3 +1,5 @@
+// rust/src/types.rs (拡張版)
+
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -8,6 +10,9 @@ pub enum Token {
     Symbol(String),
     VectorStart,
     VectorEnd,
+    QuotationStart,
+    QuotationEnd,
+    Label(String),           // 新規: タイムスタンプラベル
     Nil,
 }
 
@@ -23,9 +28,11 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>),
+    Quotation(Vec<Token>),   // 新規: クオーテーション
     Nil,
 }
 
+// Fraction実装は既存のまま維持
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fraction {
     pub numerator: i64,
@@ -57,6 +64,7 @@ impl Fraction {
         if b == 0 { a } else { Self::gcd(b, a % b) }
     }
     
+    // 算術演算メソッドは既存のまま
     pub fn add(&self, other: &Fraction) -> Fraction {
         let num = self.numerator * other.denominator + other.numerator * self.denominator;
         let den = self.denominator * other.denominator;
@@ -84,6 +92,7 @@ impl Fraction {
         Fraction::new(num, den)
     }
     
+    // 比較演算メソッドも既存のまま
     pub fn gt(&self, other: &Fraction) -> bool {
         self.numerator * other.denominator > other.numerator * self.denominator
     }
@@ -126,8 +135,31 @@ impl fmt::Display for Value {
                 }
                 write!(f, " ]")
             },
+            ValueType::Quotation(tokens) => {
+                write!(f, "{{ ")?;
+                for (i, token) in tokens.iter().enumerate() {
+                    if i > 0 { write!(f, " ")?; }
+                    write!(f, "{}", token_to_string(token))?;
+                }
+                write!(f, " }}")
+            },
             ValueType::Nil => write!(f, "nil"),
         }
+    }
+}
+
+fn token_to_string(token: &Token) -> String {
+    match token {
+        Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
+        Token::String(s) => format!("\"{}\"", s),
+        Token::Boolean(b) => b.to_string(),
+        Token::Nil => "nil".to_string(),
+        Token::Symbol(s) => s.clone(),
+        Token::VectorStart => "[".to_string(),
+        Token::VectorEnd => "]".to_string(),
+        Token::QuotationStart => "{".to_string(),
+        Token::QuotationEnd => "}".to_string(),
+        Token::Label(s) => format!("{}:", s),
     }
 }
 
