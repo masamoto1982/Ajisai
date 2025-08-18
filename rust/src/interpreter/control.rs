@@ -1,67 +1,7 @@
+// rust/src/interpreter/control.rs (簡素化版)
+
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType};
-
-pub fn op_def(_interp: &mut Interpreter) -> Result<()> {
-    // DEFは行末での特殊な構文として処理されるため、
-    // 通常の実行フローでここに到達した場合はエラー
-    Err(AjisaiError::from("DEF must be used at the end of a line with a string name: <words> \"NAME\" DEF"))
-}
-
-// 条件選択
-pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 3 {
-        return Err(AjisaiError::StackUnderflow);
-    }
-    
-    let false_val = interp.stack.pop().unwrap();
-    let true_val = interp.stack.pop().unwrap();
-    let condition = interp.stack.pop().unwrap();
-    
-    let result = apply_if_select(&condition, &true_val, &false_val);
-    
-    interp.stack.push(result);
-    Ok(())
-}
-
-// 再帰的なヘルパー関数
-fn apply_if_select(condition: &Value, true_val: &Value, false_val: &Value) -> Value {
-    match &condition.val_type {
-        ValueType::Boolean(b) => {
-            if *b { true_val.clone() } else { false_val.clone() }
-        },
-        ValueType::Nil => false_val.clone(),
-        ValueType::Vector(v) => {
-            // ベクトルの各要素に再帰的に適用
-            let results: Vec<Value> = v.iter().map(|elem| {
-                apply_if_select(elem, true_val, false_val)
-            }).collect();
-            Value { val_type: ValueType::Vector(results) }
-        },
-        _ => condition.clone(),  // その他の型はそのまま返す
-    }
-}
-
-// 新規追加: WHEN（条件付き実行）
-pub fn op_when(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
-    }
-    
-    let condition = interp.stack.pop().unwrap();
-    let value = interp.stack.pop().unwrap();
-    
-    match condition.val_type {
-        ValueType::Boolean(true) => {
-            interp.stack.push(value);
-        },
-        ValueType::Boolean(false) | ValueType::Nil => {
-            // 何もプッシュしない
-        },
-        _ => return Err(AjisaiError::type_error("boolean or nil", "other type")),
-    }
-    
-    Ok(())
-}
+use crate::types::{ValueType};
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop()
@@ -78,27 +18,9 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
                 }
             }
             
-            // 依存関係チェック
-            if let Some(dependents) = interp.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(AjisaiError::ProtectedWord {
-                        name: name.clone(),
-                        dependents: dependent_list,
-                    });
-                }
-            }
-            
             // 辞書から削除
             interp.dictionary.remove(&name);
-            
-            // 依存関係のクリーンアップ
-            interp.dependencies.remove(&name);
-            
-            // 重要：他のワードの依存関係から削除対象ワードを除去
-            for (_, deps) in interp.dependencies.iter_mut() {
-                deps.remove(&name);
-            }
+            interp.append_output(&format!("Deleted: {}\n", name));
             
             Ok(())
         },
