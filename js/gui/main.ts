@@ -1,4 +1,4 @@
-// js/gui/main.ts (簡素化版)
+// js/gui/main.ts (完全版 - レジスタ削除・構造簡素化)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
@@ -19,12 +19,11 @@ interface GUIElements {
     clearBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
     stackDisplay: HTMLElement;
-    registerDisplay: HTMLElement;
     builtinWordsDisplay: HTMLElement;
     customWordsDisplay: HTMLElement;
     inputArea: HTMLElement;
     outputArea: HTMLElement;
-    memoryArea: HTMLElement;
+    stackArea: HTMLElement;
     dictionaryArea: HTMLElement;
 }
 
@@ -54,7 +53,6 @@ export class GUI {
         this.display.init({
             outputDisplay: this.elements.outputDisplay,
             stackDisplay: this.elements.stackDisplay,
-            registerDisplay: this.elements.registerDisplay
         });
         
         this.dictionary.init({
@@ -67,7 +65,7 @@ export class GUI {
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
-            memoryArea: this.elements.memoryArea,
+            stackArea: this.elements.stackArea,
             dictionaryArea: this.elements.dictionaryArea
         });
         
@@ -88,12 +86,11 @@ export class GUI {
             clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
             outputDisplay: document.getElementById('output-display')!,
             stackDisplay: document.getElementById('stack-display')!,
-            registerDisplay: document.getElementById('register-display')!,
             builtinWordsDisplay: document.getElementById('builtin-words-display')!,
             customWordsDisplay: document.getElementById('custom-words-display')!,
             inputArea: document.querySelector('.input-area')!,
             outputArea: document.querySelector('.output-area')!,
-            memoryArea: document.querySelector('.memory-area')!,
+            stackArea: document.querySelector('.stack-area')!,
             dictionaryArea: document.querySelector('.dictionary-area')!
         };
     }
@@ -109,7 +106,7 @@ export class GUI {
             }
         });
 
-        this.elements.memoryArea.addEventListener('click', () => {
+        this.elements.stackArea.addEventListener('click', () => {
             if (this.mobile.isMobile() && this.mode === 'execution') {
                 this.setMode('input');
             }
@@ -157,7 +154,6 @@ export class GUI {
         if (!window.ajisaiInterpreter) return;
         try {
             this.display.updateStack(window.ajisaiInterpreter.get_stack());
-            this.display.updateRegister(window.ajisaiInterpreter.get_register());
             this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
         } catch (error) {
             console.error('Failed to update display:', error);
