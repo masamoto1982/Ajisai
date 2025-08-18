@@ -10,7 +10,7 @@ interface TableData {
 interface InterpreterState {
     key: string;
     stack: any;
-    register: any;
+    // register: any;  // 削除
     customWords: any;
     updatedAt: string;
 }
@@ -22,7 +22,7 @@ interface ExportData {
 
 class AjisaiDB {
     private dbName = 'AjisaiDB';
-    private version = 2;
+    private version = 3;  // バージョンアップ（スキーマ変更のため）
     private storeName = 'tables';
     private stateStoreName = 'interpreter_state';
     private db: IDBDatabase | null = null;
@@ -168,7 +168,7 @@ class AjisaiDB {
                 if (result) {
                     resolve({
                         stack: result.stack,
-                        register: result.register,
+                        // register: result.register,  // 削除
                         customWords: result.customWords
                     });
                 } else {
