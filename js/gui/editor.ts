@@ -155,8 +155,11 @@ export class Editor {
         const targetLine = currentLine + offset;
         
         if (targetLine >= 0 && targetLine < allLines.length) {
-            const match = allLines[targetLine].match(/^(\d{12}):/);
-            return match ? match[1] : null;
+            const targetLineText = allLines[targetLine]; // 158行目の修正
+            if (targetLineText) { // undefined チェック追加
+                const match = targetLineText.match(/^(\d{12}):/);
+                return match ? (match[1] || null) : null; // 159行目の修正：undefined を null に変換
+            }
         }
         
         return null;
