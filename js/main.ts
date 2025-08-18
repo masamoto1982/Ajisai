@@ -1,4 +1,4 @@
-// js/main.ts
+// js/main.ts (修正版)
 
 import { GUI_INSTANCE } from './gui/main';
 import { initWasm } from './wasm-loader';
@@ -7,7 +7,7 @@ import type { WasmModule, AjisaiInterpreter } from './wasm-types';
 
 declare global {
     interface Window {
-        HolonWasm: WasmModule;
+        AjisaiWasm: WasmModule;           // Holon → Ajisai
         ajisaiInterpreter: AjisaiInterpreter;
     }
 }
@@ -24,11 +24,11 @@ async function main(): Promise<void> {
         if (!wasm) {
             throw new Error('WASM initialization failed. Application cannot start.');
         }
-        window.HolonWasm = wasm;
+        window.AjisaiWasm = wasm;          // Holon → Ajisai
         console.log('WASM loaded and initialized successfully.');
 
         // 2. Ajisaiインタープリタを作成し、グローバルに公開
-        window.ajisaiInterpreter = new window.HolonWasm.AjisaiInterpreter();
+        window.ajisaiInterpreter = new window.AjisaiWasm.AjisaiInterpreter(); // Holon → Ajisai
         console.log('Ajisai interpreter created.');
         
         // 3. GUIを初期化（この時点でajisaiInterpreterは利用可能）
