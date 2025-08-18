@@ -1,4 +1,4 @@
-// js/gui/editor.ts (ラベル切り替え機能削除・簡略化版)
+// js/gui/editor.ts (TypeScriptエラー修正版)
 
 export class Editor {
     private element!: HTMLTextAreaElement;
@@ -95,7 +95,7 @@ export class Editor {
         lines.forEach((line, index) => {
             // Base62ラベルパターン（英数字4文字 + コロン）
             const match = line.match(/^([0-9A-Za-z]{4}):\s/);
-            if (match) {
+            if (match && match[1]) { // 66行目修正: match[1]のundefinedチェック追加
                 const label = match[1];
                 this.labelRegistry.set(label, index);
                 this.reverseRegistry.set(index, label);
@@ -158,7 +158,7 @@ export class Editor {
     private handleLinkClick(event: MouseEvent): void {
         const clickInfo = this.getClickInfo(event);
         
-        if (clickInfo && clickInfo.isLeapLabel) {
+        if (clickInfo && clickInfo.isLeapLabel && clickInfo.label) { // 162行目修正: clickInfo.labelのundefinedチェック追加
             this.jumpToLabel(clickInfo.label);
             event.preventDefault();
             event.stopPropagation();
@@ -182,11 +182,12 @@ export class Editor {
         const lines = this.element.value.split('\n');
         if (lineIndex >= lines.length) return null;
         
-        const line = lines[lineIndex];
+        const line = lines[lineIndex]; // 188行目修正: line変数の定義
+        if (!line) return null; // 188行目修正: undefinedチェック追加
         
         // LEAP文のラベル部分かチェック
-        const leapMatch = line.match(/"([0-9A-Za-z]{4})"\s+LEAP/);
-        if (leapMatch) {
+        const leapMatch = line.match(/"([0-9A-Za-z]{4})"\s+LEAP/); // 190行目修正: lineのundefinedチェック済み
+        if (leapMatch && leapMatch[1]) { // 191行目修正: leapMatch[1]のundefinedチェック追加
             const labelStart = line.indexOf(`"${leapMatch[1]}"`);
             const labelEnd = labelStart + leapMatch[1].length + 2; // クォート含む
             
@@ -202,7 +203,7 @@ export class Editor {
     private handleMouseMove(event: MouseEvent): void {
         const clickInfo = this.getClickInfo(event);
         
-        if (clickInfo && clickInfo.isLeapLabel) {
+        if (clickInfo && clickInfo.isLeapLabel && clickInfo.label) { // clickInfo.labelのundefinedチェック追加
             this.element.style.cursor = 'pointer';
             this.element.title = `${clickInfo.label} へジャンプ`;
         } else {
@@ -245,7 +246,9 @@ export class Editor {
     private highlightLine(lineNumber: number): void {
         const lines = this.element.value.split('\n');
         const lineStart = lines.slice(0, lineNumber).join('\n').length + (lineNumber > 0 ? 1 : 0);
-        const lineEnd = lineStart + lines[lineNumber].length;
+        const targetLine = lines[lineNumber]; // 248行目修正: targetLine変数の定義
+        if (!targetLine) return; // 248行目修正: undefinedチェック追加
+        const lineEnd = lineStart + targetLine.length;
         
         setTimeout(() => {
             this.element.setSelectionRange(lineStart, lineEnd);
