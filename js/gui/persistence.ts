@@ -11,7 +11,6 @@ interface CustomWord {
 
 interface InterpreterState {
     stack: Value[];
-    // register: Value | null;  // 削除
     customWords: CustomWord[];
 }
 
@@ -67,7 +66,6 @@ export class Persistence {
 
             const interpreterState: InterpreterState = {
                 stack: window.ajisaiInterpreter.get_stack(),
-                // register: window.ajisaiInterpreter.get_register(),  // 削除
                 customWords: customWords,
             };
 
@@ -87,7 +85,6 @@ export class Persistence {
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
                 if (state.stack) window.ajisaiInterpreter.restore_stack(state.stack);
-                // if (state.register) window.ajisaiInterpreter.restore_register(state.register);  // 削除
                 if (state.customWords) {
                     for (const word of state.customWords) {
                         if (word.name && word.definition) {
