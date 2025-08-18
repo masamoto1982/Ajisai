@@ -1,5 +1,3 @@
-// rust/src/types.rs (拡張版)
-
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -12,7 +10,7 @@ pub enum Token {
     VectorEnd,
     QuotationStart,
     QuotationEnd,
-    Label(String),           // 新規: タイムスタンプラベル
+    Label(String),
     Nil,
 }
 
@@ -28,11 +26,11 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>),
-    Quotation(Vec<Token>),   // 新規: クオーテーション
+    Quotation(Vec<Token>),
     Nil,
 }
 
-// Fraction実装は既存のまま維持
+// Fraction実装は既存のまま
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fraction {
     pub numerator: i64,
@@ -64,7 +62,6 @@ impl Fraction {
         if b == 0 { a } else { Self::gcd(b, a % b) }
     }
     
-    // 算術演算メソッドは既存のまま
     pub fn add(&self, other: &Fraction) -> Fraction {
         let num = self.numerator * other.denominator + other.numerator * self.denominator;
         let den = self.denominator * other.denominator;
@@ -92,7 +89,6 @@ impl Fraction {
         Fraction::new(num, den)
     }
     
-    // 比較演算メソッドも既存のまま
     pub fn gt(&self, other: &Fraction) -> bool {
         self.numerator * other.denominator > other.numerator * self.denominator
     }
@@ -164,4 +160,4 @@ fn token_to_string(token: &Token) -> String {
 }
 
 pub type Stack = Vec<Value>;
-pub type Register = Option<Value>;
+// pub type Register = Option<Value>; // 削除
