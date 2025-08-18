@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全書き直し)
+// rust/src/interpreter/mod.rs
 
 pub mod stack_ops;
 pub mod arithmetic;
@@ -10,17 +10,17 @@ pub mod quotation;
 pub mod goto;
 
 use std::collections::HashMap;
-use crate::types::{Stack, Register, Token, Value, ValueType};
+use crate::types::{Stack, Token, Value, ValueType};
 use self::error::Result;
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) output_buffer: String,
-    pub(crate) labels: HashMap<String, usize>,      // ラベル → 行番号
-    pub(crate) program: Vec<Token>,                 // 実行中のプログラム
-    pub(crate) pc: usize,                          // プログラムカウンタ
-    pub(crate) call_stack: Vec<String>,            // デバッグ用
+    pub(crate) labels: HashMap<String, usize>,
+    pub(crate) program: Vec<Token>,
+    pub(crate) pc: usize,
+    pub(crate) call_stack: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -34,7 +34,6 @@ impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
             stack: Vec::new(),
-            register: None,
             dictionary: HashMap::new(),
             output_buffer: String::new(),
             labels: HashMap::new(),
@@ -68,7 +67,6 @@ impl Interpreter {
             return Ok(());
         }
 
-        // ラベル定義の検出と処理
         self.labels.clear();
         self.program = tokens.clone();
         
@@ -131,7 +129,6 @@ impl Interpreter {
                 self.pc += consumed;
             },
             Token::Symbol(name) => {
-                // DEF構文の特殊処理
                 if name == "DEF" {
                     self.handle_def()?;
                 } else {
@@ -140,7 +137,6 @@ impl Interpreter {
                 self.pc += 1;
             },
             Token::Label(_) => {
-                // ラベルは実行時にスキップ
                 self.pc += 1;
             },
             _ => {
@@ -165,19 +161,10 @@ impl Interpreter {
                         return Ok((values, i - self.pc + 1));
                     }
                 },
-                Token::VectorStart if depth == 1 => {
-                    // ネストしたベクター
-                    let old_pc = self.pc;
-                    self.pc = i;
-                    let (nested_values, consumed) = self.collect_vector()?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values) });
-                    i += consumed;
-                    self.pc = old_pc;
-                    continue;
-                },
-                token => {
+                token if depth == 1 => {
                     values.push(self.token_to_value(token)?);
                 }
+                _ => {} // ネストしたベクターの内部は別途処理
             }
             i += 1;
         }
@@ -231,7 +218,6 @@ impl Interpreter {
     }
 
     fn handle_def(&mut self) -> Result<()> {
-        // { quotation } "name" DEF ( description ) の構文
         if self.stack.len() < 2 {
             return Err(error::AjisaiError::from("DEF requires quotation and name"));
         }
@@ -249,10 +235,9 @@ impl Interpreter {
             _ => return Err(error::AjisaiError::from("DEF requires quotation")),
         };
 
-        // 説明文の取得（オプション）
         let description = if self.pc + 1 < self.program.len() {
             if let Token::String(desc) = &self.program[self.pc + 1] {
-                self.pc += 1; // 説明文もスキップ
+                self.pc += 1;
                 Some(desc.clone())
             } else {
                 None
@@ -261,7 +246,6 @@ impl Interpreter {
             None
         };
 
-        // ビルトインワードの上書きチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
@@ -296,7 +280,6 @@ impl Interpreter {
     }
 
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-        // カスタムワードの実行は現在のプログラムとは独立
         let old_program = self.program.clone();
         let old_pc = self.pc;
         let old_labels = self.labels.clone();
@@ -304,7 +287,6 @@ impl Interpreter {
         self.program = tokens.to_vec();
         self.labels.clear();
         
-        // ラベル位置の記録
         for (i, token) in tokens.iter().enumerate() {
             if let Token::Label(label) = token {
                 self.labels.insert(label.clone(), i);
@@ -316,7 +298,6 @@ impl Interpreter {
             self.execute_token()?;
         }
 
-        // 状態復帰
         self.program = old_program;
         self.pc = old_pc;
         self.labels = old_labels;
@@ -326,16 +307,13 @@ impl Interpreter {
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // スタック操作
+            // スタック操作（レジスタ削除）
             "DUP" => stack_ops::op_dup(self),
             "DROP" => stack_ops::op_drop(self),
             "SWAP" => stack_ops::op_swap(self),
             "OVER" => stack_ops::op_over(self),
             "ROT" => stack_ops::op_rot(self),
             "NIP" => stack_ops::op_nip(self),
-            ">R" => stack_ops::op_to_r(self),
-            "R>" => stack_ops::op_from_r(self),
-            "R@" => stack_ops::op_r_fetch(self),
             
             // 算術・比較・論理
             "+" => arithmetic::op_add(self),
@@ -404,7 +382,6 @@ impl Interpreter {
     }
     
     pub fn get_stack(&self) -> &Stack { &self.stack }
-    pub fn get_register(&self) -> &Register { &self.register }
     
     pub fn get_custom_words(&self) -> Vec<String> {
         self.dictionary.iter()
@@ -423,16 +400,12 @@ impl Interpreter {
     pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
         self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, def)| (name.clone(), def.description.clone(), false)) // 保護なし
+            .map(|(name, def)| (name.clone(), def.description.clone(), false))
             .collect()
     }
    
     pub fn set_stack(&mut self, stack: Stack) {
         self.stack = stack;
-    }
-   
-    pub fn set_register(&mut self, register: Register) {
-        self.register = register;
     }
 
     pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
