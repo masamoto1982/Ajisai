@@ -10,7 +10,7 @@
     <div class="container">
         <header>
             <h1>Ajisai</h1>
-            <span class="version">ver.202508152247</span>
+            <span class="version">ver.202508181300</span>
             <div class="header-actions">
                 <a href="reference.html" class="reference-btn" target="_blank">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -29,28 +29,18 @@
                 </section>
                 <section class="input-area">
                     <h2>Input</h2>
-                    <textarea id="code-input" placeholder="Enter Ajisai code here... (Shift+Enter to run, Ctrl+Enter to step)"></textarea>
+                    <textarea id="code-input" placeholder="Enter Ajisai code here... (Shift+Enter to run)"></textarea>
                     <div class="controls">
-    <button id="run-btn">Run</button>
-    <button id="clear-btn">Clear</button>
-    <!-- ステップ実行ボタンは削除 -->
-</div>
+                        <button id="run-btn">Run</button>
+                        <button id="clear-btn">Clear</button>
+                    </div>
                 </section>
             </div>
             
             <div id="state-panel" class="panel">
-                <section class="memory-area">
-                    <h2>Memory</h2>
-                    <div class="memory-container">
-                        <div class="stack-area">
-                            <h3>Stack</h3>
-                            <div id="stack-display" class="state-display"></div>
-                        </div>
-                        <div class="register-area">
-                            <h3>Register</h3>
-                            <div id="register-display" class="state-display"></div>
-                        </div>
-                    </div>
+                <section class="stack-area">
+                    <h2>Stack</h2>
+                    <div id="stack-display" class="state-display"></div>
                 </section>
                 
                 <section class="dictionary-area">
