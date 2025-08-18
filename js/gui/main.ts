@@ -1,13 +1,11 @@
-// js/gui/main.ts
+// js/gui/main.ts (簡素化版)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
 import { Editor } from './editor';
-import { Stepper } from './stepper';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
-import { TestUI } from './test-ui';
 
 declare global {
     interface Window {
@@ -34,29 +32,23 @@ export class GUI {
     display: Display;
     dictionary: Dictionary;
     editor: Editor;
-    stepper: Stepper;
     mobile: MobileHandler;
     persistence: Persistence;
 
     private elements: GUIElements = {} as GUIElements;
     private mode: 'input' | 'execution' = 'input';
-    private stepMode = false;
-    private testUI: TestUI;
 
     constructor() {
         this.display = new Display();
         this.dictionary = new Dictionary();
         this.editor = new Editor();
-        this.stepper = new Stepper();
         this.mobile = new MobileHandler();
         this.persistence = new Persistence(this);
-        this.testUI = new TestUI();
     }
 
     init(): void {
         console.log('GUI.init() called');
         this.cacheElements();
-        this.testUI.init();
 
         // 各モジュールの初期化
         this.display.init({
@@ -71,7 +63,6 @@ export class GUI {
         }, (word) => this.insertWord(word));
         
         this.editor.init(this.elements.codeInput);
-        this.stepper.init(() => window.ajisaiInterpreter);
         
         this.mobile.init({
             inputArea: this.elements.inputArea,
@@ -108,18 +99,13 @@ export class GUI {
     }
     
     private setupEventListeners(): void {
-        this.elements.runBtn.addEventListener('click', () => this.runNormal());
+        this.elements.runBtn.addEventListener('click', () => this.runCode());
         this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
 
         this.elements.codeInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                if (e.shiftKey) {
-                    e.preventDefault();
-                    this.runNormal();
-                } else if (e.ctrlKey) {
-                    e.preventDefault();
-                    this.runStep();
-                }
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                this.runCode();
             }
         });
 
@@ -141,90 +127,30 @@ export class GUI {
         this.editor.insertWord(word);
     }
     
-    private async runNormal(): Promise<void> {
-    const code = this.editor.getValue();
-    if (!code) return;
-
-    this.stepMode = false;
-    this.updateRunButton();
-
-    try {
-        const result = window.ajisaiInterpreter.execute(code) as ExecuteResult;
-        
-        if (result.status === 'OK' && !result.error) {
-            this.display.showOutput(result.output || 'OK');
-            
-            if (result.autoNamed && result.autoNamedWord) {
-                this.editor.setValue(result.autoNamedWord);
-            } else if (!result.autoNamed) {
-                this.editor.clear();
-            }
-            
-            if (this.mobile.isMobile()) {
-                this.setMode('execution');
-            }
-        } else {
-            // エラーの場合
-            this.display.showError(result.message || 'Unknown error');
-        }
-    } catch (error) {
-        // 予期しないエラーのフォールバック
-        this.display.showError(error as Error);
-    }
-    
-    this.updateAllDisplays();
-    await this.persistence.saveCurrentState();
-    this.display.showInfo('State saved.', true);
-}
-
-    private async runStep(): Promise<void> {
+    private async runCode(): Promise<void> {
         const code = this.editor.getValue();
-        if (!code && !this.stepMode) return;
+        if (!code) return;
 
         try {
-            if (!this.stepMode) {
-                const result = await this.stepper.start(code);
-                if (result.ok) {
-                    this.stepMode = true;
-                    this.updateRunButton();
-                    await this.continueStep();
-                } else {
-                    this.display.showError(result.error || 'Unknown error');
+            const result = window.ajisaiInterpreter.execute(code) as ExecuteResult;
+            
+            if (result.status === 'OK' && !result.error) {
+                this.display.showOutput(result.output || 'OK');
+                this.editor.clear(); // 成功時は常にクリア
+                
+                if (this.mobile.isMobile()) {
+                    this.setMode('execution');
                 }
             } else {
-                await this.continueStep();
+                this.display.showError(result.message || 'Unknown error');
             }
-        } catch(error) {
+        } catch (error) {
             this.display.showError(error as Error);
-            this.resetStepMode();
-        }
-    }
-
-    private async continueStep(): Promise<void> {
-        const result = await this.stepper.step();
-        
-        if (result.output) {
-            this.display.showOutput(result.output);
-        }
-
-        if (result.hasMore) {
-            this.display.showInfo(`Step ${result.position}/${result.total}: Press Ctrl+Enter to continue...`);
-        } else {
-            this.display.showInfo('Step execution completed.');
-            this.resetStepMode();
         }
         
         this.updateAllDisplays();
-    }
-    
-    private resetStepMode(): void {
-        this.stepMode = false;
-        this.stepper.reset();
-        this.updateRunButton();
-    }
-
-    private updateRunButton(): void {
-        this.elements.runBtn.textContent = this.stepMode ? 'Step' : 'Run';
+        await this.persistence.saveCurrentState();
+        this.display.showInfo('State saved.', true);
     }
 
     updateAllDisplays(): void {
