@@ -1,9 +1,8 @@
-// js/gui/editor.ts
+// js/gui/editor.ts (ラベル切り替え機能削除・簡略化版)
 
 export class Editor {
     private element!: HTMLTextAreaElement;
     private autoLabelEnabled = true;
-    private labelsVisible = true;
     private usedLabels = new Set<string>(); // 衝突回避用
     private labelRegistry = new Map<string, number>(); // ラベル → 行番号
     private reverseRegistry = new Map<number, string>(); // 行番号 → ラベル
@@ -111,11 +110,48 @@ export class Editor {
         const textAfter = this.element.value.substring(cursorPos);
         
         const label = this.generateLabel();
-        const newLine = this.labelsVisible ? `\n${label}: ` : '\n';
+        const newLine = `\n${label}: `;
         
         this.element.value = textBefore + newLine + textAfter;
         this.element.selectionStart = this.element.selectionEnd = cursorPos + newLine.length;
         this.updateLabelRegistry();
+    }
+
+    private handlePaste(event: ClipboardEvent): void {
+        if (!this.autoLabelEnabled) return;
+        
+        event.preventDefault();
+        const pastedText = event.clipboardData?.getData('text') || '';
+        const processedText = this.processMultilineText(pastedText);
+        this.insertTextAtCursor(processedText);
+    }
+
+    private processMultilineText(text: string): string {
+        const lines = text.split('\n');
+        return lines.map(line => {
+            if (line.trim() === '') return '';
+            
+            // 既にBase62ラベルが付いているかチェック
+            if (this.hasLabel(line)) {
+                return line;
+            } else {
+                return `${this.generateLabel()}: ${line}`;
+            }
+        }).join('\n');
+    }
+
+    private hasLabel(line: string): boolean {
+        // 4文字英数字 + コロン + スペースのパターン
+        return /^[0-9A-Za-z]{4}:\s/.test(line.trim());
+    }
+
+    private insertTextAtCursor(text: string): void {
+        const cursorPos = this.element.selectionStart;
+        const textBefore = this.element.value.substring(0, cursorPos);
+        const textAfter = this.element.value.substring(cursorPos);
+        
+        this.element.value = textBefore + text + textAfter;
+        this.element.selectionStart = this.element.selectionEnd = cursorPos + text.length;
     }
 
     // 普通のクリックでジャンプ
@@ -228,50 +264,9 @@ export class Editor {
         }, 300);
     }
 
-    // ラベル表示切り替え
-    toggleLabelVisibility(): void {
-        this.labelsVisible = !this.labelsVisible;
-        this.refreshDisplay();
-    }
-
-    private refreshDisplay(): void {
-        const cursorPos = this.element.selectionStart;
-        const lines = this.element.value.split('\n');
-        
-        const processedLines = lines.map(line => {
-            const match = line.match(/^([0-9A-Za-z]{4}):\s(.*)$/);
-            if (match) {
-                const [, label, code] = match;
-                return this.labelsVisible ? line : code;
-            }
-            return line;
-        });
-        
-        this.element.value = processedLines.join('\n');
-        this.element.selectionStart = this.element.selectionEnd = cursorPos;
-    }
-
     // 外部インターフェース
     getValue(): string {
-        if (!this.labelsVisible) {
-            return this.getFullLabeledValue();
-        }
         return this.element.value.trim();
-    }
-
-    private getFullLabeledValue(): string {
-        const lines = this.element.value.split('\n');
-        return lines.map((line, index) => {
-            const label = this.reverseRegistry.get(index);
-            if (label && !line.includes(':')) {
-                return `${label}: ${line}`;
-            }
-            return line;
-        }).join('\n');
-    }
-
-    isLabelsVisible(): boolean {
-        return this.labelsVisible;
     }
 
     // デバッグ用：ラベル統計
@@ -304,7 +299,7 @@ export class Editor {
         this.usedLabels.clear();
         this.labelRegistry.clear();
         this.reverseRegistry.clear();
-        const initialContent = this.labelsVisible ? `${this.generateLabel()}: ` : '';
+        const initialContent = `${this.generateLabel()}: `;
         this.element.value = initialContent;
         this.element.focus();
         this.updateLabelRegistry();
