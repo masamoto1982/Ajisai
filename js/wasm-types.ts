@@ -9,7 +9,6 @@ export interface AjisaiInterpreter {
     init_step(code: string): string;
     step(): StepResult;
     get_stack(): Value[];
-    get_register(): Value | null;
     get_custom_words(): string[];
     get_custom_words_with_descriptions(): Array<[string, string | null]>;
     get_custom_words_info(): Array<[string, string | null, boolean]>;
@@ -19,7 +18,6 @@ export interface AjisaiInterpreter {
     load_table(name: string): any;
     get_all_tables(): string[];
     restore_stack(stack_js: Value[]): void;
-    restore_register(register_js: Value | null): void;
     get_word_definition(name: string): string | null;
     restore_word(name: string, definition: string, description?: string | null): void;
 }
