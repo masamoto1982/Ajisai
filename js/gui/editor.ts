@@ -63,16 +63,16 @@ export class Editor {
     }
 
     private toBase62(num: number, minLength: number = 4): string {
-        if (num === 0) return this.BASE62_CHARS[0].repeat(minLength);
-        
-        let result = '';
-        while (num > 0) {
-            result = this.BASE62_CHARS[num % 62] + result;
-            num = Math.floor(num / 62);
-        }
-        
-        return result.padStart(minLength, this.BASE62_CHARS[0]);
+    if (num === 0) return this.BASE62_CHARS[0]!.repeat(minLength); // 66行目修正: !追加
+    
+    let result = '';
+    while (num > 0) {
+        result = this.BASE62_CHARS[num % 62]! + result; // !追加
+        num = Math.floor(num / 62);
     }
+    
+    return result.padStart(minLength, this.BASE62_CHARS[0]!); // !追加
+}
 
     private setupEventListeners(): void {
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e));
