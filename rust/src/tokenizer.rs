@@ -1,5 +1,3 @@
-// rust/src/tokenizer.rs (完全書き直し)
-
 use crate::types::Token;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
@@ -107,7 +105,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // タイムスタンプラベル（コロン付き）
         if word.ends_with(':') && word.len() > 1 {
             let label = word[..word.len()-1].to_string();
-            // タイムスタンプ形式チェック（YYYYMMDDHHMM）
             if label.len() == 12 && label.chars().all(|c| c.is_ascii_digit()) {
                 tokens.push(Token::Label(label));
                 continue;
@@ -143,17 +140,27 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                     // 小数点記法
                     let parts: Vec<&str> = word.split('.').collect();
                     if parts.len() == 2 {
-                        let integer_part = if parts[0].is_empty() { 0 } else { 
-                            parts[0].parse::<i64>().unwrap_or_else(|_| {
-                                tokens.push(Token::Symbol(word.to_uppercase()));
-                                return;
-                            })
+                        let integer_part = if parts[0].is_empty() { 
+                            0 
+                        } else { 
+                            match parts[0].parse::<i64>() {
+                                Ok(n) => n,
+                                Err(_) => {
+                                    tokens.push(Token::Symbol(word.to_uppercase()));
+                                    continue;
+                                }
+                            }
                         };
-                        let decimal_part = if parts[1].is_empty() { 0 } else {
-                            parts[1].parse::<i64>().unwrap_or_else(|_| {
-                                tokens.push(Token::Symbol(word.to_uppercase()));
-                                return;
-                            })
+                        let decimal_part = if parts[1].is_empty() { 
+                            0 
+                        } else {
+                            match parts[1].parse::<i64>() {
+                                Ok(n) => n,
+                                Err(_) => {
+                                    tokens.push(Token::Symbol(word.to_uppercase()));
+                                    continue;
+                                }
+                            }
                         };
                         
                         let decimal_places = parts[1].len() as u32;
