@@ -1,4 +1,4 @@
-// rust/src/builtins.rs
+// rust/src/builtins.rs (更新版)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
@@ -16,10 +16,6 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, ">R", "スタックからレジスタへ移動 ( a -- )");
     register_builtin(dictionary, "R>", "レジスタからスタックへ移動 ( -- a )");
     register_builtin(dictionary, "R@", "レジスタの値をコピー ( -- a )");
-    register_builtin(dictionary, "R+", "レジスタとの加算 ( a -- a+r )");
-    register_builtin(dictionary, "R-", "レジスタとの減算 ( a -- a-r )");
-    register_builtin(dictionary, "R*", "レジスタとの乗算 ( a -- a*r )");
-    register_builtin(dictionary, "R/", "レジスタとの除算 ( a -- a/r )");
     
     // ベクトル操作
     register_builtin(dictionary, "LENGTH", "ベクトルの長さ ( vec -- n )");
@@ -32,13 +28,16 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "UNCONS", "ベクトルを分解 ( vec -- elem vec' )");
     register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )");
     
+    // クオーテーション操作
+    register_builtin(dictionary, "CALL", "クオーテーションを実行 ( quot -- )");
+    
     // 制御構造
     register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
     register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )");
     
-    // 条件演算
-    register_builtin(dictionary, "?", "条件で値を選択 ( cond true false -- result )");
-    register_builtin(dictionary, "WHEN", "条件がtrueなら値をプッシュ ( val cond -- val? )");
+    // GOTO操作
+    register_builtin(dictionary, "GOTO", "ラベルへ無条件ジャンプ ( str -- )");
+    register_builtin(dictionary, "J", "条件付き相対ジャンプ ( cond offset -- )");
     
     // 算術演算子
     register_builtin(dictionary, "+", "加算 ( a b -- a+b )");
@@ -80,7 +79,6 @@ fn register_builtin(dictionary: &mut HashMap<String, WordDefinition>, name: &str
     dictionary.insert(name.to_string(), WordDefinition {
         tokens: vec![],
         is_builtin: true,
-        is_temporary: false,  // ビルトインは永続的
         description: Some(description.to_string()),
     });
 }
