@@ -15,7 +15,6 @@ use self::error::Result;
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
-    pub(crate) register: Register,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) output_buffer: String,
     pub(crate) labels: HashMap<String, usize>,      // ラベル → 行番号
