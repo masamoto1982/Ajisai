@@ -12,11 +12,6 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "ROT", "3番目を最上位へ ( a b c -- b c a )");
     register_builtin(dictionary, "NIP", "2番目を削除 ( a b -- b )");
     
-    // レジスタ操作
-    register_builtin(dictionary, ">R", "スタックからレジスタへ移動 ( a -- )");
-    register_builtin(dictionary, "R>", "レジスタからスタックへ移動 ( -- a )");
-    register_builtin(dictionary, "R@", "レジスタの値をコピー ( -- a )");
-    
     // ベクトル操作
     register_builtin(dictionary, "LENGTH", "ベクトルの長さ ( vec -- n )");
     register_builtin(dictionary, "HEAD", "最初の要素 ( vec -- elem )");
