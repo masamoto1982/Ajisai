@@ -5,6 +5,7 @@ import type { Value } from '../wasm-types';
 interface DisplayElements {
     outputDisplay: HTMLElement;
     stackDisplay: HTMLElement;
+    // registerDisplay: HTMLElement;  // 削除
 }
 
 export class Display {
@@ -73,7 +74,7 @@ export class Display {
         display.appendChild(container);
     }
 
-    
+    // updateRegister メソッド削除
 
     private formatValue(item: Value): string {
         if (!item) return 'undefined';
