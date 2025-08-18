@@ -50,24 +50,3 @@ pub fn op_nip(interp: &mut Interpreter) -> Result<()> {
     interp.stack.remove(len - 2);
     Ok(())
 }
-
-pub fn op_to_r(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
-        .ok_or(AjisaiError::StackUnderflow)?;
-    interp.register = Some(val);
-    Ok(())
-}
-
-pub fn op_from_r(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.register.take()
-        .ok_or(AjisaiError::RegisterEmpty)?;
-    interp.stack.push(val);
-    Ok(())
-}
-
-pub fn op_r_fetch(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.register.as_ref()
-        .ok_or(AjisaiError::RegisterEmpty)?;
-    interp.stack.push(val.clone());
-    Ok(())
-}
