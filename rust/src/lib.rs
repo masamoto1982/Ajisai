@@ -1,5 +1,3 @@
-// rust/src/lib.rs (更新版)
-
 use wasm_bindgen::prelude::*;
 
 mod types;
@@ -63,13 +61,7 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    #[wasm_bindgen]
-    pub fn get_register(&self) -> JsValue {
-        match self.interpreter.get_register() {
-            Some(v) => value_to_js(v),
-            None => JsValue::NULL,
-        }
-    }
+    // get_register メソッド削除
 
     #[wasm_bindgen]
     pub fn get_custom_words(&self) -> Vec<String> {
@@ -150,16 +142,7 @@ impl AjisaiInterpreter {
         Ok(())
     }
     
-    #[wasm_bindgen]
-    pub fn restore_register(&mut self, register_js: JsValue) -> Result<(), String> {
-        if register_js.is_null() || register_js.is_undefined() {
-            self.interpreter.set_register(None);
-        } else {
-            let value = js_value_to_rust_value(&register_js)?;
-            self.interpreter.set_register(Some(value));
-        }
-        Ok(())
-    }
+    // restore_register メソッド削除
     
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
@@ -221,6 +204,7 @@ fn value_to_js(value: &Value) -> JsValue {
             // クオーテーションは表示用にプレースホルダーを返す
             let quotation_obj = js_sys::Object::new();
             js_sys::Reflect::set(&quotation_obj, &"type".into(), &"quotation".into()).unwrap();
+            js_sys::Reflect::set(&quotation_obj, &"length".into(), &JsValue::from_f64(0.0)).unwrap();
             quotation_obj.into()
         },
         ValueType::Nil => JsValue::NULL,
@@ -249,7 +233,6 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                     val_type: ValueType::Quotation(vec![])
                 })
             },
-            // 他の型は既存の実装を維持...
             "number" => {
                 if js_sys::Reflect::has(&value_field, &"numerator".into()).unwrap_or(false) &&
                    js_sys::Reflect::has(&value_field, &"denominator".into()).unwrap_or(false) {
