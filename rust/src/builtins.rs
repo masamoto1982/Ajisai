@@ -1,10 +1,8 @@
-// rust/src/builtins.rs (更新版)
-
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
-    // スタック操作
+    // スタック操作（レジスタ削除）
     register_builtin(dictionary, "DUP", "スタックトップを複製 ( a -- a a )");
     register_builtin(dictionary, "DROP", "スタックトップを削除 ( a -- )");
     register_builtin(dictionary, "SWAP", "上位2つを交換 ( a b -- b a )");
