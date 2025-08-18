@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs
+// rust/src/interpreter/mod.rs (完全書き直し)
 
 pub mod stack_ops;
 pub mod arithmetic;
@@ -6,43 +6,29 @@ pub mod vector_ops;
 pub mod control;
 pub mod io;
 pub mod error;
-pub mod register_ops;
-pub mod execute;
-pub mod word_def;
-pub mod step;
-pub mod token_processor;
+pub mod quotation;
+pub mod goto;
 
-use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Register};
+use std::collections::HashMap;
+use crate::types::{Stack, Register, Token, Value, ValueType};
 use self::error::Result;
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) register: Register,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
-    pub(crate) dependencies: HashMap<String, HashSet<String>>,
-    pub(crate) call_stack: Vec<String>,
     pub(crate) output_buffer: String,
-    pub(crate) word_properties: HashMap<String, WordProperty>,
-    // ステップ実行用のフィールド
-    pub(crate) step_tokens: Vec<crate::types::Token>,
-    pub(crate) step_position: usize,
-    pub(crate) step_mode: bool,
-    pub(crate) auto_named: bool,
-    pub(crate) last_auto_named_word: Option<String>,
+    pub(crate) labels: HashMap<String, usize>,      // ラベル → 行番号
+    pub(crate) program: Vec<Token>,                 // 実行中のプログラム
+    pub(crate) pc: usize,                          // プログラムカウンタ
+    pub(crate) call_stack: Vec<String>,            // デバッグ用
 }
 
 #[derive(Clone)]
 pub struct WordDefinition {
-    pub tokens: Vec<crate::types::Token>,
+    pub tokens: Vec<Token>,
     pub is_builtin: bool,
-    pub is_temporary: bool,  // 追加: 一時的なワードかどうか
     pub description: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-pub struct WordProperty {
-    pub is_value_producer: bool,
 }
 
 impl Interpreter {
@@ -51,37 +37,363 @@ impl Interpreter {
             stack: Vec::new(),
             register: None,
             dictionary: HashMap::new(),
-            dependencies: HashMap::new(),
-            call_stack: Vec::new(),
             output_buffer: String::new(),
-            word_properties: HashMap::new(),
-            step_tokens: Vec::new(),
-            step_position: 0,
-            step_mode: false,
-            auto_named: false,
-            last_auto_named_word: None,
+            labels: HashMap::new(),
+            program: Vec::new(),
+            pc: 0,
+            call_stack: Vec::new(),
         };
         
         crate::builtins::register_builtins(&mut interpreter.dictionary);
-        interpreter.initialize_word_properties();
         interpreter
     }
 
-    fn initialize_word_properties(&mut self) {
-        let value_producers = vec![
-            "R>", "R@", "DUP", "OVER", "ROT",
-        ];
+    pub fn execute(&mut self, code: &str) -> Result<()> {
+        self.output_buffer.clear();
         
-        for name in value_producers {
-            self.word_properties.insert(name.to_string(), WordProperty {
-                is_value_producer: true,
-            });
+        let lines: Vec<&str> = code.split('\n')
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .collect();
+
+        for line in lines {
+            self.process_line(line)?;
+        }
+        
+        Ok(())
+    }
+
+    fn process_line(&mut self, line: &str) -> Result<()> {
+        let tokens = crate::tokenizer::tokenize(line).map_err(error::AjisaiError::from)?;
+        if tokens.is_empty() {
+            return Ok(());
+        }
+
+        // ラベル定義の検出と処理
+        self.labels.clear();
+        self.program = tokens.clone();
+        
+        // 第1パス: ラベル位置の記録
+        for (i, token) in tokens.iter().enumerate() {
+            if let Token::Label(label) = token {
+                self.labels.insert(label.clone(), i);
+            }
+        }
+
+        // 第2パス: 実行
+        self.pc = 0;
+        while self.pc < self.program.len() {
+            self.execute_token()?;
+        }
+
+        Ok(())
+    }
+
+    fn execute_token(&mut self) -> Result<()> {
+        let token = self.program[self.pc].clone();
+        
+        match token {
+            Token::Number(num, den) => {
+                self.stack.push(Value {
+                    val_type: ValueType::Number(crate::types::Fraction::new(num, den)),
+                });
+                self.pc += 1;
+            },
+            Token::String(s) => {
+                self.stack.push(Value {
+                    val_type: ValueType::String(s),
+                });
+                self.pc += 1;
+            },
+            Token::Boolean(b) => {
+                self.stack.push(Value {
+                    val_type: ValueType::Boolean(b),
+                });
+                self.pc += 1;
+            },
+            Token::Nil => {
+                self.stack.push(Value {
+                    val_type: ValueType::Nil,
+                });
+                self.pc += 1;
+            },
+            Token::VectorStart => {
+                let (vector_values, consumed) = self.collect_vector()?;
+                self.stack.push(Value {
+                    val_type: ValueType::Vector(vector_values),
+                });
+                self.pc += consumed;
+            },
+            Token::QuotationStart => {
+                let (quotation_tokens, consumed) = self.collect_quotation()?;
+                self.stack.push(Value {
+                    val_type: ValueType::Quotation(quotation_tokens),
+                });
+                self.pc += consumed;
+            },
+            Token::Symbol(name) => {
+                // DEF構文の特殊処理
+                if name == "DEF" {
+                    self.handle_def()?;
+                } else {
+                    self.execute_word(&name)?;
+                }
+                self.pc += 1;
+            },
+            Token::Label(_) => {
+                // ラベルは実行時にスキップ
+                self.pc += 1;
+            },
+            _ => {
+                return Err(error::AjisaiError::from("Unexpected token"));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn collect_vector(&mut self) -> Result<(Vec<Value>, usize)> {
+        let mut values = Vec::new();
+        let mut i = self.pc + 1;
+        let mut depth = 1;
+
+        while i < self.program.len() && depth > 0 {
+            match &self.program[i] {
+                Token::VectorStart => depth += 1,
+                Token::VectorEnd => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok((values, i - self.pc + 1));
+                    }
+                },
+                Token::VectorStart if depth == 1 => {
+                    // ネストしたベクター
+                    let old_pc = self.pc;
+                    self.pc = i;
+                    let (nested_values, consumed) = self.collect_vector()?;
+                    values.push(Value { val_type: ValueType::Vector(nested_values) });
+                    i += consumed;
+                    self.pc = old_pc;
+                    continue;
+                },
+                token => {
+                    values.push(self.token_to_value(token)?);
+                }
+            }
+            i += 1;
+        }
+
+        Err(error::AjisaiError::from("Unclosed vector"))
+    }
+
+    fn collect_quotation(&mut self) -> Result<(Vec<Token>, usize)> {
+        let mut tokens = Vec::new();
+        let mut i = self.pc + 1;
+        let mut depth = 1;
+
+        while i < self.program.len() && depth > 0 {
+            match &self.program[i] {
+                Token::QuotationStart => depth += 1,
+                Token::QuotationEnd => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok((tokens, i - self.pc + 1));
+                    }
+                },
+                token => {
+                    tokens.push(token.clone());
+                }
+            }
+            i += 1;
+        }
+
+        Err(error::AjisaiError::from("Unclosed quotation"))
+    }
+
+    fn token_to_value(&self, token: &Token) -> Result<Value> {
+        match token {
+            Token::Number(num, den) => Ok(Value {
+                val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+            }),
+            Token::String(s) => Ok(Value {
+                val_type: ValueType::String(s.clone()),
+            }),
+            Token::Boolean(b) => Ok(Value {
+                val_type: ValueType::Boolean(*b),
+            }),
+            Token::Nil => Ok(Value {
+                val_type: ValueType::Nil,
+            }),
+            Token::Symbol(s) => Ok(Value {
+                val_type: ValueType::Symbol(s.clone()),
+            }),
+            _ => Err(error::AjisaiError::from("Cannot convert token to value")),
         }
     }
-    
-    // cleanup_temporary_words メソッドは削除
-    
-    // 基本的なアクセサメソッド
+
+    fn handle_def(&mut self) -> Result<()> {
+        // { quotation } "name" DEF ( description ) の構文
+        if self.stack.len() < 2 {
+            return Err(error::AjisaiError::from("DEF requires quotation and name"));
+        }
+
+        let name_val = self.stack.pop().unwrap();
+        let quotation_val = self.stack.pop().unwrap();
+
+        let name = match name_val.val_type {
+            ValueType::String(s) => s.to_uppercase(),
+            _ => return Err(error::AjisaiError::from("DEF requires string name")),
+        };
+
+        let tokens = match quotation_val.val_type {
+            ValueType::Quotation(t) => t,
+            _ => return Err(error::AjisaiError::from("DEF requires quotation")),
+        };
+
+        // 説明文の取得（オプション）
+        let description = if self.pc + 1 < self.program.len() {
+            if let Token::String(desc) = &self.program[self.pc + 1] {
+                self.pc += 1; // 説明文もスキップ
+                Some(desc.clone())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // ビルトインワードの上書きチェック
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
+            }
+        }
+
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens,
+            is_builtin: false,
+            description: description.clone(),
+        });
+
+        if let Some(desc) = description {
+            self.append_output(&format!("Defined: {} - {}\n", name, desc));
+        } else {
+            self.append_output(&format!("Defined: {}\n", name));
+        }
+
+        Ok(())
+    }
+
+    fn execute_word(&mut self, name: &str) -> Result<()> {
+        if let Some(def) = self.dictionary.get(name).cloned() {
+            if def.is_builtin {
+                self.execute_builtin(name)
+            } else {
+                self.execute_custom_word(&def.tokens)
+            }
+        } else {
+            Err(error::AjisaiError::UnknownWord(name.to_string()))
+        }
+    }
+
+    fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
+        // カスタムワードの実行は現在のプログラムとは独立
+        let old_program = self.program.clone();
+        let old_pc = self.pc;
+        let old_labels = self.labels.clone();
+
+        self.program = tokens.to_vec();
+        self.labels.clear();
+        
+        // ラベル位置の記録
+        for (i, token) in tokens.iter().enumerate() {
+            if let Token::Label(label) = token {
+                self.labels.insert(label.clone(), i);
+            }
+        }
+
+        self.pc = 0;
+        while self.pc < self.program.len() {
+            self.execute_token()?;
+        }
+
+        // 状態復帰
+        self.program = old_program;
+        self.pc = old_pc;
+        self.labels = old_labels;
+
+        Ok(())
+    }
+
+    fn execute_builtin(&mut self, name: &str) -> Result<()> {
+        match name {
+            // スタック操作
+            "DUP" => stack_ops::op_dup(self),
+            "DROP" => stack_ops::op_drop(self),
+            "SWAP" => stack_ops::op_swap(self),
+            "OVER" => stack_ops::op_over(self),
+            "ROT" => stack_ops::op_rot(self),
+            "NIP" => stack_ops::op_nip(self),
+            ">R" => stack_ops::op_to_r(self),
+            "R>" => stack_ops::op_from_r(self),
+            "R@" => stack_ops::op_r_fetch(self),
+            
+            // 算術・比較・論理
+            "+" => arithmetic::op_add(self),
+            "-" => arithmetic::op_sub(self),
+            "*" => arithmetic::op_mul(self),
+            "/" => arithmetic::op_div(self),
+            ">" => arithmetic::op_gt(self),
+            ">=" => arithmetic::op_ge(self),
+            "=" => arithmetic::op_eq(self),
+            "<" => arithmetic::op_lt(self),
+            "<=" => arithmetic::op_le(self),
+            "NOT" => arithmetic::op_not(self),
+            "AND" => arithmetic::op_and(self),
+            "OR" => arithmetic::op_or(self),
+            
+            // ベクトル操作
+            "LENGTH" => vector_ops::op_length(self),
+            "HEAD" => vector_ops::op_head(self),
+            "TAIL" => vector_ops::op_tail(self),
+            "CONS" => vector_ops::op_cons(self),
+            "APPEND" => vector_ops::op_append(self),
+            "REVERSE" => vector_ops::op_reverse(self),
+            "NTH" => vector_ops::op_nth(self),
+            "UNCONS" => vector_ops::op_uncons(self),
+            "EMPTY?" => vector_ops::op_empty(self),
+            
+            // クオーテーション操作
+            "CALL" => quotation::op_call(self),
+            
+            // GOTO操作
+            "GOTO" => goto::op_goto(self),
+            "J" => goto::op_jump_if(self),
+            
+            // 制御構造
+            "DEL" => control::op_del(self),
+            
+            // Nil関連
+            "NIL?" => arithmetic::op_nil_check(self),
+            "NOT-NIL?" => arithmetic::op_not_nil_check(self),
+            "KNOWN?" => arithmetic::op_not_nil_check(self),
+            "DEFAULT" => arithmetic::op_default(self),
+            
+            // 入出力
+            "." => io::op_dot(self),
+            "PRINT" => io::op_print(self),
+            "CR" => io::op_cr(self),
+            "SPACE" => io::op_space(self),
+            "SPACES" => io::op_spaces(self),
+            "EMIT" => io::op_emit(self),
+            
+            // データベース操作
+            "AMNESIA" => op_amnesia(self),
+            
+            _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
+        }
+    }
+
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
         self.output_buffer.clear();
@@ -92,43 +404,27 @@ impl Interpreter {
         self.output_buffer.push_str(text);
     }
     
-    pub fn was_auto_named(&self) -> bool {
-        self.auto_named
-    }
-
-    pub fn get_last_auto_named_word(&self) -> Option<String> {
-        self.last_auto_named_word.clone()
-    }
-    
     pub fn get_stack(&self) -> &Stack { &self.stack }
     pub fn get_register(&self) -> &Register { &self.register }
     
     pub fn get_custom_words(&self) -> Vec<String> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)  // 一時的なワードも含める
+            .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
             .collect()
     }
     
     pub fn get_custom_words_with_descriptions(&self) -> Vec<(String, Option<String>)> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)  // 一時的なワードも含める
+            .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| (name.clone(), def.description.clone()))
             .collect()
     }
    
     pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
         self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)  // 一時的なワードも含める
-            .map(|(name, def)| {
-                // 一時的なワードは保護されていないものとして扱う（削除可能）
-                let is_protected = if def.is_temporary {
-                    false
-                } else {
-                    self.dependencies.get(name).map_or(false, |deps| !deps.is_empty())
-                };
-                (name.clone(), def.description.clone(), is_protected)
-            })
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.description.clone(), false)) // 保護なし
             .collect()
     }
    
@@ -139,9 +435,54 @@ impl Interpreter {
     pub fn set_register(&mut self, register: Register) {
         self.register = register;
     }
+
+    pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+        let name = name.to_uppercase();
+        
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(error::AjisaiError::from(format!("Cannot restore builtin word: {}", name)));
+            }
+        }
+
+        self.dictionary.insert(name, WordDefinition {
+            tokens,
+            is_builtin: false,
+            description,
+        });
+
+        Ok(())
+    }
+   
+    pub fn get_word_definition(&self, name: &str) -> Option<String> {
+        if let Some(def) = self.dictionary.get(name) {
+            if !def.is_builtin {
+                let body_string = def.tokens.iter()
+                    .map(|token| self.token_to_string(token))
+                    .collect::<Vec<String>>()
+                    .join(" ");
+                return Some(format!("{{ {} }}", body_string));
+            }
+        }
+        None
+    }
+
+    fn token_to_string(&self, token: &Token) -> String {
+        match token {
+            Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
+            Token::String(s) => format!("\"{}\"", s),
+            Token::Boolean(b) => b.to_string(),
+            Token::Nil => "nil".to_string(),
+            Token::Symbol(s) => s.clone(),
+            Token::VectorStart => "[".to_string(),
+            Token::VectorEnd => "]".to_string(),
+            Token::QuotationStart => "{".to_string(),
+            Token::QuotationEnd => "}".to_string(),
+            Token::Label(s) => format!("{}:", s),
+        }
+    }
 }
 
-// AMNESIA操作の実装
 pub fn op_amnesia(_interp: &mut Interpreter) -> Result<()> {
     if let Some(window) = web_sys::window() {
         let event = web_sys::CustomEvent::new("ajisai-amnesia")
@@ -150,14 +491,4 @@ pub fn op_amnesia(_interp: &mut Interpreter) -> Result<()> {
             .map_err(|_| error::AjisaiError::from("Failed to dispatch amnesia event"))?;
     }
     Ok(())
-}
-
-// テストモジュール
-
-#[cfg(test)]
-impl Interpreter {
-    // テスト用にパブリックフィールドへのアクセスを提供
-    pub fn test_stack(&self) -> &Stack { &self.stack }
-    pub fn test_register(&self) -> &Register { &self.register }
-    pub fn test_dictionary(&self) -> &HashMap<String, WordDefinition> { &self.dictionary }
 }
