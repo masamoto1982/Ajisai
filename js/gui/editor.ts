@@ -95,8 +95,8 @@ export class Editor {
     lines.forEach((line, index) => {
         // Base62ラベルパターン（英数字4文字 + コロン）
         const match = line.match(/^([0-9A-Za-z]{4}):\s/);
-        const label = match?.[1]; // 66行目修正: Optional chainingで安全にアクセス
-        if (label) {
+        if (match && match.length > 1) {
+            const label = match[1]!; // 66行目修正: Non-null assertion
             this.labelRegistry.set(label, index);
             this.reverseRegistry.set(index, label);
             this.usedLabels.add(label); // 使用済みとして記録
