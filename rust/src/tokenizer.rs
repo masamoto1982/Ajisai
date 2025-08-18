@@ -102,10 +102,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // タイムスタンプラベル（コロン付き）
+        // タイムスタンプラベル（コロン付き）- 14桁対応
         if word.ends_with(':') && word.len() > 1 {
             let label = word[..word.len()-1].to_string();
-            if label.len() == 12 && label.chars().all(|c| c.is_ascii_digit()) {
+            // 12桁（分まで）または14桁（秒まで）に対応
+            if (label.len() == 12 || label.len() == 14) && label.chars().all(|c| c.is_ascii_digit()) {
                 tokens.push(Token::Label(label));
                 continue;
             }
