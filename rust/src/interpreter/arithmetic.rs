@@ -9,6 +9,7 @@ fn value_type_name(val_type: &ValueType) -> &'static str {
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
         ValueType::Vector(_) => "vector",
+        ValueType::Quotation(_) => "quotation", // 追加
         ValueType::Nil => "nil",
     }
 }
