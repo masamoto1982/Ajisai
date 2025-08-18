@@ -1,3 +1,5 @@
+// rust/src/lib.rs (更新版)
+
 use wasm_bindgen::prelude::*;
 
 mod types;
@@ -23,29 +25,20 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn execute(&mut self, code: &str) -> JsValue {  // Result<JsValue, String>から変更
+    pub fn execute(&mut self, code: &str) -> JsValue {
         let obj = js_sys::Object::new();
         
         match self.interpreter.execute(code) {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 
-                // 出力を取得
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
-                // 自動命名フラグと名前を追加
-                let auto_named = self.interpreter.was_auto_named();
-                js_sys::Reflect::set(&obj, &"autoNamed".into(), &JsValue::from_bool(auto_named)).unwrap();
-                
-                if auto_named {
-                    if let Some(name) = self.interpreter.get_last_auto_named_word() {
-                        js_sys::Reflect::set(&obj, &"autoNamedWord".into(), &JsValue::from_str(&name)).unwrap();
-                    }
-                }
+                // 自動命名は削除されたのでfalse固定
+                js_sys::Reflect::set(&obj, &"autoNamed".into(), &JsValue::from_bool(false)).unwrap();
             }
             Err(e) => {
-                // エラーの場合もオブジェクトとして返す
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"message".into(), &JsValue::from_str(&e.to_string())).unwrap();
                 js_sys::Reflect::set(&obj, &"error".into(), &JsValue::from_bool(true)).unwrap();
@@ -53,36 +46,6 @@ impl AjisaiInterpreter {
         }
         
         obj.into()
-    }
-
-    #[wasm_bindgen]
-    pub fn init_step(&mut self, code: &str) -> Result<String, String> {
-        match self.interpreter.init_step_execution(code) {
-            Ok(()) => Ok("OK".to_string()),
-            Err(e) => Err(e.to_string()),
-        }
-    }
-
-    #[wasm_bindgen]
-    pub fn step(&mut self) -> Result<JsValue, String> {
-        match self.interpreter.execute_step() {
-            Ok(has_more) => {
-                let obj = js_sys::Object::new();
-                js_sys::Reflect::set(&obj, &"hasMore".into(), &JsValue::from_bool(has_more)).unwrap();
-                
-                if let Some((position, total)) = self.interpreter.get_step_info() {
-                    js_sys::Reflect::set(&obj, &"position".into(), &JsValue::from_f64(position as f64)).unwrap();
-                    js_sys::Reflect::set(&obj, &"total".into(), &JsValue::from_f64(total as f64)).unwrap();
-                }
-                
-                // 出力を取得
-                let output = self.interpreter.get_output();
-                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
-                
-                Ok(obj.into())
-            }
-            Err(e) => Err(e.to_string()),
-        }
     }
 
     #[wasm_bindgen]
@@ -144,7 +107,7 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-     #[wasm_bindgen]
+    #[wasm_bindgen]
     pub fn get_builtin_words_info(&self) -> JsValue {
         let builtin_words_info: Vec<(String, Option<String>)> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| def.is_builtin)
@@ -207,24 +170,19 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
-pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
-    // DEFコマンドを使わず、直接辞書に登録する
-    
-    // 定義文字列（"{ ... }"形式）からトークンを抽出
-    let definition = definition.trim();
-    if !definition.starts_with('{') || !definition.ends_with('}') {
-        return Err("Invalid word definition format".to_string());
+    pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
+        let definition = definition.trim();
+        if !definition.starts_with('{') || !definition.ends_with('}') {
+            return Err("Invalid word definition format".to_string());
+        }
+        
+        let inner = &definition[1..definition.len()-1].trim();
+        let tokens = crate::tokenizer::tokenize(inner)
+            .map_err(|e| format!("Failed to tokenize definition: {}", e))?;
+        
+        self.interpreter.restore_custom_word(name, tokens, description)
+            .map_err(|e| e.to_string())
     }
-    
-    // 中身のトークンを取得
-    let inner = &definition[1..definition.len()-1].trim();
-    let tokens = crate::tokenizer::tokenize(inner)
-        .map_err(|e| format!("Failed to tokenize definition: {}", e))?;
-    
-    // 直接辞書に登録
-    self.interpreter.restore_custom_word(name, tokens, description)
-        .map_err(|e| e.to_string())
-}
 }
 
 fn value_to_js(value: &Value) -> JsValue {
@@ -236,6 +194,7 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
         ValueType::Vector(_) => "vector",
+        ValueType::Quotation(_) => "quotation",
         ValueType::Nil => "nil",
     };
     
@@ -243,7 +202,6 @@ fn value_to_js(value: &Value) -> JsValue {
     
     let val = match &value.val_type {
         ValueType::Number(n) => {
-            // 分数オブジェクトとして出力
             let frac_obj = js_sys::Object::new();
             js_sys::Reflect::set(&frac_obj, &"numerator".into(), &JsValue::from_f64(n.numerator as f64)).unwrap();
             js_sys::Reflect::set(&frac_obj, &"denominator".into(), &JsValue::from_f64(n.denominator as f64)).unwrap();
@@ -259,6 +217,12 @@ fn value_to_js(value: &Value) -> JsValue {
             }
             arr.into()
         },
+        ValueType::Quotation(_) => {
+            // クオーテーションは表示用にプレースホルダーを返す
+            let quotation_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&quotation_obj, &"type".into(), &"quotation".into()).unwrap();
+            quotation_obj.into()
+        },
         ValueType::Nil => JsValue::NULL,
     };
     
@@ -268,7 +232,7 @@ fn value_to_js(value: &Value) -> JsValue {
 }
 
 fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
-    // JavaScriptオブジェクトの場合（{type: ..., value: ...}形式）
+    // 既存の実装を維持（Quotation型に対応）
     if js_sys::Reflect::has(js_val, &"type".into()).unwrap_or(false) {
         let type_str = js_sys::Reflect::get(js_val, &"type".into())
             .ok()
@@ -279,8 +243,14 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
             .map_err(|_| "Missing value field")?;
         
         match type_str.as_str() {
+            "quotation" => {
+                // クオーテーションの復元（簡易版）
+                Ok(Value {
+                    val_type: ValueType::Quotation(vec![])
+                })
+            },
+            // 他の型は既存の実装を維持...
             "number" => {
-                // valueフィールドは分数を表すオブジェクト
                 if js_sys::Reflect::has(&value_field, &"numerator".into()).unwrap_or(false) &&
                    js_sys::Reflect::has(&value_field, &"denominator".into()).unwrap_or(false) {
                     
@@ -294,7 +264,7 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                                 None
                             }
                         })
-                        .ok_or("Invalid numerator: must be an integer within i64 range")?;
+                        .ok_or("Invalid numerator")?;
                     
                     let den = js_sys::Reflect::get(&value_field, &"denominator".into())
                         .ok()
@@ -306,7 +276,7 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                                 None
                             }
                         })
-                        .ok_or("Invalid denominator: must be an integer within i64 range")?;
+                        .ok_or("Invalid denominator")?;
                     
                     if den == 0 {
                         return Err("Division by zero in fraction".to_string());
@@ -363,14 +333,13 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
             _ => Err(format!("Unknown type: {}", type_str)),
         }
     } else {
-        // 単純な値の場合（後方互換性のため）
+        // 単純な値の場合の処理（既存のまま）
         if let Some(b) = js_val.as_bool() {
             Ok(Value {
                 val_type: ValueType::Boolean(b)
             })
         } else if js_val.as_f64().is_some() {
-            // 浮動小数点数は受け付けない
-            Err("Direct numeric values are not allowed to preserve precision. Numbers must be passed as objects with 'numerator' and 'denominator' fields.".to_string())
+            Err("Direct numeric values are not allowed".to_string())
         } else if let Some(s) = js_val.as_string() {
             Ok(Value {
                 val_type: ValueType::String(s)
@@ -380,7 +349,6 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                 val_type: ValueType::Nil
             })
         } else if js_val.is_array() {
-            // 配列の場合はVectorとして処理
             let arr = js_sys::Array::from(js_val);
             let mut values = Vec::new();
             for i in 0..arr.length() {
