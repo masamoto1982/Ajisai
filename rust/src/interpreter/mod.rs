@@ -7,7 +7,7 @@ pub mod control;
 pub mod io;
 pub mod error;
 pub mod quotation;
-pub mod goto;
+pub mod leap;
 
 use std::collections::HashMap;
 use crate::types::{Stack, Token, Value, ValueType};
@@ -343,9 +343,8 @@ impl Interpreter {
             // クオーテーション操作
             "CALL" => quotation::op_call(self),
             
-            // GOTO操作
-            "GOTO" => goto::op_goto(self),
-            "J" => goto::op_jump_if(self),
+            // LEAP操作
+            "LEAP" => leap::op_leap(self),
             
             // 制御構造
             "DEL" => control::op_del(self),
