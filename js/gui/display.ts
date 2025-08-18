@@ -5,7 +5,6 @@ import type { Value } from '../wasm-types';
 interface DisplayElements {
     outputDisplay: HTMLElement;
     stackDisplay: HTMLElement;
-    registerDisplay: HTMLElement;
 }
 
 export class Display {
@@ -74,16 +73,7 @@ export class Display {
         display.appendChild(container);
     }
 
-    updateRegister(value: Value | null): void {
-        const display = this.elements.registerDisplay;
-        if (value === null || value === undefined) {
-            display.textContent = '(empty)';
-            display.style.color = '#ccc';
-        } else {
-            display.style.color = '#333';
-            display.textContent = this.formatValue(value);
-        }
-    }
+    
 
     private formatValue(item: Value): string {
         if (!item) return 'undefined';
