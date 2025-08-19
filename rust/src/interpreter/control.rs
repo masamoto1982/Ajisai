@@ -1,8 +1,3 @@
-// rust/src/interpreter/control.rs (簡素化版)
-
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType};
-
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
@@ -18,10 +13,27 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
                 }
             }
             
+            // 依存関係チェック
+            if let Some(dependents) = interp.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(AjisaiError::ProtectedWord { 
+                        name: name.clone(), 
+                        dependents: dependent_list 
+                    });
+                }
+            }
+            
             // 辞書から削除
             interp.dictionary.remove(&name);
-            interp.append_output(&format!("Deleted: {}\n", name));
+            interp.dependencies.remove(&name);
             
+            // 他の依存関係からも削除
+            for (_, deps) in interp.dependencies.iter_mut() {
+                deps.remove(&name);
+            }
+            
+            interp.append_output(&format!("Deleted: {}\n", name));
             Ok(())
         },
         _ => Err(AjisaiError::type_error("string", "other type")),
