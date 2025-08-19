@@ -17,9 +17,10 @@ pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) output_buffer: String,
-    pub(crate) labels: HashMap<String, usize>,
-    pub(crate) program: Vec<Token>,
-    pub(crate) pc: usize,
+    // ラベル関連を削除
+    // pub(crate) labels: HashMap<String, usize>,
+    // pub(crate) program: Vec<Token>,
+    // pub(crate) pc: usize,
     pub(crate) call_stack: Vec<String>,
 }
 
@@ -36,9 +37,6 @@ impl Interpreter {
             stack: Vec::new(),
             dictionary: HashMap::new(),
             output_buffer: String::new(),
-            labels: HashMap::new(),
-            program: Vec::new(),
-            pc: 0,
             call_stack: Vec::new(),
         };
         
@@ -67,98 +65,74 @@ impl Interpreter {
             return Ok(());
         }
 
-        self.labels.clear();
-        self.program = tokens.clone();
-        
-        // 第1パス: ラベル位置の記録
-        for (i, token) in tokens.iter().enumerate() {
-            if let Token::Label(label) = token {
-                self.labels.insert(label.clone(), i);
-            }
-        }
-
-        // 第2パス: 実行
-        self.pc = 0;
-        while self.pc < self.program.len() {
-            self.execute_token()?;
-        }
-
-        Ok(())
+        self.execute_tokens(&tokens)
     }
 
-    fn execute_token(&mut self) -> Result<()> {
-        let token = self.program[self.pc].clone();
-        
-        match token {
-            Token::Number(num, den) => {
-                self.stack.push(Value {
-                    val_type: ValueType::Number(crate::types::Fraction::new(num, den)),
-                });
-                self.pc += 1;
-            },
-            Token::String(s) => {
-                self.stack.push(Value {
-                    val_type: ValueType::String(s),
-                });
-                self.pc += 1;
-            },
-            Token::Boolean(b) => {
-                self.stack.push(Value {
-                    val_type: ValueType::Boolean(b),
-                });
-                self.pc += 1;
-            },
-            Token::Nil => {
-                self.stack.push(Value {
-                    val_type: ValueType::Nil,
-                });
-                self.pc += 1;
-            },
-            Token::VectorStart => {
-                let (vector_values, consumed) = self.collect_vector()?;
-                self.stack.push(Value {
-                    val_type: ValueType::Vector(vector_values),
-                });
-                self.pc += consumed;
-            },
-            Token::QuotationStart => {
-                let (quotation_tokens, consumed) = self.collect_quotation()?;
-                self.stack.push(Value {
-                    val_type: ValueType::Quotation(quotation_tokens),
-                });
-                self.pc += consumed;
-            },
-            Token::Symbol(name) => {
-                if name == "DEF" {
-                    self.handle_def()?;
-                } else {
-                    self.execute_word(&name)?;
+    fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        for token in tokens {
+            match token {
+                Token::Number(num, den) => {
+                    self.stack.push(Value {
+                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                    });
+                },
+                Token::String(s) => {
+                    self.stack.push(Value {
+                        val_type: ValueType::String(s.clone()),
+                    });
+                },
+                Token::Boolean(b) => {
+                    self.stack.push(Value {
+                        val_type: ValueType::Boolean(*b),
+                    });
+                },
+                Token::Nil => {
+                    self.stack.push(Value {
+                        val_type: ValueType::Nil,
+                    });
+                },
+                Token::VectorStart => {
+                    let (vector_values, consumed) = self.collect_vector(tokens, 0)?;
+                    self.stack.push(Value {
+                        val_type: ValueType::Vector(vector_values),
+                    });
+                    // 消費されたトークン分をスキップする必要があるが、
+                    // 現在のループ構造では困難。別途処理が必要。
+                },
+                Token::QuotationStart => {
+                    let (quotation_tokens, consumed) = self.collect_quotation(tokens, 0)?;
+                    self.stack.push(Value {
+                        val_type: ValueType::Quotation(quotation_tokens),
+                    });
+                    // 同様にスキップ処理が必要
+                },
+                Token::Symbol(name) => {
+                    if name == "DEF" {
+                        self.handle_def()?;
+                    } else {
+                        self.execute_word(name)?;
+                    }
+                },
+                _ => {
+                    return Err(error::AjisaiError::from("Unexpected token"));
                 }
-                self.pc += 1;
-            },
-            Token::Label(_) => {
-                self.pc += 1;
-            },
-            _ => {
-                return Err(error::AjisaiError::from("Unexpected token"));
             }
         }
-
         Ok(())
     }
 
-    fn collect_vector(&mut self) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector(&mut self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
-        let mut i = self.pc + 1;
+        let mut i = start + 1;
         let mut depth = 1;
 
-        while i < self.program.len() && depth > 0 {
-            match &self.program[i] {
+        while i < tokens.len() && depth > 0 {
+            match &tokens[i] {
                 Token::VectorStart => depth += 1,
                 Token::VectorEnd => {
                     depth -= 1;
                     if depth == 0 {
-                        return Ok((values, i - self.pc + 1));
+                        return Ok((values, i - start + 1));
                     }
                 },
                 token if depth == 1 => {
@@ -172,22 +146,22 @@ impl Interpreter {
         Err(error::AjisaiError::from("Unclosed vector"))
     }
 
-    fn collect_quotation(&mut self) -> Result<(Vec<Token>, usize)> {
-        let mut tokens = Vec::new();
-        let mut i = self.pc + 1;
+    fn collect_quotation(&mut self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
+        let mut quotation_tokens = Vec::new();
+        let mut i = start + 1;
         let mut depth = 1;
 
-        while i < self.program.len() && depth > 0 {
-            match &self.program[i] {
+        while i < tokens.len() && depth > 0 {
+            match &tokens[i] {
                 Token::QuotationStart => depth += 1,
                 Token::QuotationEnd => {
                     depth -= 1;
                     if depth == 0 {
-                        return Ok((tokens, i - self.pc + 1));
+                        return Ok((quotation_tokens, i - start + 1));
                     }
                 },
                 token => {
-                    tokens.push(token.clone());
+                    quotation_tokens.push(token.clone());
                 }
             }
             i += 1;
@@ -235,17 +209,6 @@ impl Interpreter {
             _ => return Err(error::AjisaiError::from("DEF requires quotation")),
         };
 
-        let description = if self.pc + 1 < self.program.len() {
-            if let Token::String(desc) = &self.program[self.pc + 1] {
-                self.pc += 1;
-                Some(desc.clone())
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
@@ -255,14 +218,10 @@ impl Interpreter {
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens,
             is_builtin: false,
-            description: description.clone(),
+            description: None,
         });
 
-        if let Some(desc) = description {
-            self.append_output(&format!("Defined: {} - {}\n", name, desc));
-        } else {
-            self.append_output(&format!("Defined: {}\n", name));
-        }
+        self.append_output(&format!("Defined: {}\n", name));
 
         Ok(())
     }
@@ -279,35 +238,27 @@ impl Interpreter {
         }
     }
 
-    fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-        let old_program = self.program.clone();
-        let old_pc = self.pc;
-        let old_labels = self.labels.clone();
-
-        self.program = tokens.to_vec();
-        self.labels.clear();
-        
-        for (i, token) in tokens.iter().enumerate() {
-            if let Token::Label(label) = token {
-                self.labels.insert(label.clone(), i);
+    // LEAP専用のワード実行（戻らない）
+    pub(crate) fn execute_word_leap(&mut self, name: &str) -> Result<()> {
+        if let Some(def) = self.dictionary.get(name).cloned() {
+            if def.is_builtin {
+                return Err(error::AjisaiError::from("Cannot LEAP to builtin word"));
+            } else {
+                // カスタムワードを実行（これが新しい実行フロー）
+                self.execute_custom_word(&def.tokens)
             }
+        } else {
+            Err(error::AjisaiError::UnknownWord(name.to_string()))
         }
+    }
 
-        self.pc = 0;
-        while self.pc < self.program.len() {
-            self.execute_token()?;
-        }
-
-        self.program = old_program;
-        self.pc = old_pc;
-        self.labels = old_labels;
-
-        Ok(())
+    fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
+        self.execute_tokens(tokens)
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // スタック操作（レジスタ削除）
+            // スタック操作
             "DUP" => stack_ops::op_dup(self),
             "DROP" => stack_ops::op_drop(self),
             "SWAP" => stack_ops::op_swap(self),
@@ -449,7 +400,6 @@ impl Interpreter {
             Token::VectorEnd => "]".to_string(),
             Token::QuotationStart => "{".to_string(),
             Token::QuotationEnd => "}".to_string(),
-            Token::Label(s) => format!("{}:", s),
         }
     }
 }
