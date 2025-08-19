@@ -8,10 +8,10 @@ pub fn op_leap(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    let label_val = interp.stack.pop().unwrap();
+    let word_name_val = interp.stack.pop().unwrap();
     let condition_val = interp.stack.pop().unwrap();
     
-    let label = match label_val.val_type {
+    let word_name = match word_name_val.val_type {
         ValueType::String(s) => s,
         _ => return Err(AjisaiError::type_error("string", "other type")),
     };
@@ -23,11 +23,8 @@ pub fn op_leap(interp: &mut Interpreter) -> Result<()> {
     };
     
     if should_leap {
-        if let Some(&target_pc) = interp.labels.get(&label) {
-            interp.pc = target_pc.saturating_sub(1); // execute_token末尾の+1を相殺
-        } else {
-            return Err(AjisaiError::from(format!("Unknown label: {}", label)));
-        }
+        // ワードを直接実行（LEAPは戻らない）
+        interp.execute_word_leap(&word_name)?;
     }
     
     Ok(())
