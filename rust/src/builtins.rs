@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
-    // スタック操作（レジスタ削除）
+    // スタック操作
     register_builtin(dictionary, "DUP", "スタックトップを複製 ( a -- a a )");
     register_builtin(dictionary, "DROP", "スタックトップを削除 ( a -- )");
     register_builtin(dictionary, "SWAP", "上位2つを交換 ( a b -- b a )");
@@ -29,7 +29,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )");
     
     // LEAP操作（条件付き絶対ジャンプ）
-    register_builtin(dictionary, "LEAP", "条件付き絶対ジャンプ ( condition label -- )");
+    register_builtin(dictionary, "LEAP", "条件付き絶対ジャンプ ( condition word -- )");
     
     // 算術演算子
     register_builtin(dictionary, "+", "加算 ( a b -- a+b )");
