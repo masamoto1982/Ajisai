@@ -88,7 +88,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // ワード（数値、真偽値、NIL、シンボル、タイムスタンプラベル）
+        // ワード（数値、真偽値、NIL、シンボル）
         let mut word = String::new();
         while let Some(&ch) = chars.peek() {
             if ch.is_whitespace() || ['[', ']', '{', '}', '"', '#', '(', ')'].contains(&ch) {
@@ -102,15 +102,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // タイムスタンプラベル（コロン付き）- Base62対応
-if word.ends_with(':') && word.len() > 1 {
-    let label = word[..word.len()-1].to_string();
-    // 4文字の英数字ラベルに対応（Base62）
-    if label.len() == 4 && label.chars().all(|c| c.is_ascii_alphanumeric()) {
-        tokens.push(Token::Label(label));
-        continue;
-    }
-}
+        // ラベル処理を削除（Base62ラベルもコロン付きワードも全て削除）
 
         // 特殊ワード
         match word.as_str() {
