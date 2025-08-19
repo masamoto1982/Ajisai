@@ -28,8 +28,8 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
     register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )");
     
-    // LEAP操作のみ
-    register_builtin(dictionary, "LEAP", "相対ジャンプ ( [cond] offset -- )");
+    // LEAP操作（条件付き絶対ジャンプ）
+　　register_builtin(dictionary, "LEAP", "条件付き絶対ジャンプ ( condition label -- )");
     
     // 算術演算子
     register_builtin(dictionary, "+", "加算 ( a b -- a+b )");
