@@ -102,15 +102,15 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // タイムスタンプラベル（コロン付き）- 14桁対応
-        if word.ends_with(':') && word.len() > 1 {
-            let label = word[..word.len()-1].to_string();
-            // Base62の4文字英数字ラベルに対応  ← これに変更
+        // タイムスタンプラベル（コロン付き）- Base62対応
+if word.ends_with(':') && word.len() > 1 {
+    let label = word[..word.len()-1].to_string();
+    // 4文字の英数字ラベルに対応（Base62）
     if label.len() == 4 && label.chars().all(|c| c.is_ascii_alphanumeric()) {
         tokens.push(Token::Label(label));
         continue;
     }
-        }
+}
 
         // 特殊ワード
         match word.as_str() {
