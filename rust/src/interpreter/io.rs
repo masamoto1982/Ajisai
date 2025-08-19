@@ -18,8 +18,8 @@ pub fn op_print(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_cr(interp: &mut Interpreter) -> Result<()> {
-    interp.append_output("\n");
-    Ok(())  // スタックに何も追加しない
+    interp.append_output("<BR>");  // HTMLの改行で確認
+    Ok(())
 }
 
 pub fn op_space(interp: &mut Interpreter) -> Result<()> {
