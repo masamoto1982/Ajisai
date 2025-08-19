@@ -97,14 +97,14 @@ impl Interpreter {
                     self.stack.push(Value {
                         val_type: ValueType::Vector(vector_values),
                     });
-                    i += consumed; // 修正：消費されたトークン分スキップ
+                    i += consumed;
                 },
                 Token::QuotationStart => {
                     let (quotation_tokens, consumed) = self.collect_quotation(tokens, i)?;
                     self.stack.push(Value {
                         val_type: ValueType::Quotation(quotation_tokens),
                     });
-                    i += consumed; // 修正：消費されたトークン分スキップ
+                    i += consumed;
                 },
                 Token::Symbol(name) => {
                     if name == "DEF" {
@@ -142,12 +142,9 @@ impl Interpreter {
                     }
                 },
                 token if depth == 1 => {
-                    // 深度1の時のみ要素として追加
                     values.push(self.token_to_value(token)?);
                 }
-                _ => {
-                    // ネストした構造はそのまま（後で処理）
-                }
+                _ => {}
             }
             i += 1;
         }
@@ -318,13 +315,12 @@ impl Interpreter {
             "KNOWN?" => arithmetic::op_not_nil_check(self),
             "DEFAULT" => arithmetic::op_default(self),
             
-            // 入出力
-            "." => io::op_dot(self),
-            "PRINT" => io::op_print(self),
-            "CR" => io::op_cr(self),
-            "SPACE" => io::op_space(self),
-            "SPACES" => io::op_spaces(self),
-            "EMIT" => io::op_emit(self),
+            // 出力（4文字統一）
+            "SHOW" => io::op_dot(self),
+            "NEWL" => io::op_cr(self),
+            "SPCE" => io::op_space(self),
+            "SPCS" => io::op_spaces(self),
+            "CHAR" => io::op_emit(self),
             
             // データベース操作
             "AMNESIA" => op_amnesia(self),
