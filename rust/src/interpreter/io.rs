@@ -18,7 +18,7 @@ pub fn op_print(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_cr(interp: &mut Interpreter) -> Result<()> {
-    interp.append_output("<BR>");  // HTMLの改行で確認
+    interp.append_output("\\n");  // エスケープされた改行で確認
     Ok(())
 }
 
