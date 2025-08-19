@@ -16,8 +16,9 @@ export class Editor {
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
 
-    handleKeyDown(event: KeyboardEvent): void {
+    handleKeyDown(_event: KeyboardEvent): void {
         // 特別な処理なし - 普通のテキストエディタとして動作
+        // パラメータに _ を付けて未使用であることを明示
     }
 
     getValue(): string {
