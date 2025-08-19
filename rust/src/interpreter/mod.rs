@@ -97,14 +97,14 @@ impl Interpreter {
                     self.stack.push(Value {
                         val_type: ValueType::Vector(vector_values),
                     });
-                    i += consumed;
+                    i += consumed; // 修正：消費されたトークン分スキップ
                 },
                 Token::QuotationStart => {
                     let (quotation_tokens, consumed) = self.collect_quotation(tokens, i)?;
                     self.stack.push(Value {
                         val_type: ValueType::Quotation(quotation_tokens),
                     });
-                    i += consumed;
+                    i += consumed; // 修正：消費されたトークン分スキップ
                 },
                 Token::Symbol(name) => {
                     if name == "DEF" {
@@ -114,25 +114,27 @@ impl Interpreter {
                     }
                     i += 1;
                 },
-                Token::VectorEnd | Token::QuotationEnd => {
-                    return Err(error::AjisaiError::from("Unexpected closing delimiter"));
+                Token::VectorEnd => {
+                    return Err(error::AjisaiError::from("Unexpected vector end"));
                 },
-                _ => {
-                    return Err(error::AjisaiError::from("Unexpected token"));
-                }
+                Token::QuotationEnd => {
+                    return Err(error::AjisaiError::from("Unexpected quotation end"));
+                },
             }
         }
         Ok(())
     }
 
-    fn collect_vector(&mut self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
         let mut i = start + 1;
         let mut depth = 1;
 
         while i < tokens.len() && depth > 0 {
             match &tokens[i] {
-                Token::VectorStart => depth += 1,
+                Token::VectorStart => {
+                    depth += 1;
+                },
                 Token::VectorEnd => {
                     depth -= 1;
                     if depth == 0 {
@@ -140,9 +142,12 @@ impl Interpreter {
                     }
                 },
                 token if depth == 1 => {
+                    // 深度1の時のみ要素として追加
                     values.push(self.token_to_value(token)?);
                 }
-                _ => {}
+                _ => {
+                    // ネストした構造はそのまま（後で処理）
+                }
             }
             i += 1;
         }
@@ -150,7 +155,7 @@ impl Interpreter {
         Err(error::AjisaiError::from("Unclosed vector"))
     }
 
-    fn collect_quotation(&mut self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
+    fn collect_quotation(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
         let mut quotation_tokens = Vec::new();
         let mut i = start + 1;
         let mut depth = 1;
