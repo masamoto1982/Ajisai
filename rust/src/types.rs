@@ -10,7 +10,7 @@ pub enum Token {
     VectorEnd,
     QuotationStart,
     QuotationEnd,
-    Label(String),
+    // Label(String), // 削除
     Nil,
 }
 
@@ -30,7 +30,6 @@ pub enum ValueType {
     Nil,
 }
 
-// Fraction実装は既存のまま
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fraction {
     pub numerator: i64,
@@ -155,9 +154,8 @@ fn token_to_string(token: &Token) -> String {
         Token::VectorEnd => "]".to_string(),
         Token::QuotationStart => "{".to_string(),
         Token::QuotationEnd => "}".to_string(),
-        Token::Label(s) => format!("{}:", s),
+        // Token::Label(s) => format!("{}:", s), // 削除
     }
 }
 
 pub type Stack = Vec<Value>;
-// pub type Register = Option<Value>; // 削除
