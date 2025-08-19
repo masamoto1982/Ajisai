@@ -55,13 +55,12 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック ( a -- bool )");
     register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a | b -- a | b )");
 
-    // 出力
-    register_builtin(dictionary, ".", "値を出力してドロップ ( a -- )");
-    register_builtin(dictionary, "PRINT", "値を出力 ( a -- a )");
-    register_builtin(dictionary, "CR", "改行を出力 ( -- )");
-    register_builtin(dictionary, "SPACE", "スペースを出力 ( -- )");
-    register_builtin(dictionary, "SPACES", "N個のスペースを出力 ( n -- )");
-    register_builtin(dictionary, "EMIT", "文字コードを文字として出力 ( n -- )");
+    // 出力（4文字統一）
+    register_builtin(dictionary, "SHOW", "値を出力してドロップ ( a -- )");
+    register_builtin(dictionary, "NEWL", "改行を出力 ( -- )");
+    register_builtin(dictionary, "SPCE", "スペースを出力 ( -- )");
+    register_builtin(dictionary, "SPCS", "N個のスペースを出力 ( n -- )");
+    register_builtin(dictionary, "CHAR", "文字コードを文字として出力 ( n -- )");
     
     // データベース
     register_builtin(dictionary, "AMNESIA", "IndexedDBを初期化 ( -- )");
