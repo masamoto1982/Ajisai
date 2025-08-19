@@ -18,25 +18,32 @@ export class Display {
     }
 
     showOutput(text: string): void {
-        this.mainOutput = text;
-        this.elements.outputDisplay.textContent = this.mainOutput;
-    }
+    this.mainOutput = text;
+    // エスケープされた改行文字を実際の改行に変換
+    const processedText = this.mainOutput.replace(/\\n/g, '\n');
+    this.elements.outputDisplay.textContent = processedText;
+}
 
-    showError(error: Error | { message?: string } | string): void {
-        const errorMessage = typeof error === 'string' 
-            ? `Error: ${error}`
-            : `Error: ${error.message || error}`;
-        this.mainOutput = errorMessage;
-        this.elements.outputDisplay.textContent = this.mainOutput;
-    }
+showError(error: Error | { message?: string } | string): void {
+    const errorMessage = typeof error === 'string' 
+        ? `Error: ${error}`
+        : `Error: ${error.message || error}`;
+    this.mainOutput = errorMessage;
+    // エラーメッセージでも同様に変換
+    const processedText = this.mainOutput.replace(/\\n/g, '\n');
+    this.elements.outputDisplay.textContent = processedText;
+}
 
-    showInfo(text: string, append = false): void {
-        if (append && this.mainOutput) {
-            this.elements.outputDisplay.textContent = `${this.mainOutput}\n${text}`;
-        } else {
-            this.elements.outputDisplay.textContent = text;
-        }
+showInfo(text: string, append = false): void {
+    if (append && this.mainOutput) {
+        const combinedText = `${this.mainOutput}\n${text}`;
+        const processedText = combinedText.replace(/\\n/g, '\n');
+        this.elements.outputDisplay.textContent = processedText;
+    } else {
+        const processedText = text.replace(/\\n/g, '\n');
+        this.elements.outputDisplay.textContent = processedText;
     }
+}
 
     updateStack(stack: Value[]): void {
         const display = this.elements.stackDisplay;
