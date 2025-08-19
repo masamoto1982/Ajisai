@@ -5,8 +5,8 @@ pub fn op_dot(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
     
-    interp.append_output(&format!("{} ", val));
-    Ok(())  // ドロップしたまま、何も追加しない
+    interp.append_output(&format!("{}", val));
+    Ok(())
 }
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
