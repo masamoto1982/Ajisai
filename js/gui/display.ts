@@ -5,7 +5,6 @@ import type { Value } from '../wasm-types';
 interface DisplayElements {
     outputDisplay: HTMLElement;
     stackDisplay: HTMLElement;
-    // registerDisplay: HTMLElement;  // 削除
 }
 
 export class Display {
@@ -14,6 +13,8 @@ export class Display {
 
     init(elements: DisplayElements): void {
         this.elements = elements;
+        // 改行を表示するためのCSS設定
+        this.elements.outputDisplay.style.whiteSpace = 'pre-wrap';
     }
 
     showOutput(text: string): void {
@@ -73,8 +74,6 @@ export class Display {
         
         display.appendChild(container);
     }
-
-    // updateRegister メソッド削除
 
     private formatValue(item: Value): string {
         if (!item) return 'undefined';
