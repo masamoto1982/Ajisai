@@ -13,6 +13,7 @@ pub enum AjisaiError {
     IndexOutOfBounds { index: i64, length: usize },
     VectorLengthMismatch { len1: usize, len2: usize },
     ProtectedWord { name: String, dependents: Vec<String> },
+    ProtectedWord { name: String, dependents: Vec<String> },
     Custom(String),
     WithContext { error: Box<AjisaiError>, context: Vec<String> },
 }
