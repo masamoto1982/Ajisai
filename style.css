@@ -1,6 +1,4 @@
 /* style.css (完全版 - レジスタ削除・構造簡素化 + カテゴリ機能追加) */
-
-/* リセットとベース設定 */
 * {
     margin: 0;
     padding: 0;
@@ -267,15 +265,6 @@ button:hover {
 /* ワードカテゴリ（新規追加） */
 .word-category {
     margin-bottom: 1rem;
-}
-
-.word-category h4 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
-    color: #666;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.25rem;
 }
 
 /* ワードボタン */
