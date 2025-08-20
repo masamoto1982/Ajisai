@@ -61,8 +61,6 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    // get_register メソッド削除
-
     #[wasm_bindgen]
     pub fn get_custom_words(&self) -> Vec<String> {
         self.interpreter.get_custom_words()
@@ -119,6 +117,34 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn get_builtin_words_by_category(&self) -> JsValue {
+        let mut categories: std::collections::BTreeMap<String, Vec<(String, Option<String>)>> = std::collections::BTreeMap::new();
+        
+        for (name, def) in &self.interpreter.dictionary {
+            if def.is_builtin {
+                let category = def.category.clone().unwrap_or_else(|| "Other".to_string());
+                categories.entry(category)
+                    .or_insert_with(Vec::new)
+                    .push((name.clone(), def.description.clone()));
+            }
+        }
+        
+        let result = js_sys::Object::new();
+        for (category, words) in categories {
+            let words_array = js_sys::Array::new();
+            for (name, desc) in words {
+                let word_info = js_sys::Array::new();
+                word_info.push(&JsValue::from_str(&name));
+                word_info.push(&desc.map(|d| JsValue::from_str(&d)).unwrap_or(JsValue::NULL));
+                words_array.push(&word_info);
+            }
+            js_sys::Reflect::set(&result, &JsValue::from_str(&category), &words_array).unwrap();
+        }
+        
+        result.into()
+    }
+
+    #[wasm_bindgen]
     pub fn reset(&mut self) {
         self.interpreter = Interpreter::new();
     }
@@ -141,8 +167,6 @@ impl AjisaiInterpreter {
         self.interpreter.set_stack(new_stack);
         Ok(())
     }
-    
-    // restore_register メソッド削除
     
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
