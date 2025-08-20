@@ -26,6 +26,7 @@ pub struct WordDefinition {
     pub tokens: Vec<Token>,
     pub is_builtin: bool,
     pub description: Option<String>,
+    pub category: Option<String>,
 }
 
 impl Interpreter {
