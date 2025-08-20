@@ -34,7 +34,7 @@ export class Dictionary {
 private renderCategorizedWords(container: HTMLElement, categorizedWords: any): void {
     container.innerHTML = '';
     
-    for (const [category, words] of Object.entries(categorizedWords)) {
+    for (const [_, words] of Object.entries(categorizedWords)) {
         const categorySection = document.createElement('div');
         categorySection.className = 'word-category';
         
