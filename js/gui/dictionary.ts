@@ -31,46 +31,35 @@ export class Dictionary {
         }
     }
 
-    private renderCategorizedWords(container: HTMLElement, categorizedWords: any): void {
-        container.innerHTML = '';
+private renderCategorizedWords(container: HTMLElement, categorizedWords: any): void {
+    container.innerHTML = '';
+    
+    for (const [category, words] of Object.entries(categorizedWords)) {
+        const categorySection = document.createElement('div');
+        categorySection.className = 'word-category';
         
-        for (const [category, words] of Object.entries(categorizedWords)) {
-            const categorySection = document.createElement('div');
-            categorySection.className = 'word-category';
+        const wordsContainer = document.createElement('div');
+        wordsContainer.style.marginBottom = '1rem';
+        
+        (words as any[]).forEach(wordData => {
+            const button = document.createElement('button');
+            button.textContent = wordData[0];
+            button.className = 'word-button builtin';
+            button.title = wordData[1] || wordData[0];
             
-            const categoryHeader = document.createElement('h4');
-            categoryHeader.textContent = category;
-            categoryHeader.style.marginBottom = '0.5rem';
-            categoryHeader.style.color = '#666';
-            categoryHeader.style.fontSize = '0.875rem';
-            categoryHeader.style.fontWeight = '600';
-            categoryHeader.style.margin = '0 0 0.5rem 0';
-            categoryHeader.style.borderBottom = '1px solid #eee';
-            categoryHeader.style.paddingBottom = '0.25rem';
-            categorySection.appendChild(categoryHeader);
-            
-            const wordsContainer = document.createElement('div');
-            wordsContainer.style.marginBottom = '1rem';
-            
-            (words as any[]).forEach(wordData => {
-                const button = document.createElement('button');
-                button.textContent = wordData[0];
-                button.className = 'word-button builtin';
-                button.title = wordData[1] || wordData[0];
-                
-                button.addEventListener('click', () => {
-                    if (this.onWordClick) {
-                        this.onWordClick(wordData[0]);
-                    }
-                });
-                
-                wordsContainer.appendChild(button);
+            button.addEventListener('click', () => {
+                if (this.onWordClick) {
+                    this.onWordClick(wordData[0]);
+                }
             });
             
-            categorySection.appendChild(wordsContainer);
-            container.appendChild(categorySection);
-        }
+            wordsContainer.appendChild(button);
+        });
+        
+        categorySection.appendChild(wordsContainer);
+        container.appendChild(categorySection);
     }
+}
 
     updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
         const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
