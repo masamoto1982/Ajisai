@@ -205,74 +205,74 @@ impl Interpreter {
         }
     }
 
-    fn handle_def(&mut self) -> Result<()> {
-        if self.stack.len() < 2 {
-            return Err(error::AjisaiError::from("DEF requires quotation and name"));
-        }
-
-        let name_val = self.stack.pop().unwrap();
-        let quotation_val = self.stack.pop().unwrap();
-
-        let name = match name_val.val_type {
-            ValueType::String(s) => s.to_uppercase(),
-            _ => return Err(error::AjisaiError::from("DEF requires string name")),
-        };
-
-        let tokens = match quotation_val.val_type {
-            ValueType::Quotation(t) => t,
-            _ => return Err(error::AjisaiError::from("DEF requires quotation")),
-        };
-
-        if let Some(existing) = self.dictionary.get(&name) {
-            if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-            }
-        }
-
-        // 依存関係チェック：既存のワードを再定義する場合
-        if self.dictionary.contains_key(&name) {
-            if let Some(dependents) = self.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(error::AjisaiError::ProtectedWord { 
-                        name: name.clone(), 
-                        dependents: dependent_list 
-                    });
-                }
-            }
-        }
-
-        // 古い依存関係をクリア
-        if let Some(old_deps) = self.get_word_dependencies(&name) {
-            for dep in old_deps {
-                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
-                    reverse_deps.remove(&name);
-                }
-            }
-        }
-
-        // 新しい依存関係を検出・記録
-        for token in &tokens {
-            if let Token::Symbol(sym) = token {
-                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                    // 逆方向の依存関係を記録
-                    self.dependencies.entry(sym.clone())
-                        .or_insert_with(HashSet::new)
-                        .insert(name.clone());
-                }
-            }
-        }
-
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens,
-            is_builtin: false,
-            description: None,
-        });
-
-        self.append_output(&format!("Defined: {}\n", name));
-        Ok(())
+fn handle_def(&mut self) -> Result<()> {
+    if self.stack.len() < 2 {
+        return Err(error::AjisaiError::from("DEF requires quotation and name"));
     }
 
+    let name_val = self.stack.pop().unwrap();
+    let quotation_val = self.stack.pop().unwrap();
+
+    let name = match name_val.val_type {
+        ValueType::String(s) => s.to_uppercase(),
+        _ => return Err(error::AjisaiError::from("DEF requires string name")),
+    };
+
+    let tokens = match quotation_val.val_type {
+        ValueType::Quotation(t) => t,
+        _ => return Err(error::AjisaiError::from("DEF requires quotation")),
+    };
+
+    if let Some(existing) = self.dictionary.get(&name) {
+        if existing.is_builtin {
+            return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
+        }
+    }
+
+    // 依存関係チェック：既存のワードを再定義する場合
+    if self.dictionary.contains_key(&name) {
+        if let Some(dependents) = self.dependencies.get(&name) {
+            if !dependents.is_empty() {
+                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                return Err(error::AjisaiError::ProtectedWord { 
+                    name: name.clone(), 
+                    dependents: dependent_list 
+                });
+            }
+        }
+    }
+
+    // 古い依存関係をクリア
+    if let Some(old_deps) = self.get_word_dependencies(&name) {
+        for dep in old_deps {
+            if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
+                reverse_deps.remove(&name);
+            }
+        }
+    }
+
+    // 新しい依存関係を検出・記録
+    for token in &tokens {
+        if let Token::Symbol(sym) = token {
+            if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
+                // 逆方向の依存関係を記録
+                self.dependencies.entry(sym.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(name.clone());
+            }
+        }
+    }
+
+    self.dictionary.insert(name.clone(), WordDefinition {
+        tokens,
+        is_builtin: false,
+        description: None,
+        category: None,  // 追加：カスタムワードはカテゴリなし
+    });
+
+    self.append_output(&format!("Defined: {}\n", name));
+    Ok(())
+}
     fn get_word_dependencies(&self, word_name: &str) -> Option<Vec<String>> {
         if let Some(def) = self.dictionary.get(word_name) {
             let mut deps = Vec::new();
