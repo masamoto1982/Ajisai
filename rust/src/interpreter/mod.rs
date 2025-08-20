@@ -300,40 +300,52 @@ impl Interpreter {
             .unwrap_or(false)
     }
 
-    fn execute_word(&mut self, name: &str) -> Result<()> {
-        if let Some(def) = self.dictionary.get(name).cloned() {
-            if def.is_builtin {
-                self.execute_builtin(name)
-            } else {
-                self.execute_custom_word(&def.tokens)
-            }
+    // execute_word メソッドの修正
+fn execute_word(&mut self, name: &str) -> Result<()> {
+    if let Some(def) = self.dictionary.get(name).cloned() {
+        if def.is_builtin {
+            self.execute_builtin(name)
         } else {
-            Err(error::AjisaiError::UnknownWord(name.to_string()))
+            // カスタムワード実行時にcall_stackを管理
+            self.call_stack.push(name.to_string());
+            let result = self.execute_custom_word(&def.tokens);
+            self.call_stack.pop();
+            result.map_err(|e| e.with_context(&self.call_stack))
         }
+    } else {
+        Err(error::AjisaiError::UnknownWord(name.to_string()))
+    }
+}
+
+// execute_word_leap メソッドの修正
+pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
+    // 同一ワード内制限チェック
+    if let Some(current) = current_word {
+        if name != current {
+            return Err(error::AjisaiError::from(format!(
+                "LEAP can only jump within the same word. Cannot jump from '{}' to '{}'", 
+                current, name
+            )));
+        }
+    } else {
+        // メインプログラムからのLEAPは禁止
+        return Err(error::AjisaiError::from(format!(
+            "LEAP can only be used within custom words. Cannot jump to '{}' from main program", 
+            name
+        )));
     }
 
-    // LEAP専用のワード実行（同一ワード内制限付き）
-    pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
-        // 同一ワード内制限チェック
-        if let Some(current) = current_word {
-            if name != current {
-                return Err(error::AjisaiError::from(format!(
-                    "LEAP can only jump within the same word. Cannot jump from '{}' to '{}'", 
-                    current, name
-                )));
-            }
-        }
-
-        if let Some(def) = self.dictionary.get(name).cloned() {
-            if def.is_builtin {
-                return Err(error::AjisaiError::from("Cannot LEAP to builtin word"));
-            } else {
-                self.execute_custom_word(&def.tokens)
-            }
+    if let Some(def) = self.dictionary.get(name).cloned() {
+        if def.is_builtin {
+            return Err(error::AjisaiError::from("Cannot LEAP to builtin word"));
         } else {
-            Err(error::AjisaiError::UnknownWord(name.to_string()))
+            // LEAPでは call_stack を変更しない（同一ワード内なので）
+            self.execute_custom_word(&def.tokens)
         }
+    } else {
+        Err(error::AjisaiError::UnknownWord(name.to_string()))
     }
+}
 
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
         self.execute_tokens(tokens)
