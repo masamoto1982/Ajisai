@@ -1,4 +1,4 @@
-/* style.css (完全版 - レジスタ削除・構造簡素化) */
+/* style.css (完全版 - レジスタ削除・構造簡素化 + カテゴリ機能追加) */
 
 /* リセットとベース設定 */
 * {
@@ -155,6 +155,8 @@ section h3 {
     font-family: 'Consolas', 'Monaco', monospace;
     resize: vertical;
     flex: 1;
+    line-height: 1.4;
+    position: relative;
 }
 
 .controls {
@@ -177,49 +179,7 @@ button:hover {
     background-color: #0056b3;
 }
 
-/* 入力・出力エリア */
-.output-area,
-.input-area {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-#code-input {
-    width: 100%;
-    min-height: 200px;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    resize: vertical;
-    flex: 1;
-    line-height: 1.4; /* 統合 */
-    position: relative; /* 統合 */
-}
-
-.controls {
-    margin-top: 0.5rem;
-    display: flex;
-    gap: 0.5rem;
-}
-
-button {
-    padding: 0.5rem 1rem;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.875rem;
-}
-
-button:hover {
-    background-color: #0056b3;
-}
-
-/* ===== エディタ拡張機能（新規追加） ===== */
+/* ===== エディタ拡張機能 ===== */
 
 /* LEAP リンク機能 */
 .leap-link-hover {
@@ -265,7 +225,6 @@ button:hover {
     background-color: #b3d4fc;
 }
 
-
 /* 表示エリア */
 .display-area,
 .state-display,
@@ -303,6 +262,20 @@ button:hover {
 .builtin-words-area,
 .custom-words-area {
     width: 100%;
+}
+
+/* ワードカテゴリ（新規追加） */
+.word-category {
+    margin-bottom: 1rem;
+}
+
+.word-category h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #666;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.25rem;
 }
 
 /* ワードボタン */
@@ -440,18 +413,6 @@ button:hover {
     .stack-area {
         cursor: pointer;
     }
-}
-
-/* タブレット対応 */
-@media (min-width: 769px) and (max-width: 1024px) {
-    .main-layout {
-        gap: 0.75rem;
-        padding: 0.75rem;
-    }
-
-    .panel {
-        padding: 0.75rem;
-    }
 
     /* エディタ拡張のモバイル対応 */
     .label-toggle-btn {
@@ -468,5 +429,17 @@ button:hover {
         /* モバイルではタップ領域を広げる */
         padding: 2px 4px;
         margin: -2px -4px;
+    }
+}
+
+/* タブレット対応 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .main-layout {
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+
+    .panel {
+        padding: 0.75rem;
     }
 }
