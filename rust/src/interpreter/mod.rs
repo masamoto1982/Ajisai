@@ -455,23 +455,24 @@ pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str
     pub fn set_stack(&mut self, stack: Stack) {
         self.stack = stack;
     }
-
+    
     pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
-        let name = name.to_uppercase();
-        
-        if let Some(existing) = self.dictionary.get(&name) {
-            if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot restore builtin word: {}", name)));
-            }
+    let name = name.to_uppercase();
+    
+    if let Some(existing) = self.dictionary.get(&name) {
+        if existing.is_builtin {
+            return Err(error::AjisaiError::from(format!("Cannot restore builtin word: {}", name)));
         }
+    }
 
-        self.dictionary.insert(name, WordDefinition {
-            tokens,
-            is_builtin: false,
-            description,
-        });
+    self.dictionary.insert(name, WordDefinition {
+        tokens,
+        is_builtin: false,
+        description,
+        category: None,  // 追加：カスタムワードはカテゴリなし
+    });
 
-        Ok(())
+    Ok(())
     }
    
     pub fn get_word_definition(&self, name: &str) -> Option<String> {
