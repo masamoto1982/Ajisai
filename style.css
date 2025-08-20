@@ -262,11 +262,6 @@ button:hover {
     width: 100%;
 }
 
-/* ワードカテゴリ（新規追加） */
-.word-category {
-    margin-bottom: 1rem;
-}
-
 /* ワードボタン */
 .word-button {
     margin: 2px;
