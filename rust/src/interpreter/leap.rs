@@ -23,8 +23,10 @@ pub fn op_leap(interp: &mut Interpreter) -> Result<()> {
     };
     
     if should_leap {
-        // ワードを直接実行（LEAPは戻らない）
-        interp.execute_word_leap(&word_name)?;
+        // 現在実行中のワード名を取得
+        let current_word = interp.call_stack.last().cloned();
+        // 同一ワード内制限付きでワードを実行
+        interp.execute_word_leap(&word_name, current_word.as_deref())?;
     }
     
     Ok(())
