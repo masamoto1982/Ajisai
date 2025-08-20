@@ -39,7 +39,6 @@ private renderCategorizedWords(container: HTMLElement, categorizedWords: any): v
         categorySection.className = 'word-category';
         
         const wordsContainer = document.createElement('div');
-        wordsContainer.style.marginBottom = '1rem';
         
         (words as any[]).forEach(wordData => {
             const button = document.createElement('button');
