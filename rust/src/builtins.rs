@@ -1,75 +1,76 @@
+// rust/src/builtins.rs (完全版)
+
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
-    // スタック操作
-    register_builtin(dictionary, "DUP", "スタックトップを複製 ( a -- a a )");
-    register_builtin(dictionary, "DROP", "スタックトップを削除 ( a -- )");
-    register_builtin(dictionary, "SWAP", "上位2つを交換 ( a b -- b a )");
-    register_builtin(dictionary, "OVER", "2番目をコピー ( a b -- a b a )");
-    register_builtin(dictionary, "ROT", "3番目を最上位へ ( a b c -- b c a )");
-    register_builtin(dictionary, "NIP", "2番目を削除 ( a b -- b )");
+    // Stack操作
+    register_builtin(dictionary, "DUP", "スタックトップを複製 ( a -- a a )", "Stack");
+    register_builtin(dictionary, "DROP", "スタックトップを削除 ( a -- )", "Stack");
+    register_builtin(dictionary, "SWAP", "上位2つを交換 ( a b -- b a )", "Stack");
+    register_builtin(dictionary, "OVER", "2番目をコピー ( a b -- a b a )", "Stack");
+    register_builtin(dictionary, "ROT", "3番目を最上位へ ( a b c -- b c a )", "Stack");
+    register_builtin(dictionary, "NIP", "2番目を削除 ( a b -- b )", "Stack");
     
-    // ベクトル操作
-    register_builtin(dictionary, "LENGTH", "ベクトルの長さ ( vec -- n )");
-    register_builtin(dictionary, "HEAD", "最初の要素 ( vec -- elem )");
-    register_builtin(dictionary, "TAIL", "最初以外の要素 ( vec -- vec' )");
-    register_builtin(dictionary, "CONS", "要素を先頭に追加 ( elem vec -- vec' )");
-    register_builtin(dictionary, "APPEND", "要素をベクトルの末尾に追加 ( vec elem -- vec' )");
-    register_builtin(dictionary, "REVERSE", "ベクトルを逆順に ( vec -- vec' )");
-    register_builtin(dictionary, "NTH", "N番目の要素を取得 ( n vec -- elem )");
-    register_builtin(dictionary, "UNCONS", "ベクトルを分解 ( vec -- elem vec' )");
-    register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )");
+    // Arithmetic
+    register_builtin(dictionary, "+", "加算 ( a b -- a+b )", "Arithmetic");
+    register_builtin(dictionary, "-", "減算 ( a b -- a-b )", "Arithmetic");
+    register_builtin(dictionary, "*", "乗算 ( a b -- a*b )", "Arithmetic");
+    register_builtin(dictionary, "/", "除算 ( a b -- a/b )", "Arithmetic");
     
-    // クオーテーション操作
-    register_builtin(dictionary, "CALL", "クオーテーションを実行 ( quot -- )");
-    
-    // 制御構造
-    register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )");
-    register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )");
-    
-    // LEAP操作（条件付き絶対ジャンプ）
-    register_builtin(dictionary, "LEAP", "条件付き絶対ジャンプ ( condition word -- )");
-    
-    // 算術演算子
-    register_builtin(dictionary, "+", "加算 ( a b -- a+b )");
-    register_builtin(dictionary, "-", "減算 ( a b -- a-b )");
-    register_builtin(dictionary, "*", "乗算 ( a b -- a*b )");
-    register_builtin(dictionary, "/", "除算 ( a b -- a/b )");
-    
-    // 比較演算子
-    register_builtin(dictionary, ">", "より大きい ( a b -- bool )");
-    register_builtin(dictionary, ">=", "以上 ( a b -- bool )");
-    register_builtin(dictionary, "=", "等しい ( a b -- bool )");
-    register_builtin(dictionary, "<", "より小さい ( a b -- bool )");
-    register_builtin(dictionary, "<=", "以下 ( a b -- bool )");
+    // Comparison
+    register_builtin(dictionary, ">", "より大きい ( a b -- bool )", "Comparison");
+    register_builtin(dictionary, ">=", "以上 ( a b -- bool )", "Comparison");
+    register_builtin(dictionary, "=", "等しい ( a b -- bool )", "Comparison");
+    register_builtin(dictionary, "<", "より小さい ( a b -- bool )", "Comparison");
+    register_builtin(dictionary, "<=", "以下 ( a b -- bool )", "Comparison");
 
-    // 論理演算子
-    register_builtin(dictionary, "NOT", "論理否定 ( bool -- bool )");
-    register_builtin(dictionary, "AND", "論理積 ( bool bool -- bool )");
-    register_builtin(dictionary, "OR", "論理和 ( bool bool -- bool )");
+    // Logic
+    register_builtin(dictionary, "NOT", "論理否定 ( bool -- bool )", "Logic");
+    register_builtin(dictionary, "AND", "論理積 ( bool bool -- bool )", "Logic");
+    register_builtin(dictionary, "OR", "論理和 ( bool bool -- bool )", "Logic");
 
-    // Nil関連
-    register_builtin(dictionary, "NIL?", "nilかどうかをチェック ( a -- bool )");
-    register_builtin(dictionary, "NOT-NIL?", "nilでないかをチェック ( a -- bool )");
-    register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック ( a -- bool )");
-    register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a | b -- a | b )");
-
-    // 出力（4文字統一）
-    register_builtin(dictionary, "SHOW", "値を出力してドロップ ( a -- )");
-    register_builtin(dictionary, "NEWL", "改行を出力 ( -- )");
-    register_builtin(dictionary, "SPCE", "スペースを出力 ( -- )");
-    register_builtin(dictionary, "SPCS", "N個のスペースを出力 ( n -- )");
-    register_builtin(dictionary, "CHAR", "文字コードを文字として出力 ( n -- )");
+    // Vector
+    register_builtin(dictionary, "LENGTH", "ベクトルの長さ ( vec -- n )", "Vector");
+    register_builtin(dictionary, "HEAD", "最初の要素 ( vec -- elem )", "Vector");
+    register_builtin(dictionary, "TAIL", "最初以外の要素 ( vec -- vec' )", "Vector");
+    register_builtin(dictionary, "CONS", "要素を先頭に追加 ( elem vec -- vec' )", "Vector");
+    register_builtin(dictionary, "APPEND", "要素をベクトルの末尾に追加 ( vec elem -- vec' )", "Vector");
+    register_builtin(dictionary, "REVERSE", "ベクトルを逆順に ( vec -- vec' )", "Vector");
+    register_builtin(dictionary, "NTH", "N番目の要素を取得 ( n vec -- elem )", "Vector");
+    register_builtin(dictionary, "UNCONS", "ベクトルを分解 ( vec -- elem vec' )", "Vector");
+    register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )", "Vector");
     
-    // データベース
-    register_builtin(dictionary, "AMNESIA", "IndexedDBを初期化 ( -- )");
+    // Quotation
+    register_builtin(dictionary, "CALL", "クオーテーションを実行 ( quot -- )", "Quotation");
+    
+    // Control
+    register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )", "Control");
+    register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )", "Control");
+    register_builtin(dictionary, "LEAP", "条件付き絶対ジャンプ ( condition word -- )", "Control");
+
+    // Nil
+    register_builtin(dictionary, "NIL?", "nilかどうかをチェック ( a -- bool )", "Nil");
+    register_builtin(dictionary, "NOT-NIL?", "nilでないかをチェック ( a -- bool )", "Nil");
+    register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック ( a -- bool )", "Nil");
+    register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a | b -- a | b )", "Nil");
+
+    // Output
+    register_builtin(dictionary, "SHOW", "値を出力してドロップ ( a -- )", "Output");
+    register_builtin(dictionary, "NEWL", "改行を出力 ( -- )", "Output");
+    register_builtin(dictionary, "SPCE", "スペースを出力 ( -- )", "Output");
+    register_builtin(dictionary, "SPCS", "N個のスペースを出力 ( n -- )", "Output");
+    register_builtin(dictionary, "CHAR", "文字コードを文字として出力 ( n -- )", "Output");
+    
+    // Database
+    register_builtin(dictionary, "AMNESIA", "IndexedDBを初期化 ( -- )", "Database");
 }
 
-fn register_builtin(dictionary: &mut HashMap<String, WordDefinition>, name: &str, description: &str) {
+fn register_builtin(dictionary: &mut HashMap<String, WordDefinition>, name: &str, description: &str, category: &str) {
     dictionary.insert(name.to_string(), WordDefinition {
         tokens: vec![],
         is_builtin: true,
         description: Some(description.to_string()),
+        category: Some(category.to_string()),
     });
 }
