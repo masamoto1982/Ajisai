@@ -1,3 +1,8 @@
+// rust/src/interpreter/control.rs
+
+use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
+use crate::types::{ValueType};
+
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop()
         .ok_or(AjisaiError::StackUnderflow)?;
