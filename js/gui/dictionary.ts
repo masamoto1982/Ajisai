@@ -24,16 +24,51 @@ export class Dictionary {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            const builtinWordsInfo = window.ajisaiInterpreter.get_builtin_words_info();
-            const words: WordInfo[] = builtinWordsInfo.map(wordData => ({
-                name: wordData[0],
-                description: wordData[1] || wordData[0],
-                protected: true  // 組み込みワードは常に保護されている
-            }));
-            
-            this.renderWordButtons(this.elements.builtinWordsDisplay, words, false);
+            const categorizedWords = window.ajisaiInterpreter.get_builtin_words_by_category();
+            this.renderCategorizedWords(this.elements.builtinWordsDisplay, categorizedWords);
         } catch (error) {
             console.error('Failed to render builtin words:', error);
+        }
+    }
+
+    private renderCategorizedWords(container: HTMLElement, categorizedWords: any): void {
+        container.innerHTML = '';
+        
+        for (const [category, words] of Object.entries(categorizedWords)) {
+            const categorySection = document.createElement('div');
+            categorySection.className = 'word-category';
+            
+            const categoryHeader = document.createElement('h4');
+            categoryHeader.textContent = category;
+            categoryHeader.style.marginBottom = '0.5rem';
+            categoryHeader.style.color = '#666';
+            categoryHeader.style.fontSize = '0.875rem';
+            categoryHeader.style.fontWeight = '600';
+            categoryHeader.style.margin = '0 0 0.5rem 0';
+            categoryHeader.style.borderBottom = '1px solid #eee';
+            categoryHeader.style.paddingBottom = '0.25rem';
+            categorySection.appendChild(categoryHeader);
+            
+            const wordsContainer = document.createElement('div');
+            wordsContainer.style.marginBottom = '1rem';
+            
+            (words as any[]).forEach(wordData => {
+                const button = document.createElement('button');
+                button.textContent = wordData[0];
+                button.className = 'word-button builtin';
+                button.title = wordData[1] || wordData[0];
+                
+                button.addEventListener('click', () => {
+                    if (this.onWordClick) {
+                        this.onWordClick(wordData[0]);
+                    }
+                });
+                
+                wordsContainer.appendChild(button);
+            });
+            
+            categorySection.appendChild(wordsContainer);
+            container.appendChild(categorySection);
         }
     }
 
