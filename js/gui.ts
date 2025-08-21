@@ -1,4 +1,4 @@
-// js/gui.ts
+// js/gui.ts (簡素化版)
 
 // 後方互換性のためのエクスポート
 import { GUI_INSTANCE } from './gui/main';
@@ -7,17 +7,17 @@ import { GUI_INSTANCE } from './gui/main';
 (window as any).GUI = GUI_INSTANCE;
 
 // エクスポート
-export { GUI_INSTANCE as GUI };
+export { GUI_INSTANCE };
 
 // DOMContentLoadedで初期化
 document.addEventListener('DOMContentLoaded', () => {
-    (window as any).GUI.init();
+    GUI_INSTANCE.init();
 });
 
 // WASM初期化完了時にインタープリタを作成
 window.addEventListener('wasmLoaded', () => {
-    if ((window as any).HolonWasm) {
-        (window as any).ajisaiInterpreter = new (window as any).HolonWasm.AjisaiInterpreter();
+    if ((window as any).AjisaiWasm) {
+        (window as any).ajisaiInterpreter = new (window as any).AjisaiWasm.AjisaiInterpreter();
         console.log('Ajisai interpreter initialized');
     }
 });
