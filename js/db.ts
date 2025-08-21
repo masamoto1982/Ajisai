@@ -9,8 +9,7 @@ interface TableData {
 
 interface InterpreterState {
     key: string;
-    stack: any;
-    // register: any;  // 削除
+    workspace: any;  // stack → workspace
     customWords: any;
     updatedAt: string;
 }
@@ -22,7 +21,7 @@ interface ExportData {
 
 class AjisaiDB {
     private dbName = 'AjisaiDB';
-    private version = 3;  // バージョンアップ（スキーマ変更のため）
+    private version = 4;  // バージョンアップ（workspace対応）
     private storeName = 'tables';
     private stateStoreName = 'interpreter_state';
     private db: IDBDatabase | null = null;
@@ -167,8 +166,7 @@ class AjisaiDB {
                 const result = request.result;
                 if (result) {
                     resolve({
-                        stack: result.stack,
-                        // register: result.register,  // 削除
+                        workspace: result.workspace,  // stack → workspace
                         customWords: result.customWords
                     });
                 } else {
@@ -287,10 +285,8 @@ class AjisaiDB {
     }
 }
 
-// シングルトンインスタンスをエクスポート
 const DB = new AjisaiDB();
 
-// グローバルに公開
 declare global {
     interface Window {
         AjisaiDB: AjisaiDB;
@@ -299,7 +295,6 @@ declare global {
 
 window.AjisaiDB = DB;
 
-// デバッグ用
 console.log('AjisaiDB initialized:', DB);
 
 export default DB;
