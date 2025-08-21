@@ -4,8 +4,7 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
-    StackUnderflow,
-    RegisterEmpty,
+    WorkspaceUnderflow,  // StackUnderflow → WorkspaceUnderflow
     TypeError { expected: String, got: String },
     UnknownWord(String),
     UnknownBuiltin(String),
@@ -40,8 +39,7 @@ impl AjisaiError {
 impl fmt::Display for AjisaiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AjisaiError::StackUnderflow => write!(f, "Stack underflow"),
-            AjisaiError::RegisterEmpty => write!(f, "Register is empty"),
+            AjisaiError::WorkspaceUnderflow => write!(f, "Workspace underflow"),
             AjisaiError::TypeError { expected, got } => {
                 write!(f, "Type error: expected {}, got {}", expected, got)
             },
