@@ -6,11 +6,8 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(String),
-    VectorStart,
-    VectorEnd,
-    QuotationStart,
-    QuotationEnd,
-    // Label(String), // 削除
+    VectorStart,    // [ のみ（{ を削除）
+    VectorEnd,      // ] のみ（} を削除）
     Nil,
 }
 
@@ -25,8 +22,7 @@ pub enum ValueType {
     String(String),
     Boolean(bool),
     Symbol(String),
-    Vector(Vec<Value>),
-    Quotation(Vec<Token>),
+    Vector(Vec<Value>),  // データとコードの統一表現
     Nil,
 }
 
@@ -130,32 +126,9 @@ impl fmt::Display for Value {
                 }
                 write!(f, " ]")
             },
-            ValueType::Quotation(tokens) => {
-                write!(f, "{{ ")?;
-                for (i, token) in tokens.iter().enumerate() {
-                    if i > 0 { write!(f, " ")?; }
-                    write!(f, "{}", token_to_string(token))?;
-                }
-                write!(f, " }}")
-            },
             ValueType::Nil => write!(f, "nil"),
         }
     }
 }
 
-fn token_to_string(token: &Token) -> String {
-    match token {
-        Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
-        Token::String(s) => format!("\"{}\"", s),
-        Token::Boolean(b) => b.to_string(),
-        Token::Nil => "nil".to_string(),
-        Token::Symbol(s) => s.clone(),
-        Token::VectorStart => "[".to_string(),
-        Token::VectorEnd => "]".to_string(),
-        Token::QuotationStart => "{".to_string(),
-        Token::QuotationEnd => "}".to_string(),
-        // Token::Label(s) => format!("{}:", s), // 削除
-    }
-}
-
-pub type Stack = Vec<Value>;
+pub type Workspace = Vec<Value>;  // スタックの代わり
