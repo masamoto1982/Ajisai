@@ -3,7 +3,7 @@
 interface MobileElements {
     inputArea: HTMLElement;
     outputArea: HTMLElement;
-    stackArea: HTMLElement;
+    workspaceArea: HTMLElement;  // stackArea → workspaceArea
     dictionaryArea: HTMLElement;
 }
 
@@ -31,12 +31,12 @@ export class MobileHandler {
         if (mode === 'input') {
             this.elements.inputArea.style.display = 'block';
             this.elements.outputArea.style.display = 'none';
-            this.elements.stackArea.style.display = 'none';
+            this.elements.workspaceArea.style.display = 'none';  // stackArea → workspaceArea
             this.elements.dictionaryArea.style.display = 'block';
         } else { // 'execution' mode
             this.elements.inputArea.style.display = 'none';
             this.elements.outputArea.style.display = 'block';
-            this.elements.stackArea.style.display = 'block';
+            this.elements.workspaceArea.style.display = 'block';  // stackArea → workspaceArea
             this.elements.dictionaryArea.style.display = 'none';
         }
     }
