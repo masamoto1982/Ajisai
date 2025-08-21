@@ -4,8 +4,8 @@ use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType};
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
-        .ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     match val.val_type {
         ValueType::String(name) => {
