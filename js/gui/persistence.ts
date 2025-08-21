@@ -1,6 +1,5 @@
 // js/gui/persistence.ts
 
-import type { GUI } from './main';
 import type { AjisaiInterpreter, Value } from '../wasm-types';
 
 interface CustomWord {
@@ -10,7 +9,7 @@ interface CustomWord {
 }
 
 interface InterpreterState {
-    workspace: Value[];  // stack → workspace
+    workspace: Value[];
     customWords: CustomWord[];
 }
 
@@ -21,9 +20,9 @@ declare global {
 }
 
 export class Persistence {
-    private gui: GUI;
+    private gui: any; // GUI型の循環参照を避けるため any を使用
 
-    constructor(gui: GUI) {
+    constructor(gui: any) {
         this.gui = gui;
     }
 
@@ -65,7 +64,7 @@ export class Persistence {
             }));
 
             const interpreterState: InterpreterState = {
-                workspace: window.ajisaiInterpreter.get_workspace(),  // get_stack → get_workspace
+                workspace: window.ajisaiInterpreter.get_workspace(),
                 customWords: customWords,
             };
 
@@ -84,7 +83,7 @@ export class Persistence {
 
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
-                if (state.workspace) window.ajisaiInterpreter.restore_workspace(state.workspace);  // restore_stack → restore_workspace
+                if (state.workspace) window.ajisaiInterpreter.restore_workspace(state.workspace);
                 if (state.customWords) {
                     for (const word of state.customWords) {
                         if (word.name && word.definition) {
