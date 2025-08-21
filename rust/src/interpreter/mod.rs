@@ -12,7 +12,7 @@ use crate::types::{Workspace, Token, Value, ValueType};
 use self::error::Result;
 
 pub struct Interpreter {
-    pub(crate) workspace: Workspace,  // スタック廃止、ワークスペースのみ
+    pub(crate) workspace: Workspace,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) dependencies: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
@@ -101,7 +101,7 @@ impl Interpreter {
                     i += consumed;
                 },
                 Token::Symbol(name) => {
-                    if name == "DEF" {
+                    if name == "定" || name == "DEF" {
                         self.handle_def()?;
                     } else {
                         self.execute_word(name)?;
@@ -166,7 +166,7 @@ impl Interpreter {
 
     fn handle_def(&mut self) -> Result<()> {
         if self.workspace.len() < 2 {
-            return Err(error::AjisaiError::from("DEF requires vector and name"));
+            return Err(error::AjisaiError::from("定 requires vector and name"));
         }
 
         let name_val = self.workspace.pop().unwrap();
@@ -174,12 +174,12 @@ impl Interpreter {
 
         let name = match name_val.val_type {
             ValueType::String(s) => s.to_uppercase(),
-            _ => return Err(error::AjisaiError::from("DEF requires string name")),
+            _ => return Err(error::AjisaiError::from("定 requires string name")),
         };
 
         let tokens = match code_val.val_type {
             ValueType::Vector(v) => self.vector_to_tokens(v)?,
-            _ => return Err(error::AjisaiError::from("DEF requires vector")),
+            _ => return Err(error::AjisaiError::from("定 requires vector")),
         };
 
         if let Some(existing) = self.dictionary.get(&name) {
@@ -229,7 +229,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn vector_to_tokens(&self, vector: Vec<Value>) -> Result<Vec<Token>> {
+    pub fn vector_to_tokens(&self, vector: Vec<Value>) -> Result<Vec<Token>> {
         let mut tokens = Vec::new();
         for value in vector {
             tokens.push(self.value_to_token(value)?);
@@ -323,7 +323,7 @@ impl Interpreter {
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // 算術・比較・論理
+            // 算術演算（記号）
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),
@@ -331,43 +331,43 @@ impl Interpreter {
             ">" => arithmetic::op_gt(self),
             ">=" => arithmetic::op_ge(self),
             "=" => arithmetic::op_eq(self),
-            "<" => arithmetic::op_lt(self),
-            "<=" => arithmetic::op_le(self),
-            "NOT" => arithmetic::op_not(self),
-            "AND" => arithmetic::op_and(self),
-            "OR" => arithmetic::op_or(self),
             
-            // ベクトル操作
-            "LENGTH" => vector_ops::op_length(self),
-            "HEAD" => vector_ops::op_head(self),
-            "TAIL" => vector_ops::op_tail(self),
-            "CONS" => vector_ops::op_cons(self),
-            "APPEND" => vector_ops::op_append(self),
-            "REVERSE" => vector_ops::op_reverse(self),
-            "NTH" => vector_ops::op_nth(self),
-            "UNCONS" => vector_ops::op_uncons(self),
-            "EMPTY?" => vector_ops::op_empty(self),
+            // 論理演算（漢字）
+            "否" | "NOT" => arithmetic::op_not(self),
+            "且" | "AND" => arithmetic::op_and(self),
+            "或" | "OR" => arithmetic::op_or(self),
             
-            // 制御構造
-            "DEL" => control::op_del(self),
-            "LEAP" => leap::op_leap(self),
-            "EXEC" => vector_ops::op_exec(self),  // 新追加：ベクトル実行
+            // 存在チェック
+            "無" | "NIL?" => arithmetic::op_nil_check(self),
+            "有" => arithmetic::op_some_check(self),
             
-            // Nil関連
-            "NIL?" => arithmetic::op_nil_check(self),
-            "NOT-NIL?" => arithmetic::op_not_nil_check(self),
-            "KNOWN?" => arithmetic::op_not_nil_check(self),
-            "DEFAULT" => arithmetic::op_default(self),
+            // Vector操作（対称ペア）
+            "頭" | "HEAD" => vector_ops::op_head(self),
+            "尾" | "TAIL" => vector_ops::op_tail(self),
+            "接" | "CONS" => vector_ops::op_cons(self),
+            "離" => vector_ops::op_uncons(self),
+            "追" | "APPEND" => vector_ops::op_append(self),
+            "除" => vector_ops::op_remove_last(self),
             
-            // 出力
-            "SHOW" => io::op_dot(self),
-            "NEWL" => io::op_cr(self),
-            "SPCE" => io::op_space(self),
-            "SPCS" => io::op_spaces(self),
-            "CHAR" => io::op_emit(self),
+            // Vector操作（その他）
+            "複" | "CLONE" => vector_ops::op_clone(self),
+            "選" | "SELECT" => vector_ops::op_select(self),
+
+            // 統一操作
+            "数" | "COUNT" | "LENGTH" => vector_ops::op_count(self),
+            "在" | "AT" | "PICK" | "NTH" => vector_ops::op_at(self),
+            "行" | "DO" | "SHOW" | "EXEC" => vector_ops::op_do(self),
             
-            // データベース操作
-            "AMNESIA" => op_amnesia(self),
+            // 制御・定義
+            "定" | "DEF" => {
+                // DEFは特別処理済みなのでここには来ない
+                Err(error::AjisaiError::from("定 should be handled separately"))
+            },
+            "削" | "DEL" => control::op_del(self),
+            "跳" | "LEAP" => leap::op_leap(self),
+            
+            // システム
+            "忘" | "AMNESIA" => op_amnesia(self),
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
@@ -439,7 +439,7 @@ impl Interpreter {
                     .map(|token| self.token_to_string(token))
                     .collect::<Vec<String>>()
                     .join(" ");
-                return Some(format!("[ {} ]", body_string));  // {}から[]に変更
+                return Some(format!("[ {} ]", body_string));
             }
         }
         None
