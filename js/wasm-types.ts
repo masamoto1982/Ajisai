@@ -8,7 +8,7 @@ export interface AjisaiInterpreter {
     execute(code: string): ExecuteResult;
     init_step(code: string): string;
     step(): StepResult;
-    get_stack(): Value[];
+    get_workspace(): Value[];  // get_stack → get_workspace
     get_custom_words(): string[];
     get_custom_words_with_descriptions(): Array<[string, string | null]>;
     get_custom_words_info(): Array<[string, string | null, boolean]>;
@@ -18,18 +18,18 @@ export interface AjisaiInterpreter {
     save_table(name: string, schema: any, records: any): void;
     load_table(name: string): any;
     get_all_tables(): string[];
-    restore_stack(stack_js: Value[]): void;
+    restore_workspace(workspace_js: Value[]): void;  // restore_stack → restore_workspace
     get_word_definition(name: string): string | null;
     restore_word(name: string, definition: string, description?: string | null): void;
 }
 
 export interface ExecuteResult {
-    status: 'OK' | 'ERROR';  // より明確な型定義
+    status: 'OK' | 'ERROR';
     output?: string;
     autoNamed?: boolean;
     autoNamedWord?: string;
-    message?: string;  // エラーメッセージ
-    error?: boolean;   // エラーフラグを追加
+    message?: string;
+    error?: boolean;
 }
 
 export interface StepResult {
