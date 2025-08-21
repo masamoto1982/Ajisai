@@ -37,7 +37,7 @@ export class GUI {  // export を追加
     persistence: Persistence;
     testRunner: TestRunner;
 
-    private elements: GUIElements = {} as GUIElements;
+    public elements: GUIElements = {} as GUIElements;
     private mode: 'input' | 'execution' = 'input';
 
     constructor() {
