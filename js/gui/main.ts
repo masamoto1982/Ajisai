@@ -1,4 +1,4 @@
-// js/gui/main.ts (Vector中心設計版)
+// js/gui/main.ts (完全修正版)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
@@ -18,12 +18,12 @@ interface GUIElements {
     runBtn: HTMLButtonElement;
     clearBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
-    workspaceDisplay: HTMLElement;  // stackDisplay → workspaceDisplay
+    workspaceDisplay: HTMLElement;
     builtinWordsDisplay: HTMLElement;
     customWordsDisplay: HTMLElement;
     inputArea: HTMLElement;
     outputArea: HTMLElement;
-    workspaceArea: HTMLElement;     // stackArea → workspaceArea
+    workspaceArea: HTMLElement;
     dictionaryArea: HTMLElement;
 }
 
@@ -49,27 +49,32 @@ export class GUI {
         console.log('GUI.init() called');
         this.cacheElements();
 
+        // 各モジュールの初期化
         this.display.init({
             outputDisplay: this.elements.outputDisplay,
-            workspaceDisplay: this.elements.workspaceDisplay,  // 変更
+            workspaceDisplay: this.elements.workspaceDisplay,
         });
         
         this.dictionary.init({
             builtinWordsDisplay: this.elements.builtinWordsDisplay,
             customWordsDisplay: this.elements.customWordsDisplay
-        }, (word) => this.insertWord(word));
+        }, (word: string) => this.insertWord(word));  // 型注釈追加
         
         this.editor.init(this.elements.codeInput);
         
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
-            workspaceArea: this.elements.workspaceArea,  // 変更
+            workspaceArea: this.elements.workspaceArea,
             dictionaryArea: this.elements.dictionaryArea
         });
         
         this.persistence.init();
 
+        // イベントリスナーの設定
+        this.setupEventListeners();
+
+        // 初期表示
         this.dictionary.renderBuiltinWords();
         this.updateAllDisplays();
         this.mobile.updateView(this.mode);
@@ -81,12 +86,12 @@ export class GUI {
             runBtn: document.getElementById('run-btn') as HTMLButtonElement,
             clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
             outputDisplay: document.getElementById('output-display')!,
-            workspaceDisplay: document.getElementById('workspace-display')!,  // 変更
+            workspaceDisplay: document.getElementById('workspace-display')!,
             builtinWordsDisplay: document.getElementById('builtin-words-display')!,
             customWordsDisplay: document.getElementById('custom-words-display')!,
             inputArea: document.querySelector('.input-area')!,
             outputArea: document.querySelector('.output-area')!,
-            workspaceArea: document.querySelector('.workspace-area')!,  // 変更
+            workspaceArea: document.querySelector('.workspace-area')!,
             dictionaryArea: document.querySelector('.dictionary-area')!
         };
     }
@@ -102,7 +107,7 @@ export class GUI {
             }
         });
 
-        this.elements.workspaceArea.addEventListener('click', () => {  // 変更
+        this.elements.workspaceArea.addEventListener('click', () => {
             if (this.mobile.isMobile() && this.mode === 'execution') {
                 this.setMode('input');
             }
@@ -149,7 +154,7 @@ export class GUI {
     updateAllDisplays(): void {
         if (!window.ajisaiInterpreter) return;
         try {
-            this.display.updateWorkspace(window.ajisaiInterpreter.get_workspace());  // 変更
+            this.display.updateWorkspace(window.ajisaiInterpreter.get_workspace());
             this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
         } catch (error) {
             console.error('Failed to update display:', error);
@@ -158,4 +163,5 @@ export class GUI {
     }
 }
 
+// GUIインスタンスを作成してエクスポート
 export const GUI_INSTANCE = new GUI();
