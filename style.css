@@ -1,4 +1,4 @@
-/* style.css (workspace対応版 - stack関連をworkspace関連に変更) */
+/* style.css (workspace対応版 + テストボタン追加) */
 * {
     margin: 0;
     padding: 0;
@@ -76,6 +76,32 @@ header h1 {
 }
 
 .reference-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.test-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #28a745;
+    color: white;
+    border: 1px solid #1e7e34;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.test-btn:hover {
+    background-color: #218838;
+    border-color: #1c7430;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.test-btn svg {
     width: 16px;
     height: 16px;
 }
@@ -304,6 +330,11 @@ button:hover {
     }
     
     .reference-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .test-btn {
         padding: 0.4rem 0.8rem;
         font-size: 0.8rem;
     }
