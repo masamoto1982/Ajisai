@@ -4,7 +4,7 @@ import type { Value } from '../wasm-types';
 
 interface DisplayElements {
     outputDisplay: HTMLElement;
-    stackDisplay: HTMLElement;
+    workspaceDisplay: HTMLElement;  // stackDisplay → workspaceDisplay
 }
 
 export class Display {
@@ -13,43 +13,40 @@ export class Display {
 
     init(elements: DisplayElements): void {
         this.elements = elements;
-        // 改行を表示するためのCSS設定
         this.elements.outputDisplay.style.whiteSpace = 'pre-wrap';
     }
 
     showOutput(text: string): void {
-    this.mainOutput = text;
-    // エスケープされた改行文字を実際の改行に変換
-    const processedText = this.mainOutput.replace(/\\n/g, '\n');
-    this.elements.outputDisplay.textContent = processedText;
-}
-
-showError(error: Error | { message?: string } | string): void {
-    const errorMessage = typeof error === 'string' 
-        ? `Error: ${error}`
-        : `Error: ${error.message || error}`;
-    this.mainOutput = errorMessage;
-    // エラーメッセージでも同様に変換
-    const processedText = this.mainOutput.replace(/\\n/g, '\n');
-    this.elements.outputDisplay.textContent = processedText;
-}
-
-showInfo(text: string, append = false): void {
-    if (append && this.mainOutput) {
-        const combinedText = `${this.mainOutput}\n${text}`;
-        const processedText = combinedText.replace(/\\n/g, '\n');
-        this.elements.outputDisplay.textContent = processedText;
-    } else {
-        const processedText = text.replace(/\\n/g, '\n');
+        this.mainOutput = text;
+        const processedText = this.mainOutput.replace(/\\n/g, '\n');
         this.elements.outputDisplay.textContent = processedText;
     }
-}
 
-    updateStack(stack: Value[]): void {
-        const display = this.elements.stackDisplay;
+    showError(error: Error | { message?: string } | string): void {
+        const errorMessage = typeof error === 'string' 
+            ? `Error: ${error}`
+            : `Error: ${error.message || error}`;
+        this.mainOutput = errorMessage;
+        const processedText = this.mainOutput.replace(/\\n/g, '\n');
+        this.elements.outputDisplay.textContent = processedText;
+    }
+
+    showInfo(text: string, append = false): void {
+        if (append && this.mainOutput) {
+            const combinedText = `${this.mainOutput}\n${text}`;
+            const processedText = combinedText.replace(/\\n/g, '\n');
+            this.elements.outputDisplay.textContent = processedText;
+        } else {
+            const processedText = text.replace(/\\n/g, '\n');
+            this.elements.outputDisplay.textContent = processedText;
+        }
+    }
+
+    updateWorkspace(workspace: Value[]): void {  // updateStack → updateWorkspace
+        const display = this.elements.workspaceDisplay;
         display.innerHTML = '';
         
-        if (!Array.isArray(stack) || stack.length === 0) {
+        if (!Array.isArray(workspace) || workspace.length === 0) {
             display.textContent = '(empty)';
             display.style.color = '#ccc';
             return;
@@ -58,16 +55,17 @@ showInfo(text: string, append = false): void {
         display.style.color = '#333';
         const container = document.createElement('div');
         container.style.display = 'flex';
-        container.style.flexWrap = 'wrap-reverse';
+        container.style.flexWrap = 'wrap';
         container.style.justifyContent = 'flex-start';
         container.style.alignContent = 'flex-start';
+        container.style.flexDirection = 'row';  // ワークスペースは横並び
         
-        stack.forEach((item, index) => {
+        workspace.forEach((item, index) => {
             const elem = document.createElement('span');
-            elem.className = 'stack-item';
+            elem.className = 'workspace-item';  // stack-item → workspace-item
             elem.textContent = this.formatValue(item);
             
-            if (index === stack.length - 1) {
+            if (index === workspace.length - 1) {
                 elem.style.fontWeight = 'bold';
             }
             
@@ -109,8 +107,6 @@ showInfo(text: string, append = false): void {
                 return '[ ]';
             case 'nil':
                 return 'nil';
-            case 'quotation':
-                return '{ ... }';
             default:
                 return JSON.stringify(item.value);
         }
