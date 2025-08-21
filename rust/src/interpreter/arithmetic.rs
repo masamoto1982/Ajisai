@@ -349,6 +349,17 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+// 新機能: 有（SOME?）
+pub fn op_some_check(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    interp.workspace.push(Value { 
+        val_type: ValueType::Boolean(!matches!(val.val_type, ValueType::Nil)) 
+    });
+    Ok(())
+}
+
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
