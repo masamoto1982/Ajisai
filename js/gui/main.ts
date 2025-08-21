@@ -1,164 +1,214 @@
-// js/gui/test.ts (デバッグ版)
+// js/gui/main.ts
 
-import type { GUI } from './main';
+import { Display } from './display';
+import { Dictionary } from './dictionary';
+import { Editor } from './editor';
+import { MobileHandler } from './mobile';
+import { Persistence } from './persistence';
+import { TestRunner } from './test';  
+import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
 
-interface TestCase {
-    name: string;
-    code: string;
-    expectedWorkspace?: any[];
-    expectedOutput?: string;
-    expectError?: boolean;
+declare global {
+    interface Window {
+        ajisaiInterpreter: AjisaiInterpreter;
+    }
 }
 
-export class TestRunner {
-    private gui: GUI;
+interface GUIElements {
+    codeInput: HTMLTextAreaElement;
+    runBtn: HTMLButtonElement;
+    clearBtn: HTMLButtonElement;
+    testBtn: HTMLButtonElement;
+    outputDisplay: HTMLElement;
+    workspaceDisplay: HTMLElement;
+    builtinWordsDisplay: HTMLElement;
+    customWordsDisplay: HTMLElement;
+    inputArea: HTMLElement;
+    outputArea: HTMLElement;
+    workspaceArea: HTMLElement;
+    dictionaryArea: HTMLElement;
+}
 
-    constructor(gui: GUI) {
-        this.gui = gui;
-        console.log('TestRunner constructor called');
+export class GUI {  // export を追加
+    display: Display;
+    dictionary: Dictionary;
+    editor: Editor;
+    mobile: MobileHandler;
+    persistence: Persistence;
+    testRunner: TestRunner;
+
+    private elements: GUIElements = {} as GUIElements;
+    private mode: 'input' | 'execution' = 'input';
+
+    constructor() {
+        this.display = new Display();
+        this.dictionary = new Dictionary();
+        this.editor = new Editor();
+        this.mobile = new MobileHandler();
+        this.persistence = new Persistence(this);
+        this.testRunner = new TestRunner(this);
+        console.log('GUI constructor: TestRunner initialized');
     }
 
-    async runAllTests(): Promise<void> {
-        console.log('runAllTests started');
-        
-        const testCases = this.getTestCases();
-        console.log(`Running ${testCases.length} test cases`);
-        
-        let passed = 0;
-        let failed = 0;
+    init(): void {
+        console.log('GUI.init() called');
+        this.cacheElements();
 
-        this.gui.display.showInfo('🧪 Ajisai Tests Starting...\n');
+        // 各モジュールの初期化
+        this.display.init({
+            outputDisplay: this.elements.outputDisplay,
+            workspaceDisplay: this.elements.workspaceDisplay,
+        });
+        
+        this.dictionary.init({
+            builtinWordsDisplay: this.elements.builtinWordsDisplay,
+            customWordsDisplay: this.elements.customWordsDisplay
+        }, (word: string) => this.insertWord(word));
+        
+        this.editor.init(this.elements.codeInput);
+        
+        this.mobile.init({
+            inputArea: this.elements.inputArea,
+            outputArea: this.elements.outputArea,
+            workspaceArea: this.elements.workspaceArea,
+            dictionaryArea: this.elements.dictionaryArea
+        });
+        
+        this.persistence.init();
 
-        for (const testCase of testCases) {
-            console.log(`Running test: ${testCase.name}`);
-            try {
-                const result = await this.runSingleTest(testCase);
-                if (result) {
-                    passed++;
-                    console.log(`✅ ${testCase.name} PASSED`);
-                    this.gui.display.showInfo(`✅ ${testCase.name}`, true);
-                } else {
-                    failed++;
-                    console.log(`❌ ${testCase.name} FAILED`);
-                    this.gui.display.showInfo(`❌ ${testCase.name}`, true);
-                }
-            } catch (error) {
-                failed++;
-                console.error(`💥 ${testCase.name} ERROR:`, error);
-                this.gui.display.showInfo(`💥 ${testCase.name}: ${error}`, true);
+        // イベントリスナーの設定
+        this.setupEventListeners();
+
+        // 初期表示
+        this.dictionary.renderBuiltinWords();
+        this.updateAllDisplays();
+        this.mobile.updateView(this.mode);
+    }
+
+    private cacheElements(): void {
+        console.log('Caching elements...');
+        this.elements = {
+            codeInput: document.getElementById('code-input') as HTMLTextAreaElement,
+            runBtn: document.getElementById('run-btn') as HTMLButtonElement,
+            clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
+            testBtn: document.getElementById('test-btn') as HTMLButtonElement,
+            outputDisplay: document.getElementById('output-display')!,
+            workspaceDisplay: document.getElementById('workspace-display')!,
+            builtinWordsDisplay: document.getElementById('builtin-words-display')!,
+            customWordsDisplay: document.getElementById('custom-words-display')!,
+            inputArea: document.querySelector('.input-area')!,
+            outputArea: document.querySelector('.output-area')!,
+            workspaceArea: document.querySelector('.workspace-area')!,
+            dictionaryArea: document.querySelector('.dictionary-area')!
+        };
+
+        // テストボタンの存在確認
+        if (!this.elements.testBtn) {
+            console.error('Test button not found in DOM!');
+        } else {
+            console.log('Test button found:', this.elements.testBtn);
+        }
+    }
+    
+    private setupEventListeners(): void {
+        console.log('Setting up event listeners...');
+        
+        this.elements.runBtn.addEventListener('click', () => this.runCode());
+        this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
+        
+        // テストボタンのイベントリスナー
+        if (this.elements.testBtn) {
+            console.log('Adding test button event listener');
+            this.elements.testBtn.addEventListener('click', () => {
+                console.log('Test button clicked!');
+                this.runTests();
+            });
+        } else {
+            console.error('Cannot add event listener: test button not found');
+        }
+
+        this.elements.codeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                this.runCode();
             }
-        }
+        });
 
-        const summary = `\n📊 Results: ${passed} passed, ${failed} failed`;
-        console.log(summary);
-        this.gui.display.showInfo(summary, true);
-        
-        if (failed === 0) {
-            this.gui.display.showInfo('🎉 All tests passed!', true);
-        }
+        this.elements.workspaceArea.addEventListener('click', () => {
+            if (this.mobile.isMobile() && this.mode === 'execution') {
+                this.setMode('input');
+            }
+        });
+
+        window.addEventListener('resize', () => this.mobile.updateView(this.mode));
     }
 
-    private async runSingleTest(testCase: TestCase): Promise<boolean> {
-        console.log(`Testing: ${testCase.code}`);
-        
-        // テスト前にワークスペースをクリア
-        window.ajisaiInterpreter.reset();
+    private setMode(newMode: 'input' | 'execution'): void {
+        this.mode = newMode;
+        this.mobile.updateView(this.mode);
+    }
+
+    private insertWord(word: string): void {
+        this.editor.insertWord(word);
+    }
+    
+    private async runCode(): Promise<void> {
+        const code = this.editor.getValue();
+        if (!code) return;
 
         try {
-            const result = window.ajisaiInterpreter.execute(testCase.code);
-            console.log('Test result:', result);
+            const result = window.ajisaiInterpreter.execute(code) as ExecuteResult;
             
-            if (testCase.expectError) {
-                const success = result.status === 'ERROR';
-                console.log(`Expected error, got ${result.status}: ${success}`);
-                return success;
+            if (result.status === 'OK' && !result.error) {
+                this.display.showOutput(result.output || 'OK');
+                this.editor.clear();
+                
+                if (this.mobile.isMobile()) {
+                    this.setMode('execution');
+                }
+            } else {
+                this.display.showError(result.message || 'Unknown error');
             }
-
-            if (result.status === 'ERROR') {
-                console.log(`Unexpected error: ${result.message}`);
-                return false;
-            }
-
-            // ワークスペースの検証
-            if (testCase.expectedWorkspace) {
-                const workspace = window.ajisaiInterpreter.get_workspace();
-                console.log('Actual workspace:', workspace);
-                console.log('Expected workspace:', testCase.expectedWorkspace);
-                const success = this.compareWorkspace(workspace, testCase.expectedWorkspace);
-                console.log(`Workspace comparison: ${success}`);
-                return success;
-            }
-
-            // 出力の検証
-            if (testCase.expectedOutput) {
-                const success = result.output === testCase.expectedOutput;
-                console.log(`Output comparison: expected "${testCase.expectedOutput}", got "${result.output}": ${success}`);
-                return success;
-            }
-
-            console.log('Test passed (no specific expectations)');
-            return true;
         } catch (error) {
-            console.error('Test execution error:', error);
-            return testCase.expectError === true;
-        }
-    }
-
-    private compareWorkspace(actual: any[], expected: any[]): boolean {
-        console.log(`Comparing workspace lengths: actual ${actual.length}, expected ${expected.length}`);
-        if (actual.length !== expected.length) return false;
-        
-        for (let i = 0; i < actual.length; i++) {
-            if (!this.compareValue(actual[i], expected[i])) {
-                console.log(`Value mismatch at index ${i}:`, actual[i], 'vs', expected[i]);
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private compareValue(actual: any, expected: any): boolean {
-        if (expected.type === 'number' && actual.type === 'number') {
-            const actualFrac = actual.value;
-            const expectedFrac = expected.value;
-            return actualFrac.numerator === expectedFrac.numerator && 
-                   actualFrac.denominator === expectedFrac.denominator;
+            this.display.showError(error as Error);
         }
         
-        if (expected.type === 'vector' && actual.type === 'vector') {
-            return this.compareWorkspace(actual.value, expected.value);
-        }
-
-        return JSON.stringify(actual) === JSON.stringify(expected);
+        this.updateAllDisplays();
+        await this.persistence.saveCurrentState();
+        this.display.showInfo('State saved.', true);
     }
 
-    private getTestCases(): TestCase[] {
-        return [
-            // 単純なテストから開始
-            {
-                name: "基本加算",
-                code: "3 4 +",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 7, denominator: 1 } }]
-            },
-            {
-                name: "複製テスト",
-                code: "5 複",
-                expectedWorkspace: [
-                    { type: 'number', value: { numerator: 5, denominator: 1 } },
-                    { type: 'number', value: { numerator: 5, denominator: 1 } }
-                ]
-            },
-            {
-                name: "論理演算テスト",
-                code: "true false 且",
-                expectedWorkspace: [{ type: 'boolean', value: false }]
-            },
-            // エラーテスト
-            {
-                name: "空ベクトルエラー",
-                code: "[ ] 頭",
-                expectError: true
-            }
-        ];
+    private async runTests(): Promise<void> {
+        console.log('runTests called');
+        
+        if (!window.ajisaiInterpreter) {
+            console.error('ajisaiInterpreter not available');
+            this.display.showError('Interpreter not available');
+            return;
+        }
+
+        try {
+            console.log('Starting test runner...');
+            await this.testRunner.runAllTests();
+            this.updateAllDisplays();
+            console.log('Tests completed');
+        } catch (error) {
+            console.error('Error running tests:', error);
+            this.display.showError(error as Error);
+        }
+    }
+
+    updateAllDisplays(): void {
+        if (!window.ajisaiInterpreter) return;
+        try {
+            this.display.updateWorkspace(window.ajisaiInterpreter.get_workspace());
+            this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
+        } catch (error) {
+            console.error('Failed to update display:', error);
+            this.display.showError('Failed to update display.');
+        }
     }
 }
+
+// GUIインスタンスを作成してエクスポート
+export const GUI_INSTANCE = new GUI();
