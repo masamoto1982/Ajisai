@@ -2,23 +2,23 @@ use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::ValueType;
 
 pub fn op_dot(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
-        .ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     interp.append_output(&format!("{}", val));
     Ok(())
 }
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.last()
-        .ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.workspace.last()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     interp.append_output(&format!("{} ", val));
     Ok(())
 }
 
 pub fn op_cr(interp: &mut Interpreter) -> Result<()> {
-    interp.append_output("\n");  // 実際の改行文字
+    interp.append_output("\n");
     Ok(())
 }
 
@@ -28,8 +28,8 @@ pub fn op_space(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
-        .ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     match val.val_type {
         ValueType::Number(n) => {
@@ -45,8 +45,8 @@ pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_emit(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop()
-        .ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     match val.val_type {
         ValueType::Number(n) => {
