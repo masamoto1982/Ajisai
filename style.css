@@ -212,7 +212,48 @@ button:hover {
     border-radius: 4px;
     padding: 0.5rem;
     min-height: 100px;
+    max-height: 400px;  /* 追加: 最大高さ制限 */
+    overflow-y: auto;   /* 追加: 縦スクロール有効化 */
     font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* Outputエリア専用の追加スタイル */
+#output-display {
+    max-height: 500px;  /* Outputエリアはより高く */
+    overflow-y: auto;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* スクロールバーのスタイリング（Webkit系ブラウザ） */
+.display-area::-webkit-scrollbar,
+.state-display::-webkit-scrollbar,
+.words-display::-webkit-scrollbar,
+#output-display::-webkit-scrollbar {
+    width: 8px;
+}
+
+.display-area::-webkit-scrollbar-track,
+.state-display::-webkit-scrollbar-track,
+.words-display::-webkit-scrollbar-track,
+#output-display::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.display-area::-webkit-scrollbar-thumb,
+.state-display::-webkit-scrollbar-thumb,
+.words-display::-webkit-scrollbar-thumb,
+#output-display::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.display-area::-webkit-scrollbar-thumb:hover,
+.state-display::-webkit-scrollbar-thumb:hover,
+.words-display::-webkit-scrollbar-thumb:hover,
+#output-display::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 /* empty表示を薄く */
