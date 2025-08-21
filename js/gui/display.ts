@@ -4,7 +4,7 @@ import type { Value } from '../wasm-types';
 
 interface DisplayElements {
     outputDisplay: HTMLElement;
-    workspaceDisplay: HTMLElement;  // stackDisplay → workspaceDisplay
+    workspaceDisplay: HTMLElement;
 }
 
 export class Display {
@@ -18,31 +18,51 @@ export class Display {
 
     showOutput(text: string): void {
         this.mainOutput = text;
-        const processedText = this.mainOutput.replace(/\\n/g, '\n');
-        this.elements.outputDisplay.textContent = processedText;
+        this.elements.outputDisplay.innerHTML = ''; // innerHTMLに変更してスタイル適用を可能に
+        
+        const span = document.createElement('span');
+        span.style.color = '#333';
+        span.textContent = text.replace(/\\n/g, '\n');
+        this.elements.outputDisplay.appendChild(span);
     }
 
     showError(error: Error | { message?: string } | string): void {
         const errorMessage = typeof error === 'string' 
             ? `Error: ${error}`
             : `Error: ${error.message || error}`;
+        
         this.mainOutput = errorMessage;
-        const processedText = this.mainOutput.replace(/\\n/g, '\n');
-        this.elements.outputDisplay.textContent = processedText;
+        this.elements.outputDisplay.innerHTML = ''; // 既存内容をクリア
+        
+        // エラーメッセージを赤字で表示
+        const errorSpan = document.createElement('span');
+        errorSpan.style.color = '#dc3545';  // Bootstrap の danger 色
+        errorSpan.style.fontWeight = 'bold';
+        errorSpan.textContent = errorMessage.replace(/\\n/g, '\n');
+        this.elements.outputDisplay.appendChild(errorSpan);
     }
 
     showInfo(text: string, append = false): void {
         if (append && this.mainOutput) {
-            const combinedText = `${this.mainOutput}\n${text}`;
-            const processedText = combinedText.replace(/\\n/g, '\n');
-            this.elements.outputDisplay.textContent = processedText;
+            this.mainOutput = `${this.mainOutput}\n${text}`;
+            
+            // 既存の内容に追加
+            const infoSpan = document.createElement('span');
+            infoSpan.style.color = '#666';
+            infoSpan.textContent = '\n' + text.replace(/\\n/g, '\n');
+            this.elements.outputDisplay.appendChild(infoSpan);
         } else {
-            const processedText = text.replace(/\\n/g, '\n');
-            this.elements.outputDisplay.textContent = processedText;
+            this.mainOutput = text;
+            this.elements.outputDisplay.innerHTML = '';
+            
+            const infoSpan = document.createElement('span');
+            infoSpan.style.color = '#666';
+            infoSpan.textContent = text.replace(/\\n/g, '\n');
+            this.elements.outputDisplay.appendChild(infoSpan);
         }
     }
 
-    updateWorkspace(workspace: Value[]): void {  // updateStack → updateWorkspace
+    updateWorkspace(workspace: Value[]): void {
         const display = this.elements.workspaceDisplay;
         display.innerHTML = '';
         
@@ -62,7 +82,7 @@ export class Display {
         
         workspace.forEach((item, index) => {
             const elem = document.createElement('span');
-            elem.className = 'workspace-item';  // stack-item → workspace-item
+            elem.className = 'workspace-item';
             elem.textContent = this.formatValue(item);
             
             if (index === workspace.length - 1) {
