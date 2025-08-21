@@ -33,7 +33,6 @@ impl AjisaiInterpreter {
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
-                // 自動命名は削除されたのでfalse固定
                 js_sys::Reflect::set(&obj, &"autoNamed".into(), &JsValue::from_bool(false)).unwrap();
             }
             Err(e) => {
@@ -47,15 +46,15 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn get_stack(&self) -> JsValue {
-        let stack_values: Vec<JsValue> = self.interpreter
-            .get_stack()
+    pub fn get_workspace(&self) -> JsValue {
+        let workspace_values: Vec<JsValue> = self.interpreter
+            .get_workspace()
             .iter()
             .map(|v| value_to_js(v))
             .collect();
         
         let arr = js_sys::Array::new();
-        for val in stack_values {
+        for val in workspace_values {
             arr.push(&val);
         }
         arr.into()
@@ -150,21 +149,21 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
-    pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
-        if !stack_js.is_array() {
-            return Err("Stack must be an array".to_string());
+    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
+        if !workspace_js.is_array() {
+            return Err("Workspace must be an array".to_string());
         }
         
-        let arr = js_sys::Array::from(&stack_js);
-        let mut new_stack = Vec::new();
+        let arr = js_sys::Array::from(&workspace_js);
+        let mut new_workspace = Vec::new();
         
         for i in 0..arr.length() {
             let item = arr.get(i);
             let value = js_value_to_rust_value(&item)?;
-            new_stack.push(value);
+            new_workspace.push(value);
         }
         
-        self.interpreter.set_stack(new_stack);
+        self.interpreter.set_workspace(new_workspace);
         Ok(())
     }
     
@@ -179,7 +178,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
         let definition = definition.trim();
-        if !definition.starts_with('{') || !definition.ends_with('}') {
+        if !definition.starts_with('[') || !definition.ends_with(']') {
             return Err("Invalid word definition format".to_string());
         }
         
@@ -201,7 +200,6 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
         ValueType::Vector(_) => "vector",
-        ValueType::Quotation(_) => "quotation",
         ValueType::Nil => "nil",
     };
     
@@ -224,13 +222,6 @@ fn value_to_js(value: &Value) -> JsValue {
             }
             arr.into()
         },
-        ValueType::Quotation(_) => {
-            // クオーテーションは表示用にプレースホルダーを返す
-            let quotation_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&quotation_obj, &"type".into(), &"quotation".into()).unwrap();
-            js_sys::Reflect::set(&quotation_obj, &"length".into(), &JsValue::from_f64(0.0)).unwrap();
-            quotation_obj.into()
-        },
         ValueType::Nil => JsValue::NULL,
     };
     
@@ -240,7 +231,6 @@ fn value_to_js(value: &Value) -> JsValue {
 }
 
 fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
-    // 既存の実装を維持（Quotation型に対応）
     if js_sys::Reflect::has(js_val, &"type".into()).unwrap_or(false) {
         let type_str = js_sys::Reflect::get(js_val, &"type".into())
             .ok()
@@ -251,12 +241,6 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
             .map_err(|_| "Missing value field")?;
         
         match type_str.as_str() {
-            "quotation" => {
-                // クオーテーションの復元（簡易版）
-                Ok(Value {
-                    val_type: ValueType::Quotation(vec![])
-                })
-            },
             "number" => {
                 if js_sys::Reflect::has(&value_field, &"numerator".into()).unwrap_or(false) &&
                    js_sys::Reflect::has(&value_field, &"denominator".into()).unwrap_or(false) {
@@ -340,7 +324,6 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
             _ => Err(format!("Unknown type: {}", type_str)),
         }
     } else {
-        // 単純な値の場合の処理（既存のまま）
         if let Some(b) = js_val.as_bool() {
             Ok(Value {
                 val_type: ValueType::Boolean(b)
