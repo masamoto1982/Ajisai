@@ -1,4 +1,4 @@
-// js/gui/main.ts (完全版 - レジスタ削除・構造簡素化)
+// js/gui/main.ts (Vector中心設計版)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
@@ -18,12 +18,12 @@ interface GUIElements {
     runBtn: HTMLButtonElement;
     clearBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
-    stackDisplay: HTMLElement;
+    workspaceDisplay: HTMLElement;  // stackDisplay → workspaceDisplay
     builtinWordsDisplay: HTMLElement;
     customWordsDisplay: HTMLElement;
     inputArea: HTMLElement;
     outputArea: HTMLElement;
-    stackArea: HTMLElement;
+    workspaceArea: HTMLElement;     // stackArea → workspaceArea
     dictionaryArea: HTMLElement;
 }
 
@@ -49,10 +49,9 @@ export class GUI {
         console.log('GUI.init() called');
         this.cacheElements();
 
-        // 各モジュールの初期化
         this.display.init({
             outputDisplay: this.elements.outputDisplay,
-            stackDisplay: this.elements.stackDisplay,
+            workspaceDisplay: this.elements.workspaceDisplay,  // 変更
         });
         
         this.dictionary.init({
@@ -65,15 +64,12 @@ export class GUI {
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
-            stackArea: this.elements.stackArea,
+            workspaceArea: this.elements.workspaceArea,  // 変更
             dictionaryArea: this.elements.dictionaryArea
         });
         
         this.persistence.init();
 
-        this.setupEventListeners();
-
-        // 初期表示
         this.dictionary.renderBuiltinWords();
         this.updateAllDisplays();
         this.mobile.updateView(this.mode);
@@ -85,12 +81,12 @@ export class GUI {
             runBtn: document.getElementById('run-btn') as HTMLButtonElement,
             clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
             outputDisplay: document.getElementById('output-display')!,
-            stackDisplay: document.getElementById('stack-display')!,
+            workspaceDisplay: document.getElementById('workspace-display')!,  // 変更
             builtinWordsDisplay: document.getElementById('builtin-words-display')!,
             customWordsDisplay: document.getElementById('custom-words-display')!,
             inputArea: document.querySelector('.input-area')!,
             outputArea: document.querySelector('.output-area')!,
-            stackArea: document.querySelector('.stack-area')!,
+            workspaceArea: document.querySelector('.workspace-area')!,  // 変更
             dictionaryArea: document.querySelector('.dictionary-area')!
         };
     }
@@ -106,7 +102,7 @@ export class GUI {
             }
         });
 
-        this.elements.stackArea.addEventListener('click', () => {
+        this.elements.workspaceArea.addEventListener('click', () => {  // 変更
             if (this.mobile.isMobile() && this.mode === 'execution') {
                 this.setMode('input');
             }
@@ -133,7 +129,7 @@ export class GUI {
             
             if (result.status === 'OK' && !result.error) {
                 this.display.showOutput(result.output || 'OK');
-                this.editor.clear(); // 成功時は常にクリア
+                this.editor.clear();
                 
                 if (this.mobile.isMobile()) {
                     this.setMode('execution');
@@ -153,7 +149,7 @@ export class GUI {
     updateAllDisplays(): void {
         if (!window.ajisaiInterpreter) return;
         try {
-            this.display.updateStack(window.ajisaiInterpreter.get_stack());
+            this.display.updateWorkspace(window.ajisaiInterpreter.get_workspace());  // 変更
             this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
         } catch (error) {
             console.error('Failed to update display:', error);
@@ -162,5 +158,4 @@ export class GUI {
     }
 }
 
-// GUIインスタンスを作成してエクスポート
 export const GUI_INSTANCE = new GUI();
