@@ -1,59 +1,51 @@
-// rust/src/builtins.rs (スタック操作削除版)
+// rust/src/builtins.rs (漢字一文字版)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
-    // Arithmetic
+    // コア演算（記号）
     register_builtin(dictionary, "+", "加算 ( a b -- a+b )", "Arithmetic");
     register_builtin(dictionary, "-", "減算 ( a b -- a-b )", "Arithmetic");
     register_builtin(dictionary, "*", "乗算 ( a b -- a*b )", "Arithmetic");
     register_builtin(dictionary, "/", "除算 ( a b -- a/b )", "Arithmetic");
-    
-    // Comparison
     register_builtin(dictionary, ">", "より大きい ( a b -- bool )", "Comparison");
     register_builtin(dictionary, ">=", "以上 ( a b -- bool )", "Comparison");
     register_builtin(dictionary, "=", "等しい ( a b -- bool )", "Comparison");
-    register_builtin(dictionary, "<", "より小さい ( a b -- bool )", "Comparison");
-    register_builtin(dictionary, "<=", "以下 ( a b -- bool )", "Comparison");
-
-    // Logic
-    register_builtin(dictionary, "NOT", "論理否定 ( bool -- bool )", "Logic");
-    register_builtin(dictionary, "AND", "論理積 ( bool bool -- bool )", "Logic");
-    register_builtin(dictionary, "OR", "論理和 ( bool bool -- bool )", "Logic");
-
-    // Vector
-    register_builtin(dictionary, "LENGTH", "ベクトルの長さ ( vec -- n )", "Vector");
-    register_builtin(dictionary, "HEAD", "最初の要素 ( vec -- elem )", "Vector");
-    register_builtin(dictionary, "TAIL", "最初以外の要素 ( vec -- vec' )", "Vector");
-    register_builtin(dictionary, "CONS", "要素を先頭に追加 ( elem vec -- vec' )", "Vector");
-    register_builtin(dictionary, "APPEND", "要素をベクトルの末尾に追加 ( vec elem -- vec' )", "Vector");
-    register_builtin(dictionary, "REVERSE", "ベクトルを逆順に ( vec -- vec' )", "Vector");
-    register_builtin(dictionary, "NTH", "N番目の要素を取得 ( n vec -- elem )", "Vector");
-    register_builtin(dictionary, "UNCONS", "ベクトルを分解 ( vec -- elem vec' )", "Vector");
-    register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )", "Vector");
-    register_builtin(dictionary, "EXEC", "ベクトルをコードとして実行 ( vec -- )", "Vector");
     
-    // Control
-    register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )", "Control");
-    register_builtin(dictionary, "DEF", "カスタムワードを定義 ( vec str -- )", "Control");
-    register_builtin(dictionary, "LEAP", "条件付き絶対ジャンプ ( condition word -- )", "Control");
-
-    // Nil
-    register_builtin(dictionary, "NIL?", "nilかどうかをチェック ( a -- bool )", "Nil");
-    register_builtin(dictionary, "NOT-NIL?", "nilでないかをチェック ( a -- bool )", "Nil");
-    register_builtin(dictionary, "KNOWN?", "nil以外の値かチェック ( a -- bool )", "Nil");
-    register_builtin(dictionary, "DEFAULT", "nilならデフォルト値を使用 ( a | b -- a | b )", "Nil");
-
-    // Output
-    register_builtin(dictionary, "SHOW", "値を出力してドロップ ( a -- )", "Output");
-    register_builtin(dictionary, "NEWL", "改行を出力 ( -- )", "Output");
-    register_builtin(dictionary, "SPCE", "スペースを出力 ( -- )", "Output");
-    register_builtin(dictionary, "SPCS", "N個のスペースを出力 ( n -- )", "Output");
-    register_builtin(dictionary, "CHAR", "文字コードを文字として出力 ( n -- )", "Output");
+    // 論理演算（漢字）
+    register_builtin(dictionary, "否", "論理否定 ( bool -- bool )", "Logic");
+    register_builtin(dictionary, "且", "論理積 ( bool bool -- bool )", "Logic");
+    register_builtin(dictionary, "或", "論理和 ( bool bool -- bool )", "Logic");
     
-    // Database
-    register_builtin(dictionary, "AMNESIA", "IndexedDBを初期化 ( -- )", "Database");
+    // 存在チェック
+    register_builtin(dictionary, "無", "nilかどうかをチェック ( a -- bool )", "Logic");
+    register_builtin(dictionary, "有", "nilでないかをチェック ( a -- bool )", "Logic");
+
+    // Vector操作（対称ペア）
+    register_builtin(dictionary, "頭", "先頭要素を取得 ( vec -- elem )", "Vector");
+    register_builtin(dictionary, "尾", "末尾群を取得 ( vec -- vec' )", "Vector");
+    register_builtin(dictionary, "接", "先頭に接続 ( elem vec -- vec' )", "Vector");
+    register_builtin(dictionary, "離", "先頭から分離 ( vec -- elem vec' )", "Vector");
+    register_builtin(dictionary, "追", "末尾に追加 ( vec elem -- vec' )", "Vector");
+    register_builtin(dictionary, "除", "末尾から除去 ( vec -- vec' elem )", "Vector");
+    
+    // Vector操作（その他）
+    register_builtin(dictionary, "複", "値を複製 ( a -- a a )", "Vector");
+    register_builtin(dictionary, "選", "条件選択 ( a b condition -- result )", "Vector");
+
+    // 統一操作
+    register_builtin(dictionary, "数", "要素数を取得 ( vec -- n )", "Unified");
+    register_builtin(dictionary, "在", "位置アクセス ( n vec -- elem )", "Unified");
+    register_builtin(dictionary, "行", "実行 ( value -- )", "Unified");
+    
+    // 制御・定義
+    register_builtin(dictionary, "定", "ワードを定義 ( vec str -- )", "Control");
+    register_builtin(dictionary, "削", "ワードを削除 ( str -- )", "Control");
+    register_builtin(dictionary, "跳", "条件付き跳躍 ( condition target -- )", "Control");
+    
+    // システム
+    register_builtin(dictionary, "忘", "全データを消去 ( -- )", "System");
 }
 
 fn register_builtin(dictionary: &mut HashMap<String, WordDefinition>, name: &str, description: &str, category: &str) {
