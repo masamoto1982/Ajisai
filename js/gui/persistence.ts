@@ -10,7 +10,7 @@ interface CustomWord {
 }
 
 interface InterpreterState {
-    stack: Value[];
+    workspace: Value[];  // stack → workspace
     customWords: CustomWord[];
 }
 
@@ -65,7 +65,7 @@ export class Persistence {
             }));
 
             const interpreterState: InterpreterState = {
-                stack: window.ajisaiInterpreter.get_stack(),
+                workspace: window.ajisaiInterpreter.get_workspace(),  // get_stack → get_workspace
                 customWords: customWords,
             };
 
@@ -84,7 +84,7 @@ export class Persistence {
 
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
-                if (state.stack) window.ajisaiInterpreter.restore_stack(state.stack);
+                if (state.workspace) window.ajisaiInterpreter.restore_workspace(state.workspace);  // restore_stack → restore_workspace
                 if (state.customWords) {
                     for (const word of state.customWords) {
                         if (word.name && word.definition) {
