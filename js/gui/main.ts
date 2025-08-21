@@ -1,10 +1,11 @@
-// js/gui/main.ts (完全修正版)
+// js/gui/main.ts (デバッグ版)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
 import { Editor } from './editor';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
+import { TestRunner } from './test';  
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
 
 declare global {
@@ -17,6 +18,7 @@ interface GUIElements {
     codeInput: HTMLTextAreaElement;
     runBtn: HTMLButtonElement;
     clearBtn: HTMLButtonElement;
+    testBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
     workspaceDisplay: HTMLElement;
     builtinWordsDisplay: HTMLElement;
@@ -33,6 +35,7 @@ export class GUI {
     editor: Editor;
     mobile: MobileHandler;
     persistence: Persistence;
+    testRunner: TestRunner;
 
     private elements: GUIElements = {} as GUIElements;
     private mode: 'input' | 'execution' = 'input';
@@ -43,6 +46,8 @@ export class GUI {
         this.editor = new Editor();
         this.mobile = new MobileHandler();
         this.persistence = new Persistence(this);
+        this.testRunner = new TestRunner(this);
+        console.log('GUI constructor: TestRunner initialized');
     }
 
     init(): void {
@@ -58,7 +63,7 @@ export class GUI {
         this.dictionary.init({
             builtinWordsDisplay: this.elements.builtinWordsDisplay,
             customWordsDisplay: this.elements.customWordsDisplay
-        }, (word: string) => this.insertWord(word));  // 型注釈追加
+        }, (word: string) => this.insertWord(word));
         
         this.editor.init(this.elements.codeInput);
         
@@ -81,10 +86,12 @@ export class GUI {
     }
 
     private cacheElements(): void {
+        console.log('Caching elements...');
         this.elements = {
             codeInput: document.getElementById('code-input') as HTMLTextAreaElement,
             runBtn: document.getElementById('run-btn') as HTMLButtonElement,
             clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
+            testBtn: document.getElementById('test-btn') as HTMLButtonElement,
             outputDisplay: document.getElementById('output-display')!,
             workspaceDisplay: document.getElementById('workspace-display')!,
             builtinWordsDisplay: document.getElementById('builtin-words-display')!,
@@ -94,11 +101,31 @@ export class GUI {
             workspaceArea: document.querySelector('.workspace-area')!,
             dictionaryArea: document.querySelector('.dictionary-area')!
         };
+
+        // テストボタンの存在確認
+        if (!this.elements.testBtn) {
+            console.error('Test button not found in DOM!');
+        } else {
+            console.log('Test button found:', this.elements.testBtn);
+        }
     }
     
     private setupEventListeners(): void {
+        console.log('Setting up event listeners...');
+        
         this.elements.runBtn.addEventListener('click', () => this.runCode());
         this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
+        
+        // テストボタンのイベントリスナー
+        if (this.elements.testBtn) {
+            console.log('Adding test button event listener');
+            this.elements.testBtn.addEventListener('click', () => {
+                console.log('Test button clicked!');
+                this.runTests();
+            });
+        } else {
+            console.error('Cannot add event listener: test button not found');
+        }
 
         this.elements.codeInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.shiftKey) {
@@ -149,6 +176,26 @@ export class GUI {
         this.updateAllDisplays();
         await this.persistence.saveCurrentState();
         this.display.showInfo('State saved.', true);
+    }
+
+    private async runTests(): Promise<void> {
+        console.log('runTests called');
+        
+        if (!window.ajisaiInterpreter) {
+            console.error('ajisaiInterpreter not available');
+            this.display.showError('Interpreter not available');
+            return;
+        }
+
+        try {
+            console.log('Starting test runner...');
+            await this.testRunner.runAllTests();
+            this.updateAllDisplays();
+            console.log('Tests completed');
+        } catch (error) {
+            console.error('Error running tests:', error);
+            this.display.showError(error as Error);
+        }
     }
 
     updateAllDisplays(): void {
