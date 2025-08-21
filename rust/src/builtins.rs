@@ -1,17 +1,9 @@
-// rust/src/builtins.rs (完全版)
+// rust/src/builtins.rs (スタック操作削除版)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
-    // Stack操作
-    register_builtin(dictionary, "DUP", "スタックトップを複製 ( a -- a a )", "Stack");
-    register_builtin(dictionary, "DROP", "スタックトップを削除 ( a -- )", "Stack");
-    register_builtin(dictionary, "SWAP", "上位2つを交換 ( a b -- b a )", "Stack");
-    register_builtin(dictionary, "OVER", "2番目をコピー ( a b -- a b a )", "Stack");
-    register_builtin(dictionary, "ROT", "3番目を最上位へ ( a b c -- b c a )", "Stack");
-    register_builtin(dictionary, "NIP", "2番目を削除 ( a b -- b )", "Stack");
-    
     // Arithmetic
     register_builtin(dictionary, "+", "加算 ( a b -- a+b )", "Arithmetic");
     register_builtin(dictionary, "-", "減算 ( a b -- a-b )", "Arithmetic");
@@ -40,13 +32,11 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "NTH", "N番目の要素を取得 ( n vec -- elem )", "Vector");
     register_builtin(dictionary, "UNCONS", "ベクトルを分解 ( vec -- elem vec' )", "Vector");
     register_builtin(dictionary, "EMPTY?", "ベクトルが空かチェック ( vec -- bool )", "Vector");
-    
-    // Quotation
-    register_builtin(dictionary, "CALL", "クオーテーションを実行 ( quot -- )", "Quotation");
+    register_builtin(dictionary, "EXEC", "ベクトルをコードとして実行 ( vec -- )", "Vector");
     
     // Control
     register_builtin(dictionary, "DEL", "カスタムワードを削除 ( str -- )", "Control");
-    register_builtin(dictionary, "DEF", "カスタムワードを定義 ( quot str -- )", "Control");
+    register_builtin(dictionary, "DEF", "カスタムワードを定義 ( vec str -- )", "Control");
     register_builtin(dictionary, "LEAP", "条件付き絶対ジャンプ ( condition word -- )", "Control");
 
     // Nil
