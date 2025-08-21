@@ -1,22 +1,20 @@
 // rust/src/interpreter/mod.rs
 
-pub mod stack_ops;
-pub mod arithmetic;
 pub mod vector_ops;
+pub mod arithmetic;
 pub mod control;
 pub mod io;
 pub mod error;
-pub mod quotation;
 pub mod leap;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType};
+use crate::types::{Workspace, Token, Value, ValueType};
 use self::error::Result;
 
 pub struct Interpreter {
-    pub(crate) stack: Stack,
+    pub(crate) workspace: Workspace,  // スタック廃止、ワークスペースのみ
     pub(crate) dictionary: HashMap<String, WordDefinition>,
-    pub(crate) dependencies: HashMap<String, HashSet<String>>, // 依存関係管理
+    pub(crate) dependencies: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) call_stack: Vec<String>,
 }
@@ -32,7 +30,7 @@ pub struct WordDefinition {
 impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
-            stack: Vec::new(),
+            workspace: Vec::new(),
             dictionary: HashMap::new(),
             dependencies: HashMap::new(),
             output_buffer: String::new(),
@@ -72,40 +70,33 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Number(num, den) => {
-                    self.stack.push(Value {
+                    self.workspace.push(Value {
                         val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
                     });
                     i += 1;
                 },
                 Token::String(s) => {
-                    self.stack.push(Value {
+                    self.workspace.push(Value {
                         val_type: ValueType::String(s.clone()),
                     });
                     i += 1;
                 },
                 Token::Boolean(b) => {
-                    self.stack.push(Value {
+                    self.workspace.push(Value {
                         val_type: ValueType::Boolean(*b),
                     });
                     i += 1;
                 },
                 Token::Nil => {
-                    self.stack.push(Value {
+                    self.workspace.push(Value {
                         val_type: ValueType::Nil,
                     });
                     i += 1;
                 },
                 Token::VectorStart => {
                     let (vector_values, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value {
+                    self.workspace.push(Value {
                         val_type: ValueType::Vector(vector_values),
-                    });
-                    i += consumed;
-                },
-                Token::QuotationStart => {
-                    let (quotation_tokens, consumed) = self.collect_quotation(tokens, i)?;
-                    self.stack.push(Value {
-                        val_type: ValueType::Quotation(quotation_tokens),
                     });
                     i += consumed;
                 },
@@ -119,9 +110,6 @@ impl Interpreter {
                 },
                 Token::VectorEnd => {
                     return Err(error::AjisaiError::from("Unexpected vector end"));
-                },
-                Token::QuotationEnd => {
-                    return Err(error::AjisaiError::from("Unexpected quotation end"));
                 },
             }
         }
@@ -155,35 +143,6 @@ impl Interpreter {
         Err(error::AjisaiError::from("Unclosed vector"))
     }
 
-    fn collect_quotation(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
-        let mut quotation_tokens = Vec::new();
-        let mut i = start + 1;
-        let mut depth = 1;
-
-        while i < tokens.len() && depth > 0 {
-            match &tokens[i] {
-                Token::QuotationStart => {
-                    quotation_tokens.push(tokens[i].clone());
-                    depth += 1;
-                },
-                Token::QuotationEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Ok((quotation_tokens, i - start + 1));
-                    } else {
-                        quotation_tokens.push(tokens[i].clone());
-                    }
-                },
-                token => {
-                    quotation_tokens.push(token.clone());
-                }
-            }
-            i += 1;
-        }
-
-        Err(error::AjisaiError::from("Unclosed quotation"))
-    }
-
     fn token_to_value(&self, token: &Token) -> Result<Value> {
         match token {
             Token::Number(num, den) => Ok(Value {
@@ -205,74 +164,90 @@ impl Interpreter {
         }
     }
 
-fn handle_def(&mut self) -> Result<()> {
-    if self.stack.len() < 2 {
-        return Err(error::AjisaiError::from("DEF requires quotation and name"));
-    }
-
-    let name_val = self.stack.pop().unwrap();
-    let quotation_val = self.stack.pop().unwrap();
-
-    let name = match name_val.val_type {
-        ValueType::String(s) => s.to_uppercase(),
-        _ => return Err(error::AjisaiError::from("DEF requires string name")),
-    };
-
-    let tokens = match quotation_val.val_type {
-        ValueType::Quotation(t) => t,
-        _ => return Err(error::AjisaiError::from("DEF requires quotation")),
-    };
-
-    if let Some(existing) = self.dictionary.get(&name) {
-        if existing.is_builtin {
-            return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
+    fn handle_def(&mut self) -> Result<()> {
+        if self.workspace.len() < 2 {
+            return Err(error::AjisaiError::from("DEF requires vector and name"));
         }
-    }
 
-    // 依存関係チェック：既存のワードを再定義する場合
-    if self.dictionary.contains_key(&name) {
-        if let Some(dependents) = self.dependencies.get(&name) {
-            if !dependents.is_empty() {
-                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                return Err(error::AjisaiError::ProtectedWord { 
-                    name: name.clone(), 
-                    dependents: dependent_list 
-                });
+        let name_val = self.workspace.pop().unwrap();
+        let code_val = self.workspace.pop().unwrap();
+
+        let name = match name_val.val_type {
+            ValueType::String(s) => s.to_uppercase(),
+            _ => return Err(error::AjisaiError::from("DEF requires string name")),
+        };
+
+        let tokens = match code_val.val_type {
+            ValueType::Vector(v) => self.vector_to_tokens(v)?,
+            _ => return Err(error::AjisaiError::from("DEF requires vector")),
+        };
+
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
+
+        if self.dictionary.contains_key(&name) {
+            if let Some(dependents) = self.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(error::AjisaiError::ProtectedWord { 
+                        name: name.clone(), 
+                        dependents: dependent_list 
+                    });
+                }
+            }
+        }
+
+        if let Some(old_deps) = self.get_word_dependencies(&name) {
+            for dep in old_deps {
+                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
+                    reverse_deps.remove(&name);
+                }
+            }
+        }
+
+        for token in &tokens {
+            if let Token::Symbol(sym) = token {
+                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
+                    self.dependencies.entry(sym.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(name.clone());
+                }
+            }
+        }
+
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens,
+            is_builtin: false,
+            description: None,
+            category: None,
+        });
+
+        self.append_output(&format!("Defined: {}\n", name));
+        Ok(())
     }
 
-    // 古い依存関係をクリア
-    if let Some(old_deps) = self.get_word_dependencies(&name) {
-        for dep in old_deps {
-            if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
-                reverse_deps.remove(&name);
-            }
+    fn vector_to_tokens(&self, vector: Vec<Value>) -> Result<Vec<Token>> {
+        let mut tokens = Vec::new();
+        for value in vector {
+            tokens.push(self.value_to_token(value)?);
+        }
+        Ok(tokens)
+    }
+
+    fn value_to_token(&self, value: Value) -> Result<Token> {
+        match value.val_type {
+            ValueType::Number(frac) => Ok(Token::Number(frac.numerator, frac.denominator)),
+            ValueType::String(s) => Ok(Token::String(s)),
+            ValueType::Boolean(b) => Ok(Token::Boolean(b)),
+            ValueType::Symbol(s) => Ok(Token::Symbol(s)),
+            ValueType::Nil => Ok(Token::Nil),
+            ValueType::Vector(_) => Err(error::AjisaiError::from("Nested vectors not supported in DEF")),
         }
     }
 
-    // 新しい依存関係を検出・記録
-    for token in &tokens {
-        if let Token::Symbol(sym) = token {
-            if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                // 逆方向の依存関係を記録
-                self.dependencies.entry(sym.clone())
-                    .or_insert_with(HashSet::new)
-                    .insert(name.clone());
-            }
-        }
-    }
-
-    self.dictionary.insert(name.clone(), WordDefinition {
-        tokens,
-        is_builtin: false,
-        description: None,
-        category: None,  // 追加：カスタムワードはカテゴリなし
-    });
-
-    self.append_output(&format!("Defined: {}\n", name));
-    Ok(())
-}
     fn get_word_dependencies(&self, word_name: &str) -> Option<Vec<String>> {
         if let Some(def) = self.dictionary.get(word_name) {
             let mut deps = Vec::new();
@@ -301,52 +276,46 @@ fn handle_def(&mut self) -> Result<()> {
             .unwrap_or(false)
     }
 
-    // execute_word メソッドの修正
-fn execute_word(&mut self, name: &str) -> Result<()> {
-    if let Some(def) = self.dictionary.get(name).cloned() {
-        if def.is_builtin {
-            self.execute_builtin(name)
+    fn execute_word(&mut self, name: &str) -> Result<()> {
+        if let Some(def) = self.dictionary.get(name).cloned() {
+            if def.is_builtin {
+                self.execute_builtin(name)
+            } else {
+                self.call_stack.push(name.to_string());
+                let result = self.execute_custom_word(&def.tokens);
+                self.call_stack.pop();
+                result.map_err(|e| e.with_context(&self.call_stack))
+            }
         } else {
-            // カスタムワード実行時にcall_stackを管理
-            self.call_stack.push(name.to_string());
-            let result = self.execute_custom_word(&def.tokens);
-            self.call_stack.pop();
-            result.map_err(|e| e.with_context(&self.call_stack))
+            Err(error::AjisaiError::UnknownWord(name.to_string()))
         }
-    } else {
-        Err(error::AjisaiError::UnknownWord(name.to_string()))
     }
-}
 
-// execute_word_leap メソッドの修正
-pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
-    // 同一ワード内制限チェック
-    if let Some(current) = current_word {
-        if name != current {
+    pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
+        if let Some(current) = current_word {
+            if name != current {
+                return Err(error::AjisaiError::from(format!(
+                    "LEAP can only jump within the same word. Cannot jump from '{}' to '{}'", 
+                    current, name
+                )));
+            }
+        } else {
             return Err(error::AjisaiError::from(format!(
-                "LEAP can only jump within the same word. Cannot jump from '{}' to '{}'", 
-                current, name
+                "LEAP can only be used within custom words. Cannot jump to '{}' from main program", 
+                name
             )));
         }
-    } else {
-        // メインプログラムからのLEAPは禁止
-        return Err(error::AjisaiError::from(format!(
-            "LEAP can only be used within custom words. Cannot jump to '{}' from main program", 
-            name
-        )));
-    }
 
-    if let Some(def) = self.dictionary.get(name).cloned() {
-        if def.is_builtin {
-            return Err(error::AjisaiError::from("Cannot LEAP to builtin word"));
+        if let Some(def) = self.dictionary.get(name).cloned() {
+            if def.is_builtin {
+                return Err(error::AjisaiError::from("Cannot LEAP to builtin word"));
+            } else {
+                self.execute_custom_word(&def.tokens)
+            }
         } else {
-            // LEAPでは call_stack を変更しない（同一ワード内なので）
-            self.execute_custom_word(&def.tokens)
+            Err(error::AjisaiError::UnknownWord(name.to_string()))
         }
-    } else {
-        Err(error::AjisaiError::UnknownWord(name.to_string()))
     }
-}
 
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
         self.execute_tokens(tokens)
@@ -354,14 +323,6 @@ pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // スタック操作
-            "DUP" => stack_ops::op_dup(self),
-            "DROP" => stack_ops::op_drop(self),
-            "SWAP" => stack_ops::op_swap(self),
-            "OVER" => stack_ops::op_over(self),
-            "ROT" => stack_ops::op_rot(self),
-            "NIP" => stack_ops::op_nip(self),
-            
             // 算術・比較・論理
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
@@ -387,14 +348,10 @@ pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str
             "UNCONS" => vector_ops::op_uncons(self),
             "EMPTY?" => vector_ops::op_empty(self),
             
-            // クオーテーション操作
-            "CALL" => quotation::op_call(self),
-            
-            // LEAP操作
-            "LEAP" => leap::op_leap(self),
-            
             // 制御構造
             "DEL" => control::op_del(self),
+            "LEAP" => leap::op_leap(self),
+            "EXEC" => vector_ops::op_exec(self),  // 新追加：ベクトル実行
             
             // Nil関連
             "NIL?" => arithmetic::op_nil_check(self),
@@ -402,7 +359,7 @@ pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str
             "KNOWN?" => arithmetic::op_not_nil_check(self),
             "DEFAULT" => arithmetic::op_default(self),
             
-            // 出力（4文字統一）
+            // 出力
             "SHOW" => io::op_dot(self),
             "NEWL" => io::op_cr(self),
             "SPCE" => io::op_space(self),
@@ -426,7 +383,7 @@ pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str
         self.output_buffer.push_str(text);
     }
     
-    pub fn get_stack(&self) -> &Stack { &self.stack }
+    pub fn get_workspace(&self) -> &Workspace { &self.workspace }
     
     pub fn get_custom_words(&self) -> Vec<String> {
         self.dictionary.iter()
@@ -452,27 +409,27 @@ pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str
             .collect()
     }
    
-    pub fn set_stack(&mut self, stack: Stack) {
-        self.stack = stack;
+    pub fn set_workspace(&mut self, workspace: Workspace) {
+        self.workspace = workspace;
     }
     
     pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
-    let name = name.to_uppercase();
-    
-    if let Some(existing) = self.dictionary.get(&name) {
-        if existing.is_builtin {
-            return Err(error::AjisaiError::from(format!("Cannot restore builtin word: {}", name)));
+        let name = name.to_uppercase();
+        
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(error::AjisaiError::from(format!("Cannot restore builtin word: {}", name)));
+            }
         }
-    }
 
-    self.dictionary.insert(name, WordDefinition {
-        tokens,
-        is_builtin: false,
-        description,
-        category: None,  // 追加：カスタムワードはカテゴリなし
-    });
+        self.dictionary.insert(name, WordDefinition {
+            tokens,
+            is_builtin: false,
+            description,
+            category: None,
+        });
 
-    Ok(())
+        Ok(())
     }
    
     pub fn get_word_definition(&self, name: &str) -> Option<String> {
@@ -482,7 +439,7 @@ pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str
                     .map(|token| self.token_to_string(token))
                     .collect::<Vec<String>>()
                     .join(" ");
-                return Some(format!("{{ {} }}", body_string));
+                return Some(format!("[ {} ]", body_string));  // {}から[]に変更
             }
         }
         None
@@ -497,8 +454,6 @@ pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str
             Token::Symbol(s) => s.clone(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::QuotationStart => "{".to_string(),
-            Token::QuotationEnd => "}".to_string(),
         }
     }
 }
