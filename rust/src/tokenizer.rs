@@ -5,13 +5,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut chars = input.chars().peekable();
 
     while let Some(&ch) = chars.peek() {
-        // 空白をスキップ
         if ch.is_whitespace() {
             chars.next();
             continue;
         }
 
-        // 行コメント処理（#から行末まで）
         if ch == '#' {
             chars.next();
             while let Some(&ch) = chars.peek() {
@@ -23,7 +21,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // 括弧コメント処理（( から ) まで）
         if ch == '(' {
             chars.next();
             let mut depth = 1;
@@ -41,7 +38,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // 文字列リテラル
         if ch == '"' {
             chars.next();
             let mut string = String::new();
@@ -64,7 +60,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // ベクター開始/終了
+        // []のみサポート（{}削除）
         if ch == '[' {
             chars.next();
             tokens.push(Token::VectorStart);
@@ -76,22 +72,9 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // クオーテーション開始/終了
-        if ch == '{' {
-            chars.next();
-            tokens.push(Token::QuotationStart);
-            continue;
-        }
-        if ch == '}' {
-            chars.next();
-            tokens.push(Token::QuotationEnd);
-            continue;
-        }
-
-        // ワード（数値、真偽値、NIL、シンボル）
         let mut word = String::new();
         while let Some(&ch) = chars.peek() {
-            if ch.is_whitespace() || ['[', ']', '{', '}', '"', '#', '(', ')'].contains(&ch) {
+            if ch.is_whitespace() || ['[', ']', '"', '#', '(', ')'].contains(&ch) {
                 break;
             }
             word.push(ch);
@@ -102,19 +85,14 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // ラベル処理を削除（Base62ラベルもコロン付きワードも全て削除）
-
-        // 特殊ワード
         match word.as_str() {
             "true" => tokens.push(Token::Boolean(true)),
             "false" => tokens.push(Token::Boolean(false)),
             "NIL" | "nil" => tokens.push(Token::Nil),
             _ => {
-                // 数値判定
                 if let Ok(num) = word.parse::<i64>() {
                     tokens.push(Token::Number(num, 1));
                 } else if word.contains('/') {
-                    // 分数記法
                     let parts: Vec<&str> = word.split('/').collect();
                     if parts.len() == 2 {
                         if let (Ok(num), Ok(den)) = (parts[0].parse::<i64>(), parts[1].parse::<i64>()) {
@@ -130,7 +108,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                         tokens.push(Token::Symbol(word.to_uppercase()));
                     }
                 } else if word.contains('.') {
-                    // 小数点記法
                     let parts: Vec<&str> = word.split('.').collect();
                     if parts.len() == 2 {
                         let integer_part = if parts[0].is_empty() { 
