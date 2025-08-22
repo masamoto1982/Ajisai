@@ -179,24 +179,30 @@ export class GUI {  // export を追加
     }
 
     private async runTests(): Promise<void> {
-        console.log('runTests called');
-        
-        if (!window.ajisaiInterpreter) {
-            console.error('ajisaiInterpreter not available');
-            this.display.showError('Interpreter not available');
-            return;
-        }
-
-        try {
-            console.log('Starting test runner...');
-            await this.testRunner.runAllTests();
-            this.updateAllDisplays();
-            console.log('Tests completed');
-        } catch (error) {
-            console.error('Error running tests:', error);
-            this.display.showError(error as Error);
-        }
+    console.log('runTests called');
+    
+    if (!window.ajisaiInterpreter) {
+        console.error('ajisaiInterpreter not available');
+        this.display.showError('Interpreter not available');
+        return;
     }
+
+    try {
+        console.log('Starting test runner...');
+        await this.testRunner.runAllTests();
+        this.updateAllDisplays();
+        
+        // モバイルモードでの表示切り替えを追加
+        if (this.mobile.isMobile()) {
+            this.setMode('execution');
+        }
+        
+        console.log('Tests completed');
+    } catch (error) {
+        console.error('Error running tests:', error);
+        this.display.showError(error as Error);
+    }
+}
 
     updateAllDisplays(): void {
         if (!window.ajisaiInterpreter) return;
