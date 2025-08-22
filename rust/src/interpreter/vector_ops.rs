@@ -1,7 +1,7 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction};
 
-// 既存の操作は保持
+// 既存の操作
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
@@ -72,7 +72,6 @@ pub fn op_cons(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 新機能: UNCONS（離）- 既存のものが重複している場合は削除
 pub fn op_uncons(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
@@ -110,7 +109,6 @@ pub fn op_append(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 新機能: REMOVE_LAST（除）- 既存のものと重複する場合は削除
 pub fn op_remove_last(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
@@ -129,7 +127,6 @@ pub fn op_remove_last(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 新機能: CLONE（複）- 既存のものと重複する場合は削除
 pub fn op_clone(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.last()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
@@ -138,7 +135,6 @@ pub fn op_clone(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 新機能: SELECT（選）- 既存のものと重複する場合は削除
 pub fn op_select(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -159,7 +155,6 @@ pub fn op_select(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 新機能: COUNT（数）- ワークスペースまたはベクトルの要素数
 pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     if let Some(val) = interp.workspace.last() {
         match &val.val_type {
@@ -189,7 +184,6 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 新機能: AT（在）- 位置アクセス
 pub fn op_at(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -237,7 +231,6 @@ pub fn op_at(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 新機能: DO（行）- 統一実行
 pub fn op_do(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
@@ -253,5 +246,397 @@ pub fn op_do(interp: &mut Interpreter) -> Result<()> {
             interp.append_output(&format!("{}", val));
             Ok(())
         }
+    }
+}
+
+// ==================== 新機能（13個） ====================
+
+// 1. 結（JOIN/CONCAT）- Vector結合
+pub fn op_join(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let vec2_val = interp.workspace.pop().unwrap();
+    let vec1_val = interp.workspace.pop().unwrap();
+    
+    match (vec1_val.val_type, vec2_val.val_type) {
+        (ValueType::Vector(mut v1), ValueType::Vector(v2)) => {
+            v1.extend(v2);
+            interp.workspace.push(Value { val_type: ValueType::Vector(v1) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector vector", "other types")),
+    }
+}
+
+// 2. 切（SPLIT）- 指定位置で分割
+pub fn op_split(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let index_val = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    let index = match index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "other type")),
+    };
+    
+    match vec_val.val_type {
+        ValueType::Vector(v) => {
+            let split_index = if index < 0 {
+                (v.len() as i64 + index).max(0) as usize
+            } else {
+                (index as usize).min(v.len())
+            };
+            
+            let (left, right) = v.split_at(split_index);
+            interp.workspace.push(Value { val_type: ValueType::Vector(left.to_vec()) });
+            interp.workspace.push(Value { val_type: ValueType::Vector(right.to_vec()) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 3. 反（REVERSE）- 順序反転
+pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match val.val_type {
+        ValueType::Vector(mut v) => {
+            v.reverse();
+            interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 4. 挿（INSERT）- 指定位置に挿入
+pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 3 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let elem = interp.workspace.pop().unwrap();
+    let index_val = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    let index = match index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "other type")),
+    };
+    
+    match vec_val.val_type {
+        ValueType::Vector(mut v) => {
+            let insert_index = if index < 0 {
+                0
+            } else {
+                (index as usize).min(v.len())
+            };
+            
+            v.insert(insert_index, elem);
+            interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 5. 消（DELETE）- 指定位置削除
+pub fn op_delete(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let index_val = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    let index = match index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "other type")),
+    };
+    
+    match vec_val.val_type {
+        ValueType::Vector(mut v) => {
+            let actual_index = if index < 0 {
+                v.len() as i64 + index
+            } else {
+                index
+            };
+            
+            if actual_index >= 0 && (actual_index as usize) < v.len() {
+                let removed = v.remove(actual_index as usize);
+                interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+                interp.workspace.push(removed);
+                Ok(())
+            } else {
+                Err(AjisaiError::IndexOutOfBounds {
+                    index,
+                    length: v.len(),
+                })
+            }
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 6. 探（FIND）- 要素検索
+pub fn op_find(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let elem = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    match vec_val.val_type {
+        ValueType::Vector(v) => {
+            for (i, item) in v.iter().enumerate() {
+                if *item == elem {
+                    interp.workspace.push(Value { 
+                        val_type: ValueType::Number(Fraction::new(i as i64, 1)) 
+                    });
+                    return Ok(());
+                }
+            }
+            interp.workspace.push(Value { val_type: ValueType::Nil });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 7. 含（CONTAINS）- 含有チェック
+pub fn op_contains(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let elem = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    match vec_val.val_type {
+        ValueType::Vector(v) => {
+            let contains = v.iter().any(|item| *item == elem);
+            interp.workspace.push(Value { val_type: ValueType::Boolean(contains) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 8. 換（REPLACE）- 要素置換
+pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 3 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let new_elem = interp.workspace.pop().unwrap();
+    let index_val = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    let index = match index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "other type")),
+    };
+    
+    match vec_val.val_type {
+        ValueType::Vector(mut v) => {
+            let actual_index = if index < 0 {
+                v.len() as i64 + index
+            } else {
+                index
+            };
+            
+            if actual_index >= 0 && (actual_index as usize) < v.len() {
+                let old_elem = std::mem::replace(&mut v[actual_index as usize], new_elem);
+                interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+                interp.workspace.push(old_elem);
+                Ok(())
+            } else {
+                Err(AjisaiError::IndexOutOfBounds {
+                    index,
+                    length: v.len(),
+                })
+            }
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 9. 抽（FILTER）- 条件抽出
+pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let predicate_vec = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    let predicate_tokens = match predicate_vec.val_type {
+        ValueType::Vector(v) => interp.vector_to_tokens(v)?,
+        _ => return Err(AjisaiError::type_error("vector (predicate)", "other type")),
+    };
+    
+    match vec_val.val_type {
+        ValueType::Vector(v) => {
+            let mut result = Vec::new();
+            
+            for item in v {
+                // アイテムをスタックにプッシュ
+                interp.workspace.push(item.clone());
+                
+                // 述語を実行
+                interp.execute_tokens(&predicate_tokens)?;
+                
+                // 結果をチェック
+                if let Some(result_val) = interp.workspace.pop() {
+                    let include = match result_val.val_type {
+                        ValueType::Boolean(b) => b,
+                        ValueType::Nil => false,
+                        _ => true,
+                    };
+                    
+                    if include {
+                        result.push(item);
+                    }
+                }
+            }
+            
+            interp.workspace.push(Value { val_type: ValueType::Vector(result) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 10. 変（MAP）- 要素変換
+pub fn op_map(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let transform_vec = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    let transform_tokens = match transform_vec.val_type {
+        ValueType::Vector(v) => interp.vector_to_tokens(v)?,
+        _ => return Err(AjisaiError::type_error("vector (transform)", "other type")),
+    };
+    
+    match vec_val.val_type {
+        ValueType::Vector(v) => {
+            let mut result = Vec::new();
+            
+            for item in v {
+                // アイテムをスタックにプッシュ
+                interp.workspace.push(item);
+                
+                // 変換を実行
+                interp.execute_tokens(&transform_tokens)?;
+                
+                // 結果を取得
+                if let Some(transformed) = interp.workspace.pop() {
+                    result.push(transformed);
+                } else {
+                    return Err(AjisaiError::WorkspaceUnderflow);
+                }
+            }
+            
+            interp.workspace.push(Value { val_type: ValueType::Vector(result) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 11. 畳（FOLD/REDUCE）- 畳込処理
+pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let op_vec = interp.workspace.pop().unwrap();
+    let vec_val = interp.workspace.pop().unwrap();
+    
+    let op_tokens = match op_vec.val_type {
+        ValueType::Vector(v) => interp.vector_to_tokens(v)?,
+        _ => return Err(AjisaiError::type_error("vector (operation)", "other type")),
+    };
+    
+    match vec_val.val_type {
+        ValueType::Vector(v) => {
+            if v.is_empty() {
+                return Err(AjisaiError::from("畳: 空のベクトルです"));
+            }
+            
+            let mut accumulator = v[0].clone();
+            
+            for item in v.iter().skip(1) {
+                // アキュムレータとアイテムをスタックにプッシュ
+                interp.workspace.push(accumulator);
+                interp.workspace.push(item.clone());
+                
+                // 演算を実行
+                interp.execute_tokens(&op_tokens)?;
+                
+                // 結果を取得
+                if let Some(result) = interp.workspace.pop() {
+                    accumulator = result;
+                } else {
+                    return Err(AjisaiError::WorkspaceUnderflow);
+                }
+            }
+            
+            interp.workspace.push(accumulator);
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 12. 並（SORT）- ソート
+pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match val.val_type {
+        ValueType::Vector(mut v) => {
+            // 数値のみのソート（他の型の比較は複雑なので数値に限定）
+            v.sort_by(|a, b| {
+                match (&a.val_type, &b.val_type) {
+                    (ValueType::Number(n1), ValueType::Number(n2)) => {
+                        let val1 = n1.numerator as f64 / n1.denominator as f64;
+                        let val2 = n2.numerator as f64 / n2.denominator as f64;
+                        val1.partial_cmp(&val2).unwrap_or(std::cmp::Ordering::Equal)
+                    },
+                    (ValueType::String(s1), ValueType::String(s2)) => s1.cmp(s2),
+                    _ => std::cmp::Ordering::Equal,
+                }
+            });
+            
+            interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 13. 空（EMPTY）- 空判定
+pub fn op_empty(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match val.val_type {
+        ValueType::Vector(v) => {
+            interp.workspace.push(Value { val_type: ValueType::Boolean(v.is_empty()) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
     }
 }
