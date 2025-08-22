@@ -1,4 +1,4 @@
-// js/gui/test.ts（構文表示・色分け対応版）
+// js/gui/test.ts（修正された順序対応版）
 
 interface TestCase {
     name: string;
@@ -346,24 +346,24 @@ export class TestRunner {
                 category: "Clone Operations"
             },
 
-            // ========== 条件選択 ==========
+            // ========== 条件選択（修正済み） ==========
             {
                 name: "選択（真）",
-                code: "true 10 20 選",
+                code: "10 20 true 選",  // RPNに修正：a b condition 選
                 expectedWorkspace: [{ type: 'number', value: { numerator: 10, denominator: 1 } }],
                 category: "Selection"
             },
             {
                 name: "選択（偽）",
-                code: "false 10 20 選",
+                code: "10 20 false 選",  // RPNに修正：a b condition 選
                 expectedWorkspace: [{ type: 'number', value: { numerator: 20, denominator: 1 } }],
                 category: "Selection"
             },
 
-            // ========== 位置アクセス ==========
+            // ========== 位置アクセス（修正済み） ==========
             {
                 name: "Vector位置アクセス",
-                code: "1 [ 10 20 30 ] 在",
+                code: "[ 10 20 30 ] 1 在",  // RPNに修正：vector index 在
                 expectedWorkspace: [{ type: 'number', value: { numerator: 20, denominator: 1 } }],
                 category: "Position Access"
             },
