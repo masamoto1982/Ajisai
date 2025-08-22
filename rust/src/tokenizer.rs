@@ -348,7 +348,7 @@ mod tests {
     fn test_ignore_non_dictionary_chars() {
         let tokens = tokenize("[ 1 2 3 ]を復シテ、数え2を+").unwrap();
         
-        assert_eq!(tokens.len(), 7);
+        assert_eq!(tokens.len(), 9);
         assert_eq!(tokens[0], Token::VectorStart);
         assert_eq!(tokens[1], Token::Number(1, 1));
         assert_eq!(tokens[2], Token::Number(2, 1));
@@ -356,8 +356,8 @@ mod tests {
         assert_eq!(tokens[4], Token::VectorEnd);
         assert_eq!(tokens[5], Token::Symbol("復".to_string()));
         assert_eq!(tokens[6], Token::Symbol("数".to_string()));
-        // "え" は無視される
-        // tokens[7] は2、tokens[8] は+ になるはず
+        assert_eq!(tokens[7], Token::Number(2, 1));
+        assert_eq!(tokens[8], Token::Symbol("+".to_string()));
     }
     
     #[test]
@@ -394,7 +394,8 @@ mod tests {
     fn test_mixed_natural_language() {
         let tokens = tokenize("これは[ 1 2 ]という配列です。複製して数を調べましょう。").unwrap();
         
-        // "これは", "という配列です。", "して", "を調べましょう。" は無視
+        // "これは", "という配列です。", "して", "を調べましょう。" は無視される
+        assert_eq!(tokens.len(), 6);
         assert_eq!(tokens[0], Token::VectorStart);
         assert_eq!(tokens[1], Token::Number(1, 1));
         assert_eq!(tokens[2], Token::Number(2, 1));
