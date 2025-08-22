@@ -211,88 +211,86 @@ Token::Boolean(b) => {
     }
 
     fn handle_def(&mut self) -> Result<()> {
-        use web_sys::console;
-        console::log_1(&format!("=== HANDLE_DEF START ===").into());
-        console::log_1(&format!("Workspace size: {}", self.workspace.len()).into());
-        
-        if self.workspace.len() < 2 {
-            return Err(error::AjisaiError::from("定 requires vector and name"));
-        }
-
-        let name_val = self.workspace.pop().unwrap();
-        let code_val = self.workspace.pop().unwrap();
-        
-        console::log_1(&format!("Name value: {:?}", name_val).into());
-        console::log_1(&format!("Code value: {:?}", code_val).into());
-
-        let name = match name_val.val_type {
-            ValueType::String(s) => s.to_uppercase(),
-            _ => return Err(error::AjisaiError::from("定 requires string name")),
-        };
-
-        let tokens = match code_val.val_type {
-            ValueType::Vector(v) => {
-                console::log_1(&format!("Converting vector to tokens: {:?}", v).into());
-                let result = self.vector_to_tokens(v)?;
-                console::log_1(&format!("Converted to tokens: {:?}", result).into());
-                result
-            },
-            _ => return Err(error::AjisaiError::from("定 requires vector")),
-        };
-
-        if let Some(existing) = self.dictionary.get(&name) {
-            if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-            }
-        }
-
-        if self.dictionary.contains_key(&name) {
-            if let Some(dependents) = self.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(error::AjisaiError::ProtectedWord { 
-                        name: name.clone(), 
-                        dependents: dependent_list 
-                    });
-                }
-            }
-        }
-
-        if let Some(old_deps) = self.get_word_dependencies(&name) {
-            for dep in old_deps {
-                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
-                    reverse_deps.remove(&name);
-                }
-            }
-        }
-
-        for token in &tokens {
-            if let Token::Symbol(sym) = token {
-                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                    self.dependencies.entry(sym.clone())
-                        .or_insert_with(HashSet::new)
-                        .insert(name.clone());
-                }
-            }
-        }
-
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens,
-            is_builtin: false,
-            description: None,
-            category: None,
-        });
-
-        // トークナイザーにカスタムワードを登録
-    crate::tokenizer::register_custom_word(&name);
-
-        console::log_1(&format!("Word '{}' defined successfully", name).into());
-        console::log_1(&format!("=== HANDLE_DEF END ===").into());
-
-        self.append_output(&format!("Defined: {}\n", name));
-        Ok(())
+    use web_sys::console;
+    console::log_1(&format!("=== HANDLE_DEF START ===").into());
+    console::log_1(&format!("Workspace size: {}", self.workspace.len()).into());
+    
+    if self.workspace.len() < 2 {
+        return Err(error::AjisaiError::from("定 requires vector and name"));
     }
 
+    let name_val = self.workspace.pop().unwrap();
+    let code_val = self.workspace.pop().unwrap();
+    
+    console::log_1(&format!("Name value: {:?}", name_val).into());
+    console::log_1(&format!("Code value: {:?}", code_val).into());
+
+    let name = match name_val.val_type {
+        ValueType::String(s) => s.to_uppercase(),
+        _ => return Err(error::AjisaiError::from("定 requires string name")),
+    };
+
+    let tokens = match code_val.val_type {
+        ValueType::Vector(v) => {
+            console::log_1(&format!("Converting vector to tokens: {:?}", v).into());
+            let result = self.vector_to_tokens(v)?;
+            console::log_1(&format!("Converted to tokens: {:?}", result).into());
+            result
+        },
+        _ => return Err(error::AjisaiError::from("定 requires vector")),
+    };
+
+    if let Some(existing) = self.dictionary.get(&name) {
+        if existing.is_builtin {
+            return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
+        }
+    }
+
+    if self.dictionary.contains_key(&name) {
+        if let Some(dependents) = self.dependencies.get(&name) {
+            if !dependents.is_empty() {
+                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                return Err(error::AjisaiError::ProtectedWord { 
+                    name: name.clone(), 
+                    dependents: dependent_list 
+                });
+            }
+        }
+    }
+
+    if let Some(old_deps) = self.get_word_dependencies(&name) {
+        for dep in old_deps {
+            if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
+                reverse_deps.remove(&name);
+            }
+        }
+    }
+
+    for token in &tokens {
+        if let Token::Symbol(sym) = token {
+            if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
+                self.dependencies.entry(sym.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(name.clone());
+            }
+        }
+    }
+
+    self.dictionary.insert(name.clone(), WordDefinition {
+        tokens,
+        is_builtin: false,
+        description: None,
+        category: None,
+    });
+
+    // この行を削除：crate::tokenizer::register_custom_word(&name);
+
+    console::log_1(&format!("Word '{}' defined successfully", name).into());
+    console::log_1(&format!("=== HANDLE_DEF END ===").into());
+
+    self.append_output(&format!("Defined: {}\n", name));
+    Ok(())
+}
     pub fn vector_to_tokens(&self, vector: Vec<Value>) -> Result<Vec<Token>> {
         use web_sys::console;
         console::log_1(&format!("=== VECTOR_TO_TOKENS START ===").into());
