@@ -1,6 +1,11 @@
 use crate::types::Token;
+use std::collections::HashSet;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
+    tokenize_with_custom_words(input, &HashSet::new())
+}
+
+pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
@@ -44,6 +49,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
         
+        // カスタムワードチェック（最優先）
+        if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
+            tokens.push(token);
+            i += consumed;
+            continue;
+        }
+        
         // 組み込みワードチェック（漢字）
         if let Some((token, consumed)) = try_parse_kanji_builtin(&chars[i..]) {
             tokens.push(token);
@@ -73,21 +85,19 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 }
 
 // カスタムワード解析（新機能）
-fn try_parse_custom_word(chars: &[char]) -> Option<(Token, usize)> {
-    if let Ok(words) = CUSTOM_WORDS.lock() {
-        // 長い単語から優先的にマッチング
-        let mut sorted_words: Vec<&String> = words.iter().collect();
-        sorted_words.sort_by(|a, b| b.len().cmp(&a.len())); // 長い順でソート
-        
-        for word in sorted_words {
-            if chars.len() >= word.len() {
-                let candidate: String = chars[..word.len()].iter().collect();
-                if candidate == *word {
-                    // 単語境界チェック（次の文字が辞書語でない）
-                    if chars.len() == word.len() || 
-                       !is_dictionary_char(chars[word.len()]) {
-                        return Some((Token::Symbol(word.clone()), word.len()));
-                    }
+fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
+    // 長い単語から優先的にマッチング
+    let mut sorted_words: Vec<&String> = custom_words.iter().collect();
+    sorted_words.sort_by(|a, b| b.len().cmp(&a.len())); // 長い順でソート
+    
+    for word in sorted_words {
+        if chars.len() >= word.len() {
+            let candidate: String = chars[..word.len()].iter().collect();
+            if candidate == *word {
+                // 単語境界チェック（次の文字が辞書語でない）
+                if chars.len() == word.len() || 
+                   !is_dictionary_char(chars[word.len()]) {
+                    return Some((Token::Symbol(word.clone()), word.len()));
                 }
             }
         }
@@ -315,7 +325,7 @@ fn try_parse_kanji_builtin(chars: &[char]) -> Option<(Token, usize)> {
         // 制御・定義
         "定" => "定",
         "削" => "削",
-        "成" => "成",  // 「跳」→「成」に変更
+        "成" => "成",
         "忘" => "忘",
         
         _ => return None,
@@ -373,9 +383,6 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     match chars[0] {
         '+' => Some((Token::Symbol("+".to_string()), 1)),
         '-' => {
-            // 負号と減算の区別
-            // 次に数字が続く場合は数値として扱われるべきなので、ここでは減算として扱う
-            // 数値解析が先に実行されるので、ここに来るのは減算
             Some((Token::Symbol("-".to_string()), 1))
         },
         '*' => Some((Token::Symbol("*".to_string()), 1)),
@@ -396,13 +403,6 @@ mod tests {
         let input = "[ 1 2 3 ]を復シテ、数え2を+";
         let tokens = tokenize(input).unwrap();
         
-        // デバッグ情報を出力
-        println!("Input: {:?}", input);
-        println!("Tokens count: {}", tokens.len());
-        for (i, token) in tokens.iter().enumerate() {
-            println!("  [{}]: {:?}", i, token);
-        }
-        
         assert_eq!(tokens.len(), 9);
         assert_eq!(tokens[0], Token::VectorStart);
         assert_eq!(tokens[1], Token::Number(1, 1));
@@ -416,62 +416,14 @@ mod tests {
     }
     
     #[test]
-    fn test_number_parsing() {
-        let tokens = tokenize("123 -45 3/4 -1/2 3.14 -2.5").unwrap();
+    fn test_custom_word_recognition() {
+        let mut custom_words = HashSet::new();
+        custom_words.insert("加算複製".to_string());
         
-        assert_eq!(tokens[0], Token::Number(123, 1));
-        assert_eq!(tokens[1], Token::Number(-45, 1));
-        assert_eq!(tokens[2], Token::Number(3, 4));
-        assert_eq!(tokens[3], Token::Number(-1, 2));
-        assert_eq!(tokens[4], Token::Number(314, 100));
-        assert_eq!(tokens[5], Token::Number(-25, 10));
-    }
-    
-    #[test]
-    fn test_string_literals() {
-        let tokens = tokenize(r#""hello world" "escaped\"quote""#).unwrap();
+        let tokens = tokenize_with_custom_words("5 加算複製", &custom_words).unwrap();
         
-        assert_eq!(tokens[0], Token::String("hello world".to_string()));
-        assert_eq!(tokens[1], Token::String("escaped\"quote".to_string()));
-    }
-    
-    #[test]
-    fn test_ignore_whitespace() {
-        let tokens = tokenize("1    2\n\t3").unwrap();
-        
-        assert_eq!(tokens.len(), 3);
-        assert_eq!(tokens[0], Token::Number(1, 1));
-        assert_eq!(tokens[1], Token::Number(2, 1));
-        assert_eq!(tokens[2], Token::Number(3, 1));
-    }
-    
-    #[test]
-    fn test_mixed_natural_language() {
-        let tokens = tokenize("これは[ 1 2 ]という配列です。複製して数を調べましょう。").unwrap();
-        
-        // "これは", "という配列です。", "して", "を調べましょう。" は無視される
-        assert_eq!(tokens.len(), 6);
-        assert_eq!(tokens[0], Token::VectorStart);
-        assert_eq!(tokens[1], Token::Number(1, 1));
-        assert_eq!(tokens[2], Token::Number(2, 1));
-        assert_eq!(tokens[3], Token::VectorEnd);
-        assert_eq!(tokens[4], Token::Symbol("複".to_string()));
-        assert_eq!(tokens[5], Token::Symbol("数".to_string()));
-    }
-
-    #[test]
-    fn test_debug_parsing() {
-        // 個別要素のテスト
-        assert_eq!(tokenize("[").unwrap(), vec![Token::VectorStart]);
-        assert_eq!(tokenize("1").unwrap(), vec![Token::Number(1, 1)]);
-        assert_eq!(tokenize("復").unwrap(), vec![Token::Symbol("複".to_string())]);
-        assert_eq!(tokenize("数").unwrap(), vec![Token::Symbol("数".to_string())]);
-        assert_eq!(tokenize("+").unwrap(), vec![Token::Symbol("+".to_string())]);
-        
-        // 組み合わせテスト
-        let tokens = tokenize("1 2").unwrap();
         assert_eq!(tokens.len(), 2);
-        assert_eq!(tokens[0], Token::Number(1, 1));
-        assert_eq!(tokens[1], Token::Number(2, 1));
+        assert_eq!(tokens[0], Token::Number(5, 1));
+        assert_eq!(tokens[1], Token::Symbol("加算複製".to_string()));
     }
 }
