@@ -1,7 +1,7 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction};
 
-// 既存の操作
+// 既存の操作（変更なし）
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
@@ -155,32 +155,24 @@ pub fn op_select(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+// 修正版: op_count（数）- 要素をpopしてから要素数を返す
 pub fn op_count(interp: &mut Interpreter) -> Result<()> {
-    if let Some(val) = interp.workspace.last() {
-        match &val.val_type {
-            ValueType::Vector(v) => {
-                // ベクトルの要素数
-                let count = Value { 
-                    val_type: ValueType::Number(Fraction::new(v.len() as i64, 1)) 
-                };
-                interp.workspace.push(count);
-                Ok(())
-            },
-            _ => {
-                // ワークスペース全体の要素数
-                let count = Value { 
-                    val_type: ValueType::Number(Fraction::new(interp.workspace.len() as i64, 1)) 
-                };
-                interp.workspace.push(count);
-                Ok(())
-            }
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match val.val_type {
+        ValueType::Vector(v) => {
+            // ベクトルの要素数
+            let count = Value { 
+                val_type: ValueType::Number(Fraction::new(v.len() as i64, 1)) 
+            };
+            interp.workspace.push(count);
+            Ok(())
+        },
+        _ => {
+            // 非ベクトルの場合はエラー（明確化）
+            Err(AjisaiError::type_error("vector", "other type"))
         }
-    } else {
-        // 空のワークスペース
-        interp.workspace.push(Value { 
-            val_type: ValueType::Number(Fraction::new(0, 1)) 
-        });
-        Ok(())
     }
 }
 
@@ -249,7 +241,7 @@ pub fn op_do(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// ==================== 新機能（13個） ====================
+// ==================== 新機能（13個）（変更なし） ====================
 
 // 1. 結（JOIN/CONCAT）- Vector結合
 pub fn op_join(interp: &mut Interpreter) -> Result<()> {
