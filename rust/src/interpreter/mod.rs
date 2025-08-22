@@ -57,13 +57,20 @@ impl Interpreter {
     }
 
     fn process_line(&mut self, line: &str) -> Result<()> {
-        let tokens = crate::tokenizer::tokenize(line).map_err(error::AjisaiError::from)?;
-        if tokens.is_empty() {
-            return Ok(());
-        }
-
-        self.execute_tokens(&tokens)
+    let custom_word_names: HashSet<String> = self.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
+    
+    let tokens = crate::tokenizer::tokenize_with_custom_words(line, &custom_word_names)
+        .map_err(error::AjisaiError::from)?;
+        
+    if tokens.is_empty() {
+        return Ok(());
     }
+
+    self.execute_tokens(&tokens)
+}
 
     fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         use web_sys::console;
