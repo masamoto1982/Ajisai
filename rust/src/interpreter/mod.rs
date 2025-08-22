@@ -322,55 +322,50 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        match name {
-            // 算術演算（記号）
-            "+" => arithmetic::op_add(self),
-            "-" => arithmetic::op_sub(self),
-            "*" => arithmetic::op_mul(self),
-            "/" => arithmetic::op_div(self),
-            ">" => arithmetic::op_gt(self),
-            ">=" => arithmetic::op_ge(self),
-            "=" => arithmetic::op_eq(self),
-            
-            // 論理演算（漢字）
-            "否" | "NOT" => arithmetic::op_not(self),
-            "且" | "AND" => arithmetic::op_and(self),
-            "或" | "OR" => arithmetic::op_or(self),
-            
-            // 存在チェック
-            "無" | "NIL?" => arithmetic::op_nil_check(self),
-            "有" => arithmetic::op_some_check(self),
-            
-            // Vector操作（対称ペア）
-            "頭" | "HEAD" => vector_ops::op_head(self),
-            "尾" | "TAIL" => vector_ops::op_tail(self),
-            "接" | "CONS" => vector_ops::op_cons(self),
-            "離" => vector_ops::op_uncons(self),
-            "追" | "APPEND" => vector_ops::op_append(self),
-            "除" => vector_ops::op_remove_last(self),
-            
-            // Vector操作（その他）
-            "複" | "CLONE" => vector_ops::op_clone(self),
-            "選" | "SELECT" => vector_ops::op_select(self),
-
-            // 統一操作
-            "数" | "COUNT" | "LENGTH" => vector_ops::op_count(self),
-            "在" | "AT" | "PICK" | "NTH" => vector_ops::op_at(self),
-            "行" | "DO" | "SHOW" | "EXEC" => vector_ops::op_do(self),
-            
-            // 制御・定義
-            "定" | "DEF" => {
-                // DEFは特別処理済みなのでここには来ない
-                Err(error::AjisaiError::from("定 should be handled separately"))
-            },
-            "削" | "DEL" => control::op_del(self),
-            "跳" | "LEAP" => leap::op_leap(self),
-            
-            // システム
-            "忘" | "AMNESIA" => op_amnesia(self),
-            
-            _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
-        }
+         match name {
+        // 算術演算（記号）
+        "+" => arithmetic::op_add(self),
+        "-" => arithmetic::op_sub(self),
+        "*" => arithmetic::op_mul(self),
+        "/" => arithmetic::op_div(self),
+        ">" => arithmetic::op_gt(self),
+        ">=" => arithmetic::op_ge(self),
+        "=" => arithmetic::op_eq(self),
+        
+        // 論理演算
+        "NOT" => arithmetic::op_not(self),
+        "AND" => arithmetic::op_and(self),
+        "OR" => arithmetic::op_or(self),
+        
+        // 存在チェック
+        "NIL?" => arithmetic::op_nil_check(self),
+        "SOME?" => arithmetic::op_some_check(self),  // 新追加
+        
+        // Vector操作
+        "HEAD" => vector_ops::op_head(self),
+        "TAIL" => vector_ops::op_tail(self),
+        "CONS" => vector_ops::op_cons(self),
+        "UNCONS" => vector_ops::op_uncons(self),     // 新追加
+        "APPEND" => vector_ops::op_append(self),
+        "REMOVE_LAST" => vector_ops::op_remove_last(self), // 新追加
+        "CLONE" => vector_ops::op_clone(self),       // 新追加
+        "SELECT" => vector_ops::op_select(self),     // 新追加
+        "LENGTH" | "COUNT" => vector_ops::op_count(self),
+        "AT" | "NTH" => vector_ops::op_at(self),
+        "DO" => vector_ops::op_do(self),
+        
+        // 制御・定義
+        "DEF" => {
+            Err(error::AjisaiError::from("定 should be handled separately"))
+        },
+        "DEL" => control::op_del(self),
+        "LEAP" => leap::op_leap(self),
+        
+        // システム
+        "AMNESIA" => op_amnesia(self),
+        
+        _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
+    }
     }
 
     pub fn get_output(&mut self) -> String {
