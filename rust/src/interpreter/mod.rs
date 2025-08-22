@@ -347,7 +347,7 @@ impl Interpreter {
         "追" => vector_ops::op_append(self),
         "除" => vector_ops::op_remove_last(self),
         "複" => vector_ops::op_clone(self),
-        "選" => vector_ops::op_select(self),
+        "選" => vector_ops::op_select(self), // ここを追加
         "数" => vector_ops::op_count(self),
         "在" => vector_ops::op_at(self),
         "行" => vector_ops::op_do(self),
