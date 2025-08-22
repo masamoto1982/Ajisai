@@ -140,15 +140,15 @@ pub fn op_select(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::WorkspaceUnderflow);
     }
     
-    let condition = interp.workspace.pop().unwrap();
-    let b = interp.workspace.pop().unwrap();
-    let a = interp.workspace.pop().unwrap();
+    let condition = interp.workspace.pop().unwrap(); // 3番目（最後）
+    let b = interp.workspace.pop().unwrap();         // 2番目  
+    let a = interp.workspace.pop().unwrap();         // 1番目
     
     let result = match condition.val_type {
-        ValueType::Boolean(true) => a,
-        ValueType::Boolean(false) => b,
-        ValueType::Nil => b,
-        _ => a,  // nilでもfalseでもない場合はtrueとして扱う
+        ValueType::Boolean(true) => a,  // trueなら最初の値
+        ValueType::Boolean(false) => b, // falseなら2番目の値
+        ValueType::Nil => b,            // nilはfalseとして扱う
+        _ => a,                         // その他はtrueとして扱う
     };
     
     interp.workspace.push(result);
