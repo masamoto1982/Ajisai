@@ -117,7 +117,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     Ok(tokens)
 }
 
-// 自然日本語解析（辞書ベース文字抽出＋送り仮名対応）
+// 自然日本語解析（漢字そのまま処理）
 fn process_natural_japanese(word: &str) -> Vec<Token> {
     // 基本的なワード処理
     match word {
@@ -153,7 +153,7 @@ fn process_natural_japanese(word: &str) -> Vec<Token> {
             } else { 
                 match parts[0].parse::<i64>() {
                     Ok(n) => n,
-                    Err(_) => return vec![Token::Symbol(word.to_uppercase())],
+                    Err(_) => return vec![Token::Symbol(word.to_string())],
                 }
             };
             let decimal_part = if parts[1].is_empty() { 
@@ -161,7 +161,7 @@ fn process_natural_japanese(word: &str) -> Vec<Token> {
             } else {
                 match parts[1].parse::<i64>() {
                     Ok(n) => n,
-                    Err(_) => return vec![Token::Symbol(word.to_uppercase())],
+                    Err(_) => return vec![Token::Symbol(word.to_string())],
                 }
             };
             
@@ -173,12 +173,11 @@ fn process_natural_japanese(word: &str) -> Vec<Token> {
         }
     }
 
-    // 辞書ベース文字抽出（将来実装）
-    // 現在は漢字一文字＋送り仮名対応のみ実装
+    // 辞書ベース文字抽出（漢字そのまま処理）
     extract_dictionary_words(word)
 }
 
-// 辞書ベース文字抽出＋送り仮名処理
+// 辞書ベース文字抽出＋送り仮名処理（漢字そのまま版）
 fn extract_dictionary_words(text: &str) -> Vec<Token> {
     let mut result = Vec::new();
     let chars: Vec<char> = text.chars().collect();
@@ -187,9 +186,9 @@ fn extract_dictionary_words(text: &str) -> Vec<Token> {
     while i < chars.len() {
         let mut found = false;
 
-        // 漢字一文字の組み込みワードをチェック（送り仮名対応）
+        // 漢字一文字の組み込みワードをチェック（送り仮名対応、漢字そのまま）
         if let Some(kanji_word) = extract_kanji_builtin(&chars[i..]) {
-            result.push(Token::Symbol(kanji_word.to_uppercase()));
+            result.push(Token::Symbol(kanji_word)); // 漢字そのまま返す
             i += skip_okurigana(&chars[i..]);
             found = true;
         }
@@ -209,7 +208,7 @@ fn extract_dictionary_words(text: &str) -> Vec<Token> {
     result
 }
 
-// 漢字の組み込みワード抽出
+// 漢字の組み込みワード抽出（漢字そのまま返す）
 fn extract_kanji_builtin(chars: &[char]) -> Option<String> {
     if chars.is_empty() {
         return None;
@@ -218,37 +217,37 @@ fn extract_kanji_builtin(chars: &[char]) -> Option<String> {
     let first_char = chars[0];
     let kanji_str = first_char.to_string();
 
-    // 組み込みワードの漢字かチェック（将来的に辞書から動的取得）
+    // 組み込みワードの漢字かチェック（漢字そのまま返す）
     match kanji_str.as_str() {
         // 論理演算
-        "否" => Some("NOT".to_string()),
-        "且" => Some("AND".to_string()),
-        "或" => Some("OR".to_string()),
+        "否" => Some("否".to_string()),
+        "且" => Some("且".to_string()),
+        "或" => Some("或".to_string()),
         
         // 存在チェック
-        "無" => Some("NIL?".to_string()),
-        "有" => Some("SOME?".to_string()),
+        "無" => Some("無".to_string()),
+        "有" => Some("有".to_string()),
         
         // Vector操作
-        "頭" => Some("HEAD".to_string()),
-        "尾" => Some("TAIL".to_string()),
-        "接" => Some("CONS".to_string()),
-        "離" => Some("UNCONS".to_string()),
-        "追" => Some("APPEND".to_string()),
-        "除" => Some("REMOVE_LAST".to_string()),
-        "複" => Some("CLONE".to_string()),
-        "選" => Some("SELECT".to_string()),
+        "頭" => Some("頭".to_string()),
+        "尾" => Some("尾".to_string()),
+        "接" => Some("接".to_string()),
+        "離" => Some("離".to_string()),
+        "追" => Some("追".to_string()),
+        "除" => Some("除".to_string()),
+        "複" => Some("複".to_string()),
+        "選" => Some("選".to_string()),
         
         // 統一操作
-        "数" => Some("COUNT".to_string()),
-        "在" => Some("AT".to_string()),
-        "行" => Some("DO".to_string()),
+        "数" => Some("数".to_string()),
+        "在" => Some("在".to_string()),
+        "行" => Some("行".to_string()),
         
         // 制御・定義
-        "定" => Some("DEF".to_string()),
-        "削" => Some("DEL".to_string()),
-        "跳" => Some("LEAP".to_string()),
-        "忘" => Some("AMNESIA".to_string()),
+        "定" => Some("定".to_string()),
+        "削" => Some("削".to_string()),
+        "跳" => Some("跳".to_string()),
+        "忘" => Some("忘".to_string()),
         
         _ => None,
     }
