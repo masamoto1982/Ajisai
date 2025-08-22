@@ -78,26 +78,30 @@ impl Interpreter {
             
             match &tokens[i] {
                 Token::Number(num, den) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                    });
-                    console::log_1(&format!("Added number: {}/{}", num, den).into());
-                    i += 1;
-                },
-                Token::String(s) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::String(s.clone()),
-                    });
-                    console::log_1(&format!("Added string: {}", s).into());
-                    i += 1;
-                },
-                Token::Boolean(b) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Boolean(*b),
-                    });
-                    console::log_1(&format!("Added boolean: {}", b).into());
-                    i += 1;
-                },
+    let num_val = *num;
+    let den_val = *den;
+    self.workspace.push(Value {
+        val_type: ValueType::Number(crate::types::Fraction::new(num_val, den_val)),
+    });
+    console::log_1(&format!("Added number: {}/{}", num_val, den_val).into());
+    i += 1;
+},
+Token::String(s) => {
+    let string_val = s.clone();
+    self.workspace.push(Value {
+        val_type: ValueType::String(string_val.clone()),
+    });
+    console::log_1(&format!("Added string: {}", string_val).into());
+    i += 1;
+},
+Token::Boolean(b) => {
+    let bool_val = *b;
+    self.workspace.push(Value {
+        val_type: ValueType::Boolean(bool_val),
+    });
+    console::log_1(&format!("Added boolean: {}", bool_val).into());
+    i += 1;
+},
                 Token::Nil => {
                     self.workspace.push(Value {
                         val_type: ValueType::Nil,
@@ -106,14 +110,15 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::VectorStart => {
-                    console::log_1(&format!("Processing vector...").into());
-                    let (vector_values, consumed) = self.collect_vector(tokens, i)?;
-                    self.workspace.push(Value {
-                        val_type: ValueType::Vector(vector_values),
-                    });
-                    console::log_1(&format!("Added vector with {} elements, consumed {} tokens", vector_values.len(), consumed).into());
-                    i += consumed;
-                },
+    console::log_1(&format!("Processing vector...").into());
+    let (vector_values, consumed) = self.collect_vector(tokens, i)?;
+    let vector_len = vector_values.len(); // 長さを先に記録
+    self.workspace.push(Value {
+        val_type: ValueType::Vector(vector_values),
+    });
+    console::log_1(&format!("Added vector with {} elements, consumed {} tokens", vector_len, consumed).into());
+    i += consumed;
+},
                 Token::Symbol(name) => {
                     console::log_1(&format!("Processing symbol: {}", name).into());
                     
@@ -397,77 +402,82 @@ impl Interpreter {
     }
 
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-        use web_sys::console;
-        console::log_1(&format!("=== CUSTOM_WORD EXECUTION START ===").into());
-        console::log_1(&format!("Tokens to execute: {:?}", tokens).into());
-        console::log_1(&format!("Workspace before: {} items", self.workspace.len()).into());
+    use web_sys::console;
+    console::log_1(&format!("=== CUSTOM_WORD EXECUTION START ===").into());
+    console::log_1(&format!("Tokens to execute: {:?}", tokens).into());
+    console::log_1(&format!("Workspace before: {} items", self.workspace.len()).into());
+    
+    // カスタムワードは execute_tokens を再利用するのではなく、独自実装
+    let mut i = 0;
+    while i < tokens.len() {
+        console::log_1(&format!("--- Custom word token[{}]: {:?} ---", i, tokens[i]).into());
+        console::log_1(&format!("Workspace before token[{}]: {} items", i, self.workspace.len()).into());
         
-        // カスタムワードは execute_tokens を再利用するのではなく、独自実装
-        let mut i = 0;
-        while i < tokens.len() {
-            console::log_1(&format!("--- Custom word token[{}]: {:?} ---", i, tokens[i]).into());
-            console::log_1(&format!("Workspace before token[{}]: {} items", i, self.workspace.len()).into());
-            
-            match &tokens[i] {
-                Token::Number(num, den) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                    });
-                    console::log_1(&format!("Added number: {}/{}", num, den).into());
-                },
-                Token::String(s) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::String(s.clone()),
-                    });
-                    console::log_1(&format!("Added string: {}", s).into());
-                },
-                Token::Boolean(b) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Boolean(*b),
-                    });
-                    console::log_1(&format!("Added boolean: {}", b).into());
-                },
-                Token::Nil => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Nil,
-                    });
-                    console::log_1(&format!("Added nil").into());
-                },
-                Token::Symbol(name) => {
-                    console::log_1(&format!("Executing symbol in custom word: {}", name).into());
-                    match self.execute_word(name) {
-                        Ok(()) => {
-                            console::log_1(&format!("Symbol '{}' executed successfully", name).into());
-                        },
-                        Err(e) => {
-                            console::log_1(&format!("Error executing symbol '{}': {}", name, e).into());
-                            return Err(e);
-                        }
+        match &tokens[i] {
+            Token::Number(num, den) => {
+                let num_val = *num; // 値をコピー
+                let den_val = *den; // 値をコピー
+                self.workspace.push(Value {
+                    val_type: ValueType::Number(crate::types::Fraction::new(num_val, den_val)),
+                });
+                console::log_1(&format!("Added number: {}/{}", num_val, den_val).into());
+            },
+            Token::String(s) => {
+                let string_val = s.clone(); // クローン
+                self.workspace.push(Value {
+                    val_type: ValueType::String(string_val.clone()),
+                });
+                console::log_1(&format!("Added string: {}", string_val).into());
+            },
+            Token::Boolean(b) => {
+                let bool_val = *b; // 値をコピー
+                self.workspace.push(Value {
+                    val_type: ValueType::Boolean(bool_val),
+                });
+                console::log_1(&format!("Added boolean: {}", bool_val).into());
+            },
+            Token::Nil => {
+                self.workspace.push(Value {
+                    val_type: ValueType::Nil,
+                });
+                console::log_1(&format!("Added nil").into());
+            },
+            Token::Symbol(name) => {
+                let symbol_name = name.clone(); // クローン
+                console::log_1(&format!("Executing symbol in custom word: {}", symbol_name).into());
+                match self.execute_word(&symbol_name) {
+                    Ok(()) => {
+                        console::log_1(&format!("Symbol '{}' executed successfully", symbol_name).into());
+                    },
+                    Err(e) => {
+                        console::log_1(&format!("Error executing symbol '{}': {}", symbol_name, e).into());
+                        return Err(e);
                     }
-                },
-                Token::VectorStart => {
-                    console::log_1(&format!("Vector processing not implemented in custom words").into());
-                    return Err(error::AjisaiError::from("Vector literals not supported in custom words"));
-                },
-                Token::VectorEnd => {
-                    console::log_1(&format!("Unexpected vector end").into());
-                    return Err(error::AjisaiError::from("Unexpected vector end"));
-                },
-            }
-            
-            console::log_1(&format!("Workspace after token[{}]: {} items", i, self.workspace.len()).into());
-            if let Some(top) = self.workspace.last() {
-                console::log_1(&format!("Current top value: {:?}", top).into());
-            }
-            
-            i += 1;
+                }
+            },
+            Token::VectorStart => {
+                console::log_1(&format!("Vector processing not implemented in custom words").into());
+                return Err(error::AjisaiError::from("Vector literals not supported in custom words"));
+            },
+            Token::VectorEnd => {
+                console::log_1(&format!("Unexpected vector end").into());
+                return Err(error::AjisaiError::from("Unexpected vector end"));
+            },
         }
         
-        console::log_1(&format!("=== CUSTOM_WORD EXECUTION END ===").into());
-        console::log_1(&format!("Final workspace: {} items", self.workspace.len()).into());
+        console::log_1(&format!("Workspace after token[{}]: {} items", i, self.workspace.len()).into());
+        if let Some(top) = self.workspace.last() {
+            console::log_1(&format!("Current top value: {:?}", top).into());
+        }
         
-        Ok(())
+        i += 1;
     }
+    
+    console::log_1(&format!("=== CUSTOM_WORD EXECUTION END ===").into());
+    console::log_1(&format!("Final workspace: {} items", self.workspace.len()).into());
+    
+    Ok(())
+}
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
