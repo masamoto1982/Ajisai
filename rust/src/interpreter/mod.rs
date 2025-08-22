@@ -369,7 +369,8 @@ impl Interpreter {
         
         // 制御・システム（漢字）
         "定" => {
-            Err(error::AjisaiError::from("定 should be handled separately"))
+            // 定は特別処理が必要
+            self.handle_def()
         },
         "削" => control::op_del(self),
         "跳" => leap::op_leap(self),
