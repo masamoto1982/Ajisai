@@ -322,7 +322,7 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-         match name {
+    match name {
         // 算術演算（記号）
         "+" => arithmetic::op_add(self),
         "-" => arithmetic::op_sub(self),
@@ -339,17 +339,17 @@ impl Interpreter {
         
         // 存在チェック
         "NIL?" => arithmetic::op_nil_check(self),
-        "SOME?" => arithmetic::op_some_check(self),  // 新追加
+        "SOME?" => arithmetic::op_some_check(self),
         
         // Vector操作
         "HEAD" => vector_ops::op_head(self),
         "TAIL" => vector_ops::op_tail(self),
         "CONS" => vector_ops::op_cons(self),
-        "UNCONS" => vector_ops::op_uncons(self),     // 新追加
+        "UNCONS" => vector_ops::op_uncons(self),
         "APPEND" => vector_ops::op_append(self),
-        "REMOVE_LAST" => vector_ops::op_remove_last(self), // 新追加
-        "CLONE" => vector_ops::op_clone(self),       // 新追加
-        "SELECT" => vector_ops::op_select(self),     // 新追加
+        "REMOVE_LAST" => vector_ops::op_remove_last(self),
+        "CLONE" => vector_ops::op_clone(self),
+        "SELECT" => vector_ops::op_select(self),
         "LENGTH" | "COUNT" => vector_ops::op_count(self),
         "AT" | "NTH" => vector_ops::op_at(self),
         "DO" => vector_ops::op_do(self),
@@ -366,7 +366,7 @@ impl Interpreter {
         
         _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
     }
-    }
+}
 
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
