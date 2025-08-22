@@ -135,14 +135,15 @@ pub fn op_clone(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+// 修正版: op_select（選）- RPNに準拠
 pub fn op_select(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
     }
     
-    let condition = interp.workspace.pop().unwrap(); // 3番目（最後）
-    let b = interp.workspace.pop().unwrap();         // 2番目  
-    let a = interp.workspace.pop().unwrap();         // 1番目
+    let condition = interp.workspace.pop().unwrap(); // 3番目（条件）
+    let b = interp.workspace.pop().unwrap();         // 2番目（false時の値）  
+    let a = interp.workspace.pop().unwrap();         // 1番目（true時の値）
     
     let result = match condition.val_type {
         ValueType::Boolean(true) => a,  // trueなら最初の値
@@ -176,13 +177,14 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
+// 修正版: op_at（在）- RPNに準拠
 pub fn op_at(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
     }
     
-    let target = interp.workspace.pop().unwrap();
-    let index_val = interp.workspace.pop().unwrap();
+    let index_val = interp.workspace.pop().unwrap(); // 2番目（インデックス）
+    let target = interp.workspace.pop().unwrap();    // 1番目（ベクトル）
     
     let index = match index_val.val_type {
         ValueType::Number(n) if n.denominator == 1 => n.numerator,
