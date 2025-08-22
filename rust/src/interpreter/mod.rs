@@ -66,53 +66,87 @@ impl Interpreter {
     }
 
     fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        use web_sys::console;
+        console::log_1(&format!("=== EXECUTE_TOKENS START ===").into());
+        console::log_1(&format!("Tokens: {:?}", tokens).into());
+        console::log_1(&format!("Initial workspace: {} items", self.workspace.len()).into());
+        
         let mut i = 0;
         while i < tokens.len() {
+            console::log_1(&format!("--- Processing token[{}]: {:?} ---", i, tokens[i]).into());
+            console::log_1(&format!("Workspace before: {} items", self.workspace.len()).into());
+            
             match &tokens[i] {
                 Token::Number(num, den) => {
                     self.workspace.push(Value {
                         val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
                     });
+                    console::log_1(&format!("Added number: {}/{}", num, den).into());
                     i += 1;
                 },
                 Token::String(s) => {
                     self.workspace.push(Value {
                         val_type: ValueType::String(s.clone()),
                     });
+                    console::log_1(&format!("Added string: {}", s).into());
                     i += 1;
                 },
                 Token::Boolean(b) => {
                     self.workspace.push(Value {
                         val_type: ValueType::Boolean(*b),
                     });
+                    console::log_1(&format!("Added boolean: {}", b).into());
                     i += 1;
                 },
                 Token::Nil => {
                     self.workspace.push(Value {
                         val_type: ValueType::Nil,
                     });
+                    console::log_1(&format!("Added nil").into());
                     i += 1;
                 },
                 Token::VectorStart => {
+                    console::log_1(&format!("Processing vector...").into());
                     let (vector_values, consumed) = self.collect_vector(tokens, i)?;
                     self.workspace.push(Value {
                         val_type: ValueType::Vector(vector_values),
                     });
+                    console::log_1(&format!("Added vector with {} elements, consumed {} tokens", vector_values.len(), consumed).into());
                     i += consumed;
                 },
                 Token::Symbol(name) => {
+                    console::log_1(&format!("Processing symbol: {}", name).into());
+                    
                     if name == "定" || name == "DEF" {
+                        console::log_1(&format!("Handling DEF").into());
                         self.handle_def()?;
                     } else {
-                        self.execute_word(name)?;
+                        console::log_1(&format!("Executing word: {}", name).into());
+                        match self.execute_word(name) {
+                            Ok(()) => {
+                                console::log_1(&format!("Word '{}' executed successfully", name).into());
+                            },
+                            Err(e) => {
+                                console::log_1(&format!("Error executing word '{}': {}", name, e).into());
+                                return Err(e);
+                            }
+                        }
                     }
                     i += 1;
                 },
                 Token::VectorEnd => {
+                    console::log_1(&format!("Unexpected vector end").into());
                     return Err(error::AjisaiError::from("Unexpected vector end"));
                 },
             }
+            
+            console::log_1(&format!("Workspace after: {} items", self.workspace.len()).into());
+            if !self.workspace.is_empty() {
+                console::log_1(&format!("Top value: {:?}", self.workspace.last().unwrap()).into());
+            }
         }
+        
+        console::log_1(&format!("=== EXECUTE_TOKENS END ===").into());
         Ok(())
     }
 
@@ -165,12 +199,19 @@ impl Interpreter {
     }
 
     fn handle_def(&mut self) -> Result<()> {
+        use web_sys::console;
+        console::log_1(&format!("=== HANDLE_DEF START ===").into());
+        console::log_1(&format!("Workspace size: {}", self.workspace.len()).into());
+        
         if self.workspace.len() < 2 {
             return Err(error::AjisaiError::from("定 requires vector and name"));
         }
 
         let name_val = self.workspace.pop().unwrap();
         let code_val = self.workspace.pop().unwrap();
+        
+        console::log_1(&format!("Name value: {:?}", name_val).into());
+        console::log_1(&format!("Code value: {:?}", code_val).into());
 
         let name = match name_val.val_type {
             ValueType::String(s) => s.to_uppercase(),
@@ -178,7 +219,12 @@ impl Interpreter {
         };
 
         let tokens = match code_val.val_type {
-            ValueType::Vector(v) => self.vector_to_tokens(v)?,
+            ValueType::Vector(v) => {
+                console::log_1(&format!("Converting vector to tokens: {:?}", v).into());
+                let result = self.vector_to_tokens(v)?;
+                console::log_1(&format!("Converted to tokens: {:?}", result).into());
+                result
+            },
             _ => return Err(error::AjisaiError::from("定 requires vector")),
         };
 
@@ -225,15 +271,28 @@ impl Interpreter {
             category: None,
         });
 
+        console::log_1(&format!("Word '{}' defined successfully", name).into());
+        console::log_1(&format!("=== HANDLE_DEF END ===").into());
+
         self.append_output(&format!("Defined: {}\n", name));
         Ok(())
     }
 
     pub fn vector_to_tokens(&self, vector: Vec<Value>) -> Result<Vec<Token>> {
+        use web_sys::console;
+        console::log_1(&format!("=== VECTOR_TO_TOKENS START ===").into());
+        console::log_1(&format!("Input vector: {:?}", vector).into());
+        
         let mut tokens = Vec::new();
-        for value in vector {
-            tokens.push(self.value_to_token(value)?);
+        for (i, value) in vector.iter().enumerate() {
+            console::log_1(&format!("Converting value[{}]: {:?}", i, value).into());
+            let token = self.value_to_token(value.clone())?;
+            console::log_1(&format!("Converted to token[{}]: {:?}", i, token).into());
+            tokens.push(token);
         }
+        
+        console::log_1(&format!("Final tokens: {:?}", tokens).into());
+        console::log_1(&format!("=== VECTOR_TO_TOKENS END ===").into());
         Ok(tokens)
     }
 
@@ -277,17 +336,37 @@ impl Interpreter {
     }
 
     fn execute_word(&mut self, name: &str) -> Result<()> {
+        use web_sys::console;
+        console::log_1(&format!("=== EXECUTE_WORD START: {} ===", name).into());
+        
         if let Some(def) = self.dictionary.get(name).cloned() {
             if def.is_builtin {
-                self.execute_builtin(name)
+                console::log_1(&format!("Executing builtin word: {}", name).into());
+                let result = self.execute_builtin(name);
+                match &result {
+                    Ok(()) => console::log_1(&format!("Builtin '{}' completed successfully", name).into()),
+                    Err(e) => console::log_1(&format!("Builtin '{}' failed: {}", name, e).into()),
+                }
+                console::log_1(&format!("=== EXECUTE_WORD END: {} ===", name).into());
+                result
             } else {
+                console::log_1(&format!("Executing custom word: {}", name).into());
+                console::log_1(&format!("Custom word tokens: {:?}", def.tokens).into());
                 self.call_stack.push(name.to_string());
                 let result = self.execute_custom_word(&def.tokens);
                 self.call_stack.pop();
+                match &result {
+                    Ok(()) => console::log_1(&format!("Custom word '{}' completed successfully", name).into()),
+                    Err(e) => console::log_1(&format!("Custom word '{}' failed: {}", name, e).into()),
+                }
+                console::log_1(&format!("=== EXECUTE_WORD END: {} ===", name).into());
                 result.map_err(|e| e.with_context(&self.call_stack))
             }
         } else {
-            Err(error::AjisaiError::UnknownWord(name.to_string()))
+            let error = error::AjisaiError::UnknownWord(name.to_string());
+            console::log_1(&format!("Unknown word: {}", name).into());
+            console::log_1(&format!("=== EXECUTE_WORD END: {} ===", name).into());
+            Err(error)
         }
     }
 
@@ -318,7 +397,76 @@ impl Interpreter {
     }
 
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-        self.execute_tokens(tokens)
+        use web_sys::console;
+        console::log_1(&format!("=== CUSTOM_WORD EXECUTION START ===").into());
+        console::log_1(&format!("Tokens to execute: {:?}", tokens).into());
+        console::log_1(&format!("Workspace before: {} items", self.workspace.len()).into());
+        
+        // カスタムワードは execute_tokens を再利用するのではなく、独自実装
+        let mut i = 0;
+        while i < tokens.len() {
+            console::log_1(&format!("--- Custom word token[{}]: {:?} ---", i, tokens[i]).into());
+            console::log_1(&format!("Workspace before token[{}]: {} items", i, self.workspace.len()).into());
+            
+            match &tokens[i] {
+                Token::Number(num, den) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                    });
+                    console::log_1(&format!("Added number: {}/{}", num, den).into());
+                },
+                Token::String(s) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::String(s.clone()),
+                    });
+                    console::log_1(&format!("Added string: {}", s).into());
+                },
+                Token::Boolean(b) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Boolean(*b),
+                    });
+                    console::log_1(&format!("Added boolean: {}", b).into());
+                },
+                Token::Nil => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Nil,
+                    });
+                    console::log_1(&format!("Added nil").into());
+                },
+                Token::Symbol(name) => {
+                    console::log_1(&format!("Executing symbol in custom word: {}", name).into());
+                    match self.execute_word(name) {
+                        Ok(()) => {
+                            console::log_1(&format!("Symbol '{}' executed successfully", name).into());
+                        },
+                        Err(e) => {
+                            console::log_1(&format!("Error executing symbol '{}': {}", name, e).into());
+                            return Err(e);
+                        }
+                    }
+                },
+                Token::VectorStart => {
+                    console::log_1(&format!("Vector processing not implemented in custom words").into());
+                    return Err(error::AjisaiError::from("Vector literals not supported in custom words"));
+                },
+                Token::VectorEnd => {
+                    console::log_1(&format!("Unexpected vector end").into());
+                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                },
+            }
+            
+            console::log_1(&format!("Workspace after token[{}]: {} items", i, self.workspace.len()).into());
+            if let Some(top) = self.workspace.last() {
+                console::log_1(&format!("Current top value: {:?}", top).into());
+            }
+            
+            i += 1;
+        }
+        
+        console::log_1(&format!("=== CUSTOM_WORD EXECUTION END ===").into());
+        console::log_1(&format!("Final workspace: {} items", self.workspace.len()).into());
+        
+        Ok(())
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
@@ -372,7 +520,7 @@ impl Interpreter {
                 Err(error::AjisaiError::from("定 should be handled separately"))
             },
             "削" => control::op_del(self),
-            "成" => leap::op_leap(self),  // 「跳」→「成」に変更
+            "成" => leap::op_leap(self),
             "忘" => op_amnesia(self),
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
