@@ -109,6 +109,75 @@ pub fn op_append(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
+// 新機能: UNCONS（離）
+pub fn op_uncons(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match val.val_type {
+        ValueType::Vector(v) => {
+            if v.is_empty() {
+                return Err(AjisaiError::from("離: 空のベクトルです"));
+            }
+            interp.workspace.push(v[0].clone());  // 先頭要素
+            interp.workspace.push(Value { 
+                val_type: ValueType::Vector(v[1..].to_vec()) 
+            });  // 残り
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 新機能: REMOVE_LAST（除）
+pub fn op_remove_last(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match val.val_type {
+        ValueType::Vector(mut v) => {
+            if v.is_empty() {
+                return Err(AjisaiError::from("除: 空のベクトルです"));
+            }
+            let last_elem = v.pop().unwrap();
+            interp.workspace.push(Value { val_type: ValueType::Vector(v) });  // 残り
+            interp.workspace.push(last_elem);  // 除去した要素
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 新機能: CLONE（複）
+pub fn op_clone(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.workspace.last()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    interp.workspace.push(val.clone());
+    Ok(())
+}
+
+// 新機能: SELECT（選）
+pub fn op_select(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 3 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let condition = interp.workspace.pop().unwrap();
+    let b = interp.workspace.pop().unwrap();
+    let a = interp.workspace.pop().unwrap();
+    
+    let result = match condition.val_type {
+        ValueType::Boolean(true) => a,
+        ValueType::Boolean(false) => b,
+        ValueType::Nil => b,
+        _ => a,  // nilでもfalseでもない場合はtrueとして扱う
+    };
+    
+    interp.workspace.push(result);
+    Ok(())
+}
+
 // 新機能: REMOVE_LAST（除）
 pub fn op_remove_last(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
