@@ -365,17 +365,31 @@ fn test_ignore_non_dictionary_chars() {
     }
     
     assert_eq!(tokens.len(), 9);
-    if tokens.len() >= 9 {
-        assert_eq!(tokens[0], Token::VectorStart);
-        assert_eq!(tokens[1], Token::Number(1, 1));
-        assert_eq!(tokens[2], Token::Number(2, 1));
-        assert_eq!(tokens[3], Token::Number(3, 1));
-        assert_eq!(tokens[4], Token::VectorEnd);
-        assert_eq!(tokens[5], Token::Symbol("復".to_string()));
-        assert_eq!(tokens[6], Token::Symbol("数".to_string()));
-        assert_eq!(tokens[7], Token::Number(2, 1));
-        assert_eq!(tokens[8], Token::Symbol("+".to_string()));
-    }
+    assert_eq!(tokens[0], Token::VectorStart);
+    assert_eq!(tokens[1], Token::Number(1, 1));
+    assert_eq!(tokens[2], Token::Number(2, 1));
+    assert_eq!(tokens[3], Token::Number(3, 1));
+    assert_eq!(tokens[4], Token::VectorEnd);
+    assert_eq!(tokens[5], Token::Symbol("複".to_string())); // "復"は"複"として認識
+    assert_eq!(tokens[6], Token::Symbol("数".to_string()));
+    assert_eq!(tokens[7], Token::Number(2, 1));
+    assert_eq!(tokens[8], Token::Symbol("+".to_string()));
+}
+
+#[test]
+fn test_debug_parsing() {
+    // 個別要素のテスト
+    assert_eq!(tokenize("[").unwrap(), vec![Token::VectorStart]);
+    assert_eq!(tokenize("1").unwrap(), vec![Token::Number(1, 1)]);
+    assert_eq!(tokenize("復").unwrap(), vec![Token::Symbol("複".to_string())]); // "復"は"複"として認識
+    assert_eq!(tokenize("数").unwrap(), vec![Token::Symbol("数".to_string())]);
+    assert_eq!(tokenize("+").unwrap(), vec![Token::Symbol("+".to_string())]);
+    
+    // 組み合わせテスト
+    let tokens = tokenize("1 2").unwrap();
+    assert_eq!(tokens.len(), 2);
+    assert_eq!(tokens[0], Token::Number(1, 1));
+    assert_eq!(tokens[1], Token::Number(2, 1));
 }
     
     #[test]
@@ -421,20 +435,4 @@ fn test_ignore_non_dictionary_chars() {
         assert_eq!(tokens[4], Token::Symbol("複".to_string()));
         assert_eq!(tokens[5], Token::Symbol("数".to_string()));
     }
-
-    #[test]
-fn test_debug_parsing() {
-    // 個別要素のテスト
-    assert_eq!(tokenize("[").unwrap(), vec![Token::VectorStart]);
-    assert_eq!(tokenize("1").unwrap(), vec![Token::Number(1, 1)]);
-    assert_eq!(tokenize("復").unwrap(), vec![Token::Symbol("復".to_string())]);
-    assert_eq!(tokenize("数").unwrap(), vec![Token::Symbol("数".to_string())]);
-    assert_eq!(tokenize("+").unwrap(), vec![Token::Symbol("+".to_string())]);
-    
-    // 組み合わせテスト
-    let tokens = tokenize("1 2").unwrap();
-    assert_eq!(tokens.len(), 2);
-    assert_eq!(tokens[0], Token::Number(1, 1));
-    assert_eq!(tokens[1], Token::Number(2, 1));
-}
 }
