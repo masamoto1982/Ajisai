@@ -322,63 +322,62 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-    match name {
-        // 算術演算（記号）
-        "+" => arithmetic::op_add(self),
-        "-" => arithmetic::op_sub(self),
-        "*" => arithmetic::op_mul(self),
-        "/" => arithmetic::op_div(self),
-        ">" => arithmetic::op_gt(self),
-        ">=" => arithmetic::op_ge(self),
-        "=" => arithmetic::op_eq(self),
-        
-        // 論理・存在（漢字）
-        "否" => arithmetic::op_not(self),
-        "且" => arithmetic::op_and(self),
-        "或" => arithmetic::op_or(self),
-        "無" => arithmetic::op_nil_check(self),
-        "有" => arithmetic::op_some_check(self),
-        
-        // Vector操作（既存・漢字）
-        "頭" => vector_ops::op_head(self),
-        "尾" => vector_ops::op_tail(self),
-        "接" => vector_ops::op_cons(self),
-        "離" => vector_ops::op_uncons(self),
-        "追" => vector_ops::op_append(self),
-        "除" => vector_ops::op_remove_last(self),
-        "複" => vector_ops::op_clone(self),
-        "選" => vector_ops::op_select(self), // ここを追加
-        "数" => vector_ops::op_count(self),
-        "在" => vector_ops::op_at(self),
-        "行" => vector_ops::op_do(self),
-        
-        // Vector操作（新機能・漢字）
-        "結" => vector_ops::op_join(self),
-        "切" => vector_ops::op_split(self),
-        "反" => vector_ops::op_reverse(self),
-        "挿" => vector_ops::op_insert(self),
-        "消" => vector_ops::op_delete(self),
-        "探" => vector_ops::op_find(self),
-        "含" => vector_ops::op_contains(self),
-        "換" => vector_ops::op_replace(self),
-        "抽" => vector_ops::op_filter(self),
-        "変" => vector_ops::op_map(self),
-        "畳" => vector_ops::op_fold(self),
-        "並" => vector_ops::op_sort(self),
-        "空" => vector_ops::op_empty(self),
-        
-        // 制御・システム（漢字）
-        "定" => {
-            // 定は特別処理が必要
-            self.handle_def()
-        },
-        "削" => control::op_del(self),
-        "跳" => leap::op_leap(self),
-        "忘" => op_amnesia(self),
-        
-        _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
+        match name {
+            // 算術演算（記号）
+            "+" => arithmetic::op_add(self),
+            "-" => arithmetic::op_sub(self),
+            "*" => arithmetic::op_mul(self),
+            "/" => arithmetic::op_div(self),
+            ">" => arithmetic::op_gt(self),
+            ">=" => arithmetic::op_ge(self),
+            "=" => arithmetic::op_eq(self),
+            
+            // 論理・存在（漢字）
+            "否" => arithmetic::op_not(self),
+            "且" => arithmetic::op_and(self),
+            "或" => arithmetic::op_or(self),
+            "無" => arithmetic::op_nil_check(self),
+            "有" => arithmetic::op_some_check(self),
+            
+            // Vector操作（既存・漢字）
+            "頭" => vector_ops::op_head(self),
+            "尾" => vector_ops::op_tail(self),
+            "接" => vector_ops::op_cons(self),
+            "離" => vector_ops::op_uncons(self),
+            "追" => vector_ops::op_append(self),
+            "除" => vector_ops::op_remove_last(self),
+            "複" => vector_ops::op_clone(self),
+            "選" => vector_ops::op_select(self),
+            "数" => vector_ops::op_count(self),
+            "在" => vector_ops::op_at(self),
+            "行" => vector_ops::op_do(self),
+            
+            // Vector操作（新機能・漢字）
+            "結" => vector_ops::op_join(self),
+            "切" => vector_ops::op_split(self),
+            "反" => vector_ops::op_reverse(self),
+            "挿" => vector_ops::op_insert(self),
+            "消" => vector_ops::op_delete(self),
+            "探" => vector_ops::op_find(self),
+            "含" => vector_ops::op_contains(self),
+            "換" => vector_ops::op_replace(self),
+            "抽" => vector_ops::op_filter(self),
+            "変" => vector_ops::op_map(self),
+            "畳" => vector_ops::op_fold(self),
+            "並" => vector_ops::op_sort(self),
+            "空" => vector_ops::op_empty(self),
+            
+            // 制御・システム（漢字）
+            "定" => {
+                Err(error::AjisaiError::from("定 should be handled separately"))
+            },
+            "削" => control::op_del(self),
+            "成" => leap::op_leap(self),  // 「跳」→「成」に変更
+            "忘" => op_amnesia(self),
+            
+            _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
+        }
     }
-}
 
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
