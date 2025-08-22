@@ -352,10 +352,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_ignore_non_dictionary_chars() {
-        let tokens = tokenize("[ 1 2 3 ]を復シテ、数え2を+").unwrap();
-        
-        assert_eq!(tokens.len(), 9);
+fn test_ignore_non_dictionary_chars() {
+    let input = "[ 1 2 3 ]を復シテ、数え2を+";
+    let tokens = tokenize(input).unwrap();
+    
+    // デバッグ情報を出力
+    println!("Input: {:?}", input);
+    println!("Tokens count: {}", tokens.len());
+    for (i, token) in tokens.iter().enumerate() {
+        println!("  [{}]: {:?}", i, token);
+    }
+    
+    assert_eq!(tokens.len(), 9);
+    if tokens.len() >= 9 {
         assert_eq!(tokens[0], Token::VectorStart);
         assert_eq!(tokens[1], Token::Number(1, 1));
         assert_eq!(tokens[2], Token::Number(2, 1));
@@ -366,6 +375,7 @@ mod tests {
         assert_eq!(tokens[7], Token::Number(2, 1));
         assert_eq!(tokens[8], Token::Symbol("+".to_string()));
     }
+}
     
     #[test]
     fn test_number_parsing() {
@@ -410,4 +420,20 @@ mod tests {
         assert_eq!(tokens[4], Token::Symbol("複".to_string()));
         assert_eq!(tokens[5], Token::Symbol("数".to_string()));
     }
+
+    #[test]
+fn test_debug_parsing() {
+    // 個別要素のテスト
+    assert_eq!(tokenize("[").unwrap(), vec![Token::VectorStart]);
+    assert_eq!(tokenize("1").unwrap(), vec![Token::Number(1, 1)]);
+    assert_eq!(tokenize("復").unwrap(), vec![Token::Symbol("復".to_string())]);
+    assert_eq!(tokenize("数").unwrap(), vec![Token::Symbol("数".to_string())]);
+    assert_eq!(tokenize("+").unwrap(), vec![Token::Symbol("+".to_string())]);
+    
+    // 組み合わせテスト
+    let tokens = tokenize("1 2").unwrap();
+    assert_eq!(tokens.len(), 2);
+    assert_eq!(tokens[0], Token::Number(1, 1));
+    assert_eq!(tokens[1], Token::Number(2, 1));
+}
 }
