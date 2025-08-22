@@ -276,6 +276,9 @@ Token::Boolean(b) => {
             category: None,
         });
 
+        // トークナイザーにカスタムワードを登録
+    crate::tokenizer::register_custom_word(&name);
+
         console::log_1(&format!("Word '{}' defined successfully", name).into());
         console::log_1(&format!("=== HANDLE_DEF END ===").into());
 
