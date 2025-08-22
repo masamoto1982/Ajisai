@@ -2,299 +2,404 @@ use crate::types::Token;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
-    let mut chars = input.chars().peekable();
+    let chars: Vec<char> = input.chars().collect();
+    let mut i = 0;
 
-    while let Some(&ch) = chars.peek() {
-        if ch.is_whitespace() {
-            chars.next();
-            continue;
-        }
-
-        if ch == '#' {
-            chars.next();
-            while let Some(&ch) = chars.peek() {
-                chars.next();
-                if ch == '\n' {
-                    break;
-                }
+    while i < chars.len() {
+        // 文字列リテラル（""のみ）
+        if chars[i] == '"' {
+            if let Some((token, consumed)) = parse_string_literal(&chars[i..]) {
+                tokens.push(token);
+                i += consumed;
+                continue;
             }
-            continue;
         }
-
-        if ch == '(' {
-            chars.next();
-            let mut depth = 1;
-            while let Some(&ch) = chars.peek() {
-                chars.next();
-                if ch == '(' {
-                    depth += 1;
-                } else if ch == ')' {
-                    depth -= 1;
-                    if depth == 0 {
-                        break;
-                    }
-                }
-            }
-            continue;
-        }
-
-        // 「」文字列リテラル対応
-        if ch == '「' {
-            chars.next();
-            let mut string = String::new();
-            let mut escaped = false;
-
-            while let Some(&ch) = chars.peek() {
-                chars.next();
-                if escaped {
-                    string.push(ch);
-                    escaped = false;
-                } else if ch == '\\' {
-                    escaped = true;
-                } else if ch == '」' {
-                    break;
-                } else {
-                    string.push(ch);
-                }
-            }
-            tokens.push(Token::String(string));
-            continue;
-        }
-
-        // ""文字列リテラル対応（後方互換性）
-        if ch == '"' {
-            chars.next();
-            let mut string = String::new();
-            let mut escaped = false;
-
-            while let Some(&ch) = chars.peek() {
-                chars.next();
-                if escaped {
-                    string.push(ch);
-                    escaped = false;
-                } else if ch == '\\' {
-                    escaped = true;
-                } else if ch == '"' {
-                    break;
-                } else {
-                    string.push(ch);
-                }
-            }
-            tokens.push(Token::String(string));
-            continue;
-        }
-
-        // []のみサポート
-        if ch == '[' {
-            chars.next();
+        
+        // ベクトル記号
+        if chars[i] == '[' {
             tokens.push(Token::VectorStart);
+            i += 1;
             continue;
         }
-        if ch == ']' {
-            chars.next();
+        
+        if chars[i] == ']' {
             tokens.push(Token::VectorEnd);
+            i += 1;
             continue;
         }
-
-        let mut word = String::new();
-        while let Some(&ch) = chars.peek() {
-            if ch.is_whitespace() || ['[', ']', '「', '」', '"', '#', '(', ')'].contains(&ch) {
-                break;
+        
+        // コメント（#から行末まで）
+        if chars[i] == '#' {
+            // 行末まで無視
+            while i < chars.len() && chars[i] != '\n' {
+                i += 1;
             }
-            word.push(ch);
-            chars.next();
-        }
-
-        if word.is_empty() {
             continue;
         }
-
-        // 自然日本語解析適用
-        let processed_tokens = process_natural_japanese(&word);
-        tokens.extend(processed_tokens);
+        
+        // 数値チェック（整数、分数、小数）
+        if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
+            tokens.push(token);
+            i += consumed;
+            continue;
+        }
+        
+        // 組み込みワードチェック（漢字）
+        if let Some((token, consumed)) = try_parse_kanji_builtin(&chars[i..]) {
+            tokens.push(token);
+            i += consumed;
+            continue;
+        }
+        
+        // 組み込みワードチェック（英数字）
+        if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
+            tokens.push(token);
+            i += consumed;
+            continue;
+        }
+        
+        // 演算子記号チェック
+        if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+            tokens.push(token);
+            i += consumed;
+            continue;
+        }
+        
+        // どれにもマッチしなければ無視して次へ
+        i += 1;
     }
     
     Ok(tokens)
 }
 
-// 自然日本語解析（辞書ベース完全実装）
-fn process_natural_japanese(word: &str) -> Vec<Token> {
-    // 基本的なワード処理
-    match word {
-        "true" => return vec![Token::Boolean(true)],
-        "false" => return vec![Token::Boolean(false)],
-        "NIL" | "nil" => return vec![Token::Nil],
-        _ => {}
+// 文字列リテラル解析
+fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
+    if chars.is_empty() || chars[0] != '"' {
+        return None;
     }
-
-    // 数値チェック
-    if let Ok(num) = word.parse::<i64>() {
-        return vec![Token::Number(num, 1)];
+    
+    let mut string = String::new();
+    let mut i = 1; // 開始の"をスキップ
+    let mut escaped = false;
+    
+    while i < chars.len() {
+        if escaped {
+            string.push(chars[i]);
+            escaped = false;
+        } else if chars[i] == '\\' {
+            escaped = true;
+        } else if chars[i] == '"' {
+            // 終了の"
+            return Some((Token::String(string), i + 1));
+        } else {
+            string.push(chars[i]);
+        }
+        i += 1;
     }
+    
+    // 閉じていない文字列は無効
+    None
+}
 
+// 数値解析（整数、分数、小数）
+fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
+    if chars.is_empty() {
+        return None;
+    }
+    
+    // 数字または小数点、負号で始まらない場合は数値ではない
+    let first_char = chars[0];
+    if !first_char.is_ascii_digit() && first_char != '.' && first_char != '-' {
+        return None;
+    }
+    
+    let mut i = 0;
+    let mut number_str = String::new();
+    
+    // 負号の処理
+    if chars[i] == '-' {
+        number_str.push(chars[i]);
+        i += 1;
+        // 負号の後に数字がない場合は数値ではない
+        if i >= chars.len() || (!chars[i].is_ascii_digit() && chars[i] != '.') {
+            return None;
+        }
+    }
+    
+    // 整数部分
+    while i < chars.len() && chars[i].is_ascii_digit() {
+        number_str.push(chars[i]);
+        i += 1;
+    }
+    
     // 分数チェック
-    if word.contains('/') {
-        let parts: Vec<&str> = word.split('/').collect();
+    if i < chars.len() && chars[i] == '/' {
+        number_str.push(chars[i]);
+        i += 1;
+        
+        if i >= chars.len() || !chars[i].is_ascii_digit() {
+            return None; // /の後に数字がない
+        }
+        
+        while i < chars.len() && chars[i].is_ascii_digit() {
+            number_str.push(chars[i]);
+            i += 1;
+        }
+        
+        // 分数解析
+        let parts: Vec<&str> = number_str.split('/').collect();
         if parts.len() == 2 {
             if let (Ok(num), Ok(den)) = (parts[0].parse::<i64>(), parts[1].parse::<i64>()) {
                 if den != 0 {
-                    return vec![Token::Number(num, den)];
+                    return Some((Token::Number(num, den), i));
+                }
+            }
+        }
+        return None;
+    }
+    
+    // 小数チェック
+    if i < chars.len() && chars[i] == '.' {
+        number_str.push(chars[i]);
+        i += 1;
+        
+        // 小数点の後に数字がない場合は有効（例：1.）
+        while i < chars.len() && chars[i].is_ascii_digit() {
+            number_str.push(chars[i]);
+            i += 1;
+        }
+        
+        // 小数→分数変換
+        if let Some((num, den)) = parse_decimal(&number_str) {
+            return Some((Token::Number(num, den), i));
+        }
+        return None;
+    }
+    
+    // 整数
+    if let Ok(num) = number_str.parse::<i64>() {
+        Some((Token::Number(num, 1), i))
+    } else {
+        None
+    }
+}
+
+// 小数を分数に変換
+fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
+    if let Some(dot_pos) = decimal_str.find('.') {
+        let integer_part = &decimal_str[..dot_pos];
+        let decimal_part = &decimal_str[dot_pos + 1..];
+        
+        let integer_val = if integer_part.is_empty() || integer_part == "-" {
+            0
+        } else {
+            integer_part.parse::<i64>().ok()?
+        };
+        
+        let decimal_val = if decimal_part.is_empty() {
+            0
+        } else {
+            decimal_part.parse::<i64>().ok()?
+        };
+        
+        let decimal_places = decimal_part.len() as u32;
+        let denominator = 10_i64.pow(decimal_places);
+        
+        let numerator = if integer_val >= 0 {
+            integer_val * denominator + decimal_val
+        } else {
+            integer_val * denominator - decimal_val
+        };
+        
+        Some((numerator, denominator))
+    } else {
+        None
+    }
+}
+
+// 漢字組み込みワード解析
+fn try_parse_kanji_builtin(chars: &[char]) -> Option<(Token, usize)> {
+    if chars.is_empty() {
+        return None;
+    }
+    
+    let kanji = chars[0];
+    let kanji_str = kanji.to_string();
+    
+    // 組み込み漢字ワード辞書
+    let builtin_word = match kanji_str.as_str() {
+        // 論理演算
+        "否" => "否",
+        "且" => "且", 
+        "或" => "或",
+        
+        // 存在チェック
+        "無" => "無",
+        "有" => "有",
+        
+        // Vector操作（既存）
+        "頭" => "頭",
+        "尾" => "尾", 
+        "接" => "接",
+        "離" => "離",
+        "追" => "追",
+        "除" => "除",
+        "複" => "複",
+        "選" => "選",
+        "数" => "数",
+        "在" => "在",
+        "行" => "行",
+        
+        // Vector操作（新機能）
+        "結" => "結",
+        "切" => "切",
+        "反" => "反", 
+        "挿" => "挿",
+        "消" => "消",
+        "探" => "探",
+        "含" => "含",
+        "換" => "換",
+        "抽" => "抽",
+        "変" => "変",
+        "畳" => "畳",
+        "並" => "並",
+        "空" => "空",
+        
+        // 制御・定義
+        "定" => "定",
+        "削" => "削",
+        "跳" => "跳",
+        "忘" => "忘",
+        
+        _ => return None,
+    };
+    
+    Some((Token::Symbol(builtin_word.to_string()), 1))
+}
+
+// ASCII組み込みワード解析
+fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
+    // 最長マッチング用の候補リスト（長い順）
+    let builtin_words = [
+        "true", "false", "nil", "NIL", "DEF",
+    ];
+    
+    for word in &builtin_words {
+        if chars.len() >= word.len() {
+            let candidate: String = chars[..word.len()].iter().collect();
+            if candidate == *word {
+                // 単語境界チェック（次の文字が英数字でない）
+                if chars.len() == word.len() || !chars[word.len()].is_ascii_alphanumeric() {
+                    let token = match *word {
+                        "true" => Token::Boolean(true),
+                        "false" => Token::Boolean(false),
+                        "nil" | "NIL" => Token::Nil,
+                        "DEF" => Token::Symbol("DEF".to_string()),
+                        _ => Token::Symbol(word.to_uppercase()),
+                    };
+                    return Some((token, word.len()));
                 }
             }
         }
     }
-
-    // 小数チェック
-    if word.contains('.') {
-        let parts: Vec<&str> = word.split('.').collect();
-        if parts.len() == 2 {
-            let integer_part = if parts[0].is_empty() { 
-                0 
-            } else { 
-                match parts[0].parse::<i64>() {
-                    Ok(n) => n,
-                    Err(_) => return extract_dictionary_words_only(word),
-                }
-            };
-            let decimal_part = if parts[1].is_empty() { 
-                0 
-            } else {
-                match parts[1].parse::<i64>() {
-                    Ok(n) => n,
-                    Err(_) => return extract_dictionary_words_only(word),
-                }
-            };
-            
-            let decimal_places = parts[1].len() as u32;
-            let denominator = 10_i64.pow(decimal_places);
-            let numerator = integer_part * denominator + decimal_part;
-            
-            return vec![Token::Number(numerator, denominator)];
-        }
-    }
-
-    // 辞書ベース文字抽出（辞書語のみ）
-    extract_dictionary_words_only(word)
+    
+    None
 }
 
-// 辞書語のみ抽出（辞書にない文字は完全無視）
-fn extract_dictionary_words_only(text: &str) -> Vec<Token> {
-    let mut result = Vec::new();
-    let chars: Vec<char> = text.chars().collect();
-    let mut i = 0;
-
-    while i < chars.len() {
-        let mut found = false;
-
-        // 漢字一文字の組み込みワードをチェック
-        if let Some(kanji_word) = extract_kanji_builtin(&chars[i..]) {
-            result.push(Token::Symbol(kanji_word));
-            i += skip_okurigana(&chars[i..]);
-            found = true;
-        } else {
-            // 辞書にない文字は無視して次へ
-            i += 1;
-        }
-    }
-
-    // 辞書語が一つも見つからなかった場合
-    if result.is_empty() {
-        // 完全に英数字のワードかチェック
-        if text.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-            // 英語ワードとして処理
-            result.push(Token::Symbol(text.to_uppercase()));
-        }
-        // その他（ひらがな・カタカナのみなど）は無視（空のVecを返す）
-    }
-
-    result
-}
-
-// 漢字の組み込みワード抽出（漢字そのまま返す）
-fn extract_kanji_builtin(chars: &[char]) -> Option<String> {
+// 演算子記号解析
+fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() {
         return None;
     }
-
-    let first_char = chars[0];
-    let kanji_str = first_char.to_string();
-
-    // 組み込みワードの漢字かチェック（漢字そのまま返す）
-    match kanji_str.as_str() {
-        // 論理演算
-        "否" => Some("否".to_string()),
-        "且" => Some("且".to_string()),
-        "或" => Some("或".to_string()),
-        
-        // 存在チェック
-        "無" => Some("無".to_string()),
-        "有" => Some("有".to_string()),
-        
-        // Vector操作（既存）
-        "頭" => Some("頭".to_string()),
-        "尾" => Some("尾".to_string()),
-        "接" => Some("接".to_string()),
-        "離" => Some("離".to_string()),
-        "追" => Some("追".to_string()),
-        "除" => Some("除".to_string()),
-        "複" => Some("複".to_string()),
-        "選" => Some("選".to_string()),
-        "数" => Some("数".to_string()),
-        "在" => Some("在".to_string()),
-        "行" => Some("行".to_string()),
-        
-        // Vector操作（新機能）
-        "結" => Some("結".to_string()),
-        "切" => Some("切".to_string()),
-        "反" => Some("反".to_string()),
-        "挿" => Some("挿".to_string()),
-        "消" => Some("消".to_string()),
-        "探" => Some("探".to_string()),
-        "含" => Some("含".to_string()),
-        "換" => Some("換".to_string()),
-        "抽" => Some("抽".to_string()),
-        "変" => Some("変".to_string()),
-        "畳" => Some("畳".to_string()),
-        "並" => Some("並".to_string()),
-        "空" => Some("空".to_string()),
-        
-        // 制御・定義
-        "定" => Some("定".to_string()),
-        "削" => Some("削".to_string()),
-        "跳" => Some("跳".to_string()),
-        "忘" => Some("忘".to_string()),
-        
+    
+    // 2文字演算子を先にチェック
+    if chars.len() >= 2 {
+        let two_char: String = chars[..2].iter().collect();
+        match two_char.as_str() {
+            ">=" => return Some((Token::Symbol(">=".to_string()), 2)),
+            "<=" => return Some((Token::Symbol("<=".to_string()), 2)),
+            _ => {}
+        }
+    }
+    
+    // 1文字演算子
+    match chars[0] {
+        '+' => Some((Token::Symbol("+".to_string()), 1)),
+        '-' => {
+            // 負号と減算の区別
+            // 次に数字が続く場合は数値として扱われるべきなので、ここでは減算として扱う
+            // 数値解析が先に実行されるので、ここに来るのは減算
+            Some((Token::Symbol("-".to_string()), 1))
+        },
+        '*' => Some((Token::Symbol("*".to_string()), 1)),
+        '/' => Some((Token::Symbol("/".to_string()), 1)),
+        '>' => Some((Token::Symbol(">".to_string()), 1)),
+        '<' => Some((Token::Symbol("<".to_string()), 1)),
+        '=' => Some((Token::Symbol("=".to_string()), 1)),
         _ => None,
     }
 }
 
-// 送り仮名をスキップ（ひらがな、カタカナ、句読点を無視）
-fn skip_okurigana(chars: &[char]) -> usize {
-    let mut count = 1; // 漢字1文字分
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // 後続の無視すべき文字をスキップ
-    while count < chars.len() {
-        let ch = chars[count];
-        if should_ignore_char(ch) {
-            count += 1;
-        } else {
-            break;
-        }
+    #[test]
+    fn test_ignore_non_dictionary_chars() {
+        let tokens = tokenize("[ 1 2 3 ]を復シテ、数え2を+").unwrap();
+        
+        assert_eq!(tokens.len(), 7);
+        assert_eq!(tokens[0], Token::VectorStart);
+        assert_eq!(tokens[1], Token::Number(1, 1));
+        assert_eq!(tokens[2], Token::Number(2, 1));
+        assert_eq!(tokens[3], Token::Number(3, 1));
+        assert_eq!(tokens[4], Token::VectorEnd);
+        assert_eq!(tokens[5], Token::Symbol("復".to_string()));
+        assert_eq!(tokens[6], Token::Symbol("数".to_string()));
+        // "え" は無視される
+        // tokens[7] は2、tokens[8] は+ になるはず
     }
-
-    count
-}
-
-// 無視すべき文字の判定
-fn should_ignore_char(c: char) -> bool {
-    matches!(c, 
-        // ひらがな
-        'あ'..='ん' | 'ー' |
-        // カタカナ  
-        'ア'..='ン' | 'ャ'..='ョ' | 'ッ' | 'ー' |
-        // 句読点・記号
-        '。' | '、' | '！' | '？' | '：' | '；' | 
-        // その他の記号
-        '〜' | 'ゝ' | 'ゞ' | 'ヽ' | 'ヾ'
-    )
+    
+    #[test]
+    fn test_number_parsing() {
+        let tokens = tokenize("123 -45 3/4 -1/2 3.14 -2.5").unwrap();
+        
+        assert_eq!(tokens[0], Token::Number(123, 1));
+        assert_eq!(tokens[1], Token::Number(-45, 1));
+        assert_eq!(tokens[2], Token::Number(3, 4));
+        assert_eq!(tokens[3], Token::Number(-1, 2));
+        assert_eq!(tokens[4], Token::Number(314, 100));
+        assert_eq!(tokens[5], Token::Number(-25, 10));
+    }
+    
+    #[test]
+    fn test_string_literals() {
+        let tokens = tokenize(r#""hello world" "escaped\"quote""#).unwrap();
+        
+        assert_eq!(tokens[0], Token::String("hello world".to_string()));
+        assert_eq!(tokens[1], Token::String("escaped\"quote".to_string()));
+    }
+    
+    #[test]
+    fn test_ignore_whitespace() {
+        let tokens = tokenize("1    2\n\t3").unwrap();
+        
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[0], Token::Number(1, 1));
+        assert_eq!(tokens[1], Token::Number(2, 1));
+        assert_eq!(tokens[2], Token::Number(3, 1));
+    }
+    
+    #[test]
+    fn test_mixed_natural_language() {
+        let tokens = tokenize("これは[ 1 2 ]という配列です。複製して数を調べましょう。").unwrap();
+        
+        // "これは", "という配列です。", "して", "を調べましょう。" は無視
+        assert_eq!(tokens[0], Token::VectorStart);
+        assert_eq!(tokens[1], Token::Number(1, 1));
+        assert_eq!(tokens[2], Token::Number(2, 1));
+        assert_eq!(tokens[3], Token::VectorEnd);
+        assert_eq!(tokens[4], Token::Symbol("複".to_string()));
+        assert_eq!(tokens[5], Token::Symbol("数".to_string()));
+    }
 }
