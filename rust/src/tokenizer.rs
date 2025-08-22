@@ -72,6 +72,45 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     Ok(tokens)
 }
 
+// カスタムワード解析（新機能）
+fn try_parse_custom_word(chars: &[char]) -> Option<(Token, usize)> {
+    if let Ok(words) = CUSTOM_WORDS.lock() {
+        // 長い単語から優先的にマッチング
+        let mut sorted_words: Vec<&String> = words.iter().collect();
+        sorted_words.sort_by(|a, b| b.len().cmp(&a.len())); // 長い順でソート
+        
+        for word in sorted_words {
+            if chars.len() >= word.len() {
+                let candidate: String = chars[..word.len()].iter().collect();
+                if candidate == *word {
+                    // 単語境界チェック（次の文字が辞書語でない）
+                    if chars.len() == word.len() || 
+                       !is_dictionary_char(chars[word.len()]) {
+                        return Some((Token::Symbol(word.clone()), word.len()));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+// 辞書語の文字かどうかを判定
+fn is_dictionary_char(c: char) -> bool {
+    // 漢字、英数字、記号かチェック
+    match c {
+        // 組み込み漢字
+        '否' | '且' | '或' | '無' | '有' | '頭' | '尾' | '接' | '離' | '追' | '除' |
+        '複' | '復' | '選' | '数' | '在' | '行' | '結' | '切' | '反' | '挿' | '消' |
+        '探' | '含' | '換' | '抽' | '変' | '畳' | '並' | '空' | '定' | '削' | '成' | '忘' => true,
+        // 英数字
+        c if c.is_ascii_alphanumeric() => true,
+        // 演算子記号
+        '+' | '-' | '*' | '/' | '>' | '<' | '=' => true,
+        _ => false,
+    }
+}
+
 // 文字列リテラル解析
 fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() || chars[0] != '"' {
