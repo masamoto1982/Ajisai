@@ -251,7 +251,7 @@ fn try_parse_kanji_builtin(chars: &[char]) -> Option<(Token, usize)> {
         "離" => "離",
         "追" => "追",
         "除" => "除",
-        "複" => "複",  // 複製
+        "複" => "複",
         "復" => "複",  // 復も複製として認識（テストとの互換性）
         "選" => "選",
         "数" => "数",
@@ -276,7 +276,7 @@ fn try_parse_kanji_builtin(chars: &[char]) -> Option<(Token, usize)> {
         // 制御・定義
         "定" => "定",
         "削" => "削",
-        "跳" => "跳",
+        "成" => "成",  // 「跳」→「成」に変更
         "忘" => "忘",
         
         _ => return None,
@@ -353,44 +353,28 @@ mod tests {
     use super::*;
 
     #[test]
-fn test_ignore_non_dictionary_chars() {
-    let input = "[ 1 2 3 ]を復シテ、数え2を+";
-    let tokens = tokenize(input).unwrap();
-    
-    // デバッグ情報を出力
-    println!("Input: {:?}", input);
-    println!("Tokens count: {}", tokens.len());
-    for (i, token) in tokens.iter().enumerate() {
-        println!("  [{}]: {:?}", i, token);
+    fn test_ignore_non_dictionary_chars() {
+        let input = "[ 1 2 3 ]を復シテ、数え2を+";
+        let tokens = tokenize(input).unwrap();
+        
+        // デバッグ情報を出力
+        println!("Input: {:?}", input);
+        println!("Tokens count: {}", tokens.len());
+        for (i, token) in tokens.iter().enumerate() {
+            println!("  [{}]: {:?}", i, token);
+        }
+        
+        assert_eq!(tokens.len(), 9);
+        assert_eq!(tokens[0], Token::VectorStart);
+        assert_eq!(tokens[1], Token::Number(1, 1));
+        assert_eq!(tokens[2], Token::Number(2, 1));
+        assert_eq!(tokens[3], Token::Number(3, 1));
+        assert_eq!(tokens[4], Token::VectorEnd);
+        assert_eq!(tokens[5], Token::Symbol("複".to_string()));
+        assert_eq!(tokens[6], Token::Symbol("数".to_string()));
+        assert_eq!(tokens[7], Token::Number(2, 1));
+        assert_eq!(tokens[8], Token::Symbol("+".to_string()));
     }
-    
-    assert_eq!(tokens.len(), 9);
-    assert_eq!(tokens[0], Token::VectorStart);
-    assert_eq!(tokens[1], Token::Number(1, 1));
-    assert_eq!(tokens[2], Token::Number(2, 1));
-    assert_eq!(tokens[3], Token::Number(3, 1));
-    assert_eq!(tokens[4], Token::VectorEnd);
-    assert_eq!(tokens[5], Token::Symbol("複".to_string())); // "復"は"複"として認識
-    assert_eq!(tokens[6], Token::Symbol("数".to_string()));
-    assert_eq!(tokens[7], Token::Number(2, 1));
-    assert_eq!(tokens[8], Token::Symbol("+".to_string()));
-}
-
-#[test]
-fn test_debug_parsing() {
-    // 個別要素のテスト
-    assert_eq!(tokenize("[").unwrap(), vec![Token::VectorStart]);
-    assert_eq!(tokenize("1").unwrap(), vec![Token::Number(1, 1)]);
-    assert_eq!(tokenize("復").unwrap(), vec![Token::Symbol("複".to_string())]); // "復"は"複"として認識
-    assert_eq!(tokenize("数").unwrap(), vec![Token::Symbol("数".to_string())]);
-    assert_eq!(tokenize("+").unwrap(), vec![Token::Symbol("+".to_string())]);
-    
-    // 組み合わせテスト
-    let tokens = tokenize("1 2").unwrap();
-    assert_eq!(tokens.len(), 2);
-    assert_eq!(tokens[0], Token::Number(1, 1));
-    assert_eq!(tokens[1], Token::Number(2, 1));
-}
     
     #[test]
     fn test_number_parsing() {
@@ -434,5 +418,21 @@ fn test_debug_parsing() {
         assert_eq!(tokens[3], Token::VectorEnd);
         assert_eq!(tokens[4], Token::Symbol("複".to_string()));
         assert_eq!(tokens[5], Token::Symbol("数".to_string()));
+    }
+
+    #[test]
+    fn test_debug_parsing() {
+        // 個別要素のテスト
+        assert_eq!(tokenize("[").unwrap(), vec![Token::VectorStart]);
+        assert_eq!(tokenize("1").unwrap(), vec![Token::Number(1, 1)]);
+        assert_eq!(tokenize("復").unwrap(), vec![Token::Symbol("複".to_string())]);
+        assert_eq!(tokenize("数").unwrap(), vec![Token::Symbol("数".to_string())]);
+        assert_eq!(tokenize("+").unwrap(), vec![Token::Symbol("+".to_string())]);
+        
+        // 組み合わせテスト
+        let tokens = tokenize("1 2").unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0], Token::Number(1, 1));
+        assert_eq!(tokens[1], Token::Number(2, 1));
     }
 }
