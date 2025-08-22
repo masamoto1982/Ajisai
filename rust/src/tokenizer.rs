@@ -118,18 +118,23 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     
     // 負号の処理
     if chars[i] == '-' {
-        number_str.push(chars[i]);
-        i += 1;
-        // 負号の後に数字がない場合は数値ではない
-        if i >= chars.len() || (!chars[i].is_ascii_digit() && chars[i] != '.') {
+        // 次の文字が数字または小数点でない場合は演算子として扱う
+        if i + 1 >= chars.len() || (!chars[i + 1].is_ascii_digit() && chars[i + 1] != '.') {
             return None;
         }
+        number_str.push(chars[i]);
+        i += 1;
     }
     
     // 整数部分
     while i < chars.len() && chars[i].is_ascii_digit() {
         number_str.push(chars[i]);
         i += 1;
+    }
+    
+    // 数字が全くない場合（例：単独の"-"や"."）
+    if number_str.is_empty() || number_str == "-" {
+        return None;
     }
     
     // 分数チェック
@@ -190,6 +195,8 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
         let integer_part = &decimal_str[..dot_pos];
         let decimal_part = &decimal_str[dot_pos + 1..];
         
+        let is_negative = integer_part.starts_with('-');
+        
         let integer_val = if integer_part.is_empty() || integer_part == "-" {
             0
         } else {
@@ -205,10 +212,10 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
         let decimal_places = decimal_part.len() as u32;
         let denominator = 10_i64.pow(decimal_places);
         
-        let numerator = if integer_val >= 0 {
-            integer_val * denominator + decimal_val
-        } else {
+        let numerator = if is_negative {
             integer_val * denominator - decimal_val
+        } else {
+            integer_val * denominator + decimal_val
         };
         
         Some((numerator, denominator))
