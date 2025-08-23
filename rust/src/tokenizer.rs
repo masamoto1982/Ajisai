@@ -95,34 +95,38 @@ if let Some((token, consumed)) = try_parse_kanji_builtin(&chars[i..]) {
 }
 
 fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
-    // 無条件デバッグ出力
     use web_sys::console;
-    let input_str: String = chars.iter().take(10).collect(); // 最初の10文字のみ
+    let input_str: String = chars.iter().take(10).collect();
     console::log_1(&format!("Trying to parse custom word from: '{}'", input_str).into());
     console::log_1(&format!("Available custom words: {:?}", custom_words).into());
     
     // 長い単語から優先的にマッチング
     let mut sorted_words: Vec<&String> = custom_words.iter().collect();
-    sorted_words.sort_by(|a, b| b.len().cmp(&a.len())); // 長い順でソート
+    sorted_words.sort_by(|a, b| {
+        let a_len = a.chars().count();  // バイト数ではなく文字数
+        let b_len = b.chars().count();  // バイト数ではなく文字数
+        b_len.cmp(&a_len)
+    });
     
     console::log_1(&format!("Sorted words: {:?}", sorted_words).into());
     
     for word in sorted_words {
-        console::log_1(&format!("Checking word: '{}'", word).into());
+        let word_char_len = word.chars().count();  // 文字数を取得
+        console::log_1(&format!("Checking word: '{}' (char_len: {})", word, word_char_len).into());
         
-        if chars.len() >= word.len() {
-            let candidate: String = chars[..word.len()].iter().collect();
+        if chars.len() >= word_char_len {  // 文字数で比較
+            let candidate: String = chars[..word_char_len].iter().collect();  // 文字数分だけ取得
             console::log_1(&format!("Candidate: '{}' vs Word: '{}'", candidate, word).into());
             
             if candidate == *word {
                 console::log_1(&format!("Match found! Checking boundary...").into());
                 
                 // 単語境界チェック（次の文字が辞書語でない）
-                if chars.len() == word.len() || 
-                   !is_dictionary_char(chars[word.len()]) {
+                if chars.len() == word_char_len || 
+                   !is_dictionary_char(chars[word_char_len]) {  // 文字数でインデックス
                     
                     console::log_1(&format!("Custom word matched: '{}'", word).into());
-                    return Some((Token::Symbol(word.clone()), word.len()));
+                    return Some((Token::Symbol(word.clone()), word_char_len));  // 文字数を返す
                 } else {
                     console::log_1(&format!("Boundary check failed").into());
                 }
@@ -130,7 +134,7 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
                 console::log_1(&format!("No match").into());
             }
         } else {
-            console::log_1(&format!("Word too long: {} chars needed, {} available", word.len(), chars.len()).into());
+            console::log_1(&format!("Word too long: {} chars needed, {} available", word_char_len, chars.len()).into());
         }
     }
     
