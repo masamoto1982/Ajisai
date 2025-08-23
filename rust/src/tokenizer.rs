@@ -56,18 +56,22 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         }
         
         // カスタムワードチェック（最優先）
-        if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
-            tokens.push(token);
-            i += consumed;
-            continue;
-        }
-        
-        // 組み込みワードチェック（漢字）
-        if let Some((token, consumed)) = try_parse_kanji_builtin(&chars[i..]) {
-            tokens.push(token);
-            i += consumed;
-            continue;
-        }
+if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
+    use web_sys::console;
+    console::log_1(&format!("Custom word token found: {:?}", token).into());
+    tokens.push(token);
+    i += consumed;
+    continue;
+}
+
+// 組み込みワードチェック（漢字）
+if let Some((token, consumed)) = try_parse_kanji_builtin(&chars[i..]) {
+    use web_sys::console;
+    console::log_1(&format!("Kanji builtin token found: {:?}", token).into());
+    tokens.push(token);
+    i += consumed;
+    continue;
+}
         
         // 組み込みワードチェック（英数字）
         if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
