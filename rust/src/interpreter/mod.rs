@@ -62,9 +62,16 @@ impl Interpreter {
         .map(|(name, _)| name.clone())
         .collect();
     
+    // デバッグ出力を追加
+    use web_sys::console;
+    console::log_1(&format!("Processing line: {}", line).into());
+    console::log_1(&format!("Custom words available: {:?}", custom_word_names).into());
+    
     let tokens = crate::tokenizer::tokenize_with_custom_words(line, &custom_word_names)
         .map_err(error::AjisaiError::from)?;
         
+    console::log_1(&format!("Tokenized as: {:?}", tokens).into());
+    
     if tokens.is_empty() {
         return Ok(());
     }
