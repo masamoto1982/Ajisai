@@ -91,45 +91,46 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
 }
 
 fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
-    // デバッグ出力を追加
-    #[cfg(debug_assertions)]
-    {
-        use web_sys::console;
-        let input_str: String = chars.iter().collect();
-        console::log_1(&format!("Trying to parse custom word from: '{}'", input_str).into());
-        console::log_1(&format!("Available custom words: {:?}", custom_words).into());
-    }
+    // 無条件デバッグ出力
+    use web_sys::console;
+    let input_str: String = chars.iter().take(10).collect(); // 最初の10文字のみ
+    console::log_1(&format!("Trying to parse custom word from: '{}'", input_str).into());
+    console::log_1(&format!("Available custom words: {:?}", custom_words).into());
     
     // 長い単語から優先的にマッチング
     let mut sorted_words: Vec<&String> = custom_words.iter().collect();
     sorted_words.sort_by(|a, b| b.len().cmp(&a.len())); // 長い順でソート
     
+    console::log_1(&format!("Sorted words: {:?}", sorted_words).into());
+    
     for word in sorted_words {
+        console::log_1(&format!("Checking word: '{}'", word).into());
+        
         if chars.len() >= word.len() {
             let candidate: String = chars[..word.len()].iter().collect();
-            
-            #[cfg(debug_assertions)]
-            {
-                use web_sys::console;
-                console::log_1(&format!("Checking candidate: '{}' against word: '{}'", candidate, word).into());
-            }
+            console::log_1(&format!("Candidate: '{}' vs Word: '{}'", candidate, word).into());
             
             if candidate == *word {
+                console::log_1(&format!("Match found! Checking boundary...").into());
+                
                 // 単語境界チェック（次の文字が辞書語でない）
                 if chars.len() == word.len() || 
                    !is_dictionary_char(chars[word.len()]) {
                     
-                    #[cfg(debug_assertions)]
-                    {
-                        use web_sys::console;
-                        console::log_1(&format!("Custom word matched: '{}'", word).into());
-                    }
-                    
+                    console::log_1(&format!("Custom word matched: '{}'", word).into());
                     return Some((Token::Symbol(word.clone()), word.len()));
+                } else {
+                    console::log_1(&format!("Boundary check failed").into());
                 }
+            } else {
+                console::log_1(&format!("No match").into());
             }
+        } else {
+            console::log_1(&format!("Word too long: {} chars needed, {} available", word.len(), chars.len()).into());
         }
     }
+    
+    console::log_1(&format!("No custom word matched").into());
     None
 }
 
