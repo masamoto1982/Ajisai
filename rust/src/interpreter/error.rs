@@ -37,28 +37,21 @@ impl AjisaiError {
 }
 
 impl fmt::Display for AjisaiError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             AjisaiError::WorkspaceUnderflow => write!(f, "Workspace underflow"),
-            AjisaiError::TypeError { expected, got } => {
-                write!(f, "Type error: expected {}, got {}", expected, got)
-            },
-            AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
-            AjisaiError::UnknownBuiltin(name) => write!(f, "Unknown builtin: {}", name),
+            AjisaiError::InvalidToken(s) => write!(f, "Invalid token: {}", s),
+            AjisaiError::TypeError { expected, found } => write!(f, "Type error: expected {:?}, found {:?}", expected, found),
+            AjisaiError::WordNotFound(s) => write!(f, "Word not found: {}", s),
+            
+            // 修正箇所
+            AjisaiError::EmptyVector => write!(f, "空のベクトルに対する操作です"),
+
+            AjisaiError::IndexOutOfBounds => write!(f, "Index out of bounds"),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
-            AjisaiError::IndexOutOfBounds { index, length } => {
-                write!(f, "Index {} out of bounds for vector of length {}", index, length)
-            },
-            AjisaiError::VectorLengthMismatch { len1, len2 } => {
-                write!(f, "Vector length mismatch: {} vs {}", len1, len2)
-            },
-            AjisaiError::ProtectedWord { name, dependents } => {
-                write!(f, "Cannot delete '{}' because it is used by: {}", name, dependents.join(", "))
-            },
-            AjisaiError::Custom(msg) => write!(f, "{}", msg),
-            AjisaiError::WithContext { error, context } => {
-                write!(f, "{}\n  in word: {}", error, context.join(" -> "))
-            },
+            AjisaiError::InvalidArguments => write!(f, "Invalid arguments"),
+            AjisaiError::ReadOnlyViolation => write!(f, "Read-only violation"),
+            AjisaiError::Custom(s) => write!(f, "{}", s),
         }
     }
 }
