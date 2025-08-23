@@ -11,6 +11,12 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
     let mut i = 0;
 
     while i < chars.len() {
+        // 空白文字をスキップ
+        if chars[i].is_whitespace() {
+            i += 1;
+            continue;
+        }
+        
         // 文字列リテラル（""のみ）
         if chars[i] == '"' {
             if let Some((token, consumed)) = parse_string_literal(&chars[i..]) {
@@ -112,7 +118,7 @@ fn is_dictionary_char(c: char) -> bool {
         // 組み込み漢字
         '否' | '且' | '或' | '無' | '有' | '頭' | '尾' | '接' | '離' | '追' | '除' |
         '複' | '復' | '選' | '数' | '在' | '行' | '結' | '切' | '反' | '挿' | '消' |
-        '探' | '含' | '換' | '抽' | '変' | '畳' | '並' | '空' | '定' | '削' | '成' | '忘' | '復' => true,
+        '探' | '含' | '換' | '抽' | '変' | '畳' | '並' | '空' | '定' | '削' | '成' | '忘' => true,
         // 英数字
         c if c.is_ascii_alphanumeric() => true,
         // 演算子記号
@@ -382,9 +388,7 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     // 1文字演算子
     match chars[0] {
         '+' => Some((Token::Symbol("+".to_string()), 1)),
-        '-' => {
-            Some((Token::Symbol("-".to_string()), 1))
-        },
+        '-' => Some((Token::Symbol("-".to_string()), 1)),
         '*' => Some((Token::Symbol("*".to_string()), 1)),
         '/' => Some((Token::Symbol("/".to_string()), 1)),
         '>' => Some((Token::Symbol(">".to_string()), 1)),
@@ -397,6 +401,29 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_basic_tokenization() {
+        let input = "1 2 +";
+        let tokens = tokenize(input).unwrap();
+        
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[0], Token::Number(1, 1));
+        assert_eq!(tokens[1], Token::Number(2, 1));
+        assert_eq!(tokens[2], Token::Symbol("+".to_string()));
+    }
+
+    #[test]
+    fn test_custom_word_recognition() {
+        let mut custom_words = HashSet::new();
+        custom_words.insert("加算複製".to_string());
+        
+        let tokens = tokenize_with_custom_words("5 加算複製", &custom_words).unwrap();
+        
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0], Token::Number(5, 1));
+        assert_eq!(tokens[1], Token::Symbol("加算複製".to_string()));
+    }
 
     #[test]
     fn test_ignore_non_dictionary_chars() {
@@ -413,17 +440,5 @@ mod tests {
         assert_eq!(tokens[6], Token::Symbol("数".to_string()));
         assert_eq!(tokens[7], Token::Number(2, 1));
         assert_eq!(tokens[8], Token::Symbol("+".to_string()));
-    }
-    
-    #[test]
-    fn test_custom_word_recognition() {
-        let mut custom_words = HashSet::new();
-        custom_words.insert("加算複製".to_string());
-        
-        let tokens = tokenize_with_custom_words("5 加算複製", &custom_words).unwrap();
-        
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(tokens[0], Token::Number(5, 1));
-        assert_eq!(tokens[1], Token::Symbol("加算複製".to_string()));
     }
 }
