@@ -1,4 +1,4 @@
-// js/gui/main.ts
+// js/gui/main.ts (ステップ実行機能付き)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
@@ -6,7 +6,7 @@ import { Editor } from './editor';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
 import { TestRunner } from './test';  
-import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
+import type { AjisaiInterpreter, ExecuteResult, StepResult } from '../wasm-types';
 
 declare global {
     interface Window {
@@ -29,7 +29,7 @@ interface GUIElements {
     dictionaryArea: HTMLElement;
 }
 
-export class GUI {  // export を追加
+export class GUI {
     display: Display;
     dictionary: Dictionary;
     editor: Editor;
@@ -39,6 +39,7 @@ export class GUI {  // export を追加
 
     public elements: GUIElements = {} as GUIElements;
     private mode: 'input' | 'execution' = 'input';
+    private stepMode: boolean = false;
 
     constructor() {
         this.display = new Display();
@@ -102,7 +103,6 @@ export class GUI {  // export を追加
             dictionaryArea: document.querySelector('.dictionary-area')!
         };
 
-        // テストボタンの存在確認
         if (!this.elements.testBtn) {
             console.error('Test button not found in DOM!');
         } else {
@@ -116,7 +116,6 @@ export class GUI {  // export を追加
         this.elements.runBtn.addEventListener('click', () => this.runCode());
         this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
         
-        // テストボタンのイベントリスナー
         if (this.elements.testBtn) {
             console.log('Adding test button event listener');
             this.elements.testBtn.addEventListener('click', () => {
@@ -128,9 +127,24 @@ export class GUI {  // export を追加
         }
 
         this.elements.codeInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && e.shiftKey) {
+            if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    // Shift+Enter: 通常実行
+                    e.preventDefault();
+                    this.runCode();
+                } else if (e.ctrlKey) {
+                    // Ctrl+Enter: ステップ実行
+                    e.preventDefault();
+                    this.startStepExecution();
+                }
+            } else if (e.key === ' ' && this.stepMode) {
+                // スペース: ステップ実行中の次のステップ
                 e.preventDefault();
-                this.runCode();
+                this.executeNextStep();
+            } else if (e.key === 'Escape' && this.stepMode) {
+                // Escape: ステップ実行終了
+                e.preventDefault();
+                this.endStepExecution();
             }
         });
 
@@ -178,31 +192,83 @@ export class GUI {  // export を追加
         this.display.showInfo('State saved.', true);
     }
 
-    private async runTests(): Promise<void> {
-    console.log('runTests called');
-    
-    if (!window.ajisaiInterpreter) {
-        console.error('ajisaiInterpreter not available');
-        this.display.showError('Interpreter not available');
-        return;
+    private startStepExecution(): void {
+        const code = this.editor.getValue();
+        if (!code) return;
+
+        try {
+            const message = window.ajisaiInterpreter.init_step(code);
+            this.stepMode = true;
+            this.display.showInfo(`Step mode started: ${message}\nPress Space to step, Escape to end.`);
+            
+            if (this.mobile.isMobile()) {
+                this.setMode('execution');
+            }
+        } catch (error) {
+            this.display.showError(error as Error);
+        }
     }
 
-    try {
-        console.log('Starting test runner...');
-        await this.testRunner.runAllTests();
-        this.updateAllDisplays();
-        
-        // モバイルモードでの表示切り替えを追加
-        if (this.mobile.isMobile()) {
-            this.setMode('execution');
+    private executeNextStep(): void {
+        if (!this.stepMode) return;
+
+        try {
+            const result = window.ajisaiInterpreter.step() as StepResult;
+            
+            if (result.error) {
+                this.display.showError(result.output || 'Step execution error');
+                this.endStepExecution();
+                return;
+            }
+
+            this.display.showOutput(result.output || 'Step executed');
+            
+            if (result.hasMore) {
+                const progress = result.position && result.total 
+                    ? ` (${result.position}/${result.total})`
+                    : '';
+                this.display.showInfo(`Step completed${progress}. Press Space for next step, Escape to end.`, true);
+            } else {
+                this.display.showInfo('Step execution completed.', true);
+                this.endStepExecution();
+            }
+            
+            this.updateAllDisplays();
+        } catch (error) {
+            this.display.showError(error as Error);
+            this.endStepExecution();
         }
-        
-        console.log('Tests completed');
-    } catch (error) {
-        console.error('Error running tests:', error);
-        this.display.showError(error as Error);
     }
-}
+
+    private endStepExecution(): void {
+        this.stepMode = false;
+        this.display.showInfo('Step mode ended.', true);
+    }
+
+    private async runTests(): Promise<void> {
+        console.log('runTests called');
+        
+        if (!window.ajisaiInterpreter) {
+            console.error('ajisaiInterpreter not available');
+            this.display.showError('Interpreter not available');
+            return;
+        }
+
+        try {
+            console.log('Starting test runner...');
+            await this.testRunner.runAllTests();
+            this.updateAllDisplays();
+            
+            if (this.mobile.isMobile()) {
+                this.setMode('execution');
+            }
+            
+            console.log('Tests completed');
+        } catch (error) {
+            console.error('Error running tests:', error);
+            this.display.showError(error as Error);
+        }
+    }
 
     updateAllDisplays(): void {
         if (!window.ajisaiInterpreter) return;
@@ -216,5 +282,4 @@ export class GUI {  // export を追加
     }
 }
 
-// GUIインスタンスを作成してエクスポート
 export const GUI_INSTANCE = new GUI();
