@@ -1,4 +1,4 @@
-// js/gui/main.ts (ステップ実行機能付き)
+// js/gui/main.ts (AMNESIA機能対応)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
@@ -18,7 +18,7 @@ interface GUIElements {
     codeInput: HTMLTextAreaElement;
     runBtn: HTMLButtonElement;
     clearBtn: HTMLButtonElement;
-    testBtn: HTMLButtonElement;
+    testBtn: HTMLButtonButton;
     outputDisplay: HTMLElement;
     workspaceDisplay: HTMLElement;
     builtinWordsDisplay: HTMLElement;
@@ -132,6 +132,10 @@ export class GUI {
                     // Shift+Enter: 通常実行
                     e.preventDefault();
                     this.runCode();
+                } else if (e.ctrlKey && e.altKey) {
+                    // Ctrl+Alt+Enter: AMNESIA実行
+                    e.preventDefault();
+                    this.executeAmnesia();
                 } else if (e.ctrlKey) {
                     // Ctrl+Enter: ステップ実行
                     e.preventDefault();
@@ -190,6 +194,30 @@ export class GUI {
         this.updateAllDisplays();
         await this.persistence.saveCurrentState();
         this.display.showInfo('State saved.', true);
+    }
+
+    private async executeAmnesia(): Promise<void> {
+        try {
+            console.log('Executing AMNESIA...');
+            const result = window.ajisaiInterpreter.amnesia() as ExecuteResult;
+            
+            if (result.status === 'OK' && !result.error) {
+                this.display.showOutput(result.output || 'AMNESIA executed');
+                this.editor.clear();
+                
+                if (this.mobile.isMobile()) {
+                    this.setMode('execution');
+                }
+                
+                // 表示を更新
+                this.updateAllDisplays();
+                this.display.showInfo('🧠 AMNESIA: All memory cleared and database reset.', true);
+            } else {
+                this.display.showError(result.message || 'AMNESIA execution failed');
+            }
+        } catch (error) {
+            this.display.showError(error as Error);
+        }
     }
 
     private startStepExecution(): void {
