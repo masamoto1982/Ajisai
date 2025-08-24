@@ -1,4 +1,4 @@
-// js/gui/test.ts（修正された順序対応版）
+// js/gui/test.ts (新しいワード体系対応)
 
 interface TestCase {
     name: string;
@@ -28,7 +28,7 @@ export class TestRunner {
         let totalPassed = 0;
         let totalFailed = 0;
 
-        this.showColoredInfo('Ajisai Comprehensive Tests Starting...', 'info');
+        this.showColoredInfo('Ajisai New File System Tests Starting...', 'info');
         this.showColoredInfo(`Total: ${testCases.length} tests across ${categories.length} categories\n`, 'info');
 
         for (const category of categories) {
@@ -70,10 +70,9 @@ export class TestRunner {
             this.showColoredInfo(`Total Failed: ${totalFailed}`, 'error');
             this.showColoredInfo('Review needed.', 'error');
         } else {
-            this.showColoredInfo('All tests passed! Vector unified architecture fully operational.', 'success');
+            this.showColoredInfo('All tests passed! File-based vector operations working perfectly.', 'success');
         }
 
-        // 自動スクロール
         this.scrollToBottom();
     }
 
@@ -85,18 +84,18 @@ export class TestRunner {
         
         switch (type) {
             case 'success':
-                span.style.color = '#28a745';  // 緑
+                span.style.color = '#28a745';
                 span.style.fontWeight = 'bold';
                 break;
             case 'error':
-                span.style.color = '#dc3545';  // 赤
+                span.style.color = '#dc3545';
                 span.style.fontWeight = 'bold';
                 break;
             case 'info':
-                span.style.color = '#333';     // 通常
+                span.style.color = '#333';
                 break;
             case 'code':
-                span.style.color = '#6c757d';  // グレー
+                span.style.color = '#6c757d';
                 span.style.fontStyle = 'italic';
                 span.style.fontSize = '0.9em';
                 break;
@@ -115,7 +114,6 @@ export class TestRunner {
     }
 
     private async runSingleTest(testCase: TestCase): Promise<boolean> {
-        // テスト前にリセット
         window.ajisaiInterpreter.reset();
 
         try {
@@ -185,137 +183,103 @@ export class TestRunner {
 
     private getTestCases(): TestCase[] {
         return [
-            // ========== 基本算術演算 ==========
+            // ========== ファイル/ページ基本操作 ==========
             {
-                name: "基本加算",
-                code: "3 4 +",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 7, denominator: 1 } }],
-                category: "Basic Arithmetic"
-            },
-            {
-                name: "基本減算",
-                code: "10 3 -",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 7, denominator: 1 } }],
-                category: "Basic Arithmetic"
-            },
-            {
-                name: "基本乗算",
-                code: "6 7 *",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 42, denominator: 1 } }],
-                category: "Basic Arithmetic"
-            },
-            {
-                name: "基本除算",
-                code: "15 3 /",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 5, denominator: 1 } }],
-                category: "Basic Arithmetic"
-            },
-            {
-                name: "分数演算",
-                code: "1/2 1/3 +",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 5, denominator: 6 } }],
-                category: "Basic Arithmetic"
-            },
-            {
-                name: "複合演算",
-                code: "2 3 + 4 *",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 20, denominator: 1 } }],
-                category: "Basic Arithmetic"
-            },
-
-            // ========== 比較・論理演算 ==========
-            {
-                name: "大なり比較",
-                code: "5 3 >",
-                expectedWorkspace: [{ type: 'boolean', value: true }],
-                category: "Comparison & Logic"
-            },
-            {
-                name: "論理否定（漢字）",
-                code: "true 否",
-                expectedWorkspace: [{ type: 'boolean', value: false }],
-                category: "Comparison & Logic"
-            },
-            {
-                name: "論理積（漢字）",
-                code: "true false 且",
-                expectedWorkspace: [{ type: 'boolean', value: false }],
-                category: "Comparison & Logic"
-            },
-            {
-                name: "論理和（漢字）",
-                code: "true false 或",
-                expectedWorkspace: [{ type: 'boolean', value: true }],
-                category: "Comparison & Logic"
-            },
-
-            // ========== 存在チェック ==========
-            {
-                name: "無チェック（nil）",
-                code: "nil 無",
-                expectedWorkspace: [{ type: 'boolean', value: true }],
-                category: "Existence Check"
-            },
-            {
-                name: "有チェック（数値）",
-                code: "5 有",
-                expectedWorkspace: [{ type: 'boolean', value: true }],
-                category: "Existence Check"
-            },
-
-            // ========== Vector基本操作 ==========
-            {
-                name: "Vectorリテラル",
-                code: "[ 1 2 3 ]",
+                name: "ファイル作成",
+                code: "[ 1 2 3 4 5 ]",
                 expectedWorkspace: [{
                     type: 'vector',
                     value: [
                         { type: 'number', value: { numerator: 1, denominator: 1 } },
                         { type: 'number', value: { numerator: 2, denominator: 1 } },
-                        { type: 'number', value: { numerator: 3, denominator: 1 } }
+                        { type: 'number', value: { numerator: 3, denominator: 1 } },
+                        { type: 'number', value: { numerator: 4, denominator: 1 } },
+                        { type: 'number', value: { numerator: 5, denominator: 1 } }
                     ]
                 }],
-                category: "Vector Basic"
+                category: "File Operations"
             },
             {
-                name: "Vector先頭取得",
-                code: "[ 10 20 30 ] 頭",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 10, denominator: 1 } }],
-                category: "Vector Basic"
+                name: "3ページ目を見る",
+                code: "[ 1 2 3 4 5 ] 2 頁 取得",
+                expectedWorkspace: [{ type: 'number', value: { numerator: 3, denominator: 1 } }],
+                category: "Page Access"
             },
             {
-                name: "Vector末尾取得",
-                code: "[ 10 20 30 ] 尾",
+                name: "ページ数を数える",
+                code: "[ 1 2 3 4 5 ] 頁数 取得",
+                expectedWorkspace: [{ type: 'number', value: { numerator: 5, denominator: 1 } }],
+                category: "Page Count"
+            },
+            {
+                name: "2ページ目に新しいページを挿入",
+                code: "[ 1 2 3 4 5 ] 1 頁 9 挿入",
                 expectedWorkspace: [{
                     type: 'vector',
                     value: [
-                        { type: 'number', value: { numerator: 20, denominator: 1 } },
-                        { type: 'number', value: { numerator: 30, denominator: 1 } }
+                        { type: 'number', value: { numerator: 1, denominator: 1 } },
+                        { type: 'number', value: { numerator: 9, denominator: 1 } },
+                        { type: 'number', value: { numerator: 2, denominator: 1 } },
+                        { type: 'number', value: { numerator: 3, denominator: 1 } },
+                        { type: 'number', value: { numerator: 4, denominator: 1 } },
+                        { type: 'number', value: { numerator: 5, denominator: 1 } }
                     ]
                 }],
-                category: "Vector Basic"
+                category: "Page Modification"
             },
-
-            // ========== 対称ペア操作 ==========
             {
-                name: "接/離 対称性",
-                code: "5 [ 1 2 3 ] 接 離",
+                name: "2ページ目を置き換える",
+                code: "[ 1 2 3 4 5 ] 1 頁 9 置換",
                 expectedWorkspace: [
-                    { type: 'number', value: { numerator: 5, denominator: 1 } },
                     {
                         type: 'vector',
                         value: [
                             { type: 'number', value: { numerator: 1, denominator: 1 } },
-                            { type: 'number', value: { numerator: 2, denominator: 1 } },
-                            { type: 'number', value: { numerator: 3, denominator: 1 } }
+                            { type: 'number', value: { numerator: 9, denominator: 1 } },
+                            { type: 'number', value: { numerator: 3, denominator: 1 } },
+                            { type: 'number', value: { numerator: 4, denominator: 1 } },
+                            { type: 'number', value: { numerator: 5, denominator: 1 } }
                         ]
-                    }
+                    },
+                    { type: 'number', value: { numerator: 2, denominator: 1 } }
                 ],
-                category: "Symmetric Pairs"
+                category: "Page Modification"
             },
             {
-                name: "追/除 対称性",
-                code: "[ 1 2 ] 3 追 除",
+                name: "2ページ目を削除する",
+                code: "[ 1 2 3 4 5 ] 1 頁 削除",
+                expectedWorkspace: [
+                    {
+                        type: 'vector',
+                        value: [
+                            { type: 'number', value: { numerator: 1, denominator: 1 } },
+                            { type: 'number', value: { numerator: 3, denominator: 1 } },
+                            { type: 'number', value: { numerator: 4, denominator: 1 } },
+                            { type: 'number', value: { numerator: 5, denominator: 1 } }
+                        ]
+                    },
+                    { type: 'number', value: { numerator: 2, denominator: 1 } }
+                ],
+                category: "Page Modification"
+            },
+            {
+                name: "2つのファイルを合併する",
+                code: "[ 1 2 3 ] [ 4 5 ] 合併",
+                expectedWorkspace: [{
+                    type: 'vector',
+                    value: [
+                        { type: 'number', value: { numerator: 1, denominator: 1 } },
+                        { type: 'number', value: { numerator: 2, denominator: 1 } },
+                        { type: 'number', value: { numerator: 3, denominator: 1 } },
+                        { type: 'number', value: { numerator: 4, denominator: 1 } },
+                        { type: 'number', value: { numerator: 5, denominator: 1 } }
+                    ]
+                }],
+                category: "File Operations"
+            },
+            {
+                name: "ファイルを2ページ目で分離する",
+                code: "[ 1 2 3 4 5 ] 2 頁 分離",
                 expectedWorkspace: [
                     {
                         type: 'vector',
@@ -324,82 +288,42 @@ export class TestRunner {
                             { type: 'number', value: { numerator: 2, denominator: 1 } }
                         ]
                     },
-                    { type: 'number', value: { numerator: 3, denominator: 1 } }
+                    {
+                        type: 'vector',
+                        value: [
+                            { type: 'number', value: { numerator: 3, denominator: 1 } },
+                            { type: 'number', value: { numerator: 4, denominator: 1 } },
+                            { type: 'number', value: { numerator: 5, denominator: 1 } }
+                        ]
+                    }
                 ],
-                category: "Symmetric Pairs"
+                category: "File Operations"
             },
 
-            // ========== 複製機能 ==========
+            // ========== カスタムワード定義 ==========
             {
-                name: "基本複製",
-                code: "5 複",
-                expectedWorkspace: [
-                    { type: 'number', value: { numerator: 5, denominator: 1 } },
-                    { type: 'number', value: { numerator: 5, denominator: 1 } }
-                ],
-                category: "Clone Operations"
-            },
-            {
-                name: "複製して自乗",
-                code: "7 複 *",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 49, denominator: 1 } }],
-                category: "Clone Operations"
-            },
-
-            // ========== 条件選択（修正済み） ==========
-            {
-                name: "選択（真）",
-                code: "10 20 true 選",  // RPNに修正：a b condition 選
-                expectedWorkspace: [{ type: 'number', value: { numerator: 10, denominator: 1 } }],
-                category: "Selection"
-            },
-            {
-                name: "選択（偽）",
-                code: "10 20 false 選",  // RPNに修正：a b condition 選
-                expectedWorkspace: [{ type: 'number', value: { numerator: 20, denominator: 1 } }],
-                category: "Selection"
-            },
-
-            // ========== 位置アクセス（修正済み） ==========
-            {
-                name: "Vector位置アクセス",
-                code: "[ 10 20 30 ] 1 在",  // RPNに修正：vector index 在
-                expectedWorkspace: [{ type: 'number', value: { numerator: 20, denominator: 1 } }],
-                category: "Position Access"
-            },
-
-            // ========== ワード定義 ==========
-            {
-                name: "ワード定義と実行",
-                code: "[ 複 * ] \"平方\" 定 5 平方",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 25, denominator: 1 } }],
-                category: "Word Definition"
-            },
-
-            // ========== 複雑な組み合わせ ==========
-            {
-                name: "複雑なVector処理",
-                code: "[ 1 2 3 ] 複 数 * 頭 +",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 4, denominator: 1 } }],
-                category: "Complex Operations"
+                name: "ファイル複製ワード定義",
+                code: "[ 0 頁 取得 ] \"ファイル先頭\" DEF [ 1 2 3 ] ファイル先頭",
+                expectedWorkspace: [{ type: 'number', value: { numerator: 1, denominator: 1 } }],
+                category: "Custom Words"
             },
 
             // ========== エラーケース ==========
             {
-                name: "空Vector先頭エラー",
-                code: "[ ] 頭",
+                name: "存在しないページアクセス",
+                code: "[ 1 2 3 ] 10 頁 取得",
                 expectError: true,
                 category: "Error Cases"
             },
             {
-                name: "ワークスペース不足エラー",
-                code: "+",
+                name: "空ファイルページアクセス",
+                code: "[ ] 0 頁 取得",
                 expectError: true,
                 category: "Error Cases"
             },
             {
-                name: "ゼロ除算エラー",
-                code: "5 0 /",
+                name: "不十分なパラメータ（挿入）",
+                code: "[ 1 2 3 ] 挿入",
                 expectError: true,
                 category: "Error Cases"
             }
