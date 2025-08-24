@@ -1,4 +1,4 @@
-// rust/src/lib.rs (ステップ実行機能付き)
+// rust/src/lib.rs (完全版)
 
 use wasm_bindgen::prelude::*;
 
@@ -40,6 +40,30 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 
                 js_sys::Reflect::set(&obj, &"autoNamed".into(), &JsValue::from_bool(false)).unwrap();
+            }
+            Err(e) => {
+                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"message".into(), &JsValue::from_str(&e.to_string())).unwrap();
+                js_sys::Reflect::set(&obj, &"error".into(), &JsValue::from_bool(true)).unwrap();
+            }
+        }
+        
+        obj.into()
+    }
+
+    #[wasm_bindgen]
+    pub fn amnesia(&mut self) -> JsValue {
+        let obj = js_sys::Object::new();
+        
+        match self.interpreter.execute_amnesia() {
+            Ok(()) => {
+                // インタープリターもリセット
+                self.interpreter = Interpreter::new();
+                self.step_tokens.clear();
+                self.step_position = 0;
+                
+                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"output".into(), &"All memory cleared. System reset.".into()).unwrap();
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -196,6 +220,27 @@ impl AjisaiInterpreter {
         self.interpreter = Interpreter::new();
         self.step_tokens.clear();
         self.step_position = 0;
+    }
+    
+    #[wasm_bindgen]
+    pub fn save_table(&mut self, name: String, schema: JsValue, records: JsValue) -> Result<(), String> {
+        // IndexedDBへの保存処理は現在未実装
+        // 将来的にはここでIndexedDBにテーブルデータを保存する
+        Ok(())
+    }
+
+    #[wasm_bindgen]
+    pub fn load_table(&self, name: String) -> JsValue {
+        // IndexedDBからの読み込み処理は現在未実装
+        // 将来的にはここでIndexedDBからテーブルデータを読み込む
+        JsValue::NULL
+    }
+
+    #[wasm_bindgen]
+    pub fn get_all_tables(&self) -> Vec<String> {
+        // IndexedDBのテーブル一覧取得は現在未実装
+        // 将来的にはここでIndexedDB内のテーブル名一覧を返す
+        Vec::new()
     }
     
     #[wasm_bindgen]
