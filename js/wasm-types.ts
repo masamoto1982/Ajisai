@@ -1,4 +1,4 @@
-// js/wasm-types.ts (ステップ実行対応)
+// js/wasm-types.ts (AMNESIA機能対応)
 
 export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
@@ -8,6 +8,7 @@ export interface AjisaiInterpreter {
     execute(code: string): ExecuteResult;
     init_step(code: string): string;
     step(): StepResult;
+    amnesia(): ExecuteResult;  // 追加
     get_workspace(): Value[];
     get_custom_words(): string[];
     get_custom_words_with_descriptions(): Array<[string, string | null]>;
