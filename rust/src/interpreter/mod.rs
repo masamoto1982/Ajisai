@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (新しいワード体系とステップ実行対応)
+// rust/src/interpreter/mod.rs (AMNESIA機能を追加)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -51,6 +51,28 @@ impl Interpreter {
         for line in lines {
             self.process_line(line)?;
         }
+        
+        Ok(())
+    }
+
+    pub fn execute_amnesia(&mut self) -> Result<()> {
+        // IndexedDBクリアのイベントを発火
+        if let Some(window) = web_sys::window() {
+            let event = web_sys::CustomEvent::new("ajisai-amnesia")
+                .map_err(|_| error::AjisaiError::from("Failed to create amnesia event"))?;
+            window.dispatch_event(&event)
+                .map_err(|_| error::AjisaiError::from("Failed to dispatch amnesia event"))?;
+        }
+        
+        // インタープリター内部状態もクリア
+        self.workspace.clear();
+        self.dictionary.clear();
+        self.dependencies.clear();
+        self.output_buffer.clear();
+        self.call_stack.clear();
+        
+        // 組み込みワードを再登録
+        crate::builtins::register_builtins(&mut self.dictionary);
         
         Ok(())
     }
@@ -496,14 +518,4 @@ impl Interpreter {
             Token::VectorEnd => "]".to_string(),
         }
     }
-}
-
-pub fn op_amnesia(_interp: &mut Interpreter) -> Result<()> {
-    if let Some(window) = web_sys::window() {
-        let event = web_sys::CustomEvent::new("ajisai-amnesia")
-            .map_err(|_| error::AjisaiError::from("Failed to create amnesia event"))?;
-        window.dispatch_event(&event)
-            .map_err(|_| error::AjisaiError::from("Failed to dispatch amnesia event"))?;
-    }
-    Ok(())
 }
