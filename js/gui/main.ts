@@ -18,7 +18,7 @@ interface GUIElements {
     codeInput: HTMLTextAreaElement;
     runBtn: HTMLButtonElement;
     clearBtn: HTMLButtonElement;
-    testBtn: HTMLButtonButton;
+    testBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
     workspaceDisplay: HTMLElement;
     builtinWordsDisplay: HTMLElement;
