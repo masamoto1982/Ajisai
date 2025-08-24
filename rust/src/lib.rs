@@ -1,3 +1,5 @@
+// rust/src/lib.rs (ステップ実行機能付き)
+
 use wasm_bindgen::prelude::*;
 
 mod types;
@@ -11,6 +13,8 @@ use interpreter::Interpreter;
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
     interpreter: Interpreter,
+    step_tokens: Vec<types::Token>,
+    step_position: usize,
 }
 
 #[wasm_bindgen]
@@ -19,6 +23,8 @@ impl AjisaiInterpreter {
     pub fn new() -> Self {
         AjisaiInterpreter {
             interpreter: Interpreter::new(),
+            step_tokens: Vec::new(),
+            step_position: 0,
         }
     }
 
@@ -43,6 +49,48 @@ impl AjisaiInterpreter {
         }
         
         obj.into()
+    }
+
+    #[wasm_bindgen]
+    pub fn init_step(&mut self, code: &str) -> Result<String, String> {
+        let tokens = crate::tokenizer::tokenize(code)
+            .map_err(|e| format!("Tokenization error: {}", e))?;
+        
+        self.step_tokens = tokens;
+        self.step_position = 0;
+        
+        Ok(format!("Step mode initialized. {} tokens to execute.", self.step_tokens.len()))
+    }
+
+    #[wasm_bindgen]
+    pub fn step(&mut self) -> JsValue {
+        let result_obj = js_sys::Object::new();
+        
+        if self.step_position >= self.step_tokens.len() {
+            js_sys::Reflect::set(&result_obj, &"hasMore".into(), &JsValue::from_bool(false)).unwrap();
+            js_sys::Reflect::set(&result_obj, &"output".into(), &"Step execution completed.".into()).unwrap();
+            return result_obj.into();
+        }
+        
+        let token = &self.step_tokens[self.step_position];
+        
+        match self.interpreter.execute_single_token(token) {
+            Ok(output) => {
+                self.step_position += 1;
+                
+                js_sys::Reflect::set(&result_obj, &"hasMore".into(), &JsValue::from_bool(self.step_position < self.step_tokens.len())).unwrap();
+                js_sys::Reflect::set(&result_obj, &"output".into(), &output.into()).unwrap();
+                js_sys::Reflect::set(&result_obj, &"position".into(), &JsValue::from_f64(self.step_position as f64)).unwrap();
+                js_sys::Reflect::set(&result_obj, &"total".into(), &JsValue::from_f64(self.step_tokens.len() as f64)).unwrap();
+            }
+            Err(e) => {
+                js_sys::Reflect::set(&result_obj, &"hasMore".into(), &JsValue::from_bool(false)).unwrap();
+                js_sys::Reflect::set(&result_obj, &"output".into(), &format!("Error: {}", e).into()).unwrap();
+                js_sys::Reflect::set(&result_obj, &"error".into(), &JsValue::from_bool(true)).unwrap();
+            }
+        }
+        
+        result_obj.into()
     }
 
     #[wasm_bindgen]
@@ -146,6 +194,8 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn reset(&mut self) {
         self.interpreter = Interpreter::new();
+        self.step_tokens.clear();
+        self.step_position = 0;
     }
     
     #[wasm_bindgen]
