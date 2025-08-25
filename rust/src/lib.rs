@@ -1,4 +1,4 @@
-// rust/src/lib.rs (完全版)
+// rust/src/lib.rs (ParenComment対応完全版)
 
 use wasm_bindgen::prelude::*;
 
