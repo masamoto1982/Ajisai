@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (AMNESIA機能を追加)
+// rust/src/interpreter/mod.rs (丸括弧コメント+ステップ実行修正版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -105,6 +105,10 @@ impl Interpreter {
                 });
                 Ok("Pushed nil".to_string())
             },
+            Token::ParenComment(comment) => {
+                // 丸括弧コメントは実行時には無視
+                Ok(format!("Skipped comment: ({})", comment))
+            },
             Token::Symbol(name) => {
                 self.execute_word(name)?;
                 let output = self.get_output();
@@ -115,10 +119,12 @@ impl Interpreter {
                 }
             },
             Token::VectorStart => {
-                Ok("Vector start (needs matching end)".to_string())
+                // ベクトルの開始だけでは処理できない
+                Ok("Vector start token (incomplete)".to_string())
             },
             Token::VectorEnd => {
-                Ok("Vector end (needs matching start)".to_string())
+                // ベクトルの終了だけでは処理できない
+                Ok("Vector end token (incomplete)".to_string())
             },
         }
     }
@@ -136,7 +142,121 @@ impl Interpreter {
             return Ok(());
         }
 
+        // 雇用パターンのチェック（説明付きも対応）
+        if let Some(hire_result) = self.try_process_hire_pattern(&tokens) {
+            return hire_result;
+        }
+
+        // 通常のトークン実行
         self.execute_tokens(&tokens)
+    }
+
+    fn try_process_hire_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
+        // 雇用の位置を探す
+        let hire_position = tokens.iter().rposition(|t| {
+            if let Token::Symbol(s) = t {
+                s == "雇用"
+            } else {
+                false
+            }
+        })?;
+
+        // パターン1: 処理内容 "名前" ( 説明 ) 雇用
+        if hire_position >= 3 {
+            if let (Token::String(name), Token::ParenComment(desc)) = 
+                (&tokens[hire_position - 2], &tokens[hire_position - 1]) {
+                
+                let body_tokens = &tokens[..hire_position - 2];
+                return Some(self.define_word_with_description(
+                    name.clone(), 
+                    body_tokens.to_vec(), 
+                    Some(desc.clone())
+                ));
+            }
+        }
+
+        // パターン2: 処理内容 "名前" 雇用 ( 説明 )
+        if hire_position >= 1 && hire_position + 1 < tokens.len() {
+            if let (Token::String(name), Token::ParenComment(desc)) = 
+                (&tokens[hire_position - 1], &tokens[hire_position + 1]) {
+                
+                let body_tokens = &tokens[..hire_position - 1];
+                return Some(self.define_word_with_description(
+                    name.clone(), 
+                    body_tokens.to_vec(), 
+                    Some(desc.clone())
+                ));
+            }
+        }
+
+        // 従来の雇用パターン（説明なし）: 処理内容 "名前" 雇用
+        if hire_position >= 1 {
+            if let Token::String(name) = &tokens[hire_position - 1] {
+                let body_tokens = &tokens[..hire_position - 1];
+                return Some(self.define_word_with_description(
+                    name.clone(), 
+                    body_tokens.to_vec(), 
+                    None
+                ));
+            }
+        }
+
+        None
+    }
+
+    fn define_word_with_description(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+        let name = name.to_uppercase();
+        
+        // 既存のワードチェック
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(error::AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
+            }
+        }
+
+        // 依存関係チェック
+        if self.dictionary.contains_key(&name) {
+            if let Some(dependents) = self.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(error::AjisaiError::ProtectedWord { 
+                        name: name.clone(), 
+                        dependents: dependent_list 
+                    });
+                }
+            }
+        }
+
+        // 古い依存関係をクリア
+        if let Some(old_deps) = self.get_word_dependencies(&name) {
+            for dep in old_deps {
+                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
+                    reverse_deps.remove(&name);
+                }
+            }
+        }
+
+        // 新しい依存関係を登録
+        for token in &body_tokens {
+            if let Token::Symbol(sym) = token {
+                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
+                    self.dependencies.entry(sym.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(name.clone());
+                }
+            }
+        }
+
+        // ワードを登録
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens: body_tokens,
+            is_builtin: false,
+            description,
+            category: None,
+        });
+
+        self.append_output(&format!("Hired librarian: {}\n", name));
+        Ok(())
     }
 
     fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
@@ -167,6 +287,10 @@ impl Interpreter {
                     });
                     i += 1;
                 },
+                Token::ParenComment(_) => {
+                    // 丸括弧コメントは実行時には無視
+                    i += 1;
+                },
                 Token::VectorStart => {
                     let (vector_values, consumed) = self.collect_vector(tokens, i)?;
                     self.workspace.push(Value {
@@ -175,11 +299,7 @@ impl Interpreter {
                     i += consumed;
                 },
                 Token::Symbol(name) => {
-                    if name == "DEF" {
-                        self.handle_def()?;
-                    } else {
-                        self.execute_word(name)?;
-                    }
+                    self.execute_word(name)?;
                     i += 1;
                 },
                 Token::VectorEnd => {
@@ -206,6 +326,9 @@ impl Interpreter {
                     if depth == 0 {
                         return Ok((values, i - start + 1));
                     }
+                },
+                Token::ParenComment(_) => {
+                    // ベクトル内のコメントは無視
                 },
                 token if depth == 1 => {
                     values.push(self.token_to_value(token)?);
@@ -235,75 +358,12 @@ impl Interpreter {
             Token::Symbol(s) => Ok(Value {
                 val_type: ValueType::Symbol(s.clone()),
             }),
+            Token::ParenComment(_) => {
+                // コメントはValueにはならない
+                Err(error::AjisaiError::from("Cannot convert comment to value"))
+            },
             _ => Err(error::AjisaiError::from("Cannot convert token to value")),
         }
-    }
-
-    fn handle_def(&mut self) -> Result<()> {
-        if self.workspace.len() < 2 {
-            return Err(error::AjisaiError::from("DEF requires vector and name"));
-        }
-
-        let name_val = self.workspace.pop().unwrap();
-        let code_val = self.workspace.pop().unwrap();
-
-        let name = match name_val.val_type {
-            ValueType::String(s) => s.to_uppercase(),
-            _ => return Err(error::AjisaiError::from("DEF requires string name")),
-        };
-
-        let tokens = match code_val.val_type {
-            ValueType::Vector(v) => {
-                self.vector_to_tokens(v)?
-            },
-            _ => return Err(error::AjisaiError::from("DEF requires vector")),
-        };
-
-        if let Some(existing) = self.dictionary.get(&name) {
-            if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-            }
-        }
-
-        if self.dictionary.contains_key(&name) {
-            if let Some(dependents) = self.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(error::AjisaiError::ProtectedWord { 
-                        name: name.clone(), 
-                        dependents: dependent_list 
-                    });
-                }
-            }
-        }
-
-        if let Some(old_deps) = self.get_word_dependencies(&name) {
-            for dep in old_deps {
-                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
-                    reverse_deps.remove(&name);
-                }
-            }
-        }
-
-        for token in &tokens {
-            if let Token::Symbol(sym) = token {
-                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                    self.dependencies.entry(sym.clone())
-                        .or_insert_with(HashSet::new)
-                        .insert(name.clone());
-                }
-            }
-        }
-
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens,
-            is_builtin: false,
-            description: None,
-            category: None,
-        });
-
-        self.append_output(&format!("Defined: {}\n", name));
-        Ok(())
     }
 
     pub fn vector_to_tokens(&self, vector: Vec<Value>) -> Result<Vec<Token>> {
@@ -323,7 +383,7 @@ impl Interpreter {
             ValueType::Boolean(b) => Ok(Token::Boolean(b)),
             ValueType::Symbol(s) => Ok(Token::Symbol(s)),
             ValueType::Nil => Ok(Token::Nil),
-            ValueType::Vector(_) => Err(error::AjisaiError::from("Nested vectors not supported in DEF")),
+            ValueType::Vector(_) => Err(error::AjisaiError::from("Nested vectors not supported in token conversion")),
         }
     }
 
@@ -419,6 +479,9 @@ impl Interpreter {
                     self.workspace.push(Value {
                         val_type: ValueType::Nil,
                     });
+                },
+                Token::ParenComment(_) => {
+                    // カスタムワード内のコメントは無視
                 },
                 Token::Symbol(name) => {
                     self.execute_word(name)?;
@@ -534,7 +597,13 @@ impl Interpreter {
         if let Some(def) = self.dictionary.get(name) {
             if !def.is_builtin {
                 let body_string = def.tokens.iter()
-                    .map(|token| self.token_to_string(token))
+                    .filter_map(|token| {
+                        // ParenCommentはワード定義文字列には含めない
+                        match token {
+                            Token::ParenComment(_) => None,
+                            _ => Some(self.token_to_string(token))
+                        }
+                    })
                     .collect::<Vec<String>>()
                     .join(" ");
                 return Some(format!("[ {} ]", body_string));
@@ -552,6 +621,7 @@ impl Interpreter {
             Token::Symbol(s) => s.clone(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
+            Token::ParenComment(comment) => format!("({})", comment),
         }
     }
 }
