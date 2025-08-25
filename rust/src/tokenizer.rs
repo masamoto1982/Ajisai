@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (新司書体系完全版)
+// rust/src/tokenizer.rs (丸括弧コメント対応完全版)
 
 use crate::types::Token;
 use std::collections::HashSet;
@@ -22,6 +22,15 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         // 文字列リテラル（""のみ）
         if chars[i] == '"' {
             if let Some((token, consumed)) = parse_string_literal(&chars[i..]) {
+                tokens.push(token);
+                i += consumed;
+                continue;
+            }
+        }
+        
+        // 丸括弧コメント（機能説明）
+        if chars[i] == '(' {
+            if let Some((token, consumed)) = parse_paren_comment(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
@@ -153,6 +162,44 @@ fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
     }
     
     None
+}
+
+// 丸括弧コメント（機能説明）解析
+fn parse_paren_comment(chars: &[char]) -> Option<(Token, usize)> {
+    if chars.is_empty() || chars[0] != '(' {
+        return None;
+    }
+    
+    let mut comment = String::new();
+    let mut i = 1; // '(' の次から開始
+    let mut depth = 1; // ネストした丸括弧に対応
+    
+    while i < chars.len() && depth > 0 {
+        match chars[i] {
+            '(' => {
+                depth += 1;
+                comment.push(chars[i]);
+            },
+            ')' => {
+                depth -= 1;
+                if depth > 0 {
+                    comment.push(chars[i]);
+                }
+            },
+            c => {
+                comment.push(c);
+            }
+        }
+        i += 1;
+    }
+    
+    if depth == 0 {
+        // 前後の空白を除去
+        Some((Token::ParenComment(comment.trim().to_string()), i))
+    } else {
+        // 閉じ括弧がない場合はエラーとして扱わず、無視する
+        None
+    }
 }
 
 // 数値解析（整数、分数、小数）
