@@ -370,6 +370,32 @@ impl Interpreter {
         }
     }
 
+    pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
+        if let Some(current) = current_word {
+            if name != current {
+                return Err(error::AjisaiError::from(format!(
+                    "Librarian handover can only jump within the same department. Cannot jump from '{}' to '{}'", 
+                    current, name
+                )));
+            }
+        } else {
+            return Err(error::AjisaiError::from(format!(
+                "Librarian handover can only be used within custom departments. Cannot jump to '{}' from main program", 
+                name
+            )));
+        }
+
+        if let Some(def) = self.dictionary.get(name).cloned() {
+            if def.is_builtin {
+                return Err(error::AjisaiError::from("Cannot handover to builtin librarian"));
+            } else {
+                self.execute_custom_word(&def.tokens)
+            }
+        } else {
+            Err(error::AjisaiError::UnknownWord(name.to_string()))
+        }
+    }
+
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
         while i < tokens.len() {
