@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (丸括弧コメント対応完全版)
+// rust/src/interpreter/control.rs (ビルドエラー修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token};
@@ -121,6 +121,9 @@ pub fn op_hire_with_description(interp: &mut Interpreter, name: String, tokens: 
         }
     }
 
+    // 説明情報を先に取得（descriptionを移動する前に）
+    let desc_info = if description.is_some() { " with description" } else { "" };
+
     // ワード定義を登録（説明付き）
     interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
         tokens,
@@ -129,7 +132,6 @@ pub fn op_hire_with_description(interp: &mut Interpreter, name: String, tokens: 
         category: None,
     });
 
-    let desc_info = if description.is_some() { " with description" } else { "" };
     interp.append_output(&format!("Hired librarian: {}{}\n", name, desc_info));
     Ok(())
 }
