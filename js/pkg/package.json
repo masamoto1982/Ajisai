@@ -1,7 +1,7 @@
 {
   "name": "ajisai-core",
   "type": "module",
-  "version": "0.1.0",
+  "version": "2025.8.25",
   "files": [
     "ajisai_core_bg.wasm",
     "ajisai_core.js",
