@@ -223,14 +223,14 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
-    pub fn save_table(&mut self, name: String, schema: JsValue, records: JsValue) -> Result<(), String> {
+    pub fn save_table(&mut self, _name: String, _schema: JsValue, _records: JsValue) -> Result<(), String> {
         // IndexedDBへの保存処理は現在未実装
         // 将来的にはここでIndexedDBにテーブルデータを保存する
         Ok(())
     }
 
     #[wasm_bindgen]
-    pub fn load_table(&self, name: String) -> JsValue {
+    pub fn load_table(&self, _name: String) -> JsValue {
         // IndexedDBからの読み込み処理は現在未実装
         // 将来的にはここでIndexedDBからテーブルデータを読み込む
         JsValue::NULL
