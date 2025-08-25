@@ -1,18 +1,16 @@
-// rust/src/interpreter/vector_ops.rs (新しいワード体系に対応)
+// rust/src/interpreter/vector_ops.rs (新司書体系版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction};
 
-// 新しいワード体系の実装
-
-// 頁 - インデックス指定（スタックに指定情報を残す）
+// 頁司書 - 書籍の特定ページを取得
 pub fn op_page(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
     }
     
     let index_val = interp.workspace.pop().unwrap();
-    let vector_val = interp.workspace.last().unwrap().clone();
+    let vector_val = interp.workspace.pop().unwrap();
     
     let index = match index_val.val_type {
         ValueType::Number(n) if n.denominator == 1 => n.numerator,
@@ -20,58 +18,7 @@ pub fn op_page(interp: &mut Interpreter) -> Result<()> {
     };
     
     match vector_val.val_type {
-        ValueType::Vector(ref v) => {
-            let actual_index = if index < 0 {
-                v.len() as i64 + index
-            } else {
-                index
-            };
-            
-            if actual_index < 0 || actual_index >= v.len() as i64 {
-                return Err(AjisaiError::IndexOutOfBounds {
-                    index,
-                    length: v.len(),
-                });
-            }
-            
-            // インデックス情報をスタックに残す（後続の操作で使用）
-            interp.workspace.push(Value { 
-                val_type: ValueType::Number(Fraction::new(actual_index, 1))
-            });
-            Ok(())
-        },
-        _ => Err(AjisaiError::type_error("vector", "other type")),
-    }
-}
-
-// 頁数 - 長さ指定（スタックに長さ情報を残す）
-pub fn op_page_count(interp: &mut Interpreter) -> Result<()> {
-    let vector_val = interp.workspace.last()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    match vector_val.val_type {
-        ValueType::Vector(ref v) => {
-            interp.workspace.push(Value { 
-                val_type: ValueType::Number(Fraction::new(v.len() as i64, 1))
-            });
-            Ok(())
-        },
-        _ => Err(AjisaiError::type_error("vector", "other type")),
-    }
-}
-
-// 取得 - 指定された対象を取得
-pub fn op_get(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
-    let target_val = interp.workspace.pop().unwrap();
-    let vector_val = interp.workspace.pop().unwrap();
-    
-    match (&vector_val.val_type, &target_val.val_type) {
-        (ValueType::Vector(v), ValueType::Number(n)) if n.denominator == 1 => {
-            let index = n.numerator;
+        ValueType::Vector(v) => {
             let actual_index = if index < 0 {
                 v.len() as i64 + index
             } else {
@@ -88,11 +35,27 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 })
             }
         },
-        _ => Err(AjisaiError::type_error("vector and index", "other types")),
+        _ => Err(AjisaiError::type_error("vector", "other type")),
     }
 }
 
-// 挿入 - 指定位置に要素を挿入
+// 頁数司書 - 書籍の総ページ数を取得
+pub fn op_page_count(interp: &mut Interpreter) -> Result<()> {
+    let vector_val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match vector_val.val_type {
+        ValueType::Vector(v) => {
+            interp.workspace.push(Value { 
+                val_type: ValueType::Number(Fraction::new(v.len() as i64, 1))
+            });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 挿入司書 - 指定位置にページを挿入
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -125,7 +88,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 置換 - 指定位置の要素を置き換え
+// 置換司書 - 指定位置のページを置換
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -164,7 +127,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 削除 - 指定位置の要素を削除
+// 削除司書 - 指定位置のページを削除
 pub fn op_delete(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -202,7 +165,7 @@ pub fn op_delete(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 合併 - 2つのベクトルを結合
+// 合併司書 - 2つの書籍を結合
 pub fn op_merge(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -221,7 +184,7 @@ pub fn op_merge(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 分離 - ベクトルを指定位置で分離
+// 分離司書 - 書籍を2つに分ける
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -250,4 +213,26 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
     }
+}
+
+// 待機司書 - 何もしない（pass文）
+pub fn op_wait(interp: &mut Interpreter) -> Result<()> {
+    // 何もしない
+    Ok(())
+}
+
+// 複製司書 - 書籍を複製
+pub fn op_duplicate(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.workspace.last()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    interp.workspace.push(val.clone());
+    Ok(())
+}
+
+// 破棄司書 - 書籍を破棄
+pub fn op_discard(interp: &mut Interpreter) -> Result<()> {
+    interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    Ok(())
 }
