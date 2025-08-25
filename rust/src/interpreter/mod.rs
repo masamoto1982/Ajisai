@@ -413,23 +413,33 @@ impl Interpreter {
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // 対象指定ワード
+            // 算術演算司書
+            "+" => arithmetic::op_add(self),
+            "-" => arithmetic::op_sub(self),
+            "*" => arithmetic::op_mul(self),
+            "/" => arithmetic::op_div(self),
+            
+            // 比較判定司書
+            ">" => arithmetic::op_gt(self),
+            ">=" => arithmetic::op_ge(self),
+            "=" => arithmetic::op_eq(self),
+            
+            // 書籍操作司書
             "頁" => vector_ops::op_page(self),
             "頁数" => vector_ops::op_page_count(self),
-            
-            // 基本操作ワード
-            "取得" => vector_ops::op_get(self),
             "挿入" => vector_ops::op_insert(self),
             "置換" => vector_ops::op_replace(self),
             "削除" => vector_ops::op_delete(self),
             "合併" => vector_ops::op_merge(self),
             "分離" => vector_ops::op_split(self),
+            "待機" => vector_ops::op_wait(self),
+            "複製" => vector_ops::op_duplicate(self),
+            "破棄" => vector_ops::op_discard(self),
             
-            // 定義/削除ワード
-            "DEF" => {
-                Err(error::AjisaiError::from("DEF should be handled separately"))
-            },
-            "DEL" => control::op_del(self),
+            // 司書管理司書
+            "雇用" => control::op_hire(self),
+            "解雇" => control::op_fire(self),
+            "交代" => control::op_handover(self),
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
