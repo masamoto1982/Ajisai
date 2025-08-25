@@ -1,3 +1,5 @@
+// rust/src/tokenizer.rs (新司書体系完全版)
+
 use crate::types::Token;
 use std::collections::HashSet;
 
@@ -41,7 +43,6 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         
         // コメント（#から行末まで）
         if chars[i] == '#' {
-            // 行末まで無視
             while i < chars.len() && chars[i] != '\n' {
                 i += 1;
             }
@@ -56,22 +57,18 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         }
         
         // カスタムワードチェック（最優先）
-if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
-    use web_sys::console;
-    console::log_1(&format!("Custom word token found: {:?}", token).into());
-    tokens.push(token);
-    i += consumed;
-    continue;
-}
+        if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
+            tokens.push(token);
+            i += consumed;
+            continue;
+        }
 
-// 組み込みワードチェック（漢字）
-if let Some((token, consumed)) = try_parse_kanji_builtin(&chars[i..]) {
-    use web_sys::console;
-    console::log_1(&format!("Kanji builtin token found: {:?}", token).into());
-    tokens.push(token);
-    i += consumed;
-    continue;
-}
+        // 新しい組み込みワードチェック（漢字）
+        if let Some((token, consumed)) = try_parse_builtin_kanji(&chars[i..]) {
+            tokens.push(token);
+            i += consumed;
+            continue;
+        }
         
         // 組み込みワードチェック（英数字）
         if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
@@ -95,67 +92,40 @@ if let Some((token, consumed)) = try_parse_kanji_builtin(&chars[i..]) {
 }
 
 fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
-    use web_sys::console;
-    let input_str: String = chars.iter().take(10).collect();
-    console::log_1(&format!("Trying to parse custom word from: '{}'", input_str).into());
-    console::log_1(&format!("Available custom words: {:?}", custom_words).into());
-    
     // 長い単語から優先的にマッチング
     let mut sorted_words: Vec<&String> = custom_words.iter().collect();
     sorted_words.sort_by(|a, b| {
-        let a_len = a.chars().count();  // バイト数ではなく文字数
-        let b_len = b.chars().count();  // バイト数ではなく文字数
+        let a_len = a.chars().count();
+        let b_len = b.chars().count();
         b_len.cmp(&a_len)
     });
     
-    console::log_1(&format!("Sorted words: {:?}", sorted_words).into());
-    
     for word in sorted_words {
-        let word_char_len = word.chars().count();  // 文字数を取得
-        console::log_1(&format!("Checking word: '{}' (char_len: {})", word, word_char_len).into());
+        let word_char_len = word.chars().count();
         
-        if chars.len() >= word_char_len {  // 文字数で比較
-            let candidate: String = chars[..word_char_len].iter().collect();  // 文字数分だけ取得
-            console::log_1(&format!("Candidate: '{}' vs Word: '{}'", candidate, word).into());
+        if chars.len() >= word_char_len {
+            let candidate: String = chars[..word_char_len].iter().collect();
             
             if candidate == *word {
-                console::log_1(&format!("Match found! Checking boundary...").into());
-                
-                // 単語境界チェック（次の文字が辞書語でない）
+                // 単語境界チェック
                 if chars.len() == word_char_len || 
-                   !is_dictionary_char(chars[word_char_len]) {  // 文字数でインデックス
-                    
-                    console::log_1(&format!("Custom word matched: '{}'", word).into());
-                    return Some((Token::Symbol(word.clone()), word_char_len));  // 文字数を返す
-                } else {
-                    console::log_1(&format!("Boundary check failed").into());
+                   !is_word_char(chars[word_char_len]) {
+                    return Some((Token::Symbol(word.clone()), word_char_len));
                 }
-            } else {
-                console::log_1(&format!("No match").into());
             }
-        } else {
-            console::log_1(&format!("Word too long: {} chars needed, {} available", word_char_len, chars.len()).into());
         }
     }
     
-    console::log_1(&format!("No custom word matched").into());
     None
 }
 
-// 辞書語の文字かどうかを判定
-fn is_dictionary_char(c: char) -> bool {
-    // 漢字、英数字、記号かチェック
-    match c {
-        // 組み込み漢字
-        '否' | '且' | '或' | '無' | '有' | '頭' | '尾' | '接' | '離' | '追' | '除' |
-        '複' | '復' | '選' | '数' | '在' | '行' | '結' | '切' | '反' | '挿' | '消' |
-        '探' | '含' | '換' | '抽' | '変' | '畳' | '並' | '空' | '定' | '削' | '成' | '忘' => true,
-        // 英数字
-        c if c.is_ascii_alphanumeric() => true,
-        // 演算子記号
-        '+' | '-' | '*' | '/' | '>' | '<' | '=' => true,
-        _ => false,
-    }
+// 単語文字かどうかを判定
+fn is_word_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || 
+    matches!(c, 
+        '頁' | '挿' | '入' | '置' | '換' | '削' | '除' | '合' | '併' | '分' | '離' | 
+        '待' | '機' | '複' | '製' | '破' | '棄' | '雇' | '用' | '解' | '交' | '代'
+    )
 }
 
 // 文字列リテラル解析
@@ -165,7 +135,7 @@ fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
     }
     
     let mut string = String::new();
-    let mut i = 1; // 開始の"をスキップ
+    let mut i = 1;
     let mut escaped = false;
     
     while i < chars.len() {
@@ -175,7 +145,6 @@ fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
         } else if chars[i] == '\\' {
             escaped = true;
         } else if chars[i] == '"' {
-            // 終了の"
             return Some((Token::String(string), i + 1));
         } else {
             string.push(chars[i]);
@@ -183,7 +152,6 @@ fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
         i += 1;
     }
     
-    // 閉じていない文字列は無効
     None
 }
 
@@ -193,7 +161,6 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
         return None;
     }
     
-    // 数字または小数点、負号で始まらない場合は数値ではない
     let first_char = chars[0];
     if !first_char.is_ascii_digit() && first_char != '.' && first_char != '-' {
         return None;
@@ -204,7 +171,6 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     
     // 負号の処理
     if chars[i] == '-' {
-        // 次の文字が数字または小数点でない場合は演算子として扱う
         if i + 1 >= chars.len() || (!chars[i + 1].is_ascii_digit() && chars[i + 1] != '.') {
             return None;
         }
@@ -218,7 +184,6 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
         i += 1;
     }
     
-    // 数字が全くない場合（例：単独の"-"や"."）
     if number_str.is_empty() || number_str == "-" {
         return None;
     }
@@ -229,7 +194,7 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
         i += 1;
         
         if i >= chars.len() || !chars[i].is_ascii_digit() {
-            return None; // /の後に数字がない
+            return None;
         }
         
         while i < chars.len() && chars[i].is_ascii_digit() {
@@ -237,7 +202,6 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
             i += 1;
         }
         
-        // 分数解析
         let parts: Vec<&str> = number_str.split('/').collect();
         if parts.len() == 2 {
             if let (Ok(num), Ok(den)) = (parts[0].parse::<i64>(), parts[1].parse::<i64>()) {
@@ -254,13 +218,11 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
         number_str.push(chars[i]);
         i += 1;
         
-        // 小数点の後に数字がない場合は有効（例：1.）
         while i < chars.len() && chars[i].is_ascii_digit() {
             number_str.push(chars[i]);
             i += 1;
         }
         
-        // 小数→分数変換
         if let Some((num, den)) = parse_decimal(&number_str) {
             return Some((Token::Number(num, den), i));
         }
@@ -310,85 +272,59 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
     }
 }
 
-// 漢字組み込みワード解析
-fn try_parse_kanji_builtin(chars: &[char]) -> Option<(Token, usize)> {
-    if chars.is_empty() {
-        return None;
+// 新しい組み込み漢字ワード解析
+fn try_parse_builtin_kanji(chars: &[char]) -> Option<(Token, usize)> {
+    // 2文字の組み込みワードを先にチェック
+    if chars.len() >= 2 {
+        let two_char: String = chars[..2].iter().collect();
+        match two_char.as_str() {
+            "頁数" => return Some((Token::Symbol("頁数".to_string()), 2)),
+            "挿入" => return Some((Token::Symbol("挿入".to_string()), 2)),
+            "置換" => return Some((Token::Symbol("置換".to_string()), 2)),
+            "削除" => return Some((Token::Symbol("削除".to_string()), 2)),
+            "合併" => return Some((Token::Symbol("合併".to_string()), 2)),
+            "分離" => return Some((Token::Symbol("分離".to_string()), 2)),
+            "待機" => return Some((Token::Symbol("待機".to_string()), 2)),
+            "複製" => return Some((Token::Symbol("複製".to_string()), 2)),
+            "破棄" => return Some((Token::Symbol("破棄".to_string()), 2)),
+            "雇用" => return Some((Token::Symbol("雇用".to_string()), 2)),
+            "解雇" => return Some((Token::Symbol("解雇".to_string()), 2)),
+            "交代" => return Some((Token::Symbol("交代".to_string()), 2)),
+            _ => {}
+        }
     }
     
-    let kanji = chars[0];
-    let kanji_str = kanji.to_string();
-    
-    // 組み込み漢字ワード辞書
-    let builtin_word = match kanji_str.as_str() {
-        // 論理演算
-        "否" => "否",
-        "且" => "且", 
-        "或" => "或",
+    // 1文字の組み込みワードをチェック
+    if !chars.is_empty() {
+        let one_char = chars[0];
+        let one_char_str = one_char.to_string();
         
-        // 存在チェック
-        "無" => "無",
-        "有" => "有",
-        
-        // Vector操作（既存）
-        "頭" => "頭",
-        "尾" => "尾", 
-        "接" => "接",
-        "離" => "離",
-        "追" => "追",
-        "除" => "除",
-        "複" => "複",
-        "復" => "複",  // 復も複製として認識（テストとの互換性）
-        "選" => "選",
-        "数" => "数",
-        "在" => "在",
-        "行" => "行",
-        
-        // Vector操作（新機能）
-        "結" => "結",
-        "切" => "切",
-        "反" => "反", 
-        "挿" => "挿",
-        "消" => "消",
-        "探" => "探",
-        "含" => "含",
-        "換" => "換",
-        "抽" => "抽",
-        "変" => "変",
-        "畳" => "畳",
-        "並" => "並",
-        "空" => "空",
-        
-        // 制御・定義
-        "定" => "定",
-        "削" => "削",
-        "成" => "成",
-        "忘" => "忘",
-        
-        _ => return None,
-    };
-    
-    Some((Token::Symbol(builtin_word.to_string()), 1))
+        match one_char_str.as_str() {
+            "頁" => Some((Token::Symbol("頁".to_string()), 1)),
+            _ => None,
+        }
+    } else {
+        None
+    }
 }
 
 // ASCII組み込みワード解析
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
-    // 最長マッチング用の候補リスト（長い順）
     let builtin_words = [
-        "true", "false", "nil", "NIL", "DEF",
+        "true", "false", "nil", "NIL", "DEF", "DEL",
     ];
     
     for word in &builtin_words {
         if chars.len() >= word.len() {
             let candidate: String = chars[..word.len()].iter().collect();
             if candidate == *word {
-                // 単語境界チェック（次の文字が英数字でない）
                 if chars.len() == word.len() || !chars[word.len()].is_ascii_alphanumeric() {
                     let token = match *word {
                         "true" => Token::Boolean(true),
                         "false" => Token::Boolean(false),
                         "nil" | "NIL" => Token::Nil,
-                        "DEF" => Token::Symbol("DEF".to_string()),
+                        "DEF" => Token::Symbol("雇用".to_string()),  // DEF → 雇用
+                        "DEL" => Token::Symbol("解雇".to_string()),  // DEL → 解雇
                         _ => Token::Symbol(word.to_uppercase()),
                     };
                     return Some((token, word.len()));
@@ -428,12 +364,3 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
         _ => None,
     }
 }
-
-// テストを一時的に無効化
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-    // テストコードを後で修正
-}
-*/
