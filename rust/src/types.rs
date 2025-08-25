@@ -1,3 +1,5 @@
+// rust/src/types.rs (ParenComment追加版)
+
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -9,8 +11,10 @@ pub enum Token {
     VectorStart,    // [ のみ（{ を削除）
     VectorEnd,      // ] のみ（} を削除）
     Nil,
+    ParenComment(String), // 丸括弧コメント ( 説明 )
 }
 
+// 以下は既存のまま
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub val_type: ValueType,
@@ -26,6 +30,7 @@ pub enum ValueType {
     Nil,
 }
 
+// Fraction構造体とその実装は既存のまま
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fraction {
     pub numerator: i64,
@@ -33,6 +38,7 @@ pub struct Fraction {
 }
 
 impl Fraction {
+    // 既存の実装をそのまま維持
     pub fn new(numerator: i64, denominator: i64) -> Self {
         if denominator == 0 {
             panic!("Division by zero");
