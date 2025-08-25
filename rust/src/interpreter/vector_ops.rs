@@ -216,7 +216,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 }
 
 // 待機司書 - 何もしない（pass文）
-pub fn op_wait(interp: &mut Interpreter) -> Result<()> {
+pub fn op_wait(_interp: &mut Interpreter) -> Result<()> {
     // 何もしない
     Ok(())
 }
