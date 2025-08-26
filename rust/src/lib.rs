@@ -1,4 +1,4 @@
-// rust/src/lib.rs (ParenComment対応完全版)
+// rust/src/lib.rs
 
 use wasm_bindgen::prelude::*;
 
@@ -11,17 +11,17 @@ use types::*;
 use interpreter::Interpreter;
 
 #[wasm_bindgen]
-pub struct AjisaiInterpreter {
+pub struct LPLInterpreter {
     interpreter: Interpreter,
     step_tokens: Vec<types::Token>,
     step_position: usize,
 }
 
 #[wasm_bindgen]
-impl AjisaiInterpreter {
+impl LPLInterpreter {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        AjisaiInterpreter {
+        LPLInterpreter {
             interpreter: Interpreter::new(),
             step_tokens: Vec::new(),
             step_position: 0,
@@ -57,7 +57,6 @@ impl AjisaiInterpreter {
         
         match self.interpreter.execute_amnesia() {
             Ok(()) => {
-                // インタープリターもリセット
                 self.interpreter = Interpreter::new();
                 self.step_tokens.clear();
                 self.step_position = 0;
@@ -118,15 +117,15 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn get_workspace(&self) -> JsValue {
-        let workspace_values: Vec<JsValue> = self.interpreter
-            .get_workspace()
+    pub fn get_bookshelf(&self) -> JsValue {
+        let bookshelf_values: Vec<JsValue> = self.interpreter
+            .get_bookshelf()
             .iter()
             .map(|v| value_to_js(v))
             .collect();
         
         let arr = js_sys::Array::new();
-        for val in workspace_values {
+        for val in bookshelf_values {
             arr.push(&val);
         }
         arr.into()
@@ -224,41 +223,35 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn save_table(&mut self, _name: String, _schema: JsValue, _records: JsValue) -> Result<(), String> {
-        // IndexedDBへの保存処理は現在未実装
-        // 将来的にはここでIndexedDBにテーブルデータを保存する
         Ok(())
     }
 
     #[wasm_bindgen]
     pub fn load_table(&self, _name: String) -> JsValue {
-        // IndexedDBからの読み込み処理は現在未実装
-        // 将来的にはここでIndexedDBからテーブルデータを読み込む
         JsValue::NULL
     }
 
     #[wasm_bindgen]
     pub fn get_all_tables(&self) -> Vec<String> {
-        // IndexedDBのテーブル一覧取得は現在未実装
-        // 将来的にはここでIndexedDB内のテーブル名一覧を返す
         Vec::new()
     }
     
     #[wasm_bindgen]
-    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
-        if !workspace_js.is_array() {
-            return Err("Workspace must be an array".to_string());
+    pub fn restore_bookshelf(&mut self, bookshelf_js: JsValue) -> Result<(), String> {
+        if !bookshelf_js.is_array() {
+            return Err("Bookshelf must be an array".to_string());
         }
         
-        let arr = js_sys::Array::from(&workspace_js);
-        let mut new_workspace = Vec::new();
+        let arr = js_sys::Array::from(&bookshelf_js);
+        let mut new_bookshelf = Vec::new();
         
         for i in 0..arr.length() {
             let item = arr.get(i);
             let value = js_value_to_rust_value(&item)?;
-            new_workspace.push(value);
+            new_bookshelf.push(value);
         }
         
-        self.interpreter.set_workspace(new_workspace);
+        self.interpreter.set_bookshelf(new_bookshelf);
         Ok(())
     }
     
