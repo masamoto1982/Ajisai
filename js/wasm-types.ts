@@ -1,10 +1,27 @@
-// js/wasm-types.ts (AMNESIA機能対応 + シンタックスハイライト対応)
+// js/wasm-types.ts (AMNESIA機能対応)
 
-export interface TokenInfo {
-    type: string;
-    value: string;
-    start: number;
-    end: number;
+export interface AjisaiInterpreterClass {
+    new(): AjisaiInterpreter;
+}
+
+export interface AjisaiInterpreter {
+    execute(code: string): ExecuteResult;
+    init_step(code: string): string;
+    step(): StepResult;
+    amnesia(): ExecuteResult;  // 追加
+    get_workspace(): Value[];
+    get_custom_words(): string[];
+    get_custom_words_with_descriptions(): Array<[string, string | null]>;
+    get_custom_words_info(): Array<[string, string | null, boolean]>;
+    get_builtin_words_info(): Array<[string, string | null]>;
+    get_builtin_words_by_category(): any;
+    reset(): void;
+    save_table(name: string, schema: any, records: any): void;
+    load_table(name: string): any;
+    get_all_tables(): string[];
+    restore_workspace(workspace_js: Value[]): void;
+    get_word_definition(name: string): string | null;
+    restore_word(name: string, definition: string, description?: string | null): void;
 }
 
 export interface ExecuteResult {
@@ -27,31 +44,6 @@ export interface StepResult {
 export interface Value {
     type: string;
     value: any;
-}
-
-export interface AjisaiInterpreter {
-    execute(code: string): ExecuteResult;
-    init_step(code: string): string;
-    step(): StepResult;
-    amnesia(): ExecuteResult;
-    tokenize_with_positions(code: string): TokenInfo[];
-    get_workspace(): Value[];
-    get_custom_words(): string[];
-    get_custom_words_with_descriptions(): Array<[string, string | null]>;
-    get_custom_words_info(): Array<[string, string | null, boolean]>;
-    get_builtin_words_info(): Array<[string, string | null]>;
-    get_builtin_words_by_category(): any;
-    reset(): void;
-    save_table(name: string, schema: any, records: any): void;
-    load_table(name: string): any;
-    get_all_tables(): string[];
-    restore_workspace(workspace_js: Value[]): void;
-    get_word_definition(name: string): string | null;
-    restore_word(name: string, definition: string, description?: string | null): void;
-}
-
-export interface AjisaiInterpreterClass {
-    new(): AjisaiInterpreter;
 }
 
 export interface WasmModule {
