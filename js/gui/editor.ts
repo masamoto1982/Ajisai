@@ -1,4 +1,4 @@
-// js/gui/editor.ts (シンタックスハイライト対応版)
+// js/gui/editor.ts (シンタックスハイライト対応版 - 修正版)
 
 interface TokenInfo {
     type: string;
@@ -22,7 +22,7 @@ export class Editor {
         }
         
         // 初回ハイライト
-        this.updateSyntaxHighlighting();
+        setTimeout(() => this.updateSyntaxHighlighting(), 100);
     }
 
     private setupSyntaxHighlighting(): void {
@@ -40,10 +40,39 @@ export class Editor {
         this.highlightElement.className = 'syntax-highlight';
         this.container.insertBefore(this.highlightElement, this.element);
         
-        // テキストエリアを透明にする
+        // テキストエリアのスタイル調整
         this.element.style.background = 'transparent';
-        this.element.style.color = 'transparent';
+        this.element.style.color = 'rgba(51, 51, 51, 0.3)'; // 完全に透明にせず、うっすら見える程度に
         this.element.style.caretColor = '#333';
+        this.element.style.position = 'relative';
+        this.element.style.zIndex = '2';
+        
+        // ハイライトレイヤーのスタイル調整
+        this.highlightElement.style.position = 'absolute';
+        this.highlightElement.style.top = '0';
+        this.highlightElement.style.left = '0';
+        this.highlightElement.style.zIndex = '1';
+        
+        this.syncStyles();
+    }
+
+    private syncStyles(): void {
+        // テキストエリアのスタイルをハイライトレイヤーに同期
+        const computedStyle = window.getComputedStyle(this.element);
+        
+        this.highlightElement.style.width = this.element.offsetWidth + 'px';
+        this.highlightElement.style.height = this.element.offsetHeight + 'px';
+        this.highlightElement.style.padding = computedStyle.padding;
+        this.highlightElement.style.margin = computedStyle.margin;
+        this.highlightElement.style.border = computedStyle.border;
+        this.highlightElement.style.fontSize = computedStyle.fontSize;
+        this.highlightElement.style.fontFamily = computedStyle.fontFamily;
+        this.highlightElement.style.lineHeight = computedStyle.lineHeight;
+        this.highlightElement.style.letterSpacing = computedStyle.letterSpacing;
+        this.highlightElement.style.wordSpacing = computedStyle.wordSpacing;
+        this.highlightElement.style.whiteSpace = 'pre-wrap';
+        this.highlightElement.style.wordWrap = 'break-word';
+        this.highlightElement.style.overflow = 'hidden';
     }
 
     private setupEventListeners(): void {
@@ -58,12 +87,22 @@ export class Editor {
             this.highlightElement.scrollLeft = this.element.scrollLeft;
         });
         
+        // リサイズ対応
+        const resizeObserver = new ResizeObserver(() => {
+            this.syncStyles();
+            this.updateSyntaxHighlighting();
+        });
+        resizeObserver.observe(this.element);
+        
         // キーダウンは既存のまま
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
 
     private updateSyntaxHighlighting(): void {
-        if (!window.ajisaiInterpreter) return;
+        if (!window.ajisaiInterpreter) {
+            this.highlightElement.textContent = this.element.value;
+            return;
+        }
         
         const text = this.element.value;
         if (!text.trim()) {
@@ -72,7 +111,9 @@ export class Editor {
         }
         
         try {
+            console.log('Tokenizing text:', text); // デバッグ用
             const tokens = window.ajisaiInterpreter.tokenize_with_positions(text) as TokenInfo[];
+            console.log('Tokens:', tokens); // デバッグ用
             this.applyHighlighting(text, tokens);
         } catch (error) {
             console.error('Tokenization error:', error);
@@ -81,16 +122,23 @@ export class Editor {
     }
 
     private applyHighlighting(text: string, tokens: TokenInfo[]): void {
+        if (!tokens || tokens.length === 0) {
+            this.highlightElement.textContent = text;
+            return;
+        }
+        
         let highlightedText = '';
         let lastEnd = 0;
         
         // トークンを位置順にソート
         const sortedTokens = tokens.sort((a, b) => a.start - b.start);
+        console.log('Sorted tokens:', sortedTokens); // デバッグ用
         
         for (const token of sortedTokens) {
             // トークン間の非認識テキストを追加
             if (token.start > lastEnd) {
-                highlightedText += this.escapeHtml(text.slice(lastEnd, token.start));
+                const unrecognized = text.slice(lastEnd, token.start);
+                highlightedText += this.escapeHtml(unrecognized);
             }
             
             // トークンを着色して追加
@@ -106,6 +154,7 @@ export class Editor {
             highlightedText += this.escapeHtml(text.slice(lastEnd));
         }
         
+        console.log('Final highlighted HTML:', highlightedText); // デバッグ用
         this.highlightElement.innerHTML = highlightedText;
     }
 
@@ -113,6 +162,7 @@ export class Editor {
         if (token.type === 'symbol') {
             // シンボルの場合、辞書での状態をチェック
             const wordInfo = this.getWordInfo(token.value);
+            console.log('Word info for', token.value, ':', wordInfo); // デバッグ用
             if (wordInfo.isBuiltin || wordInfo.isProtected) {
                 return 'token-builtin';
             } else if (wordInfo.exists) {
