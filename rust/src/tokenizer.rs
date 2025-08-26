@@ -128,13 +128,9 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
     None
 }
 
-// 単語文字かどうかを判定
 fn is_word_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || 
-    matches!(c, 
-        '頁' | '挿' | '入' | '置' | '換' | '削' | '除' | '合' | '併' | '分' | '離' | 
-        '待' | '機' | '複' | '製' | '破' | '棄' | '雇' | '用' | '解' | '交' | '代'
-    )
+    c.is_alphabetic()  // 全ての文字（漢字、ひらがな、カタカナ含む）を単語文字とする
 }
 
 // 文字列リテラル解析
