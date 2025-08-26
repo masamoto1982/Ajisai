@@ -1,4 +1,4 @@
-// rust/src/types.rs (ParenComment追加版)
+// rust/src/types.rs
 
 use std::fmt;
 
@@ -8,13 +8,12 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(String),
-    VectorStart,    // [ のみ（{ を削除）
-    VectorEnd,      // ] のみ（} を削除）
+    VectorStart,    // [ のみ
+    VectorEnd,      // ] のみ
     Nil,
     ParenComment(String), // 丸括弧コメント ( 説明 )
 }
 
-// 以下は既存のまま
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub val_type: ValueType,
@@ -26,11 +25,10 @@ pub enum ValueType {
     String(String),
     Boolean(bool),
     Symbol(String),
-    Vector(Vec<Value>),  // データとコードの統一表現
+    Vector(Vec<Value>),  // 書籍（Book）- データとコードの統一表現
     Nil,
 }
 
-// Fraction構造体とその実装は既存のまま
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fraction {
     pub numerator: i64,
@@ -38,7 +36,6 @@ pub struct Fraction {
 }
 
 impl Fraction {
-    // 既存の実装をそのまま維持
     pub fn new(numerator: i64, denominator: i64) -> Self {
         if denominator == 0 {
             panic!("Division by zero");
@@ -137,4 +134,4 @@ impl fmt::Display for Value {
     }
 }
 
-pub type Workspace = Vec<Value>;  // スタックの代わり
+pub type Bookshelf = Vec<Value>;  // 書架 - 司書たちが書籍を配置する場所
