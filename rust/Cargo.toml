@@ -1,10 +1,10 @@
 [package]
-name = "ajisai-core"
+name = "lpl-core"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib", "rlib"]  # rlibを追加してテストを可能にする
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
