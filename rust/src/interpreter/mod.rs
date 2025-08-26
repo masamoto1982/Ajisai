@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (丸括弧コメント+ステップ実行修正版)
+// rust/src/interpreter/mod.rs (完全版・丸括弧コメント+ベクトル処理修正)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -205,99 +205,151 @@ impl Interpreter {
     }
 
     fn define_word_with_description(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
-    let name = name.to_uppercase();
-    
-    // 既存のワードチェック
-    if let Some(existing) = self.dictionary.get(&name) {
-        if existing.is_builtin {
-            return Err(error::AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
-        }
-    }
-
-    // 依存関係チェック
-    if self.dictionary.contains_key(&name) {
-        if let Some(dependents) = self.dependencies.get(&name) {
-            if !dependents.is_empty() {
-                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                return Err(error::AjisaiError::ProtectedWord { 
-                    name: name.clone(), 
-                    dependents: dependent_list 
-                });
-            }
-        }
-    }
-
-    // ベクトルリテラルから実行可能なトークンを抽出
-    let executable_tokens = self.extract_executable_tokens(&body_tokens)?;
-
-    // 古い依存関係をクリア
-    if let Some(old_deps) = self.get_word_dependencies(&name) {
-        for dep in old_deps {
-            if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
-                reverse_deps.remove(&name);
-            }
-        }
-    }
-
-    // 新しい依存関係を登録
-    for token in &executable_tokens {
-        if let Token::Symbol(sym) = token {
-            if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                self.dependencies.entry(sym.clone())
-                    .or_insert_with(HashSet::new)
-                    .insert(name.clone());
-            }
-        }
-    }
-
-    // ワードを登録
-    self.dictionary.insert(name.clone(), WordDefinition {
-        tokens: executable_tokens,
-        is_builtin: false,
-        description,
-        category: None,
-    });
-
-    self.append_output(&format!("Hired librarian: {}\n", name));
-    Ok(())
-}
-
-// ベクトルリテラルから実行可能なトークンを抽出するメソッド
-fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-    // 単一のベクトルリテラルの場合、その中身を取り出す
-    if tokens.len() >= 2 && 
-       tokens[0] == Token::VectorStart && 
-       tokens[tokens.len() - 1] == Token::VectorEnd {
+        let name = name.to_uppercase();
         
-        // ベクトルの中身を実行可能なトークンとして返す
-        let mut inner_tokens = Vec::new();
-        let mut i = 1; // VectorStart の次から
-        let mut depth = 1;
-        
-        while i < tokens.len() - 1 { // VectorEnd の前まで
-            match &tokens[i] {
-                Token::VectorStart => depth += 1,
-                Token::VectorEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        break;
-                    }
-                },
-                _ => {}
+        // 既存のワードチェック
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(error::AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
+            }
+        }
+
+        // 依存関係チェック
+        if self.dictionary.contains_key(&name) {
+            if let Some(dependents) = self.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(error::AjisaiError::ProtectedWord { 
+                        name: name.clone(), 
+                        dependents: dependent_list 
+                    });
+                }
+            }
+        }
+
+        // ベクトルリテラルから実行可能なトークンを抽出
+        let executable_tokens = self.extract_executable_tokens(&body_tokens)?;
+
+        // 古い依存関係をクリア
+        if let Some(old_deps) = self.get_word_dependencies(&name) {
+            for dep in old_deps {
+                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
+                    reverse_deps.remove(&name);
+                }
+            }
+        }
+
+        // 新しい依存関係を登録
+        for token in &executable_tokens {
+            if let Token::Symbol(sym) = token {
+                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
+                    self.dependencies.entry(sym.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(name.clone());
+                }
+            }
+        }
+
+        // ワードを登録
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens: executable_tokens,
+            is_builtin: false,
+            description,
+            category: None,
+        });
+
+        self.append_output(&format!("Hired librarian: {}\n", name));
+        Ok(())
+    }
+
+    // ベクトルリテラルから実行可能なトークンを抽出するメソッド
+    fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+        // 単一のベクトルリテラルの場合、その中身を取り出す
+        if tokens.len() >= 2 && 
+           tokens[0] == Token::VectorStart && 
+           tokens[tokens.len() - 1] == Token::VectorEnd {
+            
+            // ベクトルの中身を実行可能なトークンとして返す
+            let mut inner_tokens = Vec::new();
+            let mut i = 1; // VectorStart の次から
+            let mut depth = 1;
+            
+            while i < tokens.len() - 1 { // VectorEnd の前まで
+                match &tokens[i] {
+                    Token::VectorStart => depth += 1,
+                    Token::VectorEnd => {
+                        depth -= 1;
+                        if depth == 0 {
+                            break;
+                        }
+                    },
+                    _ => {}
+                }
+                
+                if depth == 1 {
+                    inner_tokens.push(tokens[i].clone());
+                }
+                i += 1;
             }
             
-            if depth == 1 {
-                inner_tokens.push(tokens[i].clone());
+            Ok(inner_tokens)
+        } else {
+            // ベクトルリテラルでない場合はそのまま返す
+            Ok(tokens.to_vec())
+        }
+    }
+
+    pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        let mut i = 0;
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::Number(num, den) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                    });
+                    i += 1;
+                },
+                Token::String(s) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::String(s.clone()),
+                    });
+                    i += 1;
+                },
+                Token::Boolean(b) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Boolean(*b),
+                    });
+                    i += 1;
+                },
+                Token::Nil => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Nil,
+                    });
+                    i += 1;
+                },
+                Token::ParenComment(_) => {
+                    // 丸括弧コメントは実行時には無視
+                    i += 1;
+                },
+                Token::VectorStart => {
+                    let (vector_values, consumed) = self.collect_vector(tokens, i)?;
+                    self.workspace.push(Value {
+                        val_type: ValueType::Vector(vector_values),
+                    });
+                    i += consumed;
+                },
+                Token::Symbol(name) => {
+                    self.execute_word(name)?;
+                    i += 1;
+                },
+                Token::VectorEnd => {
+                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                },
             }
-            i += 1;
         }
         
-        Ok(inner_tokens)
-    } else {
-        // ベクトルリテラルでない場合はそのまま返す
-        Ok(tokens.to_vec())
+        Ok(())
     }
-}
 
     fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
@@ -375,7 +427,7 @@ fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
         }
     }
 
-    fn get_word_dependencies(&self, word_name: &str) -> Option<Vec<String>> {
+    pub(crate) fn get_word_dependencies(&self, word_name: &str) -> Option<Vec<String>> {
         if let Some(def) = self.dictionary.get(word_name) {
             let mut deps = Vec::new();
             for token in &def.tokens {
@@ -391,7 +443,7 @@ fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
         }
     }
 
-    fn is_builtin_word(&self, name: &str) -> bool {
+    pub(crate) fn is_builtin_word(&self, name: &str) -> bool {
         self.dictionary.get(name)
             .map(|def| def.is_builtin)
             .unwrap_or(false)
@@ -445,48 +497,48 @@ fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
     }
 
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-    let mut i = 0;
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::Number(num, den) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                });
-            },
-            Token::String(s) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::String(s.clone()),
-                });
-            },
-            Token::Boolean(b) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Boolean(*b),
-                });
-            },
-            Token::Nil => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Nil,
-                });
-            },
-            Token::ParenComment(_) => {
-                // カスタムワード内のコメントは無視
-            },
-            Token::Symbol(name) => {
-                self.execute_word(name)?;
-            },
-            Token::VectorStart => {
-                return Err(error::AjisaiError::from("Vector literals should be extracted during word definition"));
-            },
-            Token::VectorEnd => {
-                return Err(error::AjisaiError::from("Unexpected vector end"));
-            },
+        let mut i = 0;
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::Number(num, den) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                    });
+                },
+                Token::String(s) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::String(s.clone()),
+                    });
+                },
+                Token::Boolean(b) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Boolean(*b),
+                    });
+                },
+                Token::Nil => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Nil,
+                    });
+                },
+                Token::ParenComment(_) => {
+                    // カスタムワード内のコメントは無視
+                },
+                Token::Symbol(name) => {
+                    self.execute_word(name)?;
+                },
+                Token::VectorStart => {
+                    return Err(error::AjisaiError::from("Vector literals should be extracted during word definition"));
+                },
+                Token::VectorEnd => {
+                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                },
+            }
+            
+            i += 1;
         }
         
-        i += 1;
+        Ok(())
     }
-    
-    Ok(())
-}
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
