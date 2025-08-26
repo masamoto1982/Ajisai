@@ -457,48 +457,53 @@ impl Interpreter {
     }
 
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-        let mut i = 0;
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::Number(num, den) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                    });
-                },
-                Token::String(s) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::String(s.clone()),
-                    });
-                },
-                Token::Boolean(b) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Boolean(*b),
-                    });
-                },
-                Token::Nil => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Nil,
-                    });
-                },
-                Token::ParenComment(_) => {
-                    // カスタムワード内のコメントは無視
-                },
-                Token::Symbol(name) => {
-                    self.execute_word(name)?;
-                },
-                Token::VectorStart => {
-                    return Err(error::AjisaiError::from("Vector literals not supported in custom words"));
-                },
-                Token::VectorEnd => {
-                    return Err(error::AjisaiError::from("Unexpected vector end"));
-                },
-            }
-            
-            i += 1;
+    let mut i = 0;
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::Number(num, den) => {
+                self.workspace.push(Value {
+                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                });
+            },
+            Token::String(s) => {
+                self.workspace.push(Value {
+                    val_type: ValueType::String(s.clone()),
+                });
+            },
+            Token::Boolean(b) => {
+                self.workspace.push(Value {
+                    val_type: ValueType::Boolean(*b),
+                });
+            },
+            Token::Nil => {
+                self.workspace.push(Value {
+                    val_type: ValueType::Nil,
+                });
+            },
+            Token::ParenComment(_) => {
+                // カスタムワード内のコメントは無視
+            },
+            Token::Symbol(name) => {
+                self.execute_word(name)?;
+            },
+            Token::VectorStart => {
+                // ベクトルリテラルをカスタムワード内でも適切に処理
+                let (vector_values, consumed) = self.collect_vector(tokens, i)?;
+                self.workspace.push(Value {
+                    val_type: ValueType::Vector(vector_values),
+                });
+                i += consumed - 1; // ループの最後でi+=1されるため-1
+            },
+            Token::VectorEnd => {
+                return Err(error::AjisaiError::from("Unexpected vector end"));
+            },
         }
         
-        Ok(())
+        i += 1;
     }
+    
+    Ok(())
+}
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
