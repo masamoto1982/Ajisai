@@ -1,34 +1,33 @@
-// rust/src/interpreter/control.rs (ビルドエラー修正版)
+// rust/src/interpreter/control.rs
 
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter, error::{LPLError, Result}};
 use crate::types::{ValueType, Token};
 
 // 雇用司書 - 新しい部署を設立（DEF相当）
-// 注意：mod.rsでの特別処理により、説明付き雇用は事前に処理される
 pub fn op_hire(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::from("雇用 requires vector and name"));
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::from("雇用 requires vector and name"));
     }
 
-    let name_val = interp.workspace.pop().unwrap();
-    let code_val = interp.workspace.pop().unwrap();
+    let name_val = interp.bookshelf.pop().unwrap();
+    let code_val = interp.bookshelf.pop().unwrap();
 
     let name = match name_val.val_type {
         ValueType::String(s) => s.to_uppercase(),
-        _ => return Err(AjisaiError::from("雇用 requires string name")),
+        _ => return Err(LPLError::from("雇用 requires string name")),
     };
 
     let tokens = match code_val.val_type {
         ValueType::Vector(v) => {
             interp.vector_to_tokens(v)?
         },
-        _ => return Err(AjisaiError::from("雇用 requires vector")),
+        _ => return Err(LPLError::from("雇用 requires vector")),
     };
 
     // 既存のワードチェック
     if let Some(existing) = interp.dictionary.get(&name) {
         if existing.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
+            return Err(LPLError::from(format!("Cannot redefine builtin librarian: {}", name)));
         }
     }
 
@@ -37,7 +36,7 @@ pub fn op_hire(interp: &mut Interpreter) -> Result<()> {
         if let Some(dependents) = interp.dependencies.get(&name) {
             if !dependents.is_empty() {
                 let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                return Err(AjisaiError::ProtectedWord { 
+                return Err(LPLError::ProtectedWord { 
                     name: name.clone(), 
                     dependents: dependent_list 
                 });
@@ -77,69 +76,10 @@ pub fn op_hire(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 説明付き雇用司書 - mod.rsから呼び出される内部用関数
-pub fn op_hire_with_description(interp: &mut Interpreter, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
-    let name = name.to_uppercase();
-    
-    // 既存のワードチェック
-    if let Some(existing) = interp.dictionary.get(&name) {
-        if existing.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
-        }
-    }
-
-    // 依存関係チェック
-    if interp.dictionary.contains_key(&name) {
-        if let Some(dependents) = interp.dependencies.get(&name) {
-            if !dependents.is_empty() {
-                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                return Err(AjisaiError::ProtectedWord { 
-                    name: name.clone(), 
-                    dependents: dependent_list 
-                });
-            }
-        }
-    }
-
-    // 古い依存関係をクリア
-    if let Some(old_deps) = interp.get_word_dependencies(&name) {
-        for dep in old_deps {
-            if let Some(reverse_deps) = interp.dependencies.get_mut(&dep) {
-                reverse_deps.remove(&name);
-            }
-        }
-    }
-
-    // 新しい依存関係を登録
-    for token in &tokens {
-        if let Token::Symbol(sym) = token {
-            if interp.dictionary.contains_key(sym) && !interp.is_builtin_word(sym) {
-                interp.dependencies.entry(sym.clone())
-                    .or_insert_with(std::collections::HashSet::new)
-                    .insert(name.clone());
-            }
-        }
-    }
-
-    // 説明情報を先に取得（descriptionを移動する前に）
-    let desc_info = if description.is_some() { " with description" } else { "" };
-
-    // ワード定義を登録（説明付き）
-    interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
-        tokens,
-        is_builtin: false,
-        description,  // 説明を設定
-        category: None,
-    });
-
-    interp.append_output(&format!("Hired librarian: {}{}\n", name, desc_info));
-    Ok(())
-}
-
 // 解雇司書 - 部署を解散（DEL相当）
 pub fn op_fire(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.bookshelf.pop()
+        .ok_or(LPLError::BookshelfUnderflow)?;
     
     match val.val_type {
         ValueType::String(name) => {
@@ -148,17 +88,17 @@ pub fn op_fire(interp: &mut Interpreter) -> Result<()> {
             // 組み込みワードの保護
             if let Some(def) = interp.dictionary.get(&name) {
                 if def.is_builtin {
-                    return Err(AjisaiError::from(format!("Cannot fire builtin librarian: {}", name)));
+                    return Err(LPLError::from(format!("Cannot fire builtin librarian: {}", name)));
                 }
             } else {
-                return Err(AjisaiError::from(format!("Librarian '{}' not found", name)));
+                return Err(LPLError::from(format!("Librarian '{}' not found", name)));
             }
             
             // 依存関係チェック（他のワードから使用されていないか確認）
             if let Some(dependents) = interp.dependencies.get(&name) {
                 if !dependents.is_empty() {
                     let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(AjisaiError::ProtectedWord { 
+                    return Err(LPLError::ProtectedWord { 
                         name: name.clone(), 
                         dependents: dependent_list 
                     });
@@ -179,19 +119,19 @@ pub fn op_fire(interp: &mut Interpreter) -> Result<()> {
             interp.append_output(&format!("Fired librarian: {}\n", name));
             Ok(())
         },
-        _ => Err(AjisaiError::type_error("string", "other type")),
+        _ => Err(LPLError::type_error("string", "other type")),
     }
 }
 
 // 交代司書 - 司書交代（条件付きGOTO相当） 
 pub fn op_handover(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 3 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 3 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let else_target = interp.workspace.pop().unwrap();
-    let if_target = interp.workspace.pop().unwrap();
-    let condition = interp.workspace.pop().unwrap();
+    let else_target = interp.bookshelf.pop().unwrap();
+    let if_target = interp.bookshelf.pop().unwrap();
+    let condition = interp.bookshelf.pop().unwrap();
     
     // 条件評価
     let should_jump = match condition.val_type {
@@ -216,18 +156,18 @@ pub fn op_handover(interp: &mut Interpreter) -> Result<()> {
             interp.execute_tokens(&tokens)?;
             Ok(())
         },
-        _ => Err(AjisaiError::type_error("string or vector", "other type")),
+        _ => Err(LPLError::type_error("string or vector", "other type")),
     }
 }
 
 // 条件付き実行司書 - 条件が真の場合のみ実行
 pub fn op_when(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let action = interp.workspace.pop().unwrap();
-    let condition = interp.workspace.pop().unwrap();
+    let action = interp.bookshelf.pop().unwrap();
+    let condition = interp.bookshelf.pop().unwrap();
     
     // 条件評価
     let should_execute = match condition.val_type {
@@ -248,8 +188,8 @@ pub fn op_when(interp: &mut Interpreter) -> Result<()> {
                 interp.execute_tokens(&tokens)?;
             },
             _ => {
-                // その他の値はそのままワークスペースに戻す
-                interp.workspace.push(action);
+                // その他の値はそのまま書架に戻す
+                interp.bookshelf.push(action);
             }
         }
     }
@@ -259,28 +199,28 @@ pub fn op_when(interp: &mut Interpreter) -> Result<()> {
 
 // デフォルト値設定司書 - nil の場合にデフォルト値を使用
 pub fn op_default(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let default_val = interp.workspace.pop().unwrap();
-    let val = interp.workspace.pop().unwrap();
+    let default_val = interp.bookshelf.pop().unwrap();
+    let val = interp.bookshelf.pop().unwrap();
     
     if matches!(val.val_type, ValueType::Nil) {
-        interp.workspace.push(default_val);
+        interp.bookshelf.push(default_val);
     } else {
-        interp.workspace.push(val);
+        interp.bookshelf.push(val);
     }
     Ok(())
 }
 
 // NIL判定司書
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.bookshelf.pop()
+        .ok_or(LPLError::BookshelfUnderflow)?;
     
     let is_nil = matches!(val.val_type, ValueType::Nil);
-    interp.workspace.push(crate::types::Value { 
+    interp.bookshelf.push(crate::types::Value { 
         val_type: ValueType::Boolean(is_nil) 
     });
     Ok(())
@@ -288,11 +228,11 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
 
 // NOT-NIL判定司書（KNOWN?と同等）
 pub fn op_not_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.bookshelf.pop()
+        .ok_or(LPLError::BookshelfUnderflow)?;
     
     let is_not_nil = !matches!(val.val_type, ValueType::Nil);
-    interp.workspace.push(crate::types::Value { 
+    interp.bookshelf.push(crate::types::Value { 
         val_type: ValueType::Boolean(is_not_nil) 
     });
     Ok(())
