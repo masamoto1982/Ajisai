@@ -1,4 +1,4 @@
-// rust/src/lib.rs (ParenComment対応完全版 + シンタックスハイライト対応)
+// rust/src/lib.rs (ParenComment対応完全版)
 
 use wasm_bindgen::prelude::*;
 
@@ -9,7 +9,6 @@ mod builtins;
 
 use types::*;
 use interpreter::Interpreter;
-use tokenizer::TokenWithPosition;
 
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
@@ -74,63 +73,6 @@ impl AjisaiInterpreter {
         }
         
         obj.into()
-    }
-
-    #[wasm_bindgen]
-    pub fn tokenize_with_positions(&self, code: &str) -> JsValue {
-        let custom_words: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-            
-        match crate::tokenizer::tokenize_with_positions_and_custom_words(code, &custom_words) {
-            Ok(tokens) => {
-                let arr = js_sys::Array::new();
-                for token_with_pos in tokens {
-                    let obj = js_sys::Object::new();
-                    
-                    // トークンの種類
-                    let token_type = match &token_with_pos.token {
-                        crate::types::Token::Number(_, _) => "number",
-                        crate::types::Token::String(_) => "string",
-                        crate::types::Token::Boolean(_) => "boolean",
-                        crate::types::Token::Symbol(_) => "symbol",
-                        crate::types::Token::VectorStart | crate::types::Token::VectorEnd => "vector-delimiter",
-                        crate::types::Token::Nil => "nil",
-                        crate::types::Token::ParenComment(_) => "comment",
-                    };
-                    
-                    // トークンの値
-                    let token_value = match &token_with_pos.token {
-                        crate::types::Token::Number(n, d) => {
-                            if *d == 1 {
-                                n.to_string()
-                            } else {
-                                format!("{}/{}", n, d)
-                            }
-                        },
-                        crate::types::Token::String(s) => format!("\"{}\"", s),
-                        crate::types::Token::Boolean(b) => b.to_string(),
-                        crate::types::Token::Symbol(s) => s.clone(),
-                        crate::types::Token::VectorStart => "[".to_string(),
-                        crate::types::Token::VectorEnd => "]".to_string(),
-                        crate::types::Token::Nil => "nil".to_string(),
-                        crate::types::Token::ParenComment(c) => format!("({})", c),
-                    };
-                    
-                    js_sys::Reflect::set(&obj, &"type".into(), &token_type.into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"value".into(), &token_value.into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"start".into(), &JsValue::from_f64(token_with_pos.start as f64)).unwrap();
-                    js_sys::Reflect::set(&obj, &"end".into(), &JsValue::from_f64(token_with_pos.end as f64)).unwrap();
-                    
-                    arr.push(&obj);
-                }
-                arr.into()
-            },
-            Err(_e) => {
-                js_sys::Array::new().into() // エラー時は空配列を返す
-            }
-        }
     }
 
     #[wasm_bindgen]
