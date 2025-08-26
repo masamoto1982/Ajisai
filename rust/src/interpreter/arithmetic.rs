@@ -1,4 +1,4 @@
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter, error::{LPLError, Result}};
 use crate::types::{Value, ValueType, Fraction};
 
 fn value_type_name(val_type: &ValueType) -> &'static str {
@@ -24,7 +24,7 @@ where
     F: Fn(&Value, &Value) -> Result<Value>,
 {
     if v1.len() != v2.len() {
-        return Err(AjisaiError::VectorLengthMismatch {
+        return Err(LPLError::VectorLengthMismatch {
             len1: v1.len(),
             len2: v2.len(),
         });
@@ -39,12 +39,12 @@ fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Fraction + Copy,
 {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let b = interp.workspace.pop().unwrap();
-    let a = interp.workspace.pop().unwrap();
+    let b = interp.bookshelf.pop().unwrap();
+    let a = interp.bookshelf.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -85,13 +85,13 @@ where
             Value { val_type: ValueType::Vector(result) }
         },
         
-        _ => return Err(AjisaiError::type_error(
+        _ => return Err(LPLError::type_error(
             "number or vector",
             &format!("{} and {}", value_type_name(&a.val_type), value_type_name(&b.val_type))
         )),
     };
     
-    interp.workspace.push(result);
+    interp.bookshelf.push(result);
     Ok(())
 }
 
@@ -99,12 +99,12 @@ fn binary_comparison_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool + Copy,
 {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let b = interp.workspace.pop().unwrap();
-    let a = interp.workspace.pop().unwrap();
+    let b = interp.bookshelf.pop().unwrap();
+    let a = interp.bookshelf.pop().unwrap();
     
     let result = match (&a.val_type, &b.val_type) {
         (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -145,13 +145,13 @@ where
             Value { val_type: ValueType::Vector(result) }
         },
         
-        _ => return Err(AjisaiError::type_error(
+        _ => return Err(LPLError::type_error(
             "number or vector",
             &format!("{} and {}", value_type_name(&a.val_type), value_type_name(&b.val_type))
         )),
     };
     
-    interp.workspace.push(result);
+    interp.bookshelf.push(result);
     Ok(())
 }
 
@@ -168,20 +168,20 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let b = interp.workspace.pop().unwrap();
-    let a = interp.workspace.pop().unwrap();
+    let b = interp.bookshelf.pop().unwrap();
+    let a = interp.bookshelf.pop().unwrap();
     
     match &b.val_type {
-        ValueType::Number(n) if n.numerator == 0 => return Err(AjisaiError::DivisionByZero),
+        ValueType::Number(n) if n.numerator == 0 => return Err(LPLError::DivisionByZero),
         ValueType::Vector(v) => {
             for elem in v {
                 if let ValueType::Number(n) = &elem.val_type {
                     if n.numerator == 0 {
-                        return Err(AjisaiError::DivisionByZero);
+                        return Err(LPLError::DivisionByZero);
                     }
                 }
             }
@@ -228,13 +228,13 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
             Value { val_type: ValueType::Vector(result) }
         },
         
-        _ => return Err(AjisaiError::type_error(
+        _ => return Err(LPLError::type_error(
             "number or vector",
             &format!("{} and {}", value_type_name(&a.val_type), value_type_name(&b.val_type))
         )),
     };
     
-    interp.workspace.push(result);
+    interp.bookshelf.push(result);
     Ok(())
 }
 
@@ -255,20 +255,20 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let b = interp.workspace.pop().unwrap();
-    let a = interp.workspace.pop().unwrap();
+    let b = interp.bookshelf.pop().unwrap();
+    let a = interp.bookshelf.pop().unwrap();
     
-    interp.workspace.push(Value { val_type: ValueType::Boolean(a == b) });
+    interp.bookshelf.push(Value { val_type: ValueType::Boolean(a == b) });
     Ok(())
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.bookshelf.pop()
+        .ok_or(LPLError::BookshelfUnderflow)?;
     
     let result = match val.val_type {
         ValueType::Boolean(b) => Value { val_type: ValueType::Boolean(!b) },
@@ -283,23 +283,23 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
             });
             Value { val_type: ValueType::Vector(result) }
         },
-        _ => return Err(AjisaiError::type_error(
+        _ => return Err(LPLError::type_error(
             "boolean, nil, or vector",
             value_type_name(&val.val_type)
         )),
     };
     
-    interp.workspace.push(result);
+    interp.bookshelf.push(result);
     Ok(())
 }
 
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let b_val = interp.workspace.pop().unwrap();
-    let a_val = interp.workspace.pop().unwrap();
+    let b_val = interp.bookshelf.pop().unwrap();
+    let a_val = interp.bookshelf.pop().unwrap();
     
     let result = match (a_val.val_type, b_val.val_type) {
         (ValueType::Boolean(a), ValueType::Boolean(b)) => {
@@ -311,23 +311,23 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
         (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) | (ValueType::Nil, ValueType::Nil) => {
             Value { val_type: ValueType::Nil }
         },
-        _ => return Err(AjisaiError::type_error(
+        _ => return Err(LPLError::type_error(
             "boolean or nil",
             "other types"
         )),
     };
     
-    interp.workspace.push(result);
+    interp.bookshelf.push(result);
     Ok(())
 }
 
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let b_val = interp.workspace.pop().unwrap();
-    let a_val = interp.workspace.pop().unwrap();
+    let b_val = interp.bookshelf.pop().unwrap();
+    let a_val = interp.bookshelf.pop().unwrap();
     
     let result = match (a_val.val_type, b_val.val_type) {
         (ValueType::Boolean(a), ValueType::Boolean(b)) => {
@@ -339,59 +339,58 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
         (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) | (ValueType::Nil, ValueType::Nil) => {
             Value { val_type: ValueType::Nil }
         },
-        _ => return Err(AjisaiError::type_error(
+        _ => return Err(LPLError::type_error(
             "boolean or nil",
             "other types"
         )),
     };
     
-    interp.workspace.push(result);
+    interp.bookshelf.push(result);
     Ok(())
 }
 
-// 新機能: 有（SOME?）
 pub fn op_some_check(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.bookshelf.pop()
+        .ok_or(LPLError::BookshelfUnderflow)?;
     
-    interp.workspace.push(Value { 
+    interp.bookshelf.push(Value { 
         val_type: ValueType::Boolean(!matches!(val.val_type, ValueType::Nil)) 
     });
     Ok(())
 }
 
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.bookshelf.pop()
+        .ok_or(LPLError::BookshelfUnderflow)?;
     
-    interp.workspace.push(Value { 
+    interp.bookshelf.push(Value { 
         val_type: ValueType::Boolean(matches!(val.val_type, ValueType::Nil)) 
     });
     Ok(())
 }
 
 pub fn op_not_nil_check(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.bookshelf.pop()
+        .ok_or(LPLError::BookshelfUnderflow)?;
     
-    interp.workspace.push(Value { 
+    interp.bookshelf.push(Value { 
         val_type: ValueType::Boolean(!matches!(val.val_type, ValueType::Nil)) 
     });
     Ok(())
 }
 
 pub fn op_default(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
     }
     
-    let default_val = interp.workspace.pop().unwrap();
-    let val = interp.workspace.pop().unwrap();
+    let default_val = interp.bookshelf.pop().unwrap();
+    let val = interp.bookshelf.pop().unwrap();
     
     if matches!(val.val_type, ValueType::Nil) {
-        interp.workspace.push(default_val);
+        interp.bookshelf.push(default_val);
     } else {
-        interp.workspace.push(val);
+        interp.bookshelf.push(val);
     }
     Ok(())
 }
