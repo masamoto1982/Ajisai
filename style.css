@@ -170,6 +170,12 @@ section h3 {
     flex-direction: column;
 }
 
+/* エディタコンテナ */
+.editor-container {
+    position: relative;
+    flex: 1;
+}
+
 #code-input {
     width: 100%;
     min-height: 200px;
@@ -182,7 +188,8 @@ section h3 {
     line-height: 1.4;
     position: relative;
     background-color: #fff;
-    color: #333;
+    color: rgba(51, 51, 51, 0.3); /* うっすら見える程度に調整 */
+    z-index: 2;
 }
 
 /* シンタックスハイライト用のスタイル */
@@ -196,13 +203,15 @@ section h3 {
     font-family: 'Consolas', 'Monaco', monospace;
     line-height: 1.4;
     pointer-events: none;
-    color: transparent;
+    color: #333;
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     resize: none;
     overflow: hidden;
     white-space: pre-wrap;
     word-wrap: break-word;
+    z-index: 1;
+    box-sizing: border-box;
 }
 
 /* エディタコンテナ */
