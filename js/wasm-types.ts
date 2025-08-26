@@ -9,6 +9,7 @@ export interface AjisaiInterpreter {
     init_step(code: string): string;
     step(): StepResult;
     amnesia(): ExecuteResult;  // 追加
+    tokenize_with_positions(code: string): TokenInfo[];  // 追加
     get_workspace(): Value[];
     get_custom_words(): string[];
     get_custom_words_with_descriptions(): Array<[string, string | null]>;
