@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全版・丸括弧コメント+ベクトル処理修正)
+// rust/src/interpreter/mod.rs
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -7,11 +7,11 @@ pub mod io;
 pub mod error;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Workspace, Token, Value, ValueType};
+use crate::types::{Bookshelf, Token, Value, ValueType};
 use self::error::Result;
 
 pub struct Interpreter {
-    pub(crate) workspace: Workspace,
+    pub(crate) bookshelf: Bookshelf,  // workspace → bookshelf
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) dependencies: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
@@ -29,7 +29,7 @@ pub struct WordDefinition {
 impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
-            workspace: Vec::new(),
+            bookshelf: Vec::new(),  // workspace → bookshelf
             dictionary: HashMap::new(),
             dependencies: HashMap::new(),
             output_buffer: String::new(),
@@ -58,14 +58,14 @@ impl Interpreter {
     pub fn execute_amnesia(&mut self) -> Result<()> {
         // IndexedDBクリアのイベントを発火
         if let Some(window) = web_sys::window() {
-            let event = web_sys::CustomEvent::new("ajisai-amnesia")
-                .map_err(|_| error::AjisaiError::from("Failed to create amnesia event"))?;
+            let event = web_sys::CustomEvent::new("lpl-amnesia")  // ajisai → lpl
+                .map_err(|_| error::LPLError::from("Failed to create amnesia event"))?;
             window.dispatch_event(&event)
-                .map_err(|_| error::AjisaiError::from("Failed to dispatch amnesia event"))?;
+                .map_err(|_| error::LPLError::from("Failed to dispatch amnesia event"))?;
         }
         
         // インタープリター内部状態もクリア
-        self.workspace.clear();
+        self.bookshelf.clear();  // workspace → bookshelf
         self.dictionary.clear();
         self.dependencies.clear();
         self.output_buffer.clear();
@@ -82,25 +82,25 @@ impl Interpreter {
         
         match token {
             Token::Number(num, den) => {
-                self.workspace.push(Value {
+                self.bookshelf.push(Value {  // workspace → bookshelf
                     val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
                 });
                 Ok(format!("Pushed number: {}/{}", num, den))
             },
             Token::String(s) => {
-                self.workspace.push(Value {
+                self.bookshelf.push(Value {  // workspace → bookshelf
                     val_type: ValueType::String(s.clone()),
                 });
                 Ok(format!("Pushed string: \"{}\"", s))
             },
             Token::Boolean(b) => {
-                self.workspace.push(Value {
+                self.bookshelf.push(Value {  // workspace → bookshelf
                     val_type: ValueType::Boolean(*b),
                 });
                 Ok(format!("Pushed boolean: {}", b))
             },
             Token::Nil => {
-                self.workspace.push(Value {
+                self.bookshelf.push(Value {  // workspace → bookshelf
                     val_type: ValueType::Nil,
                 });
                 Ok("Pushed nil".to_string())
@@ -119,11 +119,9 @@ impl Interpreter {
                 }
             },
             Token::VectorStart => {
-                // ベクトルの開始だけでは処理できない
                 Ok("Vector start token (incomplete)".to_string())
             },
             Token::VectorEnd => {
-                // ベクトルの終了だけでは処理できない
                 Ok("Vector end token (incomplete)".to_string())
             },
         }
@@ -136,7 +134,7 @@ impl Interpreter {
             .collect();
         
         let tokens = crate::tokenizer::tokenize_with_custom_words(line, &custom_word_names)
-            .map_err(error::AjisaiError::from)?;
+            .map_err(error::LPLError::from)?;
             
         if tokens.is_empty() {
             return Ok(());
@@ -155,7 +153,7 @@ impl Interpreter {
         // 雇用の位置を探す
         let hire_position = tokens.iter().rposition(|t| {
             if let Token::Symbol(s) = t {
-                s == "雇用"
+                s == "雇用" || s == "DEF" // 後方互換性のためDEFも認識
             } else {
                 false
             }
@@ -210,7 +208,7 @@ impl Interpreter {
         // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
+                return Err(error::LPLError::from(format!("Cannot redefine builtin librarian: {}", name)));
             }
         }
 
@@ -219,7 +217,7 @@ impl Interpreter {
             if let Some(dependents) = self.dependencies.get(&name) {
                 if !dependents.is_empty() {
                     let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(error::AjisaiError::ProtectedWord { 
+                    return Err(error::LPLError::ProtectedWord { 
                         name: name.clone(), 
                         dependents: dependent_list 
                     });
@@ -304,25 +302,25 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Number(num, den) => {
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
                     });
                     i += 1;
                 },
                 Token::String(s) => {
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::String(s.clone()),
                     });
                     i += 1;
                 },
                 Token::Boolean(b) => {
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::Boolean(*b),
                     });
                     i += 1;
                 },
                 Token::Nil => {
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::Nil,
                     });
                     i += 1;
@@ -333,7 +331,7 @@ impl Interpreter {
                 },
                 Token::VectorStart => {
                     let (vector_values, consumed) = self.collect_vector(tokens, i)?;
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::Vector(vector_values),
                     });
                     i += consumed;
@@ -343,7 +341,7 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::VectorEnd => {
-                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                    return Err(error::LPLError::from("Unexpected vector end"));
                 },
             }
         }
@@ -378,7 +376,7 @@ impl Interpreter {
             i += 1;
         }
 
-        Err(error::AjisaiError::from("Unclosed vector"))
+        Err(error::LPLError::from("Unclosed vector"))
     }
 
     fn token_to_value(&self, token: &Token) -> Result<Value> {
@@ -400,9 +398,9 @@ impl Interpreter {
             }),
             Token::ParenComment(_) => {
                 // コメントはValueにはならない
-                Err(error::AjisaiError::from("Cannot convert comment to value"))
+                Err(error::LPLError::from("Cannot convert comment to value"))
             },
-            _ => Err(error::AjisaiError::from("Cannot convert token to value")),
+            _ => Err(error::LPLError::from("Cannot convert token to value")),
         }
     }
 
@@ -423,7 +421,7 @@ impl Interpreter {
             ValueType::Boolean(b) => Ok(Token::Boolean(b)),
             ValueType::Symbol(s) => Ok(Token::Symbol(s)),
             ValueType::Nil => Ok(Token::Nil),
-            ValueType::Vector(_) => Err(error::AjisaiError::from("Nested vectors not supported in token conversion")),
+            ValueType::Vector(_) => Err(error::LPLError::from("Nested vectors not supported in token conversion")),
         }
     }
 
@@ -466,20 +464,20 @@ impl Interpreter {
                 result.map_err(|e| e.with_context(&self.call_stack))
             }
         } else {
-            Err(error::AjisaiError::UnknownWord(name.to_string()))
+            Err(error::LPLError::UnknownWord(name.to_string()))
         }
     }
 
     pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
         if let Some(current) = current_word {
             if name != current {
-                return Err(error::AjisaiError::from(format!(
+                return Err(error::LPLError::from(format!(
                     "Librarian handover can only jump within the same department. Cannot jump from '{}' to '{}'", 
                     current, name
                 )));
             }
         } else {
-            return Err(error::AjisaiError::from(format!(
+            return Err(error::LPLError::from(format!(
                 "Librarian handover can only be used within custom departments. Cannot jump to '{}' from main program", 
                 name
             )));
@@ -487,12 +485,12 @@ impl Interpreter {
 
         if let Some(def) = self.dictionary.get(name).cloned() {
             if def.is_builtin {
-                return Err(error::AjisaiError::from("Cannot handover to builtin librarian"));
+                return Err(error::LPLError::from("Cannot handover to builtin librarian"));
             } else {
                 self.execute_custom_word(&def.tokens)
             }
         } else {
-            Err(error::AjisaiError::UnknownWord(name.to_string()))
+            Err(error::LPLError::UnknownWord(name.to_string()))
         }
     }
 
@@ -501,22 +499,22 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Number(num, den) => {
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
                     });
                 },
                 Token::String(s) => {
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::String(s.clone()),
                     });
                 },
                 Token::Boolean(b) => {
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::Boolean(*b),
                     });
                 },
                 Token::Nil => {
-                    self.workspace.push(Value {
+                    self.bookshelf.push(Value {  // workspace → bookshelf
                         val_type: ValueType::Nil,
                     });
                 },
@@ -527,10 +525,10 @@ impl Interpreter {
                     self.execute_word(name)?;
                 },
                 Token::VectorStart => {
-                    return Err(error::AjisaiError::from("Vector literals should be extracted during word definition"));
+                    return Err(error::LPLError::from("Vector literals should be extracted during word definition"));
                 },
                 Token::VectorEnd => {
-                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                    return Err(error::LPLError::from("Unexpected vector end"));
                 },
             }
             
@@ -566,11 +564,11 @@ impl Interpreter {
             "破棄" => vector_ops::op_discard(self),
             
             // 司書管理司書
-            "雇用" => control::op_hire(self),
-            "解雇" => control::op_fire(self),
+            "雇用" | "DEF" => control::op_hire(self), // 後方互換性
+            "解雇" | "DEL" => control::op_fire(self), // 後方互換性
             "交代" => control::op_handover(self),
             
-            _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
+            _ => Err(error::LPLError::UnknownBuiltin(name.to_string())),
         }
     }
 
@@ -584,7 +582,7 @@ impl Interpreter {
         self.output_buffer.push_str(text);
     }
     
-    pub fn get_workspace(&self) -> &Workspace { &self.workspace }
+    pub fn get_bookshelf(&self) -> &Bookshelf { &self.bookshelf }  // get_workspace → get_bookshelf
     
     pub fn get_custom_words(&self) -> Vec<String> {
         self.dictionary.iter()
@@ -610,8 +608,8 @@ impl Interpreter {
             .collect()
     }
    
-    pub fn set_workspace(&mut self, workspace: Workspace) {
-        self.workspace = workspace;
+    pub fn set_bookshelf(&mut self, bookshelf: Bookshelf) {  // set_workspace → set_bookshelf
+        self.bookshelf = bookshelf;
     }
     
     pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
@@ -619,7 +617,7 @@ impl Interpreter {
         
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot restore builtin word: {}", name)));
+                return Err(error::LPLError::from(format!("Cannot restore builtin word: {}", name)));
             }
         }
 
