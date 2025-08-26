@@ -1,7 +1,14 @@
-// rust/src/tokenizer.rs (丸括弧コメント対応完全版)
+// rust/src/tokenizer.rs (丸括弧コメント対応完全版 + 位置情報付きトークン対応)
 
 use crate::types::Token;
 use std::collections::HashSet;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TokenWithPosition {
+    pub token: Token,
+    pub start: usize,
+    pub end: usize,
+}
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     tokenize_with_custom_words(input, &HashSet::new())
@@ -72,7 +79,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             continue;
         }
 
-        // 新しい組み込みワードチェック（漢字）
+        // 新しい組み込み漢字ワード解析
         if let Some((token, consumed)) = try_parse_builtin_kanji(&chars[i..]) {
             tokens.push(token);
             i += consumed;
@@ -94,6 +101,161 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         }
         
         // どれにもマッチしなければ無視して次へ
+        i += 1;
+    }
+    
+    Ok(tokens)
+}
+
+pub fn tokenize_with_positions(input: &str) -> Result<Vec<TokenWithPosition>, String> {
+    tokenize_with_positions_and_custom_words(input, &HashSet::new())
+}
+
+pub fn tokenize_with_positions_and_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<TokenWithPosition>, String> {
+    let mut tokens = Vec::new();
+    let chars: Vec<char> = input.chars().collect();
+    let mut i = 0;
+    let mut byte_pos = 0;
+
+    while i < chars.len() {
+        let start_pos = byte_pos;
+        
+        // 空白文字をスキップ
+        if chars[i].is_whitespace() {
+            byte_pos += chars[i].len_utf8();
+            i += 1;
+            continue;
+        }
+        
+        // 文字列リテラル（""のみ）
+        if chars[i] == '"' {
+            if let Some((token, consumed)) = parse_string_literal(&chars[i..]) {
+                let end_pos = byte_pos + chars[i..i+consumed].iter().map(|c| c.len_utf8()).sum::<usize>();
+                tokens.push(TokenWithPosition {
+                    token,
+                    start: start_pos,
+                    end: end_pos,
+                });
+                byte_pos = end_pos;
+                i += consumed;
+                continue;
+            }
+        }
+        
+        // 丸括弧コメント（機能説明）
+        if chars[i] == '(' {
+            if let Some((token, consumed)) = parse_paren_comment(&chars[i..]) {
+                let end_pos = byte_pos + chars[i..i+consumed].iter().map(|c| c.len_utf8()).sum::<usize>();
+                tokens.push(TokenWithPosition {
+                    token,
+                    start: start_pos,
+                    end: end_pos,
+                });
+                byte_pos = end_pos;
+                i += consumed;
+                continue;
+            }
+        }
+        
+        // ベクトル記号
+        if chars[i] == '[' {
+            byte_pos += chars[i].len_utf8();
+            tokens.push(TokenWithPosition {
+                token: Token::VectorStart,
+                start: start_pos,
+                end: byte_pos,
+            });
+            i += 1;
+            continue;
+        }
+        
+        if chars[i] == ']' {
+            byte_pos += chars[i].len_utf8();
+            tokens.push(TokenWithPosition {
+                token: Token::VectorEnd,
+                start: start_pos,
+                end: byte_pos,
+            });
+            i += 1;
+            continue;
+        }
+        
+        // コメント（#から行末まで）
+        if chars[i] == '#' {
+            while i < chars.len() && chars[i] != '\n' {
+                byte_pos += chars[i].len_utf8();
+                i += 1;
+            }
+            continue;
+        }
+        
+        // 数値チェック（整数、分数、小数）
+        if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
+            let end_pos = byte_pos + chars[i..i+consumed].iter().map(|c| c.len_utf8()).sum::<usize>();
+            tokens.push(TokenWithPosition {
+                token,
+                start: start_pos,
+                end: end_pos,
+            });
+            byte_pos = end_pos;
+            i += consumed;
+            continue;
+        }
+        
+        // カスタムワードチェック（最優先）
+        if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
+            let end_pos = byte_pos + chars[i..i+consumed].iter().map(|c| c.len_utf8()).sum::<usize>();
+            tokens.push(TokenWithPosition {
+                token,
+                start: start_pos,
+                end: end_pos,
+            });
+            byte_pos = end_pos;
+            i += consumed;
+            continue;
+        }
+
+        // 新しい組み込みワードチェック（漢字）
+        if let Some((token, consumed)) = try_parse_builtin_kanji(&chars[i..]) {
+            let end_pos = byte_pos + chars[i..i+consumed].iter().map(|c| c.len_utf8()).sum::<usize>();
+            tokens.push(TokenWithPosition {
+                token,
+                start: start_pos,
+                end: end_pos,
+            });
+            byte_pos = end_pos;
+            i += consumed;
+            continue;
+        }
+        
+        // 組み込みワードチェック（英数字）
+        if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
+            let end_pos = byte_pos + chars[i..i+consumed].iter().map(|c| c.len_utf8()).sum::<usize>();
+            tokens.push(TokenWithPosition {
+                token,
+                start: start_pos,
+                end: end_pos,
+            });
+            byte_pos = end_pos;
+            i += consumed;
+            continue;
+        }
+        
+        // 演算子記号チェック
+        if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+            let end_pos = byte_pos + chars[i..i+consumed].iter().map(|c| c.len_utf8()).sum::<usize>();
+            tokens.push(TokenWithPosition {
+                token,
+                start: start_pos,
+                end: end_pos,
+            });
+            byte_pos = end_pos;
+            i += consumed;
+            continue;
+        }
+        
+        // どれにもマッチしなければ無視して次へ
+        byte_pos += chars[i].len_utf8();
         i += 1;
     }
     
@@ -128,9 +290,9 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
     None
 }
 
+// 単語文字かどうかを判定
 fn is_word_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || 
-    c.is_alphabetic()  // 全ての文字（漢字、ひらがな、カタカナ含む）を単語文字とする
+    c.is_ascii_alphanumeric() || c.is_alphabetic() // 全ての文字（漢字、ひらがな、カタカナ含む）を単語文字とする
 }
 
 // 文字列リテラル解析
