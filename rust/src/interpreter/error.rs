@@ -1,10 +1,10 @@
 use std::fmt;
 
-pub type Result<T> = std::result::Result<T, AjisaiError>;
+pub type Result<T> = std::result::Result<T, LPLError>;
 
 #[derive(Debug, Clone)]
-pub enum AjisaiError {
-    WorkspaceUnderflow,  // StackUnderflow → WorkspaceUnderflow
+pub enum LPLError {
+    BookshelfUnderflow,  // StackUnderflow → BookshelfUnderflow
     TypeError { expected: String, got: String },
     UnknownWord(String),
     UnknownBuiltin(String),
@@ -13,15 +13,15 @@ pub enum AjisaiError {
     VectorLengthMismatch { len1: usize, len2: usize },
     ProtectedWord { name: String, dependents: Vec<String> },
     Custom(String),
-    WithContext { error: Box<AjisaiError>, context: Vec<String> },
+    WithContext { error: Box<LPLError>, context: Vec<String> },
 }
 
-impl AjisaiError {
+impl LPLError {
     pub fn with_context(self, call_stack: &[String]) -> Self {
         if call_stack.is_empty() {
             self
         } else {
-            AjisaiError::WithContext {
+            LPLError::WithContext {
                 error: Box::new(self),
                 context: call_stack.to_vec(),
             }
@@ -29,48 +29,48 @@ impl AjisaiError {
     }
     
     pub fn type_error(expected: &str, got: &str) -> Self {
-        AjisaiError::TypeError {
+        LPLError::TypeError {
             expected: expected.to_string(),
             got: got.to_string(),
         }
     }
 }
 
-impl fmt::Display for AjisaiError {
+impl fmt::Display for LPLError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AjisaiError::WorkspaceUnderflow => write!(f, "Workspace underflow"),
-            AjisaiError::TypeError { expected, got } => {
+            LPLError::BookshelfUnderflow => write!(f, "Bookshelf underflow"),
+            LPLError::TypeError { expected, got } => {
                 write!(f, "Type error: expected {}, got {}", expected, got)
             },
-            AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
-            AjisaiError::UnknownBuiltin(name) => write!(f, "Unknown builtin: {}", name),
-            AjisaiError::DivisionByZero => write!(f, "Division by zero"),
-            AjisaiError::IndexOutOfBounds { index, length } => {
+            LPLError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
+            LPLError::UnknownBuiltin(name) => write!(f, "Unknown builtin: {}", name),
+            LPLError::DivisionByZero => write!(f, "Division by zero"),
+            LPLError::IndexOutOfBounds { index, length } => {
                 write!(f, "Index {} out of bounds for vector of length {}", index, length)
             },
-            AjisaiError::VectorLengthMismatch { len1, len2 } => {
+            LPLError::VectorLengthMismatch { len1, len2 } => {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
             },
-            AjisaiError::ProtectedWord { name, dependents } => {
+            LPLError::ProtectedWord { name, dependents } => {
                 write!(f, "Cannot delete '{}' because it is used by: {}", name, dependents.join(", "))
             },
-            AjisaiError::Custom(msg) => write!(f, "{}", msg),
-            AjisaiError::WithContext { error, context } => {
+            LPLError::Custom(msg) => write!(f, "{}", msg),
+            LPLError::WithContext { error, context } => {
                 write!(f, "{}\n  in word: {}", error, context.join(" -> "))
             },
         }
     }
 }
 
-impl From<String> for AjisaiError {
+impl From<String> for LPLError {
     fn from(s: String) -> Self {
-        AjisaiError::Custom(s)
+        LPLError::Custom(s)
     }
 }
 
-impl From<&str> for AjisaiError {
+impl From<&str> for LPLError {
     fn from(s: &str) -> Self {
-        AjisaiError::Custom(s.to_string())
+        LPLError::Custom(s.to_string())
     }
 }
