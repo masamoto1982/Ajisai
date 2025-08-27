@@ -3,12 +3,12 @@
 import { GUI_INSTANCE } from './gui/main';
 import { initWasm } from './wasm-loader';
 import './db'; // IndexedDBモジュールをインポート
-import type { WasmModule, AjisaiInterpreter } from './wasm-types';
+import type { WasmModule, LPLInterpreter } from './wasm-types';
 
 declare global {
     interface Window {
-        AjisaiWasm: WasmModule;           // Holon → Ajisai
-        ajisaiInterpreter: AjisaiInterpreter;
+        LPLWasm: WasmModule;           // AjisaiWasm → LPLWasm
+        lplInterpreter: LPLInterpreter; // ajisaiInterpreter → lplInterpreter
     }
 }
 
@@ -24,14 +24,14 @@ async function main(): Promise<void> {
         if (!wasm) {
             throw new Error('WASM initialization failed. Application cannot start.');
         }
-        window.AjisaiWasm = wasm;          // Holon → Ajisai
+        window.LPLWasm = wasm;          // AjisaiWasm → LPLWasm
         console.log('WASM loaded and initialized successfully.');
 
-        // 2. Ajisaiインタープリタを作成し、グローバルに公開
-        window.ajisaiInterpreter = new window.AjisaiWasm.AjisaiInterpreter(); // Holon → Ajisai
-        console.log('Ajisai interpreter created.');
+        // 2. LPLインタープリタを作成し、グローバルに公開
+        window.lplInterpreter = new window.LPLWasm.LPLInterpreter(); // AjisaiInterpreter → LPLInterpreter
+        console.log('LPL interpreter created.');
         
-        // 3. GUIを初期化（この時点でajisaiInterpreterは利用可能）
+        // 3. GUIを初期化（この時点でlplInterpreterは利用可能）
         GUI_INSTANCE.init();
         console.log('GUI initialized.');
 
