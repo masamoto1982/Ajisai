@@ -12,10 +12,10 @@ export async function initWasm(): Promise<WasmModule | null> {
         
         const baseUrl = import.meta.url.substring(0, import.meta.url.lastIndexOf('/'));
         console.log('Base URL:', baseUrl);
-        console.log('Expected module path:', baseUrl + '/pkg/ajisai_core.js');
+        console.log('Expected module path:', baseUrl + '/pkg/lpl_core.js');  // ajisai_core.js → lpl_core.js
         
         // @ts-ignore - Dynamic import of generated WASM module
-        const module = await import('./pkg/ajisai_core.js') as WasmModule;
+        const module = await import('./pkg/lpl_core.js') as WasmModule;  // ajisai_core.js → lpl_core.js
         console.log('Module loaded:', module);
         
         // init関数を呼び出す（wasm-bindgen 0.2.92以降の場合）
@@ -39,7 +39,7 @@ export async function initWasm(): Promise<WasmModule | null> {
         // フォールバックとして直接wasmファイルをロードしてみる
         try {
             console.log('Trying fallback method...');
-            const wasmPath = new URL('./pkg/ajisai_core_bg.wasm', import.meta.url);
+            const wasmPath = new URL('./pkg/lpl_core_bg.wasm', import.meta.url);  // ajisai_core_bg.wasm → lpl_core_bg.wasm
             console.log('WASM path:', wasmPath.href);
             
             const response = await fetch(wasmPath);
