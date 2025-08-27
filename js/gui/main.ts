@@ -1,4 +1,4 @@
-// js/gui/main.ts (AMNESIA機能対応)
+// js/gui/main.ts (LPL対応)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
@@ -6,11 +6,11 @@ import { Editor } from './editor';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
 import { TestRunner } from './test';  
-import type { AjisaiInterpreter, ExecuteResult, StepResult } from '../wasm-types';
+import type { LPLInterpreter, ExecuteResult, StepResult } from '../wasm-types';
 
 declare global {
     interface Window {
-        ajisaiInterpreter: AjisaiInterpreter;
+        lplInterpreter: LPLInterpreter;  // ajisaiInterpreter → lplInterpreter
     }
 }
 
@@ -20,12 +20,12 @@ interface GUIElements {
     clearBtn: HTMLButtonElement;
     testBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
-    workspaceDisplay: HTMLElement;
+    bookshelfDisplay: HTMLElement;  // workspaceDisplay → bookshelfDisplay
     builtinWordsDisplay: HTMLElement;
     customWordsDisplay: HTMLElement;
     inputArea: HTMLElement;
     outputArea: HTMLElement;
-    workspaceArea: HTMLElement;
+    bookshelfArea: HTMLElement;  // workspaceArea → bookshelfArea
     dictionaryArea: HTMLElement;
 }
 
@@ -58,7 +58,7 @@ export class GUI {
         // 各モジュールの初期化
         this.display.init({
             outputDisplay: this.elements.outputDisplay,
-            workspaceDisplay: this.elements.workspaceDisplay,
+            bookshelfDisplay: this.elements.bookshelfDisplay,  // workspaceDisplay → bookshelfDisplay
         });
         
         this.dictionary.init({
@@ -71,7 +71,7 @@ export class GUI {
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
-            workspaceArea: this.elements.workspaceArea,
+            bookshelfArea: this.elements.bookshelfArea,  // workspaceArea → bookshelfArea
             dictionaryArea: this.elements.dictionaryArea
         });
         
@@ -94,12 +94,12 @@ export class GUI {
             clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
             testBtn: document.getElementById('test-btn') as HTMLButtonElement,
             outputDisplay: document.getElementById('output-display')!,
-            workspaceDisplay: document.getElementById('workspace-display')!,
+            bookshelfDisplay: document.getElementById('bookshelf-display')!,  // workspace → bookshelf
             builtinWordsDisplay: document.getElementById('builtin-words-display')!,
             customWordsDisplay: document.getElementById('custom-words-display')!,
             inputArea: document.querySelector('.input-area')!,
             outputArea: document.querySelector('.output-area')!,
-            workspaceArea: document.querySelector('.workspace-area')!,
+            bookshelfArea: document.querySelector('.bookshelf-area')!,  // workspace → bookshelf
             dictionaryArea: document.querySelector('.dictionary-area')!
         };
 
@@ -152,7 +152,7 @@ export class GUI {
             }
         });
 
-        this.elements.workspaceArea.addEventListener('click', () => {
+        this.elements.bookshelfArea.addEventListener('click', () => {  // workspaceArea → bookshelfArea
             if (this.mobile.isMobile() && this.mode === 'execution') {
                 this.setMode('input');
             }
@@ -175,7 +175,7 @@ export class GUI {
         if (!code) return;
 
         try {
-            const result = window.ajisaiInterpreter.execute(code) as ExecuteResult;
+            const result = window.lplInterpreter.execute(code) as ExecuteResult;  // ajisai → lpl
             
             if (result.status === 'OK' && !result.error) {
                 this.display.showOutput(result.output || 'OK');
@@ -199,7 +199,7 @@ export class GUI {
     private async executeAmnesia(): Promise<void> {
         try {
             console.log('Executing AMNESIA...');
-            const result = window.ajisaiInterpreter.amnesia() as ExecuteResult;
+            const result = window.lplInterpreter.amnesia() as ExecuteResult;  // ajisai → lpl
             
             if (result.status === 'OK' && !result.error) {
                 this.display.showOutput(result.output || 'AMNESIA executed');
@@ -225,7 +225,7 @@ export class GUI {
         if (!code) return;
 
         try {
-            const message = window.ajisaiInterpreter.init_step(code);
+            const message = window.lplInterpreter.init_step(code);  // ajisai → lpl
             this.stepMode = true;
             this.display.showInfo(`Step mode started: ${message}\nPress Space to step, Escape to end.`);
             
@@ -241,7 +241,7 @@ export class GUI {
         if (!this.stepMode) return;
 
         try {
-            const result = window.ajisaiInterpreter.step() as StepResult;
+            const result = window.lplInterpreter.step() as StepResult;  // ajisai → lpl
             
             if (result.error) {
                 this.display.showError(result.output || 'Step execution error');
@@ -276,8 +276,8 @@ export class GUI {
     private async runTests(): Promise<void> {
         console.log('runTests called');
         
-        if (!window.ajisaiInterpreter) {
-            console.error('ajisaiInterpreter not available');
+        if (!window.lplInterpreter) {  // ajisai → lpl
+            console.error('lplInterpreter not available');
             this.display.showError('Interpreter not available');
             return;
         }
@@ -299,10 +299,10 @@ export class GUI {
     }
 
     updateAllDisplays(): void {
-        if (!window.ajisaiInterpreter) return;
+        if (!window.lplInterpreter) return;  // ajisai → lpl
         try {
-            this.display.updateWorkspace(window.ajisaiInterpreter.get_workspace());
-            this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
+            this.display.updateBookshelf(window.lplInterpreter.get_bookshelf());  // updateWorkspace → updateBookshelf, ajisai → lpl
+            this.dictionary.updateCustomWords(window.lplInterpreter.get_custom_words_info());  // ajisai → lpl
         } catch (error) {
             console.error('Failed to update display:', error);
             this.display.showError('Failed to update display.');
