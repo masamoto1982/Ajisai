@@ -1,7 +1,7 @@
 {
-  "name": "ajisai",
+  "name": "lpl",
   "version": "1.0.0",
-  "description": "Ajisai - A stack-based programming language",
+  "description": "Library Programming Language (LPL) - A stack-based programming language",
   "type": "module",
   "scripts": {
     "build": "tsc",
