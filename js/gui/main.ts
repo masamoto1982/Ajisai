@@ -1,7 +1,7 @@
 // js/gui/main.ts (LPL対応)
 
 import { Display } from './display';
-import { Dictionary } from './dictionary';
+import { Librarians } from './librarians';  // Dictionary → Librarians
 import { Editor } from './editor';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
@@ -10,7 +10,7 @@ import type { LPLInterpreter, ExecuteResult, StepResult } from '../wasm-types';
 
 declare global {
     interface Window {
-        lplInterpreter: LPLInterpreter;  // ajisaiInterpreter → lplInterpreter
+        lplInterpreter: LPLInterpreter;
     }
 }
 
@@ -20,18 +20,18 @@ interface GUIElements {
     clearBtn: HTMLButtonElement;
     testBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
-    bookshelfDisplay: HTMLElement;  // workspaceDisplay → bookshelfDisplay
-    builtinWordsDisplay: HTMLElement;
-    customWordsDisplay: HTMLElement;
+    bookshelfDisplay: HTMLElement;
+    permanentLibrariansDisplay: HTMLElement;
+    temporaryLibrariansDisplay: HTMLElement;
     inputArea: HTMLElement;
     outputArea: HTMLElement;
-    bookshelfArea: HTMLElement;  // workspaceArea → bookshelfArea
-    dictionaryArea: HTMLElement;
+    bookshelfArea: HTMLElement;
+    librariansArea: HTMLElement;
 }
 
 export class GUI {
     display: Display;
-    dictionary: Dictionary;
+    librarians: Librarians;  // dictionary → librarians
     editor: Editor;
     mobile: MobileHandler;
     persistence: Persistence;
@@ -43,7 +43,7 @@ export class GUI {
 
     constructor() {
         this.display = new Display();
-        this.dictionary = new Dictionary();
+        this.librarians = new Librarians();  // Dictionary → Librarians
         this.editor = new Editor();
         this.mobile = new MobileHandler();
         this.persistence = new Persistence(this);
@@ -58,12 +58,12 @@ export class GUI {
         // 各モジュールの初期化
         this.display.init({
             outputDisplay: this.elements.outputDisplay,
-            bookshelfDisplay: this.elements.bookshelfDisplay,  // workspaceDisplay → bookshelfDisplay
+            bookshelfDisplay: this.elements.bookshelfDisplay,
         });
         
-        this.dictionary.init({
-            builtinWordsDisplay: this.elements.builtinWordsDisplay,
-            customWordsDisplay: this.elements.customWordsDisplay
+        this.librarians.init({
+            permanentLibrariansDisplay: this.elements.permanentLibrariansDisplay,
+            temporaryLibrariansDisplay: this.elements.temporaryLibrariansDisplay
         }, (word: string) => this.insertWord(word));
         
         this.editor.init(this.elements.codeInput);
@@ -71,8 +71,8 @@ export class GUI {
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
-            bookshelfArea: this.elements.bookshelfArea,  // workspaceArea → bookshelfArea
-            dictionaryArea: this.elements.dictionaryArea
+            bookshelfArea: this.elements.bookshelfArea,
+            librariansArea: this.elements.librariansArea
         });
         
         this.persistence.init();
@@ -81,7 +81,7 @@ export class GUI {
         this.setupEventListeners();
 
         // 初期表示
-        this.dictionary.renderBuiltinWords();
+        this.librarians.renderPermanentLibrarians();
         this.updateAllDisplays();
         this.mobile.updateView(this.mode);
     }
@@ -94,13 +94,13 @@ export class GUI {
             clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
             testBtn: document.getElementById('test-btn') as HTMLButtonElement,
             outputDisplay: document.getElementById('output-display')!,
-            bookshelfDisplay: document.getElementById('bookshelf-display')!,  // workspace → bookshelf
-            builtinWordsDisplay: document.getElementById('builtin-words-display')!,
-            customWordsDisplay: document.getElementById('custom-words-display')!,
+            bookshelfDisplay: document.getElementById('bookshelf-display')!,
+            permanentLibrariansDisplay: document.getElementById('permanent-librarians-display')!,
+            temporaryLibrariansDisplay: document.getElementById('temporary-librarians-display')!,
             inputArea: document.querySelector('.input-area')!,
             outputArea: document.querySelector('.output-area')!,
-            bookshelfArea: document.querySelector('.bookshelf-area')!,  // workspace → bookshelf
-            dictionaryArea: document.querySelector('.dictionary-area')!
+            bookshelfArea: document.querySelector('.bookshelf-area')!,
+            librariansArea: document.querySelector('.librarians-area')!
         };
 
         if (!this.elements.testBtn) {
@@ -152,7 +152,7 @@ export class GUI {
             }
         });
 
-        this.elements.bookshelfArea.addEventListener('click', () => {  // workspaceArea → bookshelfArea
+        this.elements.bookshelfArea.addEventListener('click', () => {
             if (this.mobile.isMobile() && this.mode === 'execution') {
                 this.setMode('input');
             }
@@ -175,7 +175,7 @@ export class GUI {
         if (!code) return;
 
         try {
-            const result = window.lplInterpreter.execute(code) as ExecuteResult;  // ajisai → lpl
+            const result = window.lplInterpreter.execute(code) as ExecuteResult;
             
             if (result.status === 'OK' && !result.error) {
                 this.display.showOutput(result.output || 'OK');
@@ -199,7 +199,7 @@ export class GUI {
     private async executeAmnesia(): Promise<void> {
         try {
             console.log('Executing AMNESIA...');
-            const result = window.lplInterpreter.amnesia() as ExecuteResult;  // ajisai → lpl
+            const result = window.lplInterpreter.amnesia() as ExecuteResult;
             
             if (result.status === 'OK' && !result.error) {
                 this.display.showOutput(result.output || 'AMNESIA executed');
@@ -225,7 +225,7 @@ export class GUI {
         if (!code) return;
 
         try {
-            const message = window.lplInterpreter.init_step(code);  // ajisai → lpl
+            const message = window.lplInterpreter.init_step(code);
             this.stepMode = true;
             this.display.showInfo(`Step mode started: ${message}\nPress Space to step, Escape to end.`);
             
@@ -241,7 +241,7 @@ export class GUI {
         if (!this.stepMode) return;
 
         try {
-            const result = window.lplInterpreter.step() as StepResult;  // ajisai → lpl
+            const result = window.lplInterpreter.step() as StepResult;
             
             if (result.error) {
                 this.display.showError(result.output || 'Step execution error');
@@ -276,7 +276,7 @@ export class GUI {
     private async runTests(): Promise<void> {
         console.log('runTests called');
         
-        if (!window.lplInterpreter) {  // ajisai → lpl
+        if (!window.lplInterpreter) {
             console.error('lplInterpreter not available');
             this.display.showError('Interpreter not available');
             return;
@@ -299,10 +299,10 @@ export class GUI {
     }
 
     updateAllDisplays(): void {
-        if (!window.lplInterpreter) return;  // ajisai → lpl
+        if (!window.lplInterpreter) return;
         try {
-            this.display.updateBookshelf(window.lplInterpreter.get_bookshelf());  // updateWorkspace → updateBookshelf, ajisai → lpl
-            this.dictionary.updateCustomWords(window.lplInterpreter.get_custom_words_info());  // ajisai → lpl
+            this.display.updateBookshelf(window.lplInterpreter.get_bookshelf());
+            this.librarians.updateTemporaryLibrarians(window.lplInterpreter.get_custom_words_info());
         } catch (error) {
             console.error('Failed to update display:', error);
             this.display.showError('Failed to update display.');
