@@ -1,4 +1,4 @@
-/* style.css (workspace対応版 + テストボタン追加) */
+/* style.css (LPL対応版 + テストボタン追加) */
 * {
     margin: 0;
     padding: 0;
@@ -266,8 +266,8 @@ button:hover {
     color: #ccc !important;
 }
 
-/* ワークスペースエリア（stack → workspace） */
-.workspace-area {
+/* 書架エリア（workspace → bookshelf） */
+.bookshelf-area {
     width: 100%;
 }
 
@@ -321,14 +321,14 @@ button:hover {
     background-color: #e0ffe8;
 }
 
-/* ワークスペース項目（stack-item → workspace-item） */
-.workspace-item {
+/* 書架項目（stack-item → bookshelf-item） */
+.bookshelf-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
 }
 
-/* ワークスペース表示の左寄せ */
-.workspace-display>div {
+/* 書架表示の左寄せ */
+.bookshelf-display>div {
     justify-content: flex-start !important;
 }
 
@@ -398,7 +398,7 @@ button:hover {
 
     .output-area,
     .input-area,
-    .workspace-area,  /* stack-area → workspace-area */
+    .bookshelf-area,  /* workspace-area → bookshelf-area */
     .dictionary-area {
         height: auto;
         flex: none;
@@ -420,7 +420,7 @@ button:hover {
         font-size: 1rem;
     }
 
-    .workspace-area {  /* stack-area → workspace-area */
+    .bookshelf-area {  /* workspace-area → bookshelf-area */
         cursor: pointer;
     }
 }
