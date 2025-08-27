@@ -3,8 +3,8 @@
 interface MobileElements {
     inputArea: HTMLElement;
     outputArea: HTMLElement;
-    bookshelfArea: HTMLElement;  // workspaceArea → bookshelfArea
-    dictionaryArea: HTMLElement;
+    bookshelfArea: HTMLElement;
+    librariansArea: HTMLElement;  // dictionaryArea → librariansArea
 }
 
 export class MobileHandler {
@@ -31,13 +31,13 @@ export class MobileHandler {
         if (mode === 'input') {
             this.elements.inputArea.style.display = 'block';
             this.elements.outputArea.style.display = 'none';
-            this.elements.bookshelfArea.style.display = 'none';  // workspaceArea → bookshelfArea
-            this.elements.dictionaryArea.style.display = 'block';
+            this.elements.bookshelfArea.style.display = 'none';
+            this.elements.librariansArea.style.display = 'block';  // dictionaryArea → librariansArea
         } else { // 'execution' mode
             this.elements.inputArea.style.display = 'none';
             this.elements.outputArea.style.display = 'block';
-            this.elements.bookshelfArea.style.display = 'block';  // workspaceArea → bookshelfArea
-            this.elements.dictionaryArea.style.display = 'none';
+            this.elements.bookshelfArea.style.display = 'block';
+            this.elements.librariansArea.style.display = 'none';  // dictionaryArea → librariansArea
         }
     }
 }
