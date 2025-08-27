@@ -24,6 +24,9 @@ pub struct WordDefinition {
     pub is_builtin: bool,
     pub description: Option<String>,
     pub category: Option<String>,
+    pub hidden: Option<bool>,  // 新フィールド：隠しワード用
+    pub english_name: Option<String>,  // 新フィールド：英語名
+    pub japanese_name: Option<String>, // 新フィールド：日本語名
 }
 
 impl Interpreter {
@@ -153,7 +156,7 @@ impl Interpreter {
         // 雇用の位置を探す
         let hire_position = tokens.iter().rposition(|t| {
             if let Token::Symbol(s) = t {
-                s == "雇用" || s == "DEF" // 後方互換性のためDEFも認識
+                s == "雇用"
             } else {
                 false
             }
@@ -254,6 +257,9 @@ impl Interpreter {
             is_builtin: false,
             description,
             category: None,
+            hidden: Some(false),
+            english_name: None,
+            japanese_name: None,
         });
 
         self.append_output(&format!("Hired librarian: {}\n", name));
@@ -550,6 +556,13 @@ impl Interpreter {
             ">" => arithmetic::op_gt(self),
             ">=" => arithmetic::op_ge(self),
             "=" => arithmetic::op_eq(self),
+            "<" => arithmetic::op_lt(self),
+            "<=" => arithmetic::op_le(self),
+            
+            // 論理演算司書
+            "AND" => arithmetic::op_and(self),
+            "OR" => arithmetic::op_or(self),
+            "NOT" => arithmetic::op_not(self),
             
             // 書籍操作司書
             "頁" => vector_ops::op_page(self),
@@ -564,8 +577,8 @@ impl Interpreter {
             "破棄" => vector_ops::op_discard(self),
             
             // 司書管理司書
-            "雇用" | "DEF" => control::op_hire(self), // 後方互換性
-            "解雇" | "DEL" => control::op_fire(self), // 後方互換性
+            "雇用" => control::op_hire(self),
+            "解雇" => control::op_fire(self),
             "交代" => control::op_handover(self),
             
             _ => Err(error::LPLError::UnknownBuiltin(name.to_string())),
@@ -626,6 +639,9 @@ impl Interpreter {
             is_builtin: false,
             description,
             category: None,
+            hidden: Some(false),
+            english_name: None,
+            japanese_name: None,
         });
 
         Ok(())
