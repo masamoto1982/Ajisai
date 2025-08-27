@@ -1,5 +1,4 @@
 // js/gui/librarians.ts
-
 interface LibrarianInfo {
     name: string;
     description?: string | null;
@@ -11,13 +10,25 @@ interface LibrariansElements {
     temporaryLibrariansDisplay: HTMLElement;
 }
 
+type LanguageMode = 'japanese' | 'english';
+
 export class Librarians {
     private elements!: LibrariansElements;
     private onWordClick!: (word: string) => void;
+    private languageMode: LanguageMode = 'japanese'; // デフォルトは日本語
 
     init(elements: LibrariansElements, onWordClick: (word: string) => void): void {
         this.elements = elements;
         this.onWordClick = onWordClick;
+    }
+
+    setLanguageMode(mode: LanguageMode): void {
+        this.languageMode = mode;
+        this.renderPermanentLibrarians(); // 再描画
+    }
+
+    getLanguageMode(): LanguageMode {
+        return this.languageMode;
     }
 
     renderPermanentLibrarians(): void {
@@ -31,24 +42,76 @@ export class Librarians {
         }
     }
 
+    private getCategoryOrder(): string[] {
+        return [
+            'Basic',      // 基礎演算
+            'Compare',    // 比較演算  
+            'Logic',      // 論理演算
+            'BookOps',    // 書籍操作
+            'Management'  // 司書管理
+        ];
+    }
+
+    private getCategoryNames(mode: LanguageMode): Record<string, string> {
+        if (mode === 'english') {
+            return {
+                'Basic': 'Basic Operations',
+                'Compare': 'Comparison',
+                'Logic': 'Logic Operations',
+                'BookOps': 'Book Operations',
+                'Management': 'Librarian Management'
+            };
+        } else {
+            return {
+                'Basic': '基礎演算司書',
+                'Compare': '比較判定司書',
+                'Logic': '論理演算司書',
+                'BookOps': '書籍操作司書',
+                'Management': '司書管理司書'
+            };
+        }
+    }
+
     private renderCategorizedWords(container: HTMLElement, categorizedWords: any): void {
         container.innerHTML = '';
         
-        for (const [_, words] of Object.entries(categorizedWords)) {
+        const categoryOrder = this.getCategoryOrder();
+        const categoryNames = this.getCategoryNames(this.languageMode);
+        
+        for (const categoryKey of categoryOrder) {
+            const words = categorizedWords[categoryKey];
+            if (!words || words.length === 0) continue;
+            
             const categorySection = document.createElement('div');
             categorySection.className = 'word-category';
             
+            const categoryTitle = document.createElement('h4');
+            categoryTitle.textContent = categoryNames[categoryKey] || categoryKey;
+            categoryTitle.style.cssText = `
+                margin: 0.75rem 0 0.5rem 0; 
+                color: #666; 
+                font-size: 0.875rem;
+                border-bottom: 1px solid #e0e0e0;
+                padding-bottom: 0.25rem;
+            `;
+            categorySection.appendChild(categoryTitle);
+            
             const wordsContainer = document.createElement('div');
+            wordsContainer.style.marginBottom = '1rem';
             
             (words as any[]).forEach(wordData => {
                 const button = document.createElement('button');
-                button.textContent = wordData[0];
+                
+                // 言語モードに応じて表示名を決定
+                const displayName = this.getDisplayName(wordData);
+                button.textContent = displayName;
                 button.className = 'word-button builtin';
-                button.title = wordData[1] || wordData[0];
+                button.title = wordData[1] || displayName;
                 
                 button.addEventListener('click', () => {
                     if (this.onWordClick) {
-                        this.onWordClick(wordData[0]);
+                        // クリック時は実際のワード名（日本語名）を渡す
+                        this.onWordClick(this.getActualWordName(wordData));
                     }
                 });
                 
@@ -58,6 +121,31 @@ export class Librarians {
             categorySection.appendChild(wordsContainer);
             container.appendChild(categorySection);
         }
+    }
+
+    private getDisplayName(wordData: any[]): string {
+        const japaneseName = wordData[0];
+        
+        // 英語マッピング（修正版）
+        const englishMapping: Record<string, string> = {
+            '+': 'ADD', '-': 'SUB', '*': 'MUL', '/': 'DIV',
+            '>': 'GT', '>=': 'GE', '=': 'EQ', '<': 'LT', '<=': 'LE',
+            'AND': 'AND', 'OR': 'OR', 'NOT': 'NOT',
+            '頁': 'PAGE', '頁数': 'LENGTH', '挿入': 'INSERT', '置換': 'REPLACE', '削除': 'DELETE',
+            '合併': 'MERGE', '分離': 'SPLIT', '待機': 'WAIT', '複製': 'DUP', '破棄': 'DROP',
+            '雇用': 'HIRE', '解雇': 'FIRE', '交代': 'SUB'
+        };
+        
+        if (this.languageMode === 'english' && englishMapping[japaneseName]) {
+            return englishMapping[japaneseName];
+        }
+        
+        return japaneseName;
+    }
+
+    private getActualWordName(wordData: any[]): string {
+        // 常に日本語名（実際のワード名）を返す
+        return wordData[0];
     }
 
     updateTemporaryLibrarians(customWordsInfo: Array<[string, string | null, boolean]>): void {
@@ -70,7 +158,6 @@ export class Librarians {
     }
 
     private decodeWordName(name: string): string | null {
-        // W_で始まるタイムスタンプ形式の自動生成名は処理しない
         if (name.match(/^W_[0-9A-F]+$/)) {
             return null;
         }
@@ -84,7 +171,6 @@ export class Librarians {
                 if (part === 'BEND') return '}';
                 if (part === 'NIL') return 'nil';
                 if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
-                // 演算子の復号化
                 if (part === 'ADD') return '+';
                 if (part === 'SUB') return '-';
                 if (part === 'MUL') return '*';
@@ -112,7 +198,6 @@ export class Librarians {
             button.textContent = wordInfo.name;
             button.className = 'word-button';
             
-            // ホバー時のタイトル設定
             if (wordInfo.description) {
                 button.title = wordInfo.description;
             } else {
