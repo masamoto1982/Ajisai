@@ -64,12 +64,15 @@ pub fn op_hire(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    // ワード定義を登録（説明なしの従来版）
+    // ワード定義を登録（新フィールド追加）
     interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
         tokens,
         is_builtin: false,
         description: None,  // 従来の雇用では説明なし
         category: None,
+        hidden: Some(false),  // 新フィールド
+        english_name: None,   // 新フィールド
+        japanese_name: None,  // 新フィールド
     });
 
     interp.append_output(&format!("Hired librarian: {}\n", name));
