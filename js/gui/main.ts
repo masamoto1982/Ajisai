@@ -127,30 +127,30 @@ export class GUI {
         }
 
         this.elements.codeInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                if (e.shiftKey) {
-                    // Shift+Enter: 通常実行
-                    e.preventDefault();
-                    this.runCode();
-                } else if (e.ctrlKey && e.altKey) {
-                    // Ctrl+Alt+Enter: AMNESIA実行
-                    e.preventDefault();
-                    this.executeAmnesia();
-                } else if (e.ctrlKey) {
-                    // Ctrl+Enter: ステップ実行
-                    e.preventDefault();
-                    this.startStepExecution();
-                }
-            } else if (e.key === ' ' && this.stepMode) {
-                // スペース: ステップ実行中の次のステップ
-                e.preventDefault();
+    if (e.key === 'Enter') {
+        if (e.shiftKey) {
+            // Shift+Enter: 通常実行
+            e.preventDefault();
+            this.runCode();
+        } else if (e.ctrlKey && e.altKey) {
+            // Ctrl+Alt+Enter: AMNESIA実行
+            e.preventDefault();
+            this.executeAmnesia();
+        } else if (e.ctrlKey) {
+            // Ctrl+Enter: ステップ実行開始 or 次のステップ
+            e.preventDefault();
+            if (this.stepMode) {
                 this.executeNextStep();
-            } else if (e.key === 'Escape' && this.stepMode) {
-                // Escape: ステップ実行終了
-                e.preventDefault();
-                this.endStepExecution();
+            } else {
+                this.startStepExecution();
             }
-        });
+        }
+    } else if (e.key === 'Escape' && this.stepMode) {
+        // Escape: ステップ実行終了
+        e.preventDefault();
+        this.endStepExecution();
+    }
+});
 
         this.elements.bookshelfArea.addEventListener('click', () => {
             if (this.mobile.isMobile() && this.mode === 'execution') {
