@@ -1,4 +1,4 @@
-/* style.css (LPL対応版 + テストボタン追加) */
+/* style.css (LPL対応版 + 司書メタファー完全統一) */
 * {
     margin: 0;
     padding: 0;
@@ -266,20 +266,25 @@ button:hover {
     color: #ccc !important;
 }
 
-/* 書架エリア（workspace → bookshelf） */
+/* 書架エリア */
 .bookshelf-area {
     width: 100%;
 }
 
-/* 辞書コンテナ - 縦並び */
-.dictionary-container {
+/* 司書コンテナ - 縦並び */
+.librarians-container {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-.builtin-words-area,
-.custom-words-area {
+.permanent-librarians-area,
+.temporary-librarians-area {
+    width: 100%;
+}
+
+/* 司書エリア */
+.librarians-area {
     width: 100%;
 }
 
@@ -299,7 +304,7 @@ button:hover {
     background-color: #e0e0e0;
 }
 
-/* 変更不可 */
+/* 変更不可（常任司書） */
 .word-button.builtin,
 .word-button.protected {
     border-color: #dc3545;
@@ -311,7 +316,7 @@ button:hover {
     background-color: #ffe0e0;
 }
 
-/* 変更可能 */
+/* 変更可能（臨時司書） */
 .word-button.deletable {
     border-color: #28a745;
     background-color: #f0fff4;
@@ -321,7 +326,7 @@ button:hover {
     background-color: #e0ffe8;
 }
 
-/* 書架項目（stack-item → bookshelf-item） */
+/* 書架項目 */
 .bookshelf-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
@@ -398,8 +403,8 @@ button:hover {
 
     .output-area,
     .input-area,
-    .bookshelf-area,  /* workspace-area → bookshelf-area */
-    .dictionary-area {
+    .bookshelf-area,
+    .librarians-area {
         height: auto;
         flex: none;
     }
@@ -420,7 +425,7 @@ button:hover {
         font-size: 1rem;
     }
 
-    .bookshelf-area {  /* workspace-area → bookshelf-area */
+    .librarians-area {
         cursor: pointer;
     }
 }
