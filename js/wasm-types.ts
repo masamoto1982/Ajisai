@@ -1,4 +1,4 @@
-// js/wasm-types.ts (LPL対応 + グローバル型定義)
+// js/wasm-types.ts (LPL対応)
 
 export interface LPLInterpreterClass {
     new(): LPLInterpreter;
@@ -52,11 +52,10 @@ export interface WasmModule {
     init?: () => Promise<void>;
 }
 
-// グローバル型定義の追加
+// グローバル型定義の追加（LPLDBは既にjs/db.tsで定義済み）
 declare global {
     interface Window {
         LPLWasm: WasmModule;
         lplInterpreter: LPLInterpreter;
-        LPLDB: any;
     }
 }
