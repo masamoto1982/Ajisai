@@ -4,7 +4,7 @@ import type { Value } from '../wasm-types';
 
 interface DisplayElements {
     outputDisplay: HTMLElement;
-    workspaceDisplay: HTMLElement;
+    bookshelfDisplay: HTMLElement;  // workspaceDisplay → bookshelfDisplay
 }
 
 export class Display {
@@ -62,11 +62,11 @@ export class Display {
         }
     }
 
-    updateWorkspace(workspace: Value[]): void {
-        const display = this.elements.workspaceDisplay;
+    updateBookshelf(bookshelf: Value[]): void {  // updateWorkspace → updateBookshelf
+        const display = this.elements.bookshelfDisplay;  // workspaceDisplay → bookshelfDisplay
         display.innerHTML = '';
         
-        if (!Array.isArray(workspace) || workspace.length === 0) {
+        if (!Array.isArray(bookshelf) || bookshelf.length === 0) {
             display.textContent = '(empty)';
             display.style.color = '#ccc';
             return;
@@ -78,14 +78,14 @@ export class Display {
         container.style.flexWrap = 'wrap';
         container.style.justifyContent = 'flex-start';
         container.style.alignContent = 'flex-start';
-        container.style.flexDirection = 'row';  // ワークスペースは横並び
+        container.style.flexDirection = 'row';  // 書架は横並び
         
-        workspace.forEach((item, index) => {
+        bookshelf.forEach((item, index) => {
             const elem = document.createElement('span');
-            elem.className = 'workspace-item';
+            elem.className = 'bookshelf-item';  // workspace-item → bookshelf-item
             elem.textContent = this.formatValue(item);
             
-            if (index === workspace.length - 1) {
+            if (index === bookshelf.length - 1) {
                 elem.style.fontWeight = 'bold';
             }
             
