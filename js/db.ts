@@ -9,7 +9,7 @@ interface TableData {
 
 interface InterpreterState {
     key: string;
-    workspace: any;  // stack → workspace
+    bookshelf: any;  // workspace → bookshelf
     customWords: any;
     updatedAt: string;
 }
@@ -19,9 +19,9 @@ interface ExportData {
     interpreterState: InterpreterState | null;
 }
 
-class AjisaiDB {
-    private dbName = 'AjisaiDB';
-    private version = 4;  // バージョンアップ（workspace対応）
+class LPLDB {
+    private dbName = 'LPLDB';  // AjisaiDB → LPLDB
+    private version = 4;  // バージョンアップ（bookshelf対応）
     private storeName = 'tables';
     private stateStoreName = 'interpreter_state';
     private db: IDBDatabase | null = null;
@@ -166,7 +166,7 @@ class AjisaiDB {
                 const result = request.result;
                 if (result) {
                     resolve({
-                        workspace: result.workspace,  // stack → workspace
+                        bookshelf: result.bookshelf,  // workspace → bookshelf
                         customWords: result.customWords
                     });
                 } else {
@@ -285,16 +285,16 @@ class AjisaiDB {
     }
 }
 
-const DB = new AjisaiDB();
+const DB = new LPLDB();
 
 declare global {
     interface Window {
-        AjisaiDB: AjisaiDB;
+        LPLDB: LPLDB;  // AjisaiDB → LPLDB
     }
 }
 
-window.AjisaiDB = DB;
+window.LPLDB = DB;  // AjisaiDB → LPLDB
 
-console.log('AjisaiDB initialized:', DB);
+console.log('LPLDB initialized:', DB);
 
 export default DB;
