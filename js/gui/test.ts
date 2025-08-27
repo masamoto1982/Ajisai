@@ -1,9 +1,9 @@
-// js/gui/test.ts (新しいワード体系対応)
+// js/gui/test.ts (LPL対応版)
 
 interface TestCase {
     name: string;
     code: string;
-    expectedWorkspace?: any[];
+    expectedBookshelf?: any[];  // expectedWorkspace → expectedBookshelf
     expectedOutput?: string;
     expectError?: boolean;
     category?: string;
@@ -28,7 +28,7 @@ export class TestRunner {
         let totalPassed = 0;
         let totalFailed = 0;
 
-        this.showColoredInfo('Ajisai New File System Tests Starting...', 'info');
+        this.showColoredInfo('LPL New File System Tests Starting...', 'info');  // Ajisai → LPL
         this.showColoredInfo(`Total: ${testCases.length} tests across ${categories.length} categories\n`, 'info');
 
         for (const category of categories) {
@@ -114,10 +114,10 @@ export class TestRunner {
     }
 
     private async runSingleTest(testCase: TestCase): Promise<boolean> {
-        window.ajisaiInterpreter.reset();
+        window.lplInterpreter.reset();  // ajisaiInterpreter → lplInterpreter
 
         try {
-            const result = window.ajisaiInterpreter.execute(testCase.code);
+            const result = window.lplInterpreter.execute(testCase.code);  // ajisai → lpl
             
             if (testCase.expectError) {
                 return result.status === 'ERROR';
@@ -128,9 +128,9 @@ export class TestRunner {
                 return false;
             }
 
-            if (testCase.expectedWorkspace) {
-                const workspace = window.ajisaiInterpreter.get_workspace();
-                return this.compareWorkspace(workspace, testCase.expectedWorkspace);
+            if (testCase.expectedBookshelf) {  // expectedWorkspace → expectedBookshelf
+                const bookshelf = window.lplInterpreter.get_bookshelf();  // ajisai → lpl
+                return this.compareBookshelf(bookshelf, testCase.expectedBookshelf);  // compareWorkspace → compareBookshelf
             }
 
             if (testCase.expectedOutput) {
@@ -143,7 +143,7 @@ export class TestRunner {
         }
     }
 
-    private compareWorkspace(actual: any[], expected: any[]): boolean {
+    private compareBookshelf(actual: any[], expected: any[]): boolean {  // compareWorkspace → compareBookshelf
         if (actual.length !== expected.length) return false;
         
         for (let i = 0; i < actual.length; i++) {
@@ -163,7 +163,7 @@ export class TestRunner {
         }
         
         if (expected.type === 'vector' && actual.type === 'vector') {
-            return this.compareWorkspace(actual.value, expected.value);
+            return this.compareBookshelf(actual.value, expected.value);  // compareWorkspace → compareBookshelf
         }
 
         if (expected.type === 'boolean' && actual.type === 'boolean') {
@@ -187,7 +187,7 @@ export class TestRunner {
             {
                 name: "ファイル作成",
                 code: "[ 1 2 3 4 5 ]",
-                expectedWorkspace: [{
+                expectedBookshelf: [{  // expectedWorkspace → expectedBookshelf
                     type: 'vector',
                     value: [
                         { type: 'number', value: { numerator: 1, denominator: 1 } },
@@ -202,19 +202,19 @@ export class TestRunner {
             {
                 name: "3ページ目を見る",
                 code: "[ 1 2 3 4 5 ] 2 頁 取得",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 3, denominator: 1 } }],
+                expectedBookshelf: [{ type: 'number', value: { numerator: 3, denominator: 1 } }],  // expectedWorkspace → expectedBookshelf
                 category: "Page Access"
             },
             {
                 name: "ページ数を数える",
                 code: "[ 1 2 3 4 5 ] 頁数 取得",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 5, denominator: 1 } }],
+                expectedBookshelf: [{ type: 'number', value: { numerator: 5, denominator: 1 } }],  // expectedWorkspace → expectedBookshelf
                 category: "Page Count"
             },
             {
                 name: "2ページ目に新しいページを挿入",
                 code: "[ 1 2 3 4 5 ] 1 頁 9 挿入",
-                expectedWorkspace: [{
+                expectedBookshelf: [{  // expectedWorkspace → expectedBookshelf
                     type: 'vector',
                     value: [
                         { type: 'number', value: { numerator: 1, denominator: 1 } },
@@ -230,7 +230,7 @@ export class TestRunner {
             {
                 name: "2ページ目を置き換える",
                 code: "[ 1 2 3 4 5 ] 1 頁 9 置換",
-                expectedWorkspace: [
+                expectedBookshelf: [  // expectedWorkspace → expectedBookshelf
                     {
                         type: 'vector',
                         value: [
@@ -248,7 +248,7 @@ export class TestRunner {
             {
                 name: "2ページ目を削除する",
                 code: "[ 1 2 3 4 5 ] 1 頁 削除",
-                expectedWorkspace: [
+                expectedBookshelf: [  // expectedWorkspace → expectedBookshelf
                     {
                         type: 'vector',
                         value: [
@@ -265,7 +265,7 @@ export class TestRunner {
             {
                 name: "2つのファイルを合併する",
                 code: "[ 1 2 3 ] [ 4 5 ] 合併",
-                expectedWorkspace: [{
+                expectedBookshelf: [{  // expectedWorkspace → expectedBookshelf
                     type: 'vector',
                     value: [
                         { type: 'number', value: { numerator: 1, denominator: 1 } },
@@ -280,7 +280,7 @@ export class TestRunner {
             {
                 name: "ファイルを2ページ目で分離する",
                 code: "[ 1 2 3 4 5 ] 2 頁 分離",
-                expectedWorkspace: [
+                expectedBookshelf: [  // expectedWorkspace → expectedBookshelf
                     {
                         type: 'vector',
                         value: [
@@ -304,7 +304,7 @@ export class TestRunner {
             {
                 name: "ファイル複製ワード定義",
                 code: "[ 0 頁 取得 ] \"ファイル先頭\" DEF [ 1 2 3 ] ファイル先頭",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 1, denominator: 1 } }],
+                expectedBookshelf: [{ type: 'number', value: { numerator: 1, denominator: 1 } }],  // expectedWorkspace → expectedBookshelf
                 category: "Custom Words"
             },
 
