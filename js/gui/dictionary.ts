@@ -21,10 +21,10 @@ export class Dictionary {
     }
 
     renderBuiltinWords(): void {
-        if (!window.ajisaiInterpreter) return;
+        if (!window.lplInterpreter) return;  // ajisaiInterpreter → lplInterpreter
         
         try {
-            const categorizedWords = window.ajisaiInterpreter.get_builtin_words_by_category();
+            const categorizedWords = window.lplInterpreter.get_builtin_words_by_category();  // ajisai → lpl
             this.renderCategorizedWords(this.elements.builtinWordsDisplay, categorizedWords);
         } catch (error) {
             console.error('Failed to render builtin words:', error);
