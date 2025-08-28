@@ -170,7 +170,7 @@ impl LPLInterpreter {
     #[wasm_bindgen]
     pub fn get_builtin_words_info(&self) -> JsValue {
         let builtin_words_info: Vec<(String, Option<String>)> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| def.is_builtin)
+            .filter(|(_, def)| def.is_builtin && !def.hidden.unwrap_or(false)) // 隠しワードを除外
             .map(|(name, def)| (name.clone(), def.description.clone()))
             .collect();
         
@@ -191,7 +191,8 @@ impl LPLInterpreter {
         let mut categories: std::collections::BTreeMap<String, Vec<(String, Option<String>)>> = std::collections::BTreeMap::new();
         
         for (name, def) in &self.interpreter.dictionary {
-            if def.is_builtin {
+            // 隠しワードと非組み込みワードを除外
+            if def.is_builtin && !def.hidden.unwrap_or(false) {
                 let category = def.category.clone().unwrap_or_else(|| "Other".to_string());
                 categories.entry(category)
                     .or_insert_with(Vec::new)
