@@ -558,12 +558,11 @@ fn execute_builtin(&mut self, name: &str) -> Result<()> {
         "SPLIT" => "分離",
         "WAIT" => "待機",
         "DUP" => "複製",
-        // "DROP" => "破棄", // 削除 - 「削除」に統合
+        
         // 司書管理系の英語名エイリアス
         "HIRE" => "雇用",
         "FIRE" => "解雇",
         "HANDOVER" => "交代",
-        // その他はそのまま
         _ => name,
     };
     
@@ -590,6 +589,7 @@ fn execute_builtin(&mut self, name: &str) -> Result<()> {
         "頁" => vector_ops::op_page(self),
         "頁数" => vector_ops::op_page_count(self),
         "冊" => vector_ops::op_book(self),  // 新規追加
+        "冊数" => vector_ops::op_book_count(self),
         "挿入" => vector_ops::op_insert(self),
         "置換" => vector_ops::op_replace(self),
         "削除" => vector_ops::op_delete(self),
@@ -597,7 +597,6 @@ fn execute_builtin(&mut self, name: &str) -> Result<()> {
         "分離" => vector_ops::op_split(self),
         "待機" => vector_ops::op_wait(self),
         "複製" => vector_ops::op_duplicate(self),
-        // "破棄" => vector_ops::op_discard(self), // 削除
         
         // 司書管理司書
         "雇用" => control::op_hire(self),
