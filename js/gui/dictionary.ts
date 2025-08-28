@@ -39,7 +39,7 @@ export class Dictionary {
         
         // 3つのグループに分ける
         const arithmeticWords = ['+', '/', '*', '-', '=', '>=', '>', 'AND', 'OR', 'NOT'];
-        const bookOpsWords = ['頁', '頁数', '巻', '巻数', '冊', '冊数', '挿入', '置換', '削除', '合併', '分離'];
+        const bookOpsWords = ['頁', '頁数', '冊', '冊数', '挿入', '置換', '削除', '合併', '分離'];
         const managementWords = ['雇用', '解雇', '交代'];
         
         const groups = [arithmeticWords, bookOpsWords, managementWords];
