@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (丸括弧コメント対応完全版)
+// rust/src/tokenizer.rs (冊・冊数対応完全版)
 
 use crate::types::Token;
 use std::collections::HashSet;
@@ -315,13 +315,14 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
     }
 }
 
-// 新しい組み込み漢字ワード解析
+// 新しい組み込み漢字ワード解析（冊・冊数対応）
 fn try_parse_builtin_kanji(chars: &[char]) -> Option<(Token, usize)> {
     // 2文字の組み込みワードを先にチェック
     if chars.len() >= 2 {
         let two_char: String = chars[..2].iter().collect();
         match two_char.as_str() {
             "頁数" => return Some((Token::Symbol("頁数".to_string()), 2)),
+            "冊数" => return Some((Token::Symbol("冊数".to_string()), 2)), // 新追加
             "挿入" => return Some((Token::Symbol("挿入".to_string()), 2)),
             "置換" => return Some((Token::Symbol("置換".to_string()), 2)),
             "削除" => return Some((Token::Symbol("削除".to_string()), 2)),
@@ -344,6 +345,7 @@ fn try_parse_builtin_kanji(chars: &[char]) -> Option<(Token, usize)> {
         
         match one_char_str.as_str() {
             "頁" => Some((Token::Symbol("頁".to_string()), 1)),
+            "冊" => Some((Token::Symbol("冊".to_string()), 1)), // 新追加
             _ => None,
         }
     } else {
