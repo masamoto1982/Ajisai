@@ -111,55 +111,58 @@ export class GUI {
     }
     
     private setupEventListeners(): void {
-        console.log('Setting up event listeners...');
-        
-        this.elements.runBtn.addEventListener('click', () => this.runCode());
-        this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
-        
-        if (this.elements.testBtn) {
-            console.log('Adding test button event listener');
-            this.elements.testBtn.addEventListener('click', () => {
-                console.log('Test button clicked!');
-                this.runTests();
-            });
-        } else {
-            console.error('Cannot add event listener: test button not found');
-        }
+    console.log('Setting up event listeners...');
+    
+    this.elements.runBtn.addEventListener('click', () => this.runCode());
+    this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
+    
+    if (this.elements.testBtn) {
+        console.log('Adding test button event listener');
+        this.elements.testBtn.addEventListener('click', () => {
+            console.log('Test button clicked!');
+            this.runTests();
+        });
+    } else {
+        console.error('Cannot add event listener: test button not found');
+    }
 
-        this.elements.codeInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                if (e.shiftKey) {
-                    // Shift+Enter: 通常実行
-                    e.preventDefault();
-                    this.runCode();
-                } else if (e.ctrlKey && e.altKey) {
-                    // Ctrl+Alt+Enter: AMNESIA実行
-                    e.preventDefault();
-                    this.executeAmnesia();
-                } else if (e.ctrlKey) {
-                    // Ctrl+Enter: ステップ実行
-                    e.preventDefault();
+    this.elements.codeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            if (e.shiftKey) {
+                // Shift+Enter: 通常実行
+                e.preventDefault();
+                this.runCode();
+            } else if (e.ctrlKey && e.altKey) {
+                // Ctrl+Alt+Enter: AMNESIA実行
+                e.preventDefault();
+                this.executeAmnesia();
+            } else if (e.ctrlKey) {
+                // Ctrl+Enter: ステップ実行開始 または ステップ進行
+                e.preventDefault();
+                if (this.stepMode) {
+                    // ステップモード中はステップ進行
+                    this.executeNextStep();
+                } else {
+                    // ステップモードでない場合はステップ実行開始
                     this.startStepExecution();
                 }
-            } else if (e.key === ' ' && this.stepMode) {
-                // スペース: ステップ実行中の次のステップ
-                e.preventDefault();
-                this.executeNextStep();
-            } else if (e.key === 'Escape' && this.stepMode) {
-                // Escape: ステップ実行終了
-                e.preventDefault();
-                this.endStepExecution();
             }
-        });
+        } else if (e.key === 'Escape' && this.stepMode) {
+            // Escape: ステップ実行終了
+            e.preventDefault();
+            this.endStepExecution();
+        }
+    });
 
-        this.elements.workspaceArea.addEventListener('click', () => {
-            if (this.mobile.isMobile() && this.mode === 'execution') {
-                this.setMode('input');
-            }
-        });
+    // 以下は既存のまま
+    this.elements.workspaceArea.addEventListener('click', () => {
+        if (this.mobile.isMobile() && this.mode === 'execution') {
+            this.setMode('input');
+        }
+    });
 
-        window.addEventListener('resize', () => this.mobile.updateView(this.mode));
-    }
+    window.addEventListener('resize', () => this.mobile.updateView(this.mode));
+}
 
     private setMode(newMode: 'input' | 'execution'): void {
         this.mode = newMode;
