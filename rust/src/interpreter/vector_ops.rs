@@ -1,4 +1,4 @@
-// rust/src/interpreter/vector_ops.rs (冊・冊数対応完全版)
+// rust/src/interpreter/vector_ops.rs (ビルドエラー修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction};
@@ -69,7 +69,7 @@ pub fn op_book(interp: &mut Interpreter) -> Result<()> {
         _ => return Err(AjisaiError::type_error("integer", "other type")),
     };
     
-    match collection_val.val_type {
+    match &collection_val.val_type {  // 参照を使用
         ValueType::Vector(collection) => {
             let actual_index = if index < 0 {
                 collection.len() as i64 + index
@@ -78,12 +78,7 @@ pub fn op_book(interp: &mut Interpreter) -> Result<()> {
             };
             
             if actual_index >= 0 && (actual_index as usize) < collection.len() {
-                // 元のコレクションと選択した冊のインデックスをワークスペースに残す
-                interp.workspace.push(collection_val);  // 元のコレクションを復元
-                interp.workspace.push(Value {
-                    val_type: ValueType::Number(Fraction::new(actual_index, 1))
-                }); // インデックスを保持
-                // 選択された冊をワークスペースの一番上に配置
+                // 選択された冊をワークスペースに配置
                 interp.workspace.push(collection[actual_index as usize].clone());
                 Ok(())
             } else {
@@ -295,12 +290,12 @@ pub fn op_discard(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 統合版削除司書 - 削除と破棄の機能統合（コンテキスト判定付き）
+// 統合版削除司書 - 削除と破棄の機能統合（シンプル版）
 pub fn op_unified_delete(interp: &mut Interpreter) -> Result<()> {
     match interp.workspace.len() {
         0 => Err(AjisaiError::WorkspaceUnderflow),
         1 => {
-            // スタックに1つだけ値がある場合は破棄（旧 op_discard）
+            // スタックに1つだけ値がある場合は破棄
             interp.workspace.pop().unwrap();
             Ok(())
         },
@@ -312,22 +307,8 @@ pub fn op_unified_delete(interp: &mut Interpreter) -> Result<()> {
             // 上位がindex（整数）、次がvectorの場合はベクトルから削除
             if let (ValueType::Number(n), ValueType::Vector(_)) = (&top.val_type, &second.val_type) {
                 if n.denominator == 1 {
-                    // ベクトルから削除（旧 op_delete）
+                    // ベクトルから削除
                     return op_delete(interp);
-                }
-            }
-            
-            // 上位3つの値を見て、冊操作のパターンをチェック
-            if interp.workspace.len() >= 3 {
-                let third = &interp.workspace[interp.workspace.len() - 3];
-                
-                // パターン: collection index book_index の場合（冊操作）
-                if let (ValueType::Vector(_), ValueType::Number(book_idx), ValueType::Number(page_idx)) = 
-                    (&third.val_type, &second.val_type, &top.val_type) {
-                    if book_idx.denominator == 1 && page_idx.denominator == 1 {
-                        // 冊の中のページを削除
-                        return op_book_page_delete(interp);
-                    }
                 }
             }
             
@@ -338,72 +319,9 @@ pub fn op_unified_delete(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 冊のページ削除司書 - 2次元配列内の特定ページを削除
-fn op_book_page_delete(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 3 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
-    let page_index_val = interp.workspace.pop().unwrap();
-    let book_index_val = interp.workspace.pop().unwrap();
-    let collection_val = interp.workspace.pop().unwrap();
-    
-    let page_index = match page_index_val.val_type {
-        ValueType::Number(n) if n.denominator == 1 => n.numerator,
-        _ => return Err(AjisaiError::type_error("integer", "page index")),
-    };
-    
-    let book_index = match book_index_val.val_type {
-        ValueType::Number(n) if n.denominator == 1 => n.numerator,
-        _ => return Err(AjisaiError::type_error("integer", "book index")),
-    };
-    
-    match collection_val.val_type {
-        ValueType::Vector(mut collection) => {
-            let actual_book_index = if book_index < 0 {
-                collection.len() as i64 + book_index
-            } else {
-                book_index
-            };
-            
-            if actual_book_index >= 0 && (actual_book_index as usize) < collection.len() {
-                if let ValueType::Vector(mut book) = collection[actual_book_index as usize].val_type.clone() {
-                    let actual_page_index = if page_index < 0 {
-                        book.len() as i64 + page_index
-                    } else {
-                        page_index
-                    };
-                    
-                    if actual_page_index >= 0 && (actual_page_index as usize) < book.len() {
-                        let removed_page = book.remove(actual_page_index as usize);
-                        collection[actual_book_index as usize] = Value {
-                            val_type: ValueType::Vector(book)
-                        };
-                        
-                        interp.workspace.push(Value { val_type: ValueType::Vector(collection) });
-                        interp.workspace.push(removed_page);
-                        Ok(())
-                    } else {
-                        Err(AjisaiError::IndexOutOfBounds {
-                            index: page_index,
-                            length: book.len(),
-                        })
-                    }
-                } else {
-                    Err(AjisaiError::type_error("vector", "book content"))
-                }
-            } else {
-                Err(AjisaiError::IndexOutOfBounds {
-                    index: book_index,
-                    length: collection.len(),
-                })
-            }
-        },
-        _ => Err(AjisaiError::type_error("vector (book collection)", "other type")),
-    }
-}
+// 冊操作用の補助関数群
 
-// 冊全体削除司書 - 2次元配列から特定の冊を削除
+// 冊全体削除司書 - 2次元配列から特定の冊を削除  
 pub fn op_book_delete(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
