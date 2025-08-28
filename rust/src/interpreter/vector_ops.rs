@@ -3,7 +3,7 @@
 use crate::interpreter::{Interpreter, error::{LPLError, Result}};
 use crate::types::{Value, ValueType, Fraction};
 
-// 頁司書 - 書籍の特定ページを取得
+// 頁司書 - 書籍の特定ページを取得（1オリジン）
 pub fn op_page(interp: &mut Interpreter) -> Result<()> {
     if interp.bookshelf.len() < 2 {
         return Err(LPLError::BookshelfUnderflow);
@@ -12,25 +12,26 @@ pub fn op_page(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.bookshelf.pop().unwrap();
     let vector_val = interp.bookshelf.pop().unwrap();
     
-    let index = match index_val.val_type {
+    let user_index = match index_val.val_type {
         ValueType::Number(n) if n.denominator == 1 => n.numerator,
         _ => return Err(LPLError::type_error("integer", "other type")),
     };
     
     match vector_val.val_type {
         ValueType::Vector(v) => {
-            let actual_index = if index < 0 {
-                v.len() as i64 + index
+            // 1オリジン → 0オリジン変換
+            let internal_index = if user_index < 0 {
+                v.len() as i64 + user_index + 1  // 負のインデックス調整
             } else {
-                index
+                user_index - 1  // 1オリジン → 0オリジン
             };
             
-            if actual_index >= 0 && (actual_index as usize) < v.len() {
-                interp.bookshelf.push(v[actual_index as usize].clone());
+            if internal_index >= 0 && (internal_index as usize) < v.len() {
+                interp.bookshelf.push(v[internal_index as usize].clone());
                 Ok(())
             } else {
                 Err(LPLError::IndexOutOfBounds {
-                    index,
+                    index: user_index,
                     length: v.len(),
                 })
             }
@@ -55,7 +56,44 @@ pub fn op_page_count(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 挿入司書 - 指定位置にページを挿入
+// 冊司書 - 書架から特定の冊（書籍）を取得（1オリジン）
+pub fn op_book(interp: &mut Interpreter) -> Result<()> {
+    if interp.bookshelf.len() < 2 {
+        return Err(LPLError::BookshelfUnderflow);
+    }
+    
+    let index_val = interp.bookshelf.pop().unwrap();
+    let vector_val = interp.bookshelf.pop().unwrap();
+    
+    let user_index = match index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(LPLError::type_error("integer", "other type")),
+    };
+    
+    match vector_val.val_type {
+        ValueType::Vector(v) => {
+            // 1オリジン → 0オリジン変換
+            let internal_index = if user_index < 0 {
+                v.len() as i64 + user_index + 1  // 負のインデックス調整
+            } else {
+                user_index - 1  // 1オリジン → 0オリジン
+            };
+            
+            if internal_index >= 0 && (internal_index as usize) < v.len() {
+                interp.bookshelf.push(v[internal_index as usize].clone());
+                Ok(())
+            } else {
+                Err(LPLError::IndexOutOfBounds {
+                    index: user_index,
+                    length: v.len(),
+                })
+            }
+        },
+        _ => Err(LPLError::type_error("vector", "other type")),
+    }
+}
+
+// 挿入司書 - 指定位置にページを挿入（1オリジン）
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     if interp.bookshelf.len() < 3 {
         return Err(LPLError::BookshelfUnderflow);
@@ -65,22 +103,23 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.bookshelf.pop().unwrap();
     let vector_val = interp.bookshelf.pop().unwrap();
     
-    let index = match index_val.val_type {
+    let user_index = match index_val.val_type {
         ValueType::Number(n) if n.denominator == 1 => n.numerator,
         _ => return Err(LPLError::type_error("integer", "other type")),
     };
     
     match vector_val.val_type {
         ValueType::Vector(mut v) => {
-            let insert_index = if index < 0 {
+            // 1オリジン → 0オリジン変換、境界チェック
+            let internal_index = if user_index <= 0 {
                 0
-            } else if index as usize > v.len() {
+            } else if user_index as usize > v.len() + 1 {
                 v.len()
             } else {
-                index as usize
+                user_index as usize - 1  // 1オリジン → 0オリジン
             };
             
-            v.insert(insert_index, element);
+            v.insert(internal_index, element);
             interp.bookshelf.push(Value { val_type: ValueType::Vector(v) });
             Ok(())
         },
@@ -88,7 +127,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 置換司書 - 指定位置のページを置換
+// 置換司書 - 指定位置のページを置換（1オリジン）
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     if interp.bookshelf.len() < 3 {
         return Err(LPLError::BookshelfUnderflow);
@@ -98,27 +137,28 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.bookshelf.pop().unwrap();
     let vector_val = interp.bookshelf.pop().unwrap();
     
-    let index = match index_val.val_type {
+    let user_index = match index_val.val_type {
         ValueType::Number(n) if n.denominator == 1 => n.numerator,
         _ => return Err(LPLError::type_error("integer", "other type")),
     };
     
     match vector_val.val_type {
         ValueType::Vector(mut v) => {
-            let actual_index = if index < 0 {
-                v.len() as i64 + index
+            // 1オリジン → 0オリジン変換
+            let internal_index = if user_index < 0 {
+                v.len() as i64 + user_index + 1  // 負のインデックス調整
             } else {
-                index
+                user_index - 1  // 1オリジン → 0オリジン
             };
             
-            if actual_index >= 0 && (actual_index as usize) < v.len() {
-                let old_element = std::mem::replace(&mut v[actual_index as usize], new_element);
+            if internal_index >= 0 && (internal_index as usize) < v.len() {
+                let old_element = std::mem::replace(&mut v[internal_index as usize], new_element);
                 interp.bookshelf.push(Value { val_type: ValueType::Vector(v) });
                 interp.bookshelf.push(old_element);
                 Ok(())
             } else {
                 Err(LPLError::IndexOutOfBounds {
-                    index,
+                    index: user_index,
                     length: v.len(),
                 })
             }
@@ -127,41 +167,53 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 削除司書 - 指定位置のページを削除
+// 削除司書 - 指定位置のページを削除、または要素全体を削除（1オリジン）
 pub fn op_delete(interp: &mut Interpreter) -> Result<()> {
-    if interp.bookshelf.len() < 2 {
+    if interp.bookshelf.is_empty() {
         return Err(LPLError::BookshelfUnderflow);
     }
     
-    let index_val = interp.bookshelf.pop().unwrap();
-    let vector_val = interp.bookshelf.pop().unwrap();
+    // 引数が1つの場合：要素全体を削除（DROP相当）
+    if interp.bookshelf.len() == 1 {
+        interp.bookshelf.pop();
+        return Ok(());
+    }
     
-    let index = match index_val.val_type {
-        ValueType::Number(n) if n.denominator == 1 => n.numerator,
-        _ => return Err(LPLError::type_error("integer", "other type")),
-    };
-    
-    match vector_val.val_type {
-        ValueType::Vector(mut v) => {
-            let actual_index = if index < 0 {
-                v.len() as i64 + index
-            } else {
-                index
-            };
-            
-            if actual_index >= 0 && (actual_index as usize) < v.len() {
-                let removed = v.remove(actual_index as usize);
-                interp.bookshelf.push(Value { val_type: ValueType::Vector(v) });
-                interp.bookshelf.push(removed);
-                Ok(())
-            } else {
-                Err(LPLError::IndexOutOfBounds {
-                    index,
-                    length: v.len(),
-                })
-            }
-        },
-        _ => Err(LPLError::type_error("vector", "other type")),
+    // 引数が2つの場合：インデックス指定削除
+    if interp.bookshelf.len() >= 2 {
+        let index_val = interp.bookshelf.pop().unwrap();
+        let vector_val = interp.bookshelf.pop().unwrap();
+        
+        let user_index = match index_val.val_type {
+            ValueType::Number(n) if n.denominator == 1 => n.numerator,
+            _ => return Err(LPLError::type_error("integer", "other type")),
+        };
+        
+        match vector_val.val_type {
+            ValueType::Vector(mut v) => {
+                // 1オリジン → 0オリジン変換
+                let internal_index = if user_index < 0 {
+                    v.len() as i64 + user_index + 1  // 負のインデックス調整
+                } else {
+                    user_index - 1  // 1オリジン → 0オリジン
+                };
+                
+                if internal_index >= 0 && (internal_index as usize) < v.len() {
+                    let removed = v.remove(internal_index as usize);
+                    interp.bookshelf.push(Value { val_type: ValueType::Vector(v) });
+                    interp.bookshelf.push(removed);
+                    Ok(())
+                } else {
+                    Err(LPLError::IndexOutOfBounds {
+                        index: user_index,
+                        length: v.len(),
+                    })
+                }
+            },
+            _ => Err(LPLError::type_error("vector", "other type")),
+        }
+    } else {
+        Err(LPLError::BookshelfUnderflow)
     }
 }
 
@@ -184,7 +236,7 @@ pub fn op_merge(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 分離司書 - 書籍を2つに分ける
+// 分離司書 - 書籍を2つに分ける（1オリジン）
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     if interp.bookshelf.len() < 2 {
         return Err(LPLError::BookshelfUnderflow);
@@ -193,20 +245,21 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.bookshelf.pop().unwrap();
     let vector_val = interp.bookshelf.pop().unwrap();
     
-    let index = match index_val.val_type {
+    let user_index = match index_val.val_type {
         ValueType::Number(n) if n.denominator == 1 => n.numerator,
         _ => return Err(LPLError::type_error("integer", "other type")),
     };
     
     match vector_val.val_type {
         ValueType::Vector(v) => {
-            let split_index = if index < 0 {
-                (v.len() as i64 + index).max(0) as usize
+            // 1オリジン → 0オリジン変換、境界調整
+            let internal_index = if user_index < 0 {
+                (v.len() as i64 + user_index + 1).max(0) as usize
             } else {
-                (index as usize).min(v.len())
+                ((user_index - 1) as usize).min(v.len())  // 1オリジン → 0オリジン
             };
             
-            let (left, right) = v.split_at(split_index);
+            let (left, right) = v.split_at(internal_index);
             interp.bookshelf.push(Value { val_type: ValueType::Vector(left.to_vec()) });
             interp.bookshelf.push(Value { val_type: ValueType::Vector(right.to_vec()) });
             Ok(())
@@ -227,12 +280,5 @@ pub fn op_duplicate(interp: &mut Interpreter) -> Result<()> {
         .ok_or(LPLError::BookshelfUnderflow)?;
     
     interp.bookshelf.push(val.clone());
-    Ok(())
-}
-
-// 破棄司書 - 書籍を破棄
-pub fn op_discard(interp: &mut Interpreter) -> Result<()> {
-    interp.bookshelf.pop()
-        .ok_or(LPLError::BookshelfUnderflow)?;
     Ok(())
 }
