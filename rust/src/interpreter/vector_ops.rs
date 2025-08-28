@@ -1,4 +1,4 @@
-// rust/src/interpreter/vector_ops.rs (新司書体系版)
+// rust/src/interpreter/vector_ops.rs (冊・冊数対応完全版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction};
@@ -52,6 +52,64 @@ pub fn op_page_count(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// 冊司書 - 書籍コレクション（2次元配列）の特定の冊を取得
+pub fn op_book(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let index_val = interp.workspace.pop().unwrap();
+    let collection_val = interp.workspace.pop().unwrap();
+    
+    let index = match index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "other type")),
+    };
+    
+    match collection_val.val_type {
+        ValueType::Vector(collection) => {
+            let actual_index = if index < 0 {
+                collection.len() as i64 + index
+            } else {
+                index
+            };
+            
+            if actual_index >= 0 && (actual_index as usize) < collection.len() {
+                // 元のコレクションと選択した冊のインデックスをワークスペースに残す
+                interp.workspace.push(collection_val);  // 元のコレクションを復元
+                interp.workspace.push(Value {
+                    val_type: ValueType::Number(Fraction::new(actual_index, 1))
+                }); // インデックスを保持
+                // 選択された冊をワークスペースの一番上に配置
+                interp.workspace.push(collection[actual_index as usize].clone());
+                Ok(())
+            } else {
+                Err(AjisaiError::IndexOutOfBounds {
+                    index,
+                    length: collection.len(),
+                })
+            }
+        },
+        _ => Err(AjisaiError::type_error("vector (book collection)", "other type")),
+    }
+}
+
+// 冊数司書 - 書籍コレクションの総冊数を取得
+pub fn op_book_count(interp: &mut Interpreter) -> Result<()> {
+    let collection_val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match collection_val.val_type {
+        ValueType::Vector(collection) => {
+            interp.workspace.push(Value { 
+                val_type: ValueType::Number(Fraction::new(collection.len() as i64, 1))
+            });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector (book collection)", "other type")),
     }
 }
 
@@ -235,4 +293,222 @@ pub fn op_discard(interp: &mut Interpreter) -> Result<()> {
     interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     Ok(())
+}
+
+// 統合版削除司書 - 削除と破棄の機能統合（コンテキスト判定付き）
+pub fn op_unified_delete(interp: &mut Interpreter) -> Result<()> {
+    match interp.workspace.len() {
+        0 => Err(AjisaiError::WorkspaceUnderflow),
+        1 => {
+            // スタックに1つだけ値がある場合は破棄（旧 op_discard）
+            interp.workspace.pop().unwrap();
+            Ok(())
+        },
+        _ => {
+            // スタックに2つ以上値がある場合、上位2つを見て判定
+            let top = &interp.workspace[interp.workspace.len() - 1];
+            let second = &interp.workspace[interp.workspace.len() - 2];
+            
+            // 上位がindex（整数）、次がvectorの場合はベクトルから削除
+            if let (ValueType::Number(n), ValueType::Vector(_)) = (&top.val_type, &second.val_type) {
+                if n.denominator == 1 {
+                    // ベクトルから削除（旧 op_delete）
+                    return op_delete(interp);
+                }
+            }
+            
+            // 上位3つの値を見て、冊操作のパターンをチェック
+            if interp.workspace.len() >= 3 {
+                let third = &interp.workspace[interp.workspace.len() - 3];
+                
+                // パターン: collection index book_index の場合（冊操作）
+                if let (ValueType::Vector(_), ValueType::Number(book_idx), ValueType::Number(page_idx)) = 
+                    (&third.val_type, &second.val_type, &top.val_type) {
+                    if book_idx.denominator == 1 && page_idx.denominator == 1 {
+                        // 冊の中のページを削除
+                        return op_book_page_delete(interp);
+                    }
+                }
+            }
+            
+            // どのパターンにも該当しなければ破棄
+            interp.workspace.pop().unwrap();
+            Ok(())
+        }
+    }
+}
+
+// 冊のページ削除司書 - 2次元配列内の特定ページを削除
+fn op_book_page_delete(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 3 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let page_index_val = interp.workspace.pop().unwrap();
+    let book_index_val = interp.workspace.pop().unwrap();
+    let collection_val = interp.workspace.pop().unwrap();
+    
+    let page_index = match page_index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "page index")),
+    };
+    
+    let book_index = match book_index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "book index")),
+    };
+    
+    match collection_val.val_type {
+        ValueType::Vector(mut collection) => {
+            let actual_book_index = if book_index < 0 {
+                collection.len() as i64 + book_index
+            } else {
+                book_index
+            };
+            
+            if actual_book_index >= 0 && (actual_book_index as usize) < collection.len() {
+                if let ValueType::Vector(mut book) = collection[actual_book_index as usize].val_type.clone() {
+                    let actual_page_index = if page_index < 0 {
+                        book.len() as i64 + page_index
+                    } else {
+                        page_index
+                    };
+                    
+                    if actual_page_index >= 0 && (actual_page_index as usize) < book.len() {
+                        let removed_page = book.remove(actual_page_index as usize);
+                        collection[actual_book_index as usize] = Value {
+                            val_type: ValueType::Vector(book)
+                        };
+                        
+                        interp.workspace.push(Value { val_type: ValueType::Vector(collection) });
+                        interp.workspace.push(removed_page);
+                        Ok(())
+                    } else {
+                        Err(AjisaiError::IndexOutOfBounds {
+                            index: page_index,
+                            length: book.len(),
+                        })
+                    }
+                } else {
+                    Err(AjisaiError::type_error("vector", "book content"))
+                }
+            } else {
+                Err(AjisaiError::IndexOutOfBounds {
+                    index: book_index,
+                    length: collection.len(),
+                })
+            }
+        },
+        _ => Err(AjisaiError::type_error("vector (book collection)", "other type")),
+    }
+}
+
+// 冊全体削除司書 - 2次元配列から特定の冊を削除
+pub fn op_book_delete(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let book_index_val = interp.workspace.pop().unwrap();
+    let collection_val = interp.workspace.pop().unwrap();
+    
+    let book_index = match book_index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "book index")),
+    };
+    
+    match collection_val.val_type {
+        ValueType::Vector(mut collection) => {
+            let actual_index = if book_index < 0 {
+                collection.len() as i64 + book_index
+            } else {
+                book_index
+            };
+            
+            if actual_index >= 0 && (actual_index as usize) < collection.len() {
+                let removed_book = collection.remove(actual_index as usize);
+                interp.workspace.push(Value { val_type: ValueType::Vector(collection) });
+                interp.workspace.push(removed_book);
+                Ok(())
+            } else {
+                Err(AjisaiError::IndexOutOfBounds {
+                    index: book_index,
+                    length: collection.len(),
+                })
+            }
+        },
+        _ => Err(AjisaiError::type_error("vector (book collection)", "other type")),
+    }
+}
+
+// 冊置換司書 - 2次元配列内の特定の冊を置換
+pub fn op_book_replace(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 3 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let new_book = interp.workspace.pop().unwrap();
+    let book_index_val = interp.workspace.pop().unwrap();
+    let collection_val = interp.workspace.pop().unwrap();
+    
+    let book_index = match book_index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "book index")),
+    };
+    
+    match collection_val.val_type {
+        ValueType::Vector(mut collection) => {
+            let actual_index = if book_index < 0 {
+                collection.len() as i64 + book_index
+            } else {
+                book_index
+            };
+            
+            if actual_index >= 0 && (actual_index as usize) < collection.len() {
+                let old_book = std::mem::replace(&mut collection[actual_index as usize], new_book);
+                interp.workspace.push(Value { val_type: ValueType::Vector(collection) });
+                interp.workspace.push(old_book);
+                Ok(())
+            } else {
+                Err(AjisaiError::IndexOutOfBounds {
+                    index: book_index,
+                    length: collection.len(),
+                })
+            }
+        },
+        _ => Err(AjisaiError::type_error("vector (book collection)", "other type")),
+    }
+}
+
+// 冊挿入司書 - 2次元配列に新しい冊を挿入
+pub fn op_book_insert(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 3 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let new_book = interp.workspace.pop().unwrap();
+    let book_index_val = interp.workspace.pop().unwrap();
+    let collection_val = interp.workspace.pop().unwrap();
+    
+    let book_index = match book_index_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator,
+        _ => return Err(AjisaiError::type_error("integer", "book index")),
+    };
+    
+    match collection_val.val_type {
+        ValueType::Vector(mut collection) => {
+            let insert_index = if book_index < 0 {
+                0
+            } else if book_index as usize > collection.len() {
+                collection.len()
+            } else {
+                book_index as usize
+            };
+            
+            collection.insert(insert_index, new_book);
+            interp.workspace.push(Value { val_type: ValueType::Vector(collection) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector (book collection)", "other type")),
+    }
 }
