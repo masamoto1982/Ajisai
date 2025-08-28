@@ -1,4 +1,4 @@
-// js/gui/dictionary.ts (インターフェース定義追加版)
+// js/gui/dictionary.ts (改行対応版)
 
 interface WordInfo {
     name: string;
@@ -24,17 +24,56 @@ export class Dictionary {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            // カテゴリ別表示をやめ、単純なリストに変更
+            // 順序保持版の組み込みワード情報を取得
             const builtinWords = window.ajisaiInterpreter.get_builtin_words_info();
-            this.renderWordButtons(this.elements.builtinWordsDisplay, 
-                builtinWords.map(([name, desc]) => ({
-                    name,
-                    description: desc,
-                    protected: false
-                })), false);
+            
+            // グループ別に表示（改行付き）
+            this.renderBuiltinWordsWithGroups(this.elements.builtinWordsDisplay, builtinWords);
         } catch (error) {
             console.error('Failed to render builtin words:', error);
         }
+    }
+
+    private renderBuiltinWordsWithGroups(container: HTMLElement, builtinWords: any[]): void {
+        container.innerHTML = '';
+        
+        // 3つのグループに分ける
+        const arithmeticWords = ['+', '/', '*', '-', '=', '>=', '>', 'AND', 'OR', 'NOT'];
+        const bookOpsWords = ['頁', '頁数', '巻', '巻数', '冊', '冊数', '挿入', '置換', '削除', '合併', '分離'];
+        const managementWords = ['雇用', '解雇', '交代'];
+        
+        const groups = [arithmeticWords, bookOpsWords, managementWords];
+        
+        groups.forEach((group, groupIndex) => {
+            const groupContainer = document.createElement('div');
+            groupContainer.style.marginBottom = '0.5rem';
+            
+            group.forEach(wordName => {
+                const wordData = builtinWords.find((item: any[]) => item[0] === wordName);
+                if (wordData) {
+                    const button = document.createElement('button');
+                    button.textContent = wordData[0];
+                    button.className = 'word-button builtin';
+                    button.title = wordData[1] || wordData[0];
+                    
+                    button.addEventListener('click', () => {
+                        if (this.onWordClick) {
+                            this.onWordClick(wordData[0]);
+                        }
+                    });
+                    
+                    groupContainer.appendChild(button);
+                }
+            });
+            
+            container.appendChild(groupContainer);
+            
+            // 最後のグループ以外は改行を追加
+            if (groupIndex < groups.length - 1) {
+                const lineBreak = document.createElement('br');
+                container.appendChild(lineBreak);
+            }
+        });
     }
 
     updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
@@ -47,7 +86,6 @@ export class Dictionary {
     }
 
     private decodeWordName(name: string): string | null {
-        // W_で始まるタイムスタンプ形式の自動生成名は処理しない
         if (name.match(/^W_[0-9A-F]+$/)) {
             return null;
         }
@@ -61,7 +99,6 @@ export class Dictionary {
                 if (part === 'BEND') return '}';
                 if (part === 'NIL') return 'nil';
                 if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
-                // 演算子の復号化
                 if (part === 'ADD') return '+';
                 if (part === 'SUB') return '-';
                 if (part === 'MUL') return '*';
@@ -89,7 +126,6 @@ export class Dictionary {
             button.textContent = wordInfo.name;
             button.className = 'word-button';
             
-            // ホバー時のタイトル設定
             if (wordInfo.description) {
                 button.title = wordInfo.description;
             } else {
