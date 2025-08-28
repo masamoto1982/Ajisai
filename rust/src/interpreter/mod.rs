@@ -541,38 +541,38 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        match name {
-            // 算術演算司書
-            "+" => arithmetic::op_add(self),
-            "-" => arithmetic::op_sub(self),
-            "*" => arithmetic::op_mul(self),
-            "/" => arithmetic::op_div(self),
-            
-            // 比較判定司書
-            ">" => arithmetic::op_gt(self),
-            ">=" => arithmetic::op_ge(self),
-            "=" => arithmetic::op_eq(self),
-            
-            // 書籍操作司書
-            "頁" => vector_ops::op_page(self),
-            "頁数" => vector_ops::op_page_count(self),
-            "挿入" => vector_ops::op_insert(self),
-            "置換" => vector_ops::op_replace(self),
-            "削除" => vector_ops::op_delete(self),
-            "合併" => vector_ops::op_merge(self),
-            "分離" => vector_ops::op_split(self),
-            "待機" => vector_ops::op_wait(self),
-            "複製" => vector_ops::op_duplicate(self),
-            "破棄" => vector_ops::op_discard(self),
-            
-            // 司書管理司書
-            "雇用" => control::op_hire(self),
-            "解雇" => control::op_fire(self),
-            "交代" => control::op_handover(self),
-            
-            _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
-        }
+    match name {
+        // 算術演算司書（要求順）
+        "+" => arithmetic::op_add(self),
+        "/" => arithmetic::op_div(self),
+        "*" => arithmetic::op_mul(self),
+        "-" => arithmetic::op_sub(self),
+        "=" => arithmetic::op_eq(self),
+        ">=" => arithmetic::op_ge(self),
+        ">" => arithmetic::op_gt(self),
+        "AND" => arithmetic::op_and(self),
+        "OR" => arithmetic::op_or(self),
+        "NOT" => arithmetic::op_not(self),
+        
+        // 書籍・頁操作司書（要求順）
+        "頁" => vector_ops::op_page(self),
+        "頁数" => vector_ops::op_page_count(self),
+        "冊" => vector_ops::op_book(self),
+        "冊数" => vector_ops::op_book_count(self),
+        "挿入" => vector_ops::op_insert(self),
+        "置換" => vector_ops::op_replace(self),
+        "削除" => vector_ops::op_unified_delete(self), // 統合版
+        "合併" => vector_ops::op_merge(self),
+        "分離" => vector_ops::op_split(self),
+        
+        // 司書管理司書
+        "雇用" => control::op_hire(self),
+        "解雇" => control::op_fire(self),
+        "交代" => control::op_handover(self),
+        
+        _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
     }
+}
 
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
