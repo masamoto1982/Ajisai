@@ -1,4 +1,15 @@
-// js/gui/dictionary.ts (修正版)
+// js/gui/dictionary.ts (インターフェース定義追加版)
+
+interface WordInfo {
+    name: string;
+    description?: string | null;
+    protected?: boolean;
+}
+
+interface DictionaryElements {
+    builtinWordsDisplay: HTMLElement;
+    customWordsDisplay: HTMLElement;
+}
 
 export class Dictionary {
     private elements!: DictionaryElements;
@@ -26,8 +37,6 @@ export class Dictionary {
         }
     }
 
-    // renderCategorizedWords メソッドは削除
-
     updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
         const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
             name: wordData[0],
@@ -37,9 +46,8 @@ export class Dictionary {
         this.renderWordButtons(this.elements.customWordsDisplay, words, true);
     }
 
-    // 以下のメソッドは既存のまま
     private decodeWordName(name: string): string | null {
-        // 既存の実装
+        // W_で始まるタイムスタンプ形式の自動生成名は処理しない
         if (name.match(/^W_[0-9A-F]+$/)) {
             return null;
         }
@@ -53,6 +61,7 @@ export class Dictionary {
                 if (part === 'BEND') return '}';
                 if (part === 'NIL') return 'nil';
                 if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
+                // 演算子の復号化
                 if (part === 'ADD') return '+';
                 if (part === 'SUB') return '-';
                 if (part === 'MUL') return '*';
@@ -80,6 +89,7 @@ export class Dictionary {
             button.textContent = wordInfo.name;
             button.className = 'word-button';
             
+            // ホバー時のタイトル設定
             if (wordInfo.description) {
                 button.title = wordInfo.description;
             } else {
