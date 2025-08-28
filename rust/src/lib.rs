@@ -1,4 +1,4 @@
-// rust/src/lib.rs (ParenComment対応完全版)
+// rust/src/lib.rs (順序保持対応完全版)
 
 use wasm_bindgen::prelude::*;
 
@@ -170,17 +170,14 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_builtin_words_info(&self) -> JsValue {
-        let builtin_words_info: Vec<(String, Option<String>)> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| def.is_builtin)
-            .map(|(name, def)| (name.clone(), def.description.clone()))
-            .collect();
-        
+        // 順序を保持した組み込みワード情報を返す
+        let builtin_definitions = crate::builtins::get_builtin_definitions();
         let arr = js_sys::Array::new();
         
-        for (name, desc) in builtin_words_info {
+        for (name, desc) in builtin_definitions {
             let word_arr = js_sys::Array::new();
-            word_arr.push(&JsValue::from_str(&name));
-            word_arr.push(&desc.map(|d| JsValue::from_str(&d)).unwrap_or(JsValue::NULL));
+            word_arr.push(&JsValue::from_str(name));
+            word_arr.push(&JsValue::from_str(desc));
             arr.push(&word_arr);
         }
         
@@ -189,28 +186,38 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_builtin_words_by_category(&self) -> JsValue {
-        let mut categories: std::collections::BTreeMap<String, Vec<(String, Option<String>)>> = std::collections::BTreeMap::new();
-        
-        for (name, def) in &self.interpreter.dictionary {
-            if def.is_builtin {
-                let category = def.category.clone().unwrap_or_else(|| "Other".to_string());
-                categories.entry(category)
-                    .or_insert_with(Vec::new)
-                    .push((name.clone(), def.description.clone()));
-            }
-        }
-        
+        // カテゴリ別機能は削除し、単純なグループ分けで返す
+        let builtin_definitions = crate::builtins::get_builtin_definitions();
         let result = js_sys::Object::new();
-        for (category, words) in categories {
-            let words_array = js_sys::Array::new();
-            for (name, desc) in words {
-                let word_info = js_sys::Array::new();
-                word_info.push(&JsValue::from_str(&name));
-                word_info.push(&desc.map(|d| JsValue::from_str(&d)).unwrap_or(JsValue::NULL));
-                words_array.push(&word_info);
+        
+        // 3つのグループに分ける
+        let arithmetic_group = js_sys::Array::new();
+        let book_ops_group = js_sys::Array::new();
+        let management_group = js_sys::Array::new();
+        
+        for (name, desc) in builtin_definitions {
+            let word_info = js_sys::Array::new();
+            word_info.push(&JsValue::from_str(name));
+            word_info.push(&JsValue::from_str(desc));
+            
+            // グループ分け
+            match name {
+                "+" | "/" | "*" | "-" | "=" | ">=" | ">" | "AND" | "OR" | "NOT" => {
+                    arithmetic_group.push(&word_info);
+                },
+                "頁" | "頁数" | "巻" | "巻数" | "冊" | "冊数" | "挿入" | "置換" | "削除" | "合併" | "分離" => {
+                    book_ops_group.push(&word_info);
+                },
+                "雇用" | "解雇" | "交代" => {
+                    management_group.push(&word_info);
+                },
+                _ => {}
             }
-            js_sys::Reflect::set(&result, &JsValue::from_str(&category), &words_array).unwrap();
         }
+        
+        js_sys::Reflect::set(&result, &JsValue::from_str("Arithmetic"), &arithmetic_group).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("BookOps"), &book_ops_group).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Management"), &management_group).unwrap();
         
         result.into()
     }
