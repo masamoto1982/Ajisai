@@ -69,15 +69,15 @@ export class Librarians {
                 const button = document.createElement('button');
                 
                 // 言語モードに応じて表示名を決定
-                const displayName = this.getDisplayName(wordData);
+                const displayName = this.getDisplayName(wordData[0]);
                 button.textContent = displayName;
                 button.className = 'word-button builtin';
                 button.title = wordData[1] || displayName;
                 
                 button.addEventListener('click', () => {
                     if (this.onWordClick) {
-                        // クリック時は実際のワード名（日本語名）を渡す
-                        this.onWordClick(this.getActualWordName(wordData));
+                        // クリック時は実際のワード名（辞書のキー）を渡す
+                        this.onWordClick(wordData[0]);
                     }
                 });
                 
@@ -88,30 +88,20 @@ export class Librarians {
         }
     }
 
-    private getDisplayName(wordData: any[]): string {
-        const japaneseName = wordData[0];
-        
-        // 完全な英語マッピング（修正版）
-        const englishMapping: Record<string, string> = {
-            '+': 'ADD', '-': 'SUB', '*': 'MUL', '/': 'DIV',
-            '>': 'GT', '>=': 'GE', '=': 'EQ', '<': 'LT', '<=': 'LE',
-            'かつ': 'AND', 'または': 'OR', 'でない': 'NOT',
-            '頁': 'PAGE', '頁数': 'LENGTH', '挿入': 'INSERT', '置換': 'REPLACE', '削除': 'DELETE',
-            '合併': 'MERGE', '分離': 'SPLIT', '待機': 'WAIT', '複製': 'DUP', '破棄': 'DROP',
-            '雇用': 'HIRE', '解雇': 'FIRE', '交代': 'HANDOVER'
-        };
-        
-        if (this.languageMode === 'english' && englishMapping[japaneseName]) {
-            return englishMapping[japaneseName];
+    private getDisplayName(originalName: string): string {
+        if (this.languageMode === 'english') {
+            // 英語モード：日本語名を英語名に変換
+            const englishMapping: Record<string, string> = {
+                '頁': 'PAGE', '頁数': 'LENGTH', '挿入': 'INSERT', '置換': 'REPLACE', '削除': 'DELETE',
+                '合併': 'MERGE', '分離': 'SPLIT', '待機': 'WAIT', '複製': 'DUP', '破棄': 'DROP',
+                '雇用': 'HIRE', '解雇': 'FIRE', '交代': 'HANDOVER'
+            };
+            
+            return englishMapping[originalName] || originalName;
+        } else {
+            // 日本語モード：そのまま表示
+            return originalName;
         }
-        
-        // 日本語モードでは必ず日本語名を返す
-        return japaneseName;
-    }
-
-    private getActualWordName(wordData: any[]): string {
-        // 常に日本語名（実際のワード名）を返す
-        return wordData[0];
     }
 
     updateTemporaryLibrarians(customWordsInfo: Array<[string, string | null, boolean]>): void {
