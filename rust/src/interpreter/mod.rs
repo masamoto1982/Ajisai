@@ -544,8 +544,29 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_builtin(&mut self, name: &str) -> Result<()> {
-    match name {
+fn execute_builtin(&mut self, name: &str) -> Result<()> {
+    // 英語名を日本語名に変換
+    let actual_name = match name {
+        // 書籍操作系の英語名エイリアス
+        "PAGE" => "頁",
+        "LENGTH" => "頁数",
+        "INSERT" => "挿入",
+        "REPLACE" => "置換",
+        "DELETE" => "削除",
+        "MERGE" => "合併",
+        "SPLIT" => "分離",
+        "WAIT" => "待機",
+        "DUP" => "複製",
+        "DROP" => "破棄",
+        // 司書管理系の英語名エイリアス
+        "HIRE" => "雇用",
+        "FIRE" => "解雇",
+        "HANDOVER" => "交代",
+        // その他はそのまま
+        _ => name,
+    };
+    
+    match actual_name {
         // 算術演算司書
         "+" => arithmetic::op_add(self),
         "-" => arithmetic::op_sub(self),
@@ -559,10 +580,10 @@ impl Interpreter {
         "<" => arithmetic::op_lt(self),
         "<=" => arithmetic::op_le(self),
         
-        // 論理演算司書（日本語名と英語名両方対応）
-        "かつ" | "AND" => arithmetic::op_and(self),
-        "または" | "OR" => arithmetic::op_or(self),
-        "でない" | "NOT" => arithmetic::op_not(self),
+        // 論理演算司書
+        "AND" => arithmetic::op_and(self),
+        "OR" => arithmetic::op_or(self),
+        "NOT" => arithmetic::op_not(self),
         
         // 書籍操作司書
         "頁" => vector_ops::op_page(self),
@@ -584,7 +605,6 @@ impl Interpreter {
         _ => Err(error::LPLError::UnknownBuiltin(name.to_string())),
     }
 }
-
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
         self.output_buffer.clear();
