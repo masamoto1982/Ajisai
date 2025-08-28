@@ -52,52 +52,18 @@ export class Librarians {
         ];
     }
 
-    private getCategoryNames(mode: LanguageMode): Record<string, string> {
-        if (mode === 'english') {
-            return {
-                'Basic': 'Basic Operations',
-                'Compare': 'Comparison',
-                'Logic': 'Logic Operations',
-                'BookOps': 'Book Operations',
-                'Management': 'Librarian Management'
-            };
-        } else {
-            return {
-                'Basic': '基礎演算司書',
-                'Compare': '比較判定司書',
-                'Logic': '論理演算司書',
-                'BookOps': '書籍操作司書',
-                'Management': '司書管理司書'
-            };
-        }
-    }
-
     private renderCategorizedWords(container: HTMLElement, categorizedWords: any): void {
         container.innerHTML = '';
         
         const categoryOrder = this.getCategoryOrder();
-        const categoryNames = this.getCategoryNames(this.languageMode);
         
         for (const categoryKey of categoryOrder) {
             const words = categorizedWords[categoryKey];
             if (!words || words.length === 0) continue;
             
-            const categorySection = document.createElement('div');
-            categorySection.className = 'word-category';
-            
-            const categoryTitle = document.createElement('h4');
-            categoryTitle.textContent = categoryNames[categoryKey] || categoryKey;
-            categoryTitle.style.cssText = `
-                margin: 0.75rem 0 0.5rem 0; 
-                color: #666; 
-                font-size: 0.875rem;
-                border-bottom: 1px solid #e0e0e0;
-                padding-bottom: 0.25rem;
-            `;
-            categorySection.appendChild(categoryTitle);
-            
+            // グループ名は表示しない - 直接ボタンを配置
             const wordsContainer = document.createElement('div');
-            wordsContainer.style.marginBottom = '1rem';
+            wordsContainer.style.marginBottom = '0.75rem';
             
             (words as any[]).forEach(wordData => {
                 const button = document.createElement('button');
@@ -118,28 +84,28 @@ export class Librarians {
                 wordsContainer.appendChild(button);
             });
             
-            categorySection.appendChild(wordsContainer);
-            container.appendChild(categorySection);
+            container.appendChild(wordsContainer);
         }
     }
 
     private getDisplayName(wordData: any[]): string {
         const japaneseName = wordData[0];
         
-        // 英語マッピング（修正版）
+        // 完全な英語マッピング（修正版）
         const englishMapping: Record<string, string> = {
             '+': 'ADD', '-': 'SUB', '*': 'MUL', '/': 'DIV',
             '>': 'GT', '>=': 'GE', '=': 'EQ', '<': 'LT', '<=': 'LE',
-            'AND': 'AND', 'OR': 'OR', 'NOT': 'NOT',
+            'かつ': 'AND', 'または': 'OR', 'でない': 'NOT',
             '頁': 'PAGE', '頁数': 'LENGTH', '挿入': 'INSERT', '置換': 'REPLACE', '削除': 'DELETE',
             '合併': 'MERGE', '分離': 'SPLIT', '待機': 'WAIT', '複製': 'DUP', '破棄': 'DROP',
-            '雇用': 'HIRE', '解雇': 'FIRE', '交代': 'SUB'
+            '雇用': 'HIRE', '解雇': 'FIRE', '交代': 'HANDOVER'
         };
         
         if (this.languageMode === 'english' && englishMapping[japaneseName]) {
             return englishMapping[japaneseName];
         }
         
+        // 日本語モードでは必ず日本語名を返す
         return japaneseName;
     }
 
