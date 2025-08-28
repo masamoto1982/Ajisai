@@ -1,4 +1,4 @@
-// js/gui/dictionary.ts (改行対応版)
+// js/gui/dictionary.ts (間隔調整版)
 
 interface WordInfo {
     name: string;
@@ -27,7 +27,7 @@ export class Dictionary {
             // 順序保持版の組み込みワード情報を取得
             const builtinWords = window.ajisaiInterpreter.get_builtin_words_info();
             
-            // グループ別に表示（改行付き）
+            // グループ別に表示（間隔調整版）
             this.renderBuiltinWordsWithGroups(this.elements.builtinWordsDisplay, builtinWords);
         } catch (error) {
             console.error('Failed to render builtin words:', error);
@@ -45,9 +45,7 @@ export class Dictionary {
         const groups = [arithmeticWords, bookOpsWords, managementWords];
         
         groups.forEach((group, groupIndex) => {
-            const groupContainer = document.createElement('div');
-            groupContainer.style.marginBottom = '0.5rem';
-            
+            // 各グループのワードを直接追加（divコンテナなし）
             group.forEach(wordName => {
                 const wordData = builtinWords.find((item: any[]) => item[0] === wordName);
                 if (wordData) {
@@ -62,13 +60,11 @@ export class Dictionary {
                         }
                     });
                     
-                    groupContainer.appendChild(button);
+                    container.appendChild(button);
                 }
             });
             
-            container.appendChild(groupContainer);
-            
-            // 最後のグループ以外は改行を追加
+            // 最後のグループ以外は改行のみ追加
             if (groupIndex < groups.length - 1) {
                 const lineBreak = document.createElement('br');
                 container.appendChild(lineBreak);
