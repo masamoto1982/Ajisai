@@ -21,19 +21,20 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "OR", "論理和を計算", "Logic");
     register_builtin(dictionary, "NOT", "論理否定を計算", "Logic");
     
-    // 4. 書籍操作司書（10名）- 日本語名のみ辞書に登録
+    // 4. 書籍操作司書（10名）- 「冊」追加、「破棄」削除
     register_builtin(dictionary, "頁", "指定ページを取得", "BookOps");
     register_builtin(dictionary, "頁数", "総ページ数を取得", "BookOps");
-    register_builtin(dictionary, "挿入", "指定位置にページを挿入", "BookOps");
-    register_builtin(dictionary, "置換", "指定ページを置換", "BookOps");
-    register_builtin(dictionary, "削除", "指定ページを削除", "BookOps");
+    register_builtin(dictionary, "冊", "指定された冊（書籍）を取得", "BookOps");
+    register_builtin(dictionary, "挿入", "指定位置に要素を挿入", "BookOps");
+    register_builtin(dictionary, "置換", "指定位置の要素を置換", "BookOps");
+    register_builtin(dictionary, "削除", "指定位置の要素を削除、または要素全体を削除", "BookOps");
     register_builtin(dictionary, "合併", "二つの書籍を結合", "BookOps");
     register_builtin(dictionary, "分離", "書籍を分割", "BookOps");
     register_builtin(dictionary, "待機", "何もしない", "BookOps");
     register_builtin(dictionary, "複製", "書籍を複製", "BookOps");
-    register_builtin(dictionary, "破棄", "書籍を破棄", "BookOps");
+    // 「破棄」は削除 - DROPの機能は「削除」に統合
     
-    // 5. 司書管理司書（3名）- 日本語名のみ辞書に登録
+    // 5. 司書管理司書（3名）
     register_builtin(dictionary, "雇用", "司書を雇用する司書", "Management");
     register_builtin(dictionary, "解雇", "司書を解雇する司書", "Management");
     register_builtin(dictionary, "交代", "司書を交代させる司書", "Management");
