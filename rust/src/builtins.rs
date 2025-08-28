@@ -21,10 +21,11 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "OR", "論理和を計算", "Logic");
     register_builtin(dictionary, "NOT", "論理否定を計算", "Logic");
     
-    // 4. 書籍操作司書（10名）- 「冊」追加、「破棄」削除
+    // 4. 書籍操作司書（11名）- 「冊数」追加
     register_builtin(dictionary, "頁", "指定ページを取得", "BookOps");
     register_builtin(dictionary, "頁数", "総ページ数を取得", "BookOps");
     register_builtin(dictionary, "冊", "指定された冊（書籍）を取得", "BookOps");
+    register_builtin(dictionary, "冊数", "総冊数を取得", "BookOps");
     register_builtin(dictionary, "挿入", "指定位置に要素を挿入", "BookOps");
     register_builtin(dictionary, "置換", "指定位置の要素を置換", "BookOps");
     register_builtin(dictionary, "削除", "指定位置の要素を削除、または要素全体を削除", "BookOps");
@@ -32,7 +33,6 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_builtin(dictionary, "分離", "書籍を分割", "BookOps");
     register_builtin(dictionary, "待機", "何もしない", "BookOps");
     register_builtin(dictionary, "複製", "書籍を複製", "BookOps");
-    // 「破棄」は削除 - DROPの機能は「削除」に統合
     
     // 5. 司書管理司書（3名）
     register_builtin(dictionary, "雇用", "司書を雇用する司書", "Management");
