@@ -1,15 +1,4 @@
-// js/gui/dictionary.ts
-
-interface WordInfo {
-    name: string;
-    description?: string | null;
-    protected?: boolean;
-}
-
-interface DictionaryElements {
-    builtinWordsDisplay: HTMLElement;
-    customWordsDisplay: HTMLElement;
-}
+// js/gui/dictionary.ts (修正版)
 
 export class Dictionary {
     private elements!: DictionaryElements;
@@ -24,41 +13,20 @@ export class Dictionary {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            const categorizedWords = window.ajisaiInterpreter.get_builtin_words_by_category();
-            this.renderCategorizedWords(this.elements.builtinWordsDisplay, categorizedWords);
+            // カテゴリ別表示をやめ、単純なリストに変更
+            const builtinWords = window.ajisaiInterpreter.get_builtin_words_info();
+            this.renderWordButtons(this.elements.builtinWordsDisplay, 
+                builtinWords.map(([name, desc]) => ({
+                    name,
+                    description: desc,
+                    protected: false
+                })), false);
         } catch (error) {
             console.error('Failed to render builtin words:', error);
         }
     }
 
-private renderCategorizedWords(container: HTMLElement, categorizedWords: any): void {
-    container.innerHTML = '';
-    
-    for (const [_, words] of Object.entries(categorizedWords)) {
-        const categorySection = document.createElement('div');
-        categorySection.className = 'word-category';
-        
-        const wordsContainer = document.createElement('div');
-        
-        (words as any[]).forEach(wordData => {
-            const button = document.createElement('button');
-            button.textContent = wordData[0];
-            button.className = 'word-button builtin';
-            button.title = wordData[1] || wordData[0];
-            
-            button.addEventListener('click', () => {
-                if (this.onWordClick) {
-                    this.onWordClick(wordData[0]);
-                }
-            });
-            
-            wordsContainer.appendChild(button);
-        });
-        
-        categorySection.appendChild(wordsContainer);
-        container.appendChild(categorySection);
-    }
-}
+    // renderCategorizedWords メソッドは削除
 
     updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
         const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
@@ -69,8 +37,9 @@ private renderCategorizedWords(container: HTMLElement, categorizedWords: any): v
         this.renderWordButtons(this.elements.customWordsDisplay, words, true);
     }
 
+    // 以下のメソッドは既存のまま
     private decodeWordName(name: string): string | null {
-        // W_で始まるタイムスタンプ形式の自動生成名は処理しない
+        // 既存の実装
         if (name.match(/^W_[0-9A-F]+$/)) {
             return null;
         }
@@ -84,7 +53,6 @@ private renderCategorizedWords(container: HTMLElement, categorizedWords: any): v
                 if (part === 'BEND') return '}';
                 if (part === 'NIL') return 'nil';
                 if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
-                // 演算子の復号化
                 if (part === 'ADD') return '+';
                 if (part === 'SUB') return '-';
                 if (part === 'MUL') return '*';
@@ -112,7 +80,6 @@ private renderCategorizedWords(container: HTMLElement, categorizedWords: any): v
             button.textContent = wordInfo.name;
             button.className = 'word-button';
             
-            // ホバー時のタイトル設定
             if (wordInfo.description) {
                 button.title = wordInfo.description;
             } else {
