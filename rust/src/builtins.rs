@@ -16,10 +16,10 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     register_dual_builtin(dictionary, "<", "LT", "左が右より小さいか判定", "Compare");
     register_dual_builtin(dictionary, "<=", "LE", "左が右以下か判定", "Compare"); 
     
-    // 3. 論理演算司書（3名）
-    register_dual_builtin(dictionary, "AND", "AND", "論理積を計算", "Logic");
-    register_dual_builtin(dictionary, "OR", "OR", "論理和を計算", "Logic");
-    register_dual_builtin(dictionary, "NOT", "NOT", "論理否定を計算", "Logic");
+    // 3. 論理演算司書（3名）- 日本語名を追加
+    register_dual_builtin(dictionary, "かつ", "AND", "論理積を計算", "Logic");
+    register_dual_builtin(dictionary, "または", "OR", "論理和を計算", "Logic");
+    register_dual_builtin(dictionary, "でない", "NOT", "論理否定を計算", "Logic");
     
     // 4. 書籍操作司書（10名）
     register_dual_builtin(dictionary, "頁", "PAGE", "指定ページを取得", "BookOps");
@@ -36,7 +36,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     // 5. 司書管理司書（3名）
     register_dual_builtin(dictionary, "雇用", "HIRE", "司書を雇用する司書", "Management");
     register_dual_builtin(dictionary, "解雇", "FIRE", "司書を解雇する司書", "Management");
-    register_dual_builtin(dictionary, "交代", "SUB", "司書を交代させる司書", "Management");
+    register_dual_builtin(dictionary, "交代", "HANDOVER", "司書を交代させる司書", "Management");
 }
 
 fn register_dual_builtin(
