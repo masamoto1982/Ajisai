@@ -554,16 +554,21 @@ fn execute_builtin(&mut self, name: &str) -> Result<()> {
         "OR" => arithmetic::op_or(self),
         "NOT" => arithmetic::op_not(self),
         
-        // データアクセス・操作妖精
+        // 位置指定操作妖精（0オリジン）
         "摘" => vector_ops::op_get(self),
-        "数" => vector_ops::op_length(self),
-        
-        // データ変更妖精
         "挿" => vector_ops::op_insert(self),
         "換" => vector_ops::op_replace(self),
         "削" => vector_ops::op_remove(self),
-        "結" => vector_ops::op_concat(self),
+        
+        // 量指定操作妖精（1オリジン）
+        "数" => vector_ops::op_length(self),
+        "取" => vector_ops::op_take(self),
+        "捨" => vector_ops::op_drop(self),
+        "重" => vector_ops::op_repeat(self),
         "分" => vector_ops::op_split(self),
+        
+        // Vector操作妖精
+        "結" => vector_ops::op_concat(self),
         "跳" => control::op_jump(self),
         
         // 妖精管理妖精
