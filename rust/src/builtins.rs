@@ -1,4 +1,4 @@
-// rust/src/builtins.rs (完全版)
+// rust/src/builtins.rs (修正版)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
@@ -38,8 +38,8 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         
         // 量指定操作妖精（1オリジン）
         ("数", "要素数を数える妖精です"),
-        ("取", "指定した個数の要素を取り出す妖精です"),
-        ("捨", "指定した個数の要素を捨てる妖精です"),
+        ("取", "指定した個数の要素を取り出す妖精です"),      // 追加！
+        ("捨", "指定した個数の要素を捨てる妖精です"),      // 追加！
         ("重", "指定した回数だけ重複させる妖精です"),
         ("分", "指定したサイズで分け隔てる妖精です"),
         
