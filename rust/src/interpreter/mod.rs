@@ -352,34 +352,37 @@ impl Interpreter {
     }
 
     fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
-        let mut values = Vec::new();
-        let mut i = start + 1;
-        let mut depth = 1;
-
-        while i < tokens.len() && depth > 0 {
-            match &tokens[i] {
-                Token::VectorStart => {
-                    depth += 1;
-                },
-                Token::VectorEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Ok((values, i - start + 1));
-                    }
-                },
-                Token::ParenComment(_) => {
-                    // ベクトル内のコメントは無視
-                },
-                token if depth == 1 => {
-                    values.push(self.token_to_value(token)?);
-                }
-                _ => {}
+    let mut values = Vec::new();
+    let mut i = start + 1; // VectorStart の次から
+    
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::VectorStart => {
+                // ネストしたVectorを再帰的に処理
+                let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                values.push(Value {
+                    val_type: ValueType::Vector(nested_values),
+                });
+                i += consumed;
+            },
+            Token::VectorEnd => {
+                // このVectorの終了
+                return Ok((values, i - start + 1));
+            },
+            Token::ParenComment(_) => {
+                // コメントは無視
+                i += 1;
+            },
+            token => {
+                // 通常の値をVector内に追加
+                values.push(self.token_to_value(token)?);
+                i += 1;
             }
-            i += 1;
         }
-
-        Err(error::AjisaiError::from("Unclosed vector"))
     }
+    
+    Err(error::AjisaiError::from("Unclosed vector"))
+}
 
     fn token_to_value(&self, token: &Token) -> Result<Value> {
         match token {
