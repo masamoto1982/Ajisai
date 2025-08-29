@@ -185,42 +185,42 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn get_builtin_words_by_category(&self) -> JsValue {
-        // カテゴリ別機能は削除し、単純なグループ分けで返す
-        let builtin_definitions = crate::builtins::get_builtin_definitions();
-        let result = js_sys::Object::new();
+pub fn get_builtin_words_by_category(&self) -> JsValue {
+    // カテゴリ別機能は削除し、単純なグループ分けで返す
+    let builtin_definitions = crate::builtins::get_builtin_definitions();
+    let result = js_sys::Object::new();
+    
+    // 3つのグループに分ける
+    let arithmetic_group = js_sys::Array::new();
+    let fairy_ops_group = js_sys::Array::new();
+    let management_group = js_sys::Array::new();
+    
+    for (name, desc) in builtin_definitions {
+        let word_info = js_sys::Array::new();
+        word_info.push(&JsValue::from_str(name));
+        word_info.push(&JsValue::from_str(desc));
         
-        // 3つのグループに分ける
-        let arithmetic_group = js_sys::Array::new();
-        let book_ops_group = js_sys::Array::new();
-        let management_group = js_sys::Array::new();
-        
-        for (name, desc) in builtin_definitions {
-            let word_info = js_sys::Array::new();
-            word_info.push(&JsValue::from_str(name));
-            word_info.push(&JsValue::from_str(desc));
-            
-            // グループ分け
-            match name {
-                "+" | "/" | "*" | "-" | "=" | ">=" | ">" | "AND" | "OR" | "NOT" => {
-                    arithmetic_group.push(&word_info);
-                },
-                "頁" | "頁数" | "冊" | "冊数" | "挿入" | "置換" | "削除" | "合併" | "分離" => {
-                    book_ops_group.push(&word_info);
-                },
-                "雇用" | "解雇" | "交代" => {
-                    management_group.push(&word_info);
-                },
-                _ => {}
-            }
+        // グループ分け
+        match name {
+            "+" | "/" | "*" | "-" | "=" | ">=" | ">" | "AND" | "OR" | "NOT" => {
+                arithmetic_group.push(&word_info);
+            },
+            "摘" | "数" | "挿" | "換" | "削" | "結" | "分" | "跳" => {
+                fairy_ops_group.push(&word_info);
+            },
+            "招" | "払" => {
+                management_group.push(&word_info);
+            },
+            _ => {}
         }
-        
-        js_sys::Reflect::set(&result, &JsValue::from_str("Arithmetic"), &arithmetic_group).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("BookOps"), &book_ops_group).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("Management"), &management_group).unwrap();
-        
-        result.into()
     }
+    
+    js_sys::Reflect::set(&result, &JsValue::from_str("Arithmetic"), &arithmetic_group).unwrap();
+    js_sys::Reflect::set(&result, &JsValue::from_str("FairyOps"), &fairy_ops_group).unwrap();
+    js_sys::Reflect::set(&result, &JsValue::from_str("Management"), &management_group).unwrap();
+    
+    result.into()
+}
 
     #[wasm_bindgen]
     pub fn reset(&mut self) {
