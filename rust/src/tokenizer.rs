@@ -315,37 +315,25 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
     }
 }
 
-// 新しい組み込み漢字ワード解析（冊・冊数対応）
+// rust/src/tokenizer.rs (新しい一文字ワード対応部分)
+
 fn try_parse_builtin_kanji(chars: &[char]) -> Option<(Token, usize)> {
-    // 2文字の組み込みワードを先にチェック
-    if chars.len() >= 2 {
-        let two_char: String = chars[..2].iter().collect();
-        match two_char.as_str() {
-            "頁数" => return Some((Token::Symbol("頁数".to_string()), 2)),
-            "冊数" => return Some((Token::Symbol("冊数".to_string()), 2)), // 新追加
-            "挿入" => return Some((Token::Symbol("挿入".to_string()), 2)),
-            "置換" => return Some((Token::Symbol("置換".to_string()), 2)),
-            "削除" => return Some((Token::Symbol("削除".to_string()), 2)),
-            "合併" => return Some((Token::Symbol("合併".to_string()), 2)),
-            "分離" => return Some((Token::Symbol("分離".to_string()), 2)),
-            "待機" => return Some((Token::Symbol("待機".to_string()), 2)),
-            "複製" => return Some((Token::Symbol("複製".to_string()), 2)),
-            "破棄" => return Some((Token::Symbol("破棄".to_string()), 2)),
-            "雇用" => return Some((Token::Symbol("雇用".to_string()), 2)),
-            "解雇" => return Some((Token::Symbol("解雇".to_string()), 2)),
-            "交代" => return Some((Token::Symbol("交代".to_string()), 2)),
-            _ => {}
-        }
-    }
-    
-    // 1文字の組み込みワードをチェック
     if !chars.is_empty() {
         let one_char = chars[0];
         let one_char_str = one_char.to_string();
         
         match one_char_str.as_str() {
-            "頁" => Some((Token::Symbol("頁".to_string()), 1)),
-            "冊" => Some((Token::Symbol("冊".to_string()), 1)), // 新追加
+            // 新しい一文字妖精ワード
+            "摘" => Some((Token::Symbol("摘".to_string()), 1)),
+            "数" => Some((Token::Symbol("数".to_string()), 1)),
+            "挿" => Some((Token::Symbol("挿".to_string()), 1)),
+            "換" => Some((Token::Symbol("換".to_string()), 1)),
+            "削" => Some((Token::Symbol("削".to_string()), 1)),
+            "結" => Some((Token::Symbol("結".to_string()), 1)),
+            "分" => Some((Token::Symbol("分".to_string()), 1)),
+            "跳" => Some((Token::Symbol("跳".to_string()), 1)),
+            "招" => Some((Token::Symbol("招".to_string()), 1)),
+            "払" => Some((Token::Symbol("払".to_string()), 1)),
             _ => None,
         }
     } else {
