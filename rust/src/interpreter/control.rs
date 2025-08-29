@@ -1,13 +1,13 @@
-// rust/src/interpreter/control.rs (ビルドエラー修正版)
+// rust/src/interpreter/control.rs (完全版・一文字漢字ワード対応)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token};
 
-// 雇用司書 - 新しい部署を設立（DEF相当）
-// 注意：mod.rsでの特別処理により、説明付き雇用は事前に処理される
-pub fn op_hire(interp: &mut Interpreter) -> Result<()> {
+// 招妖精 - 新しい妖精を招き寄せる（DEF相当）
+// 注意：mod.rsでの特別処理により、説明付き招待は事前に処理される
+pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
-        return Err(AjisaiError::from("雇用 requires vector and name"));
+        return Err(AjisaiError::from("招 requires vector and name"));
     }
 
     let name_val = interp.workspace.pop().unwrap();
@@ -15,24 +15,24 @@ pub fn op_hire(interp: &mut Interpreter) -> Result<()> {
 
     let name = match name_val.val_type {
         ValueType::String(s) => s.to_uppercase(),
-        _ => return Err(AjisaiError::from("雇用 requires string name")),
+        _ => return Err(AjisaiError::from("招 requires string name")),
     };
 
     let tokens = match code_val.val_type {
         ValueType::Vector(v) => {
             interp.vector_to_tokens(v)?
         },
-        _ => return Err(AjisaiError::from("雇用 requires vector")),
+        _ => return Err(AjisaiError::from("招 requires vector")),
     };
 
     // 既存のワードチェック
     if let Some(existing) = interp.dictionary.get(&name) {
         if existing.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
+            return Err(AjisaiError::from(format!("Cannot redefine builtin fairy: {}", name)));
         }
     }
 
-    // 依存関係チェック（保護されたワードの確認）
+    // 依存関係チェック（保護された妖精の確認）
     if interp.dictionary.contains_key(&name) {
         if let Some(dependents) = interp.dependencies.get(&name) {
             if !dependents.is_empty() {
@@ -69,22 +69,22 @@ pub fn op_hire(interp: &mut Interpreter) -> Result<()> {
     interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
         tokens,
         is_builtin: false,
-        description: None,  // 従来の雇用では説明なし
+        description: None,  // 従来の招待では説明なし
         category: None,
     });
 
-    interp.append_output(&format!("Hired librarian: {}\n", name));
+    interp.append_output(&format!("Summoned fairy: {}\n", name));
     Ok(())
 }
 
-// 説明付き雇用司書 - mod.rsから呼び出される内部用関数
-pub fn op_hire_with_description(interp: &mut Interpreter, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+// 説明付き招待妖精 - mod.rsから呼び出される内部用関数
+pub fn op_summon_with_description(interp: &mut Interpreter, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
     let name = name.to_uppercase();
     
     // 既存のワードチェック
     if let Some(existing) = interp.dictionary.get(&name) {
         if existing.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
+            return Err(AjisaiError::from(format!("Cannot redefine builtin fairy: {}", name)));
         }
     }
 
@@ -132,12 +132,12 @@ pub fn op_hire_with_description(interp: &mut Interpreter, name: String, tokens: 
         category: None,
     });
 
-    interp.append_output(&format!("Hired librarian: {}{}\n", name, desc_info));
+    interp.append_output(&format!("Summoned fairy: {}{}\n", name, desc_info));
     Ok(())
 }
 
-// 解雇司書 - 部署を解散（DEL相当）
-pub fn op_fire(interp: &mut Interpreter) -> Result<()> {
+// 払妖精 - 妖精を払い除ける（DEL相当）
+pub fn op_dismiss(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
@@ -145,16 +145,16 @@ pub fn op_fire(interp: &mut Interpreter) -> Result<()> {
         ValueType::String(name) => {
             let name = name.to_uppercase();
             
-            // 組み込みワードの保護
+            // 組み込み妖精の保護
             if let Some(def) = interp.dictionary.get(&name) {
                 if def.is_builtin {
-                    return Err(AjisaiError::from(format!("Cannot fire builtin librarian: {}", name)));
+                    return Err(AjisaiError::from(format!("Cannot dismiss builtin fairy: {}", name)));
                 }
             } else {
-                return Err(AjisaiError::from(format!("Librarian '{}' not found", name)));
+                return Err(AjisaiError::from(format!("Fairy '{}' not found", name)));
             }
             
-            // 依存関係チェック（他のワードから使用されていないか確認）
+            // 依存関係チェック（他の妖精から使用されていないか確認）
             if let Some(dependents) = interp.dependencies.get(&name) {
                 if !dependents.is_empty() {
                     let dependent_list: Vec<String> = dependents.iter().cloned().collect();
@@ -176,15 +176,15 @@ pub fn op_fire(interp: &mut Interpreter) -> Result<()> {
                 deps.remove(&name);
             }
             
-            interp.append_output(&format!("Fired librarian: {}\n", name));
+            interp.append_output(&format!("Dismissed fairy: {}\n", name));
             Ok(())
         },
         _ => Err(AjisaiError::type_error("string", "other type")),
     }
 }
 
-// 交代司書 - 司書交代（条件付きGOTO相当） 
-pub fn op_handover(interp: &mut Interpreter) -> Result<()> {
+// 跳妖精 - 妖精交代（条件付きGOTO相当） 
+pub fn op_jump(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
     }
@@ -204,10 +204,10 @@ pub fn op_handover(interp: &mut Interpreter) -> Result<()> {
     let target = if should_jump { if_target } else { else_target };
     
     match target.val_type {
-        ValueType::String(librarian_name) => {
+        ValueType::String(fairy_name) => {
             // 同一ワード内制限でワード実行
             let current_word = interp.call_stack.last().cloned();
-            interp.execute_word_leap(&librarian_name, current_word.as_deref())?;
+            interp.execute_word_leap(&fairy_name, current_word.as_deref())?;
             Ok(())
         },
         ValueType::Vector(code_vec) => {
@@ -220,7 +220,7 @@ pub fn op_handover(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 条件付き実行司書 - 条件が真の場合のみ実行
+// 条件付き実行妖精 - 条件が真の場合のみ実行
 pub fn op_when(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -257,7 +257,7 @@ pub fn op_when(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// デフォルト値設定司書 - nil の場合にデフォルト値を使用
+// デフォルト値設定妖精 - nil の場合にデフォルト値を使用
 pub fn op_default(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -274,7 +274,7 @@ pub fn op_default(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// NIL判定司書
+// NIL判定妖精
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
@@ -286,7 +286,7 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// NOT-NIL判定司書（KNOWN?と同等）
+// NOT-NIL判定妖精（KNOWN?と同等）
 pub fn op_not_nil_check(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
