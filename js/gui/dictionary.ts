@@ -39,8 +39,8 @@ export class Dictionary {
     
     // 新しい一文字漢字ワード体系に対応したグループ分け
     const arithmeticWords = ['+', '/', '*', '-', '=', '>=', '>', 'AND', 'OR', 'NOT'];
-    const fairyOpsWords = ['摘', '数', '挿', '換', '削', '結', '分', '跳'];  // 新しい妖精ワード
-    const managementWords = ['招', '払'];  // 新しい妖精管理ワード
+    const fairyOpsWords = ['摘', '数', '挿', '換', '削', '取', '捨', '重', '分', '結', '跳'];  // 取・捨を追加！
+    const managementWords = ['招', '払'];
     
     const groups = [arithmeticWords, fairyOpsWords, managementWords];
     
