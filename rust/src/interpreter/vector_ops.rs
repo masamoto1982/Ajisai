@@ -1,4 +1,4 @@
-// rust/src/interpreter/vector_ops.rs (完全再実装版)
+// rust/src/interpreter/vector_ops.rs (完全修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction};
@@ -29,13 +29,20 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             }
             
             let actual_index = if index < 0 {
-                v.len() as i64 + index
+                let pos = v.len() as i64 + index;
+                if pos < 0 {
+                    return Err(AjisaiError::IndexOutOfBounds {
+                        index,
+                        length: v.len(),
+                    });
+                }
+                pos as usize
             } else {
-                index
+                index as usize
             };
             
-            if actual_index >= 0 && (actual_index as usize) < v.len() {
-                interp.workspace.push(v[actual_index as usize].clone());
+            if actual_index < v.len() {
+                interp.workspace.push(v[actual_index].clone());
                 Ok(())
             } else {
                 Err(AjisaiError::IndexOutOfBounds {
@@ -80,7 +87,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 換妖精 - 0オリジンの位置指定上書き
+// 換妖精 - 0オリジンの位置指定上書き（古い値は返さない）
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -98,14 +105,25 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     match vector_val.val_type {
         ValueType::Vector(mut v) => {
             let actual_index = if index < 0 {
-                v.len() as i64 + index
+                let pos = v.len() as i64 + index;
+                if pos < 0 {
+                    return Err(AjisaiError::IndexOutOfBounds {
+                        index,
+                        length: v.len(),
+                    });
+                }
+                pos as usize
             } else {
-                index
+                index as usize
             };
             
-            if actual_index >= 0 && (actual_index as usize) < v.len() {
-                v[actual_index as usize] = new_element;
+            if actual_index < v.len() {
+                let old_element = v[actual_index].clone();
+                v[actual_index] = new_element;
+                
+                // 期待動作：新Vector + 古い値の両方を返す
                 interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+                interp.workspace.push(old_element);
                 Ok(())
             } else {
                 Err(AjisaiError::IndexOutOfBounds {
@@ -141,19 +159,28 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
             };
             
             if let Some(index) = should_remove_by_index {
-                interp.workspace.pop().unwrap();
-                let vector_val = interp.workspace.pop().unwrap();
+                interp.workspace.pop().unwrap(); // インデックスを削除
+                let vector_val = interp.workspace.pop().unwrap(); // ベクターを削除
                 
                 match vector_val.val_type {
                     ValueType::Vector(mut v) => {
                         let actual_index = if index < 0 {
-                            v.len() as i64 + index
+                            let pos = v.len() as i64 + index;
+                            if pos < 0 {
+                                return Err(AjisaiError::IndexOutOfBounds {
+                                    index,
+                                    length: v.len(),
+                                });
+                            }
+                            pos as usize
                         } else {
-                            index
+                            index as usize
                         };
                         
-                        if actual_index >= 0 && (actual_index as usize) < v.len() {
-                            let removed = v.remove(actual_index as usize);
+                        if actual_index < v.len() {
+                            let removed = v.remove(actual_index);
+                            
+                            // 期待動作：新Vector + 削除値の順で返す
                             interp.workspace.push(Value { val_type: ValueType::Vector(v) });
                             interp.workspace.push(removed);
                             Ok(())
@@ -167,6 +194,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                     _ => Err(AjisaiError::type_error("vector", "other type")),
                 }
             } else {
+                // インデックス指定なしの場合は単純に値を破棄
                 interp.workspace.pop().unwrap();
                 Ok(())
             }
@@ -176,7 +204,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
 
 // ========== 量指定操作（1オリジン）==========
 
-// 数妖精 - 要素数取得（0オリジンとは無関係）
+// 数妖精 - 要素数取得
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let target_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
@@ -192,7 +220,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 取妖精 - 1オリジンの量指定取得（先頭からN個）
+// 取妖精 - 1オリジンの量指定取得（修正版）
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -208,28 +236,31 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     
     match vector_val.val_type {
         ValueType::Vector(v) => {
-            if count < 0 {
-                // 負の値は末尾からN個
+            let result = if count < 0 {
+                // 負の値：末尾からN個
                 let abs_count = (-count) as usize;
-                let start_index = if abs_count >= v.len() { 0 } else { v.len() - abs_count };
-                let result = v[start_index..].to_vec();
-                interp.workspace.push(Value { val_type: ValueType::Vector(result) });
+                if abs_count >= v.len() {
+                    v.clone() // 全要素
+                } else {
+                    v[v.len() - abs_count..].to_vec()
+                }
             } else if count == 0 {
                 // 0個は空Vector
-                interp.workspace.push(Value { val_type: ValueType::Vector(vec![]) });
+                vec![]
             } else {
-                // 正の値は先頭からN個
+                // 正の値：先頭からN個
                 let take_count = (count as usize).min(v.len());
-                let result = v[..take_count].to_vec();
-                interp.workspace.push(Value { val_type: ValueType::Vector(result) });
-            }
+                v[..take_count].to_vec()
+            };
+            
+            interp.workspace.push(Value { val_type: ValueType::Vector(result) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
     }
 }
 
-// 捨妖精 - 1オリジンの量指定破棄（先頭からN個を捨てて残りを返す）
+// 捨妖精 - 1オリジンの量指定破棄（修正版）
 pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -245,21 +276,24 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
     
     match vector_val.val_type {
         ValueType::Vector(v) => {
-            if count < 0 {
-                // 負の値は末尾からN個を捨てる
+            let result = if count < 0 {
+                // 負の値：末尾からN個を捨てる
                 let abs_count = (-count) as usize;
-                let keep_count = if abs_count >= v.len() { 0 } else { v.len() - abs_count };
-                let result = v[..keep_count].to_vec();
-                interp.workspace.push(Value { val_type: ValueType::Vector(result) });
+                if abs_count >= v.len() {
+                    vec![] // 全て捨てる
+                } else {
+                    v[..v.len() - abs_count].to_vec()
+                }
             } else if count == 0 {
                 // 0個捨てる = 元のまま
-                interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+                v
             } else {
-                // 正の値は先頭からN個を捨てる
+                // 正の値：先頭からN個を捨てる
                 let drop_count = (count as usize).min(v.len());
-                let result = v[drop_count..].to_vec();
-                interp.workspace.push(Value { val_type: ValueType::Vector(result) });
-            }
+                v[drop_count..].to_vec()
+            };
+            
+            interp.workspace.push(Value { val_type: ValueType::Vector(result) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -305,7 +339,7 @@ pub fn op_repeat(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 分妖精 - 1オリジンのサイズ指定分割（既存のまま）
+// 分妖精 - 1オリジンのサイズ指定分割（既存維持）
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -321,7 +355,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 結妖精 - Vector結合（量とは無関係）
+// 結妖精 - Vector結合
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -350,6 +384,11 @@ fn extract_vector_and_sizes(interp: &mut Interpreter) -> Result<(Value, Vec<i64>
         match &val.val_type {
             ValueType::Number(n) if n.denominator == 1 => {
                 if n.numerator <= 0 {
+                    // 値を戻してからエラー
+                    temp_values.push(val);
+                    for v in temp_values.into_iter().rev() {
+                        interp.workspace.push(v);
+                    }
                     return Err(AjisaiError::from("Split size must be positive"));
                 }
                 sizes.push(n.numerator);
@@ -399,6 +438,7 @@ fn split_by_sizes(v: &[Value], sizes: &[i64], interp: &mut Interpreter) -> Resul
         start = end;
     }
     
+    // 結果を順番にプッシュ
     for result in results {
         interp.workspace.push(result);
     }
