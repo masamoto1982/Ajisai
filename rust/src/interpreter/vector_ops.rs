@@ -143,44 +143,45 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         },
         _ => {
-            // 2つ以上ある場合、上位がindex（整数）かチェック
-            let top = &interp.workspace[interp.workspace.len() - 1];
-            let second = &interp.workspace[interp.workspace.len() - 2];
+            // 2つ以上ある場合、パターンマッチングのための値を先に取得
+            let should_remove_by_index = {
+                let top = &interp.workspace[interp.workspace.len() - 1];
+                let second = &interp.workspace[interp.workspace.len() - 2];
+                
+                match (&top.val_type, &second.val_type) {
+                    (ValueType::Number(n), ValueType::Vector(_)) if n.denominator == 1 => {
+                        Some(n.numerator)
+                    },
+                    _ => None,
+                }
+            };
             
-            if let (ValueType::Number(n), ValueType::Vector(_)) = (&top.val_type, &second.val_type) {
-                if n.denominator == 1 {
-                    // インデックス付きVector削除
-                    let index_val = interp.workspace.pop().unwrap();
-                    let vector_val = interp.workspace.pop().unwrap();
-                    
-                    let index = n.numerator;
-                    
-                    match vector_val.val_type {
-                        ValueType::Vector(mut v) => {
-                            let actual_index = if index < 0 {
-                                v.len() as i64 + index
-                            } else {
-                                index
-                            };
-                            
-                            if actual_index >= 0 && (actual_index as usize) < v.len() {
-                                let removed = v.remove(actual_index as usize);
-                                interp.workspace.push(Value { val_type: ValueType::Vector(v) });
-                                interp.workspace.push(removed);
-                                Ok(())
-                            } else {
-                                Err(AjisaiError::IndexOutOfBounds {
-                                    index,
-                                    length: v.len(),
-                                })
-                            }
-                        },
-                        _ => Err(AjisaiError::type_error("vector", "other type")),
-                    }
-                } else {
-                    // 整数でない場合は破棄
-                    interp.workspace.pop().unwrap();
-                    Ok(())
+            if let Some(index) = should_remove_by_index {
+                // インデックス付きVector削除
+                interp.workspace.pop().unwrap(); // indexを破棄
+                let vector_val = interp.workspace.pop().unwrap();
+                
+                match vector_val.val_type {
+                    ValueType::Vector(mut v) => {
+                        let actual_index = if index < 0 {
+                            v.len() as i64 + index
+                        } else {
+                            index
+                        };
+                        
+                        if actual_index >= 0 && (actual_index as usize) < v.len() {
+                            let removed = v.remove(actual_index as usize);
+                            interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+                            interp.workspace.push(removed);
+                            Ok(())
+                        } else {
+                            Err(AjisaiError::IndexOutOfBounds {
+                                index,
+                                length: v.len(),
+                            })
+                        }
+                    },
+                    _ => Err(AjisaiError::type_error("vector", "other type")),
                 }
             } else {
                 // パターンに該当しない場合は破棄
