@@ -315,22 +315,27 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
     }
 }
 
-// rust/src/tokenizer.rs (新しい一文字ワード対応部分)
-
 fn try_parse_builtin_kanji(chars: &[char]) -> Option<(Token, usize)> {
     if !chars.is_empty() {
         let one_char = chars[0];
         let one_char_str = one_char.to_string();
         
         match one_char_str.as_str() {
-            // 新しい一文字妖精ワード
+            // 位置指定操作妖精（0オリジン）
             "摘" => Some((Token::Symbol("摘".to_string()), 1)),
-            "数" => Some((Token::Symbol("数".to_string()), 1)),
             "挿" => Some((Token::Symbol("挿".to_string()), 1)),
             "換" => Some((Token::Symbol("換".to_string()), 1)),
             "削" => Some((Token::Symbol("削".to_string()), 1)),
-            "結" => Some((Token::Symbol("結".to_string()), 1)),
+            
+            // 量指定操作妖精（1オリジン）
+            "数" => Some((Token::Symbol("数".to_string()), 1)),
+            "取" => Some((Token::Symbol("取".to_string()), 1)),
+            "捨" => Some((Token::Symbol("捨".to_string()), 1)),
+            "重" => Some((Token::Symbol("重".to_string()), 1)),
             "分" => Some((Token::Symbol("分".to_string()), 1)),
+            
+            // その他の妖精
+            "結" => Some((Token::Symbol("結".to_string()), 1)),
             "跳" => Some((Token::Symbol("跳".to_string()), 1)),
             "招" => Some((Token::Symbol("招".to_string()), 1)),
             "払" => Some((Token::Symbol("払".to_string()), 1)),
