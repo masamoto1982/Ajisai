@@ -219,7 +219,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 取妖精 - 1オリジンの量指定取得（修正版）
+// 取妖精 - 1オリジンの量指定取得（要素数超過時エラー版）
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -238,17 +238,25 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
             let result = if count < 0 {
                 // 負の値：末尾からN個
                 let abs_count = (-count) as usize;
-                if abs_count >= v.len() {
-                    v.clone() // 全要素
-                } else {
-                    v[v.len() - abs_count..].to_vec()
+                if abs_count > v.len() {
+                    return Err(AjisaiError::from(format!(
+                        "Cannot take {} elements from vector of length {}",
+                        abs_count, v.len()
+                    )));
                 }
+                v[v.len() - abs_count..].to_vec()
             } else if count == 0 {
                 // 0個は空Vector
                 vec![]
             } else {
                 // 正の値：先頭からN個
-                let take_count = (count as usize).min(v.len());
+                let take_count = count as usize;
+                if take_count > v.len() {
+                    return Err(AjisaiError::from(format!(
+                        "Cannot take {} elements from vector of length {}",
+                        take_count, v.len()
+                    )));
+                }
                 v[..take_count].to_vec()
             };
             
@@ -259,7 +267,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 捨妖精 - 1オリジンの量指定破棄（修正版）
+// 捨妖精 - 1オリジンの量指定破棄（要素数超過時エラー版）
 pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -278,17 +286,25 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
             let result = if count < 0 {
                 // 負の値：末尾からN個を捨てる
                 let abs_count = (-count) as usize;
-                if abs_count >= v.len() {
-                    vec![] // 全て捨てる
-                } else {
-                    v[..v.len() - abs_count].to_vec()
+                if abs_count > v.len() {
+                    return Err(AjisaiError::from(format!(
+                        "Cannot drop {} elements from vector of length {}",
+                        abs_count, v.len()
+                    )));
                 }
+                v[..v.len() - abs_count].to_vec()
             } else if count == 0 {
                 // 0個捨てる = 元のまま
                 v
             } else {
                 // 正の値：先頭からN個を捨てる
-                let drop_count = (count as usize).min(v.len());
+                let drop_count = count as usize;
+                if drop_count > v.len() {
+                    return Err(AjisaiError::from(format!(
+                        "Cannot drop {} elements from vector of length {}",
+                        drop_count, v.len()
+                    )));
+                }
                 v[drop_count..].to_vec()
             };
             
