@@ -87,7 +87,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 換妖精 - 0オリジンの位置指定上書き（古い値は返さない）
+// 換妖精 - 0オリジンの位置指定上書き（新しいベクターのみ返す）
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -118,12 +118,11 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             };
             
             if actual_index < v.len() {
-                let old_element = v[actual_index].clone();
+                // 置換実行（古い値は破棄）
                 v[actual_index] = new_element;
                 
-                // 期待動作：新Vector + 古い値の両方を返す
+                // 新しいベクターのみを返す
                 interp.workspace.push(Value { val_type: ValueType::Vector(v) });
-                interp.workspace.push(old_element);
                 Ok(())
             } else {
                 Err(AjisaiError::IndexOutOfBounds {
@@ -136,7 +135,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 削妖精 - 0オリジンの位置指定削除
+// 削妖精 - 0オリジンの位置指定削除（新しいベクターのみ返す）
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     match interp.workspace.len() {
         0 => Err(AjisaiError::WorkspaceUnderflow),
@@ -178,11 +177,11 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                         };
                         
                         if actual_index < v.len() {
-                            let removed = v.remove(actual_index);
+                            // 削除実行（削除された値は破棄）
+                            v.remove(actual_index);
                             
-                            // 期待動作：新Vector + 削除値の順で返す
+                            // 新しいベクターのみを返す
                             interp.workspace.push(Value { val_type: ValueType::Vector(v) });
-                            interp.workspace.push(removed);
                             Ok(())
                         } else {
                             Err(AjisaiError::IndexOutOfBounds {
