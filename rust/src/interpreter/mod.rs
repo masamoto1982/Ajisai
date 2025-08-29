@@ -540,9 +540,9 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_builtin(&mut self, name: &str) -> Result<()> {
+fn execute_builtin(&mut self, name: &str) -> Result<()> {
     match name {
-        // 算術演算司書（要求順）
+        // 算術・論理演算妖精
         "+" => arithmetic::op_add(self),
         "/" => arithmetic::op_div(self),
         "*" => arithmetic::op_mul(self),
@@ -554,26 +554,25 @@ impl Interpreter {
         "OR" => arithmetic::op_or(self),
         "NOT" => arithmetic::op_not(self),
         
-        // 書籍・頁操作司書（要求順）
-        "頁" => vector_ops::op_page(self),
-        "頁数" => vector_ops::op_page_count(self),
-        "冊" => vector_ops::op_book(self),
-        "冊数" => vector_ops::op_book_count(self),
-        "挿入" => vector_ops::op_insert(self),
-        "置換" => vector_ops::op_replace(self),
-        "削除" => vector_ops::op_unified_delete(self), // 統合版
-        "合併" => vector_ops::op_merge(self),
-        "分離" => vector_ops::op_split(self),
+        // データアクセス・操作妖精
+        "摘" => vector_ops::op_get(self),
+        "数" => vector_ops::op_length(self),
         
-        // 司書管理司書
-        "雇用" => control::op_hire(self),
-        "解雇" => control::op_fire(self),
-        "交代" => control::op_handover(self),
+        // データ変更妖精
+        "挿" => vector_ops::op_insert(self),
+        "換" => vector_ops::op_replace(self),
+        "削" => vector_ops::op_remove(self),
+        "結" => vector_ops::op_concat(self),
+        "分" => vector_ops::op_split(self),
+        "跳" => control::op_jump(self),
+        
+        // 妖精管理妖精
+        "招" => control::op_summon(self),
+        "払" => control::op_dismiss(self),
         
         _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
     }
 }
-
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
         self.output_buffer.clear();
