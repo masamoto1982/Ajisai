@@ -35,42 +35,42 @@ export class Dictionary {
     }
 
     private renderBuiltinWordsWithGroups(container: HTMLElement, builtinWords: any[]): void {
-        container.innerHTML = '';
-        
-        // 3つのグループに分ける
-        const arithmeticWords = ['+', '/', '*', '-', '=', '>=', '>', 'AND', 'OR', 'NOT'];
-        const bookOpsWords = ['頁', '頁数', '冊', '冊数', '挿入', '置換', '削除', '合併', '分離'];
-        const managementWords = ['雇用', '解雇', '交代'];
-        
-        const groups = [arithmeticWords, bookOpsWords, managementWords];
-        
-        groups.forEach((group, groupIndex) => {
-            // 各グループのワードを直接追加（divコンテナなし）
-            group.forEach(wordName => {
-                const wordData = builtinWords.find((item: any[]) => item[0] === wordName);
-                if (wordData) {
-                    const button = document.createElement('button');
-                    button.textContent = wordData[0];
-                    button.className = 'word-button builtin';
-                    button.title = wordData[1] || wordData[0];
-                    
-                    button.addEventListener('click', () => {
-                        if (this.onWordClick) {
-                            this.onWordClick(wordData[0]);
-                        }
-                    });
-                    
-                    container.appendChild(button);
-                }
-            });
-            
-            // 最後のグループ以外は改行のみ追加
-            if (groupIndex < groups.length - 1) {
-                const lineBreak = document.createElement('br');
-                container.appendChild(lineBreak);
+    container.innerHTML = '';
+    
+    // 新しい一文字漢字ワード体系に対応したグループ分け
+    const arithmeticWords = ['+', '/', '*', '-', '=', '>=', '>', 'AND', 'OR', 'NOT'];
+    const fairyOpsWords = ['摘', '数', '挿', '換', '削', '結', '分', '跳'];  // 新しい妖精ワード
+    const managementWords = ['招', '払'];  // 新しい妖精管理ワード
+    
+    const groups = [arithmeticWords, fairyOpsWords, managementWords];
+    
+    groups.forEach((group, groupIndex) => {
+        // 各グループのワードを直接追加（divコンテナなし）
+        group.forEach(wordName => {
+            const wordData = builtinWords.find((item: any[]) => item[0] === wordName);
+            if (wordData) {
+                const button = document.createElement('button');
+                button.textContent = wordData[0];
+                button.className = 'word-button builtin';
+                button.title = wordData[1] || wordData[0];
+                
+                button.addEventListener('click', () => {
+                    if (this.onWordClick) {
+                        this.onWordClick(wordData[0]);
+                    }
+                });
+                
+                container.appendChild(button);
             }
         });
-    }
+        
+        // 最後のグループ以外は改行のみ追加
+        if (groupIndex < groups.length - 1) {
+            const lineBreak = document.createElement('br');
+            container.appendChild(lineBreak);
+        }
+    });
+}
 
     updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
         const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
