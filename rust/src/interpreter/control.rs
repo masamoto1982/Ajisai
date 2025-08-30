@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (完全版・一文字漢字ワード対応)
+// rust/src/interpreter/control.rs (完全版・修正済み)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token};
@@ -19,86 +19,7 @@ pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
     };
 
     let tokens = match code_val.val_type {
-    ValueType::Vector(v) => {
-        let mut tokens = vec![Token::VectorStart];
-        for value in v {
-            tokens.push(interp.value_to_token(value)?);
-        }
-        tokens.push(Token::VectorEnd);
-        tokens
-    },
-    _ => return Err(AjisaiError::from("招 requires vector")),
-};
-
-    // 既存のワードチェック
-    if let Some(existing) = interp.dictionary.get(&name) {
-        if existing.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot redefine builtin fairy: {}", name)));
-        }
-    }
-
-    // 依存関係チェック（保護された妖精の確認）
-    if interp.dictionary.contains_key(&name) {
-        if let Some(dependents) = interp.dependencies.get(&name) {
-            if !dependents.is_empty() {
-                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                return Err(AjisaiError::ProtectedWord { 
-                    name: name.clone(), 
-                    dependents: dependent_list 
-                });
-            }
-        }
-    }
-
-    // 古い依存関係をクリア
-    if let Some(old_deps) = interp.get_word_dependencies(&name) {
-        for dep in old_deps {
-            if let Some(reverse_deps) = interp.dependencies.get_mut(&dep) {
-                reverse_deps.remove(&name);
-            }
-        }
-    }
-
-    // 新しい依存関係を登録
-    for token in &tokens {
-        if let Token::Symbol(sym) = token {
-            if interp.dictionary.contains_key(sym) && !interp.is_builtin_word(sym) {
-                interp.dependencies.entry(sym.clone())
-                    .or_insert_with(std::collections::HashSet::new)
-                    .insert(name.clone());
-            }
-        }
-    }
-
-    // ワード定義を登録（説明なしの従来版）
-    interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
-        tokens,
-        is_builtin: false,
-        description: None,  // 従来の招待では説明なし
-        category: None,
-    });
-
-    interp.append_output(&format!("Summoned fairy: {}\n", name));
-    Ok(())
-}
-
-// 招妖精 - 新しい妖精を招き寄せる（DEF相当）
-pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::from("招 requires vector and name"));
-    }
-
-    let name_val = interp.workspace.pop().unwrap();
-    let code_val = interp.workspace.pop().unwrap();
-
-    let name = match name_val.val_type {
-        ValueType::String(s) => s.to_uppercase(),
-        _ => return Err(AjisaiError::from("招 requires string name")),
-    };
-
-    let tokens = match code_val.val_type {
         ValueType::Vector(v) => {
-            // Vectorを直接トークンに変換するのではなく、
             // VectorStart + 内容 + VectorEnd の形でトークンを構築
             let mut tokens = vec![Token::VectorStart];
             for value in v {
@@ -159,6 +80,65 @@ pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
     });
 
     interp.append_output(&format!("Summoned fairy: {}\n", name));
+    Ok(())
+}
+
+// 説明付き招待妖精 - mod.rsから呼び出される内部用関数
+pub fn op_summon_with_description(interp: &mut Interpreter, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+    let name = name.to_uppercase();
+    
+    // 既存のワードチェック
+    if let Some(existing) = interp.dictionary.get(&name) {
+        if existing.is_builtin {
+            return Err(AjisaiError::from(format!("Cannot redefine builtin fairy: {}", name)));
+        }
+    }
+
+    // 依存関係チェック
+    if interp.dictionary.contains_key(&name) {
+        if let Some(dependents) = interp.dependencies.get(&name) {
+            if !dependents.is_empty() {
+                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                return Err(AjisaiError::ProtectedWord { 
+                    name: name.clone(), 
+                    dependents: dependent_list 
+                });
+            }
+        }
+    }
+
+    // 古い依存関係をクリア
+    if let Some(old_deps) = interp.get_word_dependencies(&name) {
+        for dep in old_deps {
+            if let Some(reverse_deps) = interp.dependencies.get_mut(&dep) {
+                reverse_deps.remove(&name);
+            }
+        }
+    }
+
+    // 新しい依存関係を登録
+    for token in &tokens {
+        if let Token::Symbol(sym) = token {
+            if interp.dictionary.contains_key(sym) && !interp.is_builtin_word(sym) {
+                interp.dependencies.entry(sym.clone())
+                    .or_insert_with(std::collections::HashSet::new)
+                    .insert(name.clone());
+            }
+        }
+    }
+
+    // 説明情報を先に取得（descriptionを移動する前に）
+    let desc_info = if description.is_some() { " with description" } else { "" };
+
+    // ワード定義を登録（説明付き）
+    interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
+        tokens,
+        is_builtin: false,
+        description,  // 説明を設定
+        category: None,
+    });
+
+    interp.append_output(&format!("Summoned fairy: {}{}\n", name, desc_info));
     Ok(())
 }
 
