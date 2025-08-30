@@ -315,7 +315,7 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 重妖精 - 1オリジンの回数指定重複
+// 重妖精 - 1オリジンの回数指定重複（スカラー値は個別配置版）
 pub fn op_repeat(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -335,7 +335,7 @@ pub fn op_repeat(interp: &mut Interpreter) -> Result<()> {
     
     match elem_val.val_type {
         ValueType::Vector(v) => {
-            // Vectorの場合は繰り返し結合
+            // Vectorの場合は繰り返し結合してVectorとして返す
             let mut result = Vec::new();
             for _ in 0..times {
                 result.extend(v.iter().cloned());
@@ -343,12 +343,10 @@ pub fn op_repeat(interp: &mut Interpreter) -> Result<()> {
             interp.workspace.push(Value { val_type: ValueType::Vector(result) });
         },
         _ => {
-            // その他の値の場合はN個のVectorを作成
-            let mut result = Vec::new();
+            // スカラー値の場合は個別に複数回ワークスペースに配置
             for _ in 0..times {
-                result.push(elem_val.clone());
+                interp.workspace.push(elem_val.clone());
             }
-            interp.workspace.push(Value { val_type: ValueType::Vector(result) });
         }
     }
     Ok(())
