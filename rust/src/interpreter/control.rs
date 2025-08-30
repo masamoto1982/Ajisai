@@ -77,10 +77,34 @@ pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 説明付き招待妖精 - mod.rsから呼び出される内部用関数
-pub fn op_summon_with_description(interp: &mut Interpreter, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
-    let name = name.to_uppercase();
-    
+// 招妖精 - 新しい妖精を招き寄せる（DEF相当）
+pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 {
+        return Err(AjisaiError::from("招 requires vector and name"));
+    }
+
+    let name_val = interp.workspace.pop().unwrap();
+    let code_val = interp.workspace.pop().unwrap();
+
+    let name = match name_val.val_type {
+        ValueType::String(s) => s.to_uppercase(),
+        _ => return Err(AjisaiError::from("招 requires string name")),
+    };
+
+    let tokens = match code_val.val_type {
+        ValueType::Vector(v) => {
+            // Vectorを直接トークンに変換するのではなく、
+            // VectorStart + 内容 + VectorEnd の形でトークンを構築
+            let mut tokens = vec![Token::VectorStart];
+            for value in v {
+                tokens.push(interp.value_to_token(value)?);
+            }
+            tokens.push(Token::VectorEnd);
+            tokens
+        },
+        _ => return Err(AjisaiError::from("招 requires vector")),
+    };
+
     // 既存のワードチェック
     if let Some(existing) = interp.dictionary.get(&name) {
         if existing.is_builtin {
@@ -88,7 +112,7 @@ pub fn op_summon_with_description(interp: &mut Interpreter, name: String, tokens
         }
     }
 
-    // 依存関係チェック
+    // 依存関係チェック（保護された妖精の確認）
     if interp.dictionary.contains_key(&name) {
         if let Some(dependents) = interp.dependencies.get(&name) {
             if !dependents.is_empty() {
@@ -121,18 +145,15 @@ pub fn op_summon_with_description(interp: &mut Interpreter, name: String, tokens
         }
     }
 
-    // 説明情報を先に取得（descriptionを移動する前に）
-    let desc_info = if description.is_some() { " with description" } else { "" };
-
-    // ワード定義を登録（説明付き）
+    // ワード定義を登録（説明なしの従来版）
     interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
         tokens,
         is_builtin: false,
-        description,  // 説明を設定
+        description: None,  // 従来の招待では説明なし
         category: None,
     });
 
-    interp.append_output(&format!("Summoned fairy: {}{}\n", name, desc_info));
+    interp.append_output(&format!("Summoned fairy: {}\n", name));
     Ok(())
 }
 
