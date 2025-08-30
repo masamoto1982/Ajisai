@@ -346,10 +346,9 @@ fn try_parse_builtin_kanji(chars: &[char]) -> Option<(Token, usize)> {
     }
 }
 
-// ASCII組み込みワード解析
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
-        "true", "false", "nil", "NIL", "DEF", "DEL",
+        "true", "false", "nil", "NIL",
     ];
     
     for word in &builtin_words {
@@ -361,8 +360,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
                         "true" => Token::Boolean(true),
                         "false" => Token::Boolean(false),
                         "nil" | "NIL" => Token::Nil,
-                        "DEF" => Token::Symbol("雇用".to_string()),  // DEF → 雇用
-                        "DEL" => Token::Symbol("解雇".to_string()),  // DEL → 解雇
+                        // DEF、DEL の変換を削除
                         _ => Token::Symbol(word.to_uppercase()),
                     };
                     return Some((token, word.len()));
