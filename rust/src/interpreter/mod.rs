@@ -262,42 +262,12 @@ impl Interpreter {
         Ok(())
     }
 
-    // ベクトルリテラルから実行可能なトークンを抽出するメソッド
-    fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-        // 単一のベクトルリテラルの場合、その中身を取り出す
-        if tokens.len() >= 2 && 
-           tokens[0] == Token::VectorStart && 
-           tokens[tokens.len() - 1] == Token::VectorEnd {
-            
-            // ベクトルの中身を実行可能なトークンとして返す
-            let mut inner_tokens = Vec::new();
-            let mut i = 1; // VectorStart の次から
-            let mut depth = 1;
-            
-            while i < tokens.len() - 1 { // VectorEnd の前まで
-                match &tokens[i] {
-                    Token::VectorStart => depth += 1,
-                    Token::VectorEnd => {
-                        depth -= 1;
-                        if depth == 0 {
-                            break;
-                        }
-                    },
-                    _ => {}
-                }
-                
-                if depth == 1 {
-                    inner_tokens.push(tokens[i].clone());
-                }
-                i += 1;
-            }
-            
-            Ok(inner_tokens)
-        } else {
-            // ベクトルリテラルでない場合はそのまま返す
-            Ok(tokens.to_vec())
-        }
-    }
+    // ベクトルリテラルから実行可能なトークンを抽出するメソッド（修正版）
+fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+    // ベクトルリテラルはそのまま保持する
+    // 内部のトークンに展開しない
+    Ok(tokens.to_vec())
+}
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
