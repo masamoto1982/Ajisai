@@ -152,57 +152,28 @@ impl Interpreter {
     }
 
     fn try_process_hire_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
-        // 雇用の位置を探す
-        let hire_position = tokens.iter().rposition(|t| {
-            if let Token::Symbol(s) = t {
-                s == "雇用"
-            } else {
-                false
-            }
-        })?;
-
-        // パターン1: 処理内容 "名前" ( 説明 ) 雇用
-        if hire_position >= 3 {
-            if let (Token::String(name), Token::ParenComment(desc)) = 
-                (&tokens[hire_position - 2], &tokens[hire_position - 1]) {
-                
-                let body_tokens = &tokens[..hire_position - 2];
-                return Some(self.define_word_with_description(
-                    name.clone(), 
-                    body_tokens.to_vec(), 
-                    Some(desc.clone())
-                ));
-            }
+    // 招妖精パターンのみをチェック（雇用関連処理を完全削除）
+    let summon_position = tokens.iter().rposition(|t| {
+        if let Token::Symbol(s) = t {
+            s == "招"
+        } else {
+            false
         }
-
-        // パターン2: 処理内容 "名前" 雇用 ( 説明 )
-        if hire_position >= 1 && hire_position + 1 < tokens.len() {
-            if let (Token::String(name), Token::ParenComment(desc)) = 
-                (&tokens[hire_position - 1], &tokens[hire_position + 1]) {
-                
-                let body_tokens = &tokens[..hire_position - 1];
-                return Some(self.define_word_with_description(
-                    name.clone(), 
-                    body_tokens.to_vec(), 
-                    Some(desc.clone())
-                ));
-            }
+    })?;
+    
+    if summon_position >= 1 {
+        if let Token::String(name) = &tokens[summon_position - 1] {
+            let body_tokens = &tokens[..summon_position - 1];
+            
+            return Some(self.define_word_direct_tokens(
+                name.clone(),
+                body_tokens.to_vec()
+            ));
         }
-
-        // 従来の雇用パターン（説明なし）: 処理内容 "名前" 雇用
-        if hire_position >= 1 {
-            if let Token::String(name) = &tokens[hire_position - 1] {
-                let body_tokens = &tokens[..hire_position - 1];
-                return Some(self.define_word_with_description(
-                    name.clone(), 
-                    body_tokens.to_vec(), 
-                    None
-                ));
-            }
-        }
-
-        None
     }
+    
+    None
+}
 
     fn define_word_with_description(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
         let name = name.to_uppercase();
