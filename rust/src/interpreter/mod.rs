@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全版・丸括弧コメント+ベクトル処理修正)
+// rust/src/interpreter/mod.rs (完全版・招妖精統一版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -142,38 +142,39 @@ impl Interpreter {
             return Ok(());
         }
 
-        // 雇用パターンのチェック（説明付きも対応）
-        if let Some(hire_result) = self.try_process_hire_pattern(&tokens) {
-            return hire_result;
+        // 招妖精パターンのチェック
+        if let Some(summon_result) = self.try_process_summon_pattern(&tokens) {
+            return summon_result;
         }
 
         // 通常のトークン実行
         self.execute_tokens(&tokens)
     }
 
-    fn try_process_hire_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
-    // 招妖精パターンのみをチェック（雇用関連処理を完全削除）
-    let summon_position = tokens.iter().rposition(|t| {
-        if let Token::Symbol(s) = t {
-            s == "招"
-        } else {
-            false
+    fn try_process_summon_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
+        // 招妖精パターンのみをチェック
+        let summon_position = tokens.iter().rposition(|t| {
+            if let Token::Symbol(s) = t {
+                s == "招"
+            } else {
+                false
+            }
+        })?;
+        
+        if summon_position >= 1 {
+            if let Token::String(name) = &tokens[summon_position - 1] {
+                let body_tokens = &tokens[..summon_position - 1];
+                
+                return Some(self.define_word_with_description(
+                    name.clone(),
+                    body_tokens.to_vec(),
+                    None
+                ));
+            }
         }
-    })?;
-    
-    if summon_position >= 1 {
-        if let Token::String(name) = &tokens[summon_position - 1] {
-            let body_tokens = &tokens[..summon_position - 1];
-            
-            return Some(self.define_word_direct_tokens(
-                name.clone(),
-                body_tokens.to_vec()
-            ));
-        }
+        
+        None
     }
-    
-    None
-}
 
     fn define_word_with_description(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
         let name = name.to_uppercase();
@@ -181,7 +182,7 @@ impl Interpreter {
         // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot redefine builtin librarian: {}", name)));
+                return Err(error::AjisaiError::from(format!("Cannot redefine builtin fairy: {}", name)));
             }
         }
 
@@ -229,16 +230,16 @@ impl Interpreter {
             category: None,
         });
 
-        self.append_output(&format!("Hired librarian: {}\n", name));
+        self.append_output(&format!("Summoned fairy: {}\n", name));
         Ok(())
     }
 
     // ベクトルリテラルから実行可能なトークンを抽出するメソッド（修正版）
-fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-    // ベクトルリテラルはそのまま保持する
-    // 内部のトークンに展開しない
-    Ok(tokens.to_vec())
-}
+    fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+        // ベクトルリテラルはそのまま保持する
+        // 内部のトークンに展開しない
+        Ok(tokens.to_vec())
+    }
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
@@ -293,37 +294,37 @@ fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
     }
 
     fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
-    let mut values = Vec::new();
-    let mut i = start + 1; // VectorStart の次から
-    
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::VectorStart => {
-                // ネストしたVectorを再帰的に処理
-                let (nested_values, consumed) = self.collect_vector(tokens, i)?;
-                values.push(Value {
-                    val_type: ValueType::Vector(nested_values),
-                });
-                i += consumed;
-            },
-            Token::VectorEnd => {
-                // このVectorの終了
-                return Ok((values, i - start + 1));
-            },
-            Token::ParenComment(_) => {
-                // コメントは無視
-                i += 1;
-            },
-            token => {
-                // 通常の値をVector内に追加
-                values.push(self.token_to_value(token)?);
-                i += 1;
+        let mut values = Vec::new();
+        let mut i = start + 1; // VectorStart の次から
+        
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::VectorStart => {
+                    // ネストしたVectorを再帰的に処理
+                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                    values.push(Value {
+                        val_type: ValueType::Vector(nested_values),
+                    });
+                    i += consumed;
+                },
+                Token::VectorEnd => {
+                    // このVectorの終了
+                    return Ok((values, i - start + 1));
+                },
+                Token::ParenComment(_) => {
+                    // コメントは無視
+                    i += 1;
+                },
+                token => {
+                    // 通常の値をVector内に追加
+                    values.push(self.token_to_value(token)?);
+                    i += 1;
+                }
             }
         }
+        
+        Err(error::AjisaiError::from("Unclosed vector"))
     }
-    
-    Err(error::AjisaiError::from("Unclosed vector"))
-}
 
     fn token_to_value(&self, token: &Token) -> Result<Value> {
         match token {
@@ -441,96 +442,97 @@ fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
     }
 
     fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-    let mut i = 0;
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::Number(num, den) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                });
-                i += 1;
-            },
-            Token::String(s) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::String(s.clone()),
-                });
-                i += 1;
-            },
-            Token::Boolean(b) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Boolean(*b),
-                });
-                i += 1;
-            },
-            Token::Nil => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Nil,
-                });
-                i += 1;
-            },
-            Token::ParenComment(_) => {
-                // カスタムワード内のコメントは無視
-                i += 1;
-            },
-            Token::Symbol(name) => {
-                self.execute_word(name)?;
-                i += 1;
-            },
-            Token::VectorStart => {
-                // ベクトルを収集して実行
-                let (vector_values, consumed) = self.collect_vector(tokens, i)?;
-                self.workspace.push(Value {
-                    val_type: ValueType::Vector(vector_values),
-                });
-                i += consumed;
-            },
-            Token::VectorEnd => {
-                return Err(error::AjisaiError::from("Unexpected vector end"));
-            },
+        let mut i = 0;
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::Number(num, den) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                    });
+                    i += 1;
+                },
+                Token::String(s) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::String(s.clone()),
+                    });
+                    i += 1;
+                },
+                Token::Boolean(b) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Boolean(*b),
+                    });
+                    i += 1;
+                },
+                Token::Nil => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Nil,
+                    });
+                    i += 1;
+                },
+                Token::ParenComment(_) => {
+                    // カスタムワード内のコメントは無視
+                    i += 1;
+                },
+                Token::Symbol(name) => {
+                    self.execute_word(name)?;
+                    i += 1;
+                },
+                Token::VectorStart => {
+                    // ベクトルを収集して実行
+                    let (vector_values, consumed) = self.collect_vector(tokens, i)?;
+                    self.workspace.push(Value {
+                        val_type: ValueType::Vector(vector_values),
+                    });
+                    i += consumed;
+                },
+                Token::VectorEnd => {
+                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                },
+            }
+        }
+        
+        Ok(())
+    }
+
+    fn execute_builtin(&mut self, name: &str) -> Result<()> {
+        match name {
+            // 算術・論理演算妖精
+            "+" => arithmetic::op_add(self),
+            "/" => arithmetic::op_div(self),
+            "*" => arithmetic::op_mul(self),
+            "-" => arithmetic::op_sub(self),
+            "=" => arithmetic::op_eq(self),
+            ">=" => arithmetic::op_ge(self),
+            ">" => arithmetic::op_gt(self),
+            "AND" => arithmetic::op_and(self),
+            "OR" => arithmetic::op_or(self),
+            "NOT" => arithmetic::op_not(self),
+            
+            // 位置指定操作妖精（0オリジン）
+            "摘" => vector_ops::op_get(self),
+            "挿" => vector_ops::op_insert(self),
+            "換" => vector_ops::op_replace(self),
+            "削" => vector_ops::op_remove(self),
+            
+            // 量指定操作妖精（1オリジン）
+            "数" => vector_ops::op_length(self),
+            "取" => vector_ops::op_take(self),
+            "捨" => vector_ops::op_drop(self),
+            "重" => vector_ops::op_repeat(self),
+            "分" => vector_ops::op_split(self),
+            
+            // Vector操作妖精
+            "結" => vector_ops::op_concat(self),
+            "跳" => control::op_jump(self),
+            
+            // 妖精管理妖精
+            "招" => control::op_summon(self),
+            "払" => control::op_dismiss(self),
+            
+            _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
     }
-    
-    Ok(())
-}
 
-fn execute_builtin(&mut self, name: &str) -> Result<()> {
-    match name {
-        // 算術・論理演算妖精
-        "+" => arithmetic::op_add(self),
-        "/" => arithmetic::op_div(self),
-        "*" => arithmetic::op_mul(self),
-        "-" => arithmetic::op_sub(self),
-        "=" => arithmetic::op_eq(self),
-        ">=" => arithmetic::op_ge(self),
-        ">" => arithmetic::op_gt(self),
-        "AND" => arithmetic::op_and(self),
-        "OR" => arithmetic::op_or(self),
-        "NOT" => arithmetic::op_not(self),
-        
-        // 位置指定操作妖精（0オリジン）
-        "摘" => vector_ops::op_get(self),
-        "挿" => vector_ops::op_insert(self),
-        "換" => vector_ops::op_replace(self),
-        "削" => vector_ops::op_remove(self),
-        
-        // 量指定操作妖精（1オリジン）
-        "数" => vector_ops::op_length(self),
-        "取" => vector_ops::op_take(self),
-        "捨" => vector_ops::op_drop(self),
-        "重" => vector_ops::op_repeat(self),
-        "分" => vector_ops::op_split(self),
-        
-        // Vector操作妖精
-        "結" => vector_ops::op_concat(self),
-        "跳" => control::op_jump(self),
-        
-        // 妖精管理妖精
-        "招" => control::op_summon(self),
-        "払" => control::op_dismiss(self),
-        
-        _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
-    }
-}
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
         self.output_buffer.clear();
