@@ -19,11 +19,16 @@ pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
     };
 
     let tokens = match code_val.val_type {
-        ValueType::Vector(v) => {
-            interp.vector_to_tokens(v)?
-        },
-        _ => return Err(AjisaiError::from("招 requires vector")),
-    };
+    ValueType::Vector(v) => {
+        let mut tokens = vec![Token::VectorStart];
+        for value in v {
+            tokens.push(interp.value_to_token(value)?);
+        }
+        tokens.push(Token::VectorEnd);
+        tokens
+    },
+    _ => return Err(AjisaiError::from("招 requires vector")),
+};
 
     // 既存のワードチェック
     if let Some(existing) = interp.dictionary.get(&name) {
