@@ -1,4 +1,4 @@
-// js/gui/dictionary.ts (間隔調整版)
+// js/gui/dictionary.ts (英語ワード対応)
 
 interface WordInfo {
     name: string;
@@ -27,7 +27,7 @@ export class Dictionary {
             // 順序保持版の組み込みワード情報を取得
             const builtinWords = window.ajisaiInterpreter.get_builtin_words_info();
             
-            // グループ別に表示（間隔調整版）
+            // グループ別に表示
             this.renderBuiltinWordsWithGroups(this.elements.builtinWordsDisplay, builtinWords);
         } catch (error) {
             console.error('Failed to render builtin words:', error);
@@ -35,42 +35,42 @@ export class Dictionary {
     }
 
     private renderBuiltinWordsWithGroups(container: HTMLElement, builtinWords: any[]): void {
-    container.innerHTML = '';
-    
-    // 新しい一文字漢字ワード体系に対応したグループ分け
-    const arithmeticWords = ['+', '/', '*', '-', '=', '>=', '>', 'AND', 'OR', 'NOT'];
-    const fairyOpsWords = ['摘', '数', '挿', '換', '削', '取', '捨', '重', '分', '結', '跳'];  // 取・捨を追加！
-    const managementWords = ['招', '払'];
-    
-    const groups = [arithmeticWords, fairyOpsWords, managementWords];
-    
-    groups.forEach((group, groupIndex) => {
-        // 各グループのワードを直接追加（divコンテナなし）
-        group.forEach(wordName => {
-            const wordData = builtinWords.find((item: any[]) => item[0] === wordName);
-            if (wordData) {
-                const button = document.createElement('button');
-                button.textContent = wordData[0];
-                button.className = 'word-button builtin';
-                button.title = wordData[1] || wordData[0];
-                
-                button.addEventListener('click', () => {
-                    if (this.onWordClick) {
-                        this.onWordClick(wordData[0]);
-                    }
-                });
-                
-                container.appendChild(button);
+        container.innerHTML = '';
+        
+        // 英語ワード体系に対応したグループ分け
+        const arithmeticWords = ['+', '/', '*', '-', '=', '>=', '>', 'AND', 'OR', 'NOT'];
+        const vectorOpsWords = ['NTH', 'INSERT', 'REPLACE', 'REMOVE', 'LENGTH', 'TAKE', 'DROP', 'REPEAT', 'SPLIT', 'CONCAT'];
+        const controlWords = ['JUMP', 'DEF', 'DEL', 'EVAL'];
+        
+        const groups = [arithmeticWords, vectorOpsWords, controlWords];
+        
+        groups.forEach((group, groupIndex) => {
+            // 各グループのワードを直接追加
+            group.forEach(wordName => {
+                const wordData = builtinWords.find((item: any[]) => item[0] === wordName);
+                if (wordData) {
+                    const button = document.createElement('button');
+                    button.textContent = wordData[0];
+                    button.className = 'word-button builtin';
+                    button.title = wordData[1] || wordData[0];
+                    
+                    button.addEventListener('click', () => {
+                        if (this.onWordClick) {
+                            this.onWordClick(wordData[0]);
+                        }
+                    });
+                    
+                    container.appendChild(button);
+                }
+            });
+            
+            // 最後のグループ以外は改行のみ追加
+            if (groupIndex < groups.length - 1) {
+                const lineBreak = document.createElement('br');
+                container.appendChild(lineBreak);
             }
         });
-        
-        // 最後のグループ以外は改行のみ追加
-        if (groupIndex < groups.length - 1) {
-            const lineBreak = document.createElement('br');
-            container.appendChild(lineBreak);
-        }
-    });
-}
+    }
 
     updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
         const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
