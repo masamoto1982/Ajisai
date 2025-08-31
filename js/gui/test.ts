@@ -1,4 +1,4 @@
-// js/gui/test.ts (新しいワード体系対応)
+// js/gui/test.ts (英語ワード対応)
 
 interface TestCase {
     name: string;
@@ -28,7 +28,7 @@ export class TestRunner {
         let totalPassed = 0;
         let totalFailed = 0;
 
-        this.showColoredInfo('Ajisai New File System Tests Starting...', 'info');
+        this.showColoredInfo('Ajisai English Word System Tests Starting...', 'info');
         this.showColoredInfo(`Total: ${testCases.length} tests across ${categories.length} categories\n`, 'info');
 
         for (const category of categories) {
@@ -70,7 +70,7 @@ export class TestRunner {
             this.showColoredInfo(`Total Failed: ${totalFailed}`, 'error');
             this.showColoredInfo('Review needed.', 'error');
         } else {
-            this.showColoredInfo('All tests passed! File-based vector operations working perfectly.', 'success');
+            this.showColoredInfo('All tests passed! English word system working perfectly.', 'success');
         }
 
         this.scrollToBottom();
@@ -183,9 +183,9 @@ export class TestRunner {
 
     private getTestCases(): TestCase[] {
         return [
-            // ========== ファイル/ページ基本操作 ==========
+            // ========== 基本ベクトル操作 ==========
             {
-                name: "ファイル作成",
+                name: "ベクトル作成",
                 code: "[ 1 2 3 4 5 ]",
                 expectedWorkspace: [{
                     type: 'vector',
@@ -197,23 +197,23 @@ export class TestRunner {
                         { type: 'number', value: { numerator: 5, denominator: 1 } }
                     ]
                 }],
-                category: "File Operations"
+                category: "Vector Operations"
             },
             {
-                name: "3ページ目を見る",
-                code: "[ 1 2 3 4 5 ] 2 頁 取得",
+                name: "位置指定取得（0オリジン）",
+                code: "[ 1 2 3 4 5 ] 2 NTH",
                 expectedWorkspace: [{ type: 'number', value: { numerator: 3, denominator: 1 } }],
-                category: "Page Access"
+                category: "Position Access"
             },
             {
-                name: "ページ数を数える",
-                code: "[ 1 2 3 4 5 ] 頁数 取得",
+                name: "ベクトル長取得",
+                code: "[ 1 2 3 4 5 ] LENGTH",
                 expectedWorkspace: [{ type: 'number', value: { numerator: 5, denominator: 1 } }],
-                category: "Page Count"
+                category: "Vector Info"
             },
             {
-                name: "2ページ目に新しいページを挿入",
-                code: "[ 1 2 3 4 5 ] 1 頁 9 挿入",
+                name: "要素挿入",
+                code: "[ 1 2 3 4 5 ] 1 9 INSERT",
                 expectedWorkspace: [{
                     type: 'vector',
                     value: [
@@ -225,46 +225,40 @@ export class TestRunner {
                         { type: 'number', value: { numerator: 5, denominator: 1 } }
                     ]
                 }],
-                category: "Page Modification"
+                category: "Vector Modification"
             },
             {
-                name: "2ページ目を置き換える",
-                code: "[ 1 2 3 4 5 ] 1 頁 9 置換",
-                expectedWorkspace: [
-                    {
-                        type: 'vector',
-                        value: [
-                            { type: 'number', value: { numerator: 1, denominator: 1 } },
-                            { type: 'number', value: { numerator: 9, denominator: 1 } },
-                            { type: 'number', value: { numerator: 3, denominator: 1 } },
-                            { type: 'number', value: { numerator: 4, denominator: 1 } },
-                            { type: 'number', value: { numerator: 5, denominator: 1 } }
-                        ]
-                    },
-                    { type: 'number', value: { numerator: 2, denominator: 1 } }
-                ],
-                category: "Page Modification"
+                name: "要素置換",
+                code: "[ 1 2 3 4 5 ] 1 9 REPLACE",
+                expectedWorkspace: [{
+                    type: 'vector',
+                    value: [
+                        { type: 'number', value: { numerator: 1, denominator: 1 } },
+                        { type: 'number', value: { numerator: 9, denominator: 1 } },
+                        { type: 'number', value: { numerator: 3, denominator: 1 } },
+                        { type: 'number', value: { numerator: 4, denominator: 1 } },
+                        { type: 'number', value: { numerator: 5, denominator: 1 } }
+                    ]
+                }],
+                category: "Vector Modification"
             },
             {
-                name: "2ページ目を削除する",
-                code: "[ 1 2 3 4 5 ] 1 頁 削除",
-                expectedWorkspace: [
-                    {
-                        type: 'vector',
-                        value: [
-                            { type: 'number', value: { numerator: 1, denominator: 1 } },
-                            { type: 'number', value: { numerator: 3, denominator: 1 } },
-                            { type: 'number', value: { numerator: 4, denominator: 1 } },
-                            { type: 'number', value: { numerator: 5, denominator: 1 } }
-                        ]
-                    },
-                    { type: 'number', value: { numerator: 2, denominator: 1 } }
-                ],
-                category: "Page Modification"
+                name: "要素削除",
+                code: "[ 1 2 3 4 5 ] 1 REMOVE",
+                expectedWorkspace: [{
+                    type: 'vector',
+                    value: [
+                        { type: 'number', value: { numerator: 1, denominator: 1 } },
+                        { type: 'number', value: { numerator: 3, denominator: 1 } },
+                        { type: 'number', value: { numerator: 4, denominator: 1 } },
+                        { type: 'number', value: { numerator: 5, denominator: 1 } }
+                    ]
+                }],
+                category: "Vector Modification"
             },
             {
-                name: "2つのファイルを合併する",
-                code: "[ 1 2 3 ] [ 4 5 ] 合併",
+                name: "ベクトル結合",
+                code: "[ 1 2 3 ] [ 4 5 ] CONCAT",
                 expectedWorkspace: [{
                     type: 'vector',
                     value: [
@@ -275,55 +269,41 @@ export class TestRunner {
                         { type: 'number', value: { numerator: 5, denominator: 1 } }
                     ]
                 }],
-                category: "File Operations"
+                category: "Vector Operations"
+            },
+
+            // ========== EVAL テスト ==========
+            {
+                name: "単純なEVAL",
+                code: "[ 1 2 + ] EVAL",
+                expectedWorkspace: [{ type: 'number', value: { numerator: 3, denominator: 1 } }],
+                category: "EVAL"
             },
             {
-                name: "ファイルを2ページ目で分離する",
-                code: "[ 1 2 3 4 5 ] 2 頁 分離",
-                expectedWorkspace: [
-                    {
-                        type: 'vector',
-                        value: [
-                            { type: 'number', value: { numerator: 1, denominator: 1 } },
-                            { type: 'number', value: { numerator: 2, denominator: 1 } }
-                        ]
-                    },
-                    {
-                        type: 'vector',
-                        value: [
-                            { type: 'number', value: { numerator: 3, denominator: 1 } },
-                            { type: 'number', value: { numerator: 4, denominator: 1 } },
-                            { type: 'number', value: { numerator: 5, denominator: 1 } }
-                        ]
-                    }
-                ],
-                category: "File Operations"
+                name: "複雑なEVAL",
+                code: "[ [ 1 2 3 ] 1 NTH 5 + ] EVAL",
+                expectedWorkspace: [{ type: 'number', value: { numerator: 7, denominator: 1 } }],
+                category: "EVAL"
             },
 
             // ========== カスタムワード定義 ==========
             {
-                name: "ファイル複製ワード定義",
-                code: "[ 0 頁 取得 ] \"ファイル先頭\" DEF [ 1 2 3 ] ファイル先頭",
-                expectedWorkspace: [{ type: 'number', value: { numerator: 1, denominator: 1 } }],
+                name: "カスタムワード定義と実行",
+                code: "[ 1 2 + ] \"ADD_ONE_TWO\" DEF ADD_ONE_TWO",
+                expectedWorkspace: [{ type: 'number', value: { numerator: 3, denominator: 1 } }],
                 category: "Custom Words"
             },
 
             // ========== エラーケース ==========
             {
-                name: "存在しないページアクセス",
-                code: "[ 1 2 3 ] 10 頁 取得",
+                name: "存在しない位置アクセス",
+                code: "[ 1 2 3 ] 10 NTH",
                 expectError: true,
                 category: "Error Cases"
             },
             {
-                name: "空ファイルページアクセス",
-                code: "[ ] 0 頁 取得",
-                expectError: true,
-                category: "Error Cases"
-            },
-            {
-                name: "不十分なパラメータ（挿入）",
-                code: "[ 1 2 3 ] 挿入",
+                name: "空ベクトルアクセス",
+                code: "[ ] 0 NTH",
                 expectError: true,
                 category: "Error Cases"
             }
