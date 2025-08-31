@@ -1,13 +1,27 @@
-// rust/src/interpreter/control.rs (完全版・修正済み)
+// rust/src/interpreter/control.rs (英語ワード + EVAL対応)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token};
 
-// 招妖精 - 新しい妖精を招き寄せる（DEF相当）
-// 注意：mod.rsでの特別処理により、説明付き招待は事前に処理される
-pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
+// EVAL - ベクトル内のコードを実行する
+pub fn op_eval(interp: &mut Interpreter) -> Result<()> {
+    let code_val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    match code_val.val_type {
+        ValueType::Vector(code_vec) => {
+            let tokens = interp.vector_to_tokens(code_vec)?;
+            interp.execute_tokens(&tokens)?;
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// DEF - 新しいワードを定義する
+pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
-        return Err(AjisaiError::from("招 requires vector and name"));
+        return Err(AjisaiError::from("DEF requires vector and name"));
     }
 
     let name_val = interp.workspace.pop().unwrap();
@@ -15,7 +29,7 @@ pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
 
     let name = match name_val.val_type {
         ValueType::String(s) => s.to_uppercase(),
-        _ => return Err(AjisaiError::from("招 requires string name")),
+        _ => return Err(AjisaiError::from("DEF requires string name")),
     };
 
     let tokens = match code_val.val_type {
@@ -28,17 +42,17 @@ pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
             tokens.push(Token::VectorEnd);
             tokens
         },
-        _ => return Err(AjisaiError::from("招 requires vector")),
+        _ => return Err(AjisaiError::from("DEF requires vector")),
     };
 
     // 既存のワードチェック
     if let Some(existing) = interp.dictionary.get(&name) {
         if existing.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot redefine builtin fairy: {}", name)));
+            return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
         }
     }
 
-    // 依存関係チェック（保護された妖精の確認）
+    // 依存関係チェック（保護されたワードの確認）
     if interp.dictionary.contains_key(&name) {
         if let Some(dependents) = interp.dependencies.get(&name) {
             if !dependents.is_empty() {
@@ -71,79 +85,20 @@ pub fn op_summon(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    // ワード定義を登録（説明なしの従来版）
+    // ワード定義を登録
     interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
         tokens,
         is_builtin: false,
-        description: None,  // 従来の招待では説明なし
+        description: None,
         category: None,
     });
 
-    interp.append_output(&format!("Summoned fairy: {}\n", name));
+    interp.append_output(&format!("Defined word: {}\n", name));
     Ok(())
 }
 
-// 説明付き招待妖精 - mod.rsから呼び出される内部用関数
-pub fn op_summon_with_description(interp: &mut Interpreter, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
-    let name = name.to_uppercase();
-    
-    // 既存のワードチェック
-    if let Some(existing) = interp.dictionary.get(&name) {
-        if existing.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot redefine builtin fairy: {}", name)));
-        }
-    }
-
-    // 依存関係チェック
-    if interp.dictionary.contains_key(&name) {
-        if let Some(dependents) = interp.dependencies.get(&name) {
-            if !dependents.is_empty() {
-                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                return Err(AjisaiError::ProtectedWord { 
-                    name: name.clone(), 
-                    dependents: dependent_list 
-                });
-            }
-        }
-    }
-
-    // 古い依存関係をクリア
-    if let Some(old_deps) = interp.get_word_dependencies(&name) {
-        for dep in old_deps {
-            if let Some(reverse_deps) = interp.dependencies.get_mut(&dep) {
-                reverse_deps.remove(&name);
-            }
-        }
-    }
-
-    // 新しい依存関係を登録
-    for token in &tokens {
-        if let Token::Symbol(sym) = token {
-            if interp.dictionary.contains_key(sym) && !interp.is_builtin_word(sym) {
-                interp.dependencies.entry(sym.clone())
-                    .or_insert_with(std::collections::HashSet::new)
-                    .insert(name.clone());
-            }
-        }
-    }
-
-    // 説明情報を先に取得（descriptionを移動する前に）
-    let desc_info = if description.is_some() { " with description" } else { "" };
-
-    // ワード定義を登録（説明付き）
-    interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
-        tokens,
-        is_builtin: false,
-        description,  // 説明を設定
-        category: None,
-    });
-
-    interp.append_output(&format!("Summoned fairy: {}{}\n", name, desc_info));
-    Ok(())
-}
-
-// 払妖精 - 妖精を払い除ける（DEL相当）
-pub fn op_dismiss(interp: &mut Interpreter) -> Result<()> {
+// DEL - ワードを削除する
+pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
@@ -151,16 +106,16 @@ pub fn op_dismiss(interp: &mut Interpreter) -> Result<()> {
         ValueType::String(name) => {
             let name = name.to_uppercase();
             
-            // 組み込み妖精の保護
+            // 組み込みワードの保護
             if let Some(def) = interp.dictionary.get(&name) {
                 if def.is_builtin {
-                    return Err(AjisaiError::from(format!("Cannot dismiss builtin fairy: {}", name)));
+                    return Err(AjisaiError::from(format!("Cannot delete builtin word: {}", name)));
                 }
             } else {
-                return Err(AjisaiError::from(format!("Fairy '{}' not found", name)));
+                return Err(AjisaiError::from(format!("Word '{}' not found", name)));
             }
             
-            // 依存関係チェック（他の妖精から使用されていないか確認）
+            // 依存関係チェック（他のワードから使用されていないか確認）
             if let Some(dependents) = interp.dependencies.get(&name) {
                 if !dependents.is_empty() {
                     let dependent_list: Vec<String> = dependents.iter().cloned().collect();
@@ -182,14 +137,14 @@ pub fn op_dismiss(interp: &mut Interpreter) -> Result<()> {
                 deps.remove(&name);
             }
             
-            interp.append_output(&format!("Dismissed fairy: {}\n", name));
+            interp.append_output(&format!("Deleted word: {}\n", name));
             Ok(())
         },
         _ => Err(AjisaiError::type_error("string", "other type")),
     }
 }
 
-// 跳妖精 - 妖精交代（条件付きGOTO相当） 
+// JUMP - 条件付き分岐（GOTO相当） 
 pub fn op_jump(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -210,10 +165,10 @@ pub fn op_jump(interp: &mut Interpreter) -> Result<()> {
     let target = if should_jump { if_target } else { else_target };
     
     match target.val_type {
-        ValueType::String(fairy_name) => {
+        ValueType::String(word_name) => {
             // 同一ワード内制限でワード実行
             let current_word = interp.call_stack.last().cloned();
-            interp.execute_word_leap(&fairy_name, current_word.as_deref())?;
+            interp.execute_word_leap(&word_name, current_word.as_deref())?;
             Ok(())
         },
         ValueType::Vector(code_vec) => {
@@ -226,7 +181,7 @@ pub fn op_jump(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 条件付き実行妖精 - 条件が真の場合のみ実行
+// 条件付き実行 - 条件が真の場合のみ実行
 pub fn op_when(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -263,7 +218,7 @@ pub fn op_when(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// デフォルト値設定妖精 - nil の場合にデフォルト値を使用
+// デフォルト値設定 - nil の場合にデフォルト値を使用
 pub fn op_default(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -280,7 +235,7 @@ pub fn op_default(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// NIL判定妖精
+// NIL判定
 pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
@@ -292,7 +247,7 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// NOT-NIL判定妖精（KNOWN?と同等）
+// NOT-NIL判定（KNOWN?と同等）
 pub fn op_not_nil_check(interp: &mut Interpreter) -> Result<()> {
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
