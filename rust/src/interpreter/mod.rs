@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全版・招妖精統一版)
+// rust/src/interpreter/mod.rs (英語ワード対応)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -142,28 +142,28 @@ impl Interpreter {
             return Ok(());
         }
 
-        // 招妖精パターンのチェック
-        if let Some(summon_result) = self.try_process_summon_pattern(&tokens) {
-            return summon_result;
+        // DEFパターンのチェック
+        if let Some(def_result) = self.try_process_def_pattern(&tokens) {
+            return def_result;
         }
 
         // 通常のトークン実行
         self.execute_tokens(&tokens)
     }
 
-    fn try_process_summon_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
-        // 招妖精パターンのみをチェック
-        let summon_position = tokens.iter().rposition(|t| {
+    fn try_process_def_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
+        // DEFパターンのみをチェック
+        let def_position = tokens.iter().rposition(|t| {
             if let Token::Symbol(s) = t {
-                s == "招"
+                s == "DEF"
             } else {
                 false
             }
         })?;
         
-        if summon_position >= 1 {
-            if let Token::String(name) = &tokens[summon_position - 1] {
-                let body_tokens = &tokens[..summon_position - 1];
+        if def_position >= 1 {
+            if let Token::String(name) = &tokens[def_position - 1] {
+                let body_tokens = &tokens[..def_position - 1];
                 
                 return Some(self.define_word_with_description(
                     name.clone(),
@@ -182,7 +182,7 @@ impl Interpreter {
         // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot redefine builtin fairy: {}", name)));
+                return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
 
@@ -230,7 +230,7 @@ impl Interpreter {
             category: None,
         });
 
-        self.append_output(&format!("Summoned fairy: {}\n", name));
+        self.append_output(&format!("Defined word: {}\n", name));
         Ok(())
     }
 
@@ -419,20 +419,20 @@ impl Interpreter {
         if let Some(current) = current_word {
             if name != current {
                 return Err(error::AjisaiError::from(format!(
-                    "Librarian handover can only jump within the same department. Cannot jump from '{}' to '{}'", 
+                    "JUMP can only jump within the same word. Cannot jump from '{}' to '{}'", 
                     current, name
                 )));
             }
         } else {
             return Err(error::AjisaiError::from(format!(
-                "Librarian handover can only be used within custom departments. Cannot jump to '{}' from main program", 
+                "JUMP can only be used within custom words. Cannot jump to '{}' from main program", 
                 name
             )));
         }
 
         if let Some(def) = self.dictionary.get(name).cloned() {
             if def.is_builtin {
-                return Err(error::AjisaiError::from("Cannot handover to builtin librarian"));
+                return Err(error::AjisaiError::from("Cannot jump to builtin word"));
             } else {
                 self.execute_custom_word(&def.tokens)
             }
@@ -496,7 +496,7 @@ impl Interpreter {
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // 算術・論理演算妖精
+            // 算術・論理演算
             "+" => arithmetic::op_add(self),
             "/" => arithmetic::op_div(self),
             "*" => arithmetic::op_mul(self),
@@ -508,26 +508,27 @@ impl Interpreter {
             "OR" => arithmetic::op_or(self),
             "NOT" => arithmetic::op_not(self),
             
-            // 位置指定操作妖精（0オリジン）
-            "摘" => vector_ops::op_get(self),
-            "挿" => vector_ops::op_insert(self),
-            "換" => vector_ops::op_replace(self),
-            "削" => vector_ops::op_remove(self),
+            // 位置指定操作（0オリジン）
+            "NTH" => vector_ops::op_get(self),
+            "INSERT" => vector_ops::op_insert(self),
+            "REPLACE" => vector_ops::op_replace(self),
+            "REMOVE" => vector_ops::op_remove(self),
             
-            // 量指定操作妖精（1オリジン）
-            "数" => vector_ops::op_length(self),
-            "取" => vector_ops::op_take(self),
-            "捨" => vector_ops::op_drop(self),
-            "重" => vector_ops::op_repeat(self),
-            "分" => vector_ops::op_split(self),
+            // 量指定操作（1オリジン）
+            "LENGTH" => vector_ops::op_length(self),
+            "TAKE" => vector_ops::op_take(self),
+            "DROP" => vector_ops::op_drop(self),
+            "REPEAT" => vector_ops::op_repeat(self),
+            "SPLIT" => vector_ops::op_split(self),
             
-            // Vector操作妖精
-            "結" => vector_ops::op_concat(self),
-            "跳" => control::op_jump(self),
+            // Vector操作
+            "CONCAT" => vector_ops::op_concat(self),
+            "JUMP" => control::op_jump(self),
             
-            // 妖精管理妖精
-            "招" => control::op_summon(self),
-            "払" => control::op_dismiss(self),
+            // ワード管理
+            "DEF" => control::op_def(self),
+            "DEL" => control::op_del(self),
+            "EVAL" => control::op_eval(self),
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
