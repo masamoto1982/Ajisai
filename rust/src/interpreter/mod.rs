@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (英語ワード対応)
+// rust/src/interpreter/mod.rs (完全修正版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -401,89 +401,117 @@ impl Interpreter {
     }
 
     fn execute_word(&mut self, name: &str) -> Result<()> {
-    if let Some(def) = self.dictionary.get(name).cloned() {
-        if def.is_builtin {
-            self.execute_builtin(name)
+        if let Some(def) = self.dictionary.get(name).cloned() {
+            if def.is_builtin {
+                self.execute_builtin(name)
+            } else {
+                // カスタムワードは即座実行（EVALなしで）
+                self.call_stack.push(name.to_string());
+                let result = self.execute_custom_word_immediate(&def.tokens);
+                self.call_stack.pop();
+                result.map_err(|e| e.with_context(&self.call_stack))
+            }
         } else {
-            // カスタムワードは即座実行（EVALなしで）
-            self.call_stack.push(name.to_string());
-            let result = self.execute_custom_word_immediate(&def.tokens);
-            self.call_stack.pop();
-            result.map_err(|e| e.with_context(&self.call_stack))
-        }
-    } else {
-        Err(error::AjisaiError::UnknownWord(name.to_string()))
-    }
-}
-
-fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
-    // ベクトル記号を除いて中身を実行
-    if tokens.len() >= 2 && 
-       tokens.first() == Some(&Token::VectorStart) && 
-       tokens.last() == Some(&Token::VectorEnd) {
-        // [ 内容 ] → 内容を直接実行
-        let inner_tokens = &tokens[1..tokens.len()-1];
-        self.execute_tokens(inner_tokens)
-    } else {
-        // 通常のトークン列をそのまま実行
-        self.execute_tokens(tokens)
-    }
-}
-
-// 既存のexecute_custom_wordは残す（必要に応じて）
-fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-    // 従来の方式（ベクトルとしてプッシュ）- 内部用
-    let mut i = 0;
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::Number(num, den) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                });
-                i += 1;
-            },
-            Token::String(s) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::String(s.clone()),
-                });
-                i += 1;
-            },
-            Token::Boolean(b) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Boolean(*b),
-                });
-                i += 1;
-            },
-            Token::Nil => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Nil,
-                });
-                i += 1;
-            },
-            Token::ParenComment(_) => {
-                // カスタムワード内のコメントは無視
-                i += 1;
-            },
-            Token::Symbol(name) => {
-                self.execute_word(name)?;
-                i += 1;
-            },
-            Token::VectorStart => {
-                // ベクトルを収集してワークスペースにプッシュ
-                let (vector_values, consumed) = self.collect_vector(tokens, i)?;
-                self.workspace.push(Value {
-                    val_type: ValueType::Vector(vector_values),
-                });
-                i += consumed;
-            },
-            Token::VectorEnd => {
-                return Err(error::AjisaiError::from("Unexpected vector end"));
-            },
+            Err(error::AjisaiError::UnknownWord(name.to_string()))
         }
     }
-    
-    Ok(())
-}
+
+    fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
+        // ベクトル記号を除いて中身を実行
+        if tokens.len() >= 2 && 
+           tokens.first() == Some(&Token::VectorStart) && 
+           tokens.last() == Some(&Token::VectorEnd) {
+            // [ 内容 ] → 内容を直接実行
+            let inner_tokens = &tokens[1..tokens.len()-1];
+            self.execute_tokens(inner_tokens)
+        } else {
+            // 通常のトークン列をそのまま実行
+            self.execute_tokens(tokens)
+        }
+    }
+
+    // JUMP用のメソッド（追加）
+    pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
+        if let Some(current) = current_word {
+            if name != current {
+                return Err(error::AjisaiError::from(format!(
+                    "JUMP can only jump within the same word. Cannot jump from '{}' to '{}'", 
+                    current, name
+                )));
+            }
+        } else {
+            return Err(error::AjisaiError::from(format!(
+                "JUMP can only be used within custom words. Cannot jump to '{}' from main program", 
+                name
+            )));
+        }
+
+        if let Some(def) = self.dictionary.get(name).cloned() {
+            if def.is_builtin {
+                return Err(error::AjisaiError::from("Cannot jump to builtin word"));
+            } else {
+                // カスタムワードを即座実行
+                self.execute_custom_word_immediate(&def.tokens)
+            }
+        } else {
+            Err(error::AjisaiError::UnknownWord(name.to_string()))
+        }
+    }
+
+    // 既存のexecute_custom_wordは内部用として残す
+    fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
+        let mut i = 0;
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::Number(num, den) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                    });
+                    i += 1;
+                },
+                Token::String(s) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::String(s.clone()),
+                    });
+                    i += 1;
+                },
+                Token::Boolean(b) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Boolean(*b),
+                    });
+                    i += 1;
+                },
+                Token::Nil => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Nil,
+                    });
+                    i += 1;
+                },
+                Token::ParenComment(_) => {
+                    // カスタムワード内のコメントは無視
+                    i += 1;
+                },
+                Token::Symbol(name) => {
+                    self.execute_word(name)?;
+                    i += 1;
+                },
+                Token::VectorStart => {
+                    // ベクトルを収集してワークスペースにプッシュ
+                    let (vector_values, consumed) = self.collect_vector(tokens, i)?;
+                    self.workspace.push(Value {
+                        val_type: ValueType::Vector(vector_values),
+                    });
+                    i += consumed;
+                },
+                Token::VectorEnd => {
+                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                },
+            }
+        }
+        
+        Ok(())
+    }
+
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
             // 算術・論理演算
