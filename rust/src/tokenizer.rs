@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (冊・冊数対応完全版)
+// rust/src/tokenizer.rs (漢字ワード削除版)
 
 use crate::types::Token;
 use std::collections::HashSet;
@@ -67,13 +67,6 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         
         // カスタムワードチェック（最優先）
         if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
-            tokens.push(token);
-            i += consumed;
-            continue;
-        }
-
-        // 新しい組み込み漢字ワード解析
-        if let Some((token, consumed)) = try_parse_builtin_kanji(&chars[i..]) {
             tokens.push(token);
             i += consumed;
             continue;
@@ -315,40 +308,13 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
     }
 }
 
-fn try_parse_builtin_kanji(chars: &[char]) -> Option<(Token, usize)> {
-    if !chars.is_empty() {
-        let one_char = chars[0];
-        let one_char_str = one_char.to_string();
-        
-        match one_char_str.as_str() {
-            // 位置指定操作妖精（0オリジン）
-            "摘" => Some((Token::Symbol("摘".to_string()), 1)),
-            "挿" => Some((Token::Symbol("挿".to_string()), 1)),
-            "換" => Some((Token::Symbol("換".to_string()), 1)),
-            "削" => Some((Token::Symbol("削".to_string()), 1)),
-            
-            // 量指定操作妖精（1オリジン）
-            "数" => Some((Token::Symbol("数".to_string()), 1)),
-            "取" => Some((Token::Symbol("取".to_string()), 1)),
-            "捨" => Some((Token::Symbol("捨".to_string()), 1)),
-            "重" => Some((Token::Symbol("重".to_string()), 1)),
-            "分" => Some((Token::Symbol("分".to_string()), 1)),
-            
-            // その他の妖精
-            "結" => Some((Token::Symbol("結".to_string()), 1)),
-            "跳" => Some((Token::Symbol("跳".to_string()), 1)),
-            "招" => Some((Token::Symbol("招".to_string()), 1)),
-            "払" => Some((Token::Symbol("払".to_string()), 1)),
-            _ => None,
-        }
-    } else {
-        None
-    }
-}
-
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
         "true", "false", "nil", "NIL",
+        // 英語組み込みワード
+        "NTH", "INSERT", "REPLACE", "REMOVE",
+        "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
+        "CONCAT", "JUMP", "DEF", "DEL", "EVAL",
     ];
     
     for word in &builtin_words {
@@ -360,8 +326,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
                         "true" => Token::Boolean(true),
                         "false" => Token::Boolean(false),
                         "nil" | "NIL" => Token::Nil,
-                        // DEF、DEL の変換を削除
-                        _ => Token::Symbol(word.to_uppercase()),
+                        _ => Token::Symbol(word.to_string()),
                     };
                     return Some((token, word.len()));
                 }
