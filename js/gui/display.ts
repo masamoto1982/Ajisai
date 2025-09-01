@@ -75,26 +75,32 @@ export class Display {
     display.style.color = '#333';
     const container = document.createElement('div');
     container.style.display = 'flex';
-    container.style.flexWrap = 'wrap';
-    container.style.justifyContent = 'flex-start';
-    container.style.alignContent = 'flex-start';
-    container.style.flexDirection = 'row';  // ワークスペースは横並び
+    container.style.flexWrap = 'wrap-reverse';  // 上向きに折り返し
+    container.style.justifyContent = 'flex-start';  // 左詰め
+    container.style.alignContent = 'flex-end';  // 下揃え（wrap-reverseと組み合わせて上に積み上げ）
+    container.style.flexDirection = 'row';  // 左から右に並ぶ
     
-    // スタックトップが上に来るよう逆順で表示
-    workspace.slice().reverse().forEach((item, index) => {
+    // スタックの順序そのままで表示（ボトムから順番に配置、トップが右上に）
+    workspace.forEach((item, index) => {
         const elem = document.createElement('span');
         elem.className = 'workspace-item';
         elem.textContent = this.formatValue(item);
         
-        // 逆順なので、index === 0 がスタックトップ
-        if (index === 0) {
+        // スタックトップ（最後の要素）を目立たせる
+        if (index === workspace.length - 1) {
             elem.style.fontWeight = 'bold';
+            elem.style.backgroundColor = '#4CAF50';  // 明るい緑色でスタックトップを強調
+            elem.style.color = 'white';
+        } else {
+            elem.style.backgroundColor = '#e0e0e0';
+            elem.style.color = '#333';
         }
         
         elem.style.margin = '2px 4px';
         elem.style.padding = '2px 6px';
-        elem.style.backgroundColor = '#e0e0e0';
         elem.style.borderRadius = '3px';
+        elem.style.fontSize = '0.875rem';
+        elem.style.fontFamily = "'Consolas', 'Monaco', monospace";
         
         container.appendChild(elem);
     });
