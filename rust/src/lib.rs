@@ -1,4 +1,4 @@
-// rust/src/lib.rs (BracketType対応完全版)
+// rust/src/lib.rs (BracketType永続化対応版)
 
 use wasm_bindgen::prelude::*;
 
@@ -421,9 +421,24 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                         let elem = arr.get(i);
                         values.push(js_value_to_rust_value(&elem)?);
                     }
-                    // デフォルトでSquare括弧を使用
+                    
+                    // bracketType情報を復元
+                    let bracket_type = if let Ok(bracket_type_val) = js_sys::Reflect::get(js_val, &"bracketType".into()) {
+                        if let Some(bracket_type_str) = bracket_type_val.as_string() {
+                            match bracket_type_str.as_str() {
+                                "curly" => BracketType::Curly,
+                                "round" => BracketType::Round,
+                                "square" | _ => BracketType::Square,
+                            }
+                        } else {
+                            BracketType::Square
+                        }
+                    } else {
+                        BracketType::Square
+                    };
+                    
                     Ok(Value {
-                        val_type: ValueType::Vector(values, BracketType::Square)
+                        val_type: ValueType::Vector(values, bracket_type)
                     })
                 } else {
                     Err("Invalid vector value".to_string())
@@ -458,7 +473,7 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                 let elem = arr.get(i);
                 values.push(js_value_to_rust_value(&elem)?);
             }
-            // デフォルトでSquare括弧を使用
+            // デフォルトでSquare括弧を使用（フォールバック）
             Ok(Value {
                 val_type: ValueType::Vector(values, BracketType::Square)
             })
