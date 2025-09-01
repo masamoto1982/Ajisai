@@ -1,7 +1,7 @@
-// rust/src/interpreter/control.rs (英語ワード + EVAL対応)
+// rust/src/interpreter/control.rs (BracketType対応完全版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Token};
+use crate::types::{ValueType, Token, BracketType};
 
 // EVAL - ベクトル内のコードを実行する
 pub fn op_eval(interp: &mut Interpreter) -> Result<()> {
@@ -9,7 +9,7 @@ pub fn op_eval(interp: &mut Interpreter) -> Result<()> {
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     match code_val.val_type {
-        ValueType::Vector(code_vec) => {
+        ValueType::Vector(code_vec, _) => {
             let tokens = interp.vector_to_tokens(code_vec)?;
             interp.execute_tokens(&tokens)?;
             Ok(())
@@ -33,13 +33,13 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     };
 
     let tokens = match code_val.val_type {
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, bracket_type) => {
             // VectorStart + 内容 + VectorEnd の形でトークンを構築
-            let mut tokens = vec![Token::VectorStart];
+            let mut tokens = vec![Token::VectorStart(bracket_type.clone())];
             for value in v {
                 tokens.push(interp.value_to_token(value)?);
             }
-            tokens.push(Token::VectorEnd);
+            tokens.push(Token::VectorEnd(bracket_type));
             tokens
         },
         _ => return Err(AjisaiError::from("DEF requires vector")),
@@ -171,7 +171,7 @@ pub fn op_jump(interp: &mut Interpreter) -> Result<()> {
             interp.execute_word_leap(&word_name, current_word.as_deref())?;
             Ok(())
         },
-        ValueType::Vector(code_vec) => {
+        ValueType::Vector(code_vec, _) => {
             // 直接コードベクトルを実行
             let tokens = interp.vector_to_tokens(code_vec)?;
             interp.execute_tokens(&tokens)?;
@@ -203,7 +203,7 @@ pub fn op_when(interp: &mut Interpreter) -> Result<()> {
                 // ワード名を実行
                 interp.execute_word(&word_name)?;
             },
-            ValueType::Vector(code_vec) => {
+            ValueType::Vector(code_vec, _) => {
                 // コードベクトルを直接実行
                 let tokens = interp.vector_to_tokens(code_vec)?;
                 interp.execute_tokens(&tokens)?;
