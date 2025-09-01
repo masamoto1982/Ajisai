@@ -1,4 +1,4 @@
-// rust/src/types.rs (FunctionComment対応版)
+// rust/src/types.rs (括弧タイプ保持版)
 
 use std::fmt;
 
@@ -8,13 +8,12 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(String),
-    VectorStart,    // [, {, ( すべて
-    VectorEnd,      // ], }, ) すべて
+    VectorStart(BracketType),    // 括弧タイプを保持
+    VectorEnd(BracketType),      // 括弧タイプを保持
     Nil,
-    FunctionComment(String), // 機能説明コメント "説明"
+    FunctionComment(String),
 }
 
-// 以下は既存のまま
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub val_type: ValueType,
@@ -26,11 +25,45 @@ pub enum ValueType {
     String(String),
     Boolean(bool),
     Symbol(String),
-    Vector(Vec<Value>),  // データとコードの統一表現
+    Vector(Vec<Value>, BracketType),  // 括弧タイプを追加
     Nil,
 }
 
-// Fraction構造体とその実装は既存のまま
+#[derive(Debug, Clone, PartialEq)]
+pub enum BracketType {
+    Square,  // [ ]
+    Curly,   // { }
+    Round,   // ( )
+}
+
+impl BracketType {
+    pub fn from_char(c: char) -> Self {
+        match c {
+            '[' | ']' => BracketType::Square,
+            '{' | '}' => BracketType::Curly,
+            '(' | ')' => BracketType::Round,
+            _ => panic!("Invalid bracket character: {}", c),
+        }
+    }
+    
+    pub fn opening_char(&self) -> char {
+        match self {
+            BracketType::Square => '[',
+            BracketType::Curly => '{',
+            BracketType::Round => '(',
+        }
+    }
+    
+    pub fn closing_char(&self) -> char {
+        match self {
+            BracketType::Square => ']',
+            BracketType::Curly => '}',
+            BracketType::Round => ')',
+        }
+    }
+}
+
+// Fraction構造体とその実装
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fraction {
     pub numerator: i64,
@@ -120,20 +153,23 @@ impl fmt::Display for Value {
                     write!(f, "{}/{}", n.numerator, n.denominator)
                 }
             },
-            ValueType::String(s) => write!(f, "\"{}\"", s),
+            ValueType::String(s) => write!(f, "'{}'", s),
             ValueType::Boolean(b) => write!(f, "{}", b),
             ValueType::Symbol(s) => write!(f, "{}", s),
-            ValueType::Vector(v) => {
-                write!(f, "[ ")?;
+            ValueType::Vector(v, bracket_type) => {
+                let open = bracket_type.opening_char();
+                let close = bracket_type.closing_char();
+                
+                write!(f, "{} ", open)?;
                 for (i, item) in v.iter().enumerate() {
                     if i > 0 { write!(f, " ")?; }
                     write!(f, "{}", item)?;
                 }
-                write!(f, " ]")
+                write!(f, " {}", close)
             },
             ValueType::Nil => write!(f, "nil"),
         }
     }
 }
 
-pub type Workspace = Vec<Value>;  // スタックの代わり
+pub type Workspace = Vec<Value>;
