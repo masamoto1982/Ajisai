@@ -101,34 +101,54 @@ export class Display {
     }
 
     private formatValue(item: Value): string {
-        if (!item) return 'undefined';
-        
-        switch (item.type) {
-            case 'number':
-                if (typeof item.value === 'object' && item.value !== null && 'numerator' in item.value && 'denominator' in item.value) {
-                    const frac = item.value as { numerator: number; denominator: number };
-                    if (frac.denominator === 1) {
-                        return frac.numerator.toString();
-                    } else {
-                        return `${frac.numerator}/${frac.denominator}`;
-                    }
+    if (!item) return 'undefined';
+    
+    switch (item.type) {
+        case 'number':
+            if (typeof item.value === 'object' && item.value !== null && 'numerator' in item.value && 'denominator' in item.value) {
+                const frac = item.value as { numerator: number; denominator: number };
+                if (frac.denominator === 1) {
+                    return frac.numerator.toString();
+                } else {
+                    return `${frac.numerator}/${frac.denominator}`;
                 }
-                return typeof item.value === 'string' ? item.value : String(item.value);
-            case 'string':
-                return `"${item.value}"`;
-            case 'symbol':
-                return String(item.value);
-            case 'boolean':
-                return item.value ? 'true' : 'false';
-            case 'vector':
-                if (Array.isArray(item.value)) {
-                    return `[ ${item.value.map(v => this.formatValue(v)).join(' ')} ]`;
+            }
+            return typeof item.value === 'string' ? item.value : String(item.value);
+        case 'string':
+            return `'${item.value}'`; // シングルクォートに変更
+        case 'symbol':
+            return String(item.value);
+        case 'boolean':
+            return item.value ? 'true' : 'false';
+        case 'vector':
+            if (Array.isArray(item.value)) {
+                // 括弧タイプに応じて適切な括弧を使用
+                const bracketType = (item as any).bracketType || 'square';
+                let openBracket: string, closeBracket: string;
+                
+                switch (bracketType) {
+                    case 'curly':
+                        openBracket = '{';
+                        closeBracket = '}';
+                        break;
+                    case 'round':
+                        openBracket = '(';
+                        closeBracket = ')';
+                        break;
+                    case 'square':
+                    default:
+                        openBracket = '[';
+                        closeBracket = ']';
+                        break;
                 }
-                return '[ ]';
-            case 'nil':
-                return 'nil';
-            default:
-                return JSON.stringify(item.value);
-        }
+                
+                return `${openBracket} ${item.value.map(v => this.formatValue(v)).join(' ')} ${closeBracket}`;
+            }
+            return '[ ]';
+        case 'nil':
+            return 'nil';
+        default:
+            return JSON.stringify(item.value);
     }
+}
 }
