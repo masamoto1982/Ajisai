@@ -1,4 +1,4 @@
-// rust/src/lib.rs (順序保持対応完全版)
+// rust/src/lib.rs (BracketType対応完全版)
 
 use wasm_bindgen::prelude::*;
 
@@ -185,42 +185,42 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-pub fn get_builtin_words_by_category(&self) -> JsValue {
-    // カテゴリ別機能は削除し、単純なグループ分けで返す
-    let builtin_definitions = crate::builtins::get_builtin_definitions();
-    let result = js_sys::Object::new();
-    
-    // 3つのグループに分ける
-    let arithmetic_group = js_sys::Array::new();
-    let fairy_ops_group = js_sys::Array::new();
-    let management_group = js_sys::Array::new();
-    
-    for (name, desc) in builtin_definitions {
-        let word_info = js_sys::Array::new();
-        word_info.push(&JsValue::from_str(name));
-        word_info.push(&JsValue::from_str(desc));
+    pub fn get_builtin_words_by_category(&self) -> JsValue {
+        // カテゴリ別機能は削除し、単純なグループ分けで返す
+        let builtin_definitions = crate::builtins::get_builtin_definitions();
+        let result = js_sys::Object::new();
         
-        // グループ分け
-        match name {
-            "+" | "/" | "*" | "-" | "=" | ">=" | ">" | "AND" | "OR" | "NOT" => {
-                arithmetic_group.push(&word_info);
-            },
-            "摘" | "数" | "挿" | "換" | "削" | "結" | "分" | "跳" => {
-                fairy_ops_group.push(&word_info);
-            },
-            "招" | "払" => {
-                management_group.push(&word_info);
-            },
-            _ => {}
+        // 3つのグループに分ける
+        let arithmetic_group = js_sys::Array::new();
+        let vector_ops_group = js_sys::Array::new();
+        let control_group = js_sys::Array::new();
+        
+        for (name, desc) in builtin_definitions {
+            let word_info = js_sys::Array::new();
+            word_info.push(&JsValue::from_str(name));
+            word_info.push(&JsValue::from_str(desc));
+            
+            // グループ分け
+            match name {
+                "+" | "/" | "*" | "-" | "=" | ">=" | ">" | "AND" | "OR" | "NOT" => {
+                    arithmetic_group.push(&word_info);
+                },
+                "NTH" | "INSERT" | "REPLACE" | "REMOVE" | "LENGTH" | "TAKE" | "DROP" | "REPEAT" | "SPLIT" | "CONCAT" => {
+                    vector_ops_group.push(&word_info);
+                },
+                "JUMP" | "DEF" | "DEL" | "EVAL" => {
+                    control_group.push(&word_info);
+                },
+                _ => {}
+            }
         }
+        
+        js_sys::Reflect::set(&result, &JsValue::from_str("Arithmetic"), &arithmetic_group).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("VectorOps"), &vector_ops_group).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Control"), &control_group).unwrap();
+        
+        result.into()
     }
-    
-    js_sys::Reflect::set(&result, &JsValue::from_str("Arithmetic"), &arithmetic_group).unwrap();
-    js_sys::Reflect::set(&result, &JsValue::from_str("FairyOps"), &fairy_ops_group).unwrap();
-    js_sys::Reflect::set(&result, &JsValue::from_str("Management"), &management_group).unwrap();
-    
-    result.into()
-}
 
     #[wasm_bindgen]
     pub fn reset(&mut self) {
@@ -301,7 +301,7 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::String(_) => "string",
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
-        ValueType::Vector(_) => "vector",
+        ValueType::Vector(_, _) => "vector",
         ValueType::Nil => "nil",
     };
     
@@ -317,7 +317,7 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::String(s) => JsValue::from_str(s),
         ValueType::Boolean(b) => JsValue::from_bool(*b),
         ValueType::Symbol(s) => JsValue::from_str(s),
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, _) => {
             let arr = js_sys::Array::new();
             for item in v.iter() {
                 arr.push(&value_to_js(item));
@@ -411,8 +411,9 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                         let elem = arr.get(i);
                         values.push(js_value_to_rust_value(&elem)?);
                     }
+                    // デフォルトでSquare括弧を使用
                     Ok(Value {
-                        val_type: ValueType::Vector(values)
+                        val_type: ValueType::Vector(values, BracketType::Square)
                     })
                 } else {
                     Err("Invalid vector value".to_string())
@@ -447,8 +448,9 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                 let elem = arr.get(i);
                 values.push(js_value_to_rust_value(&elem)?);
             }
+            // デフォルトでSquare括弧を使用
             Ok(Value {
-                val_type: ValueType::Vector(values)
+                val_type: ValueType::Vector(values, BracketType::Square)
             })
         } else {
             Err("Unsupported value type".to_string())
