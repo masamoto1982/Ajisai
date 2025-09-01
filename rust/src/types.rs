@@ -1,4 +1,4 @@
-// rust/src/types.rs (ParenComment追加版)
+// rust/src/types.rs (FunctionComment対応版)
 
 use std::fmt;
 
@@ -8,10 +8,10 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(String),
-    VectorStart,    // [ のみ（{ を削除）
-    VectorEnd,      // ] のみ（} を削除）
+    VectorStart,    // [, {, ( すべて
+    VectorEnd,      // ], }, ) すべて
     Nil,
-    ParenComment(String), // 丸括弧コメント ( 説明 )
+    FunctionComment(String), // 機能説明コメント "説明"
 }
 
 // 以下は既存のまま
@@ -38,7 +38,6 @@ pub struct Fraction {
 }
 
 impl Fraction {
-    // 既存の実装をそのまま維持
     pub fn new(numerator: i64, denominator: i64) -> Self {
         if denominator == 0 {
             panic!("Division by zero");
