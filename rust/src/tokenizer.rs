@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (漢字ワード削除版)
+// rust/src/tokenizer.rs (括弧順序強制 + シングル/ダブルクォート分離版)
 
 use crate::types::Token;
 use std::collections::HashSet;
@@ -11,6 +11,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
     let mut tokens = Vec::new();
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
+    let mut nesting_stack = Vec::new(); // ネストレベルを追跡
 
     while i < chars.len() {
         // 空白文字をスキップ
@@ -19,38 +20,81 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             continue;
         }
         
-        // 文字列リテラル（""のみ）
+        // 文字列リテラル（シングルクォート）
+        if chars[i] == '\'' {
+            if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
+                tokens.push(token);
+                i += consumed;
+                continue;
+            }
+        }
+        
+        // 機能説明コメント（ダブルクォート）
         if chars[i] == '"' {
-            if let Some((token, consumed)) = parse_string_literal(&chars[i..]) {
+            if let Some((token, consumed)) = parse_double_quote_comment(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
         }
         
-        // 丸括弧コメント（機能説明）
-        if chars[i] == '(' {
-            if let Some((token, consumed)) = parse_paren_comment(&chars[i..]) {
-                tokens.push(token);
-                i += consumed;
+        // Vector記号（括弧順序強制）
+        match chars[i] {
+            '[' | '{' | '(' => {
+                let current_depth = nesting_stack.len();
+                
+                // 6重ネスト制限
+                if current_depth >= 6 {
+                    return Err("Maximum nesting depth of 6 exceeded".to_string());
+                }
+                
+                // 期待される括弧を決定
+                let expected_bracket = match current_depth % 3 {
+                    0 => '[',  // 1層目、4層目
+                    1 => '{',  // 2層目、5層目  
+                    2 => '(',  // 3層目、6層目
+                    _ => unreachable!(),
+                };
+
+                if chars[i] != expected_bracket {
+                    return Err(format!(
+                        "Invalid bracket at depth {}: expected '{}', found '{}'. Use brackets in order: [ {{ ( [ {{ (",
+                        current_depth + 1, expected_bracket, chars[i]
+                    ));
+                }
+
+                nesting_stack.push(chars[i]);
+                tokens.push(Token::VectorStart);
+                i += 1;
                 continue;
-            }
+            },
+            ']' | '}' | ')' => {
+                if let Some(opening) = nesting_stack.pop() {
+                    let expected_closing = match opening {
+                        '[' => ']',
+                        '{' => '}',
+                        '(' => ')',
+                        _ => unreachable!(),
+                    };
+
+                    if chars[i] != expected_closing {
+                        return Err(format!(
+                            "Mismatched bracket: '{}' opened but '{}' found for closing",
+                            opening, chars[i]
+                        ));
+                    }
+
+                    tokens.push(Token::VectorEnd);
+                    i += 1;
+                    continue;
+                } else {
+                    return Err("Unexpected closing bracket".to_string());
+                }
+            },
+            _ => {}
         }
         
-        // ベクトル記号
-        if chars[i] == '[' {
-            tokens.push(Token::VectorStart);
-            i += 1;
-            continue;
-        }
-        
-        if chars[i] == ']' {
-            tokens.push(Token::VectorEnd);
-            i += 1;
-            continue;
-        }
-        
-        // コメント（#から行末まで）
+        // 行コメント（#から行末まで）
         if chars[i] == '#' {
             while i < chars.len() && chars[i] != '\n' {
                 i += 1;
@@ -89,6 +133,14 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         // どれにもマッチしなければ無視して次へ
         i += 1;
     }
+
+    // 未閉鎖の括弧チェック
+    if !nesting_stack.is_empty() {
+        return Err(format!(
+            "Unclosed bracket(s): {} bracket(s) remain open",
+            nesting_stack.len()
+        ));
+    }
     
     Ok(tokens)
 }
@@ -123,12 +175,12 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
 
 // 単語文字かどうかを判定
 fn is_word_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c.is_alphabetic() // 全ての文字（漢字、ひらがな、カタカナ含む）を単語文字とする
+    c.is_ascii_alphanumeric() || c.is_alphabetic()
 }
 
-// 文字列リテラル解析
-fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
-    if chars.is_empty() || chars[0] != '"' {
+// シングルクォート文字列解析
+fn parse_single_quote_string(chars: &[char]) -> Option<(Token, usize)> {
+    if chars.is_empty() || chars[0] != '\'' {
         return None;
     }
     
@@ -142,7 +194,7 @@ fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
             escaped = false;
         } else if chars[i] == '\\' {
             escaped = true;
-        } else if chars[i] == '"' {
+        } else if chars[i] == '\'' {
             return Some((Token::String(string), i + 1));
         } else {
             string.push(chars[i]);
@@ -153,42 +205,31 @@ fn parse_string_literal(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-// 丸括弧コメント（機能説明）解析
-fn parse_paren_comment(chars: &[char]) -> Option<(Token, usize)> {
-    if chars.is_empty() || chars[0] != '(' {
+// ダブルクォート機能説明コメント解析
+fn parse_double_quote_comment(chars: &[char]) -> Option<(Token, usize)> {
+    if chars.is_empty() || chars[0] != '"' {
         return None;
     }
     
     let mut comment = String::new();
-    let mut i = 1; // '(' の次から開始
-    let mut depth = 1; // ネストした丸括弧に対応
+    let mut i = 1;
+    let mut escaped = false;
     
-    while i < chars.len() && depth > 0 {
-        match chars[i] {
-            '(' => {
-                depth += 1;
-                comment.push(chars[i]);
-            },
-            ')' => {
-                depth -= 1;
-                if depth > 0 {
-                    comment.push(chars[i]);
-                }
-            },
-            c => {
-                comment.push(c);
-            }
+    while i < chars.len() {
+        if escaped {
+            comment.push(chars[i]);
+            escaped = false;
+        } else if chars[i] == '\\' {
+            escaped = true;
+        } else if chars[i] == '"' {
+            return Some((Token::FunctionComment(comment.trim().to_string()), i + 1));
+        } else {
+            comment.push(chars[i]);
         }
         i += 1;
     }
     
-    if depth == 0 {
-        // 前後の空白を除去
-        Some((Token::ParenComment(comment.trim().to_string()), i))
-    } else {
-        // 閉じ括弧がない場合はエラーとして扱わず、無視する
-        None
-    }
+    None
 }
 
 // 数値解析（整数、分数、小数）
