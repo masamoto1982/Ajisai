@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (FunctionComment対応版)
+// rust/src/interpreter/mod.rs (括弧タイプ対応版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -7,7 +7,7 @@ pub mod io;
 pub mod error;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Workspace, Token, Value, ValueType};
+use crate::types::{Workspace, Token, Value, ValueType, BracketType};
 use self::error::Result;
 
 pub struct Interpreter {
@@ -118,11 +118,11 @@ impl Interpreter {
                     Ok(output)
                 }
             },
-            Token::VectorStart => {
+            Token::VectorStart(_) => {
                 // ベクトルの開始だけでは処理できない
                 Ok("Vector start token (incomplete)".to_string())
             },
-            Token::VectorEnd => {
+            Token::VectorEnd(_) => {
                 // ベクトルの終了だけでは処理できない
                 Ok("Vector end token (incomplete)".to_string())
             },
@@ -270,10 +270,10 @@ impl Interpreter {
                     // 機能説明コメントは実行時には無視
                     i += 1;
                 },
-                Token::VectorStart => {
-                    let (vector_values, consumed) = self.collect_vector(tokens, i)?;
+                Token::VectorStart(bracket_type) => {
+                    let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
                     self.workspace.push(Value {
-                        val_type: ValueType::Vector(vector_values),
+                        val_type: ValueType::Vector(vector_values, bracket_type.clone()),
                     });
                     i += consumed;
                 },
@@ -281,7 +281,7 @@ impl Interpreter {
                     self.execute_word(name)?;
                     i += 1;
                 },
-                Token::VectorEnd => {
+                Token::VectorEnd(_) => {
                     return Err(error::AjisaiError::from("Unexpected vector end"));
                 },
             }
@@ -290,21 +290,29 @@ impl Interpreter {
         Ok(())
     }
 
-    fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
         let mut i = start + 1; // VectorStart の次から
         
         while i < tokens.len() {
             match &tokens[i] {
-                Token::VectorStart => {
+                Token::VectorStart(inner_bracket_type) => {
                     // ネストしたVectorを再帰的に処理
-                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                    let (nested_values, consumed) = self.collect_vector(tokens, i, inner_bracket_type.clone())?;
                     values.push(Value {
-                        val_type: ValueType::Vector(nested_values),
+                        val_type: ValueType::Vector(nested_values, inner_bracket_type.clone()),
                     });
                     i += consumed;
                 },
-                Token::VectorEnd => {
+                Token::VectorEnd(end_bracket_type) => {
+                    // 括弧の種類が一致するかチェック
+                    if *end_bracket_type != expected_bracket_type {
+                        return Err(error::AjisaiError::from(format!(
+                            "Mismatched bracket types: expected {}, found {}",
+                            expected_bracket_type.closing_char(),
+                            end_bracket_type.closing_char()
+                        )));
+                    }
                     // このVectorの終了
                     return Ok((values, i - start + 1));
                 },
@@ -364,7 +372,10 @@ impl Interpreter {
             ValueType::Boolean(b) => Ok(Token::Boolean(b)),
             ValueType::Symbol(s) => Ok(Token::Symbol(s)),
             ValueType::Nil => Ok(Token::Nil),
-            ValueType::Vector(_) => Err(error::AjisaiError::from("Nested vectors not supported in token conversion")),
+            ValueType::Vector(_, bracket_type) => {
+                // Vector内の値は変換しないが、bracket_typeは保持
+                Err(error::AjisaiError::from("Nested vectors not supported in token conversion"))
+            },
         }
     }
 
@@ -415,8 +426,8 @@ impl Interpreter {
     fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
         // ベクトル記号を除いて中身を実行
         if tokens.len() >= 2 && 
-           tokens.first() == Some(&Token::VectorStart) && 
-           tokens.last() == Some(&Token::VectorEnd) {
+           matches!(tokens.first(), Some(Token::VectorStart(_))) && 
+           matches!(tokens.last(), Some(Token::VectorEnd(_))) {
             // [ 内容 ] → 内容を直接実行
             let inner_tokens = &tokens[1..tokens.len()-1];
             self.execute_tokens(inner_tokens)
@@ -577,8 +588,8 @@ impl Interpreter {
             Token::Boolean(b) => b.to_string(),
             Token::Nil => "nil".to_string(),
             Token::Symbol(s) => s.clone(),
-            Token::VectorStart => "[".to_string(),
-            Token::VectorEnd => "]".to_string(),
+            Token::VectorStart(bracket_type) => bracket_type.opening_char().to_string(),
+            Token::VectorEnd(bracket_type) => bracket_type.closing_char().to_string(),
             Token::FunctionComment(comment) => format!("\"{}\"", comment),
         }
     }
