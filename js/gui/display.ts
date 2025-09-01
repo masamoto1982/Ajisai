@@ -63,42 +63,44 @@ export class Display {
     }
 
     updateWorkspace(workspace: Value[]): void {
-        const display = this.elements.workspaceDisplay;
-        display.innerHTML = '';
+    const display = this.elements.workspaceDisplay;
+    display.innerHTML = '';
+    
+    if (!Array.isArray(workspace) || workspace.length === 0) {
+        display.textContent = '(empty)';
+        display.style.color = '#ccc';
+        return;
+    }
+    
+    display.style.color = '#333';
+    const container = document.createElement('div');
+    container.style.display = 'flex';
+    container.style.flexWrap = 'wrap';
+    container.style.justifyContent = 'flex-start';
+    container.style.alignContent = 'flex-start';
+    container.style.flexDirection = 'row';  // ワークスペースは横並び
+    
+    // スタックトップが上に来るよう逆順で表示
+    workspace.slice().reverse().forEach((item, index) => {
+        const elem = document.createElement('span');
+        elem.className = 'workspace-item';
+        elem.textContent = this.formatValue(item);
         
-        if (!Array.isArray(workspace) || workspace.length === 0) {
-            display.textContent = '(empty)';
-            display.style.color = '#ccc';
-            return;
+        // 逆順なので、index === 0 がスタックトップ
+        if (index === 0) {
+            elem.style.fontWeight = 'bold';
         }
         
-        display.style.color = '#333';
-        const container = document.createElement('div');
-        container.style.display = 'flex';
-        container.style.flexWrap = 'wrap';
-        container.style.justifyContent = 'flex-start';
-        container.style.alignContent = 'flex-start';
-        container.style.flexDirection = 'row';  // ワークスペースは横並び
+        elem.style.margin = '2px 4px';
+        elem.style.padding = '2px 6px';
+        elem.style.backgroundColor = '#e0e0e0';
+        elem.style.borderRadius = '3px';
         
-        workspace.forEach((item, index) => {
-            const elem = document.createElement('span');
-            elem.className = 'workspace-item';
-            elem.textContent = this.formatValue(item);
-            
-            if (index === workspace.length - 1) {
-                elem.style.fontWeight = 'bold';
-            }
-            
-            elem.style.margin = '2px 4px';
-            elem.style.padding = '2px 6px';
-            elem.style.backgroundColor = '#e0e0e0';
-            elem.style.borderRadius = '3px';
-            
-            container.appendChild(elem);
-        });
-        
-        display.appendChild(container);
-    }
+        container.appendChild(elem);
+    });
+    
+    display.appendChild(container);
+}
 
     private formatValue(item: Value): string {
     if (!item) return 'undefined';
