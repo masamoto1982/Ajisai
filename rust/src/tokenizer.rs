@@ -1,6 +1,6 @@
-// rust/src/tokenizer.rs (括弧順序強制 + シングル/ダブルクォート分離版)
+// rust/src/tokenizer.rs (括弧タイプ保持版)
 
-use crate::types::Token;
+use crate::types::{Token, BracketType};
 use std::collections::HashSet;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
@@ -11,7 +11,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
     let mut tokens = Vec::new();
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
-    let mut nesting_stack = Vec::new(); // ネストレベルを追跡
+    let mut nesting_stack = Vec::new(); // (bracket_char, bracket_type) を追跡
 
     while i < chars.len() {
         // 空白文字をスキップ
@@ -63,14 +63,15 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                     ));
                 }
 
-                nesting_stack.push(chars[i]);
-                tokens.push(Token::VectorStart);
+                let bracket_type = BracketType::from_char(chars[i]);
+                nesting_stack.push((chars[i], bracket_type.clone()));
+                tokens.push(Token::VectorStart(bracket_type));
                 i += 1;
                 continue;
             },
             ']' | '}' | ')' => {
-                if let Some(opening) = nesting_stack.pop() {
-                    let expected_closing = match opening {
+                if let Some((opening_char, opening_type)) = nesting_stack.pop() {
+                    let expected_closing = match opening_char {
                         '[' => ']',
                         '{' => '}',
                         '(' => ')',
@@ -80,11 +81,11 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                     if chars[i] != expected_closing {
                         return Err(format!(
                             "Mismatched bracket: '{}' opened but '{}' found for closing",
-                            opening, chars[i]
+                            opening_char, chars[i]
                         ));
                     }
 
-                    tokens.push(Token::VectorEnd);
+                    tokens.push(Token::VectorEnd(opening_type));
                     i += 1;
                     continue;
                 } else {
