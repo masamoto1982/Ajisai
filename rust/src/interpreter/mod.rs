@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全修正版)
+// rust/src/interpreter/mod.rs (FunctionComment対応版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -91,7 +91,7 @@ impl Interpreter {
                 self.workspace.push(Value {
                     val_type: ValueType::String(s.clone()),
                 });
-                Ok(format!("Pushed string: \"{}\"", s))
+                Ok(format!("Pushed string: '{}'", s))
             },
             Token::Boolean(b) => {
                 self.workspace.push(Value {
@@ -105,9 +105,9 @@ impl Interpreter {
                 });
                 Ok("Pushed nil".to_string())
             },
-            Token::ParenComment(comment) => {
-                // 丸括弧コメントは実行時には無視
-                Ok(format!("Skipped comment: ({})", comment))
+            Token::FunctionComment(comment) => {
+                // 機能説明コメントは実行時には無視
+                Ok(format!("Skipped function comment: \"{}\"", comment))
             },
             Token::Symbol(name) => {
                 self.execute_word(name)?;
@@ -234,10 +234,7 @@ impl Interpreter {
         Ok(())
     }
 
-    // ベクトルリテラルから実行可能なトークンを抽出するメソッド（修正版）
     fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-        // ベクトルリテラルはそのまま保持する
-        // 内部のトークンに展開しない
         Ok(tokens.to_vec())
     }
 
@@ -269,8 +266,8 @@ impl Interpreter {
                     });
                     i += 1;
                 },
-                Token::ParenComment(_) => {
-                    // 丸括弧コメントは実行時には無視
+                Token::FunctionComment(_) => {
+                    // 機能説明コメントは実行時には無視
                     i += 1;
                 },
                 Token::VectorStart => {
@@ -311,7 +308,7 @@ impl Interpreter {
                     // このVectorの終了
                     return Ok((values, i - start + 1));
                 },
-                Token::ParenComment(_) => {
+                Token::FunctionComment(_) => {
                     // コメントは無視
                     i += 1;
                 },
@@ -343,8 +340,7 @@ impl Interpreter {
             Token::Symbol(s) => Ok(Value {
                 val_type: ValueType::Symbol(s.clone()),
             }),
-            Token::ParenComment(_) => {
-                // コメントはValueにはならない
+            Token::FunctionComment(_) => {
                 Err(error::AjisaiError::from("Cannot convert comment to value"))
             },
             _ => Err(error::AjisaiError::from("Cannot convert token to value")),
@@ -405,7 +401,7 @@ impl Interpreter {
             if def.is_builtin {
                 self.execute_builtin(name)
             } else {
-                // カスタムワードは即座実行（EVALなしで）
+                // カスタムワードは即座実行
                 self.call_stack.push(name.to_string());
                 let result = self.execute_custom_word_immediate(&def.tokens);
                 self.call_stack.pop();
@@ -430,7 +426,6 @@ impl Interpreter {
         }
     }
 
-    // JUMP用のメソッド（追加）
     pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
         if let Some(current) = current_word {
             if name != current {
@@ -450,66 +445,11 @@ impl Interpreter {
             if def.is_builtin {
                 return Err(error::AjisaiError::from("Cannot jump to builtin word"));
             } else {
-                // カスタムワードを即座実行
                 self.execute_custom_word_immediate(&def.tokens)
             }
         } else {
             Err(error::AjisaiError::UnknownWord(name.to_string()))
         }
-    }
-
-    // 既存のexecute_custom_wordは内部用として残す
-    fn execute_custom_word(&mut self, tokens: &[Token]) -> Result<()> {
-        let mut i = 0;
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::Number(num, den) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                    });
-                    i += 1;
-                },
-                Token::String(s) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::String(s.clone()),
-                    });
-                    i += 1;
-                },
-                Token::Boolean(b) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Boolean(*b),
-                    });
-                    i += 1;
-                },
-                Token::Nil => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Nil,
-                    });
-                    i += 1;
-                },
-                Token::ParenComment(_) => {
-                    // カスタムワード内のコメントは無視
-                    i += 1;
-                },
-                Token::Symbol(name) => {
-                    self.execute_word(name)?;
-                    i += 1;
-                },
-                Token::VectorStart => {
-                    // ベクトルを収集してワークスペースにプッシュ
-                    let (vector_values, consumed) = self.collect_vector(tokens, i)?;
-                    self.workspace.push(Value {
-                        val_type: ValueType::Vector(vector_values),
-                    });
-                    i += consumed;
-                },
-                Token::VectorEnd => {
-                    return Err(error::AjisaiError::from("Unexpected vector end"));
-                },
-            }
-        }
-        
-        Ok(())
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
@@ -616,9 +556,9 @@ impl Interpreter {
             if !def.is_builtin {
                 let body_string = def.tokens.iter()
                     .filter_map(|token| {
-                        // ParenCommentはワード定義文字列には含めない
+                        // FunctionCommentはワード定義文字列には含めない
                         match token {
-                            Token::ParenComment(_) => None,
+                            Token::FunctionComment(_) => None,
                             _ => Some(self.token_to_string(token))
                         }
                     })
@@ -633,13 +573,13 @@ impl Interpreter {
     fn token_to_string(&self, token: &Token) -> String {
         match token {
             Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
-            Token::String(s) => format!("\"{}\"", s),
+            Token::String(s) => format!("'{}'", s),
             Token::Boolean(b) => b.to_string(),
             Token::Nil => "nil".to_string(),
             Token::Symbol(s) => s.clone(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::ParenComment(comment) => format!("({})", comment),
+            Token::FunctionComment(comment) => format!("\"{}\"", comment),
         }
     }
 }
