@@ -1,5 +1,7 @@
+// rust/src/interpreter/arithmetic.rs (BracketType対応完全版)
+
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType, Fraction};
+use crate::types::{Value, ValueType, Fraction, BracketType};
 
 fn value_type_name(val_type: &ValueType) -> &'static str {
     match val_type {
@@ -7,7 +9,7 @@ fn value_type_name(val_type: &ValueType) -> &'static str {
         ValueType::String(_) => "string",
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
-        ValueType::Vector(_) => "vector",
+        ValueType::Vector(_, _) => "vector",
         ValueType::Nil => "nil",
     }
 }
@@ -51,7 +53,7 @@ where
             Value { val_type: ValueType::Number(op(n1, n2)) }
         },
         
-        (ValueType::Vector(v), ValueType::Number(n)) => {
+        (ValueType::Vector(v, bracket_type), ValueType::Number(n)) => {
             let result = apply_unary_to_vector(v, |elem| {
                 if let ValueType::Number(elem_n) = &elem.val_type {
                     Value { val_type: ValueType::Number(op(elem_n, n)) }
@@ -59,10 +61,10 @@ where
                     elem.clone()
                 }
             });
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type.clone()) }
         },
         
-        (ValueType::Number(n), ValueType::Vector(v)) => {
+        (ValueType::Number(n), ValueType::Vector(v, bracket_type)) => {
             let result = apply_unary_to_vector(v, |elem| {
                 if let ValueType::Number(elem_n) = &elem.val_type {
                     Value { val_type: ValueType::Number(op(n, elem_n)) }
@@ -70,10 +72,10 @@ where
                     elem.clone()
                 }
             });
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type.clone()) }
         },
         
-        (ValueType::Vector(v1), ValueType::Vector(v2)) => {
+        (ValueType::Vector(v1, bracket_type1), ValueType::Vector(v2, _)) => {
             let result = apply_binary_to_vectors(v1, v2, |a, b| {
                 match (&a.val_type, &b.val_type) {
                     (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -82,7 +84,7 @@ where
                     _ => Ok(a.clone())
                 }
             })?;
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type1.clone()) }
         },
         
         _ => return Err(AjisaiError::type_error(
@@ -111,7 +113,7 @@ where
             Value { val_type: ValueType::Boolean(op(n1, n2)) }
         },
         
-        (ValueType::Vector(v), ValueType::Number(n)) => {
+        (ValueType::Vector(v, bracket_type), ValueType::Number(n)) => {
             let result = apply_unary_to_vector(v, |elem| {
                 if let ValueType::Number(elem_n) = &elem.val_type {
                     Value { val_type: ValueType::Boolean(op(elem_n, n)) }
@@ -119,10 +121,10 @@ where
                     Value { val_type: ValueType::Boolean(false) }
                 }
             });
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type.clone()) }
         },
         
-        (ValueType::Number(n), ValueType::Vector(v)) => {
+        (ValueType::Number(n), ValueType::Vector(v, bracket_type)) => {
             let result = apply_unary_to_vector(v, |elem| {
                 if let ValueType::Number(elem_n) = &elem.val_type {
                     Value { val_type: ValueType::Boolean(op(n, elem_n)) }
@@ -130,10 +132,10 @@ where
                     Value { val_type: ValueType::Boolean(false) }
                 }
             });
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type.clone()) }
         },
         
-        (ValueType::Vector(v1), ValueType::Vector(v2)) => {
+        (ValueType::Vector(v1, bracket_type1), ValueType::Vector(v2, _)) => {
             let result = apply_binary_to_vectors(v1, v2, |a, b| {
                 match (&a.val_type, &b.val_type) {
                     (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -142,7 +144,7 @@ where
                     _ => Ok(Value { val_type: ValueType::Boolean(false) })
                 }
             })?;
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type1.clone()) }
         },
         
         _ => return Err(AjisaiError::type_error(
@@ -177,7 +179,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
     
     match &b.val_type {
         ValueType::Number(n) if n.numerator == 0 => return Err(AjisaiError::DivisionByZero),
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, _) => {
             for elem in v {
                 if let ValueType::Number(n) = &elem.val_type {
                     if n.numerator == 0 {
@@ -194,7 +196,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
             Value { val_type: ValueType::Number(n1.div(n2)) }
         },
         
-        (ValueType::Vector(v), ValueType::Number(n)) => {
+        (ValueType::Vector(v, bracket_type), ValueType::Number(n)) => {
             let result = apply_unary_to_vector(v, |elem| {
                 if let ValueType::Number(elem_n) = &elem.val_type {
                     Value { val_type: ValueType::Number(elem_n.div(n)) }
@@ -202,10 +204,10 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
                     elem.clone()
                 }
             });
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type.clone()) }
         },
         
-        (ValueType::Number(n), ValueType::Vector(v)) => {
+        (ValueType::Number(n), ValueType::Vector(v, bracket_type)) => {
             let result = apply_unary_to_vector(v, |elem| {
                 if let ValueType::Number(elem_n) = &elem.val_type {
                     Value { val_type: ValueType::Number(n.div(elem_n)) }
@@ -213,10 +215,10 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
                     elem.clone()
                 }
             });
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type.clone()) }
         },
         
-        (ValueType::Vector(v1), ValueType::Vector(v2)) => {
+        (ValueType::Vector(v1, bracket_type1), ValueType::Vector(v2, _)) => {
             let result = apply_binary_to_vectors(v1, v2, |a, b| {
                 match (&a.val_type, &b.val_type) {
                     (ValueType::Number(n1), ValueType::Number(n2)) => {
@@ -225,7 +227,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
                     _ => Ok(a.clone())
                 }
             })?;
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type1.clone()) }
         },
         
         _ => return Err(AjisaiError::type_error(
@@ -273,7 +275,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     let result = match val.val_type {
         ValueType::Boolean(b) => Value { val_type: ValueType::Boolean(!b) },
         ValueType::Nil => Value { val_type: ValueType::Nil },
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, bracket_type) => {
             let result = apply_unary_to_vector(&v, |elem| {
                 match &elem.val_type {
                     ValueType::Boolean(b) => Value { val_type: ValueType::Boolean(!b) },
@@ -281,7 +283,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                     _ => elem.clone(),
                 }
             });
-            Value { val_type: ValueType::Vector(result) }
+            Value { val_type: ValueType::Vector(result, bracket_type) }
         },
         _ => return Err(AjisaiError::type_error(
             "boolean, nil, or vector",
