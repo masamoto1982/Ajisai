@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (括弧タイプ保持版)
+// rust/src/tokenizer.rs (全括弧統一入力対応版)
 
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
@@ -11,7 +11,6 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
     let mut tokens = Vec::new();
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
-    let mut nesting_stack = Vec::new(); // (bracket_char, bracket_type) を追跡
 
     while i < chars.len() {
         // 空白文字をスキップ
@@ -38,60 +37,21 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             }
         }
         
-        // Vector記号（括弧順序強制）
+        // Vector記号（統一入力：[ ] のみ受け付ける）
         match chars[i] {
-            '[' | '{' | '(' => {
-                let current_depth = nesting_stack.len();
-                
-                // 6重ネスト制限
-                if current_depth >= 6 {
-                    return Err("Maximum nesting depth of 6 exceeded".to_string());
-                }
-                
-                // 期待される括弧を決定
-                let expected_bracket = match current_depth % 3 {
-                    0 => '[',  // 1層目、4層目
-                    1 => '{',  // 2層目、5層目  
-                    2 => '(',  // 3層目、6層目
-                    _ => unreachable!(),
-                };
-
-                if chars[i] != expected_bracket {
-                    return Err(format!(
-                        "Invalid bracket at depth {}: expected '{}', found '{}'. Use brackets in order: [ {{ ( [ {{ (",
-                        current_depth + 1, expected_bracket, chars[i]
-                    ));
-                }
-
-                let bracket_type = BracketType::from_char(chars[i]);
-                nesting_stack.push((chars[i], bracket_type.clone()));
-                tokens.push(Token::VectorStart(bracket_type));
+            '[' => {
+                // 開始括弧として一旦Squareで記録（後で深度に応じて変換）
+                tokens.push(Token::VectorStart(BracketType::Square));
                 i += 1;
                 continue;
             },
-            ']' | '}' | ')' => {
-                if let Some((opening_char, opening_type)) = nesting_stack.pop() {
-                    let expected_closing = match opening_char {
-                        '[' => ']',
-                        '{' => '}',
-                        '(' => ')',
-                        _ => unreachable!(),
-                    };
-
-                    if chars[i] != expected_closing {
-                        return Err(format!(
-                            "Mismatched bracket: '{}' opened but '{}' found for closing",
-                            opening_char, chars[i]
-                        ));
-                    }
-
-                    tokens.push(Token::VectorEnd(opening_type));
-                    i += 1;
-                    continue;
-                } else {
-                    return Err("Unexpected closing bracket".to_string());
-                }
+            ']' => {
+                // 終了括弧として一旦Squareで記録（後で深度に応じて変換）
+                tokens.push(Token::VectorEnd(BracketType::Square));
+                i += 1;
+                continue;
             },
+            // 他の括弧は通常の文字として扱う（エラーにはしない）
             _ => {}
         }
         
@@ -135,15 +95,56 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         i += 1;
     }
 
+    // 括弧の深度に応じた変換を実行
+    convert_brackets_by_depth(&mut tokens)?;
+    
+    Ok(tokens)
+}
+
+// 深度に応じて括弧タイプを自動変換
+fn convert_brackets_by_depth(tokens: &mut [Token]) -> Result<(), String> {
+    let mut depth_stack = Vec::new();
+    
+    for token in tokens.iter_mut() {
+        match token {
+            Token::VectorStart(_) => {
+                let current_depth = depth_stack.len();
+                
+                // 6重ネスト制限
+                if current_depth >= 6 {
+                    return Err("Maximum nesting depth of 6 exceeded".to_string());
+                }
+                
+                let bracket_type = match current_depth % 3 {
+                    0 => BracketType::Square,  // 1層目、4層目
+                    1 => BracketType::Curly,   // 2層目、5層目  
+                    2 => BracketType::Round,   // 3層目、6層目
+                    _ => unreachable!(),
+                };
+                
+                *token = Token::VectorStart(bracket_type.clone());
+                depth_stack.push(bracket_type);
+            },
+            Token::VectorEnd(_) => {
+                if let Some(opening_type) = depth_stack.pop() {
+                    *token = Token::VectorEnd(opening_type);
+                } else {
+                    return Err("Unexpected closing bracket".to_string());
+                }
+            },
+            _ => {}
+        }
+    }
+    
     // 未閉鎖の括弧チェック
-    if !nesting_stack.is_empty() {
+    if !depth_stack.is_empty() {
         return Err(format!(
             "Unclosed bracket(s): {} bracket(s) remain open",
-            nesting_stack.len()
+            depth_stack.len()
         ));
     }
     
-    Ok(tokens)
+    Ok(())
 }
 
 fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
