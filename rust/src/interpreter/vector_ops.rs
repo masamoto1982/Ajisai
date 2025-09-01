@@ -1,7 +1,7 @@
-// rust/src/interpreter/vector_ops.rs (完全修正版)
+// rust/src/interpreter/vector_ops.rs (BracketType対応完全版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType, Fraction};
+use crate::types::{Value, ValueType, Fraction, BracketType};
 
 // ========== 位置指定操作（0オリジン）==========
 
@@ -20,7 +20,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     };
     
     match target_val.val_type {
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, _) => {
             if v.is_empty() {
                 return Err(AjisaiError::IndexOutOfBounds {
                     index,
@@ -71,7 +71,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     };
     
     match vector_val.val_type {
-        ValueType::Vector(mut v) => {
+        ValueType::Vector(mut v, bracket_type) => {
             let insert_index = if index < 0 {
                 let pos = v.len() as i64 + index + 1;
                 pos.max(0) as usize
@@ -80,7 +80,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             };
             
             v.insert(insert_index, element);
-            interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+            interp.workspace.push(Value { val_type: ValueType::Vector(v, bracket_type) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -103,7 +103,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     };
     
     match vector_val.val_type {
-        ValueType::Vector(mut v) => {
+        ValueType::Vector(mut v, bracket_type) => {
             let actual_index = if index < 0 {
                 let pos = v.len() as i64 + index;
                 if pos < 0 {
@@ -122,7 +122,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
                 v[actual_index] = new_element;
                 
                 // 新しいベクターのみを返す
-                interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+                interp.workspace.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                 Ok(())
             } else {
                 Err(AjisaiError::IndexOutOfBounds {
@@ -150,7 +150,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                 let second = &interp.workspace[interp.workspace.len() - 2];
                 
                 match (&top.val_type, &second.val_type) {
-                    (ValueType::Number(n), ValueType::Vector(_)) if n.denominator == 1 => {
+                    (ValueType::Number(n), ValueType::Vector(_, _)) if n.denominator == 1 => {
                         Some(n.numerator)
                     },
                     _ => None,
@@ -162,7 +162,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                 let vector_val = interp.workspace.pop().unwrap(); // ベクターを削除
                 
                 match vector_val.val_type {
-                    ValueType::Vector(mut v) => {
+                    ValueType::Vector(mut v, bracket_type) => {
                         let actual_index = if index < 0 {
                             let pos = v.len() as i64 + index;
                             if pos < 0 {
@@ -181,7 +181,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                             v.remove(actual_index);
                             
                             // 新しいベクターのみを返す
-                            interp.workspace.push(Value { val_type: ValueType::Vector(v) });
+                            interp.workspace.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                             Ok(())
                         } else {
                             Err(AjisaiError::IndexOutOfBounds {
@@ -209,7 +209,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     match target_val.val_type {
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, _) => {
             interp.workspace.push(Value { 
                 val_type: ValueType::Number(Fraction::new(v.len() as i64, 1))
             });
@@ -234,7 +234,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     };
     
     match vector_val.val_type {
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, bracket_type) => {
             let result = if count < 0 {
                 // 負の値：末尾からN個
                 let abs_count = (-count) as usize;
@@ -260,7 +260,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                 v[..take_count].to_vec()
             };
             
-            interp.workspace.push(Value { val_type: ValueType::Vector(result) });
+            interp.workspace.push(Value { val_type: ValueType::Vector(result, bracket_type) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -282,7 +282,7 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
     };
     
     match vector_val.val_type {
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, bracket_type) => {
             let result = if count < 0 {
                 // 負の値：末尾からN個を捨てる
                 let abs_count = (-count) as usize;
@@ -308,7 +308,7 @@ pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
                 v[drop_count..].to_vec()
             };
             
-            interp.workspace.push(Value { val_type: ValueType::Vector(result) });
+            interp.workspace.push(Value { val_type: ValueType::Vector(result, bracket_type) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -334,13 +334,13 @@ pub fn op_repeat(interp: &mut Interpreter) -> Result<()> {
     }
     
     match elem_val.val_type {
-        ValueType::Vector(v) => {
+        ValueType::Vector(v, bracket_type) => {
             // Vectorの場合は繰り返し結合してVectorとして返す
             let mut result = Vec::new();
             for _ in 0..times {
                 result.extend(v.iter().cloned());
             }
-            interp.workspace.push(Value { val_type: ValueType::Vector(result) });
+            interp.workspace.push(Value { val_type: ValueType::Vector(result, bracket_type) });
         },
         _ => {
             // スカラー値の場合は個別に複数回ワークスペースに配置
@@ -361,8 +361,8 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     let (vector_val, sizes) = extract_vector_and_sizes(interp)?;
     
     match vector_val.val_type {
-        ValueType::Vector(v) => {
-            split_by_sizes(&v, &sizes, interp)
+        ValueType::Vector(v, bracket_type) => {
+            split_by_sizes(&v, &sizes, interp, bracket_type)
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
     }
@@ -378,9 +378,10 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let vec1_val = interp.workspace.pop().unwrap();
     
     match (vec1_val.val_type, vec2_val.val_type) {
-        (ValueType::Vector(mut v1), ValueType::Vector(v2)) => {
+        (ValueType::Vector(mut v1, bracket_type1), ValueType::Vector(v2, _)) => {
             v1.extend(v2);
-            interp.workspace.push(Value { val_type: ValueType::Vector(v1) });
+            // 最初のベクターの括弧タイプを使用
+            interp.workspace.push(Value { val_type: ValueType::Vector(v1, bracket_type1) });
             Ok(())
         },
         _ => Err(AjisaiError::type_error("vector vector", "other types")),
@@ -407,7 +408,7 @@ fn extract_vector_and_sizes(interp: &mut Interpreter) -> Result<(Value, Vec<i64>
                 sizes.push(n.numerator);
                 temp_values.push(val);
             },
-            ValueType::Vector(_) => {
+            ValueType::Vector(_, _) => {
                 sizes.reverse();
                 return Ok((val, sizes));
             },
@@ -427,7 +428,7 @@ fn extract_vector_and_sizes(interp: &mut Interpreter) -> Result<(Value, Vec<i64>
     Err(AjisaiError::from("分 requires vector"))
 }
 
-fn split_by_sizes(v: &[Value], sizes: &[i64], interp: &mut Interpreter) -> Result<()> {
+fn split_by_sizes(v: &[Value], sizes: &[i64], interp: &mut Interpreter, bracket_type: BracketType) -> Result<()> {
     let total_size: i64 = sizes.iter().sum();
     if total_size != v.len() as i64 {
         return Err(AjisaiError::from(format!(
@@ -446,7 +447,7 @@ fn split_by_sizes(v: &[Value], sizes: &[i64], interp: &mut Interpreter) -> Resul
         }
         
         results.push(Value { 
-            val_type: ValueType::Vector(v[start..end].to_vec()) 
+            val_type: ValueType::Vector(v[start..end].to_vec(), bracket_type.clone()) 
         });
         start = end;
     }
