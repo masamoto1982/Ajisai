@@ -317,7 +317,7 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::String(s) => JsValue::from_str(s),
         ValueType::Boolean(b) => JsValue::from_bool(*b),
         ValueType::Symbol(s) => JsValue::from_str(s),
-        ValueType::Vector(v, _) => {
+        ValueType::Vector(v, bracket_type) => {
             let arr = js_sys::Array::new();
             for item in v.iter() {
                 arr.push(&value_to_js(item));
@@ -328,6 +328,16 @@ fn value_to_js(value: &Value) -> JsValue {
     };
     
     js_sys::Reflect::set(&obj, &"value".into(), &val).unwrap();
+    
+    // Vector型の場合は括弧タイプ情報も追加
+    if let ValueType::Vector(_, bracket_type) = &value.val_type {
+        let bracket_type_str = match bracket_type {
+            BracketType::Square => "square",
+            BracketType::Curly => "curly", 
+            BracketType::Round => "round",
+        };
+        js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_type_str.into()).unwrap();
+    }
     
     obj.into()
 }
