@@ -61,27 +61,30 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn execute_amnesia(&mut self) -> Result<()> {
-        // IndexedDBクリアのイベントを発火
-        if let Some(window) = web_sys::window() {
-            let event = web_sys::CustomEvent::new("ajisai-amnesia")
-                .map_err(|_| error::AjisaiError::from("Failed to create amnesia event"))?;
-            window.dispatch_event(&event)
-                .map_err(|_| error::AjisaiError::from("Failed to dispatch amnesia event"))?;
-        }
+    pub fn execute(&mut self, code: &str) -> Result<()> {
+    self.output_buffer.clear();
+    
+    // 全体を一度にトークン化（改行を保持）
+    let custom_word_names: HashSet<String> = self.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
+    
+    let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
+        .map_err(error::AjisaiError::from)?;
         
-        // インタープリター内部状態もクリア
-        self.workspace.clear();
-        self.dictionary.clear();
-        self.dependencies.clear();
-        self.output_buffer.clear();
-        self.call_stack.clear();
-        
-        // 組み込みワードを再登録
-        crate::builtins::register_builtins(&mut self.dictionary);
-        
-        Ok(())
+    if tokens.is_empty() {
+        return Ok(());
     }
+
+    // DEFパターンを探して処理
+    if let Some(def_result) = self.try_process_multiline_def_pattern(&tokens) {
+        return def_result;
+    }
+
+    // DEFパターンがない場合は通常の実行
+    self.execute_tokens(&tokens)
+}
 
     pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
         self.output_buffer.clear();
