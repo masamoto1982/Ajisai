@@ -1,7 +1,7 @@
-// rust/src/interpreter/control.rs (GOTO機能実装)
+// rust/src/interpreter/control.rs (NOP追加、EVAL削除)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Token, BracketType, Value};
+use crate::types::{ValueType, Token, Value};
 
 #[derive(Debug, Clone)]
 struct CodeBlock {
@@ -167,6 +167,12 @@ fn evaluate_condition(interp: &mut Interpreter, condition: &Value) -> Result<boo
     }
 }
 
+// NOP - 何もしない（EVALの代わり）
+pub fn op_nop(_interp: &mut Interpreter) -> Result<()> {
+    // 何もしない
+    Ok(())
+}
+
 // DEF - 新しいワードを定義する
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
@@ -282,20 +288,5 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         },
         _ => Err(AjisaiError::type_error("string", "other type")),
-    }
-}
-
-// EVAL - ベクトル内のコードを実行する
-pub fn op_eval(interp: &mut Interpreter) -> Result<()> {
-    let code_val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    match code_val.val_type {
-        ValueType::Vector(code_vec, _) => {
-            let tokens = interp.vector_to_tokens(code_vec)?;
-            interp.execute_tokens(&tokens)?;
-            Ok(())
-        },
-        _ => Err(AjisaiError::type_error("vector", "other type")),
     }
 }
