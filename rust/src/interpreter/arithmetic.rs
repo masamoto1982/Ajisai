@@ -1,4 +1,4 @@
-// rust/src/interpreter/arithmetic.rs (> と >= を削除)
+// rust/src/interpreter/arithmetic.rs (> と >= 復活)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
@@ -240,14 +240,20 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// > と >= は削除
-
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.lt(b))
 }
 
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.le(b))
+}
+
+pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
+    binary_comparison_op(interp, |a, b| a.gt(b))
+}
+
+pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
+    binary_comparison_op(interp, |a, b| a.ge(b))
 }
 
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
