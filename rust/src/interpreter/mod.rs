@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (エラー修正版)
+// rust/src/interpreter/mod.rs (暗黙GOTO対応、> >= 復活)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -109,12 +109,11 @@ impl Interpreter {
                 // 機能説明コメントは実行時には無視
                 Ok(format!("Skipped function comment: \"{}\"", comment))
             },
-            Token::CodeBlockStart => {
-                // コードブロック開始記号をワークスペースに積む
-                self.workspace.push(Value {
-                    val_type: ValueType::Symbol(">".to_string()),
-                });
-                Ok("Pushed code block start marker".to_string())
+            Token::Colon => {
+                Ok("Colon token (should not be executed alone)".to_string())
+            },
+            Token::LineBreak => {
+                Ok("Line break token (should not be executed alone)".to_string())
             },
             Token::Symbol(name) => {
                 self.execute_word(name)?;
@@ -201,7 +200,8 @@ impl Interpreter {
             }
         }
 
-        let executable_tokens = self.extract_executable_tokens(&body_tokens)?;
+        // 暗黙GOTO機能を適用
+        let executable_tokens = control::apply_implicit_goto(&body_tokens)?;
 
         if let Some(old_deps) = self.get_word_dependencies(&name) {
             for dep in old_deps {
@@ -230,10 +230,6 @@ impl Interpreter {
 
         self.append_output(&format!("Defined word: {}\n", name));
         Ok(())
-    }
-
-    fn extract_executable_tokens(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-        Ok(tokens.to_vec())
     }
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
@@ -268,11 +264,12 @@ impl Interpreter {
                     // 機能説明コメントは実行時には無視
                     i += 1;
                 },
-                Token::CodeBlockStart => {
-                    // コードブロック開始記号をワークスペースに積む
-                    self.workspace.push(Value {
-                        val_type: ValueType::Symbol(">".to_string()),
-                    });
+                Token::Colon => {
+                    // コロンは暗黙GOTO処理で既に処理済み
+                    i += 1;
+                },
+                Token::LineBreak => {
+                    // 改行は暗黙GOTO処理で既に処理済み
                     i += 1;
                 },
                 Token::VectorStart(bracket_type) => {
@@ -348,9 +345,12 @@ impl Interpreter {
             Token::Symbol(s) => Ok(Value {
                 val_type: ValueType::Symbol(s.clone()),
             }),
-            Token::CodeBlockStart => Ok(Value {
-                val_type: ValueType::Symbol(">".to_string()),
+            Token::Colon => Ok(Value {
+                val_type: ValueType::Symbol(":".to_string()),
             }),
+            Token::LineBreak => {
+                Err(error::AjisaiError::from("Cannot convert line break to value"))
+            },
             Token::FunctionComment(_) => {
                 Err(error::AjisaiError::from("Cannot convert comment to value"))
             },
@@ -374,8 +374,8 @@ impl Interpreter {
             ValueType::String(s) => Ok(Token::String(s)),
             ValueType::Boolean(b) => Ok(Token::Boolean(b)),
             ValueType::Symbol(s) => {
-                if s == ">" {
-                    Ok(Token::CodeBlockStart)
+                if s == ":" {
+                    Ok(Token::Colon)
                 } else {
                     Ok(Token::Symbol(s))
                 }
@@ -437,7 +437,7 @@ impl Interpreter {
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // 算術・論理演算（> と >= を削除）
+            // 算術・論理演算（> と >= を復活）
             "+" => arithmetic::op_add(self),
             "/" => arithmetic::op_div(self),
             "*" => arithmetic::op_mul(self),
@@ -445,6 +445,8 @@ impl Interpreter {
             "=" => arithmetic::op_eq(self),
             "<=" => arithmetic::op_le(self),
             "<" => arithmetic::op_lt(self),
+            ">=" => arithmetic::op_ge(self),
+            ">" => arithmetic::op_gt(self),
             "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self),
             "NOT" => arithmetic::op_not(self),
@@ -464,14 +466,15 @@ impl Interpreter {
             
             // Vector操作
             "CONCAT" => vector_ops::op_concat(self),
-            "GOTO" => control::op_goto(self),
             
             // ワード管理
             "DEF" => control::op_def(self),
             "DEL" => control::op_del(self),
             
-            // 補助ワード
-            "NOP" => control::op_nop(self), // EVALをNOPに変更
+            // 補助ワード（暗黙GOTO用）
+            "BRANCH_IF" => control::op_branch_if(self),
+            "BRANCH_END" => control::op_branch_end(self),
+            "NOP" => control::op_nop(self),
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
@@ -566,7 +569,8 @@ impl Interpreter {
             Token::VectorStart(bracket_type) => bracket_type.opening_char().to_string(),
             Token::VectorEnd(bracket_type) => bracket_type.closing_char().to_string(),
             Token::FunctionComment(comment) => format!("\"{}\"", comment),
-            Token::CodeBlockStart => ">".to_string(),
+            Token::Colon => ":".to_string(),
+            Token::LineBreak => "\n".to_string(),
         }
     }
 }
