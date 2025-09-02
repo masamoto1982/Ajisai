@@ -1,4 +1,4 @@
-// rust/src/interpreter/arithmetic.rs (BracketType対応完全版)
+// rust/src/interpreter/arithmetic.rs (> と >= を削除)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
@@ -240,13 +240,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
-    binary_comparison_op(interp, |a, b| a.gt(b))
-}
-
-pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
-    binary_comparison_op(interp, |a, b| a.ge(b))
-}
+// > と >= は削除
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.lt(b))
@@ -348,17 +342,6 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
     };
     
     interp.workspace.push(result);
-    Ok(())
-}
-
-// 新機能: 有（SOME?）
-pub fn op_some_check(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    interp.workspace.push(Value { 
-        val_type: ValueType::Boolean(!matches!(val.val_type, ValueType::Nil)) 
-    });
     Ok(())
 }
 
