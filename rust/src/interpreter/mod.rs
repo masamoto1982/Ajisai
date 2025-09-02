@@ -165,36 +165,36 @@ impl Interpreter {
     }
 
     fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
-        // DEFの位置を探す
-        let def_position = tokens.iter().rposition(|t| {
-            if let Token::Symbol(s) = t {
-                s == "DEF"
-            } else {
-                false
-            }
-        })?;
-        
-        // DEF前に文字列（ワード名）があるかチェック
-        if def_position >= 1 {
-            if let Token::String(name) = &tokens[def_position - 1] {
-                let body_tokens = &tokens[..def_position - 1];
-                
-                if body_tokens.is_empty() {
-                    return Some(Err(error::AjisaiError::from("DEF requires a body")));
-                }
-                
-                // 複数行かどうかを判定
-                let multiline_def = self.parse_multiline_definition(body_tokens);
-                
-                return Some(self.define_word_from_multiline(
-                    name.clone(),
-                    multiline_def
-                ));
-            }
+    // DEFの位置を探す
+    let def_position = tokens.iter().rposition(|t| {
+        if let Token::Symbol(s) = t {
+            s == "DEF"
+        } else {
+            false
         }
-        
-        None
+    })?;
+    
+    // DEF前に文字列（ワード名）があるかチェック
+    if def_position >= 1 {
+        if let Token::String(name) = &tokens[def_position - 1] {
+            let body_tokens = &tokens[..def_position - 1];
+            
+            if body_tokens.is_empty() {
+                return Some(Err(error::AjisaiError::from("DEF requires a body")));
+            }
+            
+            // 複数行かどうかを判定
+            let multiline_def = self.parse_multiline_definition(body_tokens);
+            
+            return Some(self.define_word_from_multiline(
+                name.clone(),
+                multiline_def
+            ));
+        }
     }
+    
+    None
+}
 
     fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
         let mut lines = Vec::new();
@@ -299,18 +299,14 @@ impl Interpreter {
     }
 
     fn create_sequential_execution_tokens(&self, lines: &[Vec<Token>]) -> Vec<Token> {
-        let mut result = Vec::new();
-        
-        for (i, line) in lines.iter().enumerate() {
-            result.extend(line.iter().cloned());
-            // 最後の行以外は明示的な区切りを入れない（連続実行）
-            if i < lines.len() - 1 {
-                // 必要に応じて区切り処理を追加
-            }
-        }
-        
-        result
+    let mut result = Vec::new();
+    
+    for line in lines.iter() {
+        result.extend(line.iter().cloned());
     }
+    
+    result
+}
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
