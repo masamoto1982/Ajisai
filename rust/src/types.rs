@@ -1,4 +1,4 @@
-// rust/src/types.rs (CodeBlockStart追加版)
+// rust/src/types.rs (CodeBlockStart削除版)
 
 use std::fmt;
 
@@ -12,7 +12,8 @@ pub enum Token {
     VectorEnd(BracketType),
     Nil,
     FunctionComment(String),
-    CodeBlockStart, // > 記号
+    Colon,          // : 記号
+    LineBreak,      // 改行
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -129,6 +130,14 @@ impl Fraction {
     
     pub fn le(&self, other: &Fraction) -> bool {
         self.numerator * other.denominator <= other.numerator * self.denominator
+    }
+    
+    pub fn gt(&self, other: &Fraction) -> bool {
+        self.numerator * other.denominator > other.numerator * self.denominator
+    }
+    
+    pub fn ge(&self, other: &Fraction) -> bool {
+        self.numerator * other.denominator >= other.numerator * self.denominator
     }
     
     pub fn eq(&self, other: &Fraction) -> bool {
