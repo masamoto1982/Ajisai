@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (> >= 復活、CodeBlockStart削除)
+// rust/src/tokenizer.rs (複数行定義自動判定対応版)
 
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
@@ -103,17 +103,52 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         }
     }
 
-    // 括弧の深度に応じた変換を実行
-    convert_brackets_by_depth(&mut tokens)?;
+    // 括弧の深度に応じた変換を実行（Vector内のみ）
+    convert_vector_brackets_by_depth(&mut tokens)?;
     
     Ok(tokens)
 }
 
-// 深度に応じて括弧タイプを自動変換
-fn convert_brackets_by_depth(tokens: &mut [Token]) -> Result<(), String> {
+// Vector内のみ深度に応じて括弧タイプを自動変換
+fn convert_vector_brackets_by_depth(tokens: &mut [Token]) -> Result<(), String> {
+    let mut i = 0;
+    
+    while i < tokens.len() {
+        if matches!(tokens[i], Token::VectorStart(_)) {
+            let vector_end = find_matching_vector_end(tokens, i)?;
+            convert_single_vector_brackets(&mut tokens[i..=vector_end])?;
+            i = vector_end + 1;
+        } else {
+            i += 1;
+        }
+    }
+    
+    Ok(())
+}
+
+fn find_matching_vector_end(tokens: &[Token], start: usize) -> Result<usize, String> {
+    let mut depth = 0;
+    
+    for i in start..tokens.len() {
+        match &tokens[i] {
+            Token::VectorStart(_) => depth += 1,
+            Token::VectorEnd(_) => {
+                depth -= 1;
+                if depth == 0 {
+                    return Ok(i);
+                }
+            },
+            _ => {}
+        }
+    }
+    
+    Err("Unclosed vector found".to_string())
+}
+
+fn convert_single_vector_brackets(vector_tokens: &mut [Token]) -> Result<(), String> {
     let mut depth_stack = Vec::new();
     
-    for token in tokens.iter_mut() {
+    for token in vector_tokens.iter_mut() {
         match token {
             Token::VectorStart(_) => {
                 let current_depth = depth_stack.len();
@@ -125,7 +160,7 @@ fn convert_brackets_by_depth(tokens: &mut [Token]) -> Result<(), String> {
                 
                 let bracket_type = match current_depth % 3 {
                     0 => BracketType::Square,  // 1層目、4層目
-                    1 => BracketType::Curly,   // 2層目、5層目  
+                    1 => BracketType::Curly,   // 2層目、5層目
                     2 => BracketType::Round,   // 3層目、6層目
                     _ => unreachable!(),
                 };
@@ -142,14 +177,6 @@ fn convert_brackets_by_depth(tokens: &mut [Token]) -> Result<(), String> {
             },
             _ => {}
         }
-    }
-    
-    // 未閉鎖の括弧チェック
-    if !depth_stack.is_empty() {
-        return Err(format!(
-            "Unclosed bracket(s): {} bracket(s) remain open",
-            depth_stack.len()
-        ));
     }
     
     Ok(())
