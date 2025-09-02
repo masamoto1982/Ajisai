@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (暗黙GOTO実装)
+// rust/src/interpreter/control.rs (事前評価方式実装)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token, Value};
@@ -9,7 +9,7 @@ pub struct ConditionalBlock {
     pub action: Vec<Token>,
 }
 
-// 暗黙GOTO - ワード定義時に自動適用される条件分岐機能
+// 暗黙GOTO - ワード定義時に条件分岐処理を適用
 pub fn apply_implicit_goto(tokens: &[Token]) -> Result<Vec<Token>> {
     let blocks = parse_conditional_blocks(tokens)?;
     
@@ -22,8 +22,8 @@ pub fn apply_implicit_goto(tokens: &[Token]) -> Result<Vec<Token>> {
         return Ok(blocks[0].action.clone());
     }
     
-    // 複数ブロックまたは条件付きブロック = GOTO機能を構築
-    Ok(build_goto_tokens(blocks)?)
+    // 複数ブロックまたは条件付きブロック = 条件分岐ワードを生成
+    Ok(create_conditional_word_tokens(blocks))
 }
 
 fn parse_conditional_blocks(tokens: &[Token]) -> Result<Vec<ConditionalBlock>> {
@@ -85,59 +85,156 @@ fn parse_single_line_block(tokens: Vec<Token>) -> Result<ConditionalBlock> {
     }
 }
 
-fn build_goto_tokens(blocks: Vec<ConditionalBlock>) -> Result<Vec<Token>> {
+fn create_conditional_word_tokens(blocks: Vec<ConditionalBlock>) -> Vec<Token> {
     let mut result = Vec::new();
     
+    // 条件分岐データをトークン形式で埋め込み
+    result.push(Token::Symbol("EXECUTE_CONDITIONS".to_string()));
+    
+    // ブロック数
+    result.push(Token::Number(blocks.len() as i64, 1));
+    
+    // 各ブロックのデータ
     for block in blocks {
         if let Some(condition) = block.condition {
-            // 条件をスタックに積む
+            // 条件あり
+            result.push(Token::Number(1, 1)); // フラグ: 条件あり
+            result.push(Token::Number(condition.len() as i64, 1));
             result.extend(condition);
-            
-            // 条件分岐の実装：IF action THEN 形式
-            result.push(Token::Symbol("BRANCH_IF".to_string()));
+            result.push(Token::Number(block.action.len() as i64, 1));
             result.extend(block.action);
-            result.push(Token::Symbol("BRANCH_END".to_string()));
         } else {
-            // デフォルトブロックは最後に無条件実行
+            // デフォルトブロック
+            result.push(Token::Number(0, 1)); // フラグ: 条件なし
+            result.push(Token::Number(block.action.len() as i64, 1));
             result.extend(block.action);
         }
     }
     
-    Ok(result)
+    result
 }
 
-// BRANCH_IF - 条件分岐の実装
-pub fn op_branch_if(interp: &mut Interpreter) -> Result<()> {
-    let condition_val = interp.workspace.pop()
+// EXECUTE_CONDITIONS - 事前評価方式の条件分岐実行
+pub fn op_execute_conditions(interp: &mut Interpreter) -> Result<()> {
+    // ブロック数を取得
+    let block_count_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
-    let should_execute = match condition_val.val_type {
-        ValueType::Boolean(b) => b,
+    let block_count = match block_count_val.val_type {
+        ValueType::Number(n) if n.denominator == 1 => n.numerator as usize,
+        _ => return Err(AjisaiError::from("Invalid block count")),
+    };
+    
+    // 各ブロックを順次評価
+    for _ in 0..block_count {
+        let has_condition_val = interp.workspace.pop()
+            .ok_or(AjisaiError::WorkspaceUnderflow)?;
+        
+        let has_condition = match has_condition_val.val_type {
+            ValueType::Number(n) if n.denominator == 1 => n.numerator != 0,
+            _ => return Err(AjisaiError::from("Invalid condition flag")),
+        };
+        
+        if has_condition {
+            // 条件ありブロック
+            let condition_len_val = interp.workspace.pop()
+                .ok_or(AjisaiError::WorkspaceUnderflow)?;
+            
+            let condition_len = match condition_len_val.val_type {
+                ValueType::Number(n) if n.denominator == 1 => n.numerator as usize,
+                _ => return Err(AjisaiError::from("Invalid condition length")),
+            };
+            
+            // 条件トークンを取得
+            let mut condition_tokens = Vec::new();
+            for _ in 0..condition_len {
+                let token_val = interp.workspace.pop()
+                    .ok_or(AjisaiError::WorkspaceUnderflow)?;
+                condition_tokens.push(value_to_token(&token_val)?);
+            }
+            condition_tokens.reverse(); // スタックなので逆順
+            
+            let action_len_val = interp.workspace.pop()
+                .ok_or(AjisaiError::WorkspaceUnderflow)?;
+            
+            let action_len = match action_len_val.val_type {
+                ValueType::Number(n) if n.denominator == 1 => n.numerator as usize,
+                _ => return Err(AjisaiError::from("Invalid action length")),
+            };
+            
+            // アクショントークンを取得
+            let mut action_tokens = Vec::new();
+            for _ in 0..action_len {
+                let token_val = interp.workspace.pop()
+                    .ok_or(AjisaiError::WorkspaceUnderflow)?;
+                action_tokens.push(value_to_token(&token_val)?);
+            }
+            action_tokens.reverse(); // スタックなので逆順
+            
+            // 条件を評価
+            let original_len = interp.workspace.len();
+            interp.execute_tokens(&condition_tokens)?;
+            
+            // 条件の結果を取得
+            if interp.workspace.len() > original_len {
+                let condition_result = interp.workspace.pop().unwrap();
+                
+                if is_truthy(&condition_result) {
+                    // 条件が真なら処理を実行して終了
+                    interp.execute_tokens(&action_tokens)?;
+                    return Ok(());
+                }
+            }
+            
+        } else {
+            // デフォルトブロック
+            let action_len_val = interp.workspace.pop()
+                .ok_or(AjisaiError::WorkspaceUnderflow)?;
+            
+            let action_len = match action_len_val.val_type {
+                ValueType::Number(n) if n.denominator == 1 => n.numerator as usize,
+                _ => return Err(AjisaiError::from("Invalid action length")),
+            };
+            
+            // アクショントークンを取得
+            let mut action_tokens = Vec::new();
+            for _ in 0..action_len {
+                let token_val = interp.workspace.pop()
+                    .ok_or(AjisaiError::WorkspaceUnderflow)?;
+                action_tokens.push(value_to_token(&token_val)?);
+            }
+            action_tokens.reverse(); // スタックなので逆順
+            
+            // デフォルト処理を実行して終了
+            interp.execute_tokens(&action_tokens)?;
+            return Ok(());
+        }
+    }
+    
+    // すべての条件が偽の場合は何もしない
+    Ok(())
+}
+
+fn is_truthy(value: &Value) -> bool {
+    match &value.val_type {
+        ValueType::Boolean(b) => *b,
         ValueType::Nil => false,
         ValueType::Number(n) => n.numerator != 0,
         ValueType::String(s) => !s.is_empty(),
         ValueType::Vector(v, _) => !v.is_empty(),
         ValueType::Symbol(_) => true,
-    };
-    
-    if !should_execute {
-        // 条件が偽の場合、次のBRANCH_ENDまでスキップ
-        skip_to_branch_end(interp)?;
     }
-    
-    Ok(())
 }
 
-// BRANCH_END - 分岐終了マーカー
-pub fn op_branch_end(_interp: &mut Interpreter) -> Result<()> {
-    // 何もしない（マーカーとしてのみ使用）
-    Ok(())
-}
-
-fn skip_to_branch_end(_interp: &mut Interpreter) -> Result<()> {
-    // この実装は簡略版。実際にはコールスタックや実行状態を考慮する必要がある
-    // 今回は基本的な動作のみ実装
-    Ok(())
+fn value_to_token(value: &Value) -> Result<Token> {
+    match &value.val_type {
+        ValueType::Number(frac) => Ok(Token::Number(frac.numerator, frac.denominator)),
+        ValueType::String(s) => Ok(Token::String(s.clone())),
+        ValueType::Boolean(b) => Ok(Token::Boolean(*b)),
+        ValueType::Symbol(s) => Ok(Token::Symbol(s.clone())),
+        ValueType::Nil => Ok(Token::Nil),
+        _ => Err(AjisaiError::from("Cannot convert value to token")),
+    }
 }
 
 // NOP - 何もしない
@@ -262,16 +359,5 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         },
         _ => Err(AjisaiError::type_error("string", "other type")),
-    }
-}
-
-fn value_to_token(value: &Value) -> Result<Token> {
-    match &value.val_type {
-        ValueType::Number(frac) => Ok(Token::Number(frac.numerator, frac.denominator)),
-        ValueType::String(s) => Ok(Token::String(s.clone())),
-        ValueType::Boolean(b) => Ok(Token::Boolean(*b)),
-        ValueType::Symbol(s) => Ok(Token::Symbol(s.clone())),
-        ValueType::Nil => Ok(Token::Nil),
-        _ => Err(AjisaiError::from("Cannot convert value to token")),
     }
 }
