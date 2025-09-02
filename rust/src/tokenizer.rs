@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (全括弧統一入力対応版)
+// rust/src/tokenizer.rs (> 記号をCodeBlockStartとして処理)
 
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
@@ -40,19 +40,23 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         // Vector記号（統一入力：[ ] のみ受け付ける）
         match chars[i] {
             '[' => {
-                // 開始括弧として一旦Squareで記録（後で深度に応じて変換）
                 tokens.push(Token::VectorStart(BracketType::Square));
                 i += 1;
                 continue;
             },
             ']' => {
-                // 終了括弧として一旦Squareで記録（後で深度に応じて変換）
                 tokens.push(Token::VectorEnd(BracketType::Square));
                 i += 1;
                 continue;
             },
-            // 他の括弧は通常の文字として扱う（エラーにはしない）
             _ => {}
+        }
+        
+        // コードブロック開始記号
+        if chars[i] == '>' {
+            tokens.push(Token::CodeBlockStart);
+            i += 1;
+            continue;
         }
         
         // 行コメント（#から行末まで）
@@ -353,11 +357,11 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
 
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
-        "true", "false", "nil", "NIL",
-        // 英語組み込みワード
+        "true", "false", "nil", "NIL", "CODE", "DEFAULT",
+        // 英語組み込みワード (> と >= を除外)
         "NTH", "INSERT", "REPLACE", "REMOVE",
         "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
-        "CONCAT", "JUMP", "DEF", "DEL", "EVAL",
+        "CONCAT", "GOTO", "DEF", "DEL", "EVAL", "AND", "OR", "NOT"
     ];
     
     for word in &builtin_words {
@@ -380,7 +384,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-// 演算子記号解析
+// 演算子記号解析（> と >= を削除）
 fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() {
         return None;
@@ -390,19 +394,17 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     if chars.len() >= 2 {
         let two_char: String = chars[..2].iter().collect();
         match two_char.as_str() {
-            ">=" => return Some((Token::Symbol(">=".to_string()), 2)),
             "<=" => return Some((Token::Symbol("<=".to_string()), 2)),
             _ => {}
         }
     }
     
-    // 1文字演算子
+    // 1文字演算子（> を削除）
     match chars[0] {
         '+' => Some((Token::Symbol("+".to_string()), 1)),
         '-' => Some((Token::Symbol("-".to_string()), 1)),
         '*' => Some((Token::Symbol("*".to_string()), 1)),
         '/' => Some((Token::Symbol("/".to_string()), 1)),
-        '>' => Some((Token::Symbol(">".to_string()), 1)),
         '<' => Some((Token::Symbol("<".to_string()), 1)),
         '=' => Some((Token::Symbol("=".to_string()), 1)),
         _ => None,
