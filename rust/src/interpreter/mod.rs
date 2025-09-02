@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (括弧タイプ対応版)
+// rust/src/interpreter/mod.rs (エラー修正版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -109,6 +109,13 @@ impl Interpreter {
                 // 機能説明コメントは実行時には無視
                 Ok(format!("Skipped function comment: \"{}\"", comment))
             },
+            Token::CodeBlockStart => {
+                // コードブロック開始記号をワークスペースに積む
+                self.workspace.push(Value {
+                    val_type: ValueType::Symbol(">".to_string()),
+                });
+                Ok("Pushed code block start marker".to_string())
+            },
             Token::Symbol(name) => {
                 self.execute_word(name)?;
                 let output = self.get_output();
@@ -119,11 +126,9 @@ impl Interpreter {
                 }
             },
             Token::VectorStart(_) => {
-                // ベクトルの開始だけでは処理できない
                 Ok("Vector start token (incomplete)".to_string())
             },
             Token::VectorEnd(_) => {
-                // ベクトルの終了だけでは処理できない
                 Ok("Vector end token (incomplete)".to_string())
             },
         }
@@ -152,7 +157,6 @@ impl Interpreter {
     }
 
     fn try_process_def_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
-        // DEFパターンのみをチェック
         let def_position = tokens.iter().rposition(|t| {
             if let Token::Symbol(s) = t {
                 s == "DEF"
@@ -179,14 +183,12 @@ impl Interpreter {
     fn define_word_with_description(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
         let name = name.to_uppercase();
         
-        // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
 
-        // 依存関係チェック
         if self.dictionary.contains_key(&name) {
             if let Some(dependents) = self.dependencies.get(&name) {
                 if !dependents.is_empty() {
@@ -199,10 +201,8 @@ impl Interpreter {
             }
         }
 
-        // ベクトルリテラルから実行可能なトークンを抽出
         let executable_tokens = self.extract_executable_tokens(&body_tokens)?;
 
-        // 古い依存関係をクリア
         if let Some(old_deps) = self.get_word_dependencies(&name) {
             for dep in old_deps {
                 if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
@@ -211,7 +211,6 @@ impl Interpreter {
             }
         }
 
-        // 新しい依存関係を登録
         for token in &executable_tokens {
             if let Token::Symbol(sym) = token {
                 if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
@@ -222,7 +221,6 @@ impl Interpreter {
             }
         }
 
-        // ワードを登録
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: executable_tokens,
             is_builtin: false,
@@ -270,6 +268,13 @@ impl Interpreter {
                     // 機能説明コメントは実行時には無視
                     i += 1;
                 },
+                Token::CodeBlockStart => {
+                    // コードブロック開始記号をワークスペースに積む
+                    self.workspace.push(Value {
+                        val_type: ValueType::Symbol(">".to_string()),
+                    });
+                    i += 1;
+                },
                 Token::VectorStart(bracket_type) => {
                     let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
                     self.workspace.push(Value {
@@ -297,7 +302,6 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart(inner_bracket_type) => {
-                    // ネストしたVectorを再帰的に処理
                     let (nested_values, consumed) = self.collect_vector(tokens, i, inner_bracket_type.clone())?;
                     values.push(Value {
                         val_type: ValueType::Vector(nested_values, inner_bracket_type.clone()),
@@ -305,7 +309,6 @@ impl Interpreter {
                     i += consumed;
                 },
                 Token::VectorEnd(end_bracket_type) => {
-                    // 括弧の種類が一致するかチェック
                     if *end_bracket_type != expected_bracket_type {
                         return Err(error::AjisaiError::from(format!(
                             "Mismatched bracket types: expected {}, found {}",
@@ -313,15 +316,12 @@ impl Interpreter {
                             end_bracket_type.closing_char()
                         )));
                     }
-                    // このVectorの終了
                     return Ok((values, i - start + 1));
                 },
                 Token::FunctionComment(_) => {
-                    // コメントは無視
                     i += 1;
                 },
                 token => {
-                    // 通常の値をVector内に追加
                     values.push(self.token_to_value(token)?);
                     i += 1;
                 }
@@ -348,6 +348,9 @@ impl Interpreter {
             Token::Symbol(s) => Ok(Value {
                 val_type: ValueType::Symbol(s.clone()),
             }),
+            Token::CodeBlockStart => Ok(Value {
+                val_type: ValueType::Symbol(">".to_string()),
+            }),
             Token::FunctionComment(_) => {
                 Err(error::AjisaiError::from("Cannot convert comment to value"))
             },
@@ -370,10 +373,15 @@ impl Interpreter {
             ValueType::Number(frac) => Ok(Token::Number(frac.numerator, frac.denominator)),
             ValueType::String(s) => Ok(Token::String(s)),
             ValueType::Boolean(b) => Ok(Token::Boolean(b)),
-            ValueType::Symbol(s) => Ok(Token::Symbol(s)),
+            ValueType::Symbol(s) => {
+                if s == ">" {
+                    Ok(Token::CodeBlockStart)
+                } else {
+                    Ok(Token::Symbol(s))
+                }
+            },
             ValueType::Nil => Ok(Token::Nil),
-            ValueType::Vector(_, bracket_type) => {
-                // Vector内の値は変換しないが、bracket_typeは保持
+            ValueType::Vector(_, _) => {
                 Err(error::AjisaiError::from("Nested vectors not supported in token conversion"))
             },
         }
@@ -401,18 +409,11 @@ impl Interpreter {
             .unwrap_or(false)
     }
 
-    fn is_protected(&self, name: &str) -> bool {
-        self.dependencies.get(name)
-            .map(|deps| !deps.is_empty())
-            .unwrap_or(false)
-    }
-
     fn execute_word(&mut self, name: &str) -> Result<()> {
         if let Some(def) = self.dictionary.get(name).cloned() {
             if def.is_builtin {
                 self.execute_builtin(name)
             } else {
-                // カスタムワードは即座実行
                 self.call_stack.push(name.to_string());
                 let result = self.execute_custom_word_immediate(&def.tokens);
                 self.call_stack.pop();
@@ -424,55 +425,26 @@ impl Interpreter {
     }
 
     fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
-        // ベクトル記号を除いて中身を実行
         if tokens.len() >= 2 && 
            matches!(tokens.first(), Some(Token::VectorStart(_))) && 
            matches!(tokens.last(), Some(Token::VectorEnd(_))) {
-            // [ 内容 ] → 内容を直接実行
             let inner_tokens = &tokens[1..tokens.len()-1];
             self.execute_tokens(inner_tokens)
         } else {
-            // 通常のトークン列をそのまま実行
             self.execute_tokens(tokens)
-        }
-    }
-
-    pub(crate) fn execute_word_leap(&mut self, name: &str, current_word: Option<&str>) -> Result<()> {
-        if let Some(current) = current_word {
-            if name != current {
-                return Err(error::AjisaiError::from(format!(
-                    "JUMP can only jump within the same word. Cannot jump from '{}' to '{}'", 
-                    current, name
-                )));
-            }
-        } else {
-            return Err(error::AjisaiError::from(format!(
-                "JUMP can only be used within custom words. Cannot jump to '{}' from main program", 
-                name
-            )));
-        }
-
-        if let Some(def) = self.dictionary.get(name).cloned() {
-            if def.is_builtin {
-                return Err(error::AjisaiError::from("Cannot jump to builtin word"));
-            } else {
-                self.execute_custom_word_immediate(&def.tokens)
-            }
-        } else {
-            Err(error::AjisaiError::UnknownWord(name.to_string()))
         }
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // 算術・論理演算
+            // 算術・論理演算（> と >= を削除）
             "+" => arithmetic::op_add(self),
             "/" => arithmetic::op_div(self),
             "*" => arithmetic::op_mul(self),
             "-" => arithmetic::op_sub(self),
             "=" => arithmetic::op_eq(self),
-            ">=" => arithmetic::op_ge(self),
-            ">" => arithmetic::op_gt(self),
+            "<=" => arithmetic::op_le(self),
+            "<" => arithmetic::op_lt(self),
             "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self),
             "NOT" => arithmetic::op_not(self),
@@ -492,12 +464,14 @@ impl Interpreter {
             
             // Vector操作
             "CONCAT" => vector_ops::op_concat(self),
-            "JUMP" => control::op_jump(self),
+            "GOTO" => control::op_goto(self),
             
             // ワード管理
             "DEF" => control::op_def(self),
             "DEL" => control::op_del(self),
-            "EVAL" => control::op_eval(self),
+            
+            // 補助ワード
+            "NOP" => control::op_nop(self), // EVALをNOPに変更
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
@@ -533,7 +507,9 @@ impl Interpreter {
         self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| {
-                let protected = self.is_protected(name);
+                let protected = self.dependencies.get(name)
+                    .map(|deps| !deps.is_empty())
+                    .unwrap_or(false);
                 (name.clone(), def.description.clone(), protected)
             })
             .collect()
@@ -567,7 +543,6 @@ impl Interpreter {
             if !def.is_builtin {
                 let body_string = def.tokens.iter()
                     .filter_map(|token| {
-                        // FunctionCommentはワード定義文字列には含めない
                         match token {
                             Token::FunctionComment(_) => None,
                             _ => Some(self.token_to_string(token))
@@ -591,6 +566,7 @@ impl Interpreter {
             Token::VectorStart(bracket_type) => bracket_type.opening_char().to_string(),
             Token::VectorEnd(bracket_type) => bracket_type.closing_char().to_string(),
             Token::FunctionComment(comment) => format!("\"{}\"", comment),
+            Token::CodeBlockStart => ">".to_string(),
         }
     }
 }
