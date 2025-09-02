@@ -1,4 +1,4 @@
-// rust/src/builtins.rs (NOP追加、EVAL削除)
+// rust/src/builtins.rs (> >= 復活、GOTO/CODE/DEFAULT削除)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
@@ -18,7 +18,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
     vec![
-        // 算術・論理演算（> と >= を削除）
+        // 算術・論理演算（> と >= を復活）
         ("+", "Addition operator"),
         ("/", "Division operator"), 
         ("*", "Multiplication operator"),
@@ -26,6 +26,8 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("=", "Equality test"),
         ("<=", "Less than or equal test"),
         ("<", "Less than test"),
+        (">=", "Greater than or equal test"),
+        (">", "Greater than test"),
         ("AND", "Logical AND"),
         ("OR", "Logical OR"),
         ("NOT", "Logical NOT"),
@@ -45,13 +47,12 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         
         // その他
         ("CONCAT", "Concatenate vectors"),
-        ("GOTO", "Conditional code block execution"),
         ("DEF", "Define new word"),
         ("DEL", "Delete word"),
-        ("NOP", "No operation - do nothing"), // EVAL → NOP に変更
+        ("NOP", "No operation - do nothing"),
         
-        // 補助ワード
-        ("CODE", "Code block marker"),
-        ("DEFAULT", "Default code block marker"),
+        // 暗黙GOTO用補助ワード（通常は使用されない）
+        ("BRANCH_IF", "Internal: conditional branch"),
+        ("BRANCH_END", "Internal: branch end marker"),
     ]
 }
