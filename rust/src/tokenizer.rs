@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (> 記号をCodeBlockStartとして処理)
+// rust/src/tokenizer.rs (> >= 復活、CodeBlockStart削除)
 
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
@@ -9,94 +9,98 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
-    let chars: Vec<char> = input.chars().collect();
-    let mut i = 0;
+    let lines: Vec<&str> = input.lines().collect();
+    
+    for (line_idx, line) in lines.iter().enumerate() {
+        let chars: Vec<char> = line.chars().collect();
+        let mut i = 0;
 
-    while i < chars.len() {
-        // 空白文字をスキップ
-        if chars[i].is_whitespace() {
-            i += 1;
-            continue;
-        }
-        
-        // 文字列リテラル（シングルクォート）
-        if chars[i] == '\'' {
-            if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
+        while i < chars.len() {
+            // 空白文字をスキップ
+            if chars[i].is_whitespace() {
+                i += 1;
+                continue;
+            }
+            
+            // 文字列リテラル（シングルクォート）
+            if chars[i] == '\'' {
+                if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
+                    tokens.push(token);
+                    i += consumed;
+                    continue;
+                }
+            }
+            
+            // 機能説明コメント（ダブルクォート）
+            if chars[i] == '"' {
+                if let Some((token, consumed)) = parse_double_quote_comment(&chars[i..]) {
+                    tokens.push(token);
+                    i += consumed;
+                    continue;
+                }
+            }
+            
+            // Vector記号（統一入力：[ ] のみ受け付ける）
+            match chars[i] {
+                '[' => {
+                    tokens.push(Token::VectorStart(BracketType::Square));
+                    i += 1;
+                    continue;
+                },
+                ']' => {
+                    tokens.push(Token::VectorEnd(BracketType::Square));
+                    i += 1;
+                    continue;
+                },
+                ':' => {
+                    tokens.push(Token::Colon);
+                    i += 1;
+                    continue;
+                },
+                _ => {}
+            }
+            
+            // 行コメント（#から行末まで）
+            if chars[i] == '#' {
+                break; // 行の残りをスキップ
+            }
+            
+            // 数値チェック（整数、分数、小数）
+            if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
-        }
-        
-        // 機能説明コメント（ダブルクォート）
-        if chars[i] == '"' {
-            if let Some((token, consumed)) = parse_double_quote_comment(&chars[i..]) {
+            
+            // カスタムワードチェック（最優先）
+            if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
-        }
-        
-        // Vector記号（統一入力：[ ] のみ受け付ける）
-        match chars[i] {
-            '[' => {
-                tokens.push(Token::VectorStart(BracketType::Square));
-                i += 1;
+            
+            // 組み込みワードチェック（英数字）
+            if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
+                tokens.push(token);
+                i += consumed;
                 continue;
-            },
-            ']' => {
-                tokens.push(Token::VectorEnd(BracketType::Square));
-                i += 1;
-                continue;
-            },
-            _ => {}
-        }
-        
-        // コードブロック開始記号
-        if chars[i] == '>' {
-            tokens.push(Token::CodeBlockStart);
-            i += 1;
-            continue;
-        }
-        
-        // 行コメント（#から行末まで）
-        if chars[i] == '#' {
-            while i < chars.len() && chars[i] != '\n' {
-                i += 1;
             }
-            continue;
+            
+            // 演算子記号チェック
+            if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+                tokens.push(token);
+                i += consumed;
+                continue;
+            }
+            
+            // どれにもマッチしなければ無視して次へ
+            i += 1;
         }
         
-        // 数値チェック（整数、分数、小数）
-        if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
-            tokens.push(token);
-            i += consumed;
-            continue;
+        // 各行の終わりに改行トークンを追加（最後の行以外）
+        if line_idx < lines.len() - 1 {
+            tokens.push(Token::LineBreak);
         }
-        
-        // カスタムワードチェック（最優先）
-        if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
-            tokens.push(token);
-            i += consumed;
-            continue;
-        }
-        
-        // 組み込みワードチェック（英数字）
-        if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
-            tokens.push(token);
-            i += consumed;
-            continue;
-        }
-        
-        // 演算子記号チェック
-        if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
-            tokens.push(token);
-            i += consumed;
-            continue;
-        }
-        
-        // どれにもマッチしなければ無視して次へ
-        i += 1;
     }
 
     // 括弧の深度に応じた変換を実行
@@ -357,11 +361,11 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
 
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
-        "true", "false", "nil", "NIL", "CODE", "DEFAULT",
-        // 英語組み込みワード (> と >= を除外)
+        "true", "false", "nil", "NIL",
+        // 英語組み込みワード
         "NTH", "INSERT", "REPLACE", "REMOVE",
         "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
-        "CONCAT", "GOTO", "DEF", "DEL", "EVAL", "AND", "OR", "NOT"
+        "CONCAT", "DEF", "DEL", "NOP", "AND", "OR", "NOT"
     ];
     
     for word in &builtin_words {
@@ -384,7 +388,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-// 演算子記号解析（> と >= を削除）
+// 演算子記号解析（> と >= 復活）
 fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() {
         return None;
@@ -395,17 +399,19 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
         let two_char: String = chars[..2].iter().collect();
         match two_char.as_str() {
             "<=" => return Some((Token::Symbol("<=".to_string()), 2)),
+            ">=" => return Some((Token::Symbol(">=".to_string()), 2)),
             _ => {}
         }
     }
     
-    // 1文字演算子（> を削除）
+    // 1文字演算子
     match chars[0] {
         '+' => Some((Token::Symbol("+".to_string()), 1)),
         '-' => Some((Token::Symbol("-".to_string()), 1)),
         '*' => Some((Token::Symbol("*".to_string()), 1)),
         '/' => Some((Token::Symbol("/".to_string()), 1)),
         '<' => Some((Token::Symbol("<".to_string()), 1)),
+        '>' => Some((Token::Symbol(">".to_string()), 1)),
         '=' => Some((Token::Symbol("=".to_string()), 1)),
         _ => None,
     }
