@@ -79,10 +79,11 @@ pub fn op_conditional_branch(interp: &mut Interpreter) -> Result<()> {
     let remaining_branches_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
-    let remaining_branches = match remaining_branches_val.val_type {
-        ValueType::Number(n) if n.denominator == 1 => n.numerator as usize,
-        _ => return Err(AjisaiError::from("Invalid remaining branches count")),
-    };
+    // 82行目付近の修正
+let _remaining_branches = match remaining_branches_val.val_type {
+    ValueType::Number(n) if n.denominator == 1 => n.numerator as usize,
+    _ => return Err(AjisaiError::from("Invalid remaining branches count")),
+};
     
     // アクションを実行
     let action_val = interp.workspace.pop()
