@@ -1,4 +1,4 @@
-// rust/src/builtins.rs (> >= 復活、GOTO/CODE/DEFAULT削除)
+// rust/src/builtins.rs (BRANCH_IF/BRANCH_END削除、EXECUTE_CONDITIONS追加)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
@@ -51,8 +51,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("DEL", "Delete word"),
         ("NOP", "No operation - do nothing"),
         
-        // 暗黙GOTO用補助ワード（通常は使用されない）
-        ("BRANCH_IF", "Internal: conditional branch"),
-        ("BRANCH_END", "Internal: branch end marker"),
+        // 事前評価方式の条件分岐用（内部使用）
+        ("EXECUTE_CONDITIONS", "Internal: execute conditional blocks"),
     ]
 }
