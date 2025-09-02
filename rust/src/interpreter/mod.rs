@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (暗黙GOTO対応、> >= 復活)
+// rust/src/interpreter/mod.rs (BRANCH_IF/BRANCH_END削除、EXECUTE_CONDITIONS追加)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -471,9 +471,8 @@ impl Interpreter {
             "DEF" => control::op_def(self),
             "DEL" => control::op_del(self),
             
-            // 補助ワード（暗黙GOTO用）
-            "BRANCH_IF" => control::op_branch_if(self),
-            "BRANCH_END" => control::op_branch_end(self),
+            // 事前評価方式の条件分岐
+            "EXECUTE_CONDITIONS" => control::op_execute_conditions(self),
             "NOP" => control::op_nop(self),
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
