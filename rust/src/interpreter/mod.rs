@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (複数行定義自動判定対応版)
+// rust/src/interpreter/mod.rs (エラー修正版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -49,42 +49,49 @@ impl Interpreter {
     pub fn execute(&mut self, code: &str) -> Result<()> {
         self.output_buffer.clear();
         
-        let lines: Vec<&str> = code.split('\n')
-            .map(|line| line.trim())
-            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        // 全体を一度にトークン化（改行を保持）
+        let custom_word_names: HashSet<String> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
             .collect();
-
-        for line in lines {
-            self.process_line(line)?;
+        
+        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
+            .map_err(error::AjisaiError::from)?;
+            
+        if tokens.is_empty() {
+            return Ok(());
         }
+
+        // DEFパターンを探して処理
+        if let Some(def_result) = self.try_process_multiline_def_pattern(&tokens) {
+            return def_result;
+        }
+
+        // DEFパターンがない場合は通常の実行
+        self.execute_tokens(&tokens)
+    }
+
+    pub fn execute_amnesia(&mut self) -> Result<()> {
+        // IndexedDBクリアのイベントを発火
+        if let Some(window) = web_sys::window() {
+            let event = web_sys::CustomEvent::new("ajisai-amnesia")
+                .map_err(|_| error::AjisaiError::from("Failed to create amnesia event"))?;
+            window.dispatch_event(&event)
+                .map_err(|_| error::AjisaiError::from("Failed to dispatch amnesia event"))?;
+        }
+        
+        // インタープリター内部状態もクリア
+        self.workspace.clear();
+        self.dictionary.clear();
+        self.dependencies.clear();
+        self.output_buffer.clear();
+        self.call_stack.clear();
+        
+        // 組み込みワードを再登録
+        crate::builtins::register_builtins(&mut self.dictionary);
         
         Ok(())
     }
-
-    pub fn execute(&mut self, code: &str) -> Result<()> {
-    self.output_buffer.clear();
-    
-    // 全体を一度にトークン化（改行を保持）
-    let custom_word_names: HashSet<String> = self.dictionary.iter()
-        .filter(|(_, def)| !def.is_builtin)
-        .map(|(name, _)| name.clone())
-        .collect();
-    
-    let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
-        .map_err(error::AjisaiError::from)?;
-        
-    if tokens.is_empty() {
-        return Ok(());
-    }
-
-    // DEFパターンを探して処理
-    if let Some(def_result) = self.try_process_multiline_def_pattern(&tokens) {
-        return def_result;
-    }
-
-    // DEFパターンがない場合は通常の実行
-    self.execute_tokens(&tokens)
-}
 
     pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
         self.output_buffer.clear();
@@ -142,59 +149,37 @@ impl Interpreter {
         }
     }
 
-    fn process_line(&mut self, line: &str) -> Result<()> {
-        let custom_word_names: HashSet<String> = self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-        
-        let tokens = crate::tokenizer::tokenize_with_custom_words(line, &custom_word_names)
-            .map_err(error::AjisaiError::from)?;
-            
-        if tokens.is_empty() {
-            return Ok(());
-        }
-
-        // DEFパターンのチェック（複数行定義対応）
-        if let Some(def_result) = self.try_process_multiline_def_pattern(&tokens) {
-            return def_result;
-        }
-
-        // 通常のトークン実行
-        self.execute_tokens(&tokens)
-    }
-
     fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
-    // DEFの位置を探す
-    let def_position = tokens.iter().rposition(|t| {
-        if let Token::Symbol(s) = t {
-            s == "DEF"
-        } else {
-            false
-        }
-    })?;
-    
-    // DEF前に文字列（ワード名）があるかチェック
-    if def_position >= 1 {
-        if let Token::String(name) = &tokens[def_position - 1] {
-            let body_tokens = &tokens[..def_position - 1];
-            
-            if body_tokens.is_empty() {
-                return Some(Err(error::AjisaiError::from("DEF requires a body")));
+        // DEFの位置を探す
+        let def_position = tokens.iter().rposition(|t| {
+            if let Token::Symbol(s) = t {
+                s == "DEF"
+            } else {
+                false
             }
-            
-            // 複数行かどうかを判定
-            let multiline_def = self.parse_multiline_definition(body_tokens);
-            
-            return Some(self.define_word_from_multiline(
-                name.clone(),
-                multiline_def
-            ));
+        })?;
+        
+        // DEF前に文字列（ワード名）があるかチェック
+        if def_position >= 1 {
+            if let Token::String(name) = &tokens[def_position - 1] {
+                let body_tokens = &tokens[..def_position - 1];
+                
+                if body_tokens.is_empty() {
+                    return Some(Err(error::AjisaiError::from("DEF requires a body")));
+                }
+                
+                // 複数行かどうかを判定
+                let multiline_def = self.parse_multiline_definition(body_tokens);
+                
+                return Some(self.define_word_from_multiline(
+                    name.clone(),
+                    multiline_def
+                ));
+            }
         }
+        
+        None
     }
-    
-    None
-}
 
     fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
         let mut lines = Vec::new();
@@ -299,14 +284,14 @@ impl Interpreter {
     }
 
     fn create_sequential_execution_tokens(&self, lines: &[Vec<Token>]) -> Vec<Token> {
-    let mut result = Vec::new();
-    
-    for line in lines.iter() {
-        result.extend(line.iter().cloned());
+        let mut result = Vec::new();
+        
+        for line in lines.iter() {
+            result.extend(line.iter().cloned());
+        }
+        
+        result
     }
-    
-    result
-}
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
