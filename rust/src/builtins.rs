@@ -1,4 +1,4 @@
-// rust/src/builtins.rs (英語ワード体系)
+// rust/src/builtins.rs (NOP追加、EVAL削除)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
@@ -18,14 +18,14 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
     vec![
-        // 算術・論理演算
+        // 算術・論理演算（> と >= を削除）
         ("+", "Addition operator"),
         ("/", "Division operator"), 
         ("*", "Multiplication operator"),
         ("-", "Subtraction operator"),
         ("=", "Equality test"),
-        (">=", "Greater than or equal test"),
-        (">", "Greater than test"),
+        ("<=", "Less than or equal test"),
+        ("<", "Less than test"),
         ("AND", "Logical AND"),
         ("OR", "Logical OR"),
         ("NOT", "Logical NOT"),
@@ -45,9 +45,13 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         
         // その他
         ("CONCAT", "Concatenate vectors"),
-        ("JUMP", "Conditional jump"),
+        ("GOTO", "Conditional code block execution"),
         ("DEF", "Define new word"),
         ("DEL", "Delete word"),
-        ("EVAL", "Execute vector as code"),
+        ("NOP", "No operation - do nothing"), // EVAL → NOP に変更
+        
+        // 補助ワード
+        ("CODE", "Code block marker"),
+        ("DEFAULT", "Default code block marker"),
     ]
 }
