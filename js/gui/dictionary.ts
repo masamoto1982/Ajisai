@@ -1,4 +1,4 @@
-// js/gui/dictionary.ts (英語ワード対応)
+// js/gui/dictionary.ts (新しい組み込みワード対応版)
 
 interface WordInfo {
     name: string;
@@ -37,10 +37,10 @@ export class Dictionary {
     private renderBuiltinWordsWithGroups(container: HTMLElement, builtinWords: any[]): void {
         container.innerHTML = '';
         
-        // 英語ワード体系に対応したグループ分け
-        const arithmeticWords = ['+', '/', '*', '-', '=', '>=', '>', 'AND', 'OR', 'NOT'];
+        // 更新されたワード体系に対応したグループ分け
+        const arithmeticWords = ['+', '/', '*', '-', '=', '<=', '<', 'AND', 'OR', 'NOT'];
         const vectorOpsWords = ['NTH', 'INSERT', 'REPLACE', 'REMOVE', 'LENGTH', 'TAKE', 'DROP', 'REPEAT', 'SPLIT', 'CONCAT'];
-        const controlWords = ['JUMP', 'DEF', 'DEL', 'EVAL'];
+        const controlWords = ['GOTO', 'DEF', 'DEL', 'NOP', 'CODE', 'DEFAULT'];
         
         const groups = [arithmeticWords, vectorOpsWords, controlWords];
         
@@ -99,11 +99,9 @@ export class Dictionary {
                 if (part === 'SUB') return '-';
                 if (part === 'MUL') return '*';
                 if (part === 'DIV') return '/';
-                if (part === 'GT') return '>';
-                if (part === 'GE') return '>=';
-                if (part === 'EQ') return '=';
                 if (part === 'LT') return '<';
                 if (part === 'LE') return '<=';
+                if (part === 'EQ') return '=';
                 if (part === 'AND') return 'and';
                 if (part === 'OR') return 'or';
                 if (part === 'NOT') return 'not';
