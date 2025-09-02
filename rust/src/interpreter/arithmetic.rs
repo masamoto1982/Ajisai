@@ -1,7 +1,7 @@
 // rust/src/interpreter/arithmetic.rs (> と >= 復活)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType, Fraction, BracketType};
+use crate::types::{Value, ValueType, Fraction};
 
 fn value_type_name(val_type: &ValueType) -> &'static str {
     match val_type {
