@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (BRANCH_IF/BRANCH_END削除、EXECUTE_CONDITIONS追加)
+// rust/src/interpreter/mod.rs (複数行定義自動判定対応版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -24,6 +24,12 @@ pub struct WordDefinition {
     pub is_builtin: bool,
     pub description: Option<String>,
     pub category: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MultiLineDefinition {
+    pub lines: Vec<Vec<Token>>,
+    pub has_conditionals: bool,
 }
 
 impl Interpreter {
@@ -146,8 +152,8 @@ impl Interpreter {
             return Ok(());
         }
 
-        // DEFパターンのチェック
-        if let Some(def_result) = self.try_process_def_pattern(&tokens) {
+        // DEFパターンのチェック（複数行定義対応）
+        if let Some(def_result) = self.try_process_multiline_def_pattern(&tokens) {
             return def_result;
         }
 
@@ -155,7 +161,8 @@ impl Interpreter {
         self.execute_tokens(&tokens)
     }
 
-    fn try_process_def_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
+    fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
+        // DEFの位置を探す
         let def_position = tokens.iter().rposition(|t| {
             if let Token::Symbol(s) = t {
                 s == "DEF"
@@ -164,14 +171,21 @@ impl Interpreter {
             }
         })?;
         
+        // DEF前に文字列（ワード名）があるかチェック
         if def_position >= 1 {
             if let Token::String(name) = &tokens[def_position - 1] {
                 let body_tokens = &tokens[..def_position - 1];
                 
-                return Some(self.define_word_with_description(
+                if body_tokens.is_empty() {
+                    return Some(Err(error::AjisaiError::from("DEF requires a body")));
+                }
+                
+                // 複数行かどうかを判定
+                let multiline_def = self.parse_multiline_definition(body_tokens);
+                
+                return Some(self.define_word_from_multiline(
                     name.clone(),
-                    body_tokens.to_vec(),
-                    None
+                    multiline_def
                 ));
             }
         }
@@ -179,15 +193,53 @@ impl Interpreter {
         None
     }
 
-    fn define_word_with_description(&mut self, name: String, body_tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+    fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
+        let mut lines = Vec::new();
+        let mut current_line = Vec::new();
+        let mut has_conditionals = false;
+        
+        for token in tokens {
+            match token {
+                Token::LineBreak => {
+                    if !current_line.is_empty() {
+                        lines.push(current_line.clone());
+                        current_line.clear();
+                    }
+                },
+                Token::FunctionComment(_) => {
+                    // コメントはスキップ
+                },
+                _ => {
+                    if let Token::Colon = token {
+                        has_conditionals = true;
+                    }
+                    current_line.push(token.clone());
+                }
+            }
+        }
+        
+        // 最後の行を追加
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+        
+        MultiLineDefinition {
+            lines,
+            has_conditionals,
+        }
+    }
+
+    fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
         let name = name.to_uppercase();
         
+        // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
 
+        // 依存関係チェック
         if self.dictionary.contains_key(&name) {
             if let Some(dependents) = self.dependencies.get(&name) {
                 if !dependents.is_empty() {
@@ -200,9 +252,19 @@ impl Interpreter {
             }
         }
 
-        // 暗黙GOTO機能を適用
-        let executable_tokens = control::apply_implicit_goto(&body_tokens)?;
+        // 処理方式の判定と実行
+        let executable_tokens = if multiline_def.lines.len() == 1 {
+            // 単一行 → 通常の定義
+            multiline_def.lines[0].clone()
+        } else if multiline_def.has_conditionals {
+            // 複数行 + コロンあり → 条件分岐
+            control::create_conditional_execution_tokens(&multiline_def.lines)?
+        } else {
+            // 複数行 + コロンなし → 順次実行
+            self.create_sequential_execution_tokens(&multiline_def.lines)
+        };
 
+        // 古い依存関係をクリア
         if let Some(old_deps) = self.get_word_dependencies(&name) {
             for dep in old_deps {
                 if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
@@ -211,6 +273,7 @@ impl Interpreter {
             }
         }
 
+        // 新しい依存関係を登録
         for token in &executable_tokens {
             if let Token::Symbol(sym) = token {
                 if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
@@ -224,12 +287,26 @@ impl Interpreter {
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: executable_tokens,
             is_builtin: false,
-            description,
+            description: None,
             category: None,
         });
 
         self.append_output(&format!("Defined word: {}\n", name));
         Ok(())
+    }
+
+    fn create_sequential_execution_tokens(&self, lines: &[Vec<Token>]) -> Vec<Token> {
+        let mut result = Vec::new();
+        
+        for (i, line) in lines.iter().enumerate() {
+            result.extend(line.iter().cloned());
+            // 最後の行以外は明示的な区切りを入れない（連続実行）
+            if i < lines.len() - 1 {
+                // 必要に応じて区切り処理を追加
+            }
+        }
+        
+        result
     }
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
@@ -265,11 +342,11 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::Colon => {
-                    // コロンは暗黙GOTO処理で既に処理済み
+                    // コロンは条件分岐処理で既に処理済みのはず
                     i += 1;
                 },
                 Token::LineBreak => {
-                    // 改行は暗黙GOTO処理で既に処理済み
+                    // 改行は定義処理で既に処理済みのはず
                     i += 1;
                 },
                 Token::VectorStart(bracket_type) => {
@@ -471,8 +548,6 @@ impl Interpreter {
             "DEF" => control::op_def(self),
             "DEL" => control::op_del(self),
             
-            // 事前評価方式の条件分岐
-            "EXECUTE_CONDITIONS" => control::op_execute_conditions(self),
             "NOP" => control::op_nop(self),
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
