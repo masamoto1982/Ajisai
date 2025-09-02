@@ -1,4 +1,4 @@
-// rust/src/types.rs (括弧タイプ保持版)
+// rust/src/types.rs (CodeBlockStart追加版)
 
 use std::fmt;
 
@@ -8,10 +8,11 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(String),
-    VectorStart(BracketType),    // 括弧タイプを保持
-    VectorEnd(BracketType),      // 括弧タイプを保持
+    VectorStart(BracketType),
+    VectorEnd(BracketType),
     Nil,
     FunctionComment(String),
+    CodeBlockStart, // > 記号
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,7 +26,7 @@ pub enum ValueType {
     String(String),
     Boolean(bool),
     Symbol(String),
-    Vector(Vec<Value>, BracketType),  // 括弧タイプを追加
+    Vector(Vec<Value>, BracketType),
     Nil,
 }
 
@@ -122,24 +123,16 @@ impl Fraction {
         Fraction::new(num, den)
     }
     
-    pub fn gt(&self, other: &Fraction) -> bool {
-        self.numerator * other.denominator > other.numerator * self.denominator
-    }
-    
-    pub fn ge(&self, other: &Fraction) -> bool {
-        self.numerator * other.denominator >= other.numerator * self.denominator
-    }
-    
-    pub fn eq(&self, other: &Fraction) -> bool {
-        self.numerator * other.denominator == other.numerator * self.denominator
-    }
-    
     pub fn lt(&self, other: &Fraction) -> bool {
         self.numerator * other.denominator < other.numerator * self.denominator
     }
     
     pub fn le(&self, other: &Fraction) -> bool {
         self.numerator * other.denominator <= other.numerator * self.denominator
+    }
+    
+    pub fn eq(&self, other: &Fraction) -> bool {
+        self.numerator * other.denominator == other.numerator * self.denominator
     }
 }
 
