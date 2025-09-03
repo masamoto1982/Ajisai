@@ -48,7 +48,7 @@ impl Interpreter {
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
     // まず最初にデバッグ出力
-    self.output_buffer.push_str("DEBUG: execute() method called\n");
+    self.output_buffer.push_str(&format!("DEBUG: execute() called with code: '{}'\n", code));
     
     // 全体を一度にトークン化（改行を保持）
     let custom_word_names: HashSet<String> = self.dictionary.iter()
@@ -56,10 +56,12 @@ impl Interpreter {
         .map(|(name, _)| name.clone())
         .collect();
     
+    self.append_output(&format!("DEBUG: Custom words: {:?}\n", custom_word_names));
+    
     let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
         .map_err(error::AjisaiError::from)?;
         
-    self.append_output(&format!("DEBUG: Tokenized {} tokens\n", tokens.len()));
+    self.append_output(&format!("DEBUG: All tokens: {:?}\n", tokens));
     
     if tokens.is_empty() {
         self.append_output("DEBUG: No tokens found\n");
@@ -75,8 +77,8 @@ impl Interpreter {
         
         // 残りのトークンがあれば実行
         if !remaining_tokens.is_empty() {
-            self.append_output(&format!("DEBUG: Executing {} remaining tokens\n", remaining_tokens.len()));
-            self.execute_tokens(&remaining_tokens)?;
+            self.append_output(&format!("DEBUG: Executing remaining tokens: {:?}\n", remaining_tokens));
+            self.execute_tokens(&remaining_tokens)?;  // execute_tokens を使用（executeではない）
         } else {
             self.append_output("DEBUG: No remaining tokens to execute\n");
         }
