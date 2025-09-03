@@ -22,7 +22,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 continue;
             }
             
-            // 文字列リテラル（シングルクォート）
+            // 文字列リテラル（シングルクォート）- 最優先で処理
             if chars[i] == '\'' {
                 if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
                     tokens.push(token);
@@ -31,7 +31,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 }
             }
             
-            // 機能説明コメント（ダブルクォート）
+            // 機能説明コメント（ダブルクォート）- 次に処理
             if chars[i] == '"' {
                 if let Some((token, consumed)) = parse_double_quote_comment(&chars[i..]) {
                     tokens.push(token);
@@ -40,7 +40,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 }
             }
             
-            // Vector記号（統一入力：[ ] のみ受け付ける）
+            // Vector記号
             match chars[i] {
                 '[' => {
                     tokens.push(Token::VectorStart(BracketType::Square));
@@ -65,29 +65,29 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 break; // 行の残りをスキップ
             }
             
-            // 数値チェック（整数、分数、小数）
+            // 数値チェック
             if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
-            // カスタムワードチェック（最優先）
+            // カスタムワードチェック
             if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
-            // 組み込みワードチェック（英数字）
-            if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
+            // 演算子記号チェック（組み込みワードより先に）
+            if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
-            // 演算子記号チェック
-            if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+            // 組み込みワードチェック（最後に）
+            if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
