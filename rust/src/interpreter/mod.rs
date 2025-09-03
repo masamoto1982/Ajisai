@@ -62,13 +62,20 @@ impl Interpreter {
         return Ok(());
     }
 
+    // デバッグ: 全トークンを出力
+    self.append_output(&format!("DEBUG: All tokens: {:?}\n", tokens));
+
     // DEFパターンを探して処理
     if let Some((def_result, remaining_tokens)) = self.try_process_multiline_def_pattern(&tokens) {
+        // デバッグ: DEFパターンが見つかったことを出力
+        self.append_output(&format!("DEBUG: DEF pattern found, remaining tokens count: {}\n", remaining_tokens.len()));
+        
         // DEF処理を実行
         def_result?;
         
         // 残りのトークンがあれば実行
         if !remaining_tokens.is_empty() {
+            self.append_output(&format!("DEBUG: Executing remaining tokens: {:?}\n", remaining_tokens));
             self.execute_tokens(&remaining_tokens)?;
         }
         
@@ -167,6 +174,9 @@ impl Interpreter {
         }
     })?;
     
+    // デバッグ: DEFの位置を出力
+    self.append_output(&format!("DEBUG: DEF found at position: {}\n", def_position));
+    
     // DEF前に文字列（ワード名）があるかチェック
     if def_position >= 1 {
         if let Token::String(name) = &tokens[def_position - 1] {
@@ -179,25 +189,15 @@ impl Interpreter {
             // 複数行かどうかを判定
             let multiline_def = self.parse_multiline_definition(body_tokens);
             
-            // DEF後の残りトークンを取得（改行トークンを除外）
-            let mut remaining_tokens = Vec::new();
-            if def_position + 1 < tokens.len() {
-                for token in &tokens[def_position + 1..] {
-                    match token {
-                        Token::LineBreak | Token::FunctionComment(_) => {
-                            // 改行とコメントはスキップ
-                        },
-                        _ => {
-                            remaining_tokens.push(token.clone());
-                        }
-                    }
-                }
-            }
-            
-            // デバッグ用：残りトークンをログ出力
-            if !remaining_tokens.is_empty() {
-                self.append_output(&format!("DEBUG: Remaining tokens after DEF: {:?}\n", remaining_tokens));
-            }
+            // DEF後の残りトークンを取得
+            let remaining_tokens = if def_position + 1 < tokens.len() {
+                let raw_remaining = &tokens[def_position + 1..];
+                self.append_output(&format!("DEBUG: Raw remaining tokens: {:?}\n", raw_remaining));
+                raw_remaining.to_vec()
+            } else {
+                self.append_output(&format!("DEBUG: No tokens after DEF\n"));
+                Vec::new()
+            };
             
             let def_result = self.define_word_from_multiline(
                 name.clone(),
@@ -210,7 +210,6 @@ impl Interpreter {
     
     None
 }
-
     fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
