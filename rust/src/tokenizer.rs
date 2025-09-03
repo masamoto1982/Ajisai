@@ -8,8 +8,12 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 }
 
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER INPUT: '{}'", input)));
+    
     let mut tokens = Vec::new();
     let lines: Vec<&str> = input.lines().collect();
+
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER LINES: {:?}", lines)));
     
     for (line_idx, line) in lines.iter().enumerate() {
         let chars: Vec<char> = line.chars().collect();
