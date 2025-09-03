@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (エラー修正版)
+// rust/src/interpreter/mod.rs (最新完全版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -46,48 +46,48 @@ impl Interpreter {
         interpreter
     }
 
-    // interpreter/mod.rs の execute メソッド
-pub fn execute(&mut self, code: &str) -> Result<()> {
-    // まず最初にデバッグ出力
-    self.output_buffer.push_str(&format!("DEBUG: execute() called with code: '{}'\n", code));
-    
-    // 全体を一度にトークン化（改行を保持）
-    let custom_word_names: HashSet<String> = self.dictionary.iter()
-        .filter(|(_, def)| !def.is_builtin)
-        .map(|(name, _)| name.clone())
-        .collect();
-    
-    let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
-        .map_err(error::AjisaiError::from)?;
+    pub fn execute(&mut self, code: &str) -> Result<()> {
+        // まず最初にデバッグ出力
+        self.output_buffer.push_str(&format!("DEBUG: execute() called with code: '{}'\n", code));
         
-    self.append_output(&format!("DEBUG: All tokens: {:?}\n", tokens));
-    
-    if tokens.is_empty() {
-        return Ok(());
-    }
-
-    // DEFパターンを探して処理
-    if let Some((def_result, remaining_tokens)) = self.try_process_multiline_def_pattern(&tokens) {
-        self.append_output("DEBUG: DEF pattern processing started\n");
+        // 全体を一度にトークン化（改行を保持）
+        let custom_word_names: HashSet<String> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect();
         
-        // DEF処理を実行
-        def_result?;
+        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
+            .map_err(error::AjisaiError::from)?;
+            
+        self.append_output(&format!("DEBUG: All tokens: {:?}\n", tokens));
         
-        // 残りのトークンがあれば実行（execute_tokens を使用、execute ではない）
-        if !remaining_tokens.is_empty() {
-            self.append_output(&format!("DEBUG: Executing remaining tokens: {:?}\n", remaining_tokens));
-            self.execute_tokens(&remaining_tokens)?;  // これが重要
-        } else {
-            self.append_output("DEBUG: No remaining tokens to execute\n");
+        if tokens.is_empty() {
+            return Ok(());
         }
-        
-        return Ok(());
-    }
 
-    self.append_output("DEBUG: No DEF pattern, executing tokens normally\n");
-    // DEFパターンがない場合は通常の実行
-    self.execute_tokens(&tokens)
-}
+        // DEFパターンを探して処理
+        if let Some((def_result, remaining_code)) = self.try_process_def_pattern_from_code(code, &tokens) {
+            self.append_output("DEBUG: DEF pattern processing started\n");
+            
+            // DEF処理を実行
+            def_result?;
+            
+            // 残りのコードがあれば実行
+            if !remaining_code.trim().is_empty() {
+                self.append_output(&format!("DEBUG: Executing remaining code: '{}'\n", remaining_code));
+                // 再帰的にexecuteを呼ぶ（新しいカスタムワードを含めて）
+                self.execute(&remaining_code)?;
+            } else {
+                self.append_output("DEBUG: No remaining code to execute\n");
+            }
+            
+            return Ok(());
+        }
+
+        self.append_output("DEBUG: No DEF pattern, executing tokens normally\n");
+        // DEFパターンがない場合は通常の実行
+        self.execute_tokens(&tokens)
+    }
 
     pub fn execute_amnesia(&mut self) -> Result<()> {
         // IndexedDBクリアのイベントを発火
@@ -167,71 +167,108 @@ pub fn execute(&mut self, code: &str) -> Result<()> {
         }
     }
 
-    fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<(Result<()>, Vec<Token>)> {
-    // DEFの位置を探す
-    let def_position = tokens.iter().rposition(|t| {
-        if let Token::Symbol(s) = t {
-            s == "DEF"
-        } else {
-            false
-        }
-    })?;
-    
-    // DEF前に文字列（ワード名）があるかチェック
-    if def_position >= 1 {
-        if let Token::String(name) = &tokens[def_position - 1] {
-            let body_tokens = &tokens[..def_position - 1];
-            
-            if body_tokens.is_empty() {
-                return Some((Err(error::AjisaiError::from("DEF requires a body")), Vec::new()));
-            }
-            
-            // 複数行かどうかを判定
-            let multiline_def = self.parse_multiline_definition(body_tokens);
-            
-            // 先にワードを定義
-            let def_result = self.define_word_from_multiline(
-                name.clone(),
-                multiline_def
-            );
-            
-            // DEF後にトークンがあるかチェック
-            let remaining_tokens = if def_position + 1 < tokens.len() {
-                // DEF後のコードを再トークン化（新しいカスタムワードを含めて）
-                let remaining_code = &tokens[def_position + 1..];
-                let remaining_code_str = self.tokens_to_string(remaining_code);
-                self.append_output(&format!("DEBUG: Re-tokenizing remaining code: '{}'\n", remaining_code_str));
-                
-                let custom_word_names: HashSet<String> = self.dictionary.iter()
-                    .filter(|(_, def)| !def.is_builtin)
-                    .map(|(name, _)| name.clone())
-                    .collect();
-                
-                match crate::tokenizer::tokenize_with_custom_words(&remaining_code_str, &custom_word_names) {
-                    Ok(retokenized) => {
-                        self.append_output(&format!("DEBUG: Re-tokenized result: {:?}\n", retokenized));
-                        retokenized
-                    },
-                    Err(_) => remaining_code.to_vec(),
-                }
+    fn try_process_def_pattern_from_code(&mut self, code: &str, tokens: &[Token]) -> Option<(Result<()>, String)> {
+        // DEFの位置を探す
+        let def_position = tokens.iter().rposition(|t| {
+            if let Token::Symbol(s) = t {
+                s == "DEF"
             } else {
-                Vec::new()
-            };
-            
-            return Some((def_result, remaining_tokens));
+                false
+            }
+        })?;
+        
+        // DEF前に文字列（ワード名）があるかチェック
+        if def_position >= 1 {
+            if let Token::String(name) = &tokens[def_position - 1] {
+                let body_tokens = &tokens[..def_position - 1];
+                
+                if body_tokens.is_empty() {
+                    return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
+                }
+                
+                // 複数行かどうかを判定
+                let multiline_def = self.parse_multiline_definition(body_tokens);
+                
+                // 元のコードからDEF後の部分を直接抽出
+                let remaining_code = if let Some(def_pos_in_code) = code.rfind("DEF") {
+                    let after_def = &code[def_pos_in_code + 3..]; // "DEF"の3文字分スキップ
+                    after_def.trim().to_string()
+                } else {
+                    String::new()
+                };
+                
+                self.append_output(&format!("DEBUG: Remaining code extracted: '{}'\n", remaining_code));
+                
+                let def_result = self.define_word_from_multiline(
+                    name.clone(),
+                    multiline_def
+                );
+                
+                return Some((def_result, remaining_code));
+            }
         }
+        
+        None
     }
-    
-    None
-}
 
-// トークンを文字列に戻すヘルパーメソッド
-fn tokens_to_string(&self, tokens: &[Token]) -> String {
-    tokens.iter()
-        .map(|token| self.token_to_string(token))
-        .collect::<Vec<String>>()
-        .join(" ")
-}
+    fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<(Result<()>, Vec<Token>)> {
+        // DEFの位置を探す
+        let def_position = tokens.iter().rposition(|t| {
+            if let Token::Symbol(s) = t {
+                s == "DEF"
+            } else {
+                false
+            }
+        })?;
+        
+        // DEF前に文字列（ワード名）があるかチェック
+        if def_position >= 1 {
+            if let Token::String(name) = &tokens[def_position - 1] {
+                let body_tokens = &tokens[..def_position - 1];
+                
+                if body_tokens.is_empty() {
+                    return Some((Err(error::AjisaiError::from("DEF requires a body")), Vec::new()));
+                }
+                
+                // 複数行かどうかを判定
+                let multiline_def = self.parse_multiline_definition(body_tokens);
+                
+                // 先にワードを定義
+                let def_result = self.define_word_from_multiline(
+                    name.clone(),
+                    multiline_def
+                );
+                
+                // DEF後にトークンがあるかチェック
+                let remaining_tokens = if def_position + 1 < tokens.len() {
+                    // DEF後のコードを再トークン化（新しいカスタムワードを含めて）
+                    let remaining_code = &tokens[def_position + 1..];
+                    let remaining_code_str = self.tokens_to_string(remaining_code);
+                    self.append_output(&format!("DEBUG: Re-tokenizing remaining code: '{}'\n", remaining_code_str));
+                    
+                    let custom_word_names: HashSet<String> = self.dictionary.iter()
+                        .filter(|(_, def)| !def.is_builtin)
+                        .map(|(name, _)| name.clone())
+                        .collect();
+                    
+                    match crate::tokenizer::tokenize_with_custom_words(&remaining_code_str, &custom_word_names) {
+                        Ok(retokenized) => {
+                            self.append_output(&format!("DEBUG: Re-tokenized result: {:?}\n", retokenized));
+                            retokenized
+                        },
+                        Err(_) => remaining_code.to_vec(),
+                    }
+                } else {
+                    Vec::new()
+                };
+                
+                return Some((def_result, remaining_tokens));
+            }
+        }
+        
+        None
+    }
+
     fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
@@ -344,85 +381,84 @@ fn tokens_to_string(&self, tokens: &[Token]) -> String {
         result
     }
 
-    // interpreter/mod.rs の execute_tokens メソッドを修正
-pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-    self.append_output(&format!("DEBUG: execute_tokens called with {} tokens: {:?}\n", tokens.len(), tokens));
-    
-    let mut i = 0;
-    while i < tokens.len() {
-        self.append_output(&format!("DEBUG: Processing token #{}: {:?}\n", i, tokens[i]));
+    pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        self.append_output(&format!("DEBUG: execute_tokens called with {} tokens: {:?}\n", tokens.len(), tokens));
         
-        match &tokens[i] {
-            Token::Number(num, den) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                });
-                self.append_output(&format!("DEBUG: Pushed number {}/{}, workspace size: {}\n", num, den, self.workspace.len()));
-                i += 1;
-            },
-            Token::String(s) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::String(s.clone()),
-                });
-                self.append_output(&format!("DEBUG: Pushed string '{}', workspace size: {}\n", s, self.workspace.len()));
-                i += 1;
-            },
-            Token::Boolean(b) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Boolean(*b),
-                });
-                i += 1;
-            },
-            Token::Nil => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Nil,
-                });
-                i += 1;
-            },
-            Token::FunctionComment(_) => {
-                // 機能説明コメントは実行時には無視
-                i += 1;
-            },
-            Token::Colon => {
-                // コロンは条件分岐処理で既に処理済みのはず
-                i += 1;
-            },
-            Token::LineBreak => {
-                // 改行は定義処理で既に処理済みのはず
-                i += 1;
-            },
-            Token::VectorStart(bracket_type) => {
-                self.append_output(&format!("DEBUG: Processing vector start, workspace size before: {}\n", self.workspace.len()));
-                let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
-                self.workspace.push(Value {
-                    val_type: ValueType::Vector(vector_values, bracket_type.clone()),
-                });
-                self.append_output(&format!("DEBUG: Pushed vector, workspace size after: {}\n", self.workspace.len()));
-                i += consumed;
-            },
-            Token::Symbol(name) => {
-                self.append_output(&format!("DEBUG: Executing word '{}', workspace size before: {}\n", name, self.workspace.len()));
-                
-                match self.execute_word(name) {
-                    Ok(_) => {
-                        self.append_output(&format!("DEBUG: Successfully executed '{}', workspace size after: {}\n", name, self.workspace.len()));
-                    },
-                    Err(e) => {
-                        self.append_output(&format!("DEBUG: Error executing '{}': {}\n", name, e));
-                        return Err(e);
+        let mut i = 0;
+        while i < tokens.len() {
+            self.append_output(&format!("DEBUG: Processing token #{}: {:?}\n", i, tokens[i]));
+            
+            match &tokens[i] {
+                Token::Number(num, den) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                    });
+                    self.append_output(&format!("DEBUG: Pushed number {}/{}, workspace size: {}\n", num, den, self.workspace.len()));
+                    i += 1;
+                },
+                Token::String(s) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::String(s.clone()),
+                    });
+                    self.append_output(&format!("DEBUG: Pushed string '{}', workspace size: {}\n", s, self.workspace.len()));
+                    i += 1;
+                },
+                Token::Boolean(b) => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Boolean(*b),
+                    });
+                    i += 1;
+                },
+                Token::Nil => {
+                    self.workspace.push(Value {
+                        val_type: ValueType::Nil,
+                    });
+                    i += 1;
+                },
+                Token::FunctionComment(_) => {
+                    // 機能説明コメントは実行時には無視
+                    i += 1;
+                },
+                Token::Colon => {
+                    // コロンは条件分岐処理で既に処理済みのはず
+                    i += 1;
+                },
+                Token::LineBreak => {
+                    // 改行は定義処理で既に処理済みのはず
+                    i += 1;
+                },
+                Token::VectorStart(bracket_type) => {
+                    self.append_output(&format!("DEBUG: Processing vector start, workspace size before: {}\n", self.workspace.len()));
+                    let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
+                    self.workspace.push(Value {
+                        val_type: ValueType::Vector(vector_values, bracket_type.clone()),
+                    });
+                    self.append_output(&format!("DEBUG: Pushed vector, workspace size after: {}\n", self.workspace.len()));
+                    i += consumed;
+                },
+                Token::Symbol(name) => {
+                    self.append_output(&format!("DEBUG: Executing word '{}', workspace size before: {}\n", name, self.workspace.len()));
+                    
+                    match self.execute_word(name) {
+                        Ok(_) => {
+                            self.append_output(&format!("DEBUG: Successfully executed '{}', workspace size after: {}\n", name, self.workspace.len()));
+                        },
+                        Err(e) => {
+                            self.append_output(&format!("DEBUG: Error executing '{}': {}\n", name, e));
+                            return Err(e);
+                        }
                     }
-                }
-                i += 1;
-            },
-            Token::VectorEnd(_) => {
-                return Err(error::AjisaiError::from("Unexpected vector end"));
-            },
+                    i += 1;
+                },
+                Token::VectorEnd(_) => {
+                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                },
+            }
         }
+        
+        self.append_output(&format!("DEBUG: execute_tokens completed, final workspace size: {}\n", self.workspace.len()));
+        Ok(())
     }
-    
-    self.append_output(&format!("DEBUG: execute_tokens completed, final workspace size: {}\n", self.workspace.len()));
-    Ok(())
-}
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
@@ -519,6 +555,14 @@ pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         }
     }
 
+    // トークンを文字列に戻すヘルパーメソッド
+    fn tokens_to_string(&self, tokens: &[Token]) -> String {
+        tokens.iter()
+            .map(|token| self.token_to_string(token))
+            .collect::<Vec<String>>()
+            .join(" ")
+    }
+
     pub(crate) fn get_word_dependencies(&self, word_name: &str) -> Option<Vec<String>> {
         if let Some(def) = self.dictionary.get(word_name) {
             let mut deps = Vec::new();
@@ -557,9 +601,9 @@ pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
     }
 
     fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
-    // Vector定義の場合は直接実行（要素を個別実行しない）
-    self.execute_tokens(tokens)
-}
+        // Vector定義の場合は直接実行（要素を個別実行しない）
+        self.execute_tokens(tokens)
+    }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
