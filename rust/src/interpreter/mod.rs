@@ -47,29 +47,37 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
-        self.output_buffer.clear();
+    self.output_buffer.clear();
+    
+    // 全体を一度にトークン化（改行を保持）
+    let custom_word_names: HashSet<String> = self.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
+    
+    let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
+        .map_err(error::AjisaiError::from)?;
         
-        // 全体を一度にトークン化（改行を保持）
-        let custom_word_names: HashSet<String> = self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-        
-        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
-            .map_err(error::AjisaiError::from)?;
-            
-        if tokens.is_empty() {
-            return Ok(());
-        }
-
-        // DEFパターンを探して処理
-        if let Some(def_result) = self.try_process_multiline_def_pattern(&tokens) {
-            return def_result;
-        }
-
-        // DEFパターンがない場合は通常の実行
-        self.execute_tokens(&tokens)
+    if tokens.is_empty() {
+        return Ok(());
     }
+
+    // DEFパターンを探して処理
+    if let Some((def_result, remaining_tokens)) = self.try_process_multiline_def_pattern(&tokens) {
+        // DEF処理を実行
+        def_result?;
+        
+        // 残りのトークンがあれば実行
+        if !remaining_tokens.is_empty() {
+            self.execute_tokens(&remaining_tokens)?;
+        }
+        
+        return Ok(());
+    }
+
+    // DEFパターンがない場合は通常の実行
+    self.execute_tokens(&tokens)
+}
 
     pub fn execute_amnesia(&mut self) -> Result<()> {
         // IndexedDBクリアのイベントを発火
@@ -149,37 +157,46 @@ impl Interpreter {
         }
     }
 
-    fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<Result<()>> {
-        // DEFの位置を探す
-        let def_position = tokens.iter().rposition(|t| {
-            if let Token::Symbol(s) = t {
-                s == "DEF"
-            } else {
-                false
-            }
-        })?;
-        
-        // DEF前に文字列（ワード名）があるかチェック
-        if def_position >= 1 {
-            if let Token::String(name) = &tokens[def_position - 1] {
-                let body_tokens = &tokens[..def_position - 1];
-                
-                if body_tokens.is_empty() {
-                    return Some(Err(error::AjisaiError::from("DEF requires a body")));
-                }
-                
-                // 複数行かどうかを判定
-                let multiline_def = self.parse_multiline_definition(body_tokens);
-                
-                return Some(self.define_word_from_multiline(
-                    name.clone(),
-                    multiline_def
-                ));
-            }
+    fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<(Result<()>, Vec<Token>)> {
+    // DEFの位置を探す
+    let def_position = tokens.iter().rposition(|t| {
+        if let Token::Symbol(s) = t {
+            s == "DEF"
+        } else {
+            false
         }
-        
-        None
+    })?;
+    
+    // DEF前に文字列（ワード名）があるかチェック
+    if def_position >= 1 {
+        if let Token::String(name) = &tokens[def_position - 1] {
+            let body_tokens = &tokens[..def_position - 1];
+            
+            if body_tokens.is_empty() {
+                return Some((Err(error::AjisaiError::from("DEF requires a body")), Vec::new()));
+            }
+            
+            // 複数行かどうかを判定
+            let multiline_def = self.parse_multiline_definition(body_tokens);
+            
+            // DEF後の残りトークンを取得
+            let remaining_tokens = if def_position + 1 < tokens.len() {
+                tokens[def_position + 1..].to_vec()
+            } else {
+                Vec::new()
+            };
+            
+            let def_result = self.define_word_from_multiline(
+                name.clone(),
+                multiline_def
+            );
+            
+            return Some((def_result, remaining_tokens));
+        }
     }
+    
+    None
+}
 
     fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
         let mut lines = Vec::new();
@@ -486,15 +503,9 @@ impl Interpreter {
     }
 
     fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
-        if tokens.len() >= 2 && 
-           matches!(tokens.first(), Some(Token::VectorStart(_))) && 
-           matches!(tokens.last(), Some(Token::VectorEnd(_))) {
-            let inner_tokens = &tokens[1..tokens.len()-1];
-            self.execute_tokens(inner_tokens)
-        } else {
-            self.execute_tokens(tokens)
-        }
-    }
+    // Vector定義の場合は直接実行（要素を個別実行しない）
+    self.execute_tokens(tokens)
+}
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
