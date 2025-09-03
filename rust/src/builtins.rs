@@ -18,6 +18,13 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
     vec![
+        // スタック操作
+        ("DUP", "Duplicate top item"),
+        ("DROP", "Remove top item"),
+        ("SWAP", "Swap top two items"),
+        ("OVER", "Copy second item to top"),
+        ("ROT", "Rotate top three items"),
+        
         // 算術・論理演算（> と >= を復活）
         ("+", "Addition operator"),
         ("/", "Division operator"), 
@@ -41,7 +48,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         // 量指定操作（1オリジン）
         ("LENGTH", "Get vector length"),
         ("TAKE", "Take first N elements"),
-        ("DROP", "Drop first N elements"),
+        ("DROP", "Drop first N elements"), // 注意: DROPが重複するので調整必要
         ("REPEAT", "Repeat element N times"),
         ("SPLIT", "Split vector by sizes"),
         
