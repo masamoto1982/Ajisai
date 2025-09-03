@@ -177,9 +177,6 @@ pub fn execute(&mut self, code: &str) -> Result<()> {
         }
     })?;
     
-    // デバッグ: DEFの位置を出力
-    self.append_output(&format!("DEBUG: DEF found at position: {}\n", def_position));
-    
     // DEF前に文字列（ワード名）があるかチェック
     if def_position >= 1 {
         if let Token::String(name) = &tokens[def_position - 1] {
@@ -192,26 +189,48 @@ pub fn execute(&mut self, code: &str) -> Result<()> {
             // 複数行かどうかを判定
             let multiline_def = self.parse_multiline_definition(body_tokens);
             
-            // DEF後の残りトークンを取得
-            let remaining_tokens = if def_position + 1 < tokens.len() {
-                let raw_remaining = &tokens[def_position + 1..];
-                self.append_output(&format!("DEBUG: Raw remaining tokens: {:?}\n", raw_remaining));
-                raw_remaining.to_vec()
-            } else {
-                self.append_output(&format!("DEBUG: No tokens after DEF\n"));
-                Vec::new()
-            };
-            
+            // 先にワードを定義
             let def_result = self.define_word_from_multiline(
                 name.clone(),
                 multiline_def
             );
+            
+            // DEF後にトークンがあるかチェック
+            let remaining_tokens = if def_position + 1 < tokens.len() {
+                // DEF後のコードを再トークン化（新しいカスタムワードを含めて）
+                let remaining_code = &tokens[def_position + 1..];
+                let remaining_code_str = self.tokens_to_string(remaining_code);
+                self.append_output(&format!("DEBUG: Re-tokenizing remaining code: '{}'\n", remaining_code_str));
+                
+                let custom_word_names: HashSet<String> = self.dictionary.iter()
+                    .filter(|(_, def)| !def.is_builtin)
+                    .map(|(name, _)| name.clone())
+                    .collect();
+                
+                match crate::tokenizer::tokenize_with_custom_words(&remaining_code_str, &custom_word_names) {
+                    Ok(retokenized) => {
+                        self.append_output(&format!("DEBUG: Re-tokenized result: {:?}\n", retokenized));
+                        retokenized
+                    },
+                    Err(_) => remaining_code.to_vec(),
+                }
+            } else {
+                Vec::new()
+            };
             
             return Some((def_result, remaining_tokens));
         }
     }
     
     None
+}
+
+// トークンを文字列に戻すヘルパーメソッド
+fn tokens_to_string(&self, tokens: &[Token]) -> String {
+    tokens.iter()
+        .map(|token| self.token_to_string(token))
+        .collect::<Vec<String>>()
+        .join(" ")
 }
     fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
         let mut lines = Vec::new();
