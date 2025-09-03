@@ -386,10 +386,10 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
     }
 }
 
+// tokenizer.rs の try_parse_ascii_builtin 関数にデバッグ追加
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
         "true", "false", "nil", "NIL",
-        // 英語組み込みワード
         "NTH", "INSERT", "REPLACE", "REMOVE",
         "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
         "CONCAT", "DEF", "DEL", "NOP", "AND", "OR", "NOT"
@@ -400,6 +400,13 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
             let candidate: String = chars[..word.len()].iter().collect();
             if candidate == *word {
                 if chars.len() == word.len() || !chars[word.len()].is_ascii_alphanumeric() {
+                    // デバッグ: マッチした場合にログ出力
+                    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
+                        "TOKENIZER DEBUG: Matched builtin '{}' from chars starting with '{}'", 
+                        word, 
+                        chars.iter().take(10).collect::<String>()
+                    )));
+                    
                     let token = match *word {
                         "true" => Token::Boolean(true),
                         "false" => Token::Boolean(false),
