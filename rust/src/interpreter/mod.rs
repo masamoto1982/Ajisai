@@ -607,6 +607,27 @@ impl Interpreter {
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
     match name {
+        // スタック操作
+        "DUP" => {
+            let top = self.workspace.last()
+                .ok_or(error::AjisaiError::WorkspaceUnderflow)?;
+            self.workspace.push(top.clone());
+            Ok(())
+        },
+        "DROP" => {
+            self.workspace.pop()
+                .ok_or(error::AjisaiError::WorkspaceUnderflow)?;
+            Ok(())
+        },
+        "SWAP" => {
+            let len = self.workspace.len();
+            if len < 2 {
+                return Err(error::AjisaiError::WorkspaceUnderflow);
+            }
+            self.workspace.swap(len - 1, len - 2);
+            Ok(())
+        },
+        
         // 算術・論理演算（> と >= を復活）
         "+" => arithmetic::op_add(self),
         "/" => arithmetic::op_div(self),
