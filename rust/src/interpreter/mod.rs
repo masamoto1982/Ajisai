@@ -179,12 +179,25 @@ impl Interpreter {
             // 複数行かどうかを判定
             let multiline_def = self.parse_multiline_definition(body_tokens);
             
-            // DEF後の残りトークンを取得
-            let remaining_tokens = if def_position + 1 < tokens.len() {
-                tokens[def_position + 1..].to_vec()
-            } else {
-                Vec::new()
-            };
+            // DEF後の残りトークンを取得（改行トークンを除外）
+            let mut remaining_tokens = Vec::new();
+            if def_position + 1 < tokens.len() {
+                for token in &tokens[def_position + 1..] {
+                    match token {
+                        Token::LineBreak | Token::FunctionComment(_) => {
+                            // 改行とコメントはスキップ
+                        },
+                        _ => {
+                            remaining_tokens.push(token.clone());
+                        }
+                    }
+                }
+            }
+            
+            // デバッグ用：残りトークンをログ出力
+            if !remaining_tokens.is_empty() {
+                self.append_output(&format!("DEBUG: Remaining tokens after DEF: {:?}\n", remaining_tokens));
+            }
             
             let def_result = self.define_word_from_multiline(
                 name.clone(),
