@@ -47,7 +47,8 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
-    self.output_buffer.clear();
+    // まず最初にデバッグ出力
+    self.output_buffer.push_str("DEBUG: execute() method called\n");
     
     // 全体を一度にトークン化（改行を保持）
     let custom_word_names: HashSet<String> = self.dictionary.iter()
@@ -58,30 +59,32 @@ impl Interpreter {
     let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
         .map_err(error::AjisaiError::from)?;
         
+    self.append_output(&format!("DEBUG: Tokenized {} tokens\n", tokens.len()));
+    
     if tokens.is_empty() {
+        self.append_output("DEBUG: No tokens found\n");
         return Ok(());
     }
 
-    // デバッグ: 全トークンを出力
-    self.append_output(&format!("DEBUG: All tokens: {:?}\n", tokens));
-
     // DEFパターンを探して処理
     if let Some((def_result, remaining_tokens)) = self.try_process_multiline_def_pattern(&tokens) {
-        // デバッグ: DEFパターンが見つかったことを出力
-        self.append_output(&format!("DEBUG: DEF pattern found, remaining tokens count: {}\n", remaining_tokens.len()));
+        self.append_output("DEBUG: DEF pattern processing started\n");
         
         // DEF処理を実行
         def_result?;
         
         // 残りのトークンがあれば実行
         if !remaining_tokens.is_empty() {
-            self.append_output(&format!("DEBUG: Executing remaining tokens: {:?}\n", remaining_tokens));
+            self.append_output(&format!("DEBUG: Executing {} remaining tokens\n", remaining_tokens.len()));
             self.execute_tokens(&remaining_tokens)?;
+        } else {
+            self.append_output("DEBUG: No remaining tokens to execute\n");
         }
         
         return Ok(());
     }
 
+    self.append_output("DEBUG: No DEF pattern, executing tokens normally\n");
     // DEFパターンがない場合は通常の実行
     self.execute_tokens(&tokens)
 }
