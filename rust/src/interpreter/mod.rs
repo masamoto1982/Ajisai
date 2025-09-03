@@ -46,7 +46,8 @@ impl Interpreter {
         interpreter
     }
 
-    pub fn execute(&mut self, code: &str) -> Result<()> {
+    // interpreter/mod.rs の execute メソッド
+pub fn execute(&mut self, code: &str) -> Result<()> {
     // まず最初にデバッグ出力
     self.output_buffer.push_str(&format!("DEBUG: execute() called with code: '{}'\n", code));
     
@@ -56,15 +57,12 @@ impl Interpreter {
         .map(|(name, _)| name.clone())
         .collect();
     
-    self.append_output(&format!("DEBUG: Custom words: {:?}\n", custom_word_names));
-    
     let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
         .map_err(error::AjisaiError::from)?;
         
     self.append_output(&format!("DEBUG: All tokens: {:?}\n", tokens));
     
     if tokens.is_empty() {
-        self.append_output("DEBUG: No tokens found\n");
         return Ok(());
     }
 
@@ -75,10 +73,10 @@ impl Interpreter {
         // DEF処理を実行
         def_result?;
         
-        // 残りのトークンがあれば実行
+        // 残りのトークンがあれば実行（execute_tokens を使用、execute ではない）
         if !remaining_tokens.is_empty() {
             self.append_output(&format!("DEBUG: Executing remaining tokens: {:?}\n", remaining_tokens));
-            self.execute_tokens(&remaining_tokens)?;  // execute_tokens を使用（executeではない）
+            self.execute_tokens(&remaining_tokens)?;  // これが重要
         } else {
             self.append_output("DEBUG: No remaining tokens to execute\n");
         }
