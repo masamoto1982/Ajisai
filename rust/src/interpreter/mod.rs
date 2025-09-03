@@ -606,46 +606,49 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        match name {
-            // 算術・論理演算（> と >= を復活）
-            "+" => arithmetic::op_add(self),
-            "/" => arithmetic::op_div(self),
-            "*" => arithmetic::op_mul(self),
-            "-" => arithmetic::op_sub(self),
-            "=" => arithmetic::op_eq(self),
-            "<=" => arithmetic::op_le(self),
-            "<" => arithmetic::op_lt(self),
-            ">=" => arithmetic::op_ge(self),
-            ">" => arithmetic::op_gt(self),
-            "AND" => arithmetic::op_and(self),
-            "OR" => arithmetic::op_or(self),
-            "NOT" => arithmetic::op_not(self),
-            
-            // 位置指定操作（0オリジン）
-            "NTH" => vector_ops::op_get(self),
-            "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self),
-            "REMOVE" => vector_ops::op_remove(self),
-            
-            // 量指定操作（1オリジン）
-            "LENGTH" => vector_ops::op_length(self),
-            "TAKE" => vector_ops::op_take(self),
-            "DROP" => vector_ops::op_drop(self),
-            "REPEAT" => vector_ops::op_repeat(self),
-            "SPLIT" => vector_ops::op_split(self),
-            
-            // Vector操作
-            "CONCAT" => vector_ops::op_concat(self),
-            
-            // ワード管理
-            "DEF" => control::op_def(self),
-            "DEL" => control::op_del(self),
-            
-            "NOP" => control::op_nop(self),
-            
-            _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
-        }
+    match name {
+        // 算術・論理演算（> と >= を復活）
+        "+" => arithmetic::op_add(self),
+        "/" => arithmetic::op_div(self),
+        "*" => arithmetic::op_mul(self),
+        "-" => arithmetic::op_sub(self),
+        "=" => arithmetic::op_eq(self),
+        "<=" => arithmetic::op_le(self),
+        "<" => arithmetic::op_lt(self),
+        ">=" => arithmetic::op_ge(self),
+        ">" => arithmetic::op_gt(self),
+        "AND" => arithmetic::op_and(self),
+        "OR" => arithmetic::op_or(self),
+        "NOT" => arithmetic::op_not(self),
+        
+        // 位置指定操作（0オリジン）
+        "NTH" => vector_ops::op_get(self),
+        "INSERT" => vector_ops::op_insert(self),
+        "REPLACE" => vector_ops::op_replace(self),
+        "REMOVE" => vector_ops::op_remove(self),
+        
+        // 量指定操作（1オリジン）
+        "LENGTH" => vector_ops::op_length(self),
+        "TAKE" => vector_ops::op_take(self),
+        "DROP" => vector_ops::op_drop(self),
+        "REPEAT" => vector_ops::op_repeat(self),
+        "SPLIT" => vector_ops::op_split(self),
+        
+        // Vector操作
+        "CONCAT" => vector_ops::op_concat(self),
+        
+        // ワード管理
+        "DEF" => control::op_def(self),
+        "DEL" => control::op_del(self),
+        
+        // 条件分岐制御（内部使用）
+        "CONDITIONAL_BRANCH" => control::op_conditional_branch(self),
+        
+        "NOP" => control::op_nop(self),
+        
+        _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
     }
+}
 
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
