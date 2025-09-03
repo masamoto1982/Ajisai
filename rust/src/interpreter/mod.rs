@@ -344,65 +344,85 @@ fn tokens_to_string(&self, tokens: &[Token]) -> String {
         result
     }
 
-    pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        let mut i = 0;
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::Number(num, den) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                    });
-                    i += 1;
-                },
-                Token::String(s) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::String(s.clone()),
-                    });
-                    i += 1;
-                },
-                Token::Boolean(b) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Boolean(*b),
-                    });
-                    i += 1;
-                },
-                Token::Nil => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Nil,
-                    });
-                    i += 1;
-                },
-                Token::FunctionComment(_) => {
-                    // 機能説明コメントは実行時には無視
-                    i += 1;
-                },
-                Token::Colon => {
-                    // コロンは条件分岐処理で既に処理済みのはず
-                    i += 1;
-                },
-                Token::LineBreak => {
-                    // 改行は定義処理で既に処理済みのはず
-                    i += 1;
-                },
-                Token::VectorStart(bracket_type) => {
-                    let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
-                    self.workspace.push(Value {
-                        val_type: ValueType::Vector(vector_values, bracket_type.clone()),
-                    });
-                    i += consumed;
-                },
-                Token::Symbol(name) => {
-                    self.execute_word(name)?;
-                    i += 1;
-                },
-                Token::VectorEnd(_) => {
-                    return Err(error::AjisaiError::from("Unexpected vector end"));
-                },
-            }
-        }
+    // interpreter/mod.rs の execute_tokens メソッドを修正
+pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+    self.append_output(&format!("DEBUG: execute_tokens called with {} tokens: {:?}\n", tokens.len(), tokens));
+    
+    let mut i = 0;
+    while i < tokens.len() {
+        self.append_output(&format!("DEBUG: Processing token #{}: {:?}\n", i, tokens[i]));
         
-        Ok(())
+        match &tokens[i] {
+            Token::Number(num, den) => {
+                self.workspace.push(Value {
+                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                });
+                self.append_output(&format!("DEBUG: Pushed number {}/{}, workspace size: {}\n", num, den, self.workspace.len()));
+                i += 1;
+            },
+            Token::String(s) => {
+                self.workspace.push(Value {
+                    val_type: ValueType::String(s.clone()),
+                });
+                self.append_output(&format!("DEBUG: Pushed string '{}', workspace size: {}\n", s, self.workspace.len()));
+                i += 1;
+            },
+            Token::Boolean(b) => {
+                self.workspace.push(Value {
+                    val_type: ValueType::Boolean(*b),
+                });
+                i += 1;
+            },
+            Token::Nil => {
+                self.workspace.push(Value {
+                    val_type: ValueType::Nil,
+                });
+                i += 1;
+            },
+            Token::FunctionComment(_) => {
+                // 機能説明コメントは実行時には無視
+                i += 1;
+            },
+            Token::Colon => {
+                // コロンは条件分岐処理で既に処理済みのはず
+                i += 1;
+            },
+            Token::LineBreak => {
+                // 改行は定義処理で既に処理済みのはず
+                i += 1;
+            },
+            Token::VectorStart(bracket_type) => {
+                self.append_output(&format!("DEBUG: Processing vector start, workspace size before: {}\n", self.workspace.len()));
+                let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
+                self.workspace.push(Value {
+                    val_type: ValueType::Vector(vector_values, bracket_type.clone()),
+                });
+                self.append_output(&format!("DEBUG: Pushed vector, workspace size after: {}\n", self.workspace.len()));
+                i += consumed;
+            },
+            Token::Symbol(name) => {
+                self.append_output(&format!("DEBUG: Executing word '{}', workspace size before: {}\n", name, self.workspace.len()));
+                
+                match self.execute_word(name) {
+                    Ok(_) => {
+                        self.append_output(&format!("DEBUG: Successfully executed '{}', workspace size after: {}\n", name, self.workspace.len()));
+                    },
+                    Err(e) => {
+                        self.append_output(&format!("DEBUG: Error executing '{}': {}\n", name, e));
+                        return Err(e);
+                    }
+                }
+                i += 1;
+            },
+            Token::VectorEnd(_) => {
+                return Err(error::AjisaiError::from("Unexpected vector end"));
+            },
+        }
     }
+    
+    self.append_output(&format!("DEBUG: execute_tokens completed, final workspace size: {}\n", self.workspace.len()));
+    Ok(())
+}
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
