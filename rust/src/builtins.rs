@@ -51,7 +51,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("DEL", "Delete word"),
         ("NOP", "No operation - do nothing"),
         
-        // 事前評価方式の条件分岐用（内部使用）
-        ("EXECUTE_CONDITIONS", "Internal: execute conditional blocks"),
+        // 条件分岐制御（内部使用）
+        ("CONDITIONAL_BRANCH", "Internal: conditional branch execution"),
     ]
 }
