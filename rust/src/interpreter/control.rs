@@ -76,36 +76,29 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
 
 // CONDITIONAL_BRANCH - シンプルな条件分岐実行
 pub fn op_conditional_branch(interp: &mut Interpreter) -> Result<()> {
-    let remaining_branches_val = interp.workspace.pop()
+    // スタックから残り分岐数を取得（使用しないが互換性のため）
+    let _remaining_branches_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
-    // 82行目付近の修正
-let _remaining_branches = match remaining_branches_val.val_type {
-    ValueType::Number(n) if n.denominator == 1 => n.numerator as usize,
-    _ => return Err(AjisaiError::from("Invalid remaining branches count")),
-};
-    
-    // アクションを実行
+    // アクション（文字列）を取得
     let action_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
-    // 条件の結果を確認
+    // 条件（真偽値）を取得
     let condition_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     if is_truthy(&condition_val) {
-        // 条件が真：アクションを実行して残りをスキップ
-        if let ValueType::Vector(action_tokens, _) = action_val.val_type {
-            let tokens = vector_to_tokens(action_tokens)?;
-            interp.execute_tokens(&tokens)?;
+        // 条件が真の場合、アクションを実行
+        if let ValueType::String(action_str) = action_val.val_type {
+            interp.workspace.push(Value {
+                val_type: ValueType::String(action_str)
+            });
         }
-        
-        // 残りの分岐をスキップ（実装は省略 - 実際は複雑）
-        Ok(())
-    } else {
-        // 条件が偽：次の分岐へ（何もしない）
-        Ok(())
     }
+    // 条件が偽の場合は何もしない（次の条件へ）
+    
+    Ok(())
 }
 
 fn is_truthy(value: &Value) -> bool {
