@@ -191,7 +191,11 @@ fn value_to_token(value: Value) -> Result<Token> {
         ValueType::Boolean(b) => Ok(Token::Boolean(b)),
         ValueType::Symbol(s) => Ok(Token::Symbol(s)),
         ValueType::Nil => Ok(Token::Nil),
-        _ => Err(AjisaiError::from("Cannot convert value to token")),
+        ValueType::Vector(_, _) => {
+            // ベクター型は直接トークンに変換できない
+            Err(AjisaiError::from("Cannot convert vector to token - vectors should be handled differently"))
+        },
+        // 他の型があれば追加
     }
 }
 
