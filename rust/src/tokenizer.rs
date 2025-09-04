@@ -394,8 +394,11 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
         "true", "false", "nil", "NIL",
+        // スタック操作
+        "DUP", "DROP", "SWAP", "OVER", "ROT",
+        // 英語組み込みワード
         "NTH", "INSERT", "REPLACE", "REMOVE",
-        "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
+        "LENGTH", "TAKE", "REPEAT", "SPLIT",
         "CONCAT", "DEF", "DEL", "NOP", "AND", "OR", "NOT"
     ];
     
