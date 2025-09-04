@@ -18,43 +18,63 @@ pub fn create_conditional_execution_tokens(lines: &[Vec<Token>]) -> Result<Vec<T
         return Err(AjisaiError::from("No conditional lines found"));
     }
     
-    // シンプルな実装：最初の条件のみを処理
-    if conditional_lines.len() == 2 {
-        // 二択の分岐: condition : action1 / action2
-        let cond_line = &conditional_lines[0];
-        let default_line = &conditional_lines[1];
-        
-        if let Some(condition) = &cond_line.condition {
+    // 再帰的に条件分岐を構築
+    Ok(build_nested_conditions(&conditional_lines))
+}
+
+fn build_nested_conditions(lines: &[ConditionalLine]) -> Vec<Token> {
+    if lines.is_empty() {
+        return Vec::new();
+    }
+    
+    if lines.len() == 1 {
+        // 最後の行（デフォルト行またはただ一つの条件行）
+        let line = &lines[0];
+        if let Some(condition) = &line.condition {
+            // 単一条件の場合
             let mut result = Vec::new();
-            
-            // 条件を実行
             result.extend(condition.iter().cloned());
-            
-            // IF-ELSE的な実装
-            // [ action1 ] [ action2 ] IF_SELECT のような形で実装
             result.push(Token::VectorStart(BracketType::Square));
-            result.extend(cond_line.action.iter().cloned());
+            result.extend(line.action.iter().cloned());
             result.push(Token::VectorEnd(BracketType::Square));
-            
             result.push(Token::VectorStart(BracketType::Square));
-            result.extend(default_line.action.iter().cloned());
+            // 空のデフォルトアクション
             result.push(Token::VectorEnd(BracketType::Square));
-            
             result.push(Token::Symbol("IF_SELECT".to_string()));
-            
-            return Ok(result);
+            return result;
+        } else {
+            // デフォルト行のみ
+            return line.action.clone();
         }
     }
     
-    // フォールバック（現在の実装）
-    let mut result = Vec::new();
-    for line in conditional_lines {
-        if let Some(condition) = line.condition {
-            result.extend(condition);
-        }
-        result.extend(line.action);
+    // 複数行の場合：最初の条件 + 残りを再帰処理
+    let first_line = &lines[0];
+    let remaining_lines = &lines[1..];
+    
+    if let Some(condition) = &first_line.condition {
+        let mut result = Vec::new();
+        
+        // 最初の条件
+        result.extend(condition.iter().cloned());
+        
+        // 真の場合のアクション
+        result.push(Token::VectorStart(BracketType::Square));
+        result.extend(first_line.action.iter().cloned());
+        result.push(Token::VectorEnd(BracketType::Square));
+        
+        // 偽の場合のアクション（残りの条件を再帰処理）
+        result.push(Token::VectorStart(BracketType::Square));
+        let nested = build_nested_conditions(remaining_lines);
+        result.extend(nested);
+        result.push(Token::VectorEnd(BracketType::Square));
+        
+        result.push(Token::Symbol("IF_SELECT".to_string()));
+        return result;
+    } else {
+        // 条件がない場合（デフォルト行）
+        return first_line.action.clone();
     }
-    Ok(result)
 }
 
 fn parse_conditional_lines(lines: &[Vec<Token>]) -> Result<Vec<ConditionalLine>> {
