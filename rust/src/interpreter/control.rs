@@ -17,17 +17,19 @@ pub fn create_conditional_execution_tokens(lines: &[Vec<Token>]) -> Result<Vec<T
         return Err(AjisaiError::from("No conditional lines found"));
     }
     
-    // シンプルな条件分岐実行トークンを生成
     let mut result = Vec::new();
     
     // 各条件行を順次チェックして最初に真になった処理を実行
     for (i, cond_line) in conditional_lines.iter().enumerate() {
         if let Some(condition) = &cond_line.condition {
-            // 条件あり：condition実行→判定→真なら action 実行して終了
+            // 条件実行
             result.extend(condition.iter().cloned());
+            // アクション
             result.extend(cond_line.action.iter().cloned());
+            // 残り分岐数
+            result.push(Token::Number(conditional_lines.len() as i64 - i as i64 - 1, 1));
+            // 条件分岐実行
             result.push(Token::Symbol("CONDITIONAL_BRANCH".to_string()));
-            result.push(Token::Number(conditional_lines.len() as i64 - i as i64 - 1, 1)); // 残り行数
         } else {
             // デフォルト行：無条件実行
             result.extend(cond_line.action.iter().cloned());
