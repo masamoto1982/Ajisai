@@ -168,48 +168,55 @@ impl Interpreter {
     }
 
     fn try_process_def_pattern_from_code(&mut self, code: &str, tokens: &[Token]) -> Option<(Result<()>, String)> {
-        // DEFの位置を探す
-        let def_position = tokens.iter().rposition(|t| {
-            if let Token::Symbol(s) = t {
-                s == "DEF"
-            } else {
-                false
-            }
-        })?;
-        
-        // DEF前に文字列（ワード名）があるかチェック
-        if def_position >= 1 {
-            if let Token::String(name) = &tokens[def_position - 1] {
-                let body_tokens = &tokens[..def_position - 1];
-                
-                if body_tokens.is_empty() {
-                    return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
-                }
-                
-                // 複数行かどうかを判定
-                let multiline_def = self.parse_multiline_definition(body_tokens);
-                
-                // 元のコードからDEF後の部分を直接抽出
-                let remaining_code = if let Some(def_pos_in_code) = code.rfind("DEF") {
-                    let after_def = &code[def_pos_in_code + 3..]; // "DEF"の3文字分スキップ
-                    after_def.trim().to_string()
-                } else {
-                    String::new()
-                };
-                
-                self.append_output(&format!("DEBUG: Remaining code extracted: '{}'\n", remaining_code));
-                
-                let def_result = self.define_word_from_multiline(
-                    name.clone(),
-                    multiline_def
-                );
-                
-                return Some((def_result, remaining_code));
-            }
+    // 最初のDEFの位置を探す（rfind → find に変更）
+    let def_position = tokens.iter().position(|t| {
+        if let Token::Symbol(s) = t {
+            s == "DEF"
+        } else {
+            false
         }
-        
-        None
+    })?;
+    
+    // DEF前に文字列（ワード名）があるかチェック
+    if def_position >= 1 {
+        if let Token::String(name) = &tokens[def_position - 1] {
+            let body_tokens = &tokens[..def_position - 1];
+            
+            if body_tokens.is_empty() {
+                return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
+            }
+            
+            // 複数行かどうかを判定
+            let multiline_def = self.parse_multiline_definition(body_tokens);
+            
+            // 元のコードから最初のDEF後の部分を直接抽出
+            let remaining_code = if let Some(def_pos_in_code) = code.find("DEF") {
+                let after_first_def = &code[def_pos_in_code + 3..]; // "DEF"の3文字分スキップ
+                
+                // 改行で分割して最初の行をスキップ（DEFと同じ行の残り部分）
+                let lines: Vec<&str> = after_first_def.lines().collect();
+                if lines.len() > 1 {
+                    lines[1..].join("\n").trim().to_string()
+                } else {
+                    after_first_def.trim().to_string()
+                }
+            } else {
+                String::new()
+            };
+            
+            self.append_output(&format!("DEBUG: Remaining code extracted: '{}'\n", remaining_code));
+            
+            let def_result = self.define_word_from_multiline(
+                name.clone(),
+                multiline_def
+            );
+            
+            return Some((def_result, remaining_code));
+        }
     }
+    
+    None
+}
 
     fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<(Result<()>, Vec<Token>)> {
         // DEFの位置を探す
