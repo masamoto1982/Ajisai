@@ -115,6 +115,8 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
 
 // IF_SELECT - 条件に基づいてアクションを選択実行
 pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
+    interp.append_output("DEBUG: IF_SELECT called\n");
+    
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
     }
@@ -123,14 +125,32 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
     let true_action = interp.workspace.pop().unwrap();
     let condition = interp.workspace.pop().unwrap();
     
+    interp.append_output(&format!("DEBUG: condition={:?}, is_truthy={}\n", condition, is_truthy(&condition)));
+    interp.append_output(&format!("DEBUG: true_action={:?}\n", true_action));
+    interp.append_output(&format!("DEBUG: false_action={:?}\n", false_action));
+    
     let selected_action = if is_truthy(&condition) {
+        interp.append_output("DEBUG: Selecting true_action\n");
         true_action
     } else {
+        interp.append_output("DEBUG: Selecting false_action\n");
         false_action
     };
     
     // 選択されたアクションを実行
-    execute_action_value(interp, selected_action)
+    match selected_action.val_type {
+        ValueType::Vector(action_values, _) => {
+            interp.append_output("DEBUG: Executing vector action\n");
+            let tokens = vector_to_tokens(action_values)?;
+            interp.append_output(&format!("DEBUG: Generated tokens: {:?}\n", tokens));
+            interp.execute_tokens(&tokens)
+        },
+        _ => {
+            interp.append_output("DEBUG: Pushing non-vector action to workspace\n");
+            interp.workspace.push(selected_action);
+            Ok(())
+        }
+    }
 }
 
 // 新しいヘルパー関数
