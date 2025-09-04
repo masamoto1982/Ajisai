@@ -628,7 +628,7 @@ impl Interpreter {
             Ok(())
         },
         
-        // 算術・論理演算（> と >= を復活）
+        // 算術・論理演算
         "+" => arithmetic::op_add(self),
         "/" => arithmetic::op_div(self),
         "*" => arithmetic::op_mul(self),
@@ -662,7 +662,8 @@ impl Interpreter {
         "DEF" => control::op_def(self),
         "DEL" => control::op_del(self),
         
-        // 条件分岐制御（内部使用）
+        // 制御構造・条件分岐
+        "IF_SELECT" => control::op_if_select(self),
         "CONDITIONAL_BRANCH" => control::op_conditional_branch(self),
         
         "NOP" => control::op_nop(self),
