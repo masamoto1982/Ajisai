@@ -78,27 +78,22 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
 
 // CONDITIONAL_BRANCH - シンプルな条件分岐実行
 pub fn op_conditional_branch(interp: &mut Interpreter) -> Result<()> {
-    // スタックから残り分岐数を取得（使用しないが互換性のため）
-    let _remaining_branches_val = interp.workspace.pop()
+    // スタック順序: 条件結果、アクション、残り分岐数
+    let remaining_branches_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
-    // アクション（文字列）を取得
     let action_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
-    // 条件（真偽値）を取得
     let condition_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     if is_truthy(&condition_val) {
-        // 条件が真の場合、アクションを実行
-        if let ValueType::String(action_str) = action_val.val_type {
-            interp.workspace.push(Value {
-                val_type: ValueType::String(action_str)
-            });
-        }
+        // 条件が真：アクションを実行（文字列をプッシュ）
+        interp.workspace.push(action_val);
+        // 残りの分岐をスキップする処理は省略（簡単化）
     }
-    // 条件が偽の場合は何もしない（次の条件へ）
+    // 条件が偽の場合は次の条件へ（何もしない）
     
     Ok(())
 }
