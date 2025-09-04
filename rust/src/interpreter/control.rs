@@ -17,26 +17,42 @@ pub fn create_conditional_execution_tokens(lines: &[Vec<Token>]) -> Result<Vec<T
         return Err(AjisaiError::from("No conditional lines found"));
     }
     
-    let mut result = Vec::new();
-    
-    // 各条件行を順次チェックして最初に真になった処理を実行
-    for (i, cond_line) in conditional_lines.iter().enumerate() {
+    // シンプルな実装：最初の条件のみを処理
+    if conditional_lines.len() == 2 {
+        // 二択の分岐: condition : action1 / action2
+        let cond_line = &conditional_lines[0];
+        let default_line = &conditional_lines[1];
+        
         if let Some(condition) = &cond_line.condition {
-            // 条件実行
+            let mut result = Vec::new();
+            
+            // 条件を実行
             result.extend(condition.iter().cloned());
-            // アクション
+            
+            // IF-ELSE的な実装
+            // [ action1 ] [ action2 ] IF_SELECT のような形で実装
+            result.push(Token::VectorStart(BracketType::Square));
             result.extend(cond_line.action.iter().cloned());
-            // 残り分岐数
-            result.push(Token::Number(conditional_lines.len() as i64 - i as i64 - 1, 1));
-            // 条件分岐実行
-            result.push(Token::Symbol("CONDITIONAL_BRANCH".to_string()));
-        } else {
-            // デフォルト行：無条件実行
-            result.extend(cond_line.action.iter().cloned());
-            break;
+            result.push(Token::VectorEnd(BracketType::Square));
+            
+            result.push(Token::VectorStart(BracketType::Square));
+            result.extend(default_line.action.iter().cloned());
+            result.push(Token::VectorEnd(BracketType::Square));
+            
+            result.push(Token::Symbol("IF_SELECT".to_string()));
+            
+            return Ok(result);
         }
     }
     
+    // フォールバック（現在の実装）
+    let mut result = Vec::new();
+    for line in conditional_lines {
+        if let Some(condition) = line.condition {
+            result.extend(condition);
+        }
+        result.extend(line.action);
+    }
     Ok(result)
 }
 
