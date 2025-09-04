@@ -25,7 +25,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("OVER", "Copy second item to top"),
         ("ROT", "Rotate top three items"),
         
-        // 算術・論理演算（> と >= を復活）
+        // 算術・論理演算
         ("+", "Addition operator"),
         ("/", "Division operator"), 
         ("*", "Multiplication operator"),
@@ -48,17 +48,20 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         // 量指定操作（1オリジン）
         ("LENGTH", "Get vector length"),
         ("TAKE", "Take first N elements"),
-        ("DROP", "Drop first N elements"), // 注意: DROPが重複するので調整必要
         ("REPEAT", "Repeat element N times"),
         ("SPLIT", "Split vector by sizes"),
         
-        // その他
+        // Vector操作
         ("CONCAT", "Concatenate vectors"),
+        
+        // ワード管理
         ("DEF", "Define new word"),
         ("DEL", "Delete word"),
-        ("NOP", "No operation - do nothing"),
         
-        // 条件分岐制御（内部使用）
+        // 制御構造・条件分岐
+        ("IF_SELECT", "Select action based on condition"),
         ("CONDITIONAL_BRANCH", "Internal: conditional branch execution"),
+        
+        ("NOP", "No operation - do nothing"),
     ]
 }
