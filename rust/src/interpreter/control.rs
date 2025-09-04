@@ -129,13 +129,24 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
         false_action
     };
     
-    // 選択されたアクション（Vector）を実行
-    if let ValueType::Vector(action_values, _) = selected_action.val_type {
-        let tokens = vector_to_tokens(action_values)?;
-        interp.execute_tokens(&tokens)?;
+    // 選択されたアクションを実行
+    execute_action_value(interp, selected_action)
+}
+
+// 新しいヘルパー関数
+fn execute_action_value(interp: &mut Interpreter, action_value: Value) -> Result<()> {
+    match action_value.val_type {
+        ValueType::Vector(action_values, _) => {
+            // Vectorの場合、トークンに変換して実行
+            let tokens = vector_to_tokens(action_values)?;
+            interp.execute_tokens(&tokens)
+        },
+        _ => {
+            // Vector以外の場合、そのままワークスペースにプッシュ
+            interp.workspace.push(action_value);
+            Ok(())
+        }
     }
-    
-    Ok(())
 }
 
 // CONDITIONAL_BRANCH - シンプルな条件分岐実行（後方互換性のため残す）
@@ -179,7 +190,18 @@ fn is_truthy(value: &Value) -> bool {
 fn vector_to_tokens(values: Vec<Value>) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for value in values {
-        tokens.push(value_to_token(value)?);
+        match value.val_type {
+            ValueType::Vector(inner_values, bracket_type) => {
+                // ネストしたVectorの場合、括弧を追加して再帰処理
+                tokens.push(Token::VectorStart(bracket_type.clone()));
+                let inner_tokens = vector_to_tokens(inner_values)?;
+                tokens.extend(inner_tokens);
+                tokens.push(Token::VectorEnd(bracket_type));
+            },
+            _ => {
+                tokens.push(value_to_token(value)?);
+            }
+        }
     }
     Ok(tokens)
 }
