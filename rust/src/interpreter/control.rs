@@ -1,7 +1,8 @@
-// rust/src/interpreter/control.rs (複数行定義自動判定対応版)
+// rust/src/interpreter/control.rs (ビルドエラー修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Token, Value};
+use crate::types::{ValueType, Token, Value, BracketType}; // BracketType追加
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 pub struct ConditionalLine {
@@ -9,7 +10,7 @@ pub struct ConditionalLine {
     pub action: Vec<Token>,
 }
 
-// 条件分岐実行用のトークンを生成
+// 条件分岐実行用のトークンを生成（新しい実装）
 pub fn create_conditional_execution_tokens(lines: &[Vec<Token>]) -> Result<Vec<Token>> {
     let conditional_lines = parse_conditional_lines(lines)?;
     
@@ -92,24 +93,54 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
     }
 }
 
-// CONDITIONAL_BRANCH - シンプルな条件分岐実行
+// IF_SELECT - 条件に基づいてアクションを選択実行
+pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 3 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let false_action = interp.workspace.pop().unwrap();
+    let true_action = interp.workspace.pop().unwrap();
+    let condition = interp.workspace.pop().unwrap();
+    
+    let selected_action = if is_truthy(&condition) {
+        true_action
+    } else {
+        false_action
+    };
+    
+    // 選択されたアクション（Vector）を実行
+    if let ValueType::Vector(action_values, _) = selected_action.val_type {
+        let tokens = vector_to_tokens(action_values)?;
+        interp.execute_tokens(&tokens)?;
+    }
+    
+    Ok(())
+}
+
+// CONDITIONAL_BRANCH - シンプルな条件分岐実行（後方互換性のため残す）
 pub fn op_conditional_branch(interp: &mut Interpreter) -> Result<()> {
-    // スタック順序: 条件結果、アクション、残り分岐数
-    let remaining_branches_val = interp.workspace.pop()
+    // スタックから残り分岐数を取得（使用しないが互換性のため）
+    let _remaining_branches_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
+    // アクション（文字列）を取得
     let action_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
+    // 条件（真偽値）を取得
     let condition_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     if is_truthy(&condition_val) {
-        // 条件が真：アクションを実行（文字列をプッシュ）
-        interp.workspace.push(action_val);
-        // 残りの分岐をスキップする処理は省略（簡単化）
+        // 条件が真の場合、アクションを実行
+        if let ValueType::String(action_str) = action_val.val_type {
+            interp.workspace.push(Value {
+                val_type: ValueType::String(action_str)
+            });
+        }
     }
-    // 条件が偽の場合は次の条件へ（何もしない）
+    // 条件が偽の場合は何もしない（次の条件へ）
     
     Ok(())
 }
@@ -208,7 +239,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         if let Token::Symbol(sym) = token {
             if interp.dictionary.contains_key(sym) && !interp.is_builtin_word(sym) {
                 interp.dependencies.entry(sym.clone())
-                    .or_insert_with(std::collections::HashSet::new)
+                    .or_insert_with(HashSet::new)
                     .insert(name.clone());
             }
         }
