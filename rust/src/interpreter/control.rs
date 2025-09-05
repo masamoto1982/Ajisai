@@ -246,8 +246,7 @@ pub fn op_nop(_interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// DEF - 新しいワードを定義する
-// DEF - 新しいワードを定義する（後置説明文字列対応版）
+// DEF - 新しいワードを定義する（後置説明文字列対応版 - 修正版）
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let workspace_len = interp.workspace.len();
     
@@ -266,14 +265,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         
         match (&code_or_other.val_type, &name_or_code.val_type, &desc_or_name.val_type) {
             (ValueType::Vector(_, _), ValueType::String(_), ValueType::String(desc)) => {
-                // パターン: [本体] '名前' "説明"
-                if desc.starts_with("FUNC_COMMENT:") {
-                    (code_or_other, name_or_code, Some(desc[13..].to_string()))
-                } else {
-                    // 通常の文字列として扱い、説明なしパターンとして処理
-                    interp.workspace.push(code_or_other);
-                    (name_or_code, desc_or_name, None)
-                }
+                // パターン: [本体] '名前' '説明'
+                (code_or_other, name_or_code, Some(desc.clone()))
             },
             (ValueType::Vector(_, _), ValueType::String(_), _) => {
                 // パターン: [本体] '名前' その他 → その他を戻して説明なしとして処理
@@ -310,15 +303,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             }
             
             for value in v {
-                match value.val_type {
-                    // 本体内の機能説明コメントも検出
-                    ValueType::String(ref s) if s.starts_with("FUNC_COMMENT:") => {
-                        function_comments.push(s[13..].to_string());
-                    },
-                    _ => {
-                        tokens.push(value_to_token(value)?);
-                    }
-                }
+                tokens.push(value_to_token(value)?);
             }
             
             let final_description = if !function_comments.is_empty() {
@@ -372,6 +357,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
+    // 説明をクローンしてから使用
+    let description_clone = final_description.clone();
+
     interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
         tokens: original_tokens,
         is_builtin: false,
@@ -380,7 +368,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     });
 
     // 説明付きでログ出力
-    if let Some(desc) = &final_description {
+    if let Some(desc) = &description_clone {
         interp.append_output(&format!("Defined word: {} ({})\n", name, desc));
     } else {
         interp.append_output(&format!("Defined word: {}\n", name));
