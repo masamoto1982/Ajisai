@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (最新完全版)
+// rust/src/interpreter/mod.rs (案3: コンテキスト統合 完全版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -30,6 +30,7 @@ pub struct WordDefinition {
 pub struct MultiLineDefinition {
     pub lines: Vec<Vec<Token>>,
     pub has_conditionals: bool,
+    pub description: Option<String>,  // 機能説明を直接格納
 }
 
 impl Interpreter {
@@ -140,7 +141,7 @@ impl Interpreter {
                 Ok("Pushed nil".to_string())
             },
             Token::FunctionComment(comment) => {
-                // 機能説明コメントは実行時には無視
+                // 機能説明コメントは実行時には無視（後方互換性のため残す）
                 Ok(format!("Skipped function comment: \"{}\"", comment))
             },
             Token::Colon => {
@@ -168,32 +169,54 @@ impl Interpreter {
     }
 
     fn try_process_def_pattern_from_code(&mut self, code: &str, tokens: &[Token]) -> Option<(Result<()>, String)> {
-    // 最初のDEFの位置を探す（rfind → find に変更）
-    let def_position = tokens.iter().position(|t| {
-        if let Token::Symbol(s) = t {
-            s == "DEF"
-        } else {
-            false
-        }
-    })?;
-    
-    // DEF前に文字列（ワード名）があるかチェック
-    if def_position >= 1 {
-        if let Token::String(name) = &tokens[def_position - 1] {
-            let body_tokens = &tokens[..def_position - 1];
+        let def_position = tokens.iter().position(|t| {
+            if let Token::Symbol(s) = t {
+                s == "DEF"
+            } else {
+                false
+            }
+        })?;
+        
+        // DEF前に最低2つのトークン（本体 + ワード名）が必要
+        if def_position >= 2 {
+            // DEF直前が文字列（機能説明）かチェック
+            let (name_pos, description) = if def_position >= 3 {
+                if let Token::String(potential_desc) = &tokens[def_position - 1] {
+                    // DEF直前が文字列の場合、その前がワード名かチェック
+                    if let Token::String(name) = &tokens[def_position - 2] {
+                        // パターン: [本体...] 'ワード名' '機能説明' DEF
+                        (def_position - 2, Some(potential_desc.clone()))
+                    } else {
+                        // DEF直前が文字列だが、その前がワード名でない場合
+                        // この文字列をワード名として扱う: [本体...] '文字列' DEF
+                        (def_position - 1, None)
+                    }
+                } else if let Token::String(_) = &tokens[def_position - 1] {
+                    // パターン: [本体...] 'ワード名' DEF（説明なし）
+                    (def_position - 1, None)
+                } else {
+                    return None;
+                }
+            } else if let Token::String(_) = &tokens[def_position - 1] {
+                // パターン: [本体...] 'ワード名' DEF（説明なし）
+                (def_position - 1, None)
+            } else {
+                return None;
+            };
+            
+            let name = if let Token::String(n) = &tokens[name_pos] { n } else { return None; };
+            let body_tokens = &tokens[..name_pos];
             
             if body_tokens.is_empty() {
                 return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
             }
             
             // 複数行かどうかを判定
-            let multiline_def = self.parse_multiline_definition(body_tokens);
+            let multiline_def = self.parse_multiline_definition_with_description(body_tokens, description);
             
             // 元のコードから最初のDEF後の部分を直接抽出
             let remaining_code = if let Some(def_pos_in_code) = code.find("DEF") {
-                let after_first_def = &code[def_pos_in_code + 3..]; // "DEF"の3文字分スキップ
-                
-                // 改行で分割して最初の行をスキップ（DEFと同じ行の残り部分）
+                let after_first_def = &code[def_pos_in_code + 3..];
                 let lines: Vec<&str> = after_first_def.lines().collect();
                 if lines.len() > 1 {
                     lines[1..].join("\n").trim().to_string()
@@ -213,10 +236,9 @@ impl Interpreter {
             
             return Some((def_result, remaining_code));
         }
+        
+        None
     }
-    
-    None
-}
 
     fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<(Result<()>, Vec<Token>)> {
         // DEFの位置を探す
@@ -238,7 +260,7 @@ impl Interpreter {
                 }
                 
                 // 複数行かどうかを判定
-                let multiline_def = self.parse_multiline_definition(body_tokens);
+                let multiline_def = self.parse_multiline_definition_with_description(body_tokens, None);
                 
                 // 先にワードを定義
                 let def_result = self.define_word_from_multiline(
@@ -276,7 +298,7 @@ impl Interpreter {
         None
     }
 
-    fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
+    fn parse_multiline_definition_with_description(&self, tokens: &[Token], external_description: Option<String>) -> MultiLineDefinition {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
         let mut has_conditionals = false;
@@ -290,7 +312,8 @@ impl Interpreter {
                     }
                 },
                 Token::FunctionComment(_) => {
-                    // コメントはスキップ
+                    // 旧形式の機能説明コメントは無視（後方互換性のため）
+                    // 新しい形式では文字列リテラルを使用
                 },
                 _ => {
                     if let Token::Colon = token {
@@ -309,6 +332,7 @@ impl Interpreter {
         MultiLineDefinition {
             lines,
             has_conditionals,
+            description: external_description,
         }
     }
 
@@ -370,11 +394,16 @@ impl Interpreter {
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: executable_tokens,
             is_builtin: false,
-            description: None,
+            description: multiline_def.description,  // 機能説明を設定
             category: None,
         });
 
-        self.append_output(&format!("Defined word: {}\n", name));
+        // 説明付きでログ出力
+        if let Some(desc) = &multiline_def.description {
+            self.append_output(&format!("Defined word: {} ({})\n", name, desc));
+        } else {
+            self.append_output(&format!("Defined word: {}\n", name));
+        }
         Ok(())
     }
 
@@ -423,7 +452,8 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::FunctionComment(_) => {
-                    // 機能説明コメントは実行時には無視
+                    // 旧形式の機能説明コメントは実行時には完全に無視
+                    self.append_output("DEBUG: Skipped function comment during execution\n");
                     i += 1;
                 },
                 Token::Colon => {
@@ -491,6 +521,7 @@ impl Interpreter {
                     return Ok((values, i - start + 1));
                 },
                 Token::FunctionComment(_) => {
+                    // 旧形式の機能説明コメントは無視
                     i += 1;
                 },
                 token => {
@@ -520,14 +551,15 @@ impl Interpreter {
             Token::Symbol(s) => Ok(Value {
                 val_type: ValueType::Symbol(s.clone()),
             }),
+            Token::FunctionComment(_) => {
+                // 旧形式の機能説明コメントは変換しない
+                Err(error::AjisaiError::from("Cannot convert function comment to value"))
+            },
             Token::Colon => Ok(Value {
                 val_type: ValueType::Symbol(":".to_string()),
             }),
             Token::LineBreak => {
                 Err(error::AjisaiError::from("Cannot convert line break to value"))
-            },
-            Token::FunctionComment(_) => {
-                Err(error::AjisaiError::from("Cannot convert comment to value"))
             },
             _ => Err(error::AjisaiError::from("Cannot convert token to value")),
         }
@@ -613,71 +645,71 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-    match name {
-        // スタック操作
-        "DUP" => {
-            let top = self.workspace.last()
-                .ok_or(error::AjisaiError::WorkspaceUnderflow)?;
-            self.workspace.push(top.clone());
-            Ok(())
-        },
-        "DROP" => {
-            self.workspace.pop()
-                .ok_or(error::AjisaiError::WorkspaceUnderflow)?;
-            Ok(())
-        },
-        "SWAP" => {
-            let len = self.workspace.len();
-            if len < 2 {
-                return Err(error::AjisaiError::WorkspaceUnderflow);
-            }
-            self.workspace.swap(len - 1, len - 2);
-            Ok(())
-        },
-        
-        // 算術・論理演算
-        "+" => arithmetic::op_add(self),
-        "/" => arithmetic::op_div(self),
-        "*" => arithmetic::op_mul(self),
-        "-" => arithmetic::op_sub(self),
-        "=" => arithmetic::op_eq(self),
-        "<=" => arithmetic::op_le(self),
-        "<" => arithmetic::op_lt(self),
-        ">=" => arithmetic::op_ge(self),
-        ">" => arithmetic::op_gt(self),
-        "AND" => arithmetic::op_and(self),
-        "OR" => arithmetic::op_or(self),
-        "NOT" => arithmetic::op_not(self),
-        
-        // 位置指定操作（0オリジン）
-        "NTH" => vector_ops::op_get(self),
-        "INSERT" => vector_ops::op_insert(self),
-        "REPLACE" => vector_ops::op_replace(self),
-        "REMOVE" => vector_ops::op_remove(self),
-        
-        // 量指定操作（1オリジン）
-        "LENGTH" => vector_ops::op_length(self),
-        "TAKE" => vector_ops::op_take(self),
-        "DROP" => vector_ops::op_drop(self),
-        "REPEAT" => vector_ops::op_repeat(self),
-        "SPLIT" => vector_ops::op_split(self),
-        
-        // Vector操作
-        "CONCAT" => vector_ops::op_concat(self),
-        
-        // ワード管理
-        "DEF" => control::op_def(self),
-        "DEL" => control::op_del(self),
-        
-        // 制御構造・条件分岐
-        "IF_SELECT" => control::op_if_select(self),
-        "CONDITIONAL_BRANCH" => control::op_conditional_branch(self),
-        
-        "NOP" => control::op_nop(self),
-        
-        _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
+        match name {
+            // スタック操作
+            "DUP" => {
+                let top = self.workspace.last()
+                    .ok_or(error::AjisaiError::WorkspaceUnderflow)?;
+                self.workspace.push(top.clone());
+                Ok(())
+            },
+            "DROP" => {
+                self.workspace.pop()
+                    .ok_or(error::AjisaiError::WorkspaceUnderflow)?;
+                Ok(())
+            },
+            "SWAP" => {
+                let len = self.workspace.len();
+                if len < 2 {
+                    return Err(error::AjisaiError::WorkspaceUnderflow);
+                }
+                self.workspace.swap(len - 1, len - 2);
+                Ok(())
+            },
+            
+            // 算術・論理演算
+            "+" => arithmetic::op_add(self),
+            "/" => arithmetic::op_div(self),
+            "*" => arithmetic::op_mul(self),
+            "-" => arithmetic::op_sub(self),
+            "=" => arithmetic::op_eq(self),
+            "<=" => arithmetic::op_le(self),
+            "<" => arithmetic::op_lt(self),
+            ">=" => arithmetic::op_ge(self),
+            ">" => arithmetic::op_gt(self),
+            "AND" => arithmetic::op_and(self),
+            "OR" => arithmetic::op_or(self),
+            "NOT" => arithmetic::op_not(self),
+            
+            // 位置指定操作（0オリジン）
+            "NTH" => vector_ops::op_get(self),
+            "INSERT" => vector_ops::op_insert(self),
+            "REPLACE" => vector_ops::op_replace(self),
+            "REMOVE" => vector_ops::op_remove(self),
+            
+            // 量指定操作（1オリジン）
+            "LENGTH" => vector_ops::op_length(self),
+            "TAKE" => vector_ops::op_take(self),
+            "DROP" => vector_ops::op_drop(self),
+            "REPEAT" => vector_ops::op_repeat(self),
+            "SPLIT" => vector_ops::op_split(self),
+            
+            // Vector操作
+            "CONCAT" => vector_ops::op_concat(self),
+            
+            // ワード管理
+            "DEF" => control::op_def(self),
+            "DEL" => control::op_del(self),
+            
+            // 制御構造・条件分岐
+            "IF_SELECT" => control::op_if_select(self),
+            "CONDITIONAL_BRANCH" => control::op_conditional_branch(self),
+            
+            "NOP" => control::op_nop(self),
+            
+            _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
+        }
     }
-}
 
     pub fn get_output(&mut self) -> String {
         let output = self.output_buffer.clone();
