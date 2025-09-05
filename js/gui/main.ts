@@ -1,4 +1,4 @@
-// js/gui/main.ts (AMNESIA機能対応)
+// js/gui/main.ts (RESET対応版)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
@@ -55,7 +55,6 @@ export class GUI {
         console.log('GUI.init() called');
         this.cacheElements();
 
-        // 各モジュールの初期化
         this.display.init({
             outputDisplay: this.elements.outputDisplay,
             workspaceDisplay: this.elements.workspaceDisplay,
@@ -77,10 +76,7 @@ export class GUI {
         
         this.persistence.init();
 
-        // イベントリスナーの設定
         this.setupEventListeners();
-
-        // 初期表示
         this.dictionary.renderBuiltinWords();
         this.updateAllDisplays();
         this.mobile.updateView(this.mode);
@@ -111,58 +107,55 @@ export class GUI {
     }
     
     private setupEventListeners(): void {
-    console.log('Setting up event listeners...');
-    
-    this.elements.runBtn.addEventListener('click', () => this.runCode());
-    this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
-    
-    if (this.elements.testBtn) {
-        console.log('Adding test button event listener');
-        this.elements.testBtn.addEventListener('click', () => {
-            console.log('Test button clicked!');
-            this.runTests();
-        });
-    } else {
-        console.error('Cannot add event listener: test button not found');
-    }
+        console.log('Setting up event listeners...');
+        
+        this.elements.runBtn.addEventListener('click', () => this.runCode());
+        this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
+        
+        if (this.elements.testBtn) {
+            console.log('Adding test button event listener');
+            this.elements.testBtn.addEventListener('click', () => {
+                console.log('Test button clicked!');
+                this.runTests();
+            });
+        } else {
+            console.error('Cannot add event listener: test button not found');
+        }
 
-    this.elements.codeInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            if (e.shiftKey) {
-                // Shift+Enter: 通常実行
-                e.preventDefault();
-                this.runCode();
-            } else if (e.ctrlKey && e.altKey) {
-                // Ctrl+Alt+Enter: AMNESIA実行
-                e.preventDefault();
-                this.executeAmnesia();
-            } else if (e.ctrlKey) {
-                // Ctrl+Enter: ステップ実行開始 または ステップ進行
-                e.preventDefault();
-                if (this.stepMode) {
-                    // ステップモード中はステップ進行
-                    this.executeNextStep();
-                } else {
-                    // ステップモードでない場合はステップ実行開始
-                    this.startStepExecution();
+        this.elements.codeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    // Shift+Enter: 通常実行
+                    e.preventDefault();
+                    this.runCode();
+                } else if (e.ctrlKey && e.altKey) {
+                    // Ctrl+Alt+Enter: RESET実行
+                    e.preventDefault();
+                    this.executeReset();
+                } else if (e.ctrlKey) {
+                    // Ctrl+Enter: ステップ実行開始 または ステップ進行
+                    e.preventDefault();
+                    if (this.stepMode) {
+                        this.executeNextStep();
+                    } else {
+                        this.startStepExecution();
+                    }
                 }
+            } else if (e.key === 'Escape' && this.stepMode) {
+                // Escape: ステップ実行終了
+                e.preventDefault();
+                this.endStepExecution();
             }
-        } else if (e.key === 'Escape' && this.stepMode) {
-            // Escape: ステップ実行終了
-            e.preventDefault();
-            this.endStepExecution();
-        }
-    });
+        });
 
-    // 以下は既存のまま
-    this.elements.workspaceArea.addEventListener('click', () => {
-        if (this.mobile.isMobile() && this.mode === 'execution') {
-            this.setMode('input');
-        }
-    });
+        this.elements.workspaceArea.addEventListener('click', () => {
+            if (this.mobile.isMobile() && this.mode === 'execution') {
+                this.setMode('input');
+            }
+        });
 
-    window.addEventListener('resize', () => this.mobile.updateView(this.mode));
-}
+        window.addEventListener('resize', () => this.mobile.updateView(this.mode));
+    }
 
     private setMode(newMode: 'input' | 'execution'): void {
         this.mode = newMode;
@@ -199,24 +192,23 @@ export class GUI {
         this.display.showInfo('State saved.', true);
     }
 
-    private async executeAmnesia(): Promise<void> {
+    private async executeReset(): Promise<void> {
         try {
-            console.log('Executing AMNESIA...');
-            const result = window.ajisaiInterpreter.amnesia() as ExecuteResult;
+            console.log('Executing RESET...');
+            const result = window.ajisaiInterpreter.reset() as ExecuteResult;
             
             if (result.status === 'OK' && !result.error) {
-                this.display.showOutput(result.output || 'AMNESIA executed');
+                this.display.showOutput(result.output || 'RESET executed');
                 this.editor.clear();
                 
                 if (this.mobile.isMobile()) {
                     this.setMode('execution');
                 }
                 
-                // 表示を更新
                 this.updateAllDisplays();
-                this.display.showInfo('🧠 AMNESIA: All memory cleared and database reset.', true);
+                this.display.showInfo('🔄 RESET: All memory cleared and database reset.', true);
             } else {
-                this.display.showError(result.message || 'AMNESIA execution failed');
+                this.display.showError(result.message || 'RESET execution failed');
             }
         } catch (error) {
             this.display.showError(error as Error);
