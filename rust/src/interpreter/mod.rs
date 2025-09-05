@@ -83,24 +83,24 @@ impl Interpreter {
     }
 
     pub fn execute_reset(&mut self) -> Result<()> {
-        // IndexedDBクリアのイベントを発火
-        if let Some(window) = web_sys::window() {
-            let event = web_sys::CustomEvent::new("ajisai-amnesia")
-                .map_err(|_| error::AjisaiError::from("Failed to create reset event"))?;
-            window.dispatch_event(&event)
-                .map_err(|_| error::AjisaiError::from("Failed to dispatch reset event"))?;
-        }
-        
-        self.workspace.clear();
-        self.dictionary.clear();
-        self.dependencies.clear();
-        self.output_buffer.clear();
-        self.call_stack.clear();
-        
-        crate::builtins::register_builtins(&mut self.dictionary);
-        
-        Ok(())
+    // IndexedDBクリアのイベントを発火
+    if let Some(window) = web_sys::window() {
+        let event = web_sys::CustomEvent::new("ajisai-reset")  // AMNESIA → RESET
+            .map_err(|_| error::AjisaiError::from("Failed to create reset event"))?;
+        window.dispatch_event(&event)
+            .map_err(|_| error::AjisaiError::from("Failed to dispatch reset event"))?;
     }
+    
+    self.workspace.clear();
+    self.dictionary.clear();
+    self.dependencies.clear();
+    self.output_buffer.clear();
+    self.call_stack.clear();
+    
+    crate::builtins::register_builtins(&mut self.dictionary);
+    
+    Ok(())
+}
 
     pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
         self.output_buffer.clear();
