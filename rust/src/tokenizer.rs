@@ -394,12 +394,24 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
         "true", "false", "nil", "NIL",
-        // スタック操作
-        "DUP", "DROP", "SWAP", "OVER", "ROT",
-        // 英語組み込みワード
-        "NTH", "INSERT", "REPLACE", "REMOVE",
-        "LENGTH", "TAKE", "REPEAT", "SPLIT",
-        "CONCAT", "DEF", "DEL", "NOP", "AND", "OR", "NOT"
+        // ワークスペース操作
+        "DUP", "SWAP", "ROT",
+        // 位置指定操作
+        "GET", "INSERT", "REPLACE", "REMOVE",
+        // 量指定操作
+        "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
+        // Vector構造操作
+        "CONCAT", "REVERSE",
+        // 算術演算
+        "+", "-", "*", "/",
+        // 比較演算
+        "=", "<", "<=", ">", ">=",
+        // 論理演算
+        "AND", "OR", "NOT",
+        // 入出力
+        "PRINT",  // ← これが抜けていた！
+        // ワード管理・システム
+        "DEF", "DEL", "RESET"
     ];
     
     for word in &builtin_words {
@@ -407,7 +419,6 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
             let candidate: String = chars[..word.len()].iter().collect();
             if candidate == *word {
                 if chars.len() == word.len() || !chars[word.len()].is_ascii_alphanumeric() {
-                    // デバッグ: マッチした場合にログ出力
                     web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
                         "TOKENIZER DEBUG: Matched builtin '{}' from chars starting with '{}'", 
                         word, 
