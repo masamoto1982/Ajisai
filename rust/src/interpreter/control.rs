@@ -247,26 +247,87 @@ pub fn op_nop(_interp: &mut Interpreter) -> Result<()> {
 }
 
 // DEF - 新しいワードを定義する
+// DEF - 新しいワードを定義する（後置説明文字列対応版）
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::from("DEF requires vector and name"));
+    let workspace_len = interp.workspace.len();
+    
+    // 最低2つ（本体ベクトル + 名前）は必要
+    if workspace_len < 2 {
+        return Err(AjisaiError::from("DEF requires at least vector and name"));
     }
-
-    let name_val = interp.workspace.pop().unwrap();
-    let code_val = interp.workspace.pop().unwrap();
+    
+    // パターン判定: 3つある場合は説明付き、2つの場合は説明なし
+    let (code_val, name_val, description) = if workspace_len >= 3 {
+        // 可能性1: [本体] '名前' "説明" DEF の順でスタックに積まれている
+        // スタックトップから: "説明", '名前', [本体]
+        let desc_or_name = interp.workspace.pop().unwrap();
+        let name_or_code = interp.workspace.pop().unwrap();
+        let code_or_other = interp.workspace.pop().unwrap();
+        
+        match (&code_or_other.val_type, &name_or_code.val_type, &desc_or_name.val_type) {
+            (ValueType::Vector(_, _), ValueType::String(_), ValueType::String(desc)) => {
+                // パターン: [本体] '名前' "説明"
+                if desc.starts_with("FUNC_COMMENT:") {
+                    (code_or_other, name_or_code, Some(desc[13..].to_string()))
+                } else {
+                    // 通常の文字列として扱い、説明なしパターンとして処理
+                    interp.workspace.push(code_or_other);
+                    (name_or_code, desc_or_name, None)
+                }
+            },
+            (ValueType::Vector(_, _), ValueType::String(_), _) => {
+                // パターン: [本体] '名前' その他 → その他を戻して説明なしとして処理
+                interp.workspace.push(desc_or_name);
+                (code_or_other, name_or_code, None)
+            },
+            _ => {
+                // パターンマッチしない場合、すべて戻して2要素として処理
+                interp.workspace.push(code_or_other);
+                interp.workspace.push(name_or_code);
+                (desc_or_name, interp.workspace.pop().unwrap(), None)
+            }
+        }
+    } else {
+        // 2要素の場合: [本体] '名前' DEF
+        let name_val = interp.workspace.pop().unwrap();
+        let code_val = interp.workspace.pop().unwrap();
+        (code_val, name_val, None)
+    };
 
     let name = match name_val.val_type {
         ValueType::String(s) => s.to_uppercase(),
         _ => return Err(AjisaiError::from("DEF requires string name")),
     };
 
-    let original_tokens = match code_val.val_type {
+    let (original_tokens, final_description) = match code_val.val_type {
         ValueType::Vector(v, _) => {
             let mut tokens = Vec::new();
-            for value in v {
-                tokens.push(value_to_token(value)?);
+            let mut function_comments = Vec::new();
+            
+            // 外部説明を追加
+            if let Some(desc) = description {
+                function_comments.push(desc);
             }
-            tokens
+            
+            for value in v {
+                match value.val_type {
+                    // 本体内の機能説明コメントも検出
+                    ValueType::String(ref s) if s.starts_with("FUNC_COMMENT:") => {
+                        function_comments.push(s[13..].to_string());
+                    },
+                    _ => {
+                        tokens.push(value_to_token(value)?);
+                    }
+                }
+            }
+            
+            let final_description = if !function_comments.is_empty() {
+                Some(function_comments.join(" "))
+            } else {
+                None
+            };
+            
+            (tokens, final_description)
         },
         _ => return Err(AjisaiError::from("DEF requires vector")),
     };
@@ -314,11 +375,16 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
         tokens: original_tokens,
         is_builtin: false,
-        description: None,
+        description: final_description,
         category: None,
     });
 
-    interp.append_output(&format!("Defined word: {}\n", name));
+    // 説明付きでログ出力
+    if let Some(desc) = &final_description {
+        interp.append_output(&format!("Defined word: {} ({})\n", name, desc));
+    } else {
+        interp.append_output(&format!("Defined word: {}\n", name));
+    }
     Ok(())
 }
 
