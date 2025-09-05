@@ -1,13 +1,23 @@
-// rust/src/interpreter/io.rs (純粋Vector操作言語版)
+// rust/src/interpreter/io.rs (デバッグ版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::ValueType;
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: op_print called"));
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("DEBUG: workspace length: {}", interp.workspace.len())));
+    
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
-    interp.append_output(&format!("{} ", val));
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("DEBUG: popped value: {:?}", val)));
+    
+    let output_text = format!("{} ", val);
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("DEBUG: output text: '{}'", output_text)));
+    
+    interp.append_output(&output_text);
+    
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: op_print completed"));
     Ok(())
 }
 
