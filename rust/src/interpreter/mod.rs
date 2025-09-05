@@ -359,11 +359,10 @@ impl Interpreter {
     while i < tokens.len() {
         match &tokens[i] {
             Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
-                // スカラー値は直接ワークスペースに積まない
-                return Err(error::AjisaiError::from(
-                    "Scalar values cannot be placed directly on workspace. Use [value] syntax."
-                ));
-            },
+    return Err(error::AjisaiError::from(
+        "Scalar values cannot be placed directly on workspace. Use [value] syntax."
+    ));
+},
             Token::VectorStart(bracket_type) => {
                 // Vectorのみ受け入れる
                 let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
