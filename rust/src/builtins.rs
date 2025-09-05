@@ -1,4 +1,4 @@
-// rust/src/builtins.rs (BRANCH_IF/BRANCH_END削除、EXECUTE_CONDITIONS追加)
+// rust/src/builtins.rs (純粋Vector操作言語版)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
@@ -18,29 +18,8 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
     vec![
-        // スタック操作
-        ("DUP", "Duplicate top item"),
-        ("DROP", "Remove top item"),
-        ("SWAP", "Swap top two items"),
-        ("OVER", "Copy second item to top"),
-        ("ROT", "Rotate top three items"),
-        
-        // 算術・論理演算
-        ("+", "Addition operator"),
-        ("/", "Division operator"), 
-        ("*", "Multiplication operator"),
-        ("-", "Subtraction operator"),
-        ("=", "Equality test"),
-        ("<=", "Less than or equal test"),
-        ("<", "Less than test"),
-        (">=", "Greater than or equal test"),
-        (">", "Greater than test"),
-        ("AND", "Logical AND"),
-        ("OR", "Logical OR"),
-        ("NOT", "Logical NOT"),
-        
         // 位置指定操作（0オリジン）
-        ("NTH", "Get element at position (0-indexed)"),
+        ("GET", "Get element at position (0-indexed)"),
         ("INSERT", "Insert element at position"),
         ("REPLACE", "Replace element at position"),
         ("REMOVE", "Remove element at position"),
@@ -48,20 +27,43 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         // 量指定操作（1オリジン）
         ("LENGTH", "Get vector length"),
         ("TAKE", "Take first N elements"),
+        ("DROP", "Drop first N elements"),
         ("REPEAT", "Repeat element N times"),
         ("SPLIT", "Split vector by sizes"),
         
-        // Vector操作
-        ("CONCAT", "Concatenate vectors"),
+        // ワークスペース操作
+        ("DUP", "Duplicate top workspace element"),
+        ("SWAP", "Swap top two workspace elements"),
+        ("ROT", "Rotate top three workspace elements"),
         
-        // ワード管理
+        // Vector構造操作
+        ("CONCAT", "Concatenate vectors"),
+        ("REVERSE", "Reverse vector elements"),
+        
+        // 算術演算
+        ("+", "Vector addition"),
+        ("-", "Vector subtraction"),
+        ("*", "Vector multiplication"),
+        ("/", "Vector division"),
+        
+        // 比較演算
+        ("=", "Vector equality test"),
+        ("<", "Vector less than test"),
+        ("<=", "Vector less than or equal test"),
+        (">", "Vector greater than test"),
+        (">=", "Vector greater than or equal test"),
+        
+        // 論理演算
+        ("AND", "Vector logical AND"),
+        ("OR", "Vector logical OR"),
+        ("NOT", "Vector logical NOT"),
+        
+        // 入出力
+        ("PRINT", "Print vector value"),
+        
+        // ワード管理・システム
         ("DEF", "Define new word"),
         ("DEL", "Delete word"),
-        
-        // 制御構造・条件分岐
-        ("IF_SELECT", "Select action based on condition"),
-        ("CONDITIONAL_BRANCH", "Internal: conditional branch execution"),
-        
-        ("NOP", "No operation - do nothing"),
+        ("RESET", "Reset all memory and database"),
     ]
 }
