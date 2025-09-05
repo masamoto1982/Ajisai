@@ -183,7 +183,7 @@ impl Interpreter {
             let (name_pos, description) = if def_position >= 3 {
                 if let Token::String(potential_desc) = &tokens[def_position - 1] {
                     // DEF直前が文字列の場合、その前がワード名かチェック
-                    if let Token::String(name) = &tokens[def_position - 2] {
+                    if let Token::String(_name) = &tokens[def_position - 2] {  // _ を追加して警告を解決
                         // パターン: [本体...] 'ワード名' '機能説明' DEF
                         (def_position - 2, Some(potential_desc.clone()))
                     } else {
@@ -391,6 +391,9 @@ impl Interpreter {
             }
         }
 
+        // 説明をクローンしてから使用
+        let description_clone = multiline_def.description.clone();
+
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: executable_tokens,
             is_builtin: false,
@@ -399,7 +402,7 @@ impl Interpreter {
         });
 
         // 説明付きでログ出力
-        if let Some(desc) = &multiline_def.description {
+        if let Some(desc) = &description_clone {
             self.append_output(&format!("Defined word: {} ({})\n", name, desc));
         } else {
             self.append_output(&format!("Defined word: {}\n", name));
@@ -690,9 +693,9 @@ impl Interpreter {
             // 量指定操作（1オリジン）
             "LENGTH" => vector_ops::op_length(self),
             "TAKE" => vector_ops::op_take(self),
-            "DROP" => vector_ops::op_drop(self),
             "REPEAT" => vector_ops::op_repeat(self),
             "SPLIT" => vector_ops::op_split(self),
+            // "DROP" => vector_ops::op_drop(self),  // この行を削除（重複を解決）
             
             // Vector操作
             "CONCAT" => vector_ops::op_concat(self),
