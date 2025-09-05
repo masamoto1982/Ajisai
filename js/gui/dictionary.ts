@@ -1,4 +1,4 @@
-// js/gui/dictionary.ts (> >= 復活、GOTO/CODE/DEFAULT削除対応版)
+// js/gui/dictionary.ts (純粋Vector操作言語版)
 
 interface WordInfo {
     name: string;
@@ -24,10 +24,7 @@ export class Dictionary {
         if (!window.ajisaiInterpreter) return;
         
         try {
-            // 順序保持版の組み込みワード情報を取得
             const builtinWords = window.ajisaiInterpreter.get_builtin_words_info();
-            
-            // グループ別に表示
             this.renderBuiltinWordsWithGroups(this.elements.builtinWordsDisplay, builtinWords);
         } catch (error) {
             console.error('Failed to render builtin words:', error);
@@ -37,15 +34,23 @@ export class Dictionary {
     private renderBuiltinWordsWithGroups(container: HTMLElement, builtinWords: any[]): void {
         container.innerHTML = '';
         
-        // 更新されたワード体系に対応したグループ分け（> >= 復活、GOTO/CODE/DEFAULT削除）
-        const arithmeticWords = ['+', '/', '*', '-', '=', '<=', '<', '>=', '>', 'AND', 'OR', 'NOT'];
-        const vectorOpsWords = ['NTH', 'INSERT', 'REPLACE', 'REMOVE', 'LENGTH', 'TAKE', 'DROP', 'REPEAT', 'SPLIT', 'CONCAT'];
-        const controlWords = ['DEF', 'DEL', 'NOP']; // GOTO, CODE, DEFAULT削除
+        // 純粋Vector操作言語版のグループ分け
+        const positionWords = ['GET', 'INSERT', 'REPLACE', 'REMOVE'];
+        const quantityWords = ['LENGTH', 'TAKE', 'DROP', 'REPEAT', 'SPLIT'];
+        const workspaceWords = ['DUP', 'SWAP', 'ROT'];
+        const vectorWords = ['CONCAT', 'REVERSE'];
+        const arithmeticWords = ['+', '-', '*', '/'];
+        const comparisonWords = ['=', '<', '<=', '>', '>='];
+        const logicWords = ['AND', 'OR', 'NOT'];
+        const ioWords = ['PRINT'];
+        const systemWords = ['DEF', 'DEL', 'RESET'];
         
-        const groups = [arithmeticWords, vectorOpsWords, controlWords];
+        const groups = [
+            positionWords, quantityWords, workspaceWords, vectorWords,
+            arithmeticWords, comparisonWords, logicWords, ioWords, systemWords
+        ];
         
         groups.forEach((group, groupIndex) => {
-            // 各グループのワードを直接追加
             group.forEach(wordName => {
                 const wordData = builtinWords.find((item: any[]) => item[0] === wordName);
                 if (wordData) {
@@ -64,7 +69,6 @@ export class Dictionary {
                 }
             });
             
-            // 最後のグループ以外は改行のみ追加
             if (groupIndex < groups.length - 1) {
                 const lineBreak = document.createElement('br');
                 container.appendChild(lineBreak);
@@ -101,8 +105,8 @@ export class Dictionary {
                 if (part === 'DIV') return '/';
                 if (part === 'LT') return '<';
                 if (part === 'LE') return '<=';
-                if (part === 'GT') return '>'; // 追加
-                if (part === 'GE') return '>='; // 追加
+                if (part === 'GT') return '>';
+                if (part === 'GE') return '>=';
                 if (part === 'EQ') return '=';
                 if (part === 'AND') return 'and';
                 if (part === 'OR') return 'or';
