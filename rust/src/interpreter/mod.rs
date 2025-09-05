@@ -355,108 +355,35 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        self.append_output(&format!("DEBUG: execute_tokens called with {} tokens: {:?}\n", tokens.len(), tokens));
-        
-        let mut i = 0;
-        while i < tokens.len() {
-            self.append_output(&format!("DEBUG: Processing token #{}: {:?}\n", i, tokens[i]));
-            
-            match &tokens[i] {
-                Token::Number(num, den) => {
-                    // スカラー値を自動的にVectorでラップ
-                    let wrapped_value = Value {
-                        val_type: ValueType::Vector(
-                            vec![Value {
-                                val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                            }],
-                            BracketType::Square
-                        )
-                    };
-                    self.workspace.push(wrapped_value);
-                    self.append_output(&format!("DEBUG: Pushed wrapped number [{}], workspace size: {}\n", 
-                        if *den == 1 { num.to_string() } else { format!("{}/{}", num, den) }, 
-                        self.workspace.len()));
-                    i += 1;
-                },
-                Token::String(s) => {
-                    let wrapped_value = Value {
-                        val_type: ValueType::Vector(
-                            vec![Value {
-                                val_type: ValueType::String(s.clone()),
-                            }],
-                            BracketType::Square
-                        )
-                    };
-                    self.workspace.push(wrapped_value);
-                    self.append_output(&format!("DEBUG: Pushed wrapped string ['{}'], workspace size: {}\n", s, self.workspace.len()));
-                    i += 1;
-                },
-                Token::Boolean(b) => {
-                    let wrapped_value = Value {
-                        val_type: ValueType::Vector(
-                            vec![Value {
-                                val_type: ValueType::Boolean(*b),
-                            }],
-                            BracketType::Square
-                        )
-                    };
-                    self.workspace.push(wrapped_value);
-                    i += 1;
-                },
-                Token::Nil => {
-                    let wrapped_value = Value {
-                        val_type: ValueType::Vector(
-                            vec![Value {
-                                val_type: ValueType::Nil,
-                            }],
-                            BracketType::Square
-                        )
-                    };
-                    self.workspace.push(wrapped_value);
-                    i += 1;
-                },
-                Token::FunctionComment(_) => {
-                    self.append_output("DEBUG: Skipped function comment during execution\n");
-                    i += 1;
-                },
-                Token::Colon => {
-                    i += 1;
-                },
-                Token::LineBreak => {
-                    i += 1;
-                },
-                Token::VectorStart(bracket_type) => {
-                    self.append_output(&format!("DEBUG: Processing vector start, workspace size before: {}\n", self.workspace.len()));
-                    let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
-                    self.workspace.push(Value {
-                        val_type: ValueType::Vector(vector_values, bracket_type.clone()),
-                    });
-                    self.append_output(&format!("DEBUG: Pushed vector, workspace size after: {}\n", self.workspace.len()));
-                    i += consumed;
-                },
-                Token::Symbol(name) => {
-                    self.append_output(&format!("DEBUG: Executing word '{}', workspace size before: {}\n", name, self.workspace.len()));
-                    
-                    match self.execute_word(name) {
-                        Ok(_) => {
-                            self.append_output(&format!("DEBUG: Successfully executed '{}', workspace size after: {}\n", name, self.workspace.len()));
-                        },
-                        Err(e) => {
-                            self.append_output(&format!("DEBUG: Error executing '{}': {}\n", name, e));
-                            return Err(e);
-                        }
-                    }
-                    i += 1;
-                },
-                Token::VectorEnd(_) => {
-                    return Err(error::AjisaiError::from("Unexpected vector end"));
-                },
+    let mut i = 0;
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
+                // スカラー値は直接ワークスペースに積まない
+                return Err(error::AjisaiError::from(
+                    "Scalar values cannot be placed directly on workspace. Use [value] syntax."
+                ));
+            },
+            Token::VectorStart(bracket_type) => {
+                // Vectorのみ受け入れる
+                let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
+                self.workspace.push(Value {
+                    val_type: ValueType::Vector(vector_values, bracket_type.clone()),
+                });
+                i += consumed;
+            },
+            Token::Symbol(name) => {
+                self.execute_word(name)?;
+                i += 1;
+            },
+            // 他のトークンは無視またはエラー
+            _ => {
+                i += 1;
             }
         }
-        
-        self.append_output(&format!("DEBUG: execute_tokens completed, final workspace size: {}\n", self.workspace.len()));
-        Ok(())
     }
+    Ok(())
+}
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
