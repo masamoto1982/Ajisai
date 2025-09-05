@@ -414,36 +414,36 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                 })
             },
             "vector" => {
-                if value_field.is_array() {
-                    let arr = js_sys::Array::from(&value_field);
-                    let mut values = Vec::new();
-                    for i in 0..arr.length() {
-                        let elem = arr.get(i);
-                        values.push(js_value_to_rust_value(&elem)?);
-                    }
-                    
-                    // bracketType情報を復元
-                    let bracket_type = if let Ok(bracket_type_val) = js_sys::Reflect::get(js_val, &"bracketType".into()) {
-                        if let Some(bracket_type_str) = bracket_type_val.as_string() {
-                            match bracket_type_str.as_str() {
-                                "curly" => BracketType::Curly,
-                                "round" => BracketType::Round,
-                                "square" | _ => BracketType::Square,
-                            }
-                        } else {
-                            BracketType::Square
-                        }
-                    } else {
-                        BracketType::Square
-                    };
-                    
-                    Ok(Value {
-                        val_type: ValueType::Vector(values, bracket_type)
-                    })
-                } else {
-                    Err("Invalid vector value".to_string())
+    if value_field.is_array() {
+        let arr = js_sys::Array::from(&value_field);
+        let mut values = Vec::new();
+        for i in 0..arr.length() {
+            let elem = arr.get(i);
+            values.push(js_value_to_rust_value(&elem)?);
+        }
+        
+        // bracketType情報を復元
+        let bracket_type = if let Ok(bracket_type_val) = js_sys::Reflect::get(js_val, &"bracketType".into()) {
+            if let Some(bracket_type_str) = bracket_type_val.as_string() {
+                match bracket_type_str.as_str() {
+                    "curly" => BracketType::Curly,
+                    "round" => BracketType::Round,
+                    "square" | _ => BracketType::Square,
                 }
-            },
+            } else {
+                BracketType::Square
+            }
+        } else {
+            BracketType::Square
+        };
+        
+        Ok(Value {
+            val_type: ValueType::Vector(values, bracket_type)
+        })
+    } else {
+        Err("Invalid vector value".to_string())
+    }
+},
             "nil" => {
                 Ok(Value {
                     val_type: ValueType::Nil
