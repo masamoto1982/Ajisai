@@ -37,18 +37,17 @@ export class Persistence {
     }
 
     private setupDatabaseListeners(): void {
-        window.addEventListener('ajisai-amnesia', async () => {
-            console.log('AMNESIA command caught.');
-            this.gui.display.showInfo('Clearing all database...');
-            try {
-                await window.AjisaiDB.clearAll();
-                window.ajisaiInterpreter.reset();
-                this.gui.updateAllDisplays();
-                this.gui.display.showInfo('All memory has been cleared.', true);
-            } catch(error) {
-                this.gui.display.showError(error as Error);
-            }
-        });
+        window.addEventListener('ajisai-reset', async () => {  // AMNESIA → RESET
+    console.log('RESET command caught.');
+    this.gui.display.showInfo('Clearing all database...');
+    try {
+        await window.AjisaiDB.clearAll();
+        this.gui.updateAllDisplays();
+        this.gui.display.showInfo('All memory has been cleared.', true);
+    } catch(error) {
+        this.gui.display.showError(error as Error);
+    }
+});
     }
 
     async saveCurrentState(): Promise<void> {
