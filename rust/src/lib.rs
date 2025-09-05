@@ -1,4 +1,4 @@
-// rust/src/lib.rs (BracketType永続化対応版)
+// rust/src/lib.rs (RESET対応版)
 
 use wasm_bindgen::prelude::*;
 
@@ -52,18 +52,17 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn amnesia(&mut self) -> JsValue {
+    pub fn reset(&mut self) -> JsValue {
         let obj = js_sys::Object::new();
         
-        match self.interpreter.execute_amnesia() {
+        match self.interpreter.execute_reset() {
             Ok(()) => {
-                // インタープリターもリセット
                 self.interpreter = Interpreter::new();
                 self.step_tokens.clear();
                 self.step_position = 0;
                 
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"output".into(), &"All memory cleared. System reset.".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"output".into(), &"All memory reset. System reinitialized.".into()).unwrap();
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -170,7 +169,6 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_builtin_words_info(&self) -> JsValue {
-        // 順序を保持した組み込みワード情報を返す
         let builtin_definitions = crate::builtins::get_builtin_definitions();
         let arr = js_sys::Array::new();
         
@@ -186,44 +184,71 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_builtin_words_by_category(&self) -> JsValue {
-        // カテゴリ別機能は削除し、単純なグループ分けで返す
         let builtin_definitions = crate::builtins::get_builtin_definitions();
         let result = js_sys::Object::new();
         
-        // 3つのグループに分ける
-        let arithmetic_group = js_sys::Array::new();
-        let vector_ops_group = js_sys::Array::new();
-        let control_group = js_sys::Array::new();
+        let position_ops = js_sys::Array::new();
+        let quantity_ops = js_sys::Array::new();
+        let workspace_ops = js_sys::Array::new();
+        let vector_ops = js_sys::Array::new();
+        let arithmetic_ops = js_sys::Array::new();
+        let comparison_ops = js_sys::Array::new();
+        let logic_ops = js_sys::Array::new();
+        let io_ops = js_sys::Array::new();
+        let system_ops = js_sys::Array::new();
         
         for (name, desc) in builtin_definitions {
             let word_info = js_sys::Array::new();
             word_info.push(&JsValue::from_str(name));
             word_info.push(&JsValue::from_str(desc));
             
-            // グループ分け
             match name {
-                "+" | "/" | "*" | "-" | "=" | ">=" | ">" | "AND" | "OR" | "NOT" => {
-                    arithmetic_group.push(&word_info);
+                "GET" | "INSERT" | "REPLACE" | "REMOVE" => {
+                    position_ops.push(&word_info);
                 },
-                "NTH" | "INSERT" | "REPLACE" | "REMOVE" | "LENGTH" | "TAKE" | "DROP" | "REPEAT" | "SPLIT" | "CONCAT" => {
-                    vector_ops_group.push(&word_info);
+                "LENGTH" | "TAKE" | "DROP" | "REPEAT" | "SPLIT" => {
+                    quantity_ops.push(&word_info);
                 },
-                "JUMP" | "DEF" | "DEL" | "EVAL" => {
-                    control_group.push(&word_info);
+                "DUP" | "SWAP" | "ROT" => {
+                    workspace_ops.push(&word_info);
+                },
+                "CONCAT" | "REVERSE" => {
+                    vector_ops.push(&word_info);
+                },
+                "+" | "-" | "*" | "/" => {
+                    arithmetic_ops.push(&word_info);
+                },
+                "=" | "<" | "<=" | ">" | ">=" => {
+                    comparison_ops.push(&word_info);
+                },
+                "AND" | "OR" | "NOT" => {
+                    logic_ops.push(&word_info);
+                },
+                "PRINT" => {
+                    io_ops.push(&word_info);
+                },
+                "DEF" | "DEL" | "RESET" => {
+                    system_ops.push(&word_info);
                 },
                 _ => {}
             }
         }
         
-        js_sys::Reflect::set(&result, &JsValue::from_str("Arithmetic"), &arithmetic_group).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("VectorOps"), &vector_ops_group).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("Control"), &control_group).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Position"), &position_ops).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Quantity"), &quantity_ops).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Workspace"), &workspace_ops).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Vector"), &vector_ops).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Arithmetic"), &arithmetic_ops).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Comparison"), &comparison_ops).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("Logic"), &logic_ops).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("IO"), &io_ops).unwrap();
+        js_sys::Reflect::set(&result, &JsValue::from_str("System"), &system_ops).unwrap();
         
         result.into()
     }
 
     #[wasm_bindgen]
-    pub fn reset(&mut self) {
+    pub fn reset_workspace(&mut self) {
         self.interpreter = Interpreter::new();
         self.step_tokens.clear();
         self.step_position = 0;
@@ -231,22 +256,16 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn save_table(&mut self, _name: String, _schema: JsValue, _records: JsValue) -> Result<(), String> {
-        // IndexedDBへの保存処理は現在未実装
-        // 将来的にはここでIndexedDBにテーブルデータを保存する
         Ok(())
     }
 
     #[wasm_bindgen]
     pub fn load_table(&self, _name: String) -> JsValue {
-        // IndexedDBからの読み込み処理は現在未実装
-        // 将来的にはここでIndexedDBからテーブルデータを読み込む
         JsValue::NULL
     }
 
     #[wasm_bindgen]
     pub fn get_all_tables(&self) -> Vec<String> {
-        // IndexedDBのテーブル一覧取得は現在未実装
-        // 将来的にはここでIndexedDB内のテーブル名一覧を返す
         Vec::new()
     }
     
@@ -329,7 +348,6 @@ fn value_to_js(value: &Value) -> JsValue {
     
     js_sys::Reflect::set(&obj, &"value".into(), &val).unwrap();
     
-    // Vector型の場合は括弧タイプ情報も追加
     if let ValueType::Vector(_, bracket_type) = &value.val_type {
         let bracket_type_str = match bracket_type {
             BracketType::Square => "square",
@@ -414,36 +432,35 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                 })
             },
             "vector" => {
-    if value_field.is_array() {
-        let arr = js_sys::Array::from(&value_field);
-        let mut values = Vec::new();
-        for i in 0..arr.length() {
-            let elem = arr.get(i);
-            values.push(js_value_to_rust_value(&elem)?);
-        }
-        
-        // bracketType情報を復元
-        let bracket_type = if let Ok(bracket_type_val) = js_sys::Reflect::get(js_val, &"bracketType".into()) {
-            if let Some(bracket_type_str) = bracket_type_val.as_string() {
-                match bracket_type_str.as_str() {
-                    "curly" => BracketType::Curly,
-                    "round" => BracketType::Round,
-                    "square" | _ => BracketType::Square,
+                if value_field.is_array() {
+                    let arr = js_sys::Array::from(&value_field);
+                    let mut values = Vec::new();
+                    for i in 0..arr.length() {
+                        let elem = arr.get(i);
+                        values.push(js_value_to_rust_value(&elem)?);
+                    }
+                    
+                    let bracket_type = if let Ok(bracket_type_val) = js_sys::Reflect::get(js_val, &"bracketType".into()) {
+                        if let Some(bracket_type_str) = bracket_type_val.as_string() {
+                            match bracket_type_str.as_str() {
+                                "curly" => BracketType::Curly,
+                                "round" => BracketType::Round,
+                                "square" | _ => BracketType::Square,
+                            }
+                        } else {
+                            BracketType::Square
+                        }
+                    } else {
+                        BracketType::Square
+                    };
+                    
+                    Ok(Value {
+                        val_type: ValueType::Vector(values, bracket_type)
+                    })
+                } else {
+                    Err("Invalid vector value".to_string())
                 }
-            } else {
-                BracketType::Square
-            }
-        } else {
-            BracketType::Square
-        };
-        
-        Ok(Value {
-            val_type: ValueType::Vector(values, bracket_type)
-        })
-    } else {
-        Err("Invalid vector value".to_string())
-    }
-},
+            },
             "nil" => {
                 Ok(Value {
                     val_type: ValueType::Nil
@@ -473,7 +490,6 @@ fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
                 let elem = arr.get(i);
                 values.push(js_value_to_rust_value(&elem)?);
             }
-            // デフォルトでSquare括弧を使用（フォールバック）
             Ok(Value {
                 val_type: ValueType::Vector(values, BracketType::Square)
             })
