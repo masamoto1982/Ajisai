@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (案3: コンテキスト統合 完全版)
+// rust/src/interpreter/mod.rs (純粋Vector操作言語版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -30,7 +30,7 @@ pub struct WordDefinition {
 pub struct MultiLineDefinition {
     pub lines: Vec<Vec<Token>>,
     pub has_conditionals: bool,
-    pub description: Option<String>,  // 機能説明を直接格納
+    pub description: Option<String>,
 }
 
 impl Interpreter {
@@ -48,10 +48,8 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
-        // まず最初にデバッグ出力
         self.output_buffer.push_str(&format!("DEBUG: execute() called with code: '{}'\n", code));
         
-        // 全体を一度にトークン化（改行を保持）
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
@@ -66,17 +64,12 @@ impl Interpreter {
             return Ok(());
         }
 
-        // DEFパターンを探して処理
         if let Some((def_result, remaining_code)) = self.try_process_def_pattern_from_code(code, &tokens) {
             self.append_output("DEBUG: DEF pattern processing started\n");
-            
-            // DEF処理を実行
             def_result?;
             
-            // 残りのコードがあれば実行
             if !remaining_code.trim().is_empty() {
                 self.append_output(&format!("DEBUG: Executing remaining code: '{}'\n", remaining_code));
-                // 再帰的にexecuteを呼ぶ（新しいカスタムワードを含めて）
                 self.execute(&remaining_code)?;
             } else {
                 self.append_output("DEBUG: No remaining code to execute\n");
@@ -86,27 +79,24 @@ impl Interpreter {
         }
 
         self.append_output("DEBUG: No DEF pattern, executing tokens normally\n");
-        // DEFパターンがない場合は通常の実行
         self.execute_tokens(&tokens)
     }
 
-    pub fn execute_amnesia(&mut self) -> Result<()> {
+    pub fn execute_reset(&mut self) -> Result<()> {
         // IndexedDBクリアのイベントを発火
         if let Some(window) = web_sys::window() {
             let event = web_sys::CustomEvent::new("ajisai-amnesia")
-                .map_err(|_| error::AjisaiError::from("Failed to create amnesia event"))?;
+                .map_err(|_| error::AjisaiError::from("Failed to create reset event"))?;
             window.dispatch_event(&event)
-                .map_err(|_| error::AjisaiError::from("Failed to dispatch amnesia event"))?;
+                .map_err(|_| error::AjisaiError::from("Failed to dispatch reset event"))?;
         }
         
-        // インタープリター内部状態もクリア
         self.workspace.clear();
         self.dictionary.clear();
         self.dependencies.clear();
         self.output_buffer.clear();
         self.call_stack.clear();
         
-        // 組み込みワードを再登録
         crate::builtins::register_builtins(&mut self.dictionary);
         
         Ok(())
@@ -117,31 +107,55 @@ impl Interpreter {
         
         match token {
             Token::Number(num, den) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                });
-                Ok(format!("Pushed number: {}/{}", num, den))
+                // スカラー値を自動的にVectorでラップ
+                let wrapped_value = Value {
+                    val_type: ValueType::Vector(
+                        vec![Value {
+                            val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                        }],
+                        BracketType::Square
+                    )
+                };
+                self.workspace.push(wrapped_value);
+                Ok(format!("Pushed wrapped number: [{}]", if *den == 1 { num.to_string() } else { format!("{}/{}", num, den) }))
             },
             Token::String(s) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::String(s.clone()),
-                });
-                Ok(format!("Pushed string: '{}'", s))
+                let wrapped_value = Value {
+                    val_type: ValueType::Vector(
+                        vec![Value {
+                            val_type: ValueType::String(s.clone()),
+                        }],
+                        BracketType::Square
+                    )
+                };
+                self.workspace.push(wrapped_value);
+                Ok(format!("Pushed wrapped string: ['{}']", s))
             },
             Token::Boolean(b) => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Boolean(*b),
-                });
-                Ok(format!("Pushed boolean: {}", b))
+                let wrapped_value = Value {
+                    val_type: ValueType::Vector(
+                        vec![Value {
+                            val_type: ValueType::Boolean(*b),
+                        }],
+                        BracketType::Square
+                    )
+                };
+                self.workspace.push(wrapped_value);
+                Ok(format!("Pushed wrapped boolean: [{}]", b))
             },
             Token::Nil => {
-                self.workspace.push(Value {
-                    val_type: ValueType::Nil,
-                });
-                Ok("Pushed nil".to_string())
+                let wrapped_value = Value {
+                    val_type: ValueType::Vector(
+                        vec![Value {
+                            val_type: ValueType::Nil,
+                        }],
+                        BracketType::Square
+                    )
+                };
+                self.workspace.push(wrapped_value);
+                Ok("Pushed wrapped nil: [nil]".to_string())
             },
             Token::FunctionComment(comment) => {
-                // 機能説明コメントは実行時には無視（後方互換性のため残す）
                 Ok(format!("Skipped function comment: \"{}\"", comment))
             },
             Token::Colon => {
@@ -177,28 +191,20 @@ impl Interpreter {
             }
         })?;
         
-        // DEF前に最低2つのトークン（本体 + ワード名）が必要
         if def_position >= 2 {
-            // DEF直前が文字列（機能説明）かチェック
             let (name_pos, description) = if def_position >= 3 {
                 if let Token::String(potential_desc) = &tokens[def_position - 1] {
-                    // DEF直前が文字列の場合、その前がワード名かチェック
-                    if let Token::String(_name) = &tokens[def_position - 2] {  // _ を追加して警告を解決
-                        // パターン: [本体...] 'ワード名' '機能説明' DEF
+                    if let Token::String(_name) = &tokens[def_position - 2] {
                         (def_position - 2, Some(potential_desc.clone()))
                     } else {
-                        // DEF直前が文字列だが、その前がワード名でない場合
-                        // この文字列をワード名として扱う: [本体...] '文字列' DEF
                         (def_position - 1, None)
                     }
                 } else if let Token::String(_) = &tokens[def_position - 1] {
-                    // パターン: [本体...] 'ワード名' DEF（説明なし）
                     (def_position - 1, None)
                 } else {
                     return None;
                 }
             } else if let Token::String(_) = &tokens[def_position - 1] {
-                // パターン: [本体...] 'ワード名' DEF（説明なし）
                 (def_position - 1, None)
             } else {
                 return None;
@@ -211,10 +217,8 @@ impl Interpreter {
                 return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
             }
             
-            // 複数行かどうかを判定
             let multiline_def = self.parse_multiline_definition_with_description(body_tokens, description);
             
-            // 元のコードから最初のDEF後の部分を直接抽出
             let remaining_code = if let Some(def_pos_in_code) = code.find("DEF") {
                 let after_first_def = &code[def_pos_in_code + 3..];
                 let lines: Vec<&str> = after_first_def.lines().collect();
@@ -240,64 +244,6 @@ impl Interpreter {
         None
     }
 
-    fn try_process_multiline_def_pattern(&mut self, tokens: &[Token]) -> Option<(Result<()>, Vec<Token>)> {
-        // DEFの位置を探す
-        let def_position = tokens.iter().rposition(|t| {
-            if let Token::Symbol(s) = t {
-                s == "DEF"
-            } else {
-                false
-            }
-        })?;
-        
-        // DEF前に文字列（ワード名）があるかチェック
-        if def_position >= 1 {
-            if let Token::String(name) = &tokens[def_position - 1] {
-                let body_tokens = &tokens[..def_position - 1];
-                
-                if body_tokens.is_empty() {
-                    return Some((Err(error::AjisaiError::from("DEF requires a body")), Vec::new()));
-                }
-                
-                // 複数行かどうかを判定
-                let multiline_def = self.parse_multiline_definition_with_description(body_tokens, None);
-                
-                // 先にワードを定義
-                let def_result = self.define_word_from_multiline(
-                    name.clone(),
-                    multiline_def
-                );
-                
-                // DEF後にトークンがあるかチェック
-                let remaining_tokens = if def_position + 1 < tokens.len() {
-                    // DEF後のコードを再トークン化（新しいカスタムワードを含めて）
-                    let remaining_code = &tokens[def_position + 1..];
-                    let remaining_code_str = self.tokens_to_string(remaining_code);
-                    self.append_output(&format!("DEBUG: Re-tokenizing remaining code: '{}'\n", remaining_code_str));
-                    
-                    let custom_word_names: HashSet<String> = self.dictionary.iter()
-                        .filter(|(_, def)| !def.is_builtin)
-                        .map(|(name, _)| name.clone())
-                        .collect();
-                    
-                    match crate::tokenizer::tokenize_with_custom_words(&remaining_code_str, &custom_word_names) {
-                        Ok(retokenized) => {
-                            self.append_output(&format!("DEBUG: Re-tokenized result: {:?}\n", retokenized));
-                            retokenized
-                        },
-                        Err(_) => remaining_code.to_vec(),
-                    }
-                } else {
-                    Vec::new()
-                };
-                
-                return Some((def_result, remaining_tokens));
-            }
-        }
-        
-        None
-    }
-
     fn parse_multiline_definition_with_description(&self, tokens: &[Token], external_description: Option<String>) -> MultiLineDefinition {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
@@ -312,8 +258,7 @@ impl Interpreter {
                     }
                 },
                 Token::FunctionComment(_) => {
-                    // 旧形式の機能説明コメントは無視（後方互換性のため）
-                    // 新しい形式では文字列リテラルを使用
+                    // 旧形式の機能説明コメントは無視
                 },
                 _ => {
                     if let Token::Colon = token {
@@ -324,7 +269,6 @@ impl Interpreter {
             }
         }
         
-        // 最後の行を追加
         if !current_line.is_empty() {
             lines.push(current_line);
         }
@@ -339,14 +283,12 @@ impl Interpreter {
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
         let name = name.to_uppercase();
         
-        // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
 
-        // 依存関係チェック
         if self.dictionary.contains_key(&name) {
             if let Some(dependents) = self.dependencies.get(&name) {
                 if !dependents.is_empty() {
@@ -359,19 +301,14 @@ impl Interpreter {
             }
         }
 
-        // 処理方式の判定と実行
         let executable_tokens = if multiline_def.lines.len() == 1 {
-            // 単一行 → 通常の定義
             multiline_def.lines[0].clone()
         } else if multiline_def.has_conditionals {
-            // 複数行 + コロンあり → 条件分岐
             control::create_conditional_execution_tokens(&multiline_def.lines)?
         } else {
-            // 複数行 + コロンなし → 順次実行
             self.create_sequential_execution_tokens(&multiline_def.lines)
         };
 
-        // 古い依存関係をクリア
         if let Some(old_deps) = self.get_word_dependencies(&name) {
             for dep in old_deps {
                 if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
@@ -380,7 +317,6 @@ impl Interpreter {
             }
         }
 
-        // 新しい依存関係を登録
         for token in &executable_tokens {
             if let Token::Symbol(sym) = token {
                 if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
@@ -391,17 +327,15 @@ impl Interpreter {
             }
         }
 
-        // 説明をクローンしてから使用
         let description_clone = multiline_def.description.clone();
 
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: executable_tokens,
             is_builtin: false,
-            description: multiline_def.description,  // 機能説明を設定
+            description: multiline_def.description,
             category: None,
         });
 
-        // 説明付きでログ出力
         if let Some(desc) = &description_clone {
             self.append_output(&format!("Defined word: {} ({})\n", name, desc));
         } else {
@@ -429,42 +363,66 @@ impl Interpreter {
             
             match &tokens[i] {
                 Token::Number(num, den) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                    });
-                    self.append_output(&format!("DEBUG: Pushed number {}/{}, workspace size: {}\n", num, den, self.workspace.len()));
+                    // スカラー値を自動的にVectorでラップ
+                    let wrapped_value = Value {
+                        val_type: ValueType::Vector(
+                            vec![Value {
+                                val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                            }],
+                            BracketType::Square
+                        )
+                    };
+                    self.workspace.push(wrapped_value);
+                    self.append_output(&format!("DEBUG: Pushed wrapped number [{}], workspace size: {}\n", 
+                        if *den == 1 { num.to_string() } else { format!("{}/{}", num, den) }, 
+                        self.workspace.len()));
                     i += 1;
                 },
                 Token::String(s) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::String(s.clone()),
-                    });
-                    self.append_output(&format!("DEBUG: Pushed string '{}', workspace size: {}\n", s, self.workspace.len()));
+                    let wrapped_value = Value {
+                        val_type: ValueType::Vector(
+                            vec![Value {
+                                val_type: ValueType::String(s.clone()),
+                            }],
+                            BracketType::Square
+                        )
+                    };
+                    self.workspace.push(wrapped_value);
+                    self.append_output(&format!("DEBUG: Pushed wrapped string ['{}'], workspace size: {}\n", s, self.workspace.len()));
                     i += 1;
                 },
                 Token::Boolean(b) => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Boolean(*b),
-                    });
+                    let wrapped_value = Value {
+                        val_type: ValueType::Vector(
+                            vec![Value {
+                                val_type: ValueType::Boolean(*b),
+                            }],
+                            BracketType::Square
+                        )
+                    };
+                    self.workspace.push(wrapped_value);
                     i += 1;
                 },
                 Token::Nil => {
-                    self.workspace.push(Value {
-                        val_type: ValueType::Nil,
-                    });
+                    let wrapped_value = Value {
+                        val_type: ValueType::Vector(
+                            vec![Value {
+                                val_type: ValueType::Nil,
+                            }],
+                            BracketType::Square
+                        )
+                    };
+                    self.workspace.push(wrapped_value);
                     i += 1;
                 },
                 Token::FunctionComment(_) => {
-                    // 旧形式の機能説明コメントは実行時には完全に無視
                     self.append_output("DEBUG: Skipped function comment during execution\n");
                     i += 1;
                 },
                 Token::Colon => {
-                    // コロンは条件分岐処理で既に処理済みのはず
                     i += 1;
                 },
                 Token::LineBreak => {
-                    // 改行は定義処理で既に処理済みのはず
                     i += 1;
                 },
                 Token::VectorStart(bracket_type) => {
@@ -502,7 +460,7 @@ impl Interpreter {
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
-        let mut i = start + 1; // VectorStart の次から
+        let mut i = start + 1;
         
         while i < tokens.len() {
             match &tokens[i] {
@@ -524,7 +482,6 @@ impl Interpreter {
                     return Ok((values, i - start + 1));
                 },
                 Token::FunctionComment(_) => {
-                    // 旧形式の機能説明コメントは無視
                     i += 1;
                 },
                 token => {
@@ -555,7 +512,6 @@ impl Interpreter {
                 val_type: ValueType::Symbol(s.clone()),
             }),
             Token::FunctionComment(_) => {
-                // 旧形式の機能説明コメントは変換しない
                 Err(error::AjisaiError::from("Cannot convert function comment to value"))
             },
             Token::Colon => Ok(Value {
@@ -597,7 +553,6 @@ impl Interpreter {
         }
     }
 
-    // トークンを文字列に戻すヘルパーメソッド
     fn tokens_to_string(&self, tokens: &[Token]) -> String {
         tokens.iter()
             .map(|token| self.token_to_string(token))
@@ -643,72 +598,61 @@ impl Interpreter {
     }
 
     fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
-        // Vector定義の場合は直接実行（要素を個別実行しない）
         self.execute_tokens(tokens)
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
-            // スタック操作
-            "DUP" => {
-                let top = self.workspace.last()
-                    .ok_or(error::AjisaiError::WorkspaceUnderflow)?;
-                self.workspace.push(top.clone());
-                Ok(())
-            },
-            "DROP" => {
-                self.workspace.pop()
-                    .ok_or(error::AjisaiError::WorkspaceUnderflow)?;
-                Ok(())
-            },
-            "SWAP" => {
-                let len = self.workspace.len();
-                if len < 2 {
-                    return Err(error::AjisaiError::WorkspaceUnderflow);
-                }
-                self.workspace.swap(len - 1, len - 2);
-                Ok(())
-            },
-            
-            // 算術・論理演算
-            "+" => arithmetic::op_add(self),
-            "/" => arithmetic::op_div(self),
-            "*" => arithmetic::op_mul(self),
-            "-" => arithmetic::op_sub(self),
-            "=" => arithmetic::op_eq(self),
-            "<=" => arithmetic::op_le(self),
-            "<" => arithmetic::op_lt(self),
-            ">=" => arithmetic::op_ge(self),
-            ">" => arithmetic::op_gt(self),
-            "AND" => arithmetic::op_and(self),
-            "OR" => arithmetic::op_or(self),
-            "NOT" => arithmetic::op_not(self),
-            
-            // 位置指定操作（0オリジン）
-            "NTH" => vector_ops::op_get(self),
+            // 位置指定操作
+            "GET" => vector_ops::op_get(self),
             "INSERT" => vector_ops::op_insert(self),
             "REPLACE" => vector_ops::op_replace(self),
             "REMOVE" => vector_ops::op_remove(self),
             
-            // 量指定操作（1オリジン）
+            // 量指定操作
             "LENGTH" => vector_ops::op_length(self),
             "TAKE" => vector_ops::op_take(self),
+            "DROP" => vector_ops::op_drop_vector(self),
             "REPEAT" => vector_ops::op_repeat(self),
             "SPLIT" => vector_ops::op_split(self),
-            // "DROP" => vector_ops::op_drop(self),  // この行を削除（重複を解決）
             
-            // Vector操作
+            // ワークスペース操作
+            "DUP" => vector_ops::op_dup_workspace(self),
+            "SWAP" => vector_ops::op_swap_workspace(self),
+            "ROT" => vector_ops::op_rot_workspace(self),
+            
+            // Vector構造操作
             "CONCAT" => vector_ops::op_concat(self),
+            "REVERSE" => vector_ops::op_reverse(self),
             
-            // ワード管理
+            // 算術演算
+            "+" => arithmetic::op_add(self),
+            "-" => arithmetic::op_sub(self),
+            "*" => arithmetic::op_mul(self),
+            "/" => arithmetic::op_div(self),
+            
+            // 比較演算
+            "=" => arithmetic::op_eq(self),
+            "<" => arithmetic::op_lt(self),
+            "<=" => arithmetic::op_le(self),
+            ">" => arithmetic::op_gt(self),
+            ">=" => arithmetic::op_ge(self),
+            
+            // 論理演算
+            "AND" => arithmetic::op_and(self),
+            "OR" => arithmetic::op_or(self),
+            "NOT" => arithmetic::op_not(self),
+            
+            // 入出力
+            "PRINT" => io::op_print(self),
+            
+            // ワード管理・システム
             "DEF" => control::op_def(self),
             "DEL" => control::op_del(self),
-            
-            // 制御構造・条件分岐
-            "IF_SELECT" => control::op_if_select(self),
-            "CONDITIONAL_BRANCH" => control::op_conditional_branch(self),
-            
-            "NOP" => control::op_nop(self),
+            "RESET" => {
+                self.execute_reset()?;
+                Ok(())
+            },
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
