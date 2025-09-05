@@ -528,6 +528,7 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("DEBUG: execute_builtin called with: {}", name)));
         match name {
             // 位置指定操作
             "GET" => vector_ops::op_get(self),
@@ -570,7 +571,10 @@ impl Interpreter {
             "NOT" => arithmetic::op_not(self),
             
             // 入出力
-            "PRINT" => io::op_print(self),
+            "PRINT" => {
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: calling op_print"));
+            io::op_print(self)
+        },
             
             // ワード管理・システム
             "DEF" => control::op_def(self),
