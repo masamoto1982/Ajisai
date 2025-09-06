@@ -1,7 +1,7 @@
-// rust/src/interpreter/control.rs (ビルドエラー修正版)
+// rust/src/interpreter/control.rs (DEF修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Token, Value, BracketType}; // BracketType追加
+use crate::types::{ValueType, Token, Value, BracketType};
 use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
@@ -237,7 +237,6 @@ fn value_to_token(value: Value) -> Result<Token> {
             // ベクター型は直接トークンに変換できない
             Err(AjisaiError::from("Cannot convert vector to token - vectors should be handled differently"))
         },
-        // 他の型があれば追加
     }
 }
 
@@ -246,7 +245,7 @@ pub fn op_nop(_interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// DEF - 新しいワードを定義する（後置説明文字列対応版 - 修正版）
+// DEF - 新しいワードを定義する（修正版）
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let workspace_len = interp.workspace.len();
     
@@ -302,6 +301,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 function_comments.push(desc);
             }
             
+            // ★ 修正点: Vectorの中身だけをトークンに変換
             for value in v {
                 tokens.push(value_to_token(value)?);
             }
