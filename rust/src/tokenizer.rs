@@ -41,16 +41,6 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 }
             }
             
-            // 機能説明コメント（ダブルクォート）- 次に処理
-            if chars[i] == '"' {
-                if let Some((token, consumed)) = parse_double_quote_comment(&chars[i..]) {
-                    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed comment token: {:?}", token)));
-                    tokens.push(token);
-                    i += consumed;
-                    continue;
-                }
-            }
-            
             // Vector記号
             match chars[i] {
                 '[' => {
