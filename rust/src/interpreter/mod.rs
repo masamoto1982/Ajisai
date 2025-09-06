@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (純粋Vector操作言語版)
+// rust/src/interpreter/mod.rs (スカラー値自動ラッピング復活版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -83,31 +83,31 @@ impl Interpreter {
     }
 
     pub fn execute_reset(&mut self) -> Result<()> {
-    // IndexedDBクリアのイベントを発火
-    if let Some(window) = web_sys::window() {
-        let event = web_sys::CustomEvent::new("ajisai-reset")  // AMNESIA → RESET
-            .map_err(|_| error::AjisaiError::from("Failed to create reset event"))?;
-        window.dispatch_event(&event)
-            .map_err(|_| error::AjisaiError::from("Failed to dispatch reset event"))?;
+        // IndexedDBクリアのイベントを発火
+        if let Some(window) = web_sys::window() {
+            let event = web_sys::CustomEvent::new("ajisai-reset")
+                .map_err(|_| error::AjisaiError::from("Failed to create reset event"))?;
+            window.dispatch_event(&event)
+                .map_err(|_| error::AjisaiError::from("Failed to dispatch reset event"))?;
+        }
+        
+        self.workspace.clear();
+        self.dictionary.clear();
+        self.dependencies.clear();
+        self.output_buffer.clear();
+        self.call_stack.clear();
+        
+        crate::builtins::register_builtins(&mut self.dictionary);
+        
+        Ok(())
     }
-    
-    self.workspace.clear();
-    self.dictionary.clear();
-    self.dependencies.clear();
-    self.output_buffer.clear();
-    self.call_stack.clear();
-    
-    crate::builtins::register_builtins(&mut self.dictionary);
-    
-    Ok(())
-}
 
     pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
         self.output_buffer.clear();
         
         match token {
             Token::Number(num, den) => {
-                // スカラー値を自動的にVectorでラップ
+                // スカラー値を自動的にVectorでラッピング
                 let wrapped_value = Value {
                     val_type: ValueType::Vector(
                         vec![Value {
@@ -355,34 +355,108 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-    let mut i = 0;
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::Number(_, _) | Token::String(_) | Token::Boolean(_) | Token::Nil => {
-    return Err(error::AjisaiError::from(
-        "Scalar values cannot be placed directly on workspace. Use [value] syntax."
-    ));
-},
-            Token::VectorStart(bracket_type) => {
-                // Vectorのみ受け入れる
-                let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
-                self.workspace.push(Value {
-                    val_type: ValueType::Vector(vector_values, bracket_type.clone()),
-                });
-                i += consumed;
-            },
-            Token::Symbol(name) => {
-                self.execute_word(name)?;
-                i += 1;
-            },
-            // 他のトークンは無視またはエラー
-            _ => {
-                i += 1;
+        self.append_output(&format!("DEBUG: execute_tokens called with {} tokens: {:?}\n", tokens.len(), tokens));
+        
+        let mut i = 0;
+        while i < tokens.len() {
+            self.append_output(&format!("DEBUG: Processing token #{}: {:?}\n", i, tokens[i]));
+            
+            match &tokens[i] {
+                Token::Number(num, den) => {
+                    // スカラー値を自動的にVectorでラッピング
+                    let wrapped_value = Value {
+                        val_type: ValueType::Vector(
+                            vec![Value {
+                                val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
+                            }],
+                            BracketType::Square
+                        )
+                    };
+                    self.workspace.push(wrapped_value);
+                    self.append_output(&format!("DEBUG: Pushed wrapped number [{}], workspace size: {}\n", 
+                        if *den == 1 { num.to_string() } else { format!("{}/{}", num, den) }, 
+                        self.workspace.len()));
+                    i += 1;
+                },
+                Token::String(s) => {
+                    let wrapped_value = Value {
+                        val_type: ValueType::Vector(
+                            vec![Value {
+                                val_type: ValueType::String(s.clone()),
+                            }],
+                            BracketType::Square
+                        )
+                    };
+                    self.workspace.push(wrapped_value);
+                    self.append_output(&format!("DEBUG: Pushed wrapped string ['{}'], workspace size: {}\n", s, self.workspace.len()));
+                    i += 1;
+                },
+                Token::Boolean(b) => {
+                    let wrapped_value = Value {
+                        val_type: ValueType::Vector(
+                            vec![Value {
+                                val_type: ValueType::Boolean(*b),
+                            }],
+                            BracketType::Square
+                        )
+                    };
+                    self.workspace.push(wrapped_value);
+                    i += 1;
+                },
+                Token::Nil => {
+                    let wrapped_value = Value {
+                        val_type: ValueType::Vector(
+                            vec![Value {
+                                val_type: ValueType::Nil,
+                            }],
+                            BracketType::Square
+                        )
+                    };
+                    self.workspace.push(wrapped_value);
+                    i += 1;
+                },
+                Token::FunctionComment(_) => {
+                    self.append_output("DEBUG: Skipped function comment during execution\n");
+                    i += 1;
+                },
+                Token::Colon => {
+                    i += 1;
+                },
+                Token::LineBreak => {
+                    i += 1;
+                },
+                Token::VectorStart(bracket_type) => {
+                    self.append_output(&format!("DEBUG: Processing vector start, workspace size before: {}\n", self.workspace.len()));
+                    let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
+                    self.workspace.push(Value {
+                        val_type: ValueType::Vector(vector_values, bracket_type.clone()),
+                    });
+                    self.append_output(&format!("DEBUG: Pushed vector, workspace size after: {}\n", self.workspace.len()));
+                    i += consumed;
+                },
+                Token::Symbol(name) => {
+                    self.append_output(&format!("DEBUG: Executing word '{}', workspace size before: {}\n", name, self.workspace.len()));
+                    
+                    match self.execute_word(name) {
+                        Ok(_) => {
+                            self.append_output(&format!("DEBUG: Successfully executed '{}', workspace size after: {}\n", name, self.workspace.len()));
+                        },
+                        Err(e) => {
+                            self.append_output(&format!("DEBUG: Error executing '{}': {}\n", name, e));
+                            return Err(e);
+                        }
+                    }
+                    i += 1;
+                },
+                Token::VectorEnd(_) => {
+                    return Err(error::AjisaiError::from("Unexpected vector end"));
+                },
             }
         }
+        
+        self.append_output(&format!("DEBUG: execute_tokens completed, final workspace size: {}\n", self.workspace.len()));
+        Ok(())
     }
-    Ok(())
-}
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
@@ -528,7 +602,6 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("DEBUG: execute_builtin called with: {}", name)));
         match name {
             // 位置指定操作
             "GET" => vector_ops::op_get(self),
@@ -571,10 +644,7 @@ impl Interpreter {
             "NOT" => arithmetic::op_not(self),
             
             // 入出力
-            "PRINT" => {
-            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: calling op_print"));
-            io::op_print(self)
-        },
+            "PRINT" => io::op_print(self),
             
             // ワード管理・システム
             "DEF" => control::op_def(self),
