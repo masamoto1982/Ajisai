@@ -5,17 +5,17 @@ use crate::types::{Value, ValueType, Fraction, BracketType};
 
 // ========== 位置指定操作（0オリジン）==========
 
-// GET - 0オリジンの位置指定取得（旧NTH）
+// GET - 0オリジンの位置指定取得（修正版）
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 {
         return Err(AjisaiError::from("GET requires vector and index"));
     }
     
-    let index_val = interp.workspace.pop().unwrap();
-    let target_val = interp.workspace.pop().unwrap();
+    let index_val = interp.workspace.pop().unwrap();  // [0]
+    let target_val = interp.workspace.pop().unwrap(); // [1, 2, 3, 4]
     
-    // インデックスを取得（単一要素Vectorから）
-    let index = match target_val.val_type {
+    // インデックスを取得（単一要素Vectorから） ← index_valから取得するのが正しい
+    let index = match index_val.val_type {  // target_val → index_val に修正
         ValueType::Vector(ref v, _) if v.len() == 1 => {
             match &v[0].val_type {
                 ValueType::Number(n) if n.denominator == 1 => n.numerator,
@@ -25,7 +25,8 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
     };
     
-    match index_val.val_type {
+    // target_valからインデックス位置の要素を取得
+    match target_val.val_type {  // こちらはtarget_valのまま
         ValueType::Vector(v, bracket_type) => {
             if v.is_empty() {
                 return Err(AjisaiError::IndexOutOfBounds {
