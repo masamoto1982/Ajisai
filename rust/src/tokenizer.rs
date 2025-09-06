@@ -19,9 +19,14 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         let chars: Vec<char> = line.chars().collect();
         let mut i = 0;
 
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER processing line {}: '{}'", line_idx, line)));
+
         while i < chars.len() {
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER at position {}: '{}'", i, chars[i])));
+            
             // 空白文字をスキップ
             if chars[i].is_whitespace() {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("TOKENIZER: skipping whitespace"));
                 i += 1;
                 continue;
             }
@@ -29,6 +34,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             // 文字列リテラル（シングルクォート）- 最優先で処理
             if chars[i] == '\'' {
                 if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
+                    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed string token: {:?}", token)));
                     tokens.push(token);
                     i += consumed;
                     continue;
@@ -38,6 +44,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             // 機能説明コメント（ダブルクォート）- 次に処理
             if chars[i] == '"' {
                 if let Some((token, consumed)) = parse_double_quote_comment(&chars[i..]) {
+                    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed comment token: {:?}", token)));
                     tokens.push(token);
                     i += consumed;
                     continue;
@@ -47,16 +54,19 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             // Vector記号
             match chars[i] {
                 '[' => {
+                    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("TOKENIZER: found ["));
                     tokens.push(Token::VectorStart(BracketType::Square));
                     i += 1;
                     continue;
                 },
                 ']' => {
+                    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("TOKENIZER: found ]"));
                     tokens.push(Token::VectorEnd(BracketType::Square));
                     i += 1;
                     continue;
                 },
                 ':' => {
+                    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("TOKENIZER: found :"));
                     tokens.push(Token::Colon);
                     i += 1;
                     continue;
@@ -66,11 +76,13 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             
             // 行コメント（#から行末まで）
             if chars[i] == '#' {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("TOKENIZER: found comment, breaking"));
                 break; // 行の残りをスキップ
             }
             
             // 数値チェック
             if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed number token: {:?}", token)));
                 tokens.push(token);
                 i += consumed;
                 continue;
@@ -78,6 +90,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             
             // カスタムワードチェック
             if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed custom word token: {:?}", token)));
                 tokens.push(token);
                 i += consumed;
                 continue;
@@ -85,19 +98,23 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             
             // 演算子記号チェック（組み込みワードより先に）
             if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed operator token: {:?}", token)));
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
             // 組み込みワードチェック（最後に）
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: trying builtin parse from: '{}'", chars[i..].iter().take(10).collect::<String>())));
             if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed builtin token: {:?}", token)));
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
             // どれにもマッチしなければ無視して次へ
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: no match, skipping character: '{}'", chars[i])));
             i += 1;
         }
         
@@ -109,6 +126,8 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
 
     // 括弧の深度に応じた変換を実行（Vector内のみ）
     convert_vector_brackets_by_depth(&mut tokens)?;
+    
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER FINAL TOKENS: {:?}", tokens)));
     
     Ok(tokens)
 }
