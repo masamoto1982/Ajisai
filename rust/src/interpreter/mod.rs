@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (スカラー値自動ラッピング復活版)
+// rust/src/interpreter/mod.rs (Vector内容抽出修正版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -302,7 +302,9 @@ impl Interpreter {
         }
 
         let executable_tokens = if multiline_def.lines.len() == 1 {
-            multiline_def.lines[0].clone()
+            // ★ 修正点: 単一行の場合、Vector括弧を取り除く
+            let line_tokens = &multiline_def.lines[0];
+            self.extract_vector_content_if_needed(line_tokens)?
         } else if multiline_def.has_conditionals {
             control::create_conditional_execution_tokens(&multiline_def.lines)?
         } else {
@@ -342,6 +344,20 @@ impl Interpreter {
             self.append_output(&format!("Defined word: {}\n", name));
         }
         Ok(())
+    }
+
+    // ★ 新しいヘルパー関数を追加
+    fn extract_vector_content_if_needed(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+        // Vector括弧で囲まれている場合は中身だけを取り出す
+        if tokens.len() >= 2 {
+            if let (Token::VectorStart(_), Token::VectorEnd(_)) = (&tokens[0], &tokens[tokens.len() - 1]) {
+                // Vector括弧を取り除いて中身だけを返す
+                return Ok(tokens[1..tokens.len() - 1].to_vec());
+            }
+        }
+        
+        // Vector括弧で囲まれていない場合はそのまま返す
+        Ok(tokens.to_vec())
     }
 
     fn create_sequential_execution_tokens(&self, lines: &[Vec<Token>]) -> Vec<Token> {
