@@ -79,9 +79,43 @@ fn build_nested_conditions(lines: &[ConditionalLine]) -> Vec<Token> {
 
 fn parse_conditional_lines(lines: &[Vec<Token>]) -> Result<Vec<ConditionalLine>> {
     let mut conditional_lines = Vec::new();
+    let mut i = 0;
     
-    for line in lines {
-        conditional_lines.push(parse_single_conditional_line(line)?);
+    while i < lines.len() {
+        let line = &lines[i];
+        
+        if let Some(colon_pos) = line.iter().position(|t| matches!(t, Token::Colon)) {
+            let condition = line[..colon_pos].to_vec();
+            let mut action = line[colon_pos + 1..].to_vec();
+            
+            // 次の行が条件行でない場合は、アクションの続きとして追加
+            i += 1;
+            while i < lines.len() {
+                let next_line = &lines[i];
+                if next_line.iter().any(|t| matches!(t, Token::Colon)) {
+                    // 次の条件行が見つかったので停止
+                    break;
+                }
+                // アクションの続きとして追加
+                action.extend(next_line.iter().cloned());
+                i += 1;
+            }
+            
+            conditional_lines.push(ConditionalLine {
+                condition: Some(condition),
+                action,
+            });
+            
+            // iは既にインクリメントされているので、continueで次のループへ
+            continue;
+        } else {
+            // デフォルト行
+            conditional_lines.push(ConditionalLine {
+                condition: None,
+                action: line.clone(),
+            });
+            i += 1;
+        }
     }
     
     Ok(conditional_lines)
