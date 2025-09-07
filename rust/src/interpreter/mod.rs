@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (Vector内容抽出修正版)
+// rust/src/interpreter/mod.rs (完全版・IF_SELECT対応)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -30,7 +30,6 @@ pub struct WordDefinition {
 pub struct MultiLineDefinition {
     pub lines: Vec<Vec<Token>>,
     pub has_conditionals: bool,
-    pub description: Option<String>,
 }
 
 impl Interpreter {
@@ -48,8 +47,10 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
+        // まず最初にデバッグ出力
         self.output_buffer.push_str(&format!("DEBUG: execute() called with code: '{}'\n", code));
         
+        // 全体を一度にトークン化（改行を保持）
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
@@ -64,12 +65,17 @@ impl Interpreter {
             return Ok(());
         }
 
+        // DEFパターンを探して処理
         if let Some((def_result, remaining_code)) = self.try_process_def_pattern_from_code(code, &tokens) {
             self.append_output("DEBUG: DEF pattern processing started\n");
+            
+            // DEF処理を実行
             def_result?;
             
+            // 残りのコードがあれば実行
             if !remaining_code.trim().is_empty() {
                 self.append_output(&format!("DEBUG: Executing remaining code: '{}'\n", remaining_code));
+                // 再帰的にexecuteを呼ぶ（新しいカスタムワードを含めて）
                 self.execute(&remaining_code)?;
             } else {
                 self.append_output("DEBUG: No remaining code to execute\n");
@@ -79,6 +85,7 @@ impl Interpreter {
         }
 
         self.append_output("DEBUG: No DEF pattern, executing tokens normally\n");
+        // DEFパターンがない場合は通常の実行
         self.execute_tokens(&tokens)
     }
 
@@ -183,6 +190,7 @@ impl Interpreter {
     }
 
     fn try_process_def_pattern_from_code(&mut self, code: &str, tokens: &[Token]) -> Option<(Result<()>, String)> {
+        // 最初のDEFの位置を探す
         let def_position = tokens.iter().position(|t| {
             if let Token::Symbol(s) = t {
                 s == "DEF"
@@ -191,60 +199,48 @@ impl Interpreter {
             }
         })?;
         
-        if def_position >= 2 {
-            let (name_pos, description) = if def_position >= 3 {
-                if let Token::String(potential_desc) = &tokens[def_position - 1] {
-                    if let Token::String(_name) = &tokens[def_position - 2] {
-                        (def_position - 2, Some(potential_desc.clone()))
+        // DEF前に文字列（ワード名）があるかチェック
+        if def_position >= 1 {
+            if let Token::String(name) = &tokens[def_position - 1] {
+                let body_tokens = &tokens[..def_position - 1];
+                
+                if body_tokens.is_empty() {
+                    return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
+                }
+                
+                // 複数行かどうかを判定
+                let multiline_def = self.parse_multiline_definition(body_tokens);
+                
+                // 元のコードから最初のDEF後の部分を直接抽出
+                let remaining_code = if let Some(def_pos_in_code) = code.find("DEF") {
+                    let after_first_def = &code[def_pos_in_code + 3..]; // "DEF"の3文字分スキップ
+                    
+                    // 改行で分割して最初の行をスキップ（DEFと同じ行の残り部分）
+                    let lines: Vec<&str> = after_first_def.lines().collect();
+                    if lines.len() > 1 {
+                        lines[1..].join("\n").trim().to_string()
                     } else {
-                        (def_position - 1, None)
+                        after_first_def.trim().to_string()
                     }
-                } else if let Token::String(_) = &tokens[def_position - 1] {
-                    (def_position - 1, None)
                 } else {
-                    return None;
-                }
-            } else if let Token::String(_) = &tokens[def_position - 1] {
-                (def_position - 1, None)
-            } else {
-                return None;
-            };
-            
-            let name = if let Token::String(n) = &tokens[name_pos] { n } else { return None; };
-            let body_tokens = &tokens[..name_pos];
-            
-            if body_tokens.is_empty() {
-                return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
+                    String::new()
+                };
+                
+                self.append_output(&format!("DEBUG: Remaining code extracted: '{}'\n", remaining_code));
+                
+                let def_result = self.define_word_from_multiline(
+                    name.clone(),
+                    multiline_def
+                );
+                
+                return Some((def_result, remaining_code));
             }
-            
-            let multiline_def = self.parse_multiline_definition_with_description(body_tokens, description);
-            
-            let remaining_code = if let Some(def_pos_in_code) = code.find("DEF") {
-                let after_first_def = &code[def_pos_in_code + 3..];
-                let lines: Vec<&str> = after_first_def.lines().collect();
-                if lines.len() > 1 {
-                    lines[1..].join("\n").trim().to_string()
-                } else {
-                    after_first_def.trim().to_string()
-                }
-            } else {
-                String::new()
-            };
-            
-            self.append_output(&format!("DEBUG: Remaining code extracted: '{}'\n", remaining_code));
-            
-            let def_result = self.define_word_from_multiline(
-                name.clone(),
-                multiline_def
-            );
-            
-            return Some((def_result, remaining_code));
         }
         
         None
     }
 
-    fn parse_multiline_definition_with_description(&self, tokens: &[Token], external_description: Option<String>) -> MultiLineDefinition {
+    fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
         let mut has_conditionals = false;
@@ -258,7 +254,7 @@ impl Interpreter {
                     }
                 },
                 Token::FunctionComment(_) => {
-                    // 旧形式の機能説明コメントは無視
+                    // コメントはスキップ
                 },
                 _ => {
                     if let Token::Colon = token {
@@ -269,6 +265,7 @@ impl Interpreter {
             }
         }
         
+        // 最後の行を追加
         if !current_line.is_empty() {
             lines.push(current_line);
         }
@@ -276,19 +273,20 @@ impl Interpreter {
         MultiLineDefinition {
             lines,
             has_conditionals,
-            description: external_description,
         }
     }
 
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
         let name = name.to_uppercase();
         
+        // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
 
+        // 依存関係チェック
         if self.dictionary.contains_key(&name) {
             if let Some(dependents) = self.dependencies.get(&name) {
                 if !dependents.is_empty() {
@@ -301,16 +299,19 @@ impl Interpreter {
             }
         }
 
+        // 処理方式の判定と実行
         let executable_tokens = if multiline_def.lines.len() == 1 {
-            // ★ 修正点: 単一行の場合、Vector括弧を取り除く
-            let line_tokens = &multiline_def.lines[0];
-            self.extract_vector_content_if_needed(line_tokens)?
+            // 単一行 → Vector括弧を取り除く
+            self.extract_vector_content_if_needed(&multiline_def.lines[0])?
         } else if multiline_def.has_conditionals {
+            // 複数行 + コロンあり → 条件分岐
             control::create_conditional_execution_tokens(&multiline_def.lines)?
         } else {
+            // 複数行 + コロンなし → 順次実行
             self.create_sequential_execution_tokens(&multiline_def.lines)
         };
 
+        // 古い依存関係をクリア
         if let Some(old_deps) = self.get_word_dependencies(&name) {
             for dep in old_deps {
                 if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
@@ -319,6 +320,7 @@ impl Interpreter {
             }
         }
 
+        // 新しい依存関係を登録
         for token in &executable_tokens {
             if let Token::Symbol(sym) = token {
                 if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
@@ -329,24 +331,18 @@ impl Interpreter {
             }
         }
 
-        let description_clone = multiline_def.description.clone();
-
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: executable_tokens,
             is_builtin: false,
-            description: multiline_def.description,
+            description: None,
             category: None,
         });
 
-        if let Some(desc) = &description_clone {
-            self.append_output(&format!("Defined word: {} ({})\n", name, desc));
-        } else {
-            self.append_output(&format!("Defined word: {}\n", name));
-        }
+        self.append_output(&format!("Defined word: {}\n", name));
         Ok(())
     }
 
-    // ★ 新しいヘルパー関数を追加
+    // Vector括弧を取り除く処理
     fn extract_vector_content_if_needed(&self, tokens: &[Token]) -> Result<Vec<Token>> {
         // Vector括弧で囲まれている場合は中身だけを取り出す
         if tokens.len() >= 2 {
@@ -432,13 +428,15 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::FunctionComment(_) => {
-                    self.append_output("DEBUG: Skipped function comment during execution\n");
+                    // 機能説明コメントは実行時には無視
                     i += 1;
                 },
                 Token::Colon => {
+                    // コロンは条件分岐処理で既に処理済みのはず
                     i += 1;
                 },
                 Token::LineBreak => {
+                    // 改行は定義処理で既に処理済みのはず
                     i += 1;
                 },
                 Token::VectorStart(bracket_type) => {
@@ -476,7 +474,7 @@ impl Interpreter {
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
-        let mut i = start + 1;
+        let mut i = start + 1; // VectorStart の次から
         
         while i < tokens.len() {
             match &tokens[i] {
@@ -527,53 +525,17 @@ impl Interpreter {
             Token::Symbol(s) => Ok(Value {
                 val_type: ValueType::Symbol(s.clone()),
             }),
-            Token::FunctionComment(_) => {
-                Err(error::AjisaiError::from("Cannot convert function comment to value"))
-            },
             Token::Colon => Ok(Value {
                 val_type: ValueType::Symbol(":".to_string()),
             }),
             Token::LineBreak => {
                 Err(error::AjisaiError::from("Cannot convert line break to value"))
             },
+            Token::FunctionComment(_) => {
+                Err(error::AjisaiError::from("Cannot convert comment to value"))
+            },
             _ => Err(error::AjisaiError::from("Cannot convert token to value")),
         }
-    }
-
-    pub fn vector_to_tokens(&self, vector: Vec<Value>) -> Result<Vec<Token>> {
-        let mut tokens = Vec::new();
-        for value in vector.iter() {
-            let token = self.value_to_token(value.clone())?;
-            tokens.push(token);
-        }
-        
-        Ok(tokens)
-    }
-
-    fn value_to_token(&self, value: Value) -> Result<Token> {
-        match value.val_type {
-            ValueType::Number(frac) => Ok(Token::Number(frac.numerator, frac.denominator)),
-            ValueType::String(s) => Ok(Token::String(s)),
-            ValueType::Boolean(b) => Ok(Token::Boolean(b)),
-            ValueType::Symbol(s) => {
-                if s == ":" {
-                    Ok(Token::Colon)
-                } else {
-                    Ok(Token::Symbol(s))
-                }
-            },
-            ValueType::Nil => Ok(Token::Nil),
-            ValueType::Vector(_, _) => {
-                Err(error::AjisaiError::from("Nested vectors not supported in token conversion"))
-            },
-        }
-    }
-
-    fn tokens_to_string(&self, tokens: &[Token]) -> String {
-        tokens.iter()
-            .map(|token| self.token_to_string(token))
-            .collect::<Vec<String>>()
-            .join(" ")
     }
 
     pub(crate) fn get_word_dependencies(&self, word_name: &str) -> Option<Vec<String>> {
@@ -658,49 +620,6 @@ impl Interpreter {
             "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self),
             "NOT" => arithmetic::op_not(self),
-
-             // 条件分岐制御
-        "IF_SELECT" => {
-            if self.workspace.len() < 3 {
-                return Err(error::AjisaiError::WorkspaceUnderflow);
-            }
-            
-            let false_action = self.workspace.pop().unwrap();
-            let true_action = self.workspace.pop().unwrap();
-            let condition = self.workspace.pop().unwrap();
-            
-            // 条件の真偽値を判定（Vector内の値をチェック）
-            let is_true = match &condition.val_type {
-                ValueType::Vector(v, _) if v.len() == 1 => {
-                    match &v[0].val_type {
-                        ValueType::Boolean(b) => *b,
-                        ValueType::Number(n) => n.numerator != 0,
-                        _ => true,
-                    }
-                },
-                _ => false,
-            };
-            
-            let selected_action = if is_true { true_action } else { false_action };
-            
-            // 選択されたアクション（Vector）から内容を取り出して実行
-            if let ValueType::Vector(action_content, _) = selected_action.val_type {
-                if action_content.len() == 1 {
-                    // 単一要素の場合はその要素をワークスペースにプッシュ
-                    self.workspace.push(action_content[0].clone());
-                } else {
-                    // 複数要素の場合は各要素を順次実行
-                    for item in action_content {
-                        self.workspace.push(item);
-                    }
-                }
-            }
-            
-            Ok(())
-        },
-        
-        _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
-    }
             
             // 入出力
             "PRINT" => io::op_print(self),
@@ -710,6 +629,46 @@ impl Interpreter {
             "DEL" => control::op_del(self),
             "RESET" => {
                 self.execute_reset()?;
+                Ok(())
+            },
+            
+            // 条件分岐制御
+            "IF_SELECT" => {
+                if self.workspace.len() < 3 {
+                    return Err(error::AjisaiError::WorkspaceUnderflow);
+                }
+                
+                let false_action = self.workspace.pop().unwrap();
+                let true_action = self.workspace.pop().unwrap();
+                let condition = self.workspace.pop().unwrap();
+                
+                // 条件の真偽値を判定（Vector内の値をチェック）
+                let is_true = match &condition.val_type {
+                    ValueType::Vector(v, _) if v.len() == 1 => {
+                        match &v[0].val_type {
+                            ValueType::Boolean(b) => *b,
+                            ValueType::Number(n) => n.numerator != 0,
+                            _ => true,
+                        }
+                    },
+                    _ => false,
+                };
+                
+                let selected_action = if is_true { true_action } else { false_action };
+                
+                // 選択されたアクション（Vector）から内容を取り出してワークスペースにプッシュ
+                if let ValueType::Vector(action_content, bracket_type) = selected_action.val_type {
+                    if action_content.len() == 1 {
+                        // 単一要素の場合はその要素をワークスペースにプッシュ
+                        self.workspace.push(action_content[0].clone());
+                    } else {
+                        // 複数要素の場合はVectorとしてプッシュ
+                        self.workspace.push(Value {
+                            val_type: ValueType::Vector(action_content, bracket_type)
+                        });
+                    }
+                }
+                
                 Ok(())
             },
             
