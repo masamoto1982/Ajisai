@@ -658,6 +658,49 @@ impl Interpreter {
             "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self),
             "NOT" => arithmetic::op_not(self),
+
+             // 条件分岐制御
+        "IF_SELECT" => {
+            if self.workspace.len() < 3 {
+                return Err(error::AjisaiError::WorkspaceUnderflow);
+            }
+            
+            let false_action = self.workspace.pop().unwrap();
+            let true_action = self.workspace.pop().unwrap();
+            let condition = self.workspace.pop().unwrap();
+            
+            // 条件の真偽値を判定（Vector内の値をチェック）
+            let is_true = match &condition.val_type {
+                ValueType::Vector(v, _) if v.len() == 1 => {
+                    match &v[0].val_type {
+                        ValueType::Boolean(b) => *b,
+                        ValueType::Number(n) => n.numerator != 0,
+                        _ => true,
+                    }
+                },
+                _ => false,
+            };
+            
+            let selected_action = if is_true { true_action } else { false_action };
+            
+            // 選択されたアクション（Vector）から内容を取り出して実行
+            if let ValueType::Vector(action_content, _) = selected_action.val_type {
+                if action_content.len() == 1 {
+                    // 単一要素の場合はその要素をワークスペースにプッシュ
+                    self.workspace.push(action_content[0].clone());
+                } else {
+                    // 複数要素の場合は各要素を順次実行
+                    for item in action_content {
+                        self.workspace.push(item);
+                    }
+                }
+            }
+            
+            Ok(())
+        },
+        
+        _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
+    }
             
             // 入出力
             "PRINT" => io::op_print(self),
