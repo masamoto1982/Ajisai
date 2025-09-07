@@ -65,5 +65,8 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("DEF", "Define new word"),
         ("DEL", "Delete word"),
         ("RESET", "Reset all memory and database"),
+        
+        // 条件分岐制御
+        ("IF_SELECT", "Select action based on condition"),
     ]
 }
