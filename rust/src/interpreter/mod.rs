@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全版・IF_SELECT修正版)
+// rust/src/interpreter/mod.rs (前方参照対応・完全版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -279,23 +279,34 @@ impl Interpreter {
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
         let name = name.to_uppercase();
         
-        // 既存のワードチェック
+        // ★ 修正: 前方参照を許可するため、まず仮の定義を作成
+        let temp_definition = WordDefinition {
+            tokens: vec![Token::Symbol("FORWARD_REF".to_string())], // 仮のトークン
+            is_builtin: false,
+            description: None,
+            category: None,
+        };
+        
+        // 仮の定義を辞書に登録（前方参照を可能にする）
+        self.dictionary.insert(name.clone(), temp_definition);
+        
+        // 既存のワードチェック（ビルトインのみ）
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
+                self.dictionary.remove(&name); // 仮の定義を削除
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
 
-        // 依存関係チェック
-        if self.dictionary.contains_key(&name) {
-            if let Some(dependents) = self.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(error::AjisaiError::ProtectedWord { 
-                        name: name.clone(), 
-                        dependents: dependent_list 
-                    });
-                }
+        // 依存関係チェック（ビルトイン以外）
+        if let Some(dependents) = self.dependencies.get(&name) {
+            if !dependents.is_empty() {
+                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                self.dictionary.remove(&name); // 仮の定義を削除
+                return Err(error::AjisaiError::ProtectedWord { 
+                    name: name.clone(), 
+                    dependents: dependent_list 
+                });
             }
         }
 
@@ -331,6 +342,7 @@ impl Interpreter {
             }
         }
 
+        // ★ 実際の定義で置き換え
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: executable_tokens,
             is_builtin: false,
@@ -338,7 +350,7 @@ impl Interpreter {
             category: None,
         });
 
-        self.append_output(&format!("Defined word: {}\n", name));
+        self.append_output(&format!("Defined word: {} (with forward reference support)\n", name));
         Ok(())
     }
 
@@ -565,6 +577,17 @@ impl Interpreter {
             if def.is_builtin {
                 self.execute_builtin(name)
             } else {
+                // ★ 前方参照チェック
+                if def.tokens.len() == 1 {
+                    if let Token::Symbol(ref s) = def.tokens[0] {
+                        if s == "FORWARD_REF" {
+                            return Err(error::AjisaiError::from(format!(
+                                "Forward reference '{}' not resolved", name
+                            )));
+                        }
+                    }
+                }
+                
                 self.call_stack.push(name.to_string());
                 let result = self.execute_custom_word_immediate(&def.tokens);
                 self.call_stack.pop();
