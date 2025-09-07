@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全版・IF_SELECT対応)
+// rust/src/interpreter/mod.rs (完全版・IF_SELECT修正版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -656,16 +656,32 @@ impl Interpreter {
                 
                 let selected_action = if is_true { true_action } else { false_action };
                 
-                // 選択されたアクション（Vector）から内容を取り出してワークスペースにプッシュ
-                if let ValueType::Vector(action_content, bracket_type) = selected_action.val_type {
-                    if action_content.len() == 1 {
-                        // 単一要素の場合はその要素をワークスペースにプッシュ
-                        self.workspace.push(action_content[0].clone());
-                    } else {
-                        // 複数要素の場合はVectorとしてプッシュ
-                        self.workspace.push(Value {
-                            val_type: ValueType::Vector(action_content, bracket_type)
+                // 選択されたアクションを実行
+                match selected_action.val_type {
+                    ValueType::Vector(action_content, _) => {
+                        // アクション内容に実行可能なシンボルが含まれているかチェック
+                        let has_executable_symbols = action_content.iter().any(|v| {
+                            matches!(v.val_type, ValueType::Symbol(_))
                         });
+                        
+                        if has_executable_symbols {
+                            // 実行可能なコードの場合：トークンに変換して実行
+                            let tokens = self.vector_content_to_tokens(action_content)?;
+                            self.execute_tokens(&tokens)?;
+                        } else {
+                            // データのみの場合：ワークスペースにプッシュ
+                            if action_content.len() == 1 {
+                                self.workspace.push(action_content[0].clone());
+                            } else {
+                                self.workspace.push(Value {
+                                    val_type: ValueType::Vector(action_content, BracketType::Square)
+                                });
+                            }
+                        }
+                    },
+                    _ => {
+                        // Vector以外はそのままプッシュ
+                        self.workspace.push(selected_action);
                     }
                 }
                 
@@ -674,6 +690,36 @@ impl Interpreter {
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
+    }
+
+    fn vector_content_to_tokens(&self, values: Vec<Value>) -> Result<Vec<Token>> {
+        let mut tokens = Vec::new();
+        for value in values {
+            match value.val_type {
+                ValueType::Vector(inner_values, bracket_type) => {
+                    tokens.push(Token::VectorStart(bracket_type.clone()));
+                    let inner_tokens = self.vector_content_to_tokens(inner_values)?;
+                    tokens.extend(inner_tokens);
+                    tokens.push(Token::VectorEnd(bracket_type));
+                },
+                ValueType::Number(frac) => {
+                    tokens.push(Token::Number(frac.numerator, frac.denominator));
+                },
+                ValueType::String(s) => {
+                    tokens.push(Token::String(s));
+                },
+                ValueType::Boolean(b) => {
+                    tokens.push(Token::Boolean(b));
+                },
+                ValueType::Symbol(s) => {
+                    tokens.push(Token::Symbol(s));
+                },
+                ValueType::Nil => {
+                    tokens.push(Token::Nil);
+                },
+            }
+        }
+        Ok(tokens)
     }
 
     pub fn get_output(&mut self) -> String {
