@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (複数行定義自動判定対応版)
+// rust/src/tokenizer.rs (前方参照対応版・完全版)
 
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
@@ -94,7 +94,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 continue;
             }
             
-            // 組み込みワードチェック（最後に）
+            // 組み込みワードチェック
             web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: trying builtin parse from: '{}'", chars[i..].iter().take(10).collect::<String>())));
             if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
                 web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed builtin token: {:?}", token)));
@@ -103,8 +103,16 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 continue;
             }
             
+            // ★ 新規追加: 不明ワードを無視せずシンボルとして処理
+            if let Some((token, consumed)) = try_parse_unknown_word(&chars[i..]) {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: parsed unknown word as symbol: {:?}", token)));
+                tokens.push(token);
+                i += consumed;
+                continue;
+            }
+            
             // どれにもマッチしなければ無視して次へ
-            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: no match, skipping character: '{}'", chars[i])));
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("TOKENIZER: ignoring character: '{}'", chars[i])));
             i += 1;
         }
         
@@ -223,9 +231,36 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
     None
 }
 
+// ★ 新規追加: 不明ワードの解析
+fn try_parse_unknown_word(chars: &[char]) -> Option<(Token, usize)> {
+    if chars.is_empty() || !chars[0].is_ascii_alphabetic() {
+        return None;
+    }
+    
+    let mut word = String::new();
+    let mut i = 0;
+    
+    // アルファベットと数字、アンダースコアからなる単語を取得
+    while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+        word.push(chars[i]);
+        i += 1;
+    }
+    
+    if word.is_empty() {
+        return None;
+    }
+    
+    // 単語境界チェック
+    if i < chars.len() && is_word_char(chars[i]) {
+        return None;
+    }
+    
+    Some((Token::Symbol(word), i))
+}
+
 // 単語文字かどうかを判定
 fn is_word_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c.is_alphabetic()
+    c.is_ascii_alphanumeric() || c.is_alphabetic() || c == '_'
 }
 
 // シングルクォート文字列解析
@@ -418,7 +453,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
         // 論理演算
         "AND", "OR", "NOT",
         // 入出力
-        "PRINT",  // ← これが抜けていた！
+        "PRINT",
         // ワード管理・システム
         "DEF", "DEL", "RESET"
     ];
@@ -427,7 +462,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
         if chars.len() >= word.len() {
             let candidate: String = chars[..word.len()].iter().collect();
             if candidate == *word {
-                if chars.len() == word.len() || !chars[word.len()].is_ascii_alphanumeric() {
+                if chars.len() == word.len() || !is_word_char(chars[word.len()]) {
                     web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
                         "TOKENIZER DEBUG: Matched builtin '{}' from chars starting with '{}'", 
                         word, 
