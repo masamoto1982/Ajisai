@@ -286,6 +286,8 @@ impl Interpreter {
         }
     }
 
+    // rust/src/interpreter/mod.rs (分岐とREPEAT判定修正版)
+
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
         let name = name.to_uppercase();
         
@@ -309,21 +311,24 @@ impl Interpreter {
             }
         }
 
-        // 処理方式の判定と実行
-        let executable_tokens = if multiline_def.repeat_count.is_some() || multiline_def.has_conditionals {
-            // REPEAT指定があるか条件分岐がある場合
+        // 処理方式の判定と実行（修正版）
+        let executable_tokens = if multiline_def.repeat_count.is_some() {
+            // 明示的なREPEAT指定がある場合
             if multiline_def.lines.len() == 1 && !multiline_def.has_conditionals {
                 // 単一行 + REPEAT → 単純反復
                 self.create_simple_repeat_tokens(multiline_def.repeat_count, &multiline_def.lines[0])
             } else {
-                // 複数行 or 条件分岐 → 高度なREPEAT処理
+                // 複数行 or 条件分岐 + REPEAT → 高度なREPEAT処理
                 control::create_repeat_execution_tokens(multiline_def.repeat_count, &multiline_def.lines)?
             }
+        } else if multiline_def.has_conditionals {
+            // 条件分岐ありだがREPEAT指定なし → 従来の分岐処理
+            self.create_traditional_conditional_tokens(&multiline_def.lines)?
         } else if multiline_def.lines.len() == 1 {
             // 単一行 → Vector括弧を取り除く
             self.extract_vector_content_if_needed(&multiline_def.lines[0])?
         } else {
-            // 複数行 + REPEATなし → 順次実行
+            // 複数行 + REPEATなし + 条件なし → 順次実行
             self.create_sequential_execution_tokens(&multiline_def.lines)
         };
 
@@ -356,6 +361,110 @@ impl Interpreter {
 
         self.append_output(&format!("Defined word: {}\n", name));
         Ok(())
+    }
+
+    // 従来の分岐処理（新規追加）
+    fn create_traditional_conditional_tokens(&self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
+        if lines.is_empty() {
+            return Err(error::AjisaiError::from("No lines found"));
+        }
+
+        // デフォルト行（条件なし行）の存在チェック
+        let has_default = lines.iter().any(|line| {
+            !line.iter().any(|token| matches!(token, Token::Colon))
+        });
+        
+        if !has_default {
+            return Err(error::AjisaiError::from("Default line (line without condition) is required for safety"));
+        }
+
+        // 従来の分岐処理：IF_SELECT構造を構築
+        self.build_traditional_conditional_structure(lines)
+    }
+
+    fn build_traditional_conditional_structure(&self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
+        let mut result = Vec::new();
+        let mut conditional_lines = Vec::new();
+        let mut default_line = None;
+
+        // 条件行とデフォルト行を分離
+        for line in lines {
+            if let Some(colon_pos) = line.iter().position(|t| matches!(t, Token::Colon)) {
+                // 条件行
+                let condition = &line[..colon_pos];
+                let action = &line[colon_pos + 1..];
+                
+                conditional_lines.push((condition.to_vec(), action.to_vec()));
+            } else {
+                // デフォルト行
+                default_line = Some(line.clone());
+            }
+        }
+
+        if conditional_lines.is_empty() {
+            // 条件行がない場合は、デフォルト行のみ実行
+            if let Some(default) = default_line {
+                result.extend(default);
+            }
+            return Ok(result);
+        }
+
+        // ネストしたIF_SELECT構造を構築
+        result.extend(self.build_nested_if_select(&conditional_lines, &default_line.unwrap_or_default()));
+        
+        Ok(result)
+    }
+
+    fn build_nested_if_select(&self, conditional_lines: &[(Vec<Token>, Vec<Token>)], default_action: &[Token]) -> Vec<Token> {
+        if conditional_lines.is_empty() {
+            return default_action.to_vec();
+        }
+
+        if conditional_lines.len() == 1 {
+            let (condition, action) = &conditional_lines[0];
+            let mut result = Vec::new();
+            
+            // 条件
+            result.extend(condition.iter().cloned());
+            
+            // 真の場合のアクション
+            result.push(Token::VectorStart(BracketType::Square));
+            result.extend(action.iter().cloned());
+            result.push(Token::VectorEnd(BracketType::Square));
+            
+            // 偽の場合のアクション（デフォルト）
+            result.push(Token::VectorStart(BracketType::Square));
+            result.extend(default_action.iter().cloned());
+            result.push(Token::VectorEnd(BracketType::Square));
+            
+            result.push(Token::Symbol("IF_SELECT".to_string()));
+            
+            return result;
+        }
+
+        // 複数の条件行がある場合、再帰的にネスト
+        let (first_condition, first_action) = &conditional_lines[0];
+        let remaining_lines = &conditional_lines[1..];
+        
+        let mut result = Vec::new();
+        
+        // 最初の条件
+        result.extend(first_condition.iter().cloned());
+        
+        // 真の場合のアクション
+        result.push(Token::VectorStart(BracketType::Square));
+        result.extend(first_action.iter().cloned());
+        result.push(Token::VectorEnd(BracketType::Square));
+        
+        // 偽の場合のアクション（残りの条件を再帰処理）
+        result.push(Token::VectorStart(BracketType::Square));
+        let nested = self.build_nested_if_select(remaining_lines, default_action);
+        result.extend(nested);
+        result.push(Token::VectorEnd(BracketType::Square));
+        
+        result.push(Token::Symbol("IF_SELECT".to_string()));
+        
+        result
     }
 
     fn create_simple_repeat_tokens(&self, repeat_count: Option<i64>, line: &[Token]) -> Vec<Token> {
