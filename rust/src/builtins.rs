@@ -1,4 +1,4 @@
-// rust/src/builtins.rs (純粋Vector操作言語版)
+// rust/src/builtins.rs (REPEAT対応版)
 
 use std::collections::HashMap;
 use crate::interpreter::WordDefinition;
@@ -28,7 +28,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("LENGTH", "Get vector length"),
         ("TAKE", "Take first N elements"),
         ("DROP", "Drop first N elements"),
-        ("REPEAT", "Repeat element N times"),
+        ("REPEAT", "Repeat execution with count limit"),
         ("SPLIT", "Split vector by sizes"),
         
         // ワークスペース操作
@@ -66,7 +66,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("DEL", "Delete word"),
         ("RESET", "Reset all memory and database"),
         
-        // 条件分岐制御
+        // 条件分岐・反復制御
         ("IF_SELECT", "Select action based on condition"),
+        ("EXECUTE_REPEAT", "Execute repeat with conditional lines"),
+        ("SIMPLE_REPEAT", "Simple repeat execution"),
     ]
 }
