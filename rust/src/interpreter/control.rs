@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (DEF修正版)
+// rust/src/interpreter/control.rs (REPEAT対応版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token, Value, BracketType};
@@ -10,71 +10,56 @@ pub struct ConditionalLine {
     pub action: Vec<Token>,
 }
 
-// 条件分岐実行用のトークンを生成（新しい実装）
-pub fn create_conditional_execution_tokens(lines: &[Vec<Token>]) -> Result<Vec<Token>> {
+#[derive(Debug, Clone)]
+pub struct RepeatDefinition {
+    pub repeat_count: Option<i64>,  // None = 無制限（危険なので使わない）
+    pub conditional_lines: Vec<ConditionalLine>,
+}
+
+// REPEAT構文の解析とトークン生成
+pub fn create_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
     let conditional_lines = parse_conditional_lines(lines)?;
     
     if conditional_lines.is_empty() {
-        return Err(AjisaiError::from("No conditional lines found"));
+        return Err(AjisaiError::from("No lines found"));
     }
     
-    // 再帰的に条件分岐を構築
-    Ok(build_nested_conditions(&conditional_lines))
+    // デフォルト行（条件なし行）の存在チェック
+    let has_default = conditional_lines.iter().any(|line| line.condition.is_none());
+    if !has_default {
+        return Err(AjisaiError::from("Default line (line without condition) is required for safety"));
+    }
+    
+    // REPEAT実行用トークンを生成
+    Ok(build_repeat_execution_tokens(repeat_count, &conditional_lines))
 }
 
-fn build_nested_conditions(lines: &[ConditionalLine]) -> Vec<Token> {
-    if lines.is_empty() {
-        return Vec::new();
-    }
+fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[ConditionalLine]) -> Vec<Token> {
+    let mut result = Vec::new();
     
-    if lines.len() == 1 {
-        // 最後の行（デフォルト行またはただ一つの条件行）
-        let line = &lines[0];
+    // 回数制限を設定（デフォルトは1回）
+    let count = repeat_count.unwrap_or(1);
+    result.push(Token::Number(count, 1));
+    
+    // 条件行を順番に処理
+    for line in lines {
         if let Some(condition) = &line.condition {
-            // 単一条件の場合
-            let mut result = Vec::new();
+            // 条件付き行: [ condition action ]
+            result.push(Token::VectorStart(BracketType::Square));
             result.extend(condition.iter().cloned());
+            result.extend(line.action.iter().cloned());
+            result.push(Token::VectorEnd(BracketType::Square));
+        } else {
+            // デフォルト行: [ action ]
             result.push(Token::VectorStart(BracketType::Square));
             result.extend(line.action.iter().cloned());
             result.push(Token::VectorEnd(BracketType::Square));
-            result.push(Token::VectorStart(BracketType::Square));
-            // 空のデフォルトアクション
-            result.push(Token::VectorEnd(BracketType::Square));
-            result.push(Token::Symbol("IF_SELECT".to_string()));
-            return result;
-        } else {
-            // デフォルト行のみ
-            return line.action.clone();
         }
     }
     
-    // 複数行の場合：最初の条件 + 残りを再帰処理
-    let first_line = &lines[0];
-    let remaining_lines = &lines[1..];
-    
-    if let Some(condition) = &first_line.condition {
-        let mut result = Vec::new();
-        
-        // 最初の条件
-        result.extend(condition.iter().cloned());
-        
-        // 真の場合のアクション
-        result.push(Token::VectorStart(BracketType::Square));
-        result.extend(first_line.action.iter().cloned());
-        result.push(Token::VectorEnd(BracketType::Square));
-        
-        // 偽の場合のアクション（残りの条件を再帰処理）
-        result.push(Token::VectorStart(BracketType::Square));
-        let nested = build_nested_conditions(remaining_lines);
-        result.extend(nested);
-        result.push(Token::VectorEnd(BracketType::Square));
-        
-        result.push(Token::Symbol("IF_SELECT".to_string()));
-        return result;
-    } else {
-        // 条件がない場合（デフォルト行）
-        return first_line.action.clone();
-    }
+    // REPEAT実行ワードを追加
+    result.push(Token::Symbol("EXECUTE_REPEAT".to_string()));
+    result
 }
 
 fn parse_conditional_lines(lines: &[Vec<Token>]) -> Result<Vec<ConditionalLine>> {
@@ -106,6 +91,10 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
         })
     } else {
         // コロンなし = デフォルト行
+        if tokens.is_empty() {
+            return Err(AjisaiError::from("Empty default line"));
+        }
+        
         Ok(ConditionalLine {
             condition: None,
             action: tokens.to_vec(),
@@ -113,87 +102,131 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
     }
 }
 
-// IF_SELECT - 条件に基づいてアクションを選択実行
-pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
-    interp.append_output("DEBUG: IF_SELECT called\n");
+// EXECUTE_REPEAT - REPEAT構文の実行エンジン
+pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
+    // スタックからデフォルト行とすべての条件行を取得
+    let mut action_vectors = Vec::new();
+    let mut conditions_and_actions = Vec::new();
     
-    if interp.workspace.len() < 3 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
+    // 回数制限を取得
+    let repeat_count_val = interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
-    let false_action = interp.workspace.pop().unwrap();
-    let true_action = interp.workspace.pop().unwrap();
-    let condition = interp.workspace.pop().unwrap();
-    
-    interp.append_output(&format!("DEBUG: condition={:?}, is_truthy={}\n", condition, is_truthy(&condition)));
-    interp.append_output(&format!("DEBUG: true_action={:?}\n", true_action));
-    interp.append_output(&format!("DEBUG: false_action={:?}\n", false_action));
-    
-    let selected_action = if is_truthy(&condition) {
-        interp.append_output("DEBUG: Selecting true_action\n");
-        true_action
-    } else {
-        interp.append_output("DEBUG: Selecting false_action\n");
-        false_action
+    let repeat_count = match repeat_count_val.val_type {
+        ValueType::Vector(ref v, _) if v.len() == 1 => {
+            match &v[0].val_type {
+                ValueType::Number(n) if n.denominator == 1 => n.numerator,
+                _ => return Err(AjisaiError::type_error("integer repeat count", "other type")),
+            }
+        },
+        _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
     };
     
-    // 選択されたアクションを実行
-    match selected_action.val_type {
-        ValueType::Vector(action_values, _) => {
-            interp.append_output("DEBUG: Executing vector action\n");
-            let tokens = vector_to_tokens(action_values)?;
-            interp.append_output(&format!("DEBUG: Generated tokens: {:?}\n", tokens));
-            interp.execute_tokens(&tokens)
-        },
-        _ => {
-            interp.append_output("DEBUG: Pushing non-vector action to workspace\n");
-            interp.workspace.push(selected_action);
-            Ok(())
+    if repeat_count < 0 {
+        return Err(AjisaiError::from("Repeat count must be non-negative"));
+    }
+    
+    // すべてのアクションベクターを収集（逆順で取得）
+    while let Some(val) = interp.workspace.pop() {
+        match val.val_type {
+            ValueType::Vector(action_tokens, _) => {
+                action_vectors.push(action_tokens);
+            },
+            _ => {
+                // Vector以外が来た場合、処理を終了
+                interp.workspace.push(val); // 戻す
+                break;
+            }
         }
     }
-}
-
-// 新しいヘルパー関数
-fn execute_action_value(interp: &mut Interpreter, action_value: Value) -> Result<()> {
-    match action_value.val_type {
-        ValueType::Vector(action_values, _) => {
-            // Vectorの場合、トークンに変換して実行
-            let tokens = vector_to_tokens(action_values)?;
-            interp.execute_tokens(&tokens)
-        },
-        _ => {
-            // Vector以外の場合、そのままワークスペースにプッシュ
-            interp.workspace.push(action_value);
-            Ok(())
+    
+    // 取得順序を反転（最初に積まれたものが最初に処理されるように）
+    action_vectors.reverse();
+    
+    if action_vectors.is_empty() {
+        return Err(AjisaiError::from("No action vectors found"));
+    }
+    
+    // 最後のアクションがデフォルト行（条件なし）
+    let default_action = action_vectors.pop().unwrap();
+    
+    // 残りが条件付きアクション
+    for action_values in action_vectors {
+        conditions_and_actions.push(action_values);
+    }
+    
+    // REPEAT実行ループ
+    for _iteration in 0..repeat_count {
+        let mut executed = false;
+        
+        // 各条件を順番にチェック
+        for condition_action in &conditions_and_actions {
+            if condition_action.len() < 2 {
+                continue; // 条件とアクションの両方が必要
+            }
+            
+            // 条件部分とアクション部分を分離
+            let (condition_tokens, action_tokens) = split_condition_and_action(condition_action)?;
+            
+            // 条件を評価
+            let condition_result = evaluate_condition(interp, &condition_tokens)?;
+            
+            if is_truthy(&condition_result) {
+                // 条件が真の場合、アクションを実行
+                execute_action_tokens(interp, &action_tokens)?;
+                executed = true;
+                break; // 最初にマッチした条件のみ実行
+            }
+        }
+        
+        if !executed {
+            // どの条件も満たさない場合、デフォルト行を実行
+            execute_action_tokens(interp, &default_action)?;
+            break; // デフォルト行実行後は終了
         }
     }
-}
-
-// CONDITIONAL_BRANCH - シンプルな条件分岐実行（後方互換性のため残す）
-pub fn op_conditional_branch(interp: &mut Interpreter) -> Result<()> {
-    // スタックから残り分岐数を取得（使用しないが互換性のため）
-    let _remaining_branches_val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    // アクション（文字列）を取得
-    let action_val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    // 条件（真偽値）を取得
-    let condition_val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    if is_truthy(&condition_val) {
-        // 条件が真の場合、アクションを実行
-        if let ValueType::String(action_str) = action_val.val_type {
-            interp.workspace.push(Value {
-                val_type: ValueType::String(action_str)
-            });
-        }
-    }
-    // 条件が偽の場合は何もしない（次の条件へ）
     
     Ok(())
+}
+
+fn split_condition_and_action(tokens: &[Value]) -> Result<(Vec<Token>, Vec<Token>)> {
+    // 簡単な実装：最初の半分を条件、後の半分をアクションとする
+    // より高度な実装では、特定の区切り文字（例：THEN）を探すことも可能
+    let mid = tokens.len() / 2;
+    
+    let condition_tokens: Result<Vec<Token>, _> = tokens[..mid].iter()
+        .map(|v| value_to_token(v.clone()))
+        .collect();
+    
+    let action_tokens: Result<Vec<Token>, _> = tokens[mid..].iter()
+        .map(|v| value_to_token(v.clone()))
+        .collect();
+    
+    Ok((condition_tokens?, action_tokens?))
+}
+
+fn evaluate_condition(interp: &mut Interpreter, condition_tokens: &[Token]) -> Result<Value> {
+    // 現在のワークスペースを保存
+    let saved_workspace = interp.workspace.clone();
+    
+    // 条件を実行
+    interp.execute_tokens(condition_tokens)?;
+    
+    // 結果を取得
+    let result = if interp.workspace.is_empty() {
+        Value { val_type: ValueType::Boolean(false) }
+    } else {
+        interp.workspace.pop().unwrap()
+    };
+    
+    // ワークスペースを復元
+    interp.workspace = saved_workspace;
+    
+    Ok(result)
+}
+
+fn execute_action_tokens(interp: &mut Interpreter, action_tokens: &[Token]) -> Result<()> {
+    interp.execute_tokens(action_tokens)
 }
 
 fn is_truthy(value: &Value) -> bool {
@@ -207,12 +240,53 @@ fn is_truthy(value: &Value) -> bool {
     }
 }
 
+fn value_to_token(value: Value) -> Result<Token> {
+    match value.val_type {
+        ValueType::Number(frac) => Ok(Token::Number(frac.numerator, frac.denominator)),
+        ValueType::String(s) => Ok(Token::String(s)),
+        ValueType::Boolean(b) => Ok(Token::Boolean(b)),
+        ValueType::Symbol(s) => Ok(Token::Symbol(s)),
+        ValueType::Nil => Ok(Token::Nil),
+        ValueType::Vector(_, _) => {
+            Err(AjisaiError::from("Cannot convert vector to token directly"))
+        },
+    }
+}
+
+// IF_SELECT - 条件に基づいてアクションを選択実行
+pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 3 {
+        return Err(AjisaiError::WorkspaceUnderflow);
+    }
+    
+    let false_action = interp.workspace.pop().unwrap();
+    let true_action = interp.workspace.pop().unwrap();
+    let condition = interp.workspace.pop().unwrap();
+    
+    let selected_action = if is_truthy(&condition) {
+        true_action
+    } else {
+        false_action
+    };
+    
+    // 選択されたアクションを実行
+    match selected_action.val_type {
+        ValueType::Vector(action_values, _) => {
+            let tokens = vector_to_tokens(action_values)?;
+            interp.execute_tokens(&tokens)
+        },
+        _ => {
+            interp.workspace.push(selected_action);
+            Ok(())
+        }
+    }
+}
+
 fn vector_to_tokens(values: Vec<Value>) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for value in values {
         match value.val_type {
             ValueType::Vector(inner_values, bracket_type) => {
-                // ネストしたVectorの場合、括弧を追加して再帰処理
                 tokens.push(Token::VectorStart(bracket_type.clone()));
                 let inner_tokens = vector_to_tokens(inner_values)?;
                 tokens.extend(inner_tokens);
@@ -226,26 +300,7 @@ fn vector_to_tokens(values: Vec<Value>) -> Result<Vec<Token>> {
     Ok(tokens)
 }
 
-fn value_to_token(value: Value) -> Result<Token> {
-    match value.val_type {
-        ValueType::Number(frac) => Ok(Token::Number(frac.numerator, frac.denominator)),
-        ValueType::String(s) => Ok(Token::String(s)),
-        ValueType::Boolean(b) => Ok(Token::Boolean(b)),
-        ValueType::Symbol(s) => Ok(Token::Symbol(s)),
-        ValueType::Nil => Ok(Token::Nil),
-        ValueType::Vector(_, _) => {
-            // ベクター型は直接トークンに変換できない
-            Err(AjisaiError::from("Cannot convert vector to token - vectors should be handled differently"))
-        },
-    }
-}
-
-// NOP - 何もしない
-pub fn op_nop(_interp: &mut Interpreter) -> Result<()> {
-    Ok(())
-}
-
-// DEF - 新しいワードを定義する（修正版）
+// DEF - 新しいワードを定義する
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let workspace_len = interp.workspace.len();
     
@@ -256,31 +311,25 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     
     // パターン判定: 3つある場合は説明付き、2つの場合は説明なし
     let (code_val, name_val, description) = if workspace_len >= 3 {
-        // 可能性1: [本体] '名前' "説明" DEF の順でスタックに積まれている
-        // スタックトップから: "説明", '名前', [本体]
         let desc_or_name = interp.workspace.pop().unwrap();
         let name_or_code = interp.workspace.pop().unwrap();
         let code_or_other = interp.workspace.pop().unwrap();
         
         match (&code_or_other.val_type, &name_or_code.val_type, &desc_or_name.val_type) {
             (ValueType::Vector(_, _), ValueType::String(_), ValueType::String(desc)) => {
-                // パターン: [本体] '名前' '説明'
                 (code_or_other, name_or_code, Some(desc.clone()))
             },
             (ValueType::Vector(_, _), ValueType::String(_), _) => {
-                // パターン: [本体] '名前' その他 → その他を戻して説明なしとして処理
                 interp.workspace.push(desc_or_name);
                 (code_or_other, name_or_code, None)
             },
             _ => {
-                // パターンマッチしない場合、すべて戻して2要素として処理
                 interp.workspace.push(code_or_other);
                 interp.workspace.push(name_or_code);
                 (desc_or_name, interp.workspace.pop().unwrap(), None)
             }
         }
     } else {
-        // 2要素の場合: [本体] '名前' DEF
         let name_val = interp.workspace.pop().unwrap();
         let code_val = interp.workspace.pop().unwrap();
         (code_val, name_val, None)
@@ -296,12 +345,10 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             let mut tokens = Vec::new();
             let mut function_comments = Vec::new();
             
-            // 外部説明を追加
             if let Some(desc) = description {
                 function_comments.push(desc);
             }
             
-            // ★ 修正点: Vectorの中身だけをトークンに変換
             for value in v {
                 tokens.push(value_to_token(value)?);
             }
@@ -357,7 +404,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    // 説明をクローンしてから使用
     let description_clone = final_description.clone();
 
     interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
@@ -367,7 +413,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         category: None,
     });
 
-    // 説明付きでログ出力
     if let Some(desc) = &description_clone {
         interp.append_output(&format!("Defined word: {} ({})\n", name, desc));
     } else {
