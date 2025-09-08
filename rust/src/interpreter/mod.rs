@@ -230,7 +230,7 @@ impl Interpreter {
         None
     }
 
-    fn parse_multiline_definition(&self, tokens: &[Token]) -> MultiLineDefinition {
+    fn parse_multiline_definition(&mut self, tokens: &[Token]) -> MultiLineDefinition {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
         let mut has_conditionals = false;
