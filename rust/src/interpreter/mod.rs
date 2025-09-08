@@ -301,88 +301,90 @@ impl Interpreter {
 }
 
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
-        let name = name.to_uppercase();
-        
-        self.append_output(&format!("DEBUG: define_word_from_multiline - name: {}, repeat_count: {:?}, has_conditionals: {}\n", 
-            name, multiline_def.repeat_count, multiline_def.has_conditionals));
-        
-        // 既存のワードチェック
-        if let Some(existing) = self.dictionary.get(&name) {
-            if existing.is_builtin {
-                return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-            }
+    let name = name.to_uppercase();
+    
+    self.append_output(&format!("DEBUG: define_word_from_multiline - name: {}, repeat_count: {:?}, has_conditionals: {}, lines: {:?}\n", 
+        name, multiline_def.repeat_count, multiline_def.has_conditionals, multiline_def.lines));
+    
+    // 既存のワードチェック
+    if let Some(existing) = self.dictionary.get(&name) {
+        if existing.is_builtin {
+            return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
         }
-
-        // 依存関係チェック
-        if self.dictionary.contains_key(&name) {
-            if let Some(dependents) = self.dependencies.get(&name) {
-                if !dependents.is_empty() {
-                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                    return Err(error::AjisaiError::ProtectedWord { 
-                        name: name.clone(), 
-                        dependents: dependent_list 
-                    });
-                }
-            }
-        }
-
-        // 処理方式の判定と実行（修正版）
-        let executable_tokens = if multiline_def.repeat_count.is_some() {
-            // 明示的なREPEAT指定がある場合
-            self.append_output("DEBUG: Using REPEAT processing\n");
-            if multiline_def.lines.len() == 1 && !multiline_def.has_conditionals {
-                // 単一行 + REPEAT → 単純反復
-                self.create_simple_repeat_tokens(multiline_def.repeat_count, &multiline_def.lines[0])
-            } else {
-                // 複数行 or 条件分岐 + REPEAT → 高度なREPEAT処理
-                control::create_repeat_execution_tokens(multiline_def.repeat_count, &multiline_def.lines)?
-            }
-        } else if multiline_def.has_conditionals {
-            // 条件分岐ありだがREPEAT指定なし → 従来の分岐処理
-            self.append_output("DEBUG: Using traditional conditional processing\n");
-            self.create_traditional_conditional_tokens(&multiline_def.lines)?
-        } else if multiline_def.lines.len() == 1 {
-            // 単一行 → Vector括弧を取り除く
-            self.append_output("DEBUG: Using single line processing\n");
-            self.extract_vector_content_if_needed(&multiline_def.lines[0])?
-        } else {
-            // 複数行 + REPEATなし + 条件なし → 順次実行
-            self.append_output("DEBUG: Using sequential processing\n");
-            self.create_sequential_execution_tokens(&multiline_def.lines)
-        };
-
-        self.append_output(&format!("DEBUG: Generated executable tokens: {:?}\n", executable_tokens));
-
-        // 古い依存関係をクリア
-        if let Some(old_deps) = self.get_word_dependencies(&name) {
-            for dep in old_deps {
-                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
-                    reverse_deps.remove(&name);
-                }
-            }
-        }
-
-        // 新しい依存関係を登録
-        for token in &executable_tokens {
-            if let Token::Symbol(sym) = token {
-                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                    self.dependencies.entry(sym.clone())
-                        .or_insert_with(HashSet::new)
-                        .insert(name.clone());
-                }
-            }
-        }
-
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens: executable_tokens,
-            is_builtin: false,
-            description: None,
-            category: None,
-        });
-
-        self.append_output(&format!("Defined word: {}\n", name));
-        Ok(())
     }
+
+    // 依存関係チェック
+    if self.dictionary.contains_key(&name) {
+        if let Some(dependents) = self.dependencies.get(&name) {
+            if !dependents.is_empty() {
+                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                return Err(error::AjisaiError::ProtectedWord { 
+                    name: name.clone(), 
+                    dependents: dependent_list 
+                });
+            }
+        }
+    }
+
+    // 処理方式の判定と実行（デバッグ版）
+    let executable_tokens = if multiline_def.repeat_count.is_some() {
+        // 明示的なREPEAT指定がある場合
+        self.append_output("DEBUG: Taking REPEAT path\n");
+        if multiline_def.lines.len() == 1 && !multiline_def.has_conditionals {
+            // 単一行 + REPEAT → 単純反復
+            self.append_output("DEBUG: Using simple repeat\n");
+            self.create_simple_repeat_tokens(multiline_def.repeat_count, &multiline_def.lines[0])
+        } else {
+            // 複数行 or 条件分岐 + REPEAT → 高度なREPEAT処理
+            self.append_output("DEBUG: Using complex repeat\n");
+            control::create_repeat_execution_tokens(multiline_def.repeat_count, &multiline_def.lines)?
+        }
+    } else if multiline_def.has_conditionals {
+        // 条件分岐ありだがREPEAT指定なし → 従来の分岐処理
+        self.append_output("DEBUG: Using traditional conditional processing\n");
+        self.create_traditional_conditional_tokens(&multiline_def.lines)?
+    } else if multiline_def.lines.len() == 1 {
+        // 単一行 → Vector括弧を取り除く
+        self.append_output("DEBUG: Using single line processing\n");
+        self.extract_vector_content_if_needed(&multiline_def.lines[0])?
+    } else {
+        // 複数行 + REPEATなし + 条件なし → 順次実行
+        self.append_output("DEBUG: Using sequential processing\n");
+        self.create_sequential_execution_tokens(&multiline_def.lines)
+    };
+
+    self.append_output(&format!("DEBUG: Generated executable tokens: {:?}\n", executable_tokens));
+
+    // 古い依存関係をクリア
+    if let Some(old_deps) = self.get_word_dependencies(&name) {
+        for dep in old_deps {
+            if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
+                reverse_deps.remove(&name);
+            }
+        }
+    }
+
+    // 新しい依存関係を登録
+    for token in &executable_tokens {
+        if let Token::Symbol(sym) = token {
+            if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
+                self.dependencies.entry(sym.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(name.clone());
+            }
+        }
+    }
+
+    self.dictionary.insert(name.clone(), WordDefinition {
+        tokens: executable_tokens,
+        is_builtin: false,
+        description: None,
+        category: None,
+    });
+
+    self.append_output(&format!("Defined word: {}\n", name));
+    Ok(())
+}
 
     // 従来の分岐処理（新規追加）
     fn create_traditional_conditional_tokens(&self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
@@ -487,22 +489,26 @@ impl Interpreter {
     }
 
     fn create_simple_repeat_tokens(&self, repeat_count: Option<i64>, line: &[Token]) -> Vec<Token> {
-        let mut result = Vec::new();
-        
-        // 回数指定
-        let count = repeat_count.unwrap_or(1);
-        result.push(Token::Number(count, 1));
-        
-        // アクション（Vectorでラップ）
-        result.push(Token::VectorStart(BracketType::Square));
-        result.extend(line.iter().cloned());
-        result.push(Token::VectorEnd(BracketType::Square));
-        
-        // 簡単な反復実行ワード
-        result.push(Token::Symbol("SIMPLE_REPEAT".to_string()));
-        
-        result
-    }
+    self.append_output(&format!("DEBUG: create_simple_repeat_tokens - count: {:?}, line: {:?}\n", repeat_count, line));
+    
+    let mut result = Vec::new();
+    
+    // 回数指定
+    let count = repeat_count.unwrap_or(1);
+    result.push(Token::Number(count, 1));
+    
+    // アクション（Vectorでラップ）
+    result.push(Token::VectorStart(BracketType::Square));
+    result.extend(line.iter().cloned());
+    result.push(Token::VectorEnd(BracketType::Square));
+    
+    // 簡単な反復実行ワード
+    result.push(Token::Symbol("SIMPLE_REPEAT".to_string()));
+    
+    self.append_output(&format!("DEBUG: create_simple_repeat_tokens result: {:?}\n", result));
+    
+    result
+}
 
     fn extract_vector_content_if_needed(&self, tokens: &[Token]) -> Result<Vec<Token>> {
         if tokens.len() >= 2 {
