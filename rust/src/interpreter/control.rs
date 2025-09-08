@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (REPEAT対応版)
+// rust/src/interpreter/control.rs (ビルドエラー修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token, Value, BracketType};
@@ -102,11 +102,10 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
     }
 }
 
-// EXECUTE_REPEAT - REPEAT構文の実行エンジン
+// EXECUTE_REPEAT - REPEAT構文の実行エンジン（簡易版）
 pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
-    // スタックからデフォルト行とすべての条件行を取得
+    // より簡単な実装：スタックから情報を取得して実行
     let mut action_vectors = Vec::new();
-    let mut conditions_and_actions = Vec::new();
     
     // 回数制限を取得
     let repeat_count_val = interp.workspace.pop()
@@ -129,8 +128,8 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     // すべてのアクションベクターを収集（逆順で取得）
     while let Some(val) = interp.workspace.pop() {
         match val.val_type {
-            ValueType::Vector(action_tokens, _) => {
-                action_vectors.push(action_tokens);
+            ValueType::Vector(action_values, _) => {
+                action_vectors.push(action_values);
             },
             _ => {
                 // Vector以外が来た場合、処理を終了
@@ -151,9 +150,7 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     let default_action = action_vectors.pop().unwrap();
     
     // 残りが条件付きアクション
-    for action_values in action_vectors {
-        conditions_and_actions.push(action_values);
-    }
+    let conditions_and_actions = action_vectors;
     
     // REPEAT実行ループ
     for _iteration in 0..repeat_count {
@@ -165,14 +162,20 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
                 continue; // 条件とアクションの両方が必要
             }
             
-            // 条件部分とアクション部分を分離
-            let (condition_tokens, action_tokens) = split_condition_and_action(condition_action)?;
+            // 条件部分とアクション部分を分離（簡単な実装：半分ずつ）
+            let mid = condition_action.len() / 2;
             
-            // 条件を評価
+            // 条件部分を評価
+            let condition_values = &condition_action[..mid];
+            let action_values = &condition_action[mid..];
+            
+            // 条件をトークンに変換して評価
+            let condition_tokens = values_to_tokens(condition_values)?;
             let condition_result = evaluate_condition(interp, &condition_tokens)?;
             
             if is_truthy(&condition_result) {
                 // 条件が真の場合、アクションを実行
+                let action_tokens = values_to_tokens(action_values)?;
                 execute_action_tokens(interp, &action_tokens)?;
                 executed = true;
                 break; // 最初にマッチした条件のみ実行
@@ -181,7 +184,8 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
         
         if !executed {
             // どの条件も満たさない場合、デフォルト行を実行
-            execute_action_tokens(interp, &default_action)?;
+            let default_tokens = values_to_tokens(&default_action)?;
+            execute_action_tokens(interp, &default_tokens)?;
             break; // デフォルト行実行後は終了
         }
     }
@@ -189,20 +193,12 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn split_condition_and_action(tokens: &[Value]) -> Result<(Vec<Token>, Vec<Token>)> {
-    // 簡単な実装：最初の半分を条件、後の半分をアクションとする
-    // より高度な実装では、特定の区切り文字（例：THEN）を探すことも可能
-    let mid = tokens.len() / 2;
-    
-    let condition_tokens: Result<Vec<Token>, _> = tokens[..mid].iter()
-        .map(|v| value_to_token(v.clone()))
-        .collect();
-    
-    let action_tokens: Result<Vec<Token>, _> = tokens[mid..].iter()
-        .map(|v| value_to_token(v.clone()))
-        .collect();
-    
-    Ok((condition_tokens?, action_tokens?))
+fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>> {
+    let mut tokens = Vec::new();
+    for value in values {
+        tokens.push(value_to_token(value.clone())?);
+    }
+    Ok(tokens)
 }
 
 fn evaluate_condition(interp: &mut Interpreter, condition_tokens: &[Token]) -> Result<Value> {
