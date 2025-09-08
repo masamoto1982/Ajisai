@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (複数行定義自動判定対応版)
+// rust/src/tokenizer.rs (REPEAT対応版)
 
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
@@ -399,7 +399,6 @@ fn parse_decimal(decimal_str: &str) -> Option<(i64, i64)> {
     }
 }
 
-// tokenizer.rs の try_parse_ascii_builtin 関数にデバッグ追加
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
         "true", "false", "nil", "NIL",
@@ -418,7 +417,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
         // 論理演算
         "AND", "OR", "NOT",
         // 入出力
-        "PRINT",  // ← これが抜けていた！
+        "PRINT",
         // ワード管理・システム
         "DEF", "DEL", "RESET"
     ];
