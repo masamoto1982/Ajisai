@@ -37,11 +37,7 @@ pub fn create_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Vec<To
 fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[ConditionalLine]) -> Vec<Token> {
     let mut result = Vec::new();
     
-    // 回数制限を設定（デフォルトは1回）
-    let count = repeat_count.unwrap_or(1);
-    result.push(Token::Number(count, 1));
-    
-    // 条件行を順番に処理
+    // 条件行を順番に処理（先に追加）
     for line in lines {
         if let Some(condition) = &line.condition {
             // 条件付き行: [ condition action ]
@@ -56,6 +52,10 @@ fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Conditional
             result.push(Token::VectorEnd(BracketType::Square));
         }
     }
+    
+    // 回数制限を最後に追加（スタックトップに来るように）
+    let count = repeat_count.unwrap_or(1);
+    result.push(Token::Number(count, 1));
     
     // REPEAT実行ワードを追加
     result.push(Token::Symbol("EXECUTE_REPEAT".to_string()));
