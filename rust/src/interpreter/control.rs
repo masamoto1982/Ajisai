@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (ビルドエラー修正版)
+// rust/src/interpreter/control.rs (ビルドエラー修正・デバッグ追加版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token, Value, BracketType};
@@ -167,29 +167,19 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
             
             // 条件部分を評価
             let condition_values = &condition_action[..mid];
-            let action_values = &condition_action[mid..];
+            let _action_values = &condition_action[mid..];
             
             // 条件をトークンに変換して評価
             let condition_tokens = values_to_tokens(condition_values)?;
-            let condition_result = evaluate_condition(interp, &condition_tokens)?;
+            let _condition_result = evaluate_condition(interp, &condition_tokens)?;
             
-            fn is_truthy(value: &Value) -> bool {
-    match &value.val_type {
-        ValueType::Boolean(b) => *b,
-        ValueType::Nil => false,
-        ValueType::Number(n) => n.numerator != 0,
-        ValueType::String(s) => !s.is_empty(),
-        ValueType::Vector(v, _) => {
-            // 単一要素Vectorの場合、中身の値で判定
-            if v.len() == 1 {
-                is_truthy(&v[0])  // 再帰的に中身を評価
-            } else {
-                !v.is_empty()     // 複数要素の場合は空/非空で判定
+            if is_truthy(&_condition_result) {
+                // 条件が真の場合、アクションを実行
+                let action_tokens = values_to_tokens(_action_values)?;
+                execute_action_tokens(interp, &action_tokens)?;
+                executed = true;
+                break; // 最初にマッチした条件のみ実行
             }
-        },
-        ValueType::Symbol(_) => true,
-    }
-}
         }
         
         if !executed {
@@ -241,7 +231,14 @@ fn is_truthy(value: &Value) -> bool {
         ValueType::Nil => false,
         ValueType::Number(n) => n.numerator != 0,
         ValueType::String(s) => !s.is_empty(),
-        ValueType::Vector(v, _) => !v.is_empty(),
+        ValueType::Vector(v, _) => {
+            // 単一要素Vectorの場合、中身の値で判定
+            if v.len() == 1 {
+                is_truthy(&v[0])  // 再帰的に中身を評価
+            } else {
+                !v.is_empty()     // 複数要素の場合は空/非空で判定
+            }
+        },
         ValueType::Symbol(_) => true,
     }
 }
@@ -295,25 +292,6 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
             interp.workspace.push(selected_action);
             Ok(())
         }
-    }
-}
-
-
-fn is_truthy(value: &Value) -> bool {
-    match &value.val_type {
-        ValueType::Boolean(b) => *b,
-        ValueType::Nil => false,
-        ValueType::Number(n) => n.numerator != 0,
-        ValueType::String(s) => !s.is_empty(),
-        ValueType::Vector(v, _) => {
-            // 単一要素Vectorの場合、中身の値で判定
-            if v.len() == 1 {
-                is_truthy(&v[0])  // 再帰的に中身を評価
-            } else {
-                !v.is_empty()     // 複数要素の場合は空/非空で判定
-            }
-        },
-        ValueType::Symbol(_) => true,
     }
 }
 
