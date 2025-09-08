@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全版・IF_SELECT修正版)
+// rust/src/interpreter/mod.rs (REPEAT対応版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -30,6 +30,7 @@ pub struct WordDefinition {
 pub struct MultiLineDefinition {
     pub lines: Vec<Vec<Token>>,
     pub has_conditionals: bool,
+    pub repeat_count: Option<i64>,
 }
 
 impl Interpreter {
@@ -47,10 +48,8 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
-        // まず最初にデバッグ出力
-        self.output_buffer.push_str(&format!("DEBUG: execute() called with code: '{}'\n", code));
+        self.append_output(&format!("DEBUG: execute() called with code: '{}'\n", code));
         
-        // 全体を一度にトークン化（改行を保持）
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
@@ -69,13 +68,10 @@ impl Interpreter {
         if let Some((def_result, remaining_code)) = self.try_process_def_pattern_from_code(code, &tokens) {
             self.append_output("DEBUG: DEF pattern processing started\n");
             
-            // DEF処理を実行
             def_result?;
             
-            // 残りのコードがあれば実行
             if !remaining_code.trim().is_empty() {
                 self.append_output(&format!("DEBUG: Executing remaining code: '{}'\n", remaining_code));
-                // 再帰的にexecuteを呼ぶ（新しいカスタムワードを含めて）
                 self.execute(&remaining_code)?;
             } else {
                 self.append_output("DEBUG: No remaining code to execute\n");
@@ -85,12 +81,10 @@ impl Interpreter {
         }
 
         self.append_output("DEBUG: No DEF pattern, executing tokens normally\n");
-        // DEFパターンがない場合は通常の実行
         self.execute_tokens(&tokens)
     }
 
     pub fn execute_reset(&mut self) -> Result<()> {
-        // IndexedDBクリアのイベントを発火
         if let Some(window) = web_sys::window() {
             let event = web_sys::CustomEvent::new("ajisai-reset")
                 .map_err(|_| error::AjisaiError::from("Failed to create reset event"))?;
@@ -114,7 +108,6 @@ impl Interpreter {
         
         match token {
             Token::Number(num, den) => {
-                // スカラー値を自動的にVectorでラッピング
                 let wrapped_value = Value {
                     val_type: ValueType::Vector(
                         vec![Value {
@@ -208,14 +201,11 @@ impl Interpreter {
                     return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
                 }
                 
-                // 複数行かどうかを判定
+                // 複数行定義の解析（REPEAT対応）
                 let multiline_def = self.parse_multiline_definition(body_tokens);
                 
-                // 元のコードから最初のDEF後の部分を直接抽出
                 let remaining_code = if let Some(def_pos_in_code) = code.find("DEF") {
-                    let after_first_def = &code[def_pos_in_code + 3..]; // "DEF"の3文字分スキップ
-                    
-                    // 改行で分割して最初の行をスキップ（DEFと同じ行の残り部分）
+                    let after_first_def = &code[def_pos_in_code + 3..];
                     let lines: Vec<&str> = after_first_def.lines().collect();
                     if lines.len() > 1 {
                         lines[1..].join("\n").trim().to_string()
@@ -244,9 +234,27 @@ impl Interpreter {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
         let mut has_conditionals = false;
+        let mut repeat_count = None;
         
-        for token in tokens {
-            match token {
+        let mut i = 0;
+        
+        // 最初に REPEAT 回数指定をチェック
+        if i < tokens.len() {
+            if let Token::Number(count, 1) = &tokens[i] {
+                if i + 1 < tokens.len() {
+                    if let Token::Symbol(word) = &tokens[i + 1] {
+                        if word == "REPEAT" {
+                            repeat_count = Some(*count);
+                            i += 2; // 数値とREPEATをスキップ
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 残りのトークンを行単位で処理
+        while i < tokens.len() {
+            match &tokens[i] {
                 Token::LineBreak => {
                     if !current_line.is_empty() {
                         lines.push(current_line.clone());
@@ -257,12 +265,13 @@ impl Interpreter {
                     // コメントはスキップ
                 },
                 _ => {
-                    if let Token::Colon = token {
+                    if let Token::Colon = &tokens[i] {
                         has_conditionals = true;
                     }
-                    current_line.push(token.clone());
+                    current_line.push(tokens[i].clone());
                 }
             }
+            i += 1;
         }
         
         // 最後の行を追加
@@ -273,6 +282,7 @@ impl Interpreter {
         MultiLineDefinition {
             lines,
             has_conditionals,
+            repeat_count,
         }
     }
 
@@ -300,14 +310,20 @@ impl Interpreter {
         }
 
         // 処理方式の判定と実行
-        let executable_tokens = if multiline_def.lines.len() == 1 {
+        let executable_tokens = if multiline_def.repeat_count.is_some() || multiline_def.has_conditionals {
+            // REPEAT指定があるか条件分岐がある場合
+            if multiline_def.lines.len() == 1 && !multiline_def.has_conditionals {
+                // 単一行 + REPEAT → 単純反復
+                self.create_simple_repeat_tokens(multiline_def.repeat_count, &multiline_def.lines[0])
+            } else {
+                // 複数行 or 条件分岐 → 高度なREPEAT処理
+                control::create_repeat_execution_tokens(multiline_def.repeat_count, &multiline_def.lines)?
+            }
+        } else if multiline_def.lines.len() == 1 {
             // 単一行 → Vector括弧を取り除く
             self.extract_vector_content_if_needed(&multiline_def.lines[0])?
-        } else if multiline_def.has_conditionals {
-            // 複数行 + コロンあり → 条件分岐
-            control::create_conditional_execution_tokens(&multiline_def.lines)?
         } else {
-            // 複数行 + コロンなし → 順次実行
+            // 複数行 + REPEATなし → 順次実行
             self.create_sequential_execution_tokens(&multiline_def.lines)
         };
 
@@ -342,17 +358,31 @@ impl Interpreter {
         Ok(())
     }
 
-    // Vector括弧を取り除く処理
+    fn create_simple_repeat_tokens(&self, repeat_count: Option<i64>, line: &[Token]) -> Vec<Token> {
+        let mut result = Vec::new();
+        
+        // 回数指定
+        let count = repeat_count.unwrap_or(1);
+        result.push(Token::Number(count, 1));
+        
+        // アクション（Vectorでラップ）
+        result.push(Token::VectorStart(BracketType::Square));
+        result.extend(line.iter().cloned());
+        result.push(Token::VectorEnd(BracketType::Square));
+        
+        // 簡単な反復実行ワード
+        result.push(Token::Symbol("SIMPLE_REPEAT".to_string()));
+        
+        result
+    }
+
     fn extract_vector_content_if_needed(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-        // Vector括弧で囲まれている場合は中身だけを取り出す
         if tokens.len() >= 2 {
             if let (Token::VectorStart(_), Token::VectorEnd(_)) = (&tokens[0], &tokens[tokens.len() - 1]) {
-                // Vector括弧を取り除いて中身だけを返す
                 return Ok(tokens[1..tokens.len() - 1].to_vec());
             }
         }
         
-        // Vector括弧で囲まれていない場合はそのまま返す
         Ok(tokens.to_vec())
     }
 
@@ -375,7 +405,6 @@ impl Interpreter {
             
             match &tokens[i] {
                 Token::Number(num, den) => {
-                    // スカラー値を自動的にVectorでラッピング
                     let wrapped_value = Value {
                         val_type: ValueType::Vector(
                             vec![Value {
@@ -428,15 +457,12 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::FunctionComment(_) => {
-                    // 機能説明コメントは実行時には無視
                     i += 1;
                 },
                 Token::Colon => {
-                    // コロンは条件分岐処理で既に処理済みのはず
                     i += 1;
                 },
                 Token::LineBreak => {
-                    // 改行は定義処理で既に処理済みのはず
                     i += 1;
                 },
                 Token::VectorStart(bracket_type) => {
@@ -591,7 +617,6 @@ impl Interpreter {
             "LENGTH" => vector_ops::op_length(self),
             "TAKE" => vector_ops::op_take(self),
             "DROP" => vector_ops::op_drop_vector(self),
-            "REPEAT" => vector_ops::op_repeat(self),
             "SPLIT" => vector_ops::op_split(self),
             
             // ワークスペース操作
@@ -633,59 +658,46 @@ impl Interpreter {
             },
             
             // 条件分岐制御
-            "IF_SELECT" => {
-                if self.workspace.len() < 3 {
+            "IF_SELECT" => control::op_if_select(self),
+            
+            // REPEAT制御
+            "EXECUTE_REPEAT" => control::op_execute_repeat(self),
+            "SIMPLE_REPEAT" => {
+                // 簡単な反復実行
+                if self.workspace.len() < 2 {
                     return Err(error::AjisaiError::WorkspaceUnderflow);
                 }
                 
-                let false_action = self.workspace.pop().unwrap();
-                let true_action = self.workspace.pop().unwrap();
-                let condition = self.workspace.pop().unwrap();
+                let action_val = self.workspace.pop().unwrap();
+                let count_val = self.workspace.pop().unwrap();
                 
-                // 条件の真偽値を判定（Vector内の値をチェック）
-                let is_true = match &condition.val_type {
-                    ValueType::Vector(v, _) if v.len() == 1 => {
+                let count = match count_val.val_type {
+                    ValueType::Vector(ref v, _) if v.len() == 1 => {
                         match &v[0].val_type {
-                            ValueType::Boolean(b) => *b,
-                            ValueType::Number(n) => n.numerator != 0,
-                            _ => true,
+                            ValueType::Number(n) if n.denominator == 1 => n.numerator,
+                            _ => return Err(error::AjisaiError::type_error("integer count", "other type")),
                         }
                     },
-                    _ => false,
+                    _ => return Err(error::AjisaiError::type_error("single-element vector with integer", "other type")),
                 };
                 
-                let selected_action = if is_true { true_action } else { false_action };
-                
-                // 選択されたアクションを実行
-                match selected_action.val_type {
-                    ValueType::Vector(action_content, _) => {
-                        // アクション内容に実行可能なシンボルが含まれているかチェック
-                        let has_executable_symbols = action_content.iter().any(|v| {
-                            matches!(v.val_type, ValueType::Symbol(_))
-                        });
-                        
-                        if has_executable_symbols {
-                            // 実行可能なコードの場合：トークンに変換して実行
-                            let tokens = self.vector_content_to_tokens(action_content)?;
-                            self.execute_tokens(&tokens)?;
-                        } else {
-                            // データのみの場合：ワークスペースにプッシュ
-                            if action_content.len() == 1 {
-                                self.workspace.push(action_content[0].clone());
-                            } else {
-                                self.workspace.push(Value {
-                                    val_type: ValueType::Vector(action_content, BracketType::Square)
-                                });
-                            }
-                        }
-                    },
-                    _ => {
-                        // Vector以外はそのままプッシュ
-                        self.workspace.push(selected_action);
-                    }
+                if count < 0 {
+                    return Err(error::AjisaiError::from("Repeat count must be non-negative"));
                 }
                 
-                Ok(())
+                match action_val.val_type {
+                    ValueType::Vector(action_tokens_values, _) => {
+                        // Vectorの内容をトークンに変換
+                        let tokens = self.vector_content_to_tokens(action_tokens_values)?;
+                        
+                        // 指定回数だけ実行
+                        for _i in 0..count {
+                            self.execute_tokens(&tokens)?;
+                        }
+                        Ok(())
+                    },
+                    _ => Err(error::AjisaiError::type_error("vector", "other type")),
+                }
             },
             
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
