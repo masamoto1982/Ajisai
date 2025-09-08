@@ -269,9 +269,19 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
     let true_action = interp.workspace.pop().unwrap();
     let condition = interp.workspace.pop().unwrap();
     
-    let selected_action = if is_truthy(&condition) {
+    // デバッグ出力を追加
+    interp.append_output(&format!("DEBUG: IF_SELECT condition: {:?}\n", condition));
+    interp.append_output(&format!("DEBUG: true_action: {:?}\n", true_action));
+    interp.append_output(&format!("DEBUG: false_action: {:?}\n", false_action));
+    
+    let condition_is_true = is_truthy(&condition);
+    interp.append_output(&format!("DEBUG: is_truthy result: {}\n", condition_is_true));
+    
+    let selected_action = if condition_is_true {
+        interp.append_output("DEBUG: Selecting true_action\n");
         true_action
     } else {
+        interp.append_output("DEBUG: Selecting false_action\n");
         false_action
     };
     
@@ -285,6 +295,24 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
             interp.workspace.push(selected_action);
             Ok(())
         }
+    }
+}
+
+fn is_truthy(value: &Value) -> bool {
+    match &value.val_type {
+        ValueType::Boolean(b) => *b,
+        ValueType::Nil => false,
+        ValueType::Number(n) => n.numerator != 0,
+        ValueType::String(s) => !s.is_empty(),
+        ValueType::Vector(v, _) => {
+            // 単一要素Vectorの場合、中身の値で判定
+            if v.len() == 1 {
+                is_truthy(&v[0])  // 再帰的に中身を評価
+            } else {
+                !v.is_empty()     // 複数要素の場合は空/非空で判定
+            }
+        },
+        ValueType::Symbol(_) => true,
     }
 }
 
