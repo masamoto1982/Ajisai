@@ -751,6 +751,7 @@ impl Interpreter {
             "LENGTH" => vector_ops::op_length(self),
             "TAKE" => vector_ops::op_take(self),
             "DROP" => vector_ops::op_drop_vector(self),
+            "REPEAT" => vector_ops::op_repeat(self),
             "SPLIT" => vector_ops::op_split(self),
             
             // ワークスペース操作
