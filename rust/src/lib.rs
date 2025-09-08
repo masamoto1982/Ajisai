@@ -336,7 +336,7 @@ fn value_to_js(value: &Value) -> JsValue {
         ValueType::String(s) => JsValue::from_str(s),
         ValueType::Boolean(b) => JsValue::from_bool(*b),
         ValueType::Symbol(s) => JsValue::from_str(s),
-        ValueType::Vector(v, bracket_type) => {
+        ValueType::Vector(v, _bracket_type) => {
             let arr = js_sys::Array::new();
             for item in v.iter() {
                 arr.push(&value_to_js(item));
