@@ -104,12 +104,17 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
 
 // EXECUTE_REPEAT - REPEAT構文の実行エンジン（簡易版）
 pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
+    interp.append_output("DEBUG: EXECUTE_REPEAT called\n");
+    interp.append_output(&format!("DEBUG: Workspace size: {}\n", interp.workspace.len()));
+    
     // より簡単な実装：スタックから情報を取得して実行
     let mut action_vectors = Vec::new();
     
     // 回数制限を取得
     let repeat_count_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    
+    interp.append_output(&format!("DEBUG: repeat_count_val: {:?}\n", repeat_count_val));
     
     let repeat_count = match repeat_count_val.val_type {
         ValueType::Vector(ref v, _) if v.len() == 1 => {
