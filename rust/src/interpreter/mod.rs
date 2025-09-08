@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (REPEAT対応版)
+// rust/src/interpreter/mod.rs (完全修正版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -238,7 +238,7 @@ impl Interpreter {
         
         let mut i = 0;
         
-        // 最初に REPEAT 回数指定をチェック
+        // 最初に REPEAT 回数指定をチェック（修正版）
         if i < tokens.len() {
             if let Token::Number(count, 1) = &tokens[i] {
                 if i + 1 < tokens.len() {
@@ -246,11 +246,14 @@ impl Interpreter {
                         if word == "REPEAT" {
                             repeat_count = Some(*count);
                             i += 2; // 数値とREPEATをスキップ
+                            self.append_output(&format!("DEBUG: Found REPEAT with count: {}\n", count));
                         }
                     }
                 }
             }
         }
+        
+        self.append_output(&format!("DEBUG: Starting token parsing from index {}\n", i));
         
         // 残りのトークンを行単位で処理
         while i < tokens.len() {
@@ -279,6 +282,9 @@ impl Interpreter {
             lines.push(current_line);
         }
         
+        self.append_output(&format!("DEBUG: Parsed multiline definition - lines: {}, has_conditionals: {}, repeat_count: {:?}\n", 
+            lines.len(), has_conditionals, repeat_count));
+        
         MultiLineDefinition {
             lines,
             has_conditionals,
@@ -286,10 +292,11 @@ impl Interpreter {
         }
     }
 
-    // rust/src/interpreter/mod.rs (分岐とREPEAT判定修正版)
-
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
         let name = name.to_uppercase();
+        
+        self.append_output(&format!("DEBUG: define_word_from_multiline - name: {}, repeat_count: {:?}, has_conditionals: {}\n", 
+            name, multiline_def.repeat_count, multiline_def.has_conditionals));
         
         // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
@@ -314,6 +321,7 @@ impl Interpreter {
         // 処理方式の判定と実行（修正版）
         let executable_tokens = if multiline_def.repeat_count.is_some() {
             // 明示的なREPEAT指定がある場合
+            self.append_output("DEBUG: Using REPEAT processing\n");
             if multiline_def.lines.len() == 1 && !multiline_def.has_conditionals {
                 // 単一行 + REPEAT → 単純反復
                 self.create_simple_repeat_tokens(multiline_def.repeat_count, &multiline_def.lines[0])
@@ -323,14 +331,19 @@ impl Interpreter {
             }
         } else if multiline_def.has_conditionals {
             // 条件分岐ありだがREPEAT指定なし → 従来の分岐処理
+            self.append_output("DEBUG: Using traditional conditional processing\n");
             self.create_traditional_conditional_tokens(&multiline_def.lines)?
         } else if multiline_def.lines.len() == 1 {
             // 単一行 → Vector括弧を取り除く
+            self.append_output("DEBUG: Using single line processing\n");
             self.extract_vector_content_if_needed(&multiline_def.lines[0])?
         } else {
             // 複数行 + REPEATなし + 条件なし → 順次実行
+            self.append_output("DEBUG: Using sequential processing\n");
             self.create_sequential_execution_tokens(&multiline_def.lines)
         };
+
+        self.append_output(&format!("DEBUG: Generated executable tokens: {:?}\n", executable_tokens));
 
         // 古い依存関係をクリア
         if let Some(old_deps) = self.get_word_dependencies(&name) {
@@ -383,7 +396,6 @@ impl Interpreter {
     }
 
     fn build_traditional_conditional_structure(&self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-        let mut result = Vec::new();
         let mut conditional_lines = Vec::new();
         let mut default_line = None;
 
@@ -404,15 +416,14 @@ impl Interpreter {
         if conditional_lines.is_empty() {
             // 条件行がない場合は、デフォルト行のみ実行
             if let Some(default) = default_line {
-                result.extend(default);
+                return Ok(default);
+            } else {
+                return Ok(Vec::new());
             }
-            return Ok(result);
         }
 
         // ネストしたIF_SELECT構造を構築
-        result.extend(self.build_nested_if_select(&conditional_lines, &default_line.unwrap_or_default()));
-        
-        Ok(result)
+        Ok(self.build_nested_if_select(&conditional_lines, &default_line.unwrap_or_default()))
     }
 
     fn build_nested_if_select(&self, conditional_lines: &[(Vec<Token>, Vec<Token>)], default_action: &[Token]) -> Vec<Token> {
