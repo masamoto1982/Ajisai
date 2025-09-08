@@ -298,26 +298,6 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 既存のis_truthy関数を修正（238行目付近）
-fn is_truthy(value: &Value) -> bool {
-    match &value.val_type {
-        ValueType::Boolean(b) => *b,
-        ValueType::Nil => false,
-        ValueType::Number(n) => n.numerator != 0,
-        ValueType::String(s) => !s.is_empty(),
-        ValueType::Vector(v, _) => {
-            // 単一要素Vectorの場合、中身の値で判定
-            if v.len() == 1 {
-                is_truthy(&v[0])  // 再帰的に中身を評価
-            } else {
-                !v.is_empty()     // 複数要素の場合は空/非空で判定
-            }
-        },
-        ValueType::Symbol(_) => true,
-    }
-}
-
-// 301行目付近に追加した重複のis_truthy関数は削除してください
 
 fn is_truthy(value: &Value) -> bool {
     match &value.val_type {
