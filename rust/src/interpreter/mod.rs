@@ -231,66 +231,74 @@ impl Interpreter {
     }
 
     fn parse_multiline_definition(&mut self, tokens: &[Token]) -> MultiLineDefinition {
-        let mut lines = Vec::new();
-        let mut current_line = Vec::new();
-        let mut has_conditionals = false;
-        let mut repeat_count = None;
-        
-        let mut i = 0;
-        
-        // 最初に REPEAT 回数指定をチェック（修正版）
-        if i < tokens.len() {
-            if let Token::Number(count, 1) = &tokens[i] {
-                if i + 1 < tokens.len() {
-                    if let Token::Symbol(word) = &tokens[i + 1] {
-                        if word == "REPEAT" {
-                            repeat_count = Some(*count);
-                            i += 2; // 数値とREPEATをスキップ
-                            self.append_output(&format!("DEBUG: Found REPEAT with count: {}\n", count));
-                        }
+    let mut lines = Vec::new();
+    let mut current_line = Vec::new();
+    let mut has_conditionals = false;
+    let mut repeat_count = None;
+    
+    let mut i = 0;
+    
+    self.append_output(&format!("DEBUG: parse_multiline_definition input tokens: {:?}\n", tokens));
+    
+    // 最初に REPEAT 回数指定をチェック（修正版）
+    if i < tokens.len() {
+        self.append_output(&format!("DEBUG: Checking token[{}]: {:?}\n", i, tokens[i]));
+        if let Token::Number(count, 1) = &tokens[i] {
+            if i + 1 < tokens.len() {
+                self.append_output(&format!("DEBUG: Checking token[{}]: {:?}\n", i + 1, tokens[i + 1]));
+                if let Token::Symbol(word) = &tokens[i + 1] {
+                    if word == "REPEAT" {
+                        repeat_count = Some(*count);
+                        i += 2; // 数値とREPEATをスキップ
+                        self.append_output(&format!("DEBUG: Found REPEAT with count: {}\n", count));
                     }
                 }
             }
-        }
-        
-        self.append_output(&format!("DEBUG: Starting token parsing from index {}\n", i));
-        
-        // 残りのトークンを行単位で処理
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::LineBreak => {
-                    if !current_line.is_empty() {
-                        lines.push(current_line.clone());
-                        current_line.clear();
-                    }
-                },
-                Token::FunctionComment(_) => {
-                    // コメントはスキップ
-                },
-                _ => {
-                    if let Token::Colon = &tokens[i] {
-                        has_conditionals = true;
-                    }
-                    current_line.push(tokens[i].clone());
-                }
-            }
-            i += 1;
-        }
-        
-        // 最後の行を追加
-        if !current_line.is_empty() {
-            lines.push(current_line);
-        }
-        
-        self.append_output(&format!("DEBUG: Parsed multiline definition - lines: {}, has_conditionals: {}, repeat_count: {:?}\n", 
-            lines.len(), has_conditionals, repeat_count));
-        
-        MultiLineDefinition {
-            lines,
-            has_conditionals,
-            repeat_count,
         }
     }
+    
+    self.append_output(&format!("DEBUG: Starting token parsing from index {}\n", i));
+    
+    // 残りのトークンを行単位で処理
+    while i < tokens.len() {
+        self.append_output(&format!("DEBUG: Processing token[{}]: {:?}\n", i, tokens[i]));
+        match &tokens[i] {
+            Token::LineBreak => {
+                if !current_line.is_empty() {
+                    self.append_output(&format!("DEBUG: Adding line: {:?}\n", current_line));
+                    lines.push(current_line.clone());
+                    current_line.clear();
+                }
+            },
+            Token::FunctionComment(_) => {
+                // コメントはスキップ
+            },
+            _ => {
+                if let Token::Colon = &tokens[i] {
+                    has_conditionals = true;
+                    self.append_output("DEBUG: Found colon - has_conditionals = true\n");
+                }
+                current_line.push(tokens[i].clone());
+            }
+        }
+        i += 1;
+    }
+    
+    // 最後の行を追加
+    if !current_line.is_empty() {
+        self.append_output(&format!("DEBUG: Adding final line: {:?}\n", current_line));
+        lines.push(current_line);
+    }
+    
+    self.append_output(&format!("DEBUG: Parsed multiline definition - lines: {:?}, has_conditionals: {}, repeat_count: {:?}\n", 
+        lines, has_conditionals, repeat_count));
+    
+    MultiLineDefinition {
+        lines,
+        has_conditionals,
+        repeat_count,
+    }
+}
 
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
         let name = name.to_uppercase();
