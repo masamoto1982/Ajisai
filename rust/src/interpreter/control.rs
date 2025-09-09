@@ -102,14 +102,18 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
     }
 }
 
-// EXECUTE_REPEAT - REPEAT構文の実行エンジン（超詳細デバッグ版）
+// EXECUTE_REPEAT - REPEAT構文の実行エンジン（borrow checker修正版）
 pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     interp.append_output("=== EXECUTE_REPEAT START ===\n");
     interp.append_output(&format!("Initial workspace size: {}\n", interp.workspace.len()));
     
-    // ワークスペースの内容を表示
-    for (i, item) in interp.workspace.iter().enumerate() {
-        interp.append_output(&format!("workspace[{}]: {:?}\n", i, item));
+    // ワークスペースの内容を表示（borrow checker対応）
+    let workspace_debug: Vec<String> = interp.workspace.iter().enumerate()
+        .map(|(i, item)| format!("workspace[{}]: {:?}", i, item))
+        .collect();
+    
+    for debug_line in workspace_debug {
+        interp.append_output(&format!("{}\n", debug_line));
     }
     
     // 回数制限を取得
@@ -195,28 +199,22 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     for (i, action_vector) in action_vectors.iter().enumerate() {
         interp.append_output(&format!("Processing conditional action {} with {} elements\n", i, action_vector.len()));
         
-        // ここでデバッグ出力を追加
-        for (j, value) in action_vector.iter().enumerate() {
-            match &value.val_type {
-                ValueType::Symbol(s) => {
-                    interp.append_output(&format!("  action_vector[{}] = Symbol('{}')\n", j, s));
-                },
-                ValueType::Vector(v, _) => {
-                    interp.append_output(&format!("  action_vector[{}] = Vector({} elements)\n", j, v.len()));
-                },
-                ValueType::Number(frac) => {
-                    interp.append_output(&format!("  action_vector[{}] = Number({}/{})\n", j, frac.numerator, frac.denominator));
-                },
-                ValueType::Boolean(b) => {
-                    interp.append_output(&format!("  action_vector[{}] = Boolean({})\n", j, b));
-                },
-                ValueType::String(s) => {
-                    interp.append_output(&format!("  action_vector[{}] = String('{}')\n", j, s));
-                },
-                ValueType::Nil => {
-                    interp.append_output(&format!("  action_vector[{}] = Nil\n", j));
-                },
-            }
+        // ベクターの内容をデバッグ出力（borrow checker対応）
+        let vector_debug: Vec<String> = action_vector.iter().enumerate()
+            .map(|(j, value)| {
+                match &value.val_type {
+                    ValueType::Symbol(s) => format!("  action_vector[{}] = Symbol('{}')", j, s),
+                    ValueType::Vector(v, _) => format!("  action_vector[{}] = Vector({} elements)", j, v.len()),
+                    ValueType::Number(frac) => format!("  action_vector[{}] = Number({}/{})", j, frac.numerator, frac.denominator),
+                    ValueType::Boolean(b) => format!("  action_vector[{}] = Boolean({})", j, b),
+                    ValueType::String(s) => format!("  action_vector[{}] = String('{}')", j, s),
+                    ValueType::Nil => format!("  action_vector[{}] = Nil", j),
+                }
+            })
+            .collect();
+        
+        for debug_line in vector_debug {
+            interp.append_output(&format!("{}\n", debug_line));
         }
         
         match parse_conditional_action_vector_with_debug(action_vector.clone(), interp) {
