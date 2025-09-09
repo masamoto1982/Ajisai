@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全修正版)
+// rust/src/interpreter/mod.rs (全面デバッグ強化版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -85,6 +85,8 @@ impl Interpreter {
     }
 
     pub fn execute_reset(&mut self) -> Result<()> {
+        self.append_output("*** EXECUTE_RESET CALLED ***\n");
+        
         if let Some(window) = web_sys::window() {
             let event = web_sys::CustomEvent::new("ajisai-reset")
                 .map_err(|_| error::AjisaiError::from("Failed to create reset event"))?;
@@ -100,10 +102,12 @@ impl Interpreter {
         
         crate::builtins::register_builtins(&mut self.dictionary);
         
+        self.append_output("*** EXECUTE_RESET COMPLETED ***\n");
         Ok(())
     }
 
     pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
+        self.append_output(&format!("*** EXECUTE_SINGLE_TOKEN: {:?} ***\n", token));
         self.output_buffer.clear();
         
         match token {
@@ -183,6 +187,8 @@ impl Interpreter {
     }
 
     fn try_process_def_pattern_from_code(&mut self, code: &str, tokens: &[Token]) -> Option<(Result<()>, String)> {
+        self.append_output("*** TRY_PROCESS_DEF_PATTERN_FROM_CODE ***\n");
+        
         // 最初のDEFの位置を探す
         let def_position = tokens.iter().position(|t| {
             if let Token::Symbol(s) = t {
@@ -192,14 +198,20 @@ impl Interpreter {
             }
         })?;
         
+        self.append_output(&format!("*** DEF found at position: {} ***\n", def_position));
+        
         // DEF前に文字列（ワード名）があるかチェック
         if def_position >= 1 {
             if let Token::String(name) = &tokens[def_position - 1] {
+                self.append_output(&format!("*** DEF word name: {} ***\n", name));
+                
                 let body_tokens = &tokens[..def_position - 1];
                 
                 if body_tokens.is_empty() {
                     return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
                 }
+                
+                self.append_output(&format!("*** DEF body tokens: {:?} ***\n", body_tokens));
                 
                 // 複数行定義の解析（REPEAT対応）
                 let multiline_def = self.parse_multiline_definition(body_tokens);
@@ -216,7 +228,7 @@ impl Interpreter {
                     String::new()
                 };
                 
-                self.append_output(&format!("DEBUG: Remaining code extracted: '{}'\n", remaining_code));
+                self.append_output(&format!("*** Remaining code extracted: '{}' ***\n", remaining_code));
                 
                 let def_result = self.define_word_from_multiline(
                     name.clone(),
@@ -227,324 +239,341 @@ impl Interpreter {
             }
         }
         
+        self.append_output("*** No DEF pattern found ***\n");
         None
     }
 
     fn parse_multiline_definition(&mut self, tokens: &[Token]) -> MultiLineDefinition {
-    let mut lines = Vec::new();
-    let mut current_line = Vec::new();
-    let mut has_conditionals = false;
-    let mut repeat_count = None;
-    
-    let mut i = 0;
-    
-    self.append_output(&format!("DEBUG: parse_multiline_definition input tokens: {:?}\n", tokens));
-    
-    // 最初に REPEAT 回数指定をチェック（修正版）
-if i < tokens.len() {
-    self.append_output(&format!("DEBUG: Checking token[{}]: {:?}\n", i, tokens[i]));
-    if let Token::Number(count, 1) = &tokens[i] {
-        if i + 1 < tokens.len() {
-            self.append_output(&format!("DEBUG: Checking token[{}]: {:?}\n", i + 1, tokens[i + 1]));
-            if let Token::Symbol(word) = &tokens[i + 1] {
-                if word == "REPEAT" {
-                    repeat_count = Some(*count);
-                    i += 2; // 数値とREPEATをスキップ
-                    self.append_output(&format!("DEBUG: Found REPEAT with count: {}\n", count));
+        self.append_output("*** PARSE_MULTILINE_DEFINITION ***\n");
+        
+        let mut lines = Vec::new();
+        let mut current_line = Vec::new();
+        let mut has_conditionals = false;
+        let mut repeat_count = None;
+        
+        let mut i = 0;
+        
+        self.append_output(&format!("*** parse_multiline_definition input tokens: {:?} ***\n", tokens));
+        
+        // 最初に REPEAT 回数指定をチェック（修正版）
+        if i < tokens.len() {
+            self.append_output(&format!("*** Checking token[{}]: {:?} ***\n", i, tokens[i]));
+            if let Token::Number(count, 1) = &tokens[i] {
+                if i + 1 < tokens.len() {
+                    self.append_output(&format!("*** Checking token[{}]: {:?} ***\n", i + 1, tokens[i + 1]));
+                    if let Token::Symbol(word) = &tokens[i + 1] {
+                        if word == "REPEAT" {
+                            repeat_count = Some(*count);
+                            i += 2; // 数値とREPEATをスキップ
+                            self.append_output(&format!("*** Found REPEAT with count: {} ***\n", count));
+                        } else {
+                            self.append_output(&format!("*** Expected REPEAT, found: {} ***\n", word));
+                        }
+                    } else {
+                        self.append_output("*** Token after number is not a symbol ***\n");
+                    }
                 } else {
-                    self.append_output(&format!("DEBUG: Expected REPEAT, found: {}\n", word));
+                    self.append_output("*** No token after number ***\n");
                 }
             } else {
-                self.append_output("DEBUG: Token after number is not a symbol\n");
-            }
-        } else {
-            self.append_output("DEBUG: No token after number\n");
-        }
-    } else {
-        self.append_output("DEBUG: First token is not a number\n");
-    }
-}
-    
-    self.append_output(&format!("DEBUG: Starting token parsing from index {}\n", i));
-    
-    // 残りのトークンを行単位で処理
-    while i < tokens.len() {
-        self.append_output(&format!("DEBUG: Processing token[{}]: {:?}\n", i, tokens[i]));
-        match &tokens[i] {
-            Token::LineBreak => {
-                if !current_line.is_empty() {
-                    self.append_output(&format!("DEBUG: Adding line: {:?}\n", current_line));
-                    lines.push(current_line.clone());
-                    current_line.clear();
-                }
-            },
-            Token::FunctionComment(_) => {
-                // コメントはスキップ
-            },
-            _ => {
-                if let Token::Colon = &tokens[i] {
-                    has_conditionals = true;
-                    self.append_output("DEBUG: Found colon - has_conditionals = true\n");
-                }
-                current_line.push(tokens[i].clone());
+                self.append_output("*** First token is not a number ***\n");
             }
         }
-        i += 1;
+        
+        self.append_output(&format!("*** Starting token parsing from index {} ***\n", i));
+        
+        // 残りのトークンを行単位で処理
+        while i < tokens.len() {
+            self.append_output(&format!("*** Processing token[{}]: {:?} ***\n", i, tokens[i]));
+            match &tokens[i] {
+                Token::LineBreak => {
+                    if !current_line.is_empty() {
+                        self.append_output(&format!("*** Adding line: {:?} ***\n", current_line));
+                        lines.push(current_line.clone());
+                        current_line.clear();
+                    }
+                },
+                Token::FunctionComment(_) => {
+                    // コメントはスキップ
+                },
+                _ => {
+                    if let Token::Colon = &tokens[i] {
+                        has_conditionals = true;
+                        self.append_output("*** Found colon - has_conditionals = true ***\n");
+                    }
+                    current_line.push(tokens[i].clone());
+                }
+            }
+            i += 1;
+        }
+        
+        // 最後の行を追加
+        if !current_line.is_empty() {
+            self.append_output(&format!("*** Adding final line: {:?} ***\n", current_line));
+            lines.push(current_line);
+        }
+        
+        self.append_output(&format!("*** Parsed multiline definition - lines: {:?}, has_conditionals: {}, repeat_count: {:?} ***\n", 
+            lines, has_conditionals, repeat_count));
+        
+        MultiLineDefinition {
+            lines,
+            has_conditionals,
+            repeat_count,
+        }
     }
-    
-    // 最後の行を追加
-    if !current_line.is_empty() {
-        self.append_output(&format!("DEBUG: Adding final line: {:?}\n", current_line));
-        lines.push(current_line);
-    }
-    
-    self.append_output(&format!("DEBUG: Parsed multiline definition - lines: {:?}, has_conditionals: {}, repeat_count: {:?}\n", 
-        lines, has_conditionals, repeat_count));
-    
-    MultiLineDefinition {
-        lines,
-        has_conditionals,
-        repeat_count,
-    }
-}
 
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
-    let name = name.to_uppercase();
-    
-    self.append_output(&format!("DEBUG: define_word_from_multiline - name: {}, repeat_count: {:?}, has_conditionals: {}, lines: {:?}\n", 
-        name, multiline_def.repeat_count, multiline_def.has_conditionals, multiline_def.lines));
-    
-    // 既存のワードチェック
-    if let Some(existing) = self.dictionary.get(&name) {
-        if existing.is_builtin {
-            return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
-        }
-    }
-
-    // 依存関係チェック
-    if self.dictionary.contains_key(&name) {
-        if let Some(dependents) = self.dependencies.get(&name) {
-            if !dependents.is_empty() {
-                let dependent_list: Vec<String> = dependents.iter().cloned().collect();
-                return Err(error::AjisaiError::ProtectedWord { 
-                    name: name.clone(), 
-                    dependents: dependent_list 
-                });
+        let name = name.to_uppercase();
+        
+        self.append_output(&format!("*** DEFINE_WORD_FROM_MULTILINE - name: {}, repeat_count: {:?}, has_conditionals: {}, lines: {:?} ***\n", 
+            name, multiline_def.repeat_count, multiline_def.has_conditionals, multiline_def.lines));
+        
+        // 既存のワードチェック
+        if let Some(existing) = self.dictionary.get(&name) {
+            if existing.is_builtin {
+                return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
-    }
 
-    // 処理方式の判定と実行（デバッグ版）
-    let executable_tokens = if multiline_def.repeat_count.is_some() {
-        // 明示的なREPEAT指定がある場合
-        self.append_output("DEBUG: Taking REPEAT path\n");
-        if multiline_def.lines.len() == 1 && !multiline_def.has_conditionals {
-            // 単一行 + REPEAT → 単純反復
-            self.append_output("DEBUG: Using simple repeat\n");
-            self.create_simple_repeat_tokens(multiline_def.repeat_count, &multiline_def.lines[0])
+        // 依存関係チェック
+        if self.dictionary.contains_key(&name) {
+            if let Some(dependents) = self.dependencies.get(&name) {
+                if !dependents.is_empty() {
+                    let dependent_list: Vec<String> = dependents.iter().cloned().collect();
+                    return Err(error::AjisaiError::ProtectedWord { 
+                        name: name.clone(), 
+                        dependents: dependent_list 
+                    });
+                }
+            }
+        }
+
+        // 処理方式の判定と実行（デバッグ版）
+        let executable_tokens = if multiline_def.repeat_count.is_some() {
+            // 明示的なREPEAT指定がある場合
+            self.append_output("*** TAKING REPEAT PATH ***\n");
+            if multiline_def.lines.len() == 1 && !multiline_def.has_conditionals {
+                // 単一行 + REPEAT → 単純反復
+                self.append_output("*** USING SIMPLE REPEAT ***\n");
+                self.create_simple_repeat_tokens(multiline_def.repeat_count, &multiline_def.lines[0])
+            } else {
+                // 複数行 or 条件分岐 + REPEAT → 高度なREPEAT処理
+                self.append_output("*** USING COMPLEX REPEAT ***\n");
+                self.append_output("*** CALLING create_repeat_execution_tokens ***\n");
+                let result = control::create_repeat_execution_tokens(multiline_def.repeat_count, &multiline_def.lines);
+                self.append_output(&format!("*** create_repeat_execution_tokens result: {:?} ***\n", result));
+                result?
+            }
+        } else if multiline_def.has_conditionals {
+            // 条件分岐ありだがREPEAT指定なし → 従来の分岐処理
+            self.append_output("*** USING TRADITIONAL CONDITIONAL PROCESSING ***\n");
+            self.create_traditional_conditional_tokens(&multiline_def.lines)?
+        } else if multiline_def.lines.len() == 1 {
+            // 単一行 → Vector括弧を取り除く
+            self.append_output("*** USING SINGLE LINE PROCESSING ***\n");
+            self.extract_vector_content_if_needed(&multiline_def.lines[0])?
         } else {
-            // 複数行 or 条件分岐 + REPEAT → 高度なREPEAT処理
-            self.append_output("DEBUG: Using complex repeat\n");
-            control::create_repeat_execution_tokens(multiline_def.repeat_count, &multiline_def.lines)?
-        }
-    } else if multiline_def.has_conditionals {
-        // 条件分岐ありだがREPEAT指定なし → 従来の分岐処理
-        self.append_output("DEBUG: Using traditional conditional processing\n");
-        self.create_traditional_conditional_tokens(&multiline_def.lines)?
-    } else if multiline_def.lines.len() == 1 {
-        // 単一行 → Vector括弧を取り除く
-        self.append_output("DEBUG: Using single line processing\n");
-        self.extract_vector_content_if_needed(&multiline_def.lines[0])?
-    } else {
-        // 複数行 + REPEATなし + 条件なし → 順次実行
-        self.append_output("DEBUG: Using sequential processing\n");
-        self.create_sequential_execution_tokens(&multiline_def.lines)
-    };
+            // 複数行 + REPEATなし + 条件なし → 順次実行
+            self.append_output("*** USING SEQUENTIAL PROCESSING ***\n");
+            self.create_sequential_execution_tokens(&multiline_def.lines)
+        };
 
-    self.append_output(&format!("DEBUG: Generated executable tokens: {:?}\n", executable_tokens));
+        self.append_output(&format!("*** GENERATED EXECUTABLE TOKENS: {:?} ***\n", executable_tokens));
 
-    // 古い依存関係をクリア
-    if let Some(old_deps) = self.get_word_dependencies(&name) {
-        for dep in old_deps {
-            if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
-                reverse_deps.remove(&name);
+        // 古い依存関係をクリア
+        if let Some(old_deps) = self.get_word_dependencies(&name) {
+            for dep in old_deps {
+                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
+                    reverse_deps.remove(&name);
+                }
             }
         }
-    }
 
-    // 新しい依存関係を登録
-    for token in &executable_tokens {
-        if let Token::Symbol(sym) = token {
-            if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                self.dependencies.entry(sym.clone())
-                    .or_insert_with(HashSet::new)
-                    .insert(name.clone());
+        // 新しい依存関係を登録
+        for token in &executable_tokens {
+            if let Token::Symbol(sym) = token {
+                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
+                    self.dependencies.entry(sym.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(name.clone());
+                }
             }
         }
+
+        self.dictionary.insert(name.clone(), WordDefinition {
+            tokens: executable_tokens,
+            is_builtin: false,
+            description: None,
+            category: None,
+        });
+
+        self.append_output(&format!("Defined word: {}\n", name));
+        Ok(())
     }
-
-    self.dictionary.insert(name.clone(), WordDefinition {
-        tokens: executable_tokens,
-        is_builtin: false,
-        description: None,
-        category: None,
-    });
-
-    self.append_output(&format!("Defined word: {}\n", name));
-    Ok(())
-}
 
     // 従来の分岐処理（新規追加）
     fn create_traditional_conditional_tokens(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-    self.append_output("*** create_traditional_conditional_tokens CALLED ***\n");
-    if lines.is_empty() {
-        return Err(error::AjisaiError::from("No lines found"));
-    }
+        self.append_output("*** CREATE_TRADITIONAL_CONDITIONAL_TOKENS ***\n");
+        
+        if lines.is_empty() {
+            return Err(error::AjisaiError::from("No lines found"));
+        }
 
-    // デフォルト行（条件なし行）の存在チェック
-    let has_default = lines.iter().any(|line| {
-        !line.iter().any(|token| matches!(token, Token::Colon))
-    });
-    
-    if !has_default {
-        return Err(error::AjisaiError::from("Default line (line without condition) is required for safety"));
-    }
+        // デフォルト行（条件なし行）の存在チェック
+        let has_default = lines.iter().any(|line| {
+            !line.iter().any(|token| matches!(token, Token::Colon))
+        });
+        
+        if !has_default {
+            return Err(error::AjisaiError::from("Default line (line without condition) is required for safety"));
+        }
 
-    // 従来の分岐処理：IF_SELECT構造を構築
-    self.build_traditional_conditional_structure(lines)
-}
+        // 従来の分岐処理：IF_SELECT構造を構築
+        self.build_traditional_conditional_structure(lines)
+    }
 
     fn build_traditional_conditional_structure(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-    let mut conditional_lines = Vec::new();
-    let mut default_line = None;
+        self.append_output("*** BUILD_TRADITIONAL_CONDITIONAL_STRUCTURE ***\n");
+        
+        let mut conditional_lines = Vec::new();
+        let mut default_line = None;
 
-    // 条件行とデフォルト行を分離
-    for line in lines {
-        if let Some(colon_pos) = line.iter().position(|t| matches!(t, Token::Colon)) {
-            // 条件行
-            let condition = &line[..colon_pos];
-            let action = &line[colon_pos + 1..];
-            
-            conditional_lines.push((condition.to_vec(), action.to_vec()));
-        } else {
-            // デフォルト行
-            default_line = Some(line.clone());
+        // 条件行とデフォルト行を分離
+        for line in lines {
+            if let Some(colon_pos) = line.iter().position(|t| matches!(t, Token::Colon)) {
+                // 条件行
+                let condition = &line[..colon_pos];
+                let action = &line[colon_pos + 1..];
+                
+                conditional_lines.push((condition.to_vec(), action.to_vec()));
+            } else {
+                // デフォルト行
+                default_line = Some(line.clone());
+            }
         }
-    }
 
-    if conditional_lines.is_empty() {
-        // 条件行がない場合は、デフォルト行のみ実行
-        if let Some(default) = default_line {
-            return Ok(default);
-        } else {
-            return Ok(Vec::new());
+        if conditional_lines.is_empty() {
+            // 条件行がない場合は、デフォルト行のみ実行
+            if let Some(default) = default_line {
+                return Ok(default);
+            } else {
+                return Ok(Vec::new());
+            }
         }
-    }
 
-    // ネストしたIF_SELECT構造を構築
-    Ok(self.build_nested_if_select(&conditional_lines, &default_line.unwrap_or_default()))
-}
+        // ネストしたIF_SELECT構造を構築
+        Ok(self.build_nested_if_select(&conditional_lines, &default_line.unwrap_or_default()))
+    }
 
     fn build_nested_if_select(&mut self, conditional_lines: &[(Vec<Token>, Vec<Token>)], default_action: &[Token]) -> Vec<Token> {
-    if conditional_lines.is_empty() {
-        return default_action.to_vec();
-    }
+        self.append_output("*** BUILD_NESTED_IF_SELECT ***\n");
+        
+        if conditional_lines.is_empty() {
+            return default_action.to_vec();
+        }
 
-    if conditional_lines.len() == 1 {
-        let (condition, action) = &conditional_lines[0];
+        if conditional_lines.len() == 1 {
+            let (condition, action) = &conditional_lines[0];
+            let mut result = Vec::new();
+            
+            // 条件
+            result.extend(condition.iter().cloned());
+            
+            // 真の場合のアクション
+            result.push(Token::VectorStart(BracketType::Square));
+            result.extend(action.iter().cloned());
+            result.push(Token::VectorEnd(BracketType::Square));
+            
+            // 偽の場合のアクション（デフォルト）
+            result.push(Token::VectorStart(BracketType::Square));
+            result.extend(default_action.iter().cloned());
+            result.push(Token::VectorEnd(BracketType::Square));
+            
+            result.push(Token::Symbol("IF_SELECT".to_string()));
+            
+            return result;
+        }
+
+        // 複数の条件行がある場合、再帰的にネスト
+        let (first_condition, first_action) = &conditional_lines[0];
+        let remaining_lines = &conditional_lines[1..];
+        
         let mut result = Vec::new();
         
-        // 条件
-        result.extend(condition.iter().cloned());
+        // 最初の条件
+        result.extend(first_condition.iter().cloned());
         
         // 真の場合のアクション
         result.push(Token::VectorStart(BracketType::Square));
-        result.extend(action.iter().cloned());
+        result.extend(first_action.iter().cloned());
         result.push(Token::VectorEnd(BracketType::Square));
         
-        // 偽の場合のアクション（デフォルト）
+        // 偽の場合のアクション（残りの条件を再帰処理）
         result.push(Token::VectorStart(BracketType::Square));
-        result.extend(default_action.iter().cloned());
+        let nested = self.build_nested_if_select(remaining_lines, default_action);
+        result.extend(nested);
         result.push(Token::VectorEnd(BracketType::Square));
         
         result.push(Token::Symbol("IF_SELECT".to_string()));
         
-        return result;
+        result
     }
-
-    // 複数の条件行がある場合、再帰的にネスト
-    let (first_condition, first_action) = &conditional_lines[0];
-    let remaining_lines = &conditional_lines[1..];
-    
-    let mut result = Vec::new();
-    
-    // 最初の条件
-    result.extend(first_condition.iter().cloned());
-    
-    // 真の場合のアクション
-    result.push(Token::VectorStart(BracketType::Square));
-    result.extend(first_action.iter().cloned());
-    result.push(Token::VectorEnd(BracketType::Square));
-    
-    // 偽の場合のアクション（残りの条件を再帰処理）
-    result.push(Token::VectorStart(BracketType::Square));
-    let nested = self.build_nested_if_select(remaining_lines, default_action);
-    result.extend(nested);
-    result.push(Token::VectorEnd(BracketType::Square));
-    
-    result.push(Token::Symbol("IF_SELECT".to_string()));
-    
-    result
-}
 
     fn create_simple_repeat_tokens(&mut self, repeat_count: Option<i64>, line: &[Token]) -> Vec<Token> {
-    self.append_output(&format!("DEBUG: create_simple_repeat_tokens - count: {:?}, line: {:?}\n", repeat_count, line));
-    
-    let mut result = Vec::new();
-    
-    // 回数指定
-    let count = repeat_count.unwrap_or(1);
-    result.push(Token::Number(count, 1));
-    
-    // アクション（Vectorでラップ）
-    result.push(Token::VectorStart(BracketType::Square));
-    result.extend(line.iter().cloned());
-    result.push(Token::VectorEnd(BracketType::Square));
-    
-    // 簡単な反復実行ワード
-    result.push(Token::Symbol("SIMPLE_REPEAT".to_string()));
-    
-    self.append_output(&format!("DEBUG: create_simple_repeat_tokens result: {:?}\n", result));
-    
-    result
-}
+        self.append_output(&format!("*** CREATE_SIMPLE_REPEAT_TOKENS - count: {:?}, line: {:?} ***\n", repeat_count, line));
+        
+        let mut result = Vec::new();
+        
+        // 回数指定をVector形式でラップ
+        let count = repeat_count.unwrap_or(1);
+        result.push(Token::VectorStart(BracketType::Square));
+        result.push(Token::Number(count, 1));
+        result.push(Token::VectorEnd(BracketType::Square));
+        
+        // アクション（Vectorでラップ）
+        result.push(Token::VectorStart(BracketType::Square));
+        result.extend(line.iter().cloned());
+        result.push(Token::VectorEnd(BracketType::Square));
+        
+        // 簡単な反復実行ワード
+        result.push(Token::Symbol("SIMPLE_REPEAT".to_string()));
+        
+        self.append_output(&format!("*** CREATE_SIMPLE_REPEAT_TOKENS result: {:?} ***\n", result));
+        
+        result
+    }
 
     fn extract_vector_content_if_needed(&mut self, tokens: &[Token]) -> Result<Vec<Token>> {
-    if tokens.len() >= 2 {
-        if let (Token::VectorStart(_), Token::VectorEnd(_)) = (&tokens[0], &tokens[tokens.len() - 1]) {
-            return Ok(tokens[1..tokens.len() - 1].to_vec());
+        self.append_output("*** EXTRACT_VECTOR_CONTENT_IF_NEEDED ***\n");
+        
+        if tokens.len() >= 2 {
+            if let (Token::VectorStart(_), Token::VectorEnd(_)) = (&tokens[0], &tokens[tokens.len() - 1]) {
+                return Ok(tokens[1..tokens.len() - 1].to_vec());
+            }
         }
+        
+        Ok(tokens.to_vec())
     }
-    
-    Ok(tokens.to_vec())
-}
 
     fn create_sequential_execution_tokens(&mut self, lines: &[Vec<Token>]) -> Vec<Token> {
-    let mut result = Vec::new();
-    
-    for line in lines.iter() {
-        result.extend(line.iter().cloned());
+        self.append_output("*** CREATE_SEQUENTIAL_EXECUTION_TOKENS ***\n");
+        
+        let mut result = Vec::new();
+        
+        for line in lines.iter() {
+            result.extend(line.iter().cloned());
+        }
+        
+        result
     }
-    
-    result
-}
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        self.append_output(&format!("DEBUG: execute_tokens called with {} tokens: {:?}\n", tokens.len(), tokens));
+        self.append_output(&format!("*** EXECUTE_TOKENS called with {} tokens: {:?} ***\n", tokens.len(), tokens));
         
         let mut i = 0;
         while i < tokens.len() {
-            self.append_output(&format!("DEBUG: Processing token #{}: {:?}\n", i, tokens[i]));
+            self.append_output(&format!("*** Processing token #{}: {:?} ***\n", i, tokens[i]));
             
             match &tokens[i] {
                 Token::Number(num, den) => {
@@ -557,7 +586,7 @@ if i < tokens.len() {
                         )
                     };
                     self.workspace.push(wrapped_value);
-                    self.append_output(&format!("DEBUG: Pushed wrapped number [{}], workspace size: {}\n", 
+                    self.append_output(&format!("*** Pushed wrapped number [{}], workspace size: {} ***\n", 
                         if *den == 1 { num.to_string() } else { format!("{}/{}", num, den) }, 
                         self.workspace.len()));
                     i += 1;
@@ -572,7 +601,7 @@ if i < tokens.len() {
                         )
                     };
                     self.workspace.push(wrapped_value);
-                    self.append_output(&format!("DEBUG: Pushed wrapped string ['{}'], workspace size: {}\n", s, self.workspace.len()));
+                    self.append_output(&format!("*** Pushed wrapped string ['{}'], workspace size: {} ***\n", s, self.workspace.len()));
                     i += 1;
                 },
                 Token::Boolean(b) => {
@@ -609,23 +638,23 @@ if i < tokens.len() {
                     i += 1;
                 },
                 Token::VectorStart(bracket_type) => {
-                    self.append_output(&format!("DEBUG: Processing vector start, workspace size before: {}\n", self.workspace.len()));
+                    self.append_output(&format!("*** Processing vector start, workspace size before: {} ***\n", self.workspace.len()));
                     let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
                     self.workspace.push(Value {
                         val_type: ValueType::Vector(vector_values, bracket_type.clone()),
                     });
-                    self.append_output(&format!("DEBUG: Pushed vector, workspace size after: {}\n", self.workspace.len()));
+                    self.append_output(&format!("*** Pushed vector, workspace size after: {} ***\n", self.workspace.len()));
                     i += consumed;
                 },
                 Token::Symbol(name) => {
-                    self.append_output(&format!("DEBUG: Executing word '{}', workspace size before: {}\n", name, self.workspace.len()));
+                    self.append_output(&format!("*** Executing word '{}', workspace size before: {} ***\n", name, self.workspace.len()));
                     
                     match self.execute_word(name) {
                         Ok(_) => {
-                            self.append_output(&format!("DEBUG: Successfully executed '{}', workspace size after: {}\n", name, self.workspace.len()));
+                            self.append_output(&format!("*** Successfully executed '{}', workspace size after: {} ***\n", name, self.workspace.len()));
                         },
                         Err(e) => {
-                            self.append_output(&format!("DEBUG: Error executing '{}': {}\n", name, e));
+                            self.append_output(&format!("*** Error executing '{}': {} ***\n", name, e));
                             return Err(e);
                         }
                     }
@@ -637,7 +666,7 @@ if i < tokens.len() {
             }
         }
         
-        self.append_output(&format!("DEBUG: execute_tokens completed, final workspace size: {}\n", self.workspace.len()));
+        self.append_output(&format!("*** execute_tokens completed, final workspace size: {} ***\n", self.workspace.len()));
         Ok(())
     }
 
@@ -730,6 +759,8 @@ if i < tokens.len() {
     }
 
     fn execute_word(&mut self, name: &str) -> Result<()> {
+        self.append_output(&format!("*** EXECUTE_WORD: {} ***\n", name));
+        
         if let Some(def) = self.dictionary.get(name).cloned() {
             if def.is_builtin {
                 self.execute_builtin(name)
@@ -745,10 +776,13 @@ if i < tokens.len() {
     }
 
     fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
+        self.append_output("*** EXECUTE_CUSTOM_WORD_IMMEDIATE ***\n");
         self.execute_tokens(tokens)
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
+        self.append_output(&format!("*** EXECUTE_BUILTIN: {} ***\n", name));
+        
         match name {
             // 位置指定操作
             "GET" => vector_ops::op_get(self),
@@ -805,34 +839,36 @@ if i < tokens.len() {
             "IF_SELECT" => control::op_if_select(self),
             
             // REPEAT制御
-"EXECUTE_REPEAT" => {
-    self.append_output("*** BUILTIN EXECUTE_REPEAT CALLED ***\n");
-    self.append_output(&format!("*** Workspace size before: {} ***\n", self.workspace.len()));
-    
-    // ワークスペースの中身を詳細表示（borrow checker対応）
-    let workspace_debug: Vec<String> = self.workspace.iter().enumerate()
-        .map(|(i, item)| format!("*** workspace[{}]: {:?} ***", i, item))
-        .collect();
-    
-    for debug_line in workspace_debug {
-        self.append_output(&format!("{}\n", debug_line));
-    }
-    
-    let result = match control::op_execute_repeat(self) {
-        Ok(()) => {
-            self.append_output("*** EXECUTE_REPEAT SUCCESS ***\n");
-            Ok(())
-        },
-        Err(e) => {
-            self.append_output(&format!("*** EXECUTE_REPEAT ERROR: {} ***\n", e));
-            Err(e)
-        }
-    };
-    
-    self.append_output(&format!("*** EXECUTE_REPEAT result: {:?} ***\n", result));
-    result
-},
+            "EXECUTE_REPEAT" => {
+                self.append_output("*** BUILTIN EXECUTE_REPEAT CALLED ***\n");
+                self.append_output(&format!("*** Workspace size before: {} ***\n", self.workspace.len()));
+                
+                // ワークスペースの中身を詳細表示（borrow checker対応）
+                let workspace_debug: Vec<String> = self.workspace.iter().enumerate()
+                    .map(|(i, item)| format!("*** workspace[{}]: {:?} ***", i, item))
+                    .collect();
+                
+                for debug_line in workspace_debug {
+                    self.append_output(&format!("{}\n", debug_line));
+                }
+                
+                let result = match control::op_execute_repeat(self) {
+                    Ok(()) => {
+                        self.append_output("*** EXECUTE_REPEAT SUCCESS ***\n");
+                        Ok(())
+                    },
+                    Err(e) => {
+                        self.append_output(&format!("*** EXECUTE_REPEAT ERROR: {} ***\n", e));
+                        Err(e)
+                    }
+                };
+                
+                self.append_output(&format!("*** EXECUTE_REPEAT result: {:?} ***\n", result));
+                result
+            },
             "SIMPLE_REPEAT" => {
+                self.append_output("*** BUILTIN SIMPLE_REPEAT CALLED ***\n");
+                
                 // 簡単な反復実行
                 if self.workspace.len() < 2 {
                     return Err(error::AjisaiError::WorkspaceUnderflow);
