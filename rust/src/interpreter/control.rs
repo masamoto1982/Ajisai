@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (完全修正版)
+// rust/src/interpreter/control.rs (デバッグ強化版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token, Value, BracketType};
@@ -102,7 +102,7 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
     }
 }
 
-// EXECUTE_REPEAT - REPEAT構文の実行エンジン（完全修正版）
+// EXECUTE_REPEAT - REPEAT構文の実行エンジン（デバッグ強化版）
 pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     interp.append_output("DEBUG: EXECUTE_REPEAT called\n");
     interp.append_output(&format!("DEBUG: Workspace size: {}\n", interp.workspace.len()));
@@ -130,6 +130,7 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     while let Some(val) = interp.workspace.pop() {
         match val.val_type {
             ValueType::Vector(action_values, _) => {
+                interp.append_output(&format!("DEBUG: Found action vector with {} elements\n", action_values.len()));
                 action_vectors.push(action_values);
             },
             _ => {
@@ -149,12 +150,45 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     
     // 最後のアクションがデフォルト行（条件なし）
     let default_action = action_vectors.pop().unwrap();
+    interp.append_output(&format!("DEBUG: Default action has {} elements\n", default_action.len()));
     
     // 残りが条件付きアクション（コロンで分離）
     let mut conditional_actions = Vec::new();
-    for action_vector in action_vectors {
-        let parsed_line = parse_conditional_action_vector(action_vector)?;
-        conditional_actions.push(parsed_line);
+    for (i, action_vector) in action_vectors.iter().enumerate() {
+        interp.append_output(&format!("DEBUG: Processing conditional action {} with {} elements\n", i, action_vector.len()));
+        
+        // ここでデバッグ出力を追加
+        for (j, value) in action_vector.iter().enumerate() {
+            match &value.val_type {
+                ValueType::Symbol(s) => {
+                    interp.append_output(&format!("DEBUG: action_vector[{}] = Symbol('{}')\n", j, s));
+                },
+                ValueType::Vector(v, _) => {
+                    interp.append_output(&format!("DEBUG: action_vector[{}] = Vector({} elements)\n", j, v.len()));
+                },
+                ValueType::Number(frac) => {
+                    interp.append_output(&format!("DEBUG: action_vector[{}] = Number({}/{})\n", j, frac.numerator, frac.denominator));
+                },
+                ValueType::Boolean(b) => {
+                    interp.append_output(&format!("DEBUG: action_vector[{}] = Boolean({})\n", j, b));
+                },
+                ValueType::String(s) => {
+                    interp.append_output(&format!("DEBUG: action_vector[{}] = String('{}')\n", j, s));
+                },
+                ValueType::Nil => {
+                    interp.append_output(&format!("DEBUG: action_vector[{}] = Nil\n", j));
+                },
+            }
+        }
+        
+        match parse_conditional_action_vector_with_debug(action_vector.clone(), interp) {
+            Ok(parsed_line) => {
+                conditional_actions.push(parsed_line);
+            },
+            Err(e) => {
+                return Err(e);
+            }
+        }
     }
     
     // REPEAT実行ループ
@@ -188,37 +222,16 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 条件付きアクションベクターを解析（デバッグ版）
-fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Vec<Value>)> {
-    // デバッグ出力：受け取った値を確認
-    for (i, value) in values.iter().enumerate() {
-        match &value.val_type {
-            ValueType::Symbol(s) => {
-                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
-                    "DEBUG: values[{}] = Symbol('{}')", i, s
-                )));
-            },
-            ValueType::Vector(v, bracket_type) => {
-                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
-                    "DEBUG: values[{}] = Vector({} elements, {:?})", i, v.len(), bracket_type
-                )));
-            },
-            other => {
-                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
-                    "DEBUG: values[{}] = {:?}", i, other
-                )));
-            }
-        }
-    }
+// デバッグ版の解析関数
+fn parse_conditional_action_vector_with_debug(values: Vec<Value>, interp: &mut Interpreter) -> Result<(Vec<Value>, Vec<Value>)> {
+    interp.append_output("DEBUG: Looking for colon in conditional action\n");
     
     // コロンを表すSymbol値を探す
     for (i, value) in values.iter().enumerate() {
         if let ValueType::Symbol(s) = &value.val_type {
-            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
-                "DEBUG: Checking symbol '{}' at position {}", s, i
-            )));
+            interp.append_output(&format!("DEBUG: Found symbol '{}' at position {}\n", s, i));
             if s == ":" {
-                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: Found colon!"));
+                interp.append_output("DEBUG: Found colon!\n");
                 let condition_values = values[..i].to_vec();
                 let action_values = values[i + 1..].to_vec();
                 return Ok((condition_values, action_values));
@@ -226,11 +239,27 @@ fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Ve
         }
     }
     
-    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: No colon found in values"));
+    interp.append_output("DEBUG: No colon symbol found\n");
     Err(AjisaiError::from("No colon found in conditional action"))
 }
 
-// 条件値を直接評価（新規追加）
+// 条件付きアクションベクターを解析（元の版）
+fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Vec<Value>)> {
+    // コロンを表すSymbol値を探す
+    for (i, value) in values.iter().enumerate() {
+        if let ValueType::Symbol(s) = &value.val_type {
+            if s == ":" {
+                let condition_values = values[..i].to_vec();
+                let action_values = values[i + 1..].to_vec();
+                return Ok((condition_values, action_values));
+            }
+        }
+    }
+    
+    Err(AjisaiError::from("No colon found in conditional action"))
+}
+
+// 条件値を直接評価
 fn evaluate_condition_values(interp: &mut Interpreter, condition_values: &[Value]) -> Result<Value> {
     // 現在のワークスペースを保存
     let saved_workspace = interp.workspace.clone();
