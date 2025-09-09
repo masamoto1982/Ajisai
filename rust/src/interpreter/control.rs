@@ -308,6 +308,7 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
 
 // デバッグ版の解析関数
 fn parse_conditional_action_vector_with_debug(values: Vec<Value>, interp: &mut Interpreter) -> Result<(Vec<Value>, Vec<Value>)> {
+    interp.append_output("*** parse_conditional_action_vector_with_debug CALLED ***\n");
     interp.append_output("DEBUG: Looking for colon in conditional action\n");
     
     // コロンを表すSymbol値を探す
@@ -323,8 +324,8 @@ fn parse_conditional_action_vector_with_debug(values: Vec<Value>, interp: &mut I
         }
     }
     
-    interp.append_output("DEBUG: No colon symbol found\n");
-    Err(AjisaiError::from("No colon found in conditional action"))
+    interp.append_output("*** ERROR: No colon symbol found - FROM parse_conditional_action_vector_with_debug ***\n");
+    Err(AjisaiError::from("No colon found in conditional action - FROM parse_conditional_action_vector_with_debug"))
 }
 
 // 条件付きアクションベクターを解析（元の版）
@@ -340,7 +341,7 @@ fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Ve
         }
     }
     
-    Err(AjisaiError::from("No colon found in conditional action"))
+    Err(AjisaiError::from("No colon found in conditional action - FROM parse_conditional_action_vector"))
 }
 
 // 条件値を直接評価
