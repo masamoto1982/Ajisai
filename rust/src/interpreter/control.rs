@@ -201,7 +201,18 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
 fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for value in values {
-        tokens.push(value_to_token(value.clone())?);
+        match &value.val_type {
+            ValueType::Vector(inner_values, bracket_type) => {
+                // Vector は開始・内容・終了トークンに展開
+                tokens.push(Token::VectorStart(bracket_type.clone()));
+                let inner_tokens = values_to_tokens(inner_values)?;
+                tokens.extend(inner_tokens);
+                tokens.push(Token::VectorEnd(bracket_type.clone()));
+            },
+            _ => {
+                tokens.push(value_to_token(value.clone())?);
+            }
+        }
     }
     Ok(tokens)
 }
@@ -256,8 +267,9 @@ fn value_to_token(value: Value) -> Result<Token> {
         ValueType::Symbol(s) => Ok(Token::Symbol(s)),
         ValueType::Nil => Ok(Token::Nil),
         ValueType::Vector(_, _) => {
-            // この部分でエラーが発生している
-            Err(AjisaiError::from("Cannot convert vector to token directly"))
+            // Vector は直接 Token に変換できないため、
+            // values_to_tokens で適切に処理されるべき
+            Err(AjisaiError::from("Vector should be handled by values_to_tokens function"))
         },
     }
 }
