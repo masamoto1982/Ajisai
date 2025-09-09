@@ -374,22 +374,40 @@ fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Ve
     Err(AjisaiError::from("No colon found in conditional action - FROM parse_conditional_action_vector"))
 }
 
-// 条件値を直接評価
 fn evaluate_condition_values(interp: &mut Interpreter, condition_values: &[Value]) -> Result<Value> {
+    interp.append_output("*** evaluate_condition_values CALLED ***\n");
+    interp.append_output(&format!("condition_values.len() = {}\n", condition_values.len()));
+    
+    for (i, value) in condition_values.iter().enumerate() {
+        interp.append_output(&format!("condition_values[{}]: {:?}\n", i, value));
+    }
+    
     // 現在のワークスペースを保存
     let saved_workspace = interp.workspace.clone();
+    interp.append_output(&format!("Saved workspace size: {}\n", saved_workspace.len()));
     
     // 条件値をワークスペースに配置して実行
     interp.workspace.clear();
     for value in condition_values {
         interp.workspace.push(value.clone());
+        interp.append_output(&format!("Pushed to workspace: {:?}\n", value));
     }
+    
+    interp.append_output(&format!("Workspace after pushing condition values: {}\n", interp.workspace.len()));
     
     // 最後の操作が演算子（Symbol）の場合、それを実行
     if let Some(last_value) = condition_values.last() {
         if let ValueType::Symbol(op) = &last_value.val_type {
+            interp.append_output(&format!("Executing operator: {}\n", op));
             // 演算子を実行（例：>、=、<など）
-            interp.execute_builtin(op)?;
+            match interp.execute_builtin(op) {
+                Ok(()) => interp.append_output("Operator executed successfully\n"),
+                Err(e) => {
+                    interp.append_output(&format!("ERROR executing operator: {}\n", e));
+                    interp.workspace = saved_workspace;
+                    return Err(e);
+                }
+            }
         }
     }
     
@@ -399,6 +417,8 @@ fn evaluate_condition_values(interp: &mut Interpreter, condition_values: &[Value
     } else {
         interp.workspace.pop().unwrap()
     };
+    
+    interp.append_output(&format!("Condition evaluation result: {:?}\n", result));
     
     // ワークスペースを復元
     interp.workspace = saved_workspace;
