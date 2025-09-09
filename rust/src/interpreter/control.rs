@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (デバッグ強化版)
+// rust/src/interpreter/control.rs (全面デバッグ強化版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token, Value, BracketType};
@@ -18,29 +18,41 @@ pub struct RepeatDefinition {
 
 // REPEAT構文の解析とトークン生成
 pub fn create_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("*** CREATE_REPEAT_EXECUTION_TOKENS CALLED ***"));
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("repeat_count: {:?}, lines: {:?}", repeat_count, lines)));
+    
     let conditional_lines = parse_conditional_lines(lines)?;
     
     if conditional_lines.is_empty() {
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("ERROR: No lines found"));
         return Err(AjisaiError::from("No lines found"));
     }
     
     // デフォルト行（条件なし行）の存在チェック
     let has_default = conditional_lines.iter().any(|line| line.condition.is_none());
     if !has_default {
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("ERROR: No default line found"));
         return Err(AjisaiError::from("Default line (line without condition) is required for safety"));
     }
     
     // REPEAT実行用トークンを生成
-    Ok(build_repeat_execution_tokens(repeat_count, &conditional_lines))
+    let result = build_repeat_execution_tokens(repeat_count, &conditional_lines);
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("create_repeat_execution_tokens result: {:?}", result)));
+    Ok(result)
 }
 
 fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[ConditionalLine]) -> Vec<Token> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("*** BUILD_REPEAT_EXECUTION_TOKENS ***"));
+    
     let mut result = Vec::new();
     
     // 条件行を順番に処理（先に追加）
-    for line in lines {
+    for (i, line) in lines.iter().enumerate() {
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Processing line {}: {:?}", i, line)));
+        
         if let Some(condition) = &line.condition {
             // 条件付き行: [ condition : action ]
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("Adding conditional line"));
             result.push(Token::VectorStart(BracketType::Square));
             result.extend(condition.iter().cloned());
             result.push(Token::Colon);
@@ -48,6 +60,7 @@ fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Conditional
             result.push(Token::VectorEnd(BracketType::Square));
         } else {
             // デフォルト行: [ action ]
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("Adding default line"));
             result.push(Token::VectorStart(BracketType::Square));
             result.extend(line.action.iter().cloned());
             result.push(Token::VectorEnd(BracketType::Square));
@@ -56,30 +69,46 @@ fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Conditional
     
     // 回数制限をVector形式でラップして追加
     let count = repeat_count.unwrap_or(1);
-    result.push(Token::VectorStart(BracketType::Square));  // ← 追加
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Adding count: {}", count)));
+    result.push(Token::VectorStart(BracketType::Square));
     result.push(Token::Number(count, 1));
-    result.push(Token::VectorEnd(BracketType::Square));    // ← 追加
+    result.push(Token::VectorEnd(BracketType::Square));
     
     // REPEAT実行ワードを追加
     result.push(Token::Symbol("EXECUTE_REPEAT".to_string()));
+    
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("build_repeat_execution_tokens final result: {:?}", result)));
     result
 }
 
 fn parse_conditional_lines(lines: &[Vec<Token>]) -> Result<Vec<ConditionalLine>> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("*** PARSE_CONDITIONAL_LINES ***"));
+    
     let mut conditional_lines = Vec::new();
     
-    for line in lines {
-        conditional_lines.push(parse_single_conditional_line(line)?);
+    for (i, line) in lines.iter().enumerate() {
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Parsing line {}: {:?}", i, line)));
+        let parsed = parse_single_conditional_line(line)?;
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Parsed result: {:?}", parsed)));
+        conditional_lines.push(parsed);
     }
     
     Ok(conditional_lines)
 }
 
 fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("*** PARSE_SINGLE_CONDITIONAL_LINE ***"));
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
+    
     // コロンで分割
     if let Some(colon_pos) = tokens.iter().position(|t| matches!(t, Token::Colon)) {
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Found colon at position: {}", colon_pos)));
+        
         let condition = tokens[..colon_pos].to_vec();
         let action = tokens[colon_pos + 1..].to_vec();
+        
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Condition: {:?}", condition)));
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Action: {:?}", action)));
         
         if condition.is_empty() {
             return Err(AjisaiError::from("Empty condition before colon"));
@@ -94,6 +123,8 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
         })
     } else {
         // コロンなし = デフォルト行
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("No colon found - default line"));
+        
         if tokens.is_empty() {
             return Err(AjisaiError::from("Empty default line"));
         }
@@ -105,12 +136,12 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
     }
 }
 
-// EXECUTE_REPEAT - REPEAT構文の実行エンジン（borrow checker修正版）
+// EXECUTE_REPEAT - REPEAT構文の実行エンジン（超詳細デバッグ版）
 pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     interp.append_output("=== EXECUTE_REPEAT START ===\n");
     interp.append_output(&format!("Initial workspace size: {}\n", interp.workspace.len()));
     
-    // ワークスペースの内容を表示（borrow checker対応）
+    // ワークスペースの中身を詳細表示（borrow checker対応）
     let workspace_debug: Vec<String> = interp.workspace.iter().enumerate()
         .map(|(i, item)| format!("workspace[{}]: {:?}", i, item))
         .collect();
@@ -362,9 +393,12 @@ fn parse_conditional_action_vector_with_debug(values: Vec<Value>, interp: &mut I
 
 // 条件付きアクションベクターを解析（元の版）
 fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Vec<Value>)> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("*** parse_conditional_action_vector CALLED ***"));
+    
     // コロンを表すSymbol値を探す
     for (i, value) in values.iter().enumerate() {
         if let ValueType::Symbol(s) = &value.val_type {
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Found symbol: {}", s)));
             if s == ":" {
                 let condition_values = values[..i].to_vec();
                 let action_values = values[i + 1..].to_vec();
@@ -373,9 +407,11 @@ fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Ve
         }
     }
     
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("ERROR: No colon found"));
     Err(AjisaiError::from("No colon found in conditional action - FROM parse_conditional_action_vector"))
 }
 
+// 条件値を直接評価
 fn evaluate_condition_values(interp: &mut Interpreter, condition_values: &[Value]) -> Result<Value> {
     interp.append_output("*** evaluate_condition_values CALLED ***\n");
     interp.append_output(&format!("condition_values.len() = {}\n", condition_values.len()));
@@ -429,8 +465,12 @@ fn evaluate_condition_values(interp: &mut Interpreter, condition_values: &[Value
 }
 
 fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>> {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("*** values_to_tokens CALLED ***"));
+    
     let mut tokens = Vec::new();
-    for value in values {
+    for (i, value) in values.iter().enumerate() {
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Converting value[{}]: {:?}", i, value)));
+        
         match &value.val_type {
             ValueType::Vector(inner_values, bracket_type) => {
                 tokens.push(Token::VectorStart(bracket_type.clone()));
@@ -439,14 +479,20 @@ fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>> {
                 tokens.push(Token::VectorEnd(bracket_type.clone()));
             },
             _ => {
-                tokens.push(value_to_token(value.clone())?);
+                let token = value_to_token(value.clone())?;
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Converted to token: {:?}", token)));
+                tokens.push(token);
             }
         }
     }
+    
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("values_to_tokens result: {:?}", tokens)));
     Ok(tokens)
 }
 
 fn evaluate_condition(interp: &mut Interpreter, condition_tokens: &[Token]) -> Result<Value> {
+    interp.append_output("*** evaluate_condition CALLED ***\n");
+    
     // 現在のワークスペースを保存
     let saved_workspace = interp.workspace.clone();
     
@@ -467,11 +513,14 @@ fn evaluate_condition(interp: &mut Interpreter, condition_tokens: &[Token]) -> R
 }
 
 fn execute_action_tokens(interp: &mut Interpreter, action_tokens: &[Token]) -> Result<()> {
+    interp.append_output("*** execute_action_tokens CALLED ***\n");
+    interp.append_output(&format!("Action tokens: {:?}\n", action_tokens));
+    
     interp.execute_tokens(action_tokens)
 }
 
 fn is_truthy(value: &Value) -> bool {
-    match &value.val_type {
+    let result = match &value.val_type {
         ValueType::Boolean(b) => *b,
         ValueType::Nil => false,
         ValueType::Number(n) => n.numerator != 0,
@@ -485,24 +534,35 @@ fn is_truthy(value: &Value) -> bool {
             }
         },
         ValueType::Symbol(_) => true,
-    }
+    };
+    
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("is_truthy({:?}) = {}", value, result)));
+    result
 }
 
 fn value_to_token(value: Value) -> Result<Token> {
-    match value.val_type {
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("*** value_to_token: {:?} ***", value)));
+    
+    let result = match value.val_type {
         ValueType::Number(frac) => Ok(Token::Number(frac.numerator, frac.denominator)),
         ValueType::String(s) => Ok(Token::String(s)),
         ValueType::Boolean(b) => Ok(Token::Boolean(b)),
         ValueType::Symbol(s) => Ok(Token::Symbol(s)),
         ValueType::Nil => Ok(Token::Nil),
         ValueType::Vector(_, _) => {
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("ERROR: Cannot convert vector to token"));
             Err(AjisaiError::from("Vector should be handled by values_to_tokens function"))
         },
-    }
+    };
+    
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("value_to_token result: {:?}", result)));
+    result
 }
 
 // IF_SELECT - 条件に基づいてアクションを選択実行
 pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
+    interp.append_output("*** IF_SELECT CALLED ***\n");
+    
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
     }
@@ -541,6 +601,8 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
 }
 
 fn vector_to_tokens(values: Vec<Value>) -> Result<Vec<Token>> {
+    interp.append_output("*** vector_to_tokens CALLED ***\n");
+    
     let mut tokens = Vec::new();
     for value in values {
         match value.val_type {
@@ -560,6 +622,8 @@ fn vector_to_tokens(values: Vec<Value>) -> Result<Vec<Token>> {
 
 // DEF - 新しいワードを定義する
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
+    interp.append_output("*** DEF CALLED ***\n");
+    
     let workspace_len = interp.workspace.len();
     
     // 最低2つ（本体ベクトル + 名前）は必要
@@ -681,6 +745,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
 // DEL - ワードを削除する
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
+    interp.append_output("*** DEL CALLED ***\n");
+    
     let val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
     
