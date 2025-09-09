@@ -601,7 +601,7 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
 }
 
 fn vector_to_tokens(values: Vec<Value>) -> Result<Vec<Token>> {
-    interp.append_output("*** vector_to_tokens CALLED ***\n");
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("*** vector_to_tokens CALLED ***"));
     
     let mut tokens = Vec::new();
     for value in values {
@@ -617,6 +617,8 @@ fn vector_to_tokens(values: Vec<Value>) -> Result<Vec<Token>> {
             }
         }
     }
+    
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("vector_to_tokens result: {:?}", tokens)));
     Ok(tokens)
 }
 
