@@ -310,7 +310,36 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
 // デバッグ版の解析関数
 fn parse_conditional_action_vector_with_debug(values: Vec<Value>, interp: &mut Interpreter) -> Result<(Vec<Value>, Vec<Value>)> {
     interp.append_output("*** parse_conditional_action_vector_with_debug CALLED ***\n");
+    
+    // 呼び出しスタックを出力
+    interp.append_output(&format!("Call stack: {:?}\n", interp.call_stack));
+    
     interp.append_output("DEBUG: Looking for colon in conditional action\n");
+    interp.append_output(&format!("DEBUG: values.len() = {}\n", values.len()));
+    
+    // 受け取った値を詳細表示
+    for (i, value) in values.iter().enumerate() {
+        match &value.val_type {
+            ValueType::Symbol(s) => {
+                interp.append_output(&format!("DEBUG: values[{}] = Symbol('{}')\n", i, s));
+            },
+            ValueType::Vector(v, bracket_type) => {
+                interp.append_output(&format!("DEBUG: values[{}] = Vector({} elements, {:?})\n", i, v.len(), bracket_type));
+            },
+            ValueType::Number(frac) => {
+                interp.append_output(&format!("DEBUG: values[{}] = Number({}/{})\n", i, frac.numerator, frac.denominator));
+            },
+            ValueType::Boolean(b) => {
+                interp.append_output(&format!("DEBUG: values[{}] = Boolean({})\n", i, b));
+            },
+            ValueType::String(s) => {
+                interp.append_output(&format!("DEBUG: values[{}] = String('{}')\n", i, s));
+            },
+            ValueType::Nil => {
+                interp.append_output(&format!("DEBUG: values[{}] = Nil\n", i));
+            },
+        }
+    }
     
     // コロンを表すSymbol値を探す
     for (i, value) in values.iter().enumerate() {
