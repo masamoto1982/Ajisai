@@ -1,4 +1,4 @@
-// rust/src/interpreter/control.rs (ビルドエラー修正・デバッグ追加版)
+// rust/src/interpreter/control.rs (完全修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token, Value, BracketType};
@@ -102,19 +102,14 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
     }
 }
 
-// EXECUTE_REPEAT - REPEAT構文の実行エンジン（簡易版）
+// EXECUTE_REPEAT - REPEAT構文の実行エンジン（完全修正版）
 pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     interp.append_output("DEBUG: EXECUTE_REPEAT called\n");
     interp.append_output(&format!("DEBUG: Workspace size: {}\n", interp.workspace.len()));
     
-    // より簡単な実装：スタックから情報を取得して実行
-    let mut action_vectors = Vec::new();
-    
     // 回数制限を取得
     let repeat_count_val = interp.workspace.pop()
         .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    interp.append_output(&format!("DEBUG: repeat_count_val: {:?}\n", repeat_count_val));
     
     let repeat_count = match repeat_count_val.val_type {
         ValueType::Vector(ref v, _) if v.len() == 1 => {
@@ -131,6 +126,7 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     }
     
     // すべてのアクションベクターを収集（逆順で取得）
+    let mut action_vectors = Vec::new();
     while let Some(val) = interp.workspace.pop() {
         match val.val_type {
             ValueType::Vector(action_values, _) => {
@@ -154,33 +150,27 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     // 最後のアクションがデフォルト行（条件なし）
     let default_action = action_vectors.pop().unwrap();
     
-    // 残りが条件付きアクション
-    let conditions_and_actions = action_vectors;
+    // 残りが条件付きアクション（コロンで分離）
+    let mut conditional_actions = Vec::new();
+    for action_vector in action_vectors {
+        let parsed_line = parse_conditional_action_vector(action_vector)?;
+        conditional_actions.push(parsed_line);
+    }
     
     // REPEAT実行ループ
-    for _iteration in 0..repeat_count {
+    for iteration in 0..repeat_count {
+        interp.append_output(&format!("DEBUG: REPEAT iteration {}\n", iteration));
         let mut executed = false;
         
         // 各条件を順番にチェック
-        for condition_action in &conditions_and_actions {
-            if condition_action.len() < 2 {
-                continue; // 条件とアクションの両方が必要
-            }
+        for (condition_values, action_values) in &conditional_actions {
+            // 条件を評価
+            let condition_result = evaluate_condition_values(interp, condition_values)?;
+            interp.append_output(&format!("DEBUG: Condition result: {:?}\n", condition_result));
             
-            // 条件部分とアクション部分を分離（簡単な実装：半分ずつ）
-            let mid = condition_action.len() / 2;
-            
-            // 条件部分を評価
-            let condition_values = &condition_action[..mid];
-            let _action_values = &condition_action[mid..];
-            
-            // 条件をトークンに変換して評価
-            let condition_tokens = values_to_tokens(condition_values)?;
-            let _condition_result = evaluate_condition(interp, &condition_tokens)?;
-            
-            if is_truthy(&_condition_result) {
+            if is_truthy(&condition_result) {
                 // 条件が真の場合、アクションを実行
-                let action_tokens = values_to_tokens(_action_values)?;
+                let action_tokens = values_to_tokens(action_values)?;
                 execute_action_tokens(interp, &action_tokens)?;
                 executed = true;
                 break; // 最初にマッチした条件のみ実行
@@ -198,12 +188,59 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+// 条件付きアクションベクターを解析（新規追加）
+fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Vec<Value>)> {
+    // コロンを表すSymbol値を探す
+    for (i, value) in values.iter().enumerate() {
+        if let ValueType::Symbol(s) = &value.val_type {
+            if s == ":" {
+                let condition_values = values[..i].to_vec();
+                let action_values = values[i + 1..].to_vec();
+                return Ok((condition_values, action_values));
+            }
+        }
+    }
+    
+    Err(AjisaiError::from("No colon found in conditional action"))
+}
+
+// 条件値を直接評価（新規追加）
+fn evaluate_condition_values(interp: &mut Interpreter, condition_values: &[Value]) -> Result<Value> {
+    // 現在のワークスペースを保存
+    let saved_workspace = interp.workspace.clone();
+    
+    // 条件値をワークスペースに配置して実行
+    interp.workspace.clear();
+    for value in condition_values {
+        interp.workspace.push(value.clone());
+    }
+    
+    // 最後の操作が演算子（Symbol）の場合、それを実行
+    if let Some(last_value) = condition_values.last() {
+        if let ValueType::Symbol(op) = &last_value.val_type {
+            // 演算子を実行（例：>、=、<など）
+            interp.execute_builtin(op)?;
+        }
+    }
+    
+    // 結果を取得
+    let result = if interp.workspace.is_empty() {
+        Value { val_type: ValueType::Boolean(false) }
+    } else {
+        interp.workspace.pop().unwrap()
+    };
+    
+    // ワークスペースを復元
+    interp.workspace = saved_workspace;
+    
+    Ok(result)
+}
+
 fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for value in values {
         match &value.val_type {
             ValueType::Vector(inner_values, bracket_type) => {
-                // Vector は開始・内容・終了トークンに展開
                 tokens.push(Token::VectorStart(bracket_type.clone()));
                 let inner_tokens = values_to_tokens(inner_values)?;
                 tokens.extend(inner_tokens);
@@ -267,8 +304,6 @@ fn value_to_token(value: Value) -> Result<Token> {
         ValueType::Symbol(s) => Ok(Token::Symbol(s)),
         ValueType::Nil => Ok(Token::Nil),
         ValueType::Vector(_, _) => {
-            // Vector は直接 Token に変換できないため、
-            // values_to_tokens で適切に処理されるべき
             Err(AjisaiError::from("Vector should be handled by values_to_tokens function"))
         },
     }
