@@ -241,21 +241,29 @@ impl Interpreter {
     self.append_output(&format!("DEBUG: parse_multiline_definition input tokens: {:?}\n", tokens));
     
     // 最初に REPEAT 回数指定をチェック（修正版）
-    if i < tokens.len() {
-        self.append_output(&format!("DEBUG: Checking token[{}]: {:?}\n", i, tokens[i]));
-        if let Token::Number(count, 1) = &tokens[i] {
-            if i + 1 < tokens.len() {
-                self.append_output(&format!("DEBUG: Checking token[{}]: {:?}\n", i + 1, tokens[i + 1]));
-                if let Token::Symbol(word) = &tokens[i + 1] {
-                    if word == "REPEAT" {
-                        repeat_count = Some(*count);
-                        i += 2; // 数値とREPEATをスキップ
-                        self.append_output(&format!("DEBUG: Found REPEAT with count: {}\n", count));
-                    }
+if i < tokens.len() {
+    self.append_output(&format!("DEBUG: Checking token[{}]: {:?}\n", i, tokens[i]));
+    if let Token::Number(count, 1) = &tokens[i] {
+        if i + 1 < tokens.len() {
+            self.append_output(&format!("DEBUG: Checking token[{}]: {:?}\n", i + 1, tokens[i + 1]));
+            if let Token::Symbol(word) = &tokens[i + 1] {
+                if word == "REPEAT" {
+                    repeat_count = Some(*count);
+                    i += 2; // 数値とREPEATをスキップ
+                    self.append_output(&format!("DEBUG: Found REPEAT with count: {}\n", count));
+                } else {
+                    self.append_output(&format!("DEBUG: Expected REPEAT, found: {}\n", word));
                 }
+            } else {
+                self.append_output("DEBUG: Token after number is not a symbol\n");
             }
+        } else {
+            self.append_output("DEBUG: No token after number\n");
         }
+    } else {
+        self.append_output("DEBUG: First token is not a number\n");
     }
+}
     
     self.append_output(&format!("DEBUG: Starting token parsing from index {}\n", i));
     
