@@ -188,12 +188,37 @@ pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 条件付きアクションベクターを解析（新規追加）
+// 条件付きアクションベクターを解析（デバッグ版）
 fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Vec<Value>)> {
+    // デバッグ出力：受け取った値を確認
+    for (i, value) in values.iter().enumerate() {
+        match &value.val_type {
+            ValueType::Symbol(s) => {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
+                    "DEBUG: values[{}] = Symbol('{}')", i, s
+                )));
+            },
+            ValueType::Vector(v, bracket_type) => {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
+                    "DEBUG: values[{}] = Vector({} elements, {:?})", i, v.len(), bracket_type
+                )));
+            },
+            other => {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
+                    "DEBUG: values[{}] = {:?}", i, other
+                )));
+            }
+        }
+    }
+    
     // コロンを表すSymbol値を探す
     for (i, value) in values.iter().enumerate() {
         if let ValueType::Symbol(s) = &value.val_type {
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!(
+                "DEBUG: Checking symbol '{}' at position {}", s, i
+            )));
             if s == ":" {
+                web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: Found colon!"));
                 let condition_values = values[..i].to_vec();
                 let action_values = values[i + 1..].to_vec();
                 return Ok((condition_values, action_values));
@@ -201,6 +226,7 @@ fn parse_conditional_action_vector(values: Vec<Value>) -> Result<(Vec<Value>, Ve
         }
     }
     
+    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: No colon found in values"));
     Err(AjisaiError::from("No colon found in conditional action"))
 }
 
