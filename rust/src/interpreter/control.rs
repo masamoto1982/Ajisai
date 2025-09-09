@@ -40,9 +40,10 @@ fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Conditional
     // 条件行を順番に処理（先に追加）
     for line in lines {
         if let Some(condition) = &line.condition {
-            // 条件付き行: [ condition action ]
+            // 条件付き行: [ condition : action ]
             result.push(Token::VectorStart(BracketType::Square));
             result.extend(condition.iter().cloned());
+            result.push(Token::Colon);  // ← この行を追加
             result.extend(line.action.iter().cloned());
             result.push(Token::VectorEnd(BracketType::Square));
         } else {
