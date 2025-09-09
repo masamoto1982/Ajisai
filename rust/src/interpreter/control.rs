@@ -102,123 +102,209 @@ fn parse_single_conditional_line(tokens: &[Token]) -> Result<ConditionalLine> {
     }
 }
 
-// EXECUTE_REPEAT - REPEAT構文の実行エンジン（デバッグ強化版）
+// EXECUTE_REPEAT - REPEAT構文の実行エンジン（超詳細デバッグ版）
 pub fn op_execute_repeat(interp: &mut Interpreter) -> Result<()> {
-    interp.append_output("DEBUG: EXECUTE_REPEAT called\n");
-    interp.append_output(&format!("DEBUG: Workspace size: {}\n", interp.workspace.len()));
+    interp.append_output("=== EXECUTE_REPEAT START ===\n");
+    interp.append_output(&format!("Initial workspace size: {}\n", interp.workspace.len()));
+    
+    // ワークスペースの内容を表示
+    for (i, item) in interp.workspace.iter().enumerate() {
+        interp.append_output(&format!("workspace[{}]: {:?}\n", i, item));
+    }
     
     // 回数制限を取得
-    let repeat_count_val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    interp.append_output("About to pop repeat_count_val...\n");
+    let repeat_count_val = match interp.workspace.pop() {
+        Some(val) => {
+            interp.append_output("Successfully popped repeat_count_val\n");
+            val
+        },
+        None => {
+            interp.append_output("ERROR: Workspace is empty when trying to pop repeat_count_val\n");
+            return Err(AjisaiError::WorkspaceUnderflow);
+        }
+    };
+    
+    interp.append_output(&format!("repeat_count_val: {:?}\n", repeat_count_val));
     
     let repeat_count = match repeat_count_val.val_type {
         ValueType::Vector(ref v, _) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                _ => return Err(AjisaiError::type_error("integer repeat count", "other type")),
+                ValueType::Number(n) if n.denominator == 1 => {
+                    interp.append_output(&format!("Found valid repeat count: {}\n", n.numerator));
+                    n.numerator
+                },
+                _ => {
+                    interp.append_output("ERROR: repeat count is not an integer\n");
+                    return Err(AjisaiError::type_error("integer repeat count", "other type"));
+                }
             }
         },
-        _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
+        _ => {
+            interp.append_output("ERROR: repeat count is not a single-element vector\n");
+            return Err(AjisaiError::type_error("single-element vector with integer", "other type"));
+        }
     };
     
     if repeat_count < 0 {
+        interp.append_output("ERROR: repeat count is negative\n");
         return Err(AjisaiError::from("Repeat count must be non-negative"));
     }
     
+    interp.append_output(&format!("Valid repeat_count: {}\n", repeat_count));
+    interp.append_output(&format!("Workspace size after popping count: {}\n", interp.workspace.len()));
+    
     // すべてのアクションベクターを収集（逆順で取得）
     let mut action_vectors = Vec::new();
+    let mut pop_count = 0;
+    
     while let Some(val) = interp.workspace.pop() {
+        pop_count += 1;
+        interp.append_output(&format!("Popped item #{}: {:?}\n", pop_count, val));
+        
         match val.val_type {
             ValueType::Vector(action_values, _) => {
-                interp.append_output(&format!("DEBUG: Found action vector with {} elements\n", action_values.len()));
+                interp.append_output(&format!("Found action vector with {} elements\n", action_values.len()));
                 action_vectors.push(action_values);
             },
             _ => {
                 // Vector以外が来た場合、処理を終了
+                interp.append_output("Found non-vector, pushing back and stopping\n");
                 interp.workspace.push(val); // 戻す
                 break;
             }
         }
     }
     
+    interp.append_output(&format!("Collected {} action vectors\n", action_vectors.len()));
+    
     // 取得順序を反転（最初に積まれたものが最初に処理されるように）
     action_vectors.reverse();
     
     if action_vectors.is_empty() {
+        interp.append_output("ERROR: No action vectors found\n");
         return Err(AjisaiError::from("No action vectors found"));
     }
     
     // 最後のアクションがデフォルト行（条件なし）
     let default_action = action_vectors.pop().unwrap();
-    interp.append_output(&format!("DEBUG: Default action has {} elements\n", default_action.len()));
+    interp.append_output(&format!("Default action has {} elements\n", default_action.len()));
     
     // 残りが条件付きアクション（コロンで分離）
     let mut conditional_actions = Vec::new();
     for (i, action_vector) in action_vectors.iter().enumerate() {
-        interp.append_output(&format!("DEBUG: Processing conditional action {} with {} elements\n", i, action_vector.len()));
+        interp.append_output(&format!("Processing conditional action {} with {} elements\n", i, action_vector.len()));
         
         // ここでデバッグ出力を追加
         for (j, value) in action_vector.iter().enumerate() {
             match &value.val_type {
                 ValueType::Symbol(s) => {
-                    interp.append_output(&format!("DEBUG: action_vector[{}] = Symbol('{}')\n", j, s));
+                    interp.append_output(&format!("  action_vector[{}] = Symbol('{}')\n", j, s));
                 },
                 ValueType::Vector(v, _) => {
-                    interp.append_output(&format!("DEBUG: action_vector[{}] = Vector({} elements)\n", j, v.len()));
+                    interp.append_output(&format!("  action_vector[{}] = Vector({} elements)\n", j, v.len()));
                 },
                 ValueType::Number(frac) => {
-                    interp.append_output(&format!("DEBUG: action_vector[{}] = Number({}/{})\n", j, frac.numerator, frac.denominator));
+                    interp.append_output(&format!("  action_vector[{}] = Number({}/{})\n", j, frac.numerator, frac.denominator));
                 },
                 ValueType::Boolean(b) => {
-                    interp.append_output(&format!("DEBUG: action_vector[{}] = Boolean({})\n", j, b));
+                    interp.append_output(&format!("  action_vector[{}] = Boolean({})\n", j, b));
                 },
                 ValueType::String(s) => {
-                    interp.append_output(&format!("DEBUG: action_vector[{}] = String('{}')\n", j, s));
+                    interp.append_output(&format!("  action_vector[{}] = String('{}')\n", j, s));
                 },
                 ValueType::Nil => {
-                    interp.append_output(&format!("DEBUG: action_vector[{}] = Nil\n", j));
+                    interp.append_output(&format!("  action_vector[{}] = Nil\n", j));
                 },
             }
         }
         
         match parse_conditional_action_vector_with_debug(action_vector.clone(), interp) {
             Ok(parsed_line) => {
+                interp.append_output("Successfully parsed conditional line\n");
                 conditional_actions.push(parsed_line);
             },
             Err(e) => {
+                interp.append_output(&format!("ERROR parsing conditional line: {}\n", e));
                 return Err(e);
             }
         }
     }
     
+    interp.append_output(&format!("Successfully parsed {} conditional actions\n", conditional_actions.len()));
+    
     // REPEAT実行ループ
     for iteration in 0..repeat_count {
-        interp.append_output(&format!("DEBUG: REPEAT iteration {}\n", iteration));
+        interp.append_output(&format!("=== REPEAT iteration {} ===\n", iteration));
         let mut executed = false;
         
         // 各条件を順番にチェック
-        for (condition_values, action_values) in &conditional_actions {
-            // 条件を評価
-            let condition_result = evaluate_condition_values(interp, condition_values)?;
-            interp.append_output(&format!("DEBUG: Condition result: {:?}\n", condition_result));
+        for (cond_idx, (condition_values, action_values)) in conditional_actions.iter().enumerate() {
+            interp.append_output(&format!("Checking condition {} with {} values\n", cond_idx, condition_values.len()));
             
-            if is_truthy(&condition_result) {
-                // 条件が真の場合、アクションを実行
-                let action_tokens = values_to_tokens(action_values)?;
-                execute_action_tokens(interp, &action_tokens)?;
-                executed = true;
-                break; // 最初にマッチした条件のみ実行
+            // 条件を評価
+            match evaluate_condition_values(interp, condition_values) {
+                Ok(condition_result) => {
+                    interp.append_output(&format!("Condition result: {:?}\n", condition_result));
+                    
+                    if is_truthy(&condition_result) {
+                        interp.append_output("Condition is true, executing action\n");
+                        // 条件が真の場合、アクションを実行
+                        match values_to_tokens(action_values) {
+                            Ok(action_tokens) => {
+                                match execute_action_tokens(interp, &action_tokens) {
+                                    Ok(()) => {
+                                        interp.append_output("Action executed successfully\n");
+                                        executed = true;
+                                        break; // 最初にマッチした条件のみ実行
+                                    },
+                                    Err(e) => {
+                                        interp.append_output(&format!("ERROR executing action: {}\n", e));
+                                        return Err(e);
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                interp.append_output(&format!("ERROR converting action to tokens: {}\n", e));
+                                return Err(e);
+                            }
+                        }
+                    } else {
+                        interp.append_output("Condition is false, continuing\n");
+                    }
+                },
+                Err(e) => {
+                    interp.append_output(&format!("ERROR evaluating condition: {}\n", e));
+                    return Err(e);
+                }
             }
         }
         
         if !executed {
+            interp.append_output("No conditions matched, executing default action\n");
             // どの条件も満たさない場合、デフォルト行を実行
-            let default_tokens = values_to_tokens(&default_action)?;
-            execute_action_tokens(interp, &default_tokens)?;
-            break; // デフォルト行実行後は終了
+            match values_to_tokens(&default_action) {
+                Ok(default_tokens) => {
+                    match execute_action_tokens(interp, &default_tokens) {
+                        Ok(()) => {
+                            interp.append_output("Default action executed, breaking\n");
+                            break; // デフォルト行実行後は終了
+                        },
+                        Err(e) => {
+                            interp.append_output(&format!("ERROR executing default action: {}\n", e));
+                            return Err(e);
+                        }
+                    }
+                },
+                Err(e) => {
+                    interp.append_output(&format!("ERROR converting default action to tokens: {}\n", e));
+                    return Err(e);
+                }
+            }
         }
     }
     
+    interp.append_output("=== EXECUTE_REPEAT END ===\n");
     Ok(())
 }
 
