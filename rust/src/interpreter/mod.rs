@@ -805,10 +805,27 @@ if i < tokens.len() {
             "IF_SELECT" => control::op_if_select(self),
             
             // REPEAT制御
-            "EXECUTE_REPEAT" => {
+            // REPEAT制御
+"EXECUTE_REPEAT" => {
     self.append_output("*** BUILTIN EXECUTE_REPEAT CALLED ***\n");
     self.append_output(&format!("*** Workspace size before: {} ***\n", self.workspace.len()));
-    let result = control::op_execute_repeat(self);
+    
+    // ワークスペースの中身を詳細表示
+    for (i, item) in self.workspace.iter().enumerate() {
+        self.append_output(&format!("*** workspace[{}]: {:?} ***\n", i, item));
+    }
+    
+    let result = match control::op_execute_repeat(self) {
+        Ok(()) => {
+            self.append_output("*** EXECUTE_REPEAT SUCCESS ***\n");
+            Ok(())
+        },
+        Err(e) => {
+            self.append_output(&format!("*** EXECUTE_REPEAT ERROR: {} ***\n", e));
+            Err(e)
+        }
+    };
+    
     self.append_output(&format!("*** EXECUTE_REPEAT result: {:?} ***\n", result));
     result
 },
