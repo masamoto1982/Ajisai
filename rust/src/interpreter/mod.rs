@@ -388,6 +388,7 @@ impl Interpreter {
 
     // 従来の分岐処理（新規追加）
     fn create_traditional_conditional_tokens(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
+    self.append_output("*** create_traditional_conditional_tokens CALLED ***\n");
     if lines.is_empty() {
         return Err(error::AjisaiError::from("No lines found"));
     }
