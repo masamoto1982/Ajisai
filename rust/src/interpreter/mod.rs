@@ -796,7 +796,13 @@ impl Interpreter {
             "IF_SELECT" => control::op_if_select(self),
             
             // REPEAT制御
-            "EXECUTE_REPEAT" => control::op_execute_repeat(self),
+            "EXECUTE_REPEAT" => {
+    self.append_output("*** BUILTIN EXECUTE_REPEAT CALLED ***\n");
+    self.append_output(&format!("*** Workspace size before: {} ***\n", self.workspace.len()));
+    let result = control::op_execute_repeat(self);
+    self.append_output(&format!("*** EXECUTE_REPEAT result: {:?} ***\n", result));
+    result
+},
             "SIMPLE_REPEAT" => {
                 // 簡単な反復実行
                 if self.workspace.len() < 2 {
