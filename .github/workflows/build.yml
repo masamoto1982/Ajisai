@@ -1,4 +1,4 @@
-name: Build and Deploy Ajisa
+name: Build and Deploy Ajisai
 
 on:
   push:
