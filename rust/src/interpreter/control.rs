@@ -43,7 +43,7 @@ fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Conditional
             // 条件付き行: [ condition : action ]
             result.push(Token::VectorStart(BracketType::Square));
             result.extend(condition.iter().cloned());
-            result.push(Token::Colon);  // ← この行を追加
+            result.push(Token::Colon);
             result.extend(line.action.iter().cloned());
             result.push(Token::VectorEnd(BracketType::Square));
         } else {
@@ -54,9 +54,11 @@ fn build_repeat_execution_tokens(repeat_count: Option<i64>, lines: &[Conditional
         }
     }
     
-    // 回数制限を最後に追加（スタックトップに来るように）
+    // 回数制限をVector形式でラップして追加
     let count = repeat_count.unwrap_or(1);
+    result.push(Token::VectorStart(BracketType::Square));  // ← 追加
     result.push(Token::Number(count, 1));
+    result.push(Token::VectorEnd(BracketType::Square));    // ← 追加
     
     // REPEAT実行ワードを追加
     result.push(Token::Symbol("EXECUTE_REPEAT".to_string()));
