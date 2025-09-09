@@ -256,6 +256,7 @@ fn value_to_token(value: Value) -> Result<Token> {
         ValueType::Symbol(s) => Ok(Token::Symbol(s)),
         ValueType::Nil => Ok(Token::Nil),
         ValueType::Vector(_, _) => {
+            // この部分でエラーが発生している
             Err(AjisaiError::from("Cannot convert vector to token directly"))
         },
     }
