@@ -805,14 +805,17 @@ if i < tokens.len() {
             "IF_SELECT" => control::op_if_select(self),
             
             // REPEAT制御
-            // REPEAT制御
 "EXECUTE_REPEAT" => {
     self.append_output("*** BUILTIN EXECUTE_REPEAT CALLED ***\n");
     self.append_output(&format!("*** Workspace size before: {} ***\n", self.workspace.len()));
     
-    // ワークスペースの中身を詳細表示
-    for (i, item) in self.workspace.iter().enumerate() {
-        self.append_output(&format!("*** workspace[{}]: {:?} ***\n", i, item));
+    // ワークスペースの中身を詳細表示（borrow checker対応）
+    let workspace_debug: Vec<String> = self.workspace.iter().enumerate()
+        .map(|(i, item)| format!("*** workspace[{}]: {:?} ***", i, item))
+        .collect();
+    
+    for debug_line in workspace_debug {
+        self.append_output(&format!("{}\n", debug_line));
     }
     
     let result = match control::op_execute_repeat(self) {
