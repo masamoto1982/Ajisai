@@ -1,7 +1,7 @@
 // rust/src/interpreter/control.rs (暗黙のGOTO削除版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Token, Value, BracketType};
+use crate::types::{ValueType, Token, Value};
 use std::collections::HashSet;
 
 // IF_SELECT - 条件に基づいてアクションを選択実行
@@ -220,6 +220,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         is_builtin: false,
         description: final_description,
         category: None,
+        repeat_count: 1,
     });
 
     if let Some(desc) = &description_clone {
