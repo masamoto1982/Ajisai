@@ -24,7 +24,7 @@ pub struct WordDefinition {
     pub is_builtin: bool,
     pub description: Option<String>,
     pub category: Option<String>,
-    pub repeat_count: i64, // Add this field for implicit GOTO
+    pub repeat_count: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -189,8 +189,7 @@ impl Interpreter {
     fn try_process_def_pattern_from_code(&mut self, code: &str, tokens: &[Token]) -> Option<(Result<()>, String)> {
         self.append_output("*** TRY_PROCESS_DEF_PATTERN_FROM_CODE ***\n");
         
-        // 最初のDEFの位置を探す
-        let def_position = tokens.iter().position(|t| {
+        let def_position = tokens.iter().rposition(|t| {
             if let Token::Symbol(s) = t {
                 s == "DEF"
             } else {
@@ -200,20 +199,18 @@ impl Interpreter {
         
         self.append_output(&format!("*** DEF found at position: {} ***\n", def_position));
         
-        // DEF前に文字列（ワード名）があるかチェック
         if def_position >= 1 {
             if let Token::String(name) = &tokens[def_position - 1] {
                 self.append_output(&format!("*** DEF word name: {} ***\n", name));
                 
                 let mut body_tokens = &tokens[..def_position - 1];
                 
-                // Check for REPEAT pattern
                 let mut repeat_count = 1;
                 if body_tokens.len() >= 2 {
                     if let (Token::Number(num, 1), Token::Symbol(s)) = (&body_tokens[0], &body_tokens[1]) {
                         if s == "REPEAT" {
                             repeat_count = *num;
-                            body_tokens = &body_tokens[2..]; // Consume REPEAT tokens
+                            body_tokens = &body_tokens[2..];
                         }
                     }
                 }
@@ -224,22 +221,9 @@ impl Interpreter {
                 
                 self.append_output(&format!("*** DEF body tokens: {:?} ***\n", body_tokens));
                 
-                // 複数行定義の解析
                 let multiline_def = self.parse_multiline_definition(body_tokens);
                 
-                let remaining_code = if let Some(def_pos_in_code) = code.find("DEF") {
-                    let after_first_def = &code[def_pos_in_code + 3..];
-                    let lines: Vec<&str> = after_first_def.lines().collect();
-                    if lines.len() > 1 {
-                        lines[1..].join("\n").trim().to_string()
-                    } else {
-                        after_first_def.trim().to_string()
-                    }
-                } else {
-                    String::new()
-                };
-                
-                self.append_output(&format!("*** Remaining code extracted: '{}' ***\n", remaining_code));
+                let remaining_code = "".to_string(); // In this model, DEF consumes all code.
                 
                 let def_result = self.define_word_from_multiline(
                     name.clone(),
@@ -262,43 +246,27 @@ impl Interpreter {
         let mut current_line = Vec::new();
         let mut has_conditionals = false;
         
-        self.append_output(&format!("*** parse_multiline_definition input tokens: {:?} ***\n", tokens));
-        
-        let mut i = 0;
-        
-        // 残りのトークンを行単位で処理
-        while i < tokens.len() {
-            self.append_output(&format!("*** Processing token[{}]: {:?} ***\n", i, tokens[i]));
-            match &tokens[i] {
+        for token in tokens {
+            match token {
                 Token::LineBreak => {
                     if !current_line.is_empty() {
-                        self.append_output(&format!("*** Adding line: {:?} ***\n", current_line));
                         lines.push(current_line.clone());
                         current_line.clear();
                     }
                 },
-                Token::FunctionComment(_) => {
-                    // コメントはスキップ
-                },
+                Token::FunctionComment(_) => {},
                 _ => {
-                    if let Token::Colon = &tokens[i] {
+                    if let Token::Colon = token {
                         has_conditionals = true;
-                        self.append_output("*** Found colon - has_conditionals = true ***\n");
                     }
-                    current_line.push(tokens[i].clone());
+                    current_line.push(token.clone());
                 }
             }
-            i += 1;
         }
         
-        // 最後の行を追加
         if !current_line.is_empty() {
-            self.append_output(&format!("*** Adding final line: {:?} ***\n", current_line));
             lines.push(current_line);
         }
-        
-        self.append_output(&format!("*** Parsed multiline definition - lines: {:?}, has_conditionals: {} ***\n", 
-            lines, has_conditionals));
         
         MultiLineDefinition {
             lines,
@@ -309,17 +277,18 @@ impl Interpreter {
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition, repeat_count: i64) -> Result<()> {
         let name = name.to_uppercase();
         
-        self.append_output(&format!("*** DEFINE_WORD_FROM_MULTILINE - name: {}, has_conditionals: {}, lines: {:?} ***\n", 
-            name, multiline_def.has_conditionals, multiline_def.lines));
-        
-        // 既存のワードチェック
+        let executable_tokens = if multiline_def.has_conditionals {
+            self.create_conditional_tokens(&multiline_def.lines)?
+        } else {
+            multiline_def.lines.into_iter().flatten().collect()
+        };
+
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
             }
         }
 
-        // 依存関係チェック
         if self.dictionary.contains_key(&name) {
             if let Some(dependents) = self.dependencies.get(&name) {
                 if !dependents.is_empty() {
@@ -328,43 +297,6 @@ impl Interpreter {
                         name: name.clone(), 
                         dependents: dependent_list 
                     });
-                }
-            }
-        }
-
-        // 処理方式の判定と実行
-        let executable_tokens = if multiline_def.has_conditionals {
-            // 条件分岐あり → IF_SELECT構造を構築
-            self.append_output("*** USING CONDITIONAL PROCESSING ***\n");
-            self.create_conditional_tokens(&multiline_def.lines)?
-        } else if multiline_def.lines.len() == 1 {
-            // 単一行 → Vector括弧を取り除く
-            self.append_output("*** USING SINGLE LINE PROCESSING ***\n");
-            self.extract_vector_content_if_needed(&multiline_def.lines[0])?
-        } else {
-            // 複数行 + 条件なし → 順次実行
-            self.append_output("*** USING SEQUENTIAL PROCESSING ***\n");
-            self.create_sequential_execution_tokens(&multiline_def.lines)
-        };
-
-        self.append_output(&format!("*** GENERATED EXECUTABLE TOKENS: {:?} ***\n", executable_tokens));
-
-        // 古い依存関係をクリア
-        if let Some(old_deps) = self.get_word_dependencies(&name) {
-            for dep in old_deps {
-                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
-                    reverse_deps.remove(&name);
-                }
-            }
-        }
-
-        // 新しい依存関係を登録
-        for token in &executable_tokens {
-            if let Token::Symbol(sym) = token {
-                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                    self.dependencies.entry(sym.clone())
-                        .or_insert_with(HashSet::new)
-                        .insert(name.clone());
                 }
             }
         }
@@ -381,265 +313,105 @@ impl Interpreter {
         Ok(())
     }
 
-    // 条件分岐処理
     fn create_conditional_tokens(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-        self.append_output("*** CREATE_CONDITIONAL_TOKENS ***\n");
-        
-        if lines.is_empty() {
-            return Err(error::AjisaiError::from("No lines found"));
-        }
-
-        // デフォルト行（条件なし行）の存在チェック
-        let has_default = lines.iter().any(|line| {
-            !line.iter().any(|token| matches!(token, Token::Colon))
-        });
-        
-        if !has_default {
-            return Err(error::AjisaiError::from("Default line (line without condition) is required for safety"));
-        }
-
-        // IF_SELECT構造を構築
-        self.build_conditional_structure(lines)
-    }
-
-    fn build_conditional_structure(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-        self.append_output("*** BUILD_CONDITIONAL_STRUCTURE ***\n");
-        
         let mut conditional_lines = Vec::new();
-        let mut default_line = None;
+        let mut default_line: Option<Vec<Token>> = None;
 
-        // 条件行とデフォルト行を分離
         for line in lines {
             if let Some(colon_pos) = line.iter().position(|t| matches!(t, Token::Colon)) {
-                // 条件行
-                let condition = &line[..colon_pos];
-                let action = &line[colon_pos + 1..];
-                
-                conditional_lines.push((condition.to_vec(), action.to_vec()));
+                conditional_lines.push((line[..colon_pos].to_vec(), line[colon_pos + 1..].to_vec()));
             } else {
-                // デフォルト行
+                if default_line.is_some() {
+                    return Err(error::AjisaiError::from("Multiple default lines found"));
+                }
                 default_line = Some(line.clone());
             }
         }
 
-        if conditional_lines.is_empty() {
-            // 条件行がない場合は、デフォルト行のみ実行
-            if let Some(default) = default_line {
-                return Ok(default);
-            } else {
-                return Ok(Vec::new());
-            }
+        if let Some(default_action) = default_line {
+            Ok(self.build_nested_if_select(&conditional_lines, &default_action))
+        } else {
+            Err(error::AjisaiError::from("A default line is mandatory in a conditional definition"))
         }
-
-        // ネストしたIF_SELECT構造を構築
-        Ok(self.build_nested_if_select(&conditional_lines, &default_line.unwrap_or_default()))
     }
 
     fn build_nested_if_select(&mut self, conditional_lines: &[(Vec<Token>, Vec<Token>)], default_action: &[Token]) -> Vec<Token> {
-        self.append_output("*** BUILD_NESTED_IF_SELECT ***\n");
-        
         if conditional_lines.is_empty() {
             return default_action.to_vec();
         }
 
-        if conditional_lines.len() == 1 {
-            let (condition, action) = &conditional_lines[0];
-            let mut result = Vec::new();
-            
-            // 条件
-            result.extend(condition.iter().cloned());
-            
-            // 真の場合のアクション
-            result.push(Token::VectorStart(BracketType::Square));
-            result.extend(action.iter().cloned());
-            result.push(Token::VectorEnd(BracketType::Square));
-            
-            // 偽の場合のアクション（デフォルト）
-            result.push(Token::VectorStart(BracketType::Square));
-            result.extend(default_action.iter().cloned());
-            result.push(Token::VectorEnd(BracketType::Square));
-            
-            result.push(Token::Symbol("IF_SELECT".to_string()));
-            
-            return result;
-        }
-
-        // 複数の条件行がある場合、再帰的にネスト
-        let (first_condition, first_action) = &conditional_lines[0];
+        let (condition, action) = &conditional_lines[0];
         let remaining_lines = &conditional_lines[1..];
         
+        let false_branch_action = self.build_nested_if_select(remaining_lines, default_action);
+        
         let mut result = Vec::new();
+        result.extend(condition.iter().cloned());
         
-        // 最初の条件
-        result.extend(first_condition.iter().cloned());
-        
-        // 真の場合のアクション
         result.push(Token::VectorStart(BracketType::Square));
-        result.extend(first_action.iter().cloned());
+        result.extend(action.iter().cloned());
         result.push(Token::VectorEnd(BracketType::Square));
         
-        // 偽の場合のアクション（残りの条件を再帰処理）
         result.push(Token::VectorStart(BracketType::Square));
-        let nested = self.build_nested_if_select(remaining_lines, default_action);
-        result.extend(nested);
+        result.extend(false_branch_action);
         result.push(Token::VectorEnd(BracketType::Square));
         
         result.push(Token::Symbol("IF_SELECT".to_string()));
-        
-        result
-    }
-
-    fn extract_vector_content_if_needed(&mut self, tokens: &[Token]) -> Result<Vec<Token>> {
-        self.append_output("*** EXTRACT_VECTOR_CONTENT_IF_NEEDED ***\n");
-        
-        if tokens.len() >= 2 {
-            if let (Token::VectorStart(_), Token::VectorEnd(_)) = (&tokens[0], &tokens[tokens.len() - 1]) {
-                return Ok(tokens[1..tokens.len() - 1].to_vec());
-            }
-        }
-        
-        Ok(tokens.to_vec())
-    }
-
-    fn create_sequential_execution_tokens(&mut self, lines: &[Vec<Token>]) -> Vec<Token> {
-        self.append_output("*** CREATE_SEQUENTIAL_EXECUTION_TOKENS ***\n");
-        
-        let mut result = Vec::new();
-        
-        for line in lines.iter() {
-            result.extend(line.iter().cloned());
-        }
-        
         result
     }
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        self.append_output(&format!("*** EXECUTE_TOKENS called with {} tokens: {:?} ***\n", tokens.len(), tokens));
-        
         let mut i = 0;
         while i < tokens.len() {
-            self.append_output(&format!("*** Processing token #{}: {:?} ***\n", i, tokens[i]));
-            
             match &tokens[i] {
                 Token::Number(num, den) => {
-                    let wrapped_value = Value {
-                        val_type: ValueType::Vector(
-                            vec![Value {
-                                val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-                            }],
-                            BracketType::Square
-                        )
-                    };
-                    self.workspace.push(wrapped_value);
-                    self.append_output(&format!("*** Pushed wrapped number [{}], workspace size: {} ***\n", 
-                        if *den == 1 { num.to_string() } else { format!("{}/{}", num, den) }, 
-                        self.workspace.len()));
+                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(crate::types::Fraction::new(*num, *den))}], BracketType::Square)});
                     i += 1;
                 },
                 Token::String(s) => {
-                    let wrapped_value = Value {
-                        val_type: ValueType::Vector(
-                            vec![Value {
-                                val_type: ValueType::String(s.clone()),
-                            }],
-                            BracketType::Square
-                        )
-                    };
-                    self.workspace.push(wrapped_value);
-                    self.append_output(&format!("*** Pushed wrapped string ['{}'], workspace size: {} ***\n", s, self.workspace.len()));
+                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
                     i += 1;
                 },
                 Token::Boolean(b) => {
-                    let wrapped_value = Value {
-                        val_type: ValueType::Vector(
-                            vec![Value {
-                                val_type: ValueType::Boolean(*b),
-                            }],
-                            BracketType::Square
-                        )
-                    };
-                    self.workspace.push(wrapped_value);
+                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)});
                     i += 1;
                 },
                 Token::Nil => {
-                    let wrapped_value = Value {
-                        val_type: ValueType::Vector(
-                            vec![Value {
-                                val_type: ValueType::Nil,
-                            }],
-                            BracketType::Square
-                        )
-                    };
-                    self.workspace.push(wrapped_value);
-                    i += 1;
-                },
-                Token::FunctionComment(_) => {
-                    i += 1;
-                },
-                Token::Colon => {
-                    i += 1;
-                },
-                Token::LineBreak => {
+                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)});
                     i += 1;
                 },
                 Token::VectorStart(bracket_type) => {
-                    self.append_output(&format!("*** Processing vector start, workspace size before: {} ***\n", self.workspace.len()));
                     let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
-                    self.workspace.push(Value {
-                        val_type: ValueType::Vector(vector_values, bracket_type.clone()),
-                    });
-                    self.append_output(&format!("*** Pushed vector, workspace size after: {} ***\n", self.workspace.len()));
+                    self.workspace.push(Value { val_type: ValueType::Vector(vector_values, bracket_type.clone())});
                     i += consumed;
                 },
                 Token::Symbol(name) => {
-                    self.append_output(&format!("*** Executing word '{}', workspace size before: {} ***\n", name, self.workspace.len()));
-                    
-                    match self.execute_word(name) {
-                        Ok(_) => {
-                            self.append_output(&format!("*** Successfully executed '{}', workspace size after: {} ***\n", name, self.workspace.len()));
-                        },
-                        Err(e) => {
-                            self.append_output(&format!("*** Error executing '{}': {} ***\n", name, e));
-                            return Err(e);
-                        }
-                    }
+                    self.execute_word(name)?;
                     i += 1;
                 },
-                Token::VectorEnd(_) => {
-                    return Err(error::AjisaiError::from("Unexpected vector end"));
-                },
+                Token::VectorEnd(_) => return Err(error::AjisaiError::from("Unexpected vector end")),
+                _ => { i += 1; }
             }
         }
-        
-        self.append_output(&format!("*** execute_tokens completed, final workspace size: {} ***\n", self.workspace.len()));
         Ok(())
     }
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
-        let mut i = start + 1; // VectorStart の次から
+        let mut i = start + 1;
         
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart(inner_bracket_type) => {
                     let (nested_values, consumed) = self.collect_vector(tokens, i, inner_bracket_type.clone())?;
-                    values.push(Value {
-                        val_type: ValueType::Vector(nested_values, inner_bracket_type.clone()),
-                    });
+                    values.push(Value { val_type: ValueType::Vector(nested_values, inner_bracket_type.clone())});
                     i += consumed;
                 },
                 Token::VectorEnd(end_bracket_type) => {
                     if *end_bracket_type != expected_bracket_type {
-                        return Err(error::AjisaiError::from(format!(
-                            "Mismatched bracket types: expected {}, found {}",
-                            expected_bracket_type.closing_char(),
-                            end_bracket_type.closing_char()
-                        )));
+                        return Err(error::AjisaiError::from(format!("Mismatched bracket types")));
                     }
                     return Ok((values, i - start + 1));
-                },
-                Token::FunctionComment(_) => {
-                    i += 1;
                 },
                 token => {
                     values.push(self.token_to_value(token)?);
@@ -653,67 +425,43 @@ impl Interpreter {
 
     fn token_to_value(&self, token: &Token) -> Result<Value> {
         match token {
-            Token::Number(num, den) => Ok(Value {
-                val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)),
-            }),
-            Token::String(s) => Ok(Value {
-                val_type: ValueType::String(s.clone()),
-            }),
-            Token::Boolean(b) => Ok(Value {
-                val_type: ValueType::Boolean(*b),
-            }),
-            Token::Nil => Ok(Value {
-                val_type: ValueType::Nil,
-            }),
-            Token::Symbol(s) => Ok(Value {
-                val_type: ValueType::Symbol(s.clone()),
-            }),
-            Token::Colon => Ok(Value {
-                val_type: ValueType::Symbol(":".to_string()),
-            }),
-            Token::LineBreak => {
-                Err(error::AjisaiError::from("Cannot convert line break to value"))
-            },
-            Token::FunctionComment(_) => {
-                Err(error::AjisaiError::from("Cannot convert comment to value"))
-            },
+            Token::Number(num, den) => Ok(Value { val_type: ValueType::Number(crate::types::Fraction::new(*num, *den)) }),
+            Token::String(s) => Ok(Value { val_type: ValueType::String(s.clone()) }),
+            Token::Boolean(b) => Ok(Value { val_type: ValueType::Boolean(*b) }),
+            Token::Nil => Ok(Value { val_type: ValueType::Nil }),
+            Token::Symbol(s) => Ok(Value { val_type: ValueType::Symbol(s.clone()) }),
             _ => Err(error::AjisaiError::from("Cannot convert token to value")),
         }
     }
 
     pub(crate) fn get_word_dependencies(&self, word_name: &str) -> Option<Vec<String>> {
-        if let Some(def) = self.dictionary.get(word_name) {
-            let mut deps = Vec::new();
-            for token in &def.tokens {
+        self.dictionary.get(word_name).map(|def| {
+            def.tokens.iter().filter_map(|token| {
                 if let Token::Symbol(sym) = token {
                     if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
-                        deps.push(sym.clone());
+                        Some(sym.clone())
+                    } else {
+                        None
                     }
+                } else {
+                    None
                 }
-            }
-            Some(deps)
-        } else {
-            None
-        }
+            }).collect()
+        })
     }
 
     pub(crate) fn is_builtin_word(&self, name: &str) -> bool {
-        self.dictionary.get(name)
-            .map(|def| def.is_builtin)
-            .unwrap_or(false)
+        self.dictionary.get(name).map(|def| def.is_builtin).unwrap_or(false)
     }
 
     fn execute_word(&mut self, name: &str) -> Result<()> {
-        self.append_output(&format!("*** EXECUTE_WORD: {} ***\n", name));
-        
         if let Some(def) = self.dictionary.get(name).cloned() {
             if def.is_builtin {
                 self.execute_builtin(name)
             } else {
                 self.call_stack.push(name.to_string());
-                for i in 0..def.repeat_count {
-                    self.append_output(&format!("*** Implicit GOTO iteration {}/{} for word: {} ***\n", i + 1, def.repeat_count, name));
-                    if let Err(e) = self.execute_custom_word_immediate(&def.tokens) {
+                for _ in 0..def.repeat_count {
+                    if let Err(e) = self.execute_tokens(&def.tokens) {
                         self.call_stack.pop();
                         return Err(e.with_context(&self.call_stack));
                     }
@@ -726,69 +474,39 @@ impl Interpreter {
         }
     }
 
-    fn execute_custom_word_immediate(&mut self, tokens: &[Token]) -> Result<()> {
-        self.append_output("*** EXECUTE_CUSTOM_WORD_IMMEDIATE ***\n");
-        self.execute_tokens(tokens)
-    }
-
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        self.append_output(&format!("*** EXECUTE_BUILTIN: {} ***\n", name));
-        
         match name {
-            // 位置指定操作
             "GET" => vector_ops::op_get(self),
             "INSERT" => vector_ops::op_insert(self),
             "REPLACE" => vector_ops::op_replace(self),
             "REMOVE" => vector_ops::op_remove(self),
-            
-            // 量指定操作
             "LENGTH" => vector_ops::op_length(self),
             "TAKE" => vector_ops::op_take(self),
             "DROP" => vector_ops::op_drop_vector(self),
             "REPEAT" => vector_ops::op_repeat(self),
             "SPLIT" => vector_ops::op_split(self),
-            
-            // ワークスペース操作
             "DUP" => vector_ops::op_dup_workspace(self),
             "SWAP" => vector_ops::op_swap_workspace(self),
             "ROT" => vector_ops::op_rot_workspace(self),
-            
-            // Vector構造操作
             "CONCAT" => vector_ops::op_concat(self),
             "REVERSE" => vector_ops::op_reverse(self),
-            
-            // 算術演算
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),
             "/" => arithmetic::op_div(self),
-            
-            // 比較演算
             "=" => arithmetic::op_eq(self),
             "<" => arithmetic::op_lt(self),
             "<=" => arithmetic::op_le(self),
             ">" => arithmetic::op_gt(self),
             ">=" => arithmetic::op_ge(self),
-            
-            // 論理演算
             "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self),
             "NOT" => arithmetic::op_not(self),
-            
-            // 入出力
             "PRINT" => io::op_print(self),
-            
-            // ワード管理・システム
             "DEF" => control::op_def(self),
             "DEL" => control::op_del(self),
-            "RESET" => {
-                self.execute_reset()?;
-                Ok(())
-            },
-            
-            // 条件分岐制御
+            "RESET" => self.execute_reset(),
             "IF_SELECT" => control::op_if_select(self),
-            
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
     }
@@ -823,9 +541,7 @@ impl Interpreter {
         self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| {
-                let protected = self.dependencies.get(name)
-                    .map(|deps| !deps.is_empty())
-                    .unwrap_or(false);
+                let protected = self.dependencies.get(name).map(|deps| !deps.is_empty()).unwrap_or(false);
                 (name.clone(), def.description.clone(), protected)
             })
             .collect()
@@ -849,40 +565,34 @@ impl Interpreter {
             is_builtin: false,
             description,
             category: None,
-            repeat_count: 1, // Default to 1 for restored words
+            repeat_count: 1,
         });
 
         Ok(())
     }
    
     pub fn get_word_definition(&self, name: &str) -> Option<String> {
-        if let Some(def) = self.dictionary.get(name) {
+        self.dictionary.get(name).and_then(|def| {
             if !def.is_builtin {
-                let body_string = def.tokens.iter()
-                    .filter_map(|token| {
-                        match token {
-                            Token::FunctionComment(_) => None,
-                            _ => Some(self.token_to_string(token))
-                        }
-                    })
-                    .collect::<Vec<String>>()
-                    .join(" ");
-                return Some(format!("[ {} ]", body_string));
+                let body = def.tokens.iter().map(|t| self.token_to_string(t)).collect::<Vec<_>>().join(" ");
+                Some(format!("[ {} ]", body))
+            } else {
+                None
             }
-        }
-        None
+        })
     }
 
     fn token_to_string(&self, token: &Token) -> String {
         match token {
-            Token::Number(n, d) => if *d == 1 { n.to_string() } else { format!("{}/{}", n, d) },
+            Token::Number(n, d) if *d == 1 => n.to_string(),
+            Token::Number(n, d) => format!("{}/{}", n, d),
             Token::String(s) => format!("'{}'", s),
             Token::Boolean(b) => b.to_string(),
             Token::Nil => "nil".to_string(),
             Token::Symbol(s) => s.clone(),
-            Token::VectorStart(bracket_type) => bracket_type.opening_char().to_string(),
-            Token::VectorEnd(bracket_type) => bracket_type.closing_char().to_string(),
-            Token::FunctionComment(comment) => format!("\"{}\"", comment),
+            Token::VectorStart(bt) => bt.opening_char().to_string(),
+            Token::VectorEnd(bt) => bt.closing_char().to_string(),
+            Token::FunctionComment(c) => format!("\"{}\"", c),
             Token::Colon => ":".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
