@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (全面デバッグ強化版)
+// rust/src/interpreter/mod.rs (暗黙のGOTO削除版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -30,7 +30,6 @@ pub struct WordDefinition {
 pub struct MultiLineDefinition {
     pub lines: Vec<Vec<Token>>,
     pub has_conditionals: bool,
-    pub repeat_count: Option<i64>,
 }
 
 impl Interpreter {
@@ -213,7 +212,7 @@ impl Interpreter {
                 
                 self.append_output(&format!("*** DEF body tokens: {:?} ***\n", body_tokens));
                 
-                // 複数行定義の解析（REPEAT対応）
+                // 複数行定義の解析
                 let multiline_def = self.parse_multiline_definition(body_tokens);
                 
                 let remaining_code = if let Some(def_pos_in_code) = code.find("DEF") {
@@ -249,38 +248,10 @@ impl Interpreter {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
         let mut has_conditionals = false;
-        let mut repeat_count = None;
-        
-        let mut i = 0;
         
         self.append_output(&format!("*** parse_multiline_definition input tokens: {:?} ***\n", tokens));
         
-        // 最初に REPEAT 回数指定をチェック（修正版）
-        if i < tokens.len() {
-            self.append_output(&format!("*** Checking token[{}]: {:?} ***\n", i, tokens[i]));
-            if let Token::Number(count, 1) = &tokens[i] {
-                if i + 1 < tokens.len() {
-                    self.append_output(&format!("*** Checking token[{}]: {:?} ***\n", i + 1, tokens[i + 1]));
-                    if let Token::Symbol(word) = &tokens[i + 1] {
-                        if word == "REPEAT" {
-                            repeat_count = Some(*count);
-                            i += 2; // 数値とREPEATをスキップ
-                            self.append_output(&format!("*** Found REPEAT with count: {} ***\n", count));
-                        } else {
-                            self.append_output(&format!("*** Expected REPEAT, found: {} ***\n", word));
-                        }
-                    } else {
-                        self.append_output("*** Token after number is not a symbol ***\n");
-                    }
-                } else {
-                    self.append_output("*** No token after number ***\n");
-                }
-            } else {
-                self.append_output("*** First token is not a number ***\n");
-            }
-        }
-        
-        self.append_output(&format!("*** Starting token parsing from index {} ***\n", i));
+        let mut i = 0;
         
         // 残りのトークンを行単位で処理
         while i < tokens.len() {
@@ -313,21 +284,20 @@ impl Interpreter {
             lines.push(current_line);
         }
         
-        self.append_output(&format!("*** Parsed multiline definition - lines: {:?}, has_conditionals: {}, repeat_count: {:?} ***\n", 
-            lines, has_conditionals, repeat_count));
+        self.append_output(&format!("*** Parsed multiline definition - lines: {:?}, has_conditionals: {} ***\n", 
+            lines, has_conditionals));
         
         MultiLineDefinition {
             lines,
             has_conditionals,
-            repeat_count,
         }
     }
 
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
         let name = name.to_uppercase();
         
-        self.append_output(&format!("*** DEFINE_WORD_FROM_MULTILINE - name: {}, repeat_count: {:?}, has_conditionals: {}, lines: {:?} ***\n", 
-            name, multiline_def.repeat_count, multiline_def.has_conditionals, multiline_def.lines));
+        self.append_output(&format!("*** DEFINE_WORD_FROM_MULTILINE - name: {}, has_conditionals: {}, lines: {:?} ***\n", 
+            name, multiline_def.has_conditionals, multiline_def.lines));
         
         // 既存のワードチェック
         if let Some(existing) = self.dictionary.get(&name) {
@@ -349,32 +319,17 @@ impl Interpreter {
             }
         }
 
-        // 処理方式の判定と実行（デバッグ版）
-        let executable_tokens = if multiline_def.repeat_count.is_some() {
-            // 明示的なREPEAT指定がある場合
-            self.append_output("*** TAKING REPEAT PATH ***\n");
-            if multiline_def.lines.len() == 1 && !multiline_def.has_conditionals {
-                // 単一行 + REPEAT → 単純反復
-                self.append_output("*** USING SIMPLE REPEAT ***\n");
-                self.create_simple_repeat_tokens(multiline_def.repeat_count, &multiline_def.lines[0])
-            } else {
-                // 複数行 or 条件分岐 + REPEAT → 高度なREPEAT処理
-                self.append_output("*** USING COMPLEX REPEAT ***\n");
-                self.append_output("*** CALLING create_repeat_execution_tokens ***\n");
-                let result = control::create_repeat_execution_tokens(multiline_def.repeat_count, &multiline_def.lines);
-                self.append_output(&format!("*** create_repeat_execution_tokens result: {:?} ***\n", result));
-                result?
-            }
-        } else if multiline_def.has_conditionals {
-            // 条件分岐ありだがREPEAT指定なし → 従来の分岐処理
-            self.append_output("*** USING TRADITIONAL CONDITIONAL PROCESSING ***\n");
-            self.create_traditional_conditional_tokens(&multiline_def.lines)?
+        // 処理方式の判定と実行
+        let executable_tokens = if multiline_def.has_conditionals {
+            // 条件分岐あり → IF_SELECT構造を構築
+            self.append_output("*** USING CONDITIONAL PROCESSING ***\n");
+            self.create_conditional_tokens(&multiline_def.lines)?
         } else if multiline_def.lines.len() == 1 {
             // 単一行 → Vector括弧を取り除く
             self.append_output("*** USING SINGLE LINE PROCESSING ***\n");
             self.extract_vector_content_if_needed(&multiline_def.lines[0])?
         } else {
-            // 複数行 + REPEATなし + 条件なし → 順次実行
+            // 複数行 + 条件なし → 順次実行
             self.append_output("*** USING SEQUENTIAL PROCESSING ***\n");
             self.create_sequential_execution_tokens(&multiline_def.lines)
         };
@@ -412,9 +367,9 @@ impl Interpreter {
         Ok(())
     }
 
-    // 従来の分岐処理（新規追加）
-    fn create_traditional_conditional_tokens(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-        self.append_output("*** CREATE_TRADITIONAL_CONDITIONAL_TOKENS ***\n");
+    // 条件分岐処理
+    fn create_conditional_tokens(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
+        self.append_output("*** CREATE_CONDITIONAL_TOKENS ***\n");
         
         if lines.is_empty() {
             return Err(error::AjisaiError::from("No lines found"));
@@ -429,12 +384,12 @@ impl Interpreter {
             return Err(error::AjisaiError::from("Default line (line without condition) is required for safety"));
         }
 
-        // 従来の分岐処理：IF_SELECT構造を構築
-        self.build_traditional_conditional_structure(lines)
+        // IF_SELECT構造を構築
+        self.build_conditional_structure(lines)
     }
 
-    fn build_traditional_conditional_structure(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-        self.append_output("*** BUILD_TRADITIONAL_CONDITIONAL_STRUCTURE ***\n");
+    fn build_conditional_structure(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
+        self.append_output("*** BUILD_CONDITIONAL_STRUCTURE ***\n");
         
         let mut conditional_lines = Vec::new();
         let mut default_line = None;
@@ -516,30 +471,6 @@ impl Interpreter {
         result.push(Token::VectorEnd(BracketType::Square));
         
         result.push(Token::Symbol("IF_SELECT".to_string()));
-        
-        result
-    }
-
-    fn create_simple_repeat_tokens(&mut self, repeat_count: Option<i64>, line: &[Token]) -> Vec<Token> {
-        self.append_output(&format!("*** CREATE_SIMPLE_REPEAT_TOKENS - count: {:?}, line: {:?} ***\n", repeat_count, line));
-        
-        let mut result = Vec::new();
-        
-        // 回数指定をVector形式でラップ
-        let count = repeat_count.unwrap_or(1);
-        result.push(Token::VectorStart(BracketType::Square));
-        result.push(Token::Number(count, 1));
-        result.push(Token::VectorEnd(BracketType::Square));
-        
-        // アクション（Vectorでラップ）
-        result.push(Token::VectorStart(BracketType::Square));
-        result.extend(line.iter().cloned());
-        result.push(Token::VectorEnd(BracketType::Square));
-        
-        // 簡単な反復実行ワード
-        result.push(Token::Symbol("SIMPLE_REPEAT".to_string()));
-        
-        self.append_output(&format!("*** CREATE_SIMPLE_REPEAT_TOKENS result: {:?} ***\n", result));
         
         result
     }
@@ -838,106 +769,8 @@ impl Interpreter {
             // 条件分岐制御
             "IF_SELECT" => control::op_if_select(self),
             
-            // REPEAT制御
-            "EXECUTE_REPEAT" => {
-                self.append_output("*** BUILTIN EXECUTE_REPEAT CALLED ***\n");
-                self.append_output(&format!("*** Workspace size before: {} ***\n", self.workspace.len()));
-                
-                // ワークスペースの中身を詳細表示（borrow checker対応）
-                let workspace_debug: Vec<String> = self.workspace.iter().enumerate()
-                    .map(|(i, item)| format!("*** workspace[{}]: {:?} ***", i, item))
-                    .collect();
-                
-                for debug_line in workspace_debug {
-                    self.append_output(&format!("{}\n", debug_line));
-                }
-                
-                let result = match control::op_execute_repeat(self) {
-                    Ok(()) => {
-                        self.append_output("*** EXECUTE_REPEAT SUCCESS ***\n");
-                        Ok(())
-                    },
-                    Err(e) => {
-                        self.append_output(&format!("*** EXECUTE_REPEAT ERROR: {} ***\n", e));
-                        Err(e)
-                    }
-                };
-                
-                self.append_output(&format!("*** EXECUTE_REPEAT result: {:?} ***\n", result));
-                result
-            },
-            "SIMPLE_REPEAT" => {
-                self.append_output("*** BUILTIN SIMPLE_REPEAT CALLED ***\n");
-                
-                // 簡単な反復実行
-                if self.workspace.len() < 2 {
-                    return Err(error::AjisaiError::WorkspaceUnderflow);
-                }
-                
-                let action_val = self.workspace.pop().unwrap();
-                let count_val = self.workspace.pop().unwrap();
-                
-                let count = match count_val.val_type {
-                    ValueType::Vector(ref v, _) if v.len() == 1 => {
-                        match &v[0].val_type {
-                            ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                            _ => return Err(error::AjisaiError::type_error("integer count", "other type")),
-                        }
-                    },
-                    _ => return Err(error::AjisaiError::type_error("single-element vector with integer", "other type")),
-                };
-                
-                if count < 0 {
-                    return Err(error::AjisaiError::from("Repeat count must be non-negative"));
-                }
-                
-                match action_val.val_type {
-                    ValueType::Vector(action_tokens_values, _) => {
-                        // Vectorの内容をトークンに変換
-                        let tokens = self.vector_content_to_tokens(action_tokens_values)?;
-                        
-                        // 指定回数だけ実行
-                        for _i in 0..count {
-                            self.execute_tokens(&tokens)?;
-                        }
-                        Ok(())
-                    },
-                    _ => Err(error::AjisaiError::type_error("vector", "other type")),
-                }
-            },
-            
             _ => Err(error::AjisaiError::UnknownBuiltin(name.to_string())),
         }
-    }
-
-    fn vector_content_to_tokens(&self, values: Vec<Value>) -> Result<Vec<Token>> {
-        let mut tokens = Vec::new();
-        for value in values {
-            match value.val_type {
-                ValueType::Vector(inner_values, bracket_type) => {
-                    tokens.push(Token::VectorStart(bracket_type.clone()));
-                    let inner_tokens = self.vector_content_to_tokens(inner_values)?;
-                    tokens.extend(inner_tokens);
-                    tokens.push(Token::VectorEnd(bracket_type));
-                },
-                ValueType::Number(frac) => {
-                    tokens.push(Token::Number(frac.numerator, frac.denominator));
-                },
-                ValueType::String(s) => {
-                    tokens.push(Token::String(s));
-                },
-                ValueType::Boolean(b) => {
-                    tokens.push(Token::Boolean(b));
-                },
-                ValueType::Symbol(s) => {
-                    tokens.push(Token::Symbol(s));
-                },
-                ValueType::Nil => {
-                    tokens.push(Token::Nil);
-                },
-            }
-        }
-        Ok(tokens)
     }
 
     pub fn get_output(&mut self) -> String {
