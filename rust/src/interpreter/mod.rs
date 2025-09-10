@@ -24,6 +24,7 @@ pub struct WordDefinition {
     pub is_builtin: bool,
     pub description: Option<String>,
     pub category: Option<String>,
+    pub repeat_count: i64, // Add this field for implicit GOTO
 }
 
 #[derive(Debug, Clone)]
@@ -204,8 +205,19 @@ impl Interpreter {
             if let Token::String(name) = &tokens[def_position - 1] {
                 self.append_output(&format!("*** DEF word name: {} ***\n", name));
                 
-                let body_tokens = &tokens[..def_position - 1];
+                let mut body_tokens = &tokens[..def_position - 1];
                 
+                // Check for REPEAT pattern
+                let mut repeat_count = 1;
+                if body_tokens.len() >= 2 {
+                    if let (Token::Number(num, 1), Token::Symbol(s)) = (&body_tokens[0], &body_tokens[1]) {
+                        if s == "REPEAT" {
+                            repeat_count = *num;
+                            body_tokens = &body_tokens[2..]; // Consume REPEAT tokens
+                        }
+                    }
+                }
+
                 if body_tokens.is_empty() {
                     return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
                 }
@@ -231,7 +243,8 @@ impl Interpreter {
                 
                 let def_result = self.define_word_from_multiline(
                     name.clone(),
-                    multiline_def
+                    multiline_def,
+                    repeat_count,
                 );
                 
                 return Some((def_result, remaining_code));
@@ -293,7 +306,7 @@ impl Interpreter {
         }
     }
 
-    fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition) -> Result<()> {
+    fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition, repeat_count: i64) -> Result<()> {
         let name = name.to_uppercase();
         
         self.append_output(&format!("*** DEFINE_WORD_FROM_MULTILINE - name: {}, has_conditionals: {}, lines: {:?} ***\n", 
@@ -361,6 +374,7 @@ impl Interpreter {
             is_builtin: false,
             description: None,
             category: None,
+            repeat_count,
         });
 
         self.append_output(&format!("Defined word: {}\n", name));
@@ -697,9 +711,15 @@ impl Interpreter {
                 self.execute_builtin(name)
             } else {
                 self.call_stack.push(name.to_string());
-                let result = self.execute_custom_word_immediate(&def.tokens);
+                for i in 0..def.repeat_count {
+                    self.append_output(&format!("*** Implicit GOTO iteration {}/{} for word: {} ***\n", i + 1, def.repeat_count, name));
+                    if let Err(e) = self.execute_custom_word_immediate(&def.tokens) {
+                        self.call_stack.pop();
+                        return Err(e.with_context(&self.call_stack));
+                    }
+                }
                 self.call_stack.pop();
-                result.map_err(|e| e.with_context(&self.call_stack))
+                Ok(())
             }
         } else {
             Err(error::AjisaiError::UnknownWord(name.to_string()))
@@ -829,6 +849,7 @@ impl Interpreter {
             is_builtin: false,
             description,
             category: None,
+            repeat_count: 1, // Default to 1 for restored words
         });
 
         Ok(())
