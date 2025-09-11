@@ -1,12 +1,13 @@
-// rust/src/types.rs (BigInt対応版)
+// rust/src/types.rs (BigInt対応・エラー修正版)
 
 use std::fmt;
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive};
+use num_integer::Integer;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    Number(String), // 数値は文字列としてトークナイズ
+    Number(String),
     String(String),
     Boolean(bool),
     Symbol(String),
@@ -35,21 +36,12 @@ pub enum ValueType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BracketType {
-    Square,  // [ ]
-    Curly,   // { }
-    Round,   // ( )
+    Square,
+    Curly,
+    Round,
 }
 
 impl BracketType {
-    pub fn from_char(c: char) -> Self {
-        match c {
-            '[' | ']' => BracketType::Square,
-            '{' | '}' => BracketType::Curly,
-            '(' | ')' => BracketType::Round,
-            _ => panic!("Invalid bracket character: {}", c),
-        }
-    }
-    
     pub fn opening_char(&self) -> char {
         match self {
             BracketType::Square => '[',
@@ -67,7 +59,6 @@ impl BracketType {
     }
 }
 
-// Fraction構造体 (BigInt対応)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fraction {
     pub numerator: BigInt,
@@ -102,7 +93,7 @@ impl Fraction {
             let num = num_str.parse::<BigInt>().map_err(|e| e.to_string())?;
             let den = den_str.parse::<BigInt>().map_err(|e| e.to_string())?;
             Ok(Fraction::new(num, den))
-        } else if let Some(pos) = s.find('.') {
+        } else if let Some(_pos) = s.find('.') {
             let mut parts = s.split('.');
             let int_part_str = parts.next().unwrap_or("0");
             let frac_part_str = parts.next().unwrap_or("");
@@ -177,7 +168,7 @@ impl Fraction {
     }
     
     pub fn eq(&self, other: &Fraction) -> bool {
-        &self.numerator * &other.denominator == &other.numerator * &self.denominator
+        self.numerator == other.numerator && self.denominator == other.denominator
     }
 }
 
@@ -195,15 +186,12 @@ impl fmt::Display for Value {
             ValueType::Boolean(b) => write!(f, "{}", b),
             ValueType::Symbol(s) => write!(f, "{}", s),
             ValueType::Vector(v, bracket_type) => {
-                let open = bracket_type.opening_char();
-                let close = bracket_type.closing_char();
-                
-                write!(f, "{} ", open)?;
+                write!(f, "{} ", bracket_type.opening_char())?;
                 for (i, item) in v.iter().enumerate() {
                     if i > 0 { write!(f, " ")?; }
                     write!(f, "{}", item)?;
                 }
-                write!(f, " {}", close)
+                write!(f, " {}", bracket_type.closing_char())
             },
             ValueType::Nil => write!(f, "nil"),
         }
