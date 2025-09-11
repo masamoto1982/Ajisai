@@ -125,15 +125,12 @@ export class GUI {
         this.elements.codeInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 if (e.shiftKey) {
-                    // Shift+Enter: 通常実行
                     e.preventDefault();
                     this.runCode();
                 } else if (e.ctrlKey && e.altKey) {
-                    // Ctrl+Alt+Enter: RESET実行
                     e.preventDefault();
                     this.executeReset();
                 } else if (e.ctrlKey) {
-                    // Ctrl+Enter: ステップ実行開始 または ステップ進行
                     e.preventDefault();
                     if (this.stepMode) {
                         this.executeNextStep();
@@ -142,7 +139,6 @@ export class GUI {
                     }
                 }
             } else if (e.key === 'Escape' && this.stepMode) {
-                // Escape: ステップ実行終了
                 e.preventDefault();
                 this.endStepExecution();
             }
@@ -174,7 +170,7 @@ export class GUI {
             const result = window.ajisaiInterpreter.execute(code) as ExecuteResult;
             
             if (result.status === 'OK' && !result.error) {
-                this.display.showOutput(result.output || 'OK');
+                this.display.showExecutionResult(result);
                 this.editor.clear();
                 
                 if (this.mobile.isMobile()) {
