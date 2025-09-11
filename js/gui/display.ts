@@ -1,6 +1,6 @@
-// js/gui/display.ts (BigInt対応・型安全版)
+// js/gui/display.ts (BigInt対応・最終修正版)
 
-import type { Value, ExecuteResult, Fraction } from '../wasm-types';
+import type { Value, ExecuteResult } from '../wasm-types';
 
 interface DisplayElements {
     outputDisplay: HTMLElement;
