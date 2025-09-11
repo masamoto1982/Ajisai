@@ -1,4 +1,4 @@
-// js/gui/display.ts (BigInt対応・修正版)
+// js/gui/display.ts (BigInt対応・型安全版)
 
 import type { Value, ExecuteResult, Fraction } from '../wasm-types';
 
@@ -159,20 +159,36 @@ export class Display {
         }
         
         switch (item.type) {
-            case 'number':
+            case 'number': {
                 console.log('Formatting number:', item.value);
-                const frac = item.value as Fraction;
-                if (!frac) {
-                    console.error('Number value is undefined');
+                
+                // item.valueの型を確認
+                if (!item.value || typeof item.value !== 'object') {
+                    console.error('Number value is not an object:', item.value);
                     return '?';
                 }
-                // BigIntは文字列として送られてくる
-                // denominatorは常に文字列として扱う
-                if (String(frac.denominator) === '1') {
-                    return String(frac.numerator);
-                } else {
-                    return `${frac.numerator}/${frac.denominator}`;
+                
+                // Fractionオブジェクトとして扱う
+                const frac = item.value as any;
+                
+                // numeratorとdenominatorが存在することを確認
+                if (!('numerator' in frac) || !('denominator' in frac)) {
+                    console.error('Invalid fraction object:', frac);
+                    return '?';
                 }
+                
+                // 両方を文字列に変換してから比較
+                const denomStr = String(frac.denominator);
+                const numerStr = String(frac.numerator);
+                
+                console.log(`Fraction: ${numerStr}/${denomStr}`);
+                
+                if (denomStr === '1') {
+                    return numerStr;
+                } else {
+                    return `${numerStr}/${denomStr}`;
+                }
+            }
                 
             case 'string':
                 return `'${item.value}'`;
@@ -183,7 +199,7 @@ export class Display {
             case 'boolean':
                 return item.value ? 'true' : 'false';
                 
-            case 'vector':
+            case 'vector': {
                 console.log('Formatting vector:', item.value);
                 if (Array.isArray(item.value)) {
                     const bracketType = item.bracketType || 'square';
@@ -208,6 +224,7 @@ export class Display {
                 }
                 console.error('Vector value is not an array:', item.value);
                 return '[ ]';
+            }
                 
             case 'nil':
                 return 'nil';
