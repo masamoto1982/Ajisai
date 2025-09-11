@@ -15,6 +15,7 @@ pub struct Interpreter {
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) dependencies: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
+    pub(crate) debug_buffer: String,
     pub(crate) call_stack: Vec<String>,
 }
 
@@ -40,6 +41,7 @@ impl Interpreter {
             dictionary: HashMap::new(),
             dependencies: HashMap::new(),
             output_buffer: String::new(),
+            debug_buffer: String::new(),
             call_stack: Vec::new(),
         };
         
@@ -48,7 +50,7 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
-        self.append_output(&format!("DEBUG: execute() called with code: '{}'\n", code));
+        self.append_debug(&format!("DEBUG: execute() called with code: '{}'\n", code));
         
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
@@ -58,7 +60,7 @@ impl Interpreter {
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)
             .map_err(error::AjisaiError::from)?;
             
-        self.append_output(&format!("DEBUG: All tokens: {:?}\n", tokens));
+        self.append_debug(&format!("DEBUG: All tokens: {:?}\n", tokens));
         
         if tokens.is_empty() {
             return Ok(());
@@ -66,26 +68,26 @@ impl Interpreter {
 
         // DEFパターンを探して処理
         if let Some((def_result, remaining_code)) = self.try_process_def_pattern_from_code(code, &tokens) {
-            self.append_output("DEBUG: DEF pattern processing started\n");
+            self.append_debug("DEBUG: DEF pattern processing started\n");
             
             def_result?;
             
             if !remaining_code.trim().is_empty() {
-                self.append_output(&format!("DEBUG: Executing remaining code: '{}'\n", remaining_code));
+                self.append_debug(&format!("DEBUG: Executing remaining code: '{}'\n", remaining_code));
                 self.execute(&remaining_code)?;
             } else {
-                self.append_output("DEBUG: No remaining code to execute\n");
+                self.append_debug("DEBUG: No remaining code to execute\n");
             }
             
             return Ok(());
         }
 
-        self.append_output("DEBUG: No DEF pattern, executing tokens normally\n");
+        self.append_debug("DEBUG: No DEF pattern, executing tokens normally\n");
         self.execute_tokens(&tokens)
     }
 
     pub fn execute_reset(&mut self) -> Result<()> {
-        self.append_output("*** EXECUTE_RESET CALLED ***\n");
+        self.append_debug("*** EXECUTE_RESET CALLED ***\n");
         
         if let Some(window) = web_sys::window() {
             let event = web_sys::CustomEvent::new("ajisai-reset")
@@ -102,12 +104,12 @@ impl Interpreter {
         
         crate::builtins::register_builtins(&mut self.dictionary);
         
-        self.append_output("*** EXECUTE_RESET COMPLETED ***\n");
+        self.append_debug("*** EXECUTE_RESET COMPLETED ***\n");
         Ok(())
     }
 
     pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
-        self.append_output(&format!("*** EXECUTE_SINGLE_TOKEN: {:?} ***\n", token));
+        self.append_debug(&format!("*** EXECUTE_SINGLE_TOKEN: {:?} ***\n", token));
         self.output_buffer.clear();
         
         match token {
@@ -187,7 +189,7 @@ impl Interpreter {
     }
 
     fn try_process_def_pattern_from_code(&mut self, code: &str, tokens: &[Token]) -> Option<(Result<()>, String)> {
-        self.append_output("*** TRY_PROCESS_DEF_PATTERN_FROM_CODE ***\n");
+        self.append_debug("*** TRY_PROCESS_DEF_PATTERN_FROM_CODE ***\n");
         
         let def_position = tokens.iter().rposition(|t| {
             if let Token::Symbol(s) = t {
@@ -197,11 +199,11 @@ impl Interpreter {
             }
         })?;
         
-        self.append_output(&format!("*** DEF found at position: {} ***\n", def_position));
+        self.append_debug(&format!("*** DEF found at position: {} ***\n", def_position));
         
         if def_position >= 1 {
             if let Token::String(name) = &tokens[def_position - 1] {
-                self.append_output(&format!("*** DEF word name: {} ***\n", name));
+                self.append_debug(&format!("*** DEF word name: {} ***\n", name));
                 
                 let mut body_tokens = &tokens[..def_position - 1];
                 
@@ -219,11 +221,11 @@ impl Interpreter {
                     return Some((Err(error::AjisaiError::from("DEF requires a body")), String::new()));
                 }
                 
-                self.append_output(&format!("*** DEF body tokens: {:?} ***\n", body_tokens));
+                self.append_debug(&format!("*** DEF body tokens: {:?} ***\n", body_tokens));
                 
                 let multiline_def = self.parse_multiline_definition(body_tokens);
                 
-                let remaining_code = "".to_string(); // In this model, DEF consumes all code.
+                let remaining_code = "".to_string();
                 
                 let def_result = self.define_word_from_multiline(
                     name.clone(),
@@ -235,38 +237,52 @@ impl Interpreter {
             }
         }
         
-        self.append_output("*** No DEF pattern found ***\n");
+        self.append_debug("*** No DEF pattern found ***\n");
         None
     }
 
     fn parse_multiline_definition(&mut self, tokens: &[Token]) -> MultiLineDefinition {
-        self.append_output("*** PARSE_MULTILINE_DEFINITION ***\n");
+        self.append_debug("*** PARSE_MULTILINE_DEFINITION ***\n");
         
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
         let mut has_conditionals = false;
         
-        for token in tokens {
-            match token {
+        self.append_debug(&format!("*** parse_multiline_definition input tokens: {:?} ***\n", tokens));
+        
+        let mut i = 0;
+        
+        while i < tokens.len() {
+            self.append_debug(&format!("*** Processing token[{}]: {:?} ***\n", i, tokens[i]));
+            match &tokens[i] {
                 Token::LineBreak => {
                     if !current_line.is_empty() {
+                        self.append_debug(&format!("*** Adding line: {:?} ***\n", current_line));
                         lines.push(current_line.clone());
                         current_line.clear();
                     }
                 },
-                Token::FunctionComment(_) => {},
+                Token::FunctionComment(_) => {
+                    // コメントはスキップ
+                },
                 _ => {
-                    if let Token::Colon = token {
+                    if let Token::Colon = &tokens[i] {
                         has_conditionals = true;
+                        self.append_debug("*** Found colon - has_conditionals = true ***\n");
                     }
-                    current_line.push(token.clone());
+                    current_line.push(tokens[i].clone());
                 }
             }
+            i += 1;
         }
         
         if !current_line.is_empty() {
+            self.append_debug(&format!("*** Adding final line: {:?} ***\n", current_line));
             lines.push(current_line);
         }
+        
+        self.append_debug(&format!("*** Parsed multiline definition - lines: {:?}, has_conditionals: {} ***\n", 
+            lines, has_conditionals));
         
         MultiLineDefinition {
             lines,
@@ -277,12 +293,9 @@ impl Interpreter {
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition, repeat_count: i64) -> Result<()> {
         let name = name.to_uppercase();
         
-        let executable_tokens = if multiline_def.has_conditionals {
-            self.create_conditional_tokens(&multiline_def.lines)?
-        } else {
-            multiline_def.lines.into_iter().flatten().collect()
-        };
-
+        self.append_debug(&format!("*** DEFINE_WORD_FROM_MULTILINE - name: {}, has_conditionals: {}, lines: {:?} ***\n", 
+            name, multiline_def.has_conditionals, multiline_def.lines));
+        
         if let Some(existing) = self.dictionary.get(&name) {
             if existing.is_builtin {
                 return Err(error::AjisaiError::from(format!("Cannot redefine builtin word: {}", name)));
@@ -301,6 +314,34 @@ impl Interpreter {
             }
         }
 
+        let executable_tokens = if multiline_def.has_conditionals {
+            self.append_debug("*** USING CONDITIONAL PROCESSING ***\n");
+            self.create_conditional_tokens(&multiline_def.lines)?
+        } else {
+            self.append_debug("*** USING SEQUENTIAL PROCESSING ***\n");
+            multiline_def.lines.into_iter().flatten().collect()
+        };
+
+        self.append_debug(&format!("*** GENERATED EXECUTABLE TOKENS: {:?} ***\n", executable_tokens));
+
+        if let Some(old_deps) = self.get_word_dependencies(&name) {
+            for dep in old_deps {
+                if let Some(reverse_deps) = self.dependencies.get_mut(&dep) {
+                    reverse_deps.remove(&name);
+                }
+            }
+        }
+
+        for token in &executable_tokens {
+            if let Token::Symbol(sym) = token {
+                if self.dictionary.contains_key(sym) && !self.is_builtin_word(sym) {
+                    self.dependencies.entry(sym.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(name.clone());
+                }
+            }
+        }
+
         self.dictionary.insert(name.clone(), WordDefinition {
             tokens: executable_tokens,
             is_builtin: false,
@@ -314,8 +355,14 @@ impl Interpreter {
     }
 
     fn create_conditional_tokens(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
+        self.append_debug("*** CREATE_CONDITIONAL_TOKENS ***\n");
+        
+        if lines.is_empty() {
+            return Err(error::AjisaiError::from("No lines found"));
+        }
+
         let mut conditional_lines = Vec::new();
-        let mut default_line: Option<Vec<Token>> = None;
+        let mut default_line = None;
 
         for line in lines {
             if let Some(colon_pos) = line.iter().position(|t| matches!(t, Token::Colon)) {
@@ -336,6 +383,8 @@ impl Interpreter {
     }
 
     fn build_nested_if_select(&mut self, conditional_lines: &[(Vec<Token>, Vec<Token>)], default_action: &[Token]) -> Vec<Token> {
+        self.append_debug("*** BUILD_NESTED_IF_SELECT ***\n");
+        
         if conditional_lines.is_empty() {
             return default_action.to_vec();
         }
@@ -343,9 +392,8 @@ impl Interpreter {
         let (condition, action) = &conditional_lines[0];
         let remaining_lines = &conditional_lines[1..];
         
-        let false_branch_action = self.build_nested_if_select(remaining_lines, default_action);
-        
         let mut result = Vec::new();
+        
         result.extend(condition.iter().cloned());
         
         result.push(Token::VectorStart(BracketType::Square));
@@ -353,16 +401,22 @@ impl Interpreter {
         result.push(Token::VectorEnd(BracketType::Square));
         
         result.push(Token::VectorStart(BracketType::Square));
-        result.extend(false_branch_action);
+        let nested = self.build_nested_if_select(remaining_lines, default_action);
+        result.extend(nested);
         result.push(Token::VectorEnd(BracketType::Square));
         
         result.push(Token::Symbol("IF_SELECT".to_string()));
+        
         result
     }
 
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        self.append_debug(&format!("*** EXECUTE_TOKENS called with {} tokens: {:?} ***\n", tokens.len(), tokens));
+        
         let mut i = 0;
         while i < tokens.len() {
+            self.append_debug(&format!("*** Processing token #{}: {:?} ***\n", i, tokens[i]));
+            
             match &tokens[i] {
                 Token::Number(num, den) => {
                     self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(crate::types::Fraction::new(*num, *den))}], BracketType::Square)});
@@ -393,6 +447,8 @@ impl Interpreter {
                 _ => { i += 1; }
             }
         }
+        
+        self.append_debug(&format!("*** execute_tokens completed, final workspace size: {} ***\n", self.workspace.len()));
         Ok(())
     }
 
@@ -516,9 +572,19 @@ impl Interpreter {
         self.output_buffer.clear();
         output
     }
+
+    pub fn get_debug_output(&mut self) -> String {
+        let output = self.debug_buffer.clone();
+        self.debug_buffer.clear();
+        output
+    }
     
     pub(crate) fn append_output(&mut self, text: &str) {
         self.output_buffer.push_str(text);
+    }
+
+    pub(crate) fn append_debug(&mut self, text: &str) {
+        self.debug_buffer.push_str(text);
     }
     
     pub fn get_workspace(&self) -> &Workspace { &self.workspace }
