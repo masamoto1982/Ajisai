@@ -1,6 +1,6 @@
-// js/gui/display.ts
+// js/gui/display.ts (BigInt対応版)
 
-import type { Value, ExecuteResult } from '../wasm-types';
+import type { Value, ExecuteResult, Fraction } from '../wasm-types';
 
 interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -9,7 +9,6 @@ interface DisplayElements {
 
 export class Display {
     private elements!: DisplayElements;
-    private mainOutput = '';
 
     init(elements: DisplayElements): void {
         this.elements = elements;
@@ -20,12 +19,11 @@ export class Display {
         const debugText = (result.debugOutput || '').trim();
         const programOutput = (result.output || '').trim();
         
-        this.mainOutput = `${debugText}\n${programOutput}`;
         this.elements.outputDisplay.innerHTML = '';
 
         if (debugText) {
             const debugSpan = document.createElement('span');
-            debugSpan.style.color = '#333'; // Black for debug
+            debugSpan.style.color = '#333';
             debugSpan.textContent = debugText.replace(/\\n/g, '\n');
             this.elements.outputDisplay.appendChild(debugSpan);
         }
@@ -36,59 +34,29 @@ export class Display {
 
         if (programOutput) {
             const outputSpan = document.createElement('span');
-            outputSpan.style.color = '#007bff'; // Blue for program output
+            outputSpan.style.color = '#007bff';
             outputSpan.textContent = programOutput.replace(/\\n/g, '\n');
             this.elements.outputDisplay.appendChild(outputSpan);
         }
 
         if (!debugText && !programOutput && result.status === 'OK') {
             const okSpan = document.createElement('span');
-            okSpan.style.color = '#333'; // Black for simple "OK"
+            okSpan.style.color = '#333';
             okSpan.textContent = 'OK';
             this.elements.outputDisplay.appendChild(okSpan);
         }
     }
 
-    showOutput(text: string): void {
-        this.mainOutput = text;
-        this.elements.outputDisplay.innerHTML = '';
-        
-        const span = document.createElement('span');
-        span.style.color = '#007bff';
-        span.textContent = text.replace(/\\n/g, '\n');
-        this.elements.outputDisplay.appendChild(span);
-    }
-
     showError(error: Error | { message?: string } | string): void {
-        const errorMessage = typeof error === 'string' 
-            ? `Error: ${error}`
-            : `Error: ${error.message || error}`;
-        
-        this.mainOutput = errorMessage;
+        const errorMessage = typeof error === 'string' ? `Error: ${error}` : `Error: ${error.message || error}`;
         this.elements.outputDisplay.innerHTML = '';
-        
         const errorSpan = document.createElement('span');
         errorSpan.style.color = '#dc3545';
         errorSpan.style.fontWeight = 'bold';
         errorSpan.textContent = errorMessage.replace(/\\n/g, '\n');
         this.elements.outputDisplay.appendChild(errorSpan);
     }
-
-    showInfo(text: string, append = false): void {
-        const infoSpan = document.createElement('span');
-        infoSpan.style.color = '#666';
-        infoSpan.textContent = (append ? '\n' : '') + text.replace(/\\n/g, '\n');
-
-        if (append && this.elements.outputDisplay.innerHTML.trim() !== '') {
-            this.mainOutput = `${this.mainOutput}\n${text}`;
-            this.elements.outputDisplay.appendChild(infoSpan);
-        } else {
-            this.mainOutput = text;
-            this.elements.outputDisplay.innerHTML = '';
-            this.elements.outputDisplay.appendChild(infoSpan);
-        }
-    }
-
+    
     updateWorkspace(workspace: Value[]): void {
         const display = this.elements.workspaceDisplay;
         display.innerHTML = '';
@@ -138,15 +106,12 @@ export class Display {
         
         switch (item.type) {
             case 'number':
-                if (typeof item.value === 'object' && item.value !== null && 'numerator' in item.value && 'denominator' in item.value) {
-                    const frac = item.value as { numerator: number; denominator: number };
-                    if (frac.denominator === 1) {
-                        return frac.numerator.toString();
-                    } else {
-                        return `${frac.numerator}/${frac.denominator}`;
-                    }
+                const frac = item.value as Fraction;
+                if (frac.denominator === '1') {
+                    return frac.numerator;
+                } else {
+                    return `${frac.numerator}/${frac.denominator}`;
                 }
-                return typeof item.value === 'string' ? item.value : String(item.value);
             case 'string':
                 return `'${item.value}'`;
             case 'symbol':
@@ -155,23 +120,13 @@ export class Display {
                 return item.value ? 'true' : 'false';
             case 'vector':
                 if (Array.isArray(item.value)) {
-                    const bracketType = (item as any).bracketType || 'square';
+                    const bracketType = item.bracketType || 'square';
                     let openBracket: string, closeBracket: string;
                     
                     switch (bracketType) {
-                        case 'curly':
-                            openBracket = '{';
-                            closeBracket = '}';
-                            break;
-                        case 'round':
-                            openBracket = '(';
-                            closeBracket = ')';
-                            break;
-                        case 'square':
-                        default:
-                            openBracket = '[';
-                            closeBracket = ']';
-                            break;
+                        case 'curly': openBracket = '{'; closeBracket = '}'; break;
+                        case 'round': openBracket = '('; closeBracket = ')'; break;
+                        default: openBracket = '['; closeBracket = ']'; break;
                     }
                     
                     return `${openBracket} ${item.value.map(v => this.formatValue(v)).join(' ')} ${closeBracket}`;
