@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (完全版)
+// rust/src/interpreter/mod.rs (BigInt対応・デバッグ版)
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -10,6 +10,8 @@ use std::collections::{HashMap, HashSet};
 use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction};
 use self::error::{Result, AjisaiError};
 use num_traits::ToPrimitive;
+use web_sys::console;
+use wasm_bindgen::JsValue;
 
 pub struct Interpreter {
     pub(crate) workspace: Workspace,
@@ -50,13 +52,17 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
+        console::log_1(&JsValue::from_str(&format!("=== Execute: {} ===", code)));
+        
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
             .collect();
         
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
-            
+        
+        console::log_1(&JsValue::from_str(&format!("Tokenized: {:?}", tokens)));
+        
         if tokens.is_empty() { return Ok(()); }
 
         if let Some((def_result, remaining_code)) = self.try_process_def_pattern_from_code(&tokens) {
@@ -85,13 +91,31 @@ impl Interpreter {
     }
 
     pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
+        console::log_1(&JsValue::from_str(&format!("Execute single token: {:?}", token)));
+        
         self.output_buffer.clear();
         match token {
             Token::Number(s) => {
+                console::log_1(&JsValue::from_str(&format!("Parsing number string: {}", s)));
+                
                 let frac = Fraction::from_str(s)?;
-                let wrapped = Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square) };
+                
+                console::log_1(&JsValue::from_str(&format!("Parsed fraction: {}/{}", frac.numerator, frac.denominator)));
+                
+                let wrapped = Value { 
+                    val_type: ValueType::Vector(
+                        vec![Value { val_type: ValueType::Number(frac) }], 
+                        BracketType::Square
+                    ) 
+                };
+                
                 let display = format!("{}", wrapped);
+                console::log_1(&JsValue::from_str(&format!("Pushing to workspace: {}", display)));
+                
                 self.workspace.push(wrapped);
+                
+                console::log_1(&JsValue::from_str(&format!("Workspace size after push: {}", self.workspace.len())));
+                
                 Ok(format!("Pushed {}", display))
             },
             Token::String(s) => {
@@ -110,6 +134,7 @@ impl Interpreter {
                 Ok("Pushed wrapped nil: [nil]".to_string())
             },
             Token::Symbol(name) => {
+                console::log_1(&JsValue::from_str(&format!("Executing word: {}", name)));
                 self.execute_word(name)?;
                 let output = self.get_output();
                 Ok(if output.is_empty() { format!("Executed word: {}", name) } else { output })
@@ -144,7 +169,6 @@ impl Interpreter {
                 let multiline_def = self.parse_multiline_definition(body_tokens);
                 let def_result = self.define_word_from_multiline(name.clone(), multiline_def, repeat_count);
                 
-                // Assuming DEF consumes the whole line for simplicity now
                 return Some((def_result, "".to_string()));
             }
         }
@@ -179,7 +203,6 @@ impl Interpreter {
 
     fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition, repeat_count: i64) -> Result<()> {
         let name = name.to_uppercase();
-        // ... (Dependency checks, etc. would go here) ...
 
         let executable_tokens = if multiline_def.has_conditionals {
             self.create_conditional_tokens(&multiline_def.lines)?
@@ -199,19 +222,39 @@ impl Interpreter {
         Ok(())
     }
 
-    fn create_conditional_tokens(&mut self, lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-        // ... (Implementation unchanged from original) ...
+    fn create_conditional_tokens(&mut self, _lines: &[Vec<Token>]) -> Result<Vec<Token>> {
         Ok(vec![])
     }
     
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        console::log_1(&JsValue::from_str(&format!("=== execute_tokens: {:?} ===", tokens)));
+        
         let mut i = 0;
         while i < tokens.len() {
+            console::log_1(&JsValue::from_str(&format!("Processing token[{}]: {:?}", i, tokens[i])));
+            
             match &tokens[i] {
                 Token::Number(s) => {
-                    let frac = Fraction::from_str(s)?;
+                    console::log_1(&JsValue::from_str(&format!("Number token: {}", s)));
+                    
+                    let frac = match Fraction::from_str(s) {
+                        Ok(f) => {
+                            console::log_1(&JsValue::from_str(&format!("Parsed to fraction: {}/{}", f.numerator, f.denominator)));
+                            f
+                        },
+                        Err(e) => {
+                            console::error_1(&JsValue::from_str(&format!("Failed to parse number: {}", e)));
+                            return Err(AjisaiError::from(format!("Failed to parse number: {}", e)));
+                        }
+                    };
+                    
                     let val = Value { val_type: ValueType::Number(frac) };
-                    self.workspace.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square)});
+                    let wrapped = Value { val_type: ValueType::Vector(vec![val], BracketType::Square)};
+                    
+                    console::log_1(&JsValue::from_str(&format!("Pushing wrapped number: {}", wrapped)));
+                    self.workspace.push(wrapped);
+                    
+                    console::log_1(&JsValue::from_str(&format!("Workspace size: {}", self.workspace.len())));
                     i += 1;
                 },
                 Token::String(s) => {
@@ -227,22 +270,34 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::VectorStart(bracket_type) => {
+                    console::log_1(&JsValue::from_str("Vector start"));
                     let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
+                    console::log_1(&JsValue::from_str(&format!("Collected vector with {} elements", vector_values.len())));
                     self.workspace.push(Value { val_type: ValueType::Vector(vector_values, bracket_type.clone())});
                     i += consumed;
                 },
                 Token::Symbol(name) => {
+                    console::log_1(&JsValue::from_str(&format!("Executing symbol: {}", name)));
                     self.execute_word(name)?;
                     i += 1;
                 },
                 Token::VectorEnd(_) => return Err(AjisaiError::from("Unexpected vector end")),
                 _ => { i += 1; }
             }
+            
+            // ワークスペースの現在の状態を表示
+            if !self.workspace.is_empty() {
+                console::log_1(&JsValue::from_str(&format!("Workspace top: {}", self.workspace.last().unwrap())));
+            }
         }
+        
+        console::log_1(&JsValue::from_str(&format!("=== execute_tokens complete. Final workspace size: {} ===", self.workspace.len())));
         Ok(())
     }
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
+        console::log_1(&JsValue::from_str(&format!("Collecting vector starting at {}", start)));
+        
         let mut values = Vec::new();
         let mut i = start + 1;
         while i < tokens.len() {
@@ -256,9 +311,11 @@ impl Interpreter {
                     if *end_bracket_type != expected_bracket_type {
                         return Err(AjisaiError::from("Mismatched bracket types"));
                     }
+                    console::log_1(&JsValue::from_str(&format!("Vector complete with {} elements", values.len())));
                     return Ok((values, i - start + 1));
                 },
                 token => {
+                    console::log_1(&JsValue::from_str(&format!("Adding token to vector: {:?}", token)));
                     values.push(self.token_to_value(token)?);
                     i += 1;
                 }
@@ -269,7 +326,12 @@ impl Interpreter {
 
     fn token_to_value(&self, token: &Token) -> Result<Value> {
         match token {
-            Token::Number(s) => Ok(Value { val_type: ValueType::Number(Fraction::from_str(s)?) }),
+            Token::Number(s) => {
+                console::log_1(&JsValue::from_str(&format!("token_to_value: Number {}", s)));
+                let frac = Fraction::from_str(s)?;
+                console::log_1(&JsValue::from_str(&format!("token_to_value: Fraction {}/{}", frac.numerator, frac.denominator)));
+                Ok(Value { val_type: ValueType::Number(frac) })
+            },
             Token::String(s) => Ok(Value { val_type: ValueType::String(s.clone()) }),
             Token::Boolean(b) => Ok(Value { val_type: ValueType::Boolean(*b) }),
             Token::Nil => Ok(Value { val_type: ValueType::Nil }),
@@ -279,9 +341,14 @@ impl Interpreter {
     }
 
     fn execute_word(&mut self, name: &str) -> Result<()> {
+        console::log_1(&JsValue::from_str(&format!("execute_word: {}", name)));
+        console::log_1(&JsValue::from_str(&format!("Workspace before: {} items", self.workspace.len())));
+        
         if let Some(def) = self.dictionary.get(name).cloned() {
             if def.is_builtin {
-                self.execute_builtin(name)
+                let result = self.execute_builtin(name);
+                console::log_1(&JsValue::from_str(&format!("Workspace after builtin {}: {} items", name, self.workspace.len())));
+                result
             } else {
                 self.call_stack.push(name.to_string());
                 let result = self.execute_tokens(&def.tokens);
@@ -294,6 +361,8 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
+        console::log_1(&JsValue::from_str(&format!("execute_builtin: {}", name)));
+        
         match name {
             "GET" => vector_ops::op_get(self),
             "INSERT" => vector_ops::op_insert(self),
