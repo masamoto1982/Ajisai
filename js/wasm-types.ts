@@ -8,7 +8,7 @@ export interface AjisaiInterpreter {
     execute(code: string): ExecuteResult;
     init_step(code: string): string;
     step(): StepResult;
-    reset(): ExecuteResult;  // amnesia → reset に変更
+    reset(): ExecuteResult;
     get_workspace(): Value[];
     get_custom_words(): string[];
     get_custom_words_with_descriptions(): Array<[string, string | null]>;
@@ -27,6 +27,7 @@ export interface AjisaiInterpreter {
 export interface ExecuteResult {
     status: 'OK' | 'ERROR';
     output?: string;
+    debugOutput?: string;
     autoNamed?: boolean;
     autoNamedWord?: string;
     message?: string;
