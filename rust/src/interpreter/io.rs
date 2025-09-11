@@ -1,77 +1,59 @@
-// rust/src/interpreter/io.rs (デバッグ版)
+// rust/src/interpreter/io.rs (ビルドエラー完全修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::ValueType;
+use num_bigint::BigInt;
+use num_traits::{Zero, One, ToPrimitive};
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
-    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: op_print called"));
-    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("DEBUG: workspace length: {}", interp.workspace.len())));
-    
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("DEBUG: popped value: {:?}", val)));
-    
-    let output_text = format!("{} ", val);
-    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("DEBUG: output text: '{}'", output_text)));
-    
-    interp.append_output(&output_text);
-    
-    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str("DEBUG: op_print completed"));
+    let val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    interp.output_buffer.push_str(&format!("{} ", val));
     Ok(())
 }
 
 pub fn op_cr(interp: &mut Interpreter) -> Result<()> {
-    interp.append_output("\n");
+    interp.output_buffer.push('\n');
     Ok(())
 }
 
 pub fn op_space(interp: &mut Interpreter) -> Result<()> {
-    interp.append_output(" ");
+    interp.output_buffer.push(' ');
     Ok(())
 }
 
 pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    // 単一要素Vectorから数値を取得
+    let val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
     match val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) => {
-                    if n.denominator == 1 && n.numerator >= 0 {
-                        interp.append_output(&" ".repeat(n.numerator as usize));
-                        Ok(())
-                    } else {
-                        Err(AjisaiError::from("SPACES requires a non-negative integer"))
+        ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
+            ValueType::Number(n) => {
+                if n.denominator == BigInt::one() && n.numerator >= BigInt::zero() {
+                    if let Some(count) = n.numerator.to_usize() {
+                        interp.output_buffer.push_str(&" ".repeat(count));
+                        return Ok(());
                     }
-                },
-                _ => Err(AjisaiError::type_error("number", "other type")),
-            }
+                }
+                Err(AjisaiError::from("SPACES requires a non-negative integer"))
+            },
+            _ => Err(AjisaiError::type_error("number", "other type")),
         },
         _ => Err(AjisaiError::type_error("single-element vector with number", "other type")),
     }
 }
 
 pub fn op_emit(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    // 単一要素Vectorから数値を取得
+    let val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
     match val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) => {
-                    if n.denominator == 1 && n.numerator >= 0 && n.numerator <= 255 {
-                        interp.append_output(&(n.numerator as u8 as char).to_string());
-                        Ok(())
-                    } else {
-                        Err(AjisaiError::from("EMIT requires an integer between 0 and 255"))
+        ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
+            ValueType::Number(n) => {
+                if n.denominator == BigInt::one() && n.numerator >= BigInt::zero() && n.numerator <= BigInt::from(255) {
+                    if let Some(byte) = n.numerator.to_u8() {
+                        interp.output_buffer.push(byte as char);
+                        return Ok(());
                     }
-                },
-                _ => Err(AjisaiError::type_error("number", "other type")),
-            }
+                }
+                Err(AjisaiError::from("EMIT requires an integer between 0 and 255"))
+            },
+            _ => Err(AjisaiError::type_error("number", "other type")),
         },
         _ => Err(AjisaiError::type_error("single-element vector with number", "other type")),
     }
