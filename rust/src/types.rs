@@ -1,9 +1,10 @@
-// rust/src/types.rs (BigInt対応・エラー修正版)
+// rust/src/types.rs (BigInt対応・完全修正版)
 
 use std::fmt;
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive};
 use num_integer::Integer;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -87,31 +88,64 @@ impl Fraction {
     }
     
     pub fn from_str(s: &str) -> std::result::Result<Self, String> {
+        // 空文字列チェック
+        if s.is_empty() {
+            return Err("Empty string cannot be parsed as number".to_string());
+        }
+        
+        // 分数形式 (例: "3/4")
         if let Some(pos) = s.find('/') {
             let num_str = &s[..pos];
             let den_str = &s[pos+1..];
-            let num = num_str.parse::<BigInt>().map_err(|e| e.to_string())?;
-            let den = den_str.parse::<BigInt>().map_err(|e| e.to_string())?;
-            Ok(Fraction::new(num, den))
-        } else if let Some(_pos) = s.find('.') {
-            let mut parts = s.split('.');
-            let int_part_str = parts.next().unwrap_or("0");
-            let frac_part_str = parts.next().unwrap_or("");
             
-            let int_part = int_part_str.parse::<BigInt>().map_err(|e| e.to_string())?;
-            
-            let mut frac_num = BigInt::zero();
-            if !frac_part_str.is_empty() {
-                frac_num = frac_part_str.parse::<BigInt>().map_err(|e| e.to_string())?;
+            if num_str.is_empty() || den_str.is_empty() {
+                return Err("Invalid fraction format".to_string());
             }
             
+            let num = BigInt::from_str(num_str).map_err(|e| format!("Failed to parse numerator: {}", e))?;
+            let den = BigInt::from_str(den_str).map_err(|e| format!("Failed to parse denominator: {}", e))?;
+            
+            if den.is_zero() {
+                return Err("Denominator cannot be zero".to_string());
+            }
+            
+            Ok(Fraction::new(num, den))
+        } 
+        // 小数形式 (例: "3.14")
+        else if let Some(dot_pos) = s.find('.') {
+            let int_part_str = &s[..dot_pos];
+            let frac_part_str = &s[dot_pos+1..];
+            
+            // 整数部が空の場合は"0"として扱う
+            let int_part_str = if int_part_str.is_empty() || int_part_str == "-" {
+                if int_part_str == "-" { "-0" } else { "0" }
+            } else {
+                int_part_str
+            };
+            
+            let int_part = BigInt::from_str(int_part_str).map_err(|e| format!("Failed to parse integer part: {}", e))?;
+            
+            if frac_part_str.is_empty() {
+                // ".5"のような形式は"0.5"として扱う
+                return Ok(Fraction::new(int_part, BigInt::one()));
+            }
+            
+            // 小数部を分数に変換
+            let frac_num = BigInt::from_str(frac_part_str).map_err(|e| format!("Failed to parse fractional part: {}", e))?;
             let frac_den = BigInt::from(10).pow(frac_part_str.len() as u32);
             
-            let numerator = int_part * &frac_den + if s.starts_with('-') { -frac_num } else { frac_num };
-
-            Ok(Fraction::new(numerator, frac_den))
-        } else {
-            let num = s.parse::<BigInt>().map_err(|e| e.to_string())?;
+            // 負の数の場合の処理
+            let is_negative = int_part < BigInt::zero();
+            let abs_int_part = if is_negative { -&int_part } else { int_part.clone() };
+            
+            let total_num = abs_int_part * &frac_den + frac_num;
+            let final_num = if is_negative { -total_num } else { total_num };
+            
+            Ok(Fraction::new(final_num, frac_den))
+        } 
+        // 整数形式
+        else {
+            let num = BigInt::from_str(s).map_err(|e| format!("Failed to parse integer: {}", e))?;
             Ok(Fraction::new(num, BigInt::one()))
         }
     }
@@ -186,12 +220,12 @@ impl fmt::Display for Value {
             ValueType::Boolean(b) => write!(f, "{}", b),
             ValueType::Symbol(s) => write!(f, "{}", s),
             ValueType::Vector(v, bracket_type) => {
-                write!(f, "{} ", bracket_type.opening_char())?;
+                write!(f, "{}", bracket_type.opening_char())?;
                 for (i, item) in v.iter().enumerate() {
                     if i > 0 { write!(f, " ")?; }
                     write!(f, "{}", item)?;
                 }
-                write!(f, " {}", bracket_type.closing_char())
+                write!(f, "{}", bracket_type.closing_char())
             },
             ValueType::Nil => write!(f, "nil"),
         }
