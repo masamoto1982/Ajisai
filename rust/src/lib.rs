@@ -37,7 +37,10 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 
                 let output = self.interpreter.get_output();
+                let debug_output = self.interpreter.get_debug_output();
+
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
+                js_sys::Reflect::set(&obj, &"debugOutput".into(), &debug_output.into()).unwrap();
                 
                 js_sys::Reflect::set(&obj, &"autoNamed".into(), &JsValue::from_bool(false)).unwrap();
             }
