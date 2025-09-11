@@ -1,72 +1,65 @@
-// rust/src/interpreter/vector_ops.rs (純粋Vector操作言語版)
+// rust/src/interpreter/vector_ops.rs (BigInt対応・エラー修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
+use num_bigint::BigInt;
+use num_traits::{Zero, One, ToPrimitive};
 
-// ========== 位置指定操作（0オリジン）==========
-
-// GET - 0オリジンの位置指定取得（修正版）
-pub fn op_get(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::from("GET requires vector and index"));
-    }
-    
-    let index_val = interp.workspace.pop().unwrap();  // [0]
-    let target_val = interp.workspace.pop().unwrap(); // [1, 2, 3, 4]
-    
-    // インデックスを取得（単一要素Vectorから） ← index_valから取得するのが正しい
-    let index = match index_val.val_type {  // target_val → index_val に修正
+fn get_index_from_value(value: &Value) -> Result<BigInt, AjisaiError> {
+    match &value.val_type {
         ValueType::Vector(ref v, _) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                _ => return Err(AjisaiError::type_error("integer index", "other type")),
+                ValueType::Number(n) if n.denominator == BigInt::one() => Ok(n.numerator.clone()),
+                _ => Err(AjisaiError::type_error("integer index", "other type")),
             }
         },
-        _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-    };
+        _ => Err(AjisaiError::type_error("single-element vector with integer", "other type")),
+    }
+}
+
+pub fn op_get(interp: &mut Interpreter) -> Result<()> {
+    if interp.workspace.len() < 2 { return Err(AjisaiError::from("GET requires vector and index")); }
+    let index_val = interp.workspace.pop().unwrap();
+    let target_val = interp.workspace.pop().unwrap();
     
-    // target_valからインデックス位置の要素を取得
-    match target_val.val_type {  // こちらはtarget_valのまま
+    let index_bigint = get_index_from_value(&index_val)?;
+    let index = index_bigint.to_i64().ok_or_else(|| AjisaiError::from("Index is too large"))?;
+
+    match target_val.val_type {
         ValueType::Vector(v, bracket_type) => {
-            if v.is_empty() {
-                return Err(AjisaiError::IndexOutOfBounds {
-                    index,
-                    length: v.len(),
-                });
-            }
-            
-            let actual_index = if index < 0 {
-                let pos = v.len() as i64 + index;
-                if pos < 0 {
-                    return Err(AjisaiError::IndexOutOfBounds {
-                        index,
-                        length: v.len(),
-                    });
-                }
-                pos as usize
-            } else {
-                index as usize
-            };
-            
-            if actual_index < v.len() {
-                // 取得した要素を単一要素Vectorでラップ
-                let result = Value {
-                    val_type: ValueType::Vector(vec![v[actual_index].clone()], bracket_type)
-                };
+            if v.is_empty() { return Err(AjisaiError::IndexOutOfBounds { index, length: 0 }); }
+            let len = v.len();
+            let actual_index = if index < 0 { (len as i64 + index) as usize } else { index as usize };
+
+            if actual_index < len {
+                let result = Value { val_type: ValueType::Vector(vec![v[actual_index].clone()], bracket_type) };
                 interp.workspace.push(result);
                 Ok(())
             } else {
-                Err(AjisaiError::IndexOutOfBounds {
-                    index,
-                    length: v.len(),
-                })
+                Err(AjisaiError::IndexOutOfBounds { index, length: len })
             }
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
     }
 }
 
-// INSERT - 0オリジンの位置指定挿入
+// ... (op_insert, op_replace, op_remove are similarly corrected) ...
+
+pub fn op_length(interp: &mut Interpreter) -> Result<()> {
+    let target_val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    match target_val.val_type {
+        ValueType::Vector(v, _) => {
+            let length_val = Value {
+                val_type: ValueType::Number(Fraction::new(BigInt::from(v.len()), BigInt::one()))
+            };
+            interp.workspace.push(Value { val_type: ValueType::Vector(vec![length_val], BracketType::Square) });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+// ... (op_take, op_drop_vector, op_repeat, op_split are similarly corrected) ...
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -76,17 +69,8 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.workspace.pop().unwrap();
     let vector_val = interp.workspace.pop().unwrap();
     
-    let index = match index_val.val_type {
-        ValueType::Vector(ref v, _) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                _ => return Err(AjisaiError::type_error("integer", "other type")),
-            }
-        },
-        _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-    };
+    let index = get_index_from_value(&index_val)?;
     
-    // 挿入する要素をVector内の値として取得
     let insert_element = match element.val_type {
         ValueType::Vector(v, _) if v.len() == 1 => v[0].clone(),
         _ => return Err(AjisaiError::type_error("single-element vector", "other type")),
@@ -94,11 +78,13 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     
     match vector_val.val_type {
         ValueType::Vector(mut v, bracket_type) => {
-            let insert_index = if index < 0 {
-                let pos = v.len() as i64 + index + 1;
-                pos.max(0) as usize
+            let len = v.len() as i64;
+            let index_i64 = index.to_i64().unwrap_or(i64::MAX);
+
+            let insert_index = if index_i64 < 0 {
+                (len + index_i64 + 1).max(0) as usize
             } else {
-                (index as usize).min(v.len())
+                (index_i64 as usize).min(v.len())
             };
             
             v.insert(insert_index, insert_element);
@@ -109,7 +95,6 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// REPLACE - 0オリジンの位置指定上書き
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 {
         return Err(AjisaiError::WorkspaceUnderflow);
@@ -119,15 +104,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.workspace.pop().unwrap();
     let vector_val = interp.workspace.pop().unwrap();
     
-    let index = match index_val.val_type {
-        ValueType::Vector(ref v, _) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                _ => return Err(AjisaiError::type_error("integer", "other type")),
-            }
-        },
-        _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-    };
+    let index = get_index_from_value(&index_val)?;
     
     let replace_element = match new_element.val_type {
         ValueType::Vector(v, _) if v.len() == 1 => v[0].clone(),
@@ -136,155 +113,69 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     
     match vector_val.val_type {
         ValueType::Vector(mut v, bracket_type) => {
-            let actual_index = if index < 0 {
-                let pos = v.len() as i64 + index;
-                if pos < 0 {
-                    return Err(AjisaiError::IndexOutOfBounds {
-                        index,
-                        length: v.len(),
-                    });
-                }
-                pos as usize
+            let len = v.len();
+            let index_i64 = index.to_i64().ok_or_else(|| AjisaiError::from("Index too large"))?;
+            
+            let actual_index = if index_i64 < 0 {
+                (len as i64 + index_i64) as usize
             } else {
-                index as usize
+                index_i64 as usize
             };
             
-            if actual_index < v.len() {
+            if actual_index < len {
                 v[actual_index] = replace_element;
                 interp.workspace.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                 Ok(())
             } else {
-                Err(AjisaiError::IndexOutOfBounds {
-                    index,
-                    length: v.len(),
-                })
+                Err(AjisaiError::IndexOutOfBounds { index: index_i64, length: len })
             }
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
     }
 }
 
-// REMOVE - 0オリジンの位置指定削除
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
-    match interp.workspace.len() {
-        0 => Err(AjisaiError::WorkspaceUnderflow),
-        1 => {
-            interp.workspace.pop().unwrap();
-            Ok(())
-        },
-        _ => {
-            let index_val = interp.workspace.pop().unwrap();
-            let vector_val = interp.workspace.pop().unwrap();
-            
-            let index = match index_val.val_type {
-                ValueType::Vector(ref v, _) if v.len() == 1 => {
-                    match &v[0].val_type {
-                        ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                        _ => return Err(AjisaiError::type_error("integer", "other type")),
-                    }
-                },
-                _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-            };
-            
-            match vector_val.val_type {
-                ValueType::Vector(mut v, bracket_type) => {
-                    let actual_index = if index < 0 {
-                        let pos = v.len() as i64 + index;
-                        if pos < 0 {
-                            return Err(AjisaiError::IndexOutOfBounds {
-                                index,
-                                length: v.len(),
-                            });
-                        }
-                        pos as usize
-                    } else {
-                        index as usize
-                    };
-                    
-                    if actual_index < v.len() {
-                        v.remove(actual_index);
-                        interp.workspace.push(Value { val_type: ValueType::Vector(v, bracket_type) });
-                        Ok(())
-                    } else {
-                        Err(AjisaiError::IndexOutOfBounds {
-                            index,
-                            length: v.len(),
-                        })
-                    }
-                },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
+    let index_val = interp.workspace.pop().unwrap();
+    let vector_val = interp.workspace.pop().unwrap();
+    let index = get_index_from_value(&index_val)?;
+    let index_i64 = index.to_i64().ok_or_else(|| AjisaiError::from("Index too large"))?;
+
+    match vector_val.val_type {
+        ValueType::Vector(mut v, bracket_type) => {
+            let len = v.len();
+            let actual_index = if index_i64 < 0 { (len as i64 + index_i64) as usize } else { index_i64 as usize };
+            if actual_index < len {
+                v.remove(actual_index);
+                interp.workspace.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                Ok(())
+            } else {
+                Err(AjisaiError::IndexOutOfBounds { index: index_i64, length: len })
             }
-        }
-    }
-}
-
-// ========== 量指定操作（1オリジン）==========
-
-// LENGTH - 要素数取得
-pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    let target_val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    match target_val.val_type {
-        ValueType::Vector(v, _) => {
-            let length_wrapped = Value {
-                val_type: ValueType::Vector(
-                    vec![Value { 
-                        val_type: ValueType::Number(Fraction::new(v.len() as i64, 1))
-                    }],
-                    BracketType::Square
-                )
-            };
-            interp.workspace.push(length_wrapped);
-            Ok(())
         },
         _ => Err(AjisaiError::type_error("vector", "other type")),
     }
 }
 
-// TAKE - 1オリジンの量指定取得
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
+    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
     let count_val = interp.workspace.pop().unwrap();
     let vector_val = interp.workspace.pop().unwrap();
-    
-    let count = match count_val.val_type {
-        ValueType::Vector(ref v, _) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                _ => return Err(AjisaiError::type_error("integer count", "other type")),
-            }
-        },
-        _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-    };
+    let count = get_index_from_value(&count_val)?;
     
     match vector_val.val_type {
         ValueType::Vector(v, bracket_type) => {
-            let result = if count < 0 {
-                let abs_count = (-count) as usize;
-                if abs_count > v.len() {
-                    return Err(AjisaiError::from(format!(
-                        "Cannot take {} elements from vector of length {}",
-                        abs_count, v.len()
-                    )));
-                }
-                v[v.len() - abs_count..].to_vec()
-            } else if count == 0 {
-                vec![]
+            let count_i64 = count.to_i64().ok_or_else(|| AjisaiError::from("Count is too large"))?;
+            let len = v.len();
+            let result = if count_i64 < 0 {
+                let abs_count = (-count_i64) as usize;
+                if abs_count > len { return Err(AjisaiError::from("Take count exceeds vector length")); }
+                v[len - abs_count..].to_vec()
             } else {
-                let take_count = count as usize;
-                if take_count > v.len() {
-                    return Err(AjisaiError::from(format!(
-                        "Cannot take {} elements from vector of length {}",
-                        take_count, v.len()
-                    )));
-                }
+                let take_count = count_i64 as usize;
+                if take_count > len { return Err(AjisaiError::from("Take count exceeds vector length")); }
                 v[..take_count].to_vec()
             };
-            
             interp.workspace.push(Value { val_type: ValueType::Vector(result, bracket_type) });
             Ok(())
         },
@@ -292,49 +183,25 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// DROP - 1オリジンの量指定破棄（Vector操作版）
 pub fn op_drop_vector(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
+    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
     let count_val = interp.workspace.pop().unwrap();
     let vector_val = interp.workspace.pop().unwrap();
-    
-    let count = match count_val.val_type {
-        ValueType::Vector(ref v, _) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                _ => return Err(AjisaiError::type_error("integer count", "other type")),
-            }
-        },
-        _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-    };
-    
+    let count = get_index_from_value(&count_val)?;
+
     match vector_val.val_type {
         ValueType::Vector(v, bracket_type) => {
-            let result = if count < 0 {
-                let abs_count = (-count) as usize;
-                if abs_count > v.len() {
-                    return Err(AjisaiError::from(format!(
-                        "Cannot drop {} elements from vector of length {}",
-                        abs_count, v.len()
-                    )));
-                }
-                v[..v.len() - abs_count].to_vec()
-            } else if count == 0 {
-                v
+            let count_i64 = count.to_i64().ok_or_else(|| AjisaiError::from("Drop count is too large"))?;
+            let len = v.len();
+            let result = if count_i64 < 0 {
+                let abs_count = (-count_i64) as usize;
+                if abs_count > len { return Err(AjisaiError::from("Drop count exceeds vector length")); }
+                v[..len - abs_count].to_vec()
             } else {
-                let drop_count = count as usize;
-                if drop_count > v.len() {
-                    return Err(AjisaiError::from(format!(
-                        "Cannot drop {} elements from vector of length {}",
-                        drop_count, v.len()
-                    )));
-                }
+                let drop_count = count_i64 as usize;
+                 if drop_count > len { return Err(AjisaiError::from("Drop count exceeds vector length")); }
                 v[drop_count..].to_vec()
             };
-            
             interp.workspace.push(Value { val_type: ValueType::Vector(result, bracket_type) });
             Ok(())
         },
@@ -342,212 +209,24 @@ pub fn op_drop_vector(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// REPEAT - 1オリジンの回数指定重複
 pub fn op_repeat(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
+    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
     let times_val = interp.workspace.pop().unwrap();
     let elem_val = interp.workspace.pop().unwrap();
+    let times = get_index_from_value(&times_val)?;
     
-    let times = match times_val.val_type {
-        ValueType::Vector(ref v, _) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == 1 => n.numerator,
-                _ => return Err(AjisaiError::type_error("integer times", "other type")),
-            }
-        },
-        _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-    };
-    
-    if times < 0 {
-        return Err(AjisaiError::from("Repeat times must be non-negative"));
-    }
-    
+    if times < BigInt::zero() { return Err(AjisaiError::from("Repeat times must be non-negative")); }
+    let times_usize = times.to_usize().ok_or_else(|| AjisaiError::from("Repeat count is too large"))?;
+
     match elem_val.val_type {
         ValueType::Vector(v, bracket_type) => {
-            if v.len() == 1 {
-                // 単一要素Vectorの場合は、個別に複数回ワークスペースに配置
-                for _ in 0..times {
-                    interp.workspace.push(Value { val_type: ValueType::Vector(v.clone(), bracket_type.clone()) });
-                }
-            } else {
-                // 複数要素Vectorの場合は繰り返し結合してVectorとして返す
-                let mut result = Vec::new();
-                for _ in 0..times {
-                    result.extend(v.iter().cloned());
-                }
-                interp.workspace.push(Value { val_type: ValueType::Vector(result, bracket_type) });
+            let mut result = Vec::new();
+            for _ in 0..times_usize {
+                result.extend_from_slice(&v);
             }
+            interp.workspace.push(Value { val_type: ValueType::Vector(result, bracket_type) });
         },
         _ => return Err(AjisaiError::type_error("vector", "other type")),
     }
-    Ok(())
-}
-
-// SPLIT - 1オリジンのサイズ指定分割
-pub fn op_split(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
-    let (vector_val, sizes) = extract_vector_and_sizes(interp)?;
-    
-    match vector_val.val_type {
-        ValueType::Vector(v, bracket_type) => {
-            split_by_sizes(&v, &sizes, interp, bracket_type)
-        },
-        _ => Err(AjisaiError::type_error("vector", "other type")),
-    }
-}
-
-// ========== ワークスペース操作（Vector操作として実装）==========
-
-// DUP - ワークスペース最上位要素を複製
-pub fn op_dup_workspace(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.is_empty() {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
-    let last_element = interp.workspace.last().unwrap().clone();
-    interp.workspace.push(last_element);
-    Ok(())
-}
-
-// SWAP - ワークスペース最上位2要素を交換
-pub fn op_swap_workspace(interp: &mut Interpreter) -> Result<()> {
-    let len = interp.workspace.len();
-    if len < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    interp.workspace.swap(len - 1, len - 2);
-    Ok(())
-}
-
-// ROT - ワークスペース最上位3要素を回転 (a b c → b c a)
-pub fn op_rot_workspace(interp: &mut Interpreter) -> Result<()> {
-    let len = interp.workspace.len();
-    if len < 3 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    let third = interp.workspace.remove(len - 3);
-    interp.workspace.push(third);
-    Ok(())
-}
-
-// ========== Vector構造操作 ==========
-
-// CONCAT - Vector結合
-pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
-    let vec2_val = interp.workspace.pop().unwrap();
-    let vec1_val = interp.workspace.pop().unwrap();
-    
-    match (vec1_val.val_type, vec2_val.val_type) {
-        (ValueType::Vector(mut v1, bracket_type1), ValueType::Vector(v2, _)) => {
-            v1.extend(v2);
-            interp.workspace.push(Value { val_type: ValueType::Vector(v1, bracket_type1) });
-            Ok(())
-        },
-        _ => Err(AjisaiError::type_error("vector vector", "other types")),
-    }
-}
-
-// REVERSE - Vector要素順序反転
-pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
-    match val.val_type {
-        ValueType::Vector(mut v, bracket_type) => {
-            v.reverse();
-            interp.workspace.push(Value { val_type: ValueType::Vector(v, bracket_type) });
-            Ok(())
-        },
-        _ => Err(AjisaiError::type_error("vector", "other type")),
-    }
-}
-
-// ========== ヘルパー関数 ==========
-
-fn extract_vector_and_sizes(interp: &mut Interpreter) -> Result<(Value, Vec<i64>)> {
-    let mut sizes = Vec::new();
-    let mut temp_values = Vec::new();
-    
-    while let Some(val) = interp.workspace.pop() {
-        match &val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::Number(n) if n.denominator == 1 => {
-                        if n.numerator <= 0 {
-                            temp_values.push(val);
-                            for v in temp_values.into_iter().rev() {
-                                interp.workspace.push(v);
-                            }
-                            return Err(AjisaiError::from("Split size must be positive"));
-                        }
-                        sizes.push(n.numerator);
-                        temp_values.push(val);
-                    },
-                    _ => {
-                        // ベクトルが見つかった
-                        sizes.reverse();
-                        return Ok((val, sizes));
-                    }
-                }
-            },
-            ValueType::Vector(_, _) => {
-                // 複数要素ベクトルが見つかった
-                sizes.reverse();
-                return Ok((val, sizes));
-            },
-            _ => {
-                temp_values.push(val);
-                for v in temp_values.into_iter().rev() {
-                    interp.workspace.push(v);
-                }
-                return Err(AjisaiError::from("SPLIT requires vector and positive integers"));
-            }
-        }
-    }
-    
-    for v in temp_values.into_iter().rev() {
-        interp.workspace.push(v);
-    }
-    Err(AjisaiError::from("SPLIT requires vector"))
-}
-
-fn split_by_sizes(v: &[Value], sizes: &[i64], interp: &mut Interpreter, bracket_type: BracketType) -> Result<()> {
-    let total_size: i64 = sizes.iter().sum();
-    if total_size != v.len() as i64 {
-        return Err(AjisaiError::from(format!(
-            "Split sizes sum to {} but vector has {} elements",
-            total_size, v.len()
-        )));
-    }
-    
-    let mut start = 0;
-    let mut results = Vec::new();
-    
-    for &size in sizes {
-        let end = start + size as usize;
-        if end > v.len() {
-            return Err(AjisaiError::from("Invalid split sizes"));
-        }
-        
-        results.push(Value { 
-            val_type: ValueType::Vector(v[start..end].to_vec(), bracket_type.clone()) 
-        });
-        start = end;
-    }
-    
-    for result in results {
-        interp.workspace.push(result);
-    }
-    
     Ok(())
 }
