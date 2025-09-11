@@ -1,7 +1,9 @@
-// rust/src/interpreter/arithmetic.rs (純粋Vector操作言語版)
+// rust/src/interpreter/arithmetic.rs (BigInt対応版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
+use num_bigint::BigInt;
+use num_traits::Zero;
 
 fn extract_single_element_value(vector_val: &Value) -> Result<&Value> {
     match &vector_val.val_type {
@@ -90,9 +92,8 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
     let a_val = extract_single_element_value(&a_vec)?;
     let b_val = extract_single_element_value(&b_vec)?;
     
-    // ゼロ除算チェック
     if let ValueType::Number(n) = &b_val.val_type {
-        if n.numerator == 0 {
+        if n.numerator.is_zero() {
             return Err(AjisaiError::DivisionByZero);
         }
     }
@@ -138,9 +139,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
-    let val_vec = interp.workspace.pop()
-        .ok_or(AjisaiError::WorkspaceUnderflow)?;
-    
+    let val_vec = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
     let val = extract_single_element_value(&val_vec)?;
     
     let result = match &val.val_type {
@@ -154,57 +153,35 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
+    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
     let b_vec = interp.workspace.pop().unwrap();
     let a_vec = interp.workspace.pop().unwrap();
-    
     let a_val = extract_single_element_value(&a_vec)?;
     let b_val = extract_single_element_value(&b_vec)?;
     
     let result = match (&a_val.val_type, &b_val.val_type) {
-        (ValueType::Boolean(a), ValueType::Boolean(b)) => {
-            Value { val_type: ValueType::Boolean(*a && *b) }
-        },
-        (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) => {
-            Value { val_type: ValueType::Boolean(false) }
-        },
-        (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) | (ValueType::Nil, ValueType::Nil) => {
-            Value { val_type: ValueType::Nil }
-        },
+        (ValueType::Boolean(a), ValueType::Boolean(b)) => Value { val_type: ValueType::Boolean(*a && *b) },
+        (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) => Value { val_type: ValueType::Boolean(false) },
+        (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) | (ValueType::Nil, ValueType::Nil) => Value { val_type: ValueType::Nil },
         _ => return Err(AjisaiError::type_error("boolean or nil", "other types")),
     };
-    
     interp.workspace.push(wrap_result_value(result));
     Ok(())
 }
 
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
-    }
-    
+    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
     let b_vec = interp.workspace.pop().unwrap();
     let a_vec = interp.workspace.pop().unwrap();
-    
     let a_val = extract_single_element_value(&a_vec)?;
     let b_val = extract_single_element_value(&b_vec)?;
-    
+
     let result = match (&a_val.val_type, &b_val.val_type) {
-        (ValueType::Boolean(a), ValueType::Boolean(b)) => {
-            Value { val_type: ValueType::Boolean(*a || *b) }
-        },
-        (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) => {
-            Value { val_type: ValueType::Boolean(true) }
-        },
-        (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) | (ValueType::Nil, ValueType::Nil) => {
-            Value { val_type: ValueType::Nil }
-        },
+        (ValueType::Boolean(a), ValueType::Boolean(b)) => Value { val_type: ValueType::Boolean(*a || *b) },
+        (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) => Value { val_type: ValueType::Boolean(true) },
+        (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) | (ValueType::Nil, ValueType::Nil) => Value { val_type: ValueType::Nil },
         _ => return Err(AjisaiError::type_error("boolean or nil", "other types")),
     };
-    
     interp.workspace.push(wrap_result_value(result));
     Ok(())
 }
