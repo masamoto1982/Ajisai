@@ -1,4 +1,4 @@
-// rust/src/lib.rs (BigInt対応・数値文字列変換版)
+// rust/src/lib.rs (BigInt対応・エラー修正版)
 
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
@@ -67,8 +67,25 @@ impl AjisaiInterpreter {
         }
         obj.into()
     }
-
+    
     #[wasm_bindgen]
+    pub fn get_workspace(&self) -> JsValue {
+        let serializable_workspace: Vec<SerializableValue> = self.interpreter.get_workspace().iter().map(value_to_serializable).collect();
+        to_value(&serializable_workspace).unwrap_or(JsValue::NULL)
+    }
+
+    // ... (init_step, step, get_custom_words_info, get_builtin_words_info, get_word_definition, restore_word are unchanged) ...
+    
+    #[wasm_bindgen]
+    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
+        let s_workspace: Vec<SerializableValue> = serde_wasm_bindgen::from_value(workspace_js)
+            .map_err(|e| format!("Deserialization error: {}", e))?;
+        let workspace = s_workspace.into_iter()
+            .map(serializable_to_value)
+            .collect::<Result<Vec<Value>, String>>()?;
+        self.interpreter.set_workspace(workspace);
+        Ok(())
+    }
     pub fn init_step(&mut self, code: &str) -> Result<String, String> {
         let tokens = crate::tokenizer::tokenize(code).map_err(|e| format!("Tokenization error: {}", e))?;
         self.step_tokens = tokens;
@@ -104,11 +121,6 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn get_workspace(&self) -> JsValue {
-        to_value(&self.interpreter.get_workspace().iter().map(value_to_serializable).collect::<Vec<_>>()).unwrap_or(JsValue::NULL)
-    }
-
-    #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
         to_value(&self.interpreter.get_custom_words_info()).unwrap_or(JsValue::NULL)
     }
@@ -125,20 +137,7 @@ impl AjisaiInterpreter {
             None => JsValue::NULL,
         }
     }
-
-    #[wasm_bindgen]
-    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
-        let workspace_serializable: Vec<SerializableValue> = serde_wasm_bindgen::from_value(workspace_js)
-            .map_err(|e| format!("Failed to deserialize workspace: {}", e))?;
-        
-        let new_workspace = workspace_serializable.into_iter()
-            .map(serializable_to_value)
-            .collect::<Result<Vec<_>,_>>()?;
-
-        self.interpreter.set_workspace(new_workspace);
-        Ok(())
-    }
-
+    
     #[wasm_bindgen]
     pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
         let definition = definition.trim();
@@ -152,11 +151,8 @@ impl AjisaiInterpreter {
         self.interpreter.restore_custom_word(name, tokens, description)
             .map_err(|e| e.to_string())
     }
-
-    // Other functions (get_custom_words, etc.) can be added here if needed
 }
 
-// --- Serialization ---
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct SerializableValue {
@@ -168,7 +164,7 @@ struct SerializableValue {
 }
 
 fn value_to_serializable(value: &Value) -> SerializableValue {
-    let (val_type, json_value, bracket_type_str) = match &value.val_type {
+    let (val_type_str, json_value, bracket_type_str) = match &value.val_type {
         ValueType::Number(f) => ("number", serde_json::json!({
             "numerator": f.numerator.to_string(),
             "denominator": f.denominator.to_string(),
@@ -176,14 +172,23 @@ fn value_to_serializable(value: &Value) -> SerializableValue {
         ValueType::String(s) => ("string", serde_json::json!(s), None),
         ValueType::Boolean(b) => ("boolean", serde_json::json!(b), None),
         ValueType::Symbol(s) => ("symbol", serde_json::json!(s), None),
-        ValueType::Vector(v, bt) => ("vector", serde_json::json!(v.iter().map(value_to_serializable).collect::<Vec<_>>()), Some(match bt {
-            BracketType::Square => "square",
-            BracketType::Curly => "curly",
-            BracketType::Round => "round",
-        }.to_string())),
+        ValueType::Vector(v, bt) => (
+            "vector",
+            serde_json::json!(v.iter().map(value_to_serializable).collect::<Vec<_>>()),
+            Some(match bt {
+                BracketType::Square => "square".to_string(),
+                BracketType::Curly => "curly".to_string(),
+                BracketType::Round => "round".to_string(),
+            })
+        ),
         ValueType::Nil => ("nil", serde_json::Value::Null, None),
     };
-    SerializableValue { val_type: val_type.to_string(), value: json_value, bracket_type: bracket_type_str }
+
+    SerializableValue {
+        val_type: val_type_str.to_string(),
+        value: json_value,
+        bracket_type: bracket_type_str,
+    }
 }
 
 fn serializable_to_value(s_val: SerializableValue) -> Result<Value, String> {
