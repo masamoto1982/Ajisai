@@ -1,4 +1,4 @@
-// js/gui/display.ts (BigInt対応版)
+// js/gui/display.ts (ビルドエラー完全修正版)
 
 import type { Value, ExecuteResult, Fraction } from '../wasm-types';
 
@@ -9,6 +9,7 @@ interface DisplayElements {
 
 export class Display {
     private elements!: DisplayElements;
+    private mainOutput = '';
 
     init(elements: DisplayElements): void {
         this.elements = elements;
@@ -19,6 +20,7 @@ export class Display {
         const debugText = (result.debugOutput || '').trim();
         const programOutput = (result.output || '').trim();
         
+        this.mainOutput = `${debugText}\n${programOutput}`;
         this.elements.outputDisplay.innerHTML = '';
 
         if (debugText) {
@@ -46,17 +48,46 @@ export class Display {
             this.elements.outputDisplay.appendChild(okSpan);
         }
     }
+    
+    showOutput(text: string): void {
+        this.mainOutput = text;
+        this.elements.outputDisplay.innerHTML = '';
+        const span = document.createElement('span');
+        span.style.color = '#007bff';
+        span.textContent = text.replace(/\\n/g, '\n');
+        this.elements.outputDisplay.appendChild(span);
+    }
 
     showError(error: Error | { message?: string } | string): void {
-        const errorMessage = typeof error === 'string' ? `Error: ${error}` : `Error: ${error.message || error}`;
+        const errorMessage = typeof error === 'string' 
+            ? `Error: ${error}`
+            : `Error: ${error.message || error}`;
+        
+        this.mainOutput = errorMessage;
         this.elements.outputDisplay.innerHTML = '';
+        
         const errorSpan = document.createElement('span');
         errorSpan.style.color = '#dc3545';
         errorSpan.style.fontWeight = 'bold';
         errorSpan.textContent = errorMessage.replace(/\\n/g, '\n');
         this.elements.outputDisplay.appendChild(errorSpan);
     }
-    
+
+    showInfo(text: string, append = false): void {
+        const infoSpan = document.createElement('span');
+        infoSpan.style.color = '#666';
+        infoSpan.textContent = (append ? '\n' : '') + text.replace(/\\n/g, '\n');
+
+        if (append && this.elements.outputDisplay.innerHTML.trim() !== '') {
+            this.mainOutput = `${this.mainOutput}\n${text}`;
+            this.elements.outputDisplay.appendChild(infoSpan);
+        } else {
+            this.mainOutput = text;
+            this.elements.outputDisplay.innerHTML = '';
+            this.elements.outputDisplay.appendChild(infoSpan);
+        }
+    }
+
     updateWorkspace(workspace: Value[]): void {
         const display = this.elements.workspaceDisplay;
         display.innerHTML = '';
@@ -129,7 +160,7 @@ export class Display {
                         default: openBracket = '['; closeBracket = ']'; break;
                     }
                     
-                    return `${openBracket} ${item.value.map(v => this.formatValue(v)).join(' ')} ${closeBracket}`;
+                    return `${openBracket} ${item.value.map((v: Value) => this.formatValue(v)).join(' ')} ${closeBracket}`;
                 }
                 return '[ ]';
             case 'nil':
