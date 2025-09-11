@@ -1,9 +1,10 @@
-// rust/src/interpreter/control.rs (ビルドエラー完全修正版)
+// rust/src/interpreter/control.rs (完全修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Token, Value, BracketType};
 use std::collections::HashSet;
-use num_traits::Zero;
+use num_bigint::BigInt;
+use num_traits::{Zero, One};
 
 pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 { return Err(AjisaiError::WorkspaceUnderflow); }
@@ -55,7 +56,14 @@ fn is_truthy(value: &Value) -> bool {
 
 fn value_to_token(value: Value) -> Result<Token> {
     match value.val_type {
-        ValueType::Number(_) => Ok(Token::Number(format!("{}", value))),
+        ValueType::Number(frac) => {
+            let s = if frac.denominator == BigInt::one() {
+                frac.numerator.to_string()
+            } else {
+                format!("{}/{}", frac.numerator, frac.denominator)
+            };
+            Ok(Token::Number(s))
+        },
         ValueType::String(s) => Ok(Token::String(s)),
         ValueType::Boolean(b) => Ok(Token::Boolean(b)),
         ValueType::Symbol(s) => Ok(Token::Symbol(s)),
@@ -86,13 +94,14 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         if existing.is_builtin { return Err(AjisaiError::from(format!("Cannot redefine builtin word: {}", name))); }
     }
     
-    interp.dictionary.insert(name, crate::interpreter::WordDefinition {
+    interp.dictionary.insert(name.clone(), crate::interpreter::WordDefinition {
         tokens,
         is_builtin: false,
         description: None,
         category: None,
         repeat_count: 1,
     });
+    interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
 
     Ok(())
 }
@@ -115,6 +124,8 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::ProtectedWord { name, dependents });
     }
     
-    interp.dictionary.remove(&name);
+    if interp.dictionary.remove(&name).is_some() {
+        interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
+    }
     Ok(())
 }
