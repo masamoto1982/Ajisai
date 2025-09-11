@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (BigInt対応版)
+// rust/src/tokenizer.rs (BigInt対応・完全修正版)
 
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
@@ -21,6 +21,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 continue;
             }
 
+            // 文字列リテラル
             if chars[i] == '\'' {
                 if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
                     tokens.push(token);
@@ -29,41 +30,60 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 }
             }
             
+            // ブラケット記号
             match chars[i] {
-                '[' => { tokens.push(Token::VectorStart(BracketType::Square)); i += 1; continue; },
-                ']' => { tokens.push(Token::VectorEnd(BracketType::Square)); i += 1; continue; },
-                ':' => { tokens.push(Token::Colon); i += 1; continue; },
+                '[' => { 
+                    tokens.push(Token::VectorStart(BracketType::Square)); 
+                    i += 1; 
+                    continue; 
+                },
+                ']' => { 
+                    tokens.push(Token::VectorEnd(BracketType::Square)); 
+                    i += 1; 
+                    continue; 
+                },
+                ':' => { 
+                    tokens.push(Token::Colon); 
+                    i += 1; 
+                    continue; 
+                },
                 _ => {}
             }
             
+            // コメント
             if chars[i] == '#' {
                 break;
             }
             
+            // 数値のパース（最優先）
             if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
+            // カスタムワード
             if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
+            // 演算子
             if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
+            // ビルトインワード
             if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
+            // 認識できない文字はスキップ
             i += 1;
         }
         
@@ -143,7 +163,6 @@ fn convert_single_vector_brackets(vector_tokens: &mut [Token]) -> Result<(), Str
     Ok(())
 }
 
-
 fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
     let mut sorted_words: Vec<&String> = custom_words.iter().collect();
     sorted_words.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()));
@@ -161,7 +180,7 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
 }
 
 fn is_word_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c.is_alphabetic()
+    c.is_ascii_alphanumeric() || c.is_alphabetic() || c == '_'
 }
 
 fn parse_single_quote_string(chars: &[char]) -> Option<(Token, usize)> {
@@ -189,57 +208,82 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() { return None; }
     
     let mut i = 0;
+    let start = i;
     
-    // 符号
-    if chars[i] == '-' {
+    // 符号の処理
+    if chars[i] == '-' || chars[i] == '+' {
         i += 1;
-    }
-    
-    // 数字が続くかチェック
-    if i >= chars.len() || !chars[i].is_ascii_digit() {
-        return None; // 符号のみは数値ではない
+        // 符号の後に数字が続かない場合は演算子として扱う
+        if i >= chars.len() || !chars[i].is_ascii_digit() {
+            return None;
+        }
     }
     
     // 整数部
+    let int_start = i;
     while i < chars.len() && chars[i].is_ascii_digit() {
         i += 1;
     }
     
-    // 小数点
+    // 少なくとも1つの数字が必要
+    if i == int_start {
+        return None;
+    }
+    
+    // 小数点の処理
     if i < chars.len() && chars[i] == '.' {
         i += 1;
+        // 小数部
+        let frac_start = i;
         while i < chars.len() && chars[i].is_ascii_digit() {
             i += 1;
         }
+        // 小数点の後に数字がない場合も有効（例: "3."）
     }
     
-    // 分数
-    if i < chars.len() && chars[i] == '/' {
+    // 分数の処理
+    else if i < chars.len() && chars[i] == '/' {
         i += 1;
+        // 分母は必須
         if i >= chars.len() || !chars[i].is_ascii_digit() {
-            return None; // 分母がない
-        }
-        while i < chars.len() && chars[i].is_ascii_digit() {
-            i += 1;
+            // 分母がない場合は整数として扱う
+            i -= 1;
+        } else {
+            while i < chars.len() && chars[i].is_ascii_digit() {
+                i += 1;
+            }
         }
     }
     
-    let number_str: String = chars[..i].iter().collect();
-    Some((Token::Number(number_str), i))
+    // 次の文字が数字やアルファベットの場合は無効
+    if i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '.') {
+        return None;
+    }
+    
+    let number_str: String = chars[start..i].iter().collect();
+    Some((Token::Number(number_str), i - start))
 }
 
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
-        "true", "false", "nil", "NIL", "DUP", "SWAP", "ROT", "GET", "INSERT", 
-        "REPLACE", "REMOVE", "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
-        "CONCAT", "REVERSE", "+", "-", "*", "/", "=", "<", "<=", ">", ">=",
-        "AND", "OR", "NOT", "PRINT", "DEF", "DEL", "RESET"
+        "true", "false", "nil", "NIL", 
+        "DUP", "SWAP", "ROT", 
+        "GET", "INSERT", "REPLACE", "REMOVE", 
+        "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
+        "CONCAT", "REVERSE", 
+        "AND", "OR", "NOT", 
+        "PRINT", "DEF", "DEL", "RESET"
     ];
     
     for word in &builtin_words {
         if chars.len() >= word.len() {
             let candidate: String = chars[..word.len()].iter().collect();
-            if candidate == *word && (chars.len() == word.len() || !chars[word.len()].is_ascii_alphanumeric()) {
+            if candidate == *word {
+                // 次の文字がアルファベットや数字でないことを確認
+                if chars.len() > word.len() && is_word_char(chars[word.len()]) {
+                    continue;
+                }
+                
                 let token = match *word {
                     "true" => Token::Boolean(true),
                     "false" => Token::Boolean(false),
@@ -256,6 +300,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
 fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() { return None; }
     
+    // 2文字演算子
     if chars.len() >= 2 {
         let two_char: String = chars[..2].iter().collect();
         match two_char.as_str() {
@@ -265,8 +310,19 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
         }
     }
     
+    // 1文字演算子（単独の+/-は数値の符号と区別する必要がある）
     match chars[0] {
-        '+' | '-' | '*' | '/' | '<' | '>' | '=' => Some((Token::Symbol(chars[0].to_string()), 1)),
+        '+' | '-' => {
+            // 次の文字が数字の場合は数値の符号として扱うため、ここでは処理しない
+            if chars.len() > 1 && chars[1].is_ascii_digit() {
+                None
+            } else {
+                Some((Token::Symbol(chars[0].to_string()), 1))
+            }
+        },
+        '*' | '/' | '<' | '>' | '=' => {
+            Some((Token::Symbol(chars[0].to_string()), 1))
+        },
         _ => None
     }
 }
