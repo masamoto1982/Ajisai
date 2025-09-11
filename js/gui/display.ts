@@ -1,4 +1,4 @@
-// js/gui/display.ts (ビルドエラー完全修正版)
+// js/gui/display.ts (BigInt対応・デバッグ版)
 
 import type { Value, ExecuteResult, Fraction } from '../wasm-types';
 
@@ -89,6 +89,9 @@ export class Display {
     }
 
     updateWorkspace(workspace: Value[]): void {
+        console.log('updateWorkspace called with:', workspace);
+        console.log('Workspace JSON:', JSON.stringify(workspace, null, 2));
+        
         const display = this.elements.workspaceDisplay;
         display.innerHTML = '';
         
@@ -107,9 +110,18 @@ export class Display {
         container.style.flexDirection = 'row';
         
         workspace.forEach((item, index) => {
+            console.log(`Workspace item ${index}:`, item);
+            
             const elem = document.createElement('span');
             elem.className = 'workspace-item';
-            elem.textContent = this.formatValue(item);
+            
+            try {
+                elem.textContent = this.formatValue(item);
+                console.log(`Formatted item ${index}:`, elem.textContent);
+            } catch (error) {
+                console.error(`Error formatting item ${index}:`, error);
+                elem.textContent = 'ERROR';
+            }
             
             if (index === workspace.length - 1) {
                 elem.style.fontWeight = 'bold';
@@ -133,23 +145,45 @@ export class Display {
     }
 
     private formatValue(item: Value): string {
-        if (!item) return 'undefined';
+        console.log('formatValue input:', item);
+        
+        if (!item) {
+            console.error('formatValue: item is undefined or null');
+            return 'undefined';
+        }
+        
+        if (!item.type) {
+            console.error('formatValue: item.type is undefined');
+            console.log('Item structure:', JSON.stringify(item));
+            return 'unknown';
+        }
         
         switch (item.type) {
             case 'number':
+                console.log('Formatting number:', item.value);
                 const frac = item.value as Fraction;
-                if (frac.denominator === '1') {
-                    return frac.numerator;
+                if (!frac) {
+                    console.error('Number value is undefined');
+                    return '?';
+                }
+                // BigIntは文字列として送られてくる
+                if (frac.denominator === '1' || frac.denominator === 1) {
+                    return String(frac.numerator);
                 } else {
                     return `${frac.numerator}/${frac.denominator}`;
                 }
+                
             case 'string':
                 return `'${item.value}'`;
+                
             case 'symbol':
                 return String(item.value);
+                
             case 'boolean':
                 return item.value ? 'true' : 'false';
+                
             case 'vector':
+                console.log('Formatting vector:', item.value);
                 if (Array.isArray(item.value)) {
                     const bracketType = item.bracketType || 'square';
                     let openBracket: string, closeBracket: string;
@@ -160,12 +194,25 @@ export class Display {
                         default: openBracket = '['; closeBracket = ']'; break;
                     }
                     
-                    return `${openBracket} ${item.value.map((v: Value) => this.formatValue(v)).join(' ')} ${closeBracket}`;
+                    const elements = item.value.map((v: Value) => {
+                        try {
+                            return this.formatValue(v);
+                        } catch (e) {
+                            console.error('Error formatting vector element:', e);
+                            return '?';
+                        }
+                    }).join(' ');
+                    
+                    return `${openBracket}${elements ? ' ' + elements + ' ' : ''}${closeBracket}`;
                 }
+                console.error('Vector value is not an array:', item.value);
                 return '[ ]';
+                
             case 'nil':
                 return 'nil';
+                
             default:
+                console.error('Unknown type:', item.type);
                 return JSON.stringify(item.value);
         }
     }
