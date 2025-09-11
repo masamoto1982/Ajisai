@@ -1,8 +1,7 @@
-// rust/src/interpreter/arithmetic.rs (BigInt対応版)
+// rust/src/interpreter/arithmetic.rs (ビルドエラー完全修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
-use num_bigint::BigInt;
 use num_traits::Zero;
 
 fn extract_single_element_value(vector_val: &Value) -> Result<&Value> {
