@@ -1,4 +1,4 @@
-// js/gui/test.ts (BigInt対応版)
+// js/gui/test.ts (ビルドエラー完全修正版)
 
 import type { Value, Fraction } from '../wasm-types';
 
@@ -70,7 +70,10 @@ export class TestRunner {
     private compareWorkspace(actual: Value[], expected: Value[]): boolean {
         if (actual.length !== expected.length) return false;
         for (let i = 0; i < actual.length; i++) {
-            if (!this.compareValue(actual[i], expected[i])) return false;
+            const actualItem = actual[i];
+            const expectedItem = expected[i];
+            if (actualItem === undefined || expectedItem === undefined) return false;
+            if (!this.compareValue(actualItem, expectedItem)) return false;
         }
         return true;
     }
@@ -91,7 +94,6 @@ export class TestRunner {
         }
     }
     
-    // UI表示用のメソッド
     private showColoredInfo(text: string, type: 'success' | 'error' | 'info'): void {
         const outputElement = this.gui.elements.outputDisplay;
         const span = document.createElement('span');
@@ -106,7 +108,6 @@ export class TestRunner {
     
     private getTestCases(): TestCase[] {
         return [
-            // ========== BigIntテスト ==========
             {
                 name: "巨大な整数の作成",
                 code: "[ 10000000000000000000000000000000000000000000000000000 ]",
