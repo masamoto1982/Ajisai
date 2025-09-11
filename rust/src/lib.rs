@@ -1,14 +1,16 @@
-// rust/src/lib.rs (RESET対応版)
+// rust/src/lib.rs (BigInt対応・数値文字列変換版)
 
 use wasm_bindgen::prelude::*;
+use serde_wasm_bindgen::to_value;
+use crate::types::{Value, ValueType, Fraction, BracketType};
+use crate::interpreter::Interpreter;
+use num_bigint::BigInt;
+use std::str::FromStr;
 
 mod types;
 mod tokenizer;
 mod interpreter;
 mod builtins;
-
-use types::*;
-use interpreter::Interpreter;
 
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
@@ -31,67 +33,52 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn execute(&mut self, code: &str) -> JsValue {
         let obj = js_sys::Object::new();
-        
         match self.interpreter.execute(code) {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                
-                let output = self.interpreter.get_output();
-                let debug_output = self.interpreter.get_debug_output();
-
-                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"debugOutput".into(), &debug_output.into()).unwrap();
-                
-                js_sys::Reflect::set(&obj, &"autoNamed".into(), &JsValue::from_bool(false)).unwrap();
+                js_sys::Reflect::set(&obj, &"output".into(), &self.interpreter.get_output().into()).unwrap();
+                js_sys::Reflect::set(&obj, &"debugOutput".into(), &self.interpreter.get_debug_output().into()).unwrap();
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &JsValue::from_str(&e.to_string())).unwrap();
+                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
                 js_sys::Reflect::set(&obj, &"error".into(), &JsValue::from_bool(true)).unwrap();
             }
         }
-        
         obj.into()
     }
 
     #[wasm_bindgen]
     pub fn reset(&mut self) -> JsValue {
         let obj = js_sys::Object::new();
-        
         match self.interpreter.execute_reset() {
             Ok(()) => {
                 self.interpreter = Interpreter::new();
                 self.step_tokens.clear();
                 self.step_position = 0;
-                
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &"All memory reset. System reinitialized.".into()).unwrap();
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &JsValue::from_str(&e.to_string())).unwrap();
+                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
                 js_sys::Reflect::set(&obj, &"error".into(), &JsValue::from_bool(true)).unwrap();
             }
         }
-        
         obj.into()
     }
 
     #[wasm_bindgen]
     pub fn init_step(&mut self, code: &str) -> Result<String, String> {
-        let tokens = crate::tokenizer::tokenize(code)
-            .map_err(|e| format!("Tokenization error: {}", e))?;
-        
+        let tokens = crate::tokenizer::tokenize(code).map_err(|e| format!("Tokenization error: {}", e))?;
         self.step_tokens = tokens;
         self.step_position = 0;
-        
         Ok(format!("Step mode initialized. {} tokens to execute.", self.step_tokens.len()))
     }
 
     #[wasm_bindgen]
     pub fn step(&mut self) -> JsValue {
         let result_obj = js_sys::Object::new();
-        
         if self.step_position >= self.step_tokens.len() {
             js_sys::Reflect::set(&result_obj, &"hasMore".into(), &JsValue::from_bool(false)).unwrap();
             js_sys::Reflect::set(&result_obj, &"output".into(), &"Step execution completed.".into()).unwrap();
@@ -99,11 +86,9 @@ impl AjisaiInterpreter {
         }
         
         let token = &self.step_tokens[self.step_position];
-        
         match self.interpreter.execute_single_token(token) {
             Ok(output) => {
                 self.step_position += 1;
-                
                 js_sys::Reflect::set(&result_obj, &"hasMore".into(), &JsValue::from_bool(self.step_position < self.step_tokens.len())).unwrap();
                 js_sys::Reflect::set(&result_obj, &"output".into(), &output.into()).unwrap();
                 js_sys::Reflect::set(&result_obj, &"position".into(), &JsValue::from_f64(self.step_position as f64)).unwrap();
@@ -115,180 +100,22 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&result_obj, &"error".into(), &JsValue::from_bool(true)).unwrap();
             }
         }
-        
         result_obj.into()
     }
 
     #[wasm_bindgen]
     pub fn get_workspace(&self) -> JsValue {
-        let workspace_values: Vec<JsValue> = self.interpreter
-            .get_workspace()
-            .iter()
-            .map(|v| value_to_js(v))
-            .collect();
-        
-        let arr = js_sys::Array::new();
-        for val in workspace_values {
-            arr.push(&val);
-        }
-        arr.into()
-    }
-
-    #[wasm_bindgen]
-    pub fn get_custom_words(&self) -> Vec<String> {
-        self.interpreter.get_custom_words()
-    }
-
-    #[wasm_bindgen]
-    pub fn get_custom_words_with_descriptions(&self) -> JsValue {
-        let words = self.interpreter.get_custom_words_with_descriptions();
-        let arr = js_sys::Array::new();
-        
-        for (name, desc) in words {
-            let word_arr = js_sys::Array::new();
-            word_arr.push(&JsValue::from_str(&name));
-            word_arr.push(&desc.map(|d| JsValue::from_str(&d)).unwrap_or(JsValue::NULL));
-            arr.push(&word_arr);
-        }
-        
-        arr.into()
+        to_value(&self.interpreter.get_workspace().iter().map(value_to_serializable).collect::<Vec<_>>()).unwrap_or(JsValue::NULL)
     }
 
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
-        let words_info = self.interpreter.get_custom_words_info();
-        let arr = js_sys::Array::new();
-        
-        for (name, desc, protected) in words_info {
-            let word_arr = js_sys::Array::new();
-            word_arr.push(&JsValue::from_str(&name));
-            word_arr.push(&desc.map(|d| JsValue::from_str(&d)).unwrap_or(JsValue::NULL));
-            word_arr.push(&JsValue::from_bool(protected));
-            arr.push(&word_arr);
-        }
-        
-        arr.into()
+        to_value(&self.interpreter.get_custom_words_info()).unwrap_or(JsValue::NULL)
     }
 
     #[wasm_bindgen]
     pub fn get_builtin_words_info(&self) -> JsValue {
-        let builtin_definitions = crate::builtins::get_builtin_definitions();
-        let arr = js_sys::Array::new();
-        
-        for (name, desc) in builtin_definitions {
-            let word_arr = js_sys::Array::new();
-            word_arr.push(&JsValue::from_str(name));
-            word_arr.push(&JsValue::from_str(desc));
-            arr.push(&word_arr);
-        }
-        
-        arr.into()
-    }
-
-    #[wasm_bindgen]
-    pub fn get_builtin_words_by_category(&self) -> JsValue {
-        let builtin_definitions = crate::builtins::get_builtin_definitions();
-        let result = js_sys::Object::new();
-        
-        let position_ops = js_sys::Array::new();
-        let quantity_ops = js_sys::Array::new();
-        let workspace_ops = js_sys::Array::new();
-        let vector_ops = js_sys::Array::new();
-        let arithmetic_ops = js_sys::Array::new();
-        let comparison_ops = js_sys::Array::new();
-        let logic_ops = js_sys::Array::new();
-        let io_ops = js_sys::Array::new();
-        let system_ops = js_sys::Array::new();
-        
-        for (name, desc) in builtin_definitions {
-            let word_info = js_sys::Array::new();
-            word_info.push(&JsValue::from_str(name));
-            word_info.push(&JsValue::from_str(desc));
-            
-            match name {
-                "GET" | "INSERT" | "REPLACE" | "REMOVE" => {
-                    position_ops.push(&word_info);
-                },
-                "LENGTH" | "TAKE" | "DROP" | "REPEAT" | "SPLIT" => {
-                    quantity_ops.push(&word_info);
-                },
-                "DUP" | "SWAP" | "ROT" => {
-                    workspace_ops.push(&word_info);
-                },
-                "CONCAT" | "REVERSE" => {
-                    vector_ops.push(&word_info);
-                },
-                "+" | "-" | "*" | "/" => {
-                    arithmetic_ops.push(&word_info);
-                },
-                "=" | "<" | "<=" | ">" | ">=" => {
-                    comparison_ops.push(&word_info);
-                },
-                "AND" | "OR" | "NOT" => {
-                    logic_ops.push(&word_info);
-                },
-                "PRINT" => {
-                    io_ops.push(&word_info);
-                },
-                "DEF" | "DEL" | "RESET" => {
-                    system_ops.push(&word_info);
-                },
-                _ => {}
-            }
-        }
-        
-        js_sys::Reflect::set(&result, &JsValue::from_str("Position"), &position_ops).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("Quantity"), &quantity_ops).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("Workspace"), &workspace_ops).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("Vector"), &vector_ops).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("Arithmetic"), &arithmetic_ops).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("Comparison"), &comparison_ops).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("Logic"), &logic_ops).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("IO"), &io_ops).unwrap();
-        js_sys::Reflect::set(&result, &JsValue::from_str("System"), &system_ops).unwrap();
-        
-        result.into()
-    }
-
-    #[wasm_bindgen]
-    pub fn reset_workspace(&mut self) {
-        self.interpreter = Interpreter::new();
-        self.step_tokens.clear();
-        self.step_position = 0;
-    }
-    
-    #[wasm_bindgen]
-    pub fn save_table(&mut self, _name: String, _schema: JsValue, _records: JsValue) -> Result<(), String> {
-        Ok(())
-    }
-
-    #[wasm_bindgen]
-    pub fn load_table(&self, _name: String) -> JsValue {
-        JsValue::NULL
-    }
-
-    #[wasm_bindgen]
-    pub fn get_all_tables(&self) -> Vec<String> {
-        Vec::new()
-    }
-    
-    #[wasm_bindgen]
-    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
-        if !workspace_js.is_array() {
-            return Err("Workspace must be an array".to_string());
-        }
-        
-        let arr = js_sys::Array::from(&workspace_js);
-        let mut new_workspace = Vec::new();
-        
-        for i in 0..arr.length() {
-            let item = arr.get(i);
-            let value = js_value_to_rust_value(&item)?;
-            new_workspace.push(value);
-        }
-        
-        self.interpreter.set_workspace(new_workspace);
-        Ok(())
+        to_value(&crate::builtins::get_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
     
     #[wasm_bindgen]
@@ -298,7 +125,20 @@ impl AjisaiInterpreter {
             None => JsValue::NULL,
         }
     }
-    
+
+    #[wasm_bindgen]
+    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
+        let workspace_serializable: Vec<SerializableValue> = serde_wasm_bindgen::from_value(workspace_js)
+            .map_err(|e| format!("Failed to deserialize workspace: {}", e))?;
+        
+        let new_workspace = workspace_serializable.into_iter()
+            .map(serializable_to_value)
+            .collect::<Result<Vec<_>,_>>()?;
+
+        self.interpreter.set_workspace(new_workspace);
+        Ok(())
+    }
+
     #[wasm_bindgen]
     pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
         let definition = definition.trim();
@@ -307,197 +147,69 @@ impl AjisaiInterpreter {
         }
         
         let inner = &definition[1..definition.len()-1].trim();
-        let tokens = crate::tokenizer::tokenize(inner)
-            .map_err(|e| format!("Failed to tokenize definition: {}", e))?;
+        let tokens = crate::tokenizer::tokenize(inner)?;
         
         self.interpreter.restore_custom_word(name, tokens, description)
             .map_err(|e| e.to_string())
     }
+
+    // Other functions (get_custom_words, etc.) can be added here if needed
 }
 
-fn value_to_js(value: &Value) -> JsValue {
-    let obj = js_sys::Object::new();
-    
-    let type_str = match &value.val_type {
-        ValueType::Number(_) => "number",
-        ValueType::String(_) => "string",
-        ValueType::Boolean(_) => "boolean",
-        ValueType::Symbol(_) => "symbol",
-        ValueType::Vector(_, _) => "vector",
-        ValueType::Nil => "nil",
-    };
-    
-    js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
-    
-    let val = match &value.val_type {
-        ValueType::Number(n) => {
-            let frac_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&frac_obj, &"numerator".into(), &JsValue::from_f64(n.numerator as f64)).unwrap();
-            js_sys::Reflect::set(&frac_obj, &"denominator".into(), &JsValue::from_f64(n.denominator as f64)).unwrap();
-            frac_obj.into()
-        },
-        ValueType::String(s) => JsValue::from_str(s),
-        ValueType::Boolean(b) => JsValue::from_bool(*b),
-        ValueType::Symbol(s) => JsValue::from_str(s),
-        ValueType::Vector(v, _bracket_type) => {
-            let arr = js_sys::Array::new();
-            for item in v.iter() {
-                arr.push(&value_to_js(item));
-            }
-            arr.into()
-        },
-        ValueType::Nil => JsValue::NULL,
-    };
-    
-    js_sys::Reflect::set(&obj, &"value".into(), &val).unwrap();
-    
-    if let ValueType::Vector(_, bracket_type) = &value.val_type {
-        let bracket_type_str = match bracket_type {
+// --- Serialization ---
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SerializableValue {
+    #[serde(rename = "type")]
+    val_type: String,
+    value: serde_json::Value,
+    #[serde(rename = "bracketType", skip_serializing_if = "Option::is_none")]
+    bracket_type: Option<String>,
+}
+
+fn value_to_serializable(value: &Value) -> SerializableValue {
+    let (val_type, json_value, bracket_type_str) = match &value.val_type {
+        ValueType::Number(f) => ("number", serde_json::json!({
+            "numerator": f.numerator.to_string(),
+            "denominator": f.denominator.to_string(),
+        }), None),
+        ValueType::String(s) => ("string", serde_json::json!(s), None),
+        ValueType::Boolean(b) => ("boolean", serde_json::json!(b), None),
+        ValueType::Symbol(s) => ("symbol", serde_json::json!(s), None),
+        ValueType::Vector(v, bt) => ("vector", serde_json::json!(v.iter().map(value_to_serializable).collect::<Vec<_>>()), Some(match bt {
             BracketType::Square => "square",
-            BracketType::Curly => "curly", 
+            BracketType::Curly => "curly",
             BracketType::Round => "round",
-        };
-        js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_type_str.into()).unwrap();
-    }
-    
-    obj.into()
+        }.to_string())),
+        ValueType::Nil => ("nil", serde_json::Value::Null, None),
+    };
+    SerializableValue { val_type: val_type.to_string(), value: json_value, bracket_type: bracket_type_str }
 }
 
-fn js_value_to_rust_value(js_val: &JsValue) -> Result<Value, String> {
-    if js_sys::Reflect::has(js_val, &"type".into()).unwrap_or(false) {
-        let type_str = js_sys::Reflect::get(js_val, &"type".into())
-            .ok()
-            .and_then(|v| v.as_string())
-            .ok_or("Invalid type field")?;
-        
-        let value_field = js_sys::Reflect::get(js_val, &"value".into())
-            .map_err(|_| "Missing value field")?;
-        
-        match type_str.as_str() {
-            "number" => {
-                if js_sys::Reflect::has(&value_field, &"numerator".into()).unwrap_or(false) &&
-                   js_sys::Reflect::has(&value_field, &"denominator".into()).unwrap_or(false) {
-                    
-                    let num = js_sys::Reflect::get(&value_field, &"numerator".into())
-                        .ok()
-                        .and_then(|v| v.as_f64())
-                        .and_then(|n| {
-                            if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                                Some(n as i64)
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or("Invalid numerator")?;
-                    
-                    let den = js_sys::Reflect::get(&value_field, &"denominator".into())
-                        .ok()
-                        .and_then(|v| v.as_f64())
-                        .and_then(|n| {
-                            if n.fract() == 0.0 && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                                Some(n as i64)
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or("Invalid denominator")?;
-                    
-                    if den == 0 {
-                        return Err("Division by zero in fraction".to_string());
-                    }
-                    
-                    Ok(Value {
-                        val_type: ValueType::Number(Fraction::new(num, den))
-                    })
-                } else {
-                    Err("Number value must be an object with 'numerator' and 'denominator' fields".to_string())
-                }
-            },
-            "string" => {
-                let s = value_field.as_string()
-                    .ok_or("Invalid string value")?;
-                Ok(Value {
-                    val_type: ValueType::String(s)
-                })
-            },
-            "boolean" => {
-                let b = value_field.as_bool()
-                    .ok_or("Invalid boolean value")?;
-                Ok(Value {
-                    val_type: ValueType::Boolean(b)
-                })
-            },
-            "symbol" => {
-                let s = value_field.as_string()
-                    .ok_or("Invalid symbol value")?;
-                Ok(Value {
-                    val_type: ValueType::Symbol(s)
-                })
-            },
-            "vector" => {
-                if value_field.is_array() {
-                    let arr = js_sys::Array::from(&value_field);
-                    let mut values = Vec::new();
-                    for i in 0..arr.length() {
-                        let elem = arr.get(i);
-                        values.push(js_value_to_rust_value(&elem)?);
-                    }
-                    
-                    let bracket_type = if let Ok(bracket_type_val) = js_sys::Reflect::get(js_val, &"bracketType".into()) {
-                        if let Some(bracket_type_str) = bracket_type_val.as_string() {
-                            match bracket_type_str.as_str() {
-                                "curly" => BracketType::Curly,
-                                "round" => BracketType::Round,
-                                "square" | _ => BracketType::Square,
-                            }
-                        } else {
-                            BracketType::Square
-                        }
-                    } else {
-                        BracketType::Square
-                    };
-                    
-                    Ok(Value {
-                        val_type: ValueType::Vector(values, bracket_type)
-                    })
-                } else {
-                    Err("Invalid vector value".to_string())
-                }
-            },
-            "nil" => {
-                Ok(Value {
-                    val_type: ValueType::Nil
-                })
-            },
-            _ => Err(format!("Unknown type: {}", type_str)),
-        }
-    } else {
-        if let Some(b) = js_val.as_bool() {
-            Ok(Value {
-                val_type: ValueType::Boolean(b)
-            })
-        } else if js_val.as_f64().is_some() {
-            Err("Direct numeric values are not allowed".to_string())
-        } else if let Some(s) = js_val.as_string() {
-            Ok(Value {
-                val_type: ValueType::String(s)
-            })
-        } else if js_val.is_null() || js_val.is_undefined() {
-            Ok(Value {
-                val_type: ValueType::Nil
-            })
-        } else if js_val.is_array() {
-            let arr = js_sys::Array::from(js_val);
-            let mut values = Vec::new();
-            for i in 0..arr.length() {
-                let elem = arr.get(i);
-                values.push(js_value_to_rust_value(&elem)?);
-            }
-            Ok(Value {
-                val_type: ValueType::Vector(values, BracketType::Square)
-            })
-        } else {
-            Err("Unsupported value type".to_string())
-        }
-    }
+fn serializable_to_value(s_val: SerializableValue) -> Result<Value, String> {
+    let val_type = match s_val.val_type.as_str() {
+        "number" => {
+            let num_str = s_val.value.get("numerator").and_then(|v| v.as_str()).ok_or("Invalid numerator")?;
+            let den_str = s_val.value.get("denominator").and_then(|v| v.as_str()).ok_or("Invalid denominator")?;
+            let num = BigInt::from_str(num_str).map_err(|e| e.to_string())?;
+            let den = BigInt::from_str(den_str).map_err(|e| e.to_string())?;
+            ValueType::Number(Fraction::new(num, den))
+        },
+        "string" => ValueType::String(s_val.value.as_str().ok_or("Invalid string")?.to_string()),
+        "boolean" => ValueType::Boolean(s_val.value.as_bool().ok_or("Invalid boolean")?),
+        "symbol" => ValueType::Symbol(s_val.value.as_str().ok_or("Invalid symbol")?.to_string()),
+        "vector" => {
+            let s_vec: Vec<SerializableValue> = serde_json::from_value(s_val.value).map_err(|e| e.to_string())?;
+            let vec = s_vec.into_iter().map(serializable_to_value).collect::<Result<_,_>>()?;
+            let bt = match s_val.bracket_type.as_deref() {
+                Some("curly") => BracketType::Curly,
+                Some("round") => BracketType::Round,
+                _ => BracketType::Square,
+            };
+            ValueType::Vector(vec, bt)
+        },
+        "nil" => ValueType::Nil,
+        _ => return Err(format!("Unknown type: {}", s_val.val_type)),
+    };
+    Ok(Value { val_type })
 }
