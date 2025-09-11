@@ -1,4 +1,4 @@
-// rust/src/lib.rs (BigInt対応・エラー修正版)
+// rust/src/lib.rs (BigInt対応・完全修正版)
 
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
@@ -33,6 +33,10 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn execute(&mut self, code: &str) -> JsValue {
         let obj = js_sys::Object::new();
+        
+        // デバッグ出力を追加
+        web_sys::console::log_1(&JsValue::from_str(&format!("Executing code: {}", code)));
+        
         match self.interpreter.execute(code) {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
@@ -40,6 +44,7 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"debugOutput".into(), &self.interpreter.get_debug_output().into()).unwrap();
             }
             Err(e) => {
+                web_sys::console::error_1(&JsValue::from_str(&format!("Execution error: {}", e)));
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
                 js_sys::Reflect::set(&obj, &"error".into(), &JsValue::from_bool(true)).unwrap();
@@ -70,24 +75,24 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn get_workspace(&self) -> JsValue {
-        let serializable_workspace: Vec<SerializableValue> = self.interpreter.get_workspace().iter().map(value_to_serializable).collect();
+        let serializable_workspace: Vec<SerializableValue> = self.interpreter.get_workspace()
+            .iter()
+            .map(value_to_serializable)
+            .collect();
+        
+        // デバッグ出力
+        web_sys::console::log_1(&JsValue::from_str(&format!(
+            "Workspace has {} items", 
+            serializable_workspace.len()
+        )));
+        
         to_value(&serializable_workspace).unwrap_or(JsValue::NULL)
     }
 
-    // ... (init_step, step, get_custom_words_info, get_builtin_words_info, get_word_definition, restore_word are unchanged) ...
-    
     #[wasm_bindgen]
-    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
-        let s_workspace: Vec<SerializableValue> = serde_wasm_bindgen::from_value(workspace_js)
-            .map_err(|e| format!("Deserialization error: {}", e))?;
-        let workspace = s_workspace.into_iter()
-            .map(serializable_to_value)
-            .collect::<Result<Vec<Value>, String>>()?;
-        self.interpreter.set_workspace(workspace);
-        Ok(())
-    }
     pub fn init_step(&mut self, code: &str) -> Result<String, String> {
-        let tokens = crate::tokenizer::tokenize(code).map_err(|e| format!("Tokenization error: {}", e))?;
+        let tokens = crate::tokenizer::tokenize(code)
+            .map_err(|e| format!("Tokenization error: {}", e))?;
         self.step_tokens = tokens;
         self.step_position = 0;
         Ok(format!("Step mode initialized. {} tokens to execute.", self.step_tokens.len()))
@@ -151,10 +156,22 @@ impl AjisaiInterpreter {
         self.interpreter.restore_custom_word(name, tokens, description)
             .map_err(|e| e.to_string())
     }
+    
+    #[wasm_bindgen]
+    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
+        let s_workspace: Vec<SerializableValue> = serde_wasm_bindgen::from_value(workspace_js)
+            .map_err(|e| format!("Deserialization error: {}", e))?;
+        
+        let workspace = s_workspace.into_iter()
+            .map(serializable_to_value)
+            .collect::<Result<Vec<Value>, String>>()?;
+        
+        self.interpreter.set_workspace(workspace);
+        Ok(())
+    }
 }
 
-
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct SerializableValue {
     #[serde(rename = "type")]
     val_type: String,
@@ -165,22 +182,28 @@ struct SerializableValue {
 
 fn value_to_serializable(value: &Value) -> SerializableValue {
     let (val_type_str, json_value, bracket_type_str) = match &value.val_type {
-        ValueType::Number(f) => ("number", serde_json::json!({
-            "numerator": f.numerator.to_string(),
-            "denominator": f.denominator.to_string(),
-        }), None),
+        ValueType::Number(f) => {
+            ("number", serde_json::json!({
+                "numerator": f.numerator.to_string(),
+                "denominator": f.denominator.to_string(),
+            }), None)
+        },
         ValueType::String(s) => ("string", serde_json::json!(s), None),
         ValueType::Boolean(b) => ("boolean", serde_json::json!(b), None),
         ValueType::Symbol(s) => ("symbol", serde_json::json!(s), None),
-        ValueType::Vector(v, bt) => (
-            "vector",
-            serde_json::json!(v.iter().map(value_to_serializable).collect::<Vec<_>>()),
-            Some(match bt {
+        ValueType::Vector(v, bt) => {
+            let serialized_elements: Vec<SerializableValue> = v.iter()
+                .map(value_to_serializable)
+                .collect();
+            
+            ("vector", 
+             serde_json::json!(serialized_elements),
+             Some(match bt {
                 BracketType::Square => "square".to_string(),
                 BracketType::Curly => "curly".to_string(),
                 BracketType::Round => "round".to_string(),
-            })
-        ),
+            }))
+        },
         ValueType::Nil => ("nil", serde_json::Value::Null, None),
     };
 
@@ -194,27 +217,56 @@ fn value_to_serializable(value: &Value) -> SerializableValue {
 fn serializable_to_value(s_val: SerializableValue) -> Result<Value, String> {
     let val_type = match s_val.val_type.as_str() {
         "number" => {
-            let num_str = s_val.value.get("numerator").and_then(|v| v.as_str()).ok_or("Invalid numerator")?;
-            let den_str = s_val.value.get("denominator").and_then(|v| v.as_str()).ok_or("Invalid denominator")?;
-            let num = BigInt::from_str(num_str).map_err(|e| e.to_string())?;
-            let den = BigInt::from_str(den_str).map_err(|e| e.to_string())?;
+            let obj = s_val.value.as_object()
+                .ok_or("Number value should be an object")?;
+            
+            let num_str = obj.get("numerator")
+                .and_then(|v| v.as_str())
+                .ok_or("Invalid numerator")?;
+            let den_str = obj.get("denominator")
+                .and_then(|v| v.as_str())
+                .ok_or("Invalid denominator")?;
+            
+            let num = BigInt::from_str(num_str)
+                .map_err(|e| format!("Failed to parse numerator: {}", e))?;
+            let den = BigInt::from_str(den_str)
+                .map_err(|e| format!("Failed to parse denominator: {}", e))?;
+            
             ValueType::Number(Fraction::new(num, den))
         },
-        "string" => ValueType::String(s_val.value.as_str().ok_or("Invalid string")?.to_string()),
-        "boolean" => ValueType::Boolean(s_val.value.as_bool().ok_or("Invalid boolean")?),
-        "symbol" => ValueType::Symbol(s_val.value.as_str().ok_or("Invalid symbol")?.to_string()),
+        "string" => {
+            ValueType::String(s_val.value.as_str()
+                .ok_or("Invalid string value")?
+                .to_string())
+        },
+        "boolean" => {
+            ValueType::Boolean(s_val.value.as_bool()
+                .ok_or("Invalid boolean value")?)
+        },
+        "symbol" => {
+            ValueType::Symbol(s_val.value.as_str()
+                .ok_or("Invalid symbol value")?
+                .to_string())
+        },
         "vector" => {
-            let s_vec: Vec<SerializableValue> = serde_json::from_value(s_val.value).map_err(|e| e.to_string())?;
-            let vec = s_vec.into_iter().map(serializable_to_value).collect::<Result<_,_>>()?;
+            let s_vec: Vec<SerializableValue> = serde_json::from_value(s_val.value)
+                .map_err(|e| format!("Failed to deserialize vector: {}", e))?;
+            
+            let vec = s_vec.into_iter()
+                .map(serializable_to_value)
+                .collect::<Result<Vec<_>, _>>()?;
+            
             let bt = match s_val.bracket_type.as_deref() {
                 Some("curly") => BracketType::Curly,
                 Some("round") => BracketType::Round,
                 _ => BracketType::Square,
             };
+            
             ValueType::Vector(vec, bt)
         },
         "nil" => ValueType::Nil,
         _ => return Err(format!("Unknown type: {}", s_val.val_type)),
     };
+    
     Ok(Value { val_type })
 }
