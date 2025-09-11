@@ -21,7 +21,7 @@ export class Display {
         this.elements.outputDisplay.innerHTML = ''; // innerHTMLに変更してスタイル適用を可能に
         
         const span = document.createElement('span');
-        span.style.color = '#333';
+        span.style.color = '#007bff'; // 文字色を青に変更
         span.textContent = text.replace(/\\n/g, '\n');
         this.elements.outputDisplay.appendChild(span);
     }
