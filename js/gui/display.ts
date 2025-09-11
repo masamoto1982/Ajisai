@@ -1,4 +1,4 @@
-// js/gui/display.ts (BigInt対応・デバッグ版)
+// js/gui/display.ts (BigInt対応・修正版)
 
 import type { Value, ExecuteResult, Fraction } from '../wasm-types';
 
@@ -167,7 +167,8 @@ export class Display {
                     return '?';
                 }
                 // BigIntは文字列として送られてくる
-                if (frac.denominator === '1' || frac.denominator === 1) {
+                // denominatorは常に文字列として扱う
+                if (String(frac.denominator) === '1') {
                     return String(frac.numerator);
                 } else {
                     return `${frac.numerator}/${frac.denominator}`;
