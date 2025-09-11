@@ -1,7 +1,7 @@
-// rust/src/lib.rs (BigInt対応・完全修正版)
+// rust/src/lib.rs (BigInt対応・シリアライゼーション修正版)
 
 use wasm_bindgen::prelude::*;
-use serde_wasm_bindgen::to_value;
+use serde_wasm_bindgen::{to_value, Serializer};
 use crate::types::{Value, ValueType, Fraction, BracketType};
 use crate::interpreter::Interpreter;
 use num_bigint::BigInt;
@@ -75,18 +75,20 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn get_workspace(&self) -> JsValue {
-        let serializable_workspace: Vec<SerializableValue> = self.interpreter.get_workspace()
-            .iter()
-            .map(value_to_serializable)
-            .collect();
+        // 手動でJSオブジェクトを構築する方法に変更
+        let js_array = js_sys::Array::new();
         
-        // デバッグ出力
+        for value in self.interpreter.get_workspace() {
+            let js_value = value_to_js_value(value);
+            js_array.push(&js_value);
+        }
+        
         web_sys::console::log_1(&JsValue::from_str(&format!(
             "Workspace has {} items", 
-            serializable_workspace.len()
+            js_array.length()
         )));
         
-        to_value(&serializable_workspace).unwrap_or(JsValue::NULL)
+        js_array.into()
     }
 
     #[wasm_bindgen]
@@ -159,114 +161,134 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
-        let s_workspace: Vec<SerializableValue> = serde_wasm_bindgen::from_value(workspace_js)
-            .map_err(|e| format!("Deserialization error: {}", e))?;
+        // JSの配列から直接Valueに変換
+        let js_array = js_sys::Array::from(&workspace_js);
+        let mut workspace = Vec::new();
         
-        let workspace = s_workspace.into_iter()
-            .map(serializable_to_value)
-            .collect::<Result<Vec<Value>, String>>()?;
+        for i in 0..js_array.length() {
+            let js_val = js_array.get(i);
+            let value = js_value_to_value(js_val)?;
+            workspace.push(value);
+        }
         
         self.interpreter.set_workspace(workspace);
         Ok(())
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct SerializableValue {
-    #[serde(rename = "type")]
-    val_type: String,
-    value: serde_json::Value,
-    #[serde(rename = "bracketType", skip_serializing_if = "Option::is_none")]
-    bracket_type: Option<String>,
-}
-
-fn value_to_serializable(value: &Value) -> SerializableValue {
-    let (val_type_str, json_value, bracket_type_str) = match &value.val_type {
-        ValueType::Number(f) => {
-            ("number", serde_json::json!({
-                "numerator": f.numerator.to_string(),
-                "denominator": f.denominator.to_string(),
-            }), None)
-        },
-        ValueType::String(s) => ("string", serde_json::json!(s), None),
-        ValueType::Boolean(b) => ("boolean", serde_json::json!(b), None),
-        ValueType::Symbol(s) => ("symbol", serde_json::json!(s), None),
-        ValueType::Vector(v, bt) => {
-            let serialized_elements: Vec<SerializableValue> = v.iter()
-                .map(value_to_serializable)
-                .collect();
-            
-            ("vector", 
-             serde_json::json!(serialized_elements),
-             Some(match bt {
-                BracketType::Square => "square".to_string(),
-                BracketType::Curly => "curly".to_string(),
-                BracketType::Round => "round".to_string(),
-            }))
-        },
-        ValueType::Nil => ("nil", serde_json::Value::Null, None),
-    };
-
-    SerializableValue {
-        val_type: val_type_str.to_string(),
-        value: json_value,
-        bracket_type: bracket_type_str,
-    }
-}
-
-fn serializable_to_value(s_val: SerializableValue) -> Result<Value, String> {
-    let val_type = match s_val.val_type.as_str() {
+// JSのValueオブジェクトをRustのValueに変換
+fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
+    let obj = js_sys::Object::from(js_val);
+    
+    let type_str = js_sys::Reflect::get(&obj, &"type".into())
+        .map_err(|_| "Missing type field")?
+        .as_string()
+        .ok_or("type is not a string")?;
+    
+    let value_js = js_sys::Reflect::get(&obj, &"value".into())
+        .map_err(|_| "Missing value field")?;
+    
+    let val_type = match type_str.as_str() {
         "number" => {
-            let obj = s_val.value.as_object()
-                .ok_or("Number value should be an object")?;
+            let num_obj = js_sys::Object::from(value_js);
+            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into())
+                .map_err(|_| "Missing numerator")?
+                .as_string()
+                .ok_or("numerator is not a string")?;
+            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into())
+                .map_err(|_| "Missing denominator")?
+                .as_string()
+                .ok_or("denominator is not a string")?;
             
-            let num_str = obj.get("numerator")
-                .and_then(|v| v.as_str())
-                .ok_or("Invalid numerator")?;
-            let den_str = obj.get("denominator")
-                .and_then(|v| v.as_str())
-                .ok_or("Invalid denominator")?;
-            
-            let num = BigInt::from_str(num_str)
-                .map_err(|e| format!("Failed to parse numerator: {}", e))?;
-            let den = BigInt::from_str(den_str)
-                .map_err(|e| format!("Failed to parse denominator: {}", e))?;
+            let num = BigInt::from_str(&num_str).map_err(|e| e.to_string())?;
+            let den = BigInt::from_str(&den_str).map_err(|e| e.to_string())?;
             
             ValueType::Number(Fraction::new(num, den))
         },
         "string" => {
-            ValueType::String(s_val.value.as_str()
-                .ok_or("Invalid string value")?
-                .to_string())
+            ValueType::String(value_js.as_string().ok_or("value is not a string")?)
         },
         "boolean" => {
-            ValueType::Boolean(s_val.value.as_bool()
-                .ok_or("Invalid boolean value")?)
+            ValueType::Boolean(value_js.as_bool().ok_or("value is not a boolean")?)
         },
         "symbol" => {
-            ValueType::Symbol(s_val.value.as_str()
-                .ok_or("Invalid symbol value")?
-                .to_string())
+            ValueType::Symbol(value_js.as_string().ok_or("value is not a string")?)
         },
         "vector" => {
-            let s_vec: Vec<SerializableValue> = serde_json::from_value(s_val.value)
-                .map_err(|e| format!("Failed to deserialize vector: {}", e))?;
+            let bracket_type_str = js_sys::Reflect::get(&obj, &"bracketType".into())
+                .ok()
+                .and_then(|v| v.as_string());
             
-            let vec = s_vec.into_iter()
-                .map(serializable_to_value)
-                .collect::<Result<Vec<_>, _>>()?;
-            
-            let bt = match s_val.bracket_type.as_deref() {
+            let bracket_type = match bracket_type_str.as_deref() {
                 Some("curly") => BracketType::Curly,
                 Some("round") => BracketType::Round,
                 _ => BracketType::Square,
             };
             
-            ValueType::Vector(vec, bt)
+            let js_array = js_sys::Array::from(&value_js);
+            let mut vec = Vec::new();
+            
+            for i in 0..js_array.length() {
+                let elem = js_value_to_value(js_array.get(i))?;
+                vec.push(elem);
+            }
+            
+            ValueType::Vector(vec, bracket_type)
         },
         "nil" => ValueType::Nil,
-        _ => return Err(format!("Unknown type: {}", s_val.val_type)),
+        _ => return Err(format!("Unknown type: {}", type_str)),
     };
     
     Ok(Value { val_type })
+}
+
+// RustのValueをJSのオブジェクトに変換（手動構築）
+fn value_to_js_value(value: &Value) -> JsValue {
+    let obj = js_sys::Object::new();
+    
+    match &value.val_type {
+        ValueType::Number(frac) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"number".into()).unwrap();
+            
+            let frac_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&frac_obj, &"numerator".into(), &frac.numerator.to_string().into()).unwrap();
+            js_sys::Reflect::set(&frac_obj, &"denominator".into(), &frac.denominator.to_string().into()).unwrap();
+            
+            js_sys::Reflect::set(&obj, &"value".into(), &frac_obj.into()).unwrap();
+        },
+        ValueType::String(s) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
+        },
+        ValueType::Boolean(b) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"boolean".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &(*b).into()).unwrap();
+        },
+        ValueType::Symbol(s) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"symbol".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
+        },
+        ValueType::Vector(vec, bracket_type) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
+            
+            let js_array = js_sys::Array::new();
+            for elem in vec {
+                js_array.push(&value_to_js_value(elem));
+            }
+            js_sys::Reflect::set(&obj, &"value".into(), &js_array.into()).unwrap();
+            
+            let bracket_str = match bracket_type {
+                BracketType::Square => "square",
+                BracketType::Curly => "curly",
+                BracketType::Round => "round",
+            };
+            js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
+        },
+        ValueType::Nil => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        },
+    }
+    
+    obj.into()
 }
