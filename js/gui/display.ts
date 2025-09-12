@@ -1,4 +1,4 @@
-// js/gui/display.ts (科学的記数法対応・型エラー修正版)
+// js/gui/display.ts (科学的記数法対応・完全修正版)
 
 import type { Value, ExecuteResult } from '../wasm-types';
 
@@ -281,6 +281,11 @@ export class Display {
         const isNegative = numStr.startsWith('-');
         const absNumStr = isNegative ? numStr.substring(1) : numStr;
         
+        // 空文字列チェック
+        if (absNumStr.length === 0) {
+            return '0';
+        }
+        
         // 小さい数値はそのまま表示
         if (absNumStr.length < this.scientificThreshold) {
             return numStr;
@@ -288,6 +293,10 @@ export class Display {
         
         // 科学的記数法に変換
         const firstDigit = absNumStr[0];
+        if (!firstDigit) {
+            return '0';
+        }
+        
         const remainingDigits = absNumStr.substring(1);
         const exponent = remainingDigits.length;
         
