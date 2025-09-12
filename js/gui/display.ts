@@ -1,4 +1,4 @@
-// js/gui/display.ts (科学的記数法対応版)
+// js/gui/display.ts (科学的記数法対応・型エラー修正版)
 
 import type { Value, ExecuteResult } from '../wasm-types';
 
@@ -231,36 +231,44 @@ export class Display {
             const denMatch = denSci.match(/^([+-]?\d+\.?\d*)e([+-]?\d+)$/);
             
             if (numMatch && denMatch) {
-                const numMantissa = parseFloat(numMatch[1]);
-                const numExponent = parseInt(numMatch[2]);
-                const denMantissa = parseFloat(denMatch[1]);
-                const denExponent = parseInt(denMatch[2]);
+                // 配列要素の存在を確認
+                const numMantissaStr = numMatch[1];
+                const numExponentStr = numMatch[2];
+                const denMantissaStr = denMatch[1];
+                const denExponentStr = denMatch[2];
                 
-                // 仮数部の除算
-                const resultMantissa = numMantissa / denMantissa;
-                // 指数部の減算
-                const resultExponent = numExponent - denExponent;
-                
-                // 仮数部を正規化（1 <= |m| < 10）
-                let normalizedMantissa = resultMantissa;
-                let normalizedExponent = resultExponent;
-                
-                while (Math.abs(normalizedMantissa) >= 10) {
-                    normalizedMantissa /= 10;
-                    normalizedExponent += 1;
-                }
-                while (Math.abs(normalizedMantissa) < 1 && normalizedMantissa !== 0) {
-                    normalizedMantissa *= 10;
-                    normalizedExponent -= 1;
-                }
-                
-                // 精度を制限
-                const rounded = normalizedMantissa.toPrecision(this.mantissaPrecision);
-                
-                if (normalizedExponent === 0) {
-                    return rounded;
-                } else {
-                    return `${rounded}e${normalizedExponent}`;
+                if (numMantissaStr && numExponentStr && denMantissaStr && denExponentStr) {
+                    const numMantissa = parseFloat(numMantissaStr);
+                    const numExponent = parseInt(numExponentStr);
+                    const denMantissa = parseFloat(denMantissaStr);
+                    const denExponent = parseInt(denExponentStr);
+                    
+                    // 仮数部の除算
+                    const resultMantissa = numMantissa / denMantissa;
+                    // 指数部の減算
+                    const resultExponent = numExponent - denExponent;
+                    
+                    // 仮数部を正規化（1 <= |m| < 10）
+                    let normalizedMantissa = resultMantissa;
+                    let normalizedExponent = resultExponent;
+                    
+                    while (Math.abs(normalizedMantissa) >= 10) {
+                        normalizedMantissa /= 10;
+                        normalizedExponent += 1;
+                    }
+                    while (Math.abs(normalizedMantissa) < 1 && normalizedMantissa !== 0) {
+                        normalizedMantissa *= 10;
+                        normalizedExponent -= 1;
+                    }
+                    
+                    // 精度を制限
+                    const rounded = normalizedMantissa.toPrecision(this.mantissaPrecision);
+                    
+                    if (normalizedExponent === 0) {
+                        return rounded;
+                    } else {
+                        return `${rounded}e${normalizedExponent}`;
+                    }
                 }
             }
         }
@@ -284,7 +292,7 @@ export class Display {
         const exponent = remainingDigits.length;
         
         // 仮数部を構成（最初の数桁のみ使用）
-        let mantissa = firstDigit;
+        let mantissa: string = firstDigit;
         if (remainingDigits.length > 0) {
             // 小数点以下の桁数を計算
             const fractionalDigits = Math.min(this.mantissaPrecision - 1, remainingDigits.length);
