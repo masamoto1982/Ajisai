@@ -1,4 +1,4 @@
-// js/gui/display.ts (BigInt対応・最終修正版)
+// js/gui/display.ts (科学的記数法対応版)
 
 import type { Value, ExecuteResult } from '../wasm-types';
 
@@ -10,6 +10,8 @@ interface DisplayElements {
 export class Display {
     private elements!: DisplayElements;
     private mainOutput = '';
+    private scientificThreshold = 10; // 10桁以上で科学的記数法
+    private mantissaPrecision = 6;    // 仮数部の精度
 
     init(elements: DisplayElements): void {
         this.elements = elements;
@@ -89,9 +91,6 @@ export class Display {
     }
 
     updateWorkspace(workspace: Value[]): void {
-        console.log('updateWorkspace called with:', workspace);
-        console.log('Workspace JSON:', JSON.stringify(workspace, null, 2));
-        
         const display = this.elements.workspaceDisplay;
         display.innerHTML = '';
         
@@ -110,14 +109,11 @@ export class Display {
         container.style.flexDirection = 'row';
         
         workspace.forEach((item, index) => {
-            console.log(`Workspace item ${index}:`, item);
-            
             const elem = document.createElement('span');
             elem.className = 'workspace-item';
             
             try {
                 elem.textContent = this.formatValue(item);
-                console.log(`Formatted item ${index}:`, elem.textContent);
             } catch (error) {
                 console.error(`Error formatting item ${index}:`, error);
                 elem.textContent = 'ERROR';
@@ -145,26 +141,18 @@ export class Display {
     }
 
     private formatValue(item: Value): string {
-        console.log('formatValue input:', item);
-        
         if (!item) {
-            console.error('formatValue: item is undefined or null');
             return 'undefined';
         }
         
         if (!item.type) {
-            console.error('formatValue: item.type is undefined');
-            console.log('Item structure:', JSON.stringify(item));
             return 'unknown';
         }
         
         switch (item.type) {
             case 'number': {
-                console.log('Formatting number:', item.value);
-                
                 // item.valueの型を確認
                 if (!item.value || typeof item.value !== 'object') {
-                    console.error('Number value is not an object:', item.value);
                     return '?';
                 }
                 
@@ -173,21 +161,15 @@ export class Display {
                 
                 // numeratorとdenominatorが存在することを確認
                 if (!('numerator' in frac) || !('denominator' in frac)) {
-                    console.error('Invalid fraction object:', frac);
                     return '?';
                 }
                 
-                // 両方を文字列に変換してから比較
+                // 両方を文字列に変換
                 const denomStr = String(frac.denominator);
                 const numerStr = String(frac.numerator);
                 
-                console.log(`Fraction: ${numerStr}/${denomStr}`);
-                
-                if (denomStr === '1') {
-                    return numerStr;
-                } else {
-                    return `${numerStr}/${denomStr}`;
-                }
+                // 分数を科学的記数法で表示
+                return this.formatFractionScientific(numerStr, denomStr);
             }
                 
             case 'string':
@@ -200,7 +182,6 @@ export class Display {
                 return item.value ? 'true' : 'false';
                 
             case 'vector': {
-                console.log('Formatting vector:', item.value);
                 if (Array.isArray(item.value)) {
                     const bracketType = item.bracketType || 'square';
                     let openBracket: string, closeBracket: string;
@@ -222,7 +203,6 @@ export class Display {
                     
                     return `${openBracket}${elements ? ' ' + elements + ' ' : ''}${closeBracket}`;
                 }
-                console.error('Vector value is not an array:', item.value);
                 return '[ ]';
             }
                 
@@ -230,8 +210,97 @@ export class Display {
                 return 'nil';
                 
             default:
-                console.error('Unknown type:', item.type);
                 return JSON.stringify(item.value);
         }
+    }
+
+    private formatFractionScientific(numerStr: string, denomStr: string): string {
+        // 整数の場合（分母が1）
+        if (denomStr === '1') {
+            return this.formatIntegerScientific(numerStr);
+        }
+        
+        // 真の分数の場合
+        // 分子と分母それぞれを科学的記数法に変換
+        const numSci = this.formatIntegerScientific(numerStr);
+        const denSci = this.formatIntegerScientific(denomStr);
+        
+        // 両方が科学的記数法の場合、指数を計算して一つの科学的記数法にまとめる
+        if (numSci.includes('e') && denSci.includes('e')) {
+            const numMatch = numSci.match(/^([+-]?\d+\.?\d*)e([+-]?\d+)$/);
+            const denMatch = denSci.match(/^([+-]?\d+\.?\d*)e([+-]?\d+)$/);
+            
+            if (numMatch && denMatch) {
+                const numMantissa = parseFloat(numMatch[1]);
+                const numExponent = parseInt(numMatch[2]);
+                const denMantissa = parseFloat(denMatch[1]);
+                const denExponent = parseInt(denMatch[2]);
+                
+                // 仮数部の除算
+                const resultMantissa = numMantissa / denMantissa;
+                // 指数部の減算
+                const resultExponent = numExponent - denExponent;
+                
+                // 仮数部を正規化（1 <= |m| < 10）
+                let normalizedMantissa = resultMantissa;
+                let normalizedExponent = resultExponent;
+                
+                while (Math.abs(normalizedMantissa) >= 10) {
+                    normalizedMantissa /= 10;
+                    normalizedExponent += 1;
+                }
+                while (Math.abs(normalizedMantissa) < 1 && normalizedMantissa !== 0) {
+                    normalizedMantissa *= 10;
+                    normalizedExponent -= 1;
+                }
+                
+                // 精度を制限
+                const rounded = normalizedMantissa.toPrecision(this.mantissaPrecision);
+                
+                if (normalizedExponent === 0) {
+                    return rounded;
+                } else {
+                    return `${rounded}e${normalizedExponent}`;
+                }
+            }
+        }
+        
+        // 片方だけが科学的記数法、または両方とも通常の数値の場合
+        return `${numSci}/${denSci}`;
+    }
+
+    private formatIntegerScientific(numStr: string): string {
+        const isNegative = numStr.startsWith('-');
+        const absNumStr = isNegative ? numStr.substring(1) : numStr;
+        
+        // 小さい数値はそのまま表示
+        if (absNumStr.length < this.scientificThreshold) {
+            return numStr;
+        }
+        
+        // 科学的記数法に変換
+        const firstDigit = absNumStr[0];
+        const remainingDigits = absNumStr.substring(1);
+        const exponent = remainingDigits.length;
+        
+        // 仮数部を構成（最初の数桁のみ使用）
+        let mantissa = firstDigit;
+        if (remainingDigits.length > 0) {
+            // 小数点以下の桁数を計算
+            const fractionalDigits = Math.min(this.mantissaPrecision - 1, remainingDigits.length);
+            if (fractionalDigits > 0) {
+                mantissa += '.' + remainingDigits.substring(0, fractionalDigits);
+            }
+        }
+        
+        // 末尾の0を削除
+        mantissa = mantissa.replace(/\.?0+$/, '');
+        
+        // 符号を付加
+        if (isNegative) {
+            mantissa = '-' + mantissa;
+        }
+        
+        return `${mantissa}e${exponent}`;
     }
 }
