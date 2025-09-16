@@ -1,4 +1,4 @@
-// js/gui/display.ts - 括弧自動変換対応版
+// js/gui/display.ts - 不要メソッド削除版
 
 import type { Value, ExecuteResult } from '../wasm-types';
 
@@ -209,11 +209,6 @@ export class Display {
             case 2: return ['(', ')'];  // レベル 2, 5, 8, ...
             default: return ['[', ']'];
         }
-    }
-
-    private formatValue(item: Value): string {
-        // 従来の形式（括弧変換なし）
-        return this.formatValueWithBrackets(item, 0);
     }
 
     private formatFractionScientific(numerStr: string, denomStr: string): string {
