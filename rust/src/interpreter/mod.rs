@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs - ビルドエラー修正とDEL対応版
+// rust/src/interpreter/mod.rs - デバッグ出力修正版
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -284,6 +284,7 @@ impl Interpreter {
             action,
         };
         
+        // Display トレイトを使用してデバッグ出力を修正
         console::log_1(&JsValue::from_str(&format!("Final execution line: repeat={}, timing={}, has_condition={}, action_count={}", 
             line.repeat, line.timing, line.condition.is_some(), line.action.len())));
         
