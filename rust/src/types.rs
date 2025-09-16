@@ -1,4 +1,4 @@
-// rust/src/types.rs (BigInt対応・完全修正版)
+// rust/src/types.rs - 新しいAjisai構文対応版
 
 use std::fmt;
 use num_bigint::BigInt;
@@ -12,12 +12,30 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(String),
-    VectorStart(BracketType),
-    VectorEnd(BracketType),
+    VectorStart,
+    VectorEnd,
     Nil,
-    FunctionComment(String),
-    Colon,
-    LineBreak,
+    RepeatUnit(RepeatControl),
+    TimeUnit(TimeControl),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum RepeatControl {
+    Times(u32),        // 3x
+    Repetitions(u32),  // 5rep
+    Iterations(u32),   // 10iter
+    While,             // WHILE
+    Until,             // UNTIL
+    Forever,           // FOREVER
+    Once,              // ONCE
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TimeControl {
+    Seconds(f64),      // 2s, 1.5s
+    Milliseconds(u32), // 100ms, 500ms
+    FPS(u32),          // 60fps
+    Immediate,         // 即座実行
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -31,33 +49,24 @@ pub enum ValueType {
     String(String),
     Boolean(bool),
     Symbol(String),
-    Vector(Vec<Value>, BracketType),
+    Vector(Vec<Value>),
     Nil,
+    ExecutionLine(ExecutionLine),
+    WordDefinition(WordDefinition),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum BracketType {
-    Square,
-    Curly,
-    Round,
+pub struct ExecutionLine {
+    pub repeat: RepeatControl,
+    pub timing: TimeControl,
+    pub condition: Option<Vec<Value>>,
+    pub action: Vec<Value>,
 }
 
-impl BracketType {
-    pub fn opening_char(&self) -> char {
-        match self {
-            BracketType::Square => '[',
-            BracketType::Curly => '{',
-            BracketType::Round => '(',
-        }
-    }
-    
-    pub fn closing_char(&self) -> char {
-        match self {
-            BracketType::Square => ']',
-            BracketType::Curly => '}',
-            BracketType::Round => ')',
-        }
-    }
+#[derive(Debug, Clone, PartialEq)]
+pub struct WordDefinition {
+    pub name: String,
+    pub lines: Vec<ExecutionLine>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -88,12 +97,10 @@ impl Fraction {
     }
     
     pub fn from_str(s: &str) -> std::result::Result<Self, String> {
-        // 空文字列チェック
         if s.is_empty() {
             return Err("Empty string cannot be parsed as number".to_string());
         }
         
-        // 分数形式 (例: "3/4")
         if let Some(pos) = s.find('/') {
             let num_str = &s[..pos];
             let den_str = &s[pos+1..];
@@ -110,13 +117,10 @@ impl Fraction {
             }
             
             Ok(Fraction::new(num, den))
-        } 
-        // 小数形式 (例: "3.14")
-        else if let Some(dot_pos) = s.find('.') {
+        } else if let Some(dot_pos) = s.find('.') {
             let int_part_str = &s[..dot_pos];
             let frac_part_str = &s[dot_pos+1..];
             
-            // 整数部が空の場合は"0"として扱う
             let int_part_str = if int_part_str.is_empty() || int_part_str == "-" {
                 if int_part_str == "-" { "-0" } else { "0" }
             } else {
@@ -126,15 +130,12 @@ impl Fraction {
             let int_part = BigInt::from_str(int_part_str).map_err(|e| format!("Failed to parse integer part: {}", e))?;
             
             if frac_part_str.is_empty() {
-                // ".5"のような形式は"0.5"として扱う
                 return Ok(Fraction::new(int_part, BigInt::one()));
             }
             
-            // 小数部を分数に変換
             let frac_num = BigInt::from_str(frac_part_str).map_err(|e| format!("Failed to parse fractional part: {}", e))?;
             let frac_den = BigInt::from(10).pow(frac_part_str.len() as u32);
             
-            // 負の数の場合の処理
             let is_negative = int_part < BigInt::zero();
             let abs_int_part = if is_negative { -&int_part } else { int_part.clone() };
             
@@ -142,9 +143,7 @@ impl Fraction {
             let final_num = if is_negative { -total_num } else { total_num };
             
             Ok(Fraction::new(final_num, frac_den))
-        } 
-        // 整数形式
-        else {
+        } else {
             let num = BigInt::from_str(s).map_err(|e| format!("Failed to parse integer: {}", e))?;
             Ok(Fraction::new(num, BigInt::one()))
         }
@@ -206,6 +205,18 @@ impl Fraction {
     }
 }
 
+impl Default for RepeatControl {
+    fn default() -> Self {
+        RepeatControl::Once
+    }
+}
+
+impl Default for TimeControl {
+    fn default() -> Self {
+        TimeControl::Immediate
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.val_type {
@@ -219,15 +230,42 @@ impl fmt::Display for Value {
             ValueType::String(s) => write!(f, "'{}'", s),
             ValueType::Boolean(b) => write!(f, "{}", b),
             ValueType::Symbol(s) => write!(f, "{}", s),
-            ValueType::Vector(v, bracket_type) => {
-                write!(f, "{}", bracket_type.opening_char())?;
+            ValueType::Vector(v) => {
+                write!(f, "[")?;
                 for (i, item) in v.iter().enumerate() {
                     if i > 0 { write!(f, " ")?; }
                     write!(f, "{}", item)?;
                 }
-                write!(f, "{}", bracket_type.closing_char())
+                write!(f, "]")
             },
             ValueType::Nil => write!(f, "nil"),
+            ValueType::ExecutionLine(line) => write!(f, "ExecutionLine({:?})", line),
+            ValueType::WordDefinition(def) => write!(f, "WordDef({})", def.name),
+        }
+    }
+}
+
+impl fmt::Display for RepeatControl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RepeatControl::Times(n) => write!(f, "{}x", n),
+            RepeatControl::Repetitions(n) => write!(f, "{}rep", n),
+            RepeatControl::Iterations(n) => write!(f, "{}iter", n),
+            RepeatControl::While => write!(f, "WHILE"),
+            RepeatControl::Until => write!(f, "UNTIL"),
+            RepeatControl::Forever => write!(f, "FOREVER"),
+            RepeatControl::Once => write!(f, "ONCE"),
+        }
+    }
+}
+
+impl fmt::Display for TimeControl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TimeControl::Seconds(s) => write!(f, "{}s", s),
+            TimeControl::Milliseconds(ms) => write!(f, "{}ms", ms),
+            TimeControl::FPS(fps) => write!(f, "{}fps", fps),
+            TimeControl::Immediate => write!(f, "immediate"),
         }
     }
 }
