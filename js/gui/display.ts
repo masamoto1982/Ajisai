@@ -1,4 +1,4 @@
-// js/gui/display.ts (科学的記数法対応・完全修正版)
+// js/gui/display.ts - 括弧自動変換対応版
 
 import type { Value, ExecuteResult } from '../wasm-types';
 
@@ -113,7 +113,7 @@ export class Display {
             elem.className = 'workspace-item';
             
             try {
-                elem.textContent = this.formatValue(item);
+                elem.textContent = this.formatValueWithBrackets(item, 0);
             } catch (error) {
                 console.error(`Error formatting item ${index}:`, error);
                 elem.textContent = 'ERROR';
@@ -140,7 +140,7 @@ export class Display {
         display.appendChild(container);
     }
 
-    private formatValue(item: Value): string {
+    private formatValueWithBrackets(item: Value, depth: number): string {
         if (!item) {
             return 'undefined';
         }
@@ -151,24 +151,19 @@ export class Display {
         
         switch (item.type) {
             case 'number': {
-                // item.valueの型を確認
                 if (!item.value || typeof item.value !== 'object') {
                     return '?';
                 }
                 
-                // Fractionオブジェクトとして扱う
                 const frac = item.value as any;
                 
-                // numeratorとdenominatorが存在することを確認
                 if (!('numerator' in frac) || !('denominator' in frac)) {
                     return '?';
                 }
                 
-                // 両方を文字列に変換
                 const denomStr = String(frac.denominator);
                 const numerStr = String(frac.numerator);
                 
-                // 分数を科学的記数法で表示
                 return this.formatFractionScientific(numerStr, denomStr);
             }
                 
@@ -183,18 +178,11 @@ export class Display {
                 
             case 'vector': {
                 if (Array.isArray(item.value)) {
-                    const bracketType = item.bracketType || 'square';
-                    let openBracket: string, closeBracket: string;
-                    
-                    switch (bracketType) {
-                        case 'curly': openBracket = '{'; closeBracket = '}'; break;
-                        case 'round': openBracket = '('; closeBracket = ')'; break;
-                        default: openBracket = '['; closeBracket = ']'; break;
-                    }
+                    const [openBracket, closeBracket] = this.getBracketForDepth(depth);
                     
                     const elements = item.value.map((v: Value) => {
                         try {
-                            return this.formatValue(v);
+                            return this.formatValueWithBrackets(v, depth + 1);
                         } catch (e) {
                             console.error('Error formatting vector element:', e);
                             return '?';
@@ -212,6 +200,20 @@ export class Display {
             default:
                 return JSON.stringify(item.value);
         }
+    }
+
+    private getBracketForDepth(depth: number): [string, string] {
+        switch (depth % 3) {
+            case 0: return ['[', ']'];  // レベル 0, 3, 6, ...
+            case 1: return ['{', '}'];  // レベル 1, 4, 7, ...
+            case 2: return ['(', ')'];  // レベル 2, 5, 8, ...
+            default: return ['[', ']'];
+        }
+    }
+
+    private formatValue(item: Value): string {
+        // 従来の形式（括弧変換なし）
+        return this.formatValueWithBrackets(item, 0);
     }
 
     private formatFractionScientific(numerStr: string, denomStr: string): string {
