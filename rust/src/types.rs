@@ -219,6 +219,12 @@ impl Default for TimeControl {
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_with_depth(f, 0)
+    }
+}
+
+impl Value {
+    fn fmt_with_depth(&self, f: &mut fmt::Formatter<'_>, depth: usize) -> fmt::Result {
         match &self.val_type {
             ValueType::Number(n) => {
                 if n.denominator == BigInt::one() {
@@ -231,12 +237,13 @@ impl fmt::Display for Value {
             ValueType::Boolean(b) => write!(f, "{}", b),
             ValueType::Symbol(s) => write!(f, "{}", s),
             ValueType::Vector(v) => {
-                write!(f, "[")?;
+                let (open_bracket, close_bracket) = get_bracket_for_depth(depth);
+                write!(f, "{}", open_bracket)?;
                 for (i, item) in v.iter().enumerate() {
                     if i > 0 { write!(f, " ")?; }
-                    write!(f, "{}", item)?;
+                    item.fmt_with_depth(f, depth + 1)?;
                 }
-                write!(f, "]")
+                write!(f, "{}", close_bracket)
             },
             ValueType::Nil => write!(f, "nil"),
             ValueType::ExecutionLine(line) => write!(f, "ExecutionLine({:?})", line),
@@ -245,29 +252,11 @@ impl fmt::Display for Value {
     }
 }
 
-impl fmt::Display for RepeatControl {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            RepeatControl::Times(n) => write!(f, "{}x", n),
-            RepeatControl::Repetitions(n) => write!(f, "{}rep", n),
-            RepeatControl::Iterations(n) => write!(f, "{}iter", n),
-            RepeatControl::While => write!(f, "WHILE"),
-            RepeatControl::Until => write!(f, "UNTIL"),
-            RepeatControl::Forever => write!(f, "FOREVER"),
-            RepeatControl::Once => write!(f, "ONCE"),
-        }
+fn get_bracket_for_depth(depth: usize) -> (char, char) {
+    match depth % 3 {
+        0 => ('[', ']'),  // レベル 0, 3, 6, ...
+        1 => ('{', '}'),  // レベル 1, 4, 7, ...
+        2 => ('(', ')'),  // レベル 2, 5, 8, ...
+        _ => unreachable!(),
     }
 }
-
-impl fmt::Display for TimeControl {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TimeControl::Seconds(s) => write!(f, "{}s", s),
-            TimeControl::Milliseconds(ms) => write!(f, "{}ms", ms),
-            TimeControl::FPS(fps) => write!(f, "{}fps", fps),
-            TimeControl::Immediate => write!(f, "immediate"),
-        }
-    }
-}
-
-pub type Workspace = Vec<Value>;
