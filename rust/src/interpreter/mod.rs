@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs - 新しい実行エンジン
+// rust/src/interpreter/mod.rs - ビルドエラー修正とDEL対応版
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -7,7 +7,7 @@ pub mod io;
 pub mod error;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Workspace, Token, Value, ValueType, ExecutionLine, WordDefinition, RepeatControl, TimeControl, Fraction};
+use crate::types::{Workspace, Token, Value, ValueType, ExecutionLine, RepeatControl, TimeControl, Fraction};
 use self::error::{Result, AjisaiError};
 use web_sys::console;
 use wasm_bindgen::JsValue;
@@ -63,10 +63,13 @@ impl Interpreter {
             return Ok(()); 
         }
 
-        // ワード定義の検出
+        // ワード定義またはワード削除の検出
         if self.is_word_definition(&tokens) {
             console::log_1(&JsValue::from_str("Detected word definition"));
             return self.process_word_definition(&tokens);
+        } else if self.is_word_deletion(&tokens) {
+            console::log_1(&JsValue::from_str("Detected word deletion"));
+            return self.process_word_deletion(&tokens);
         }
 
         // 通常の実行
@@ -83,6 +86,40 @@ impl Interpreter {
         
         console::log_1(&JsValue::from_str(&format!("Is word definition: {}", result)));
         result
+    }
+
+    fn is_word_deletion(&self, tokens: &[Token]) -> bool {
+        console::log_1(&JsValue::from_str("=== is_word_deletion ==="));
+        
+        // [ DEL [ WORD_NAME ] ] の形式をチェック
+        let result = tokens.len() >= 6 && 
+               matches!(tokens[0], Token::VectorStart) &&
+               matches!(tokens[1], Token::Symbol(ref s) if s == "DEL") &&
+               matches!(tokens[2], Token::VectorStart) &&
+               matches!(tokens[4], Token::VectorEnd) &&
+               matches!(tokens[5], Token::VectorEnd);
+        
+        console::log_1(&JsValue::from_str(&format!("Is word deletion: {}", result)));
+        result
+    }
+
+    fn process_word_deletion(&mut self, tokens: &[Token]) -> Result<()> {
+        console::log_1(&JsValue::from_str("=== process_word_deletion ==="));
+        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
+        
+        // [ DEL [ WORD_NAME ] ] の構造を解析
+        if tokens.len() != 6 {
+            return Err(AjisaiError::from("Invalid DEL format. Expected: [ DEL [ WORD_NAME ] ]"));
+        }
+        
+        let word_name = match &tokens[3] {
+            Token::Symbol(name) => name.clone(),
+            _ => return Err(AjisaiError::from("Expected word name symbol in DEL command")),
+        };
+        
+        console::log_1(&JsValue::from_str(&format!("Deleting word: '{}'", word_name)));
+        
+        control::op_del_word(self, &word_name)
     }
 
     fn process_word_definition(&mut self, tokens: &[Token]) -> Result<()> {
@@ -290,7 +327,7 @@ impl Interpreter {
         }
     }
 
-    fn parse_time_from_string(&self, s: &str) -> Result<TimeControl> {
+    fn parse_time_from_string(&self, _s: &str) -> Result<TimeControl> {
         // 簡易実装
         Ok(TimeControl::Immediate)
     }
@@ -480,6 +517,74 @@ impl Interpreter {
         self.output_buffer.clear();
         self.call_stack.clear();
         crate::builtins::register_builtins(&mut self.dictionary);
+        Ok(())
+    }
+
+    pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
+        console::log_1(&JsValue::from_str(&format!("Execute single token: {:?}", token)));
+        
+        self.output_buffer.clear();
+        match token {
+            Token::Number(s) => {
+                console::log_1(&JsValue::from_str(&format!("Parsing number string: {}", s)));
+                
+                let frac = Fraction::from_str(s)?;
+                
+                console::log_1(&JsValue::from_str(&format!("Parsed fraction: {}/{}", frac.numerator, frac.denominator)));
+                
+                let wrapped = Value { 
+                    val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }])
+                };
+                
+                let display = format!("{}", wrapped);
+                console::log_1(&JsValue::from_str(&format!("Pushing to workspace: {}", display)));
+                
+                self.workspace.push(wrapped);
+                
+                console::log_1(&JsValue::from_str(&format!("Workspace size after push: {}", self.workspace.len())));
+                
+                Ok(format!("Pushed {}", display))
+            },
+            Token::String(s) => {
+                let wrapped = Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone())}])};
+                self.workspace.push(wrapped);
+                Ok(format!("Pushed wrapped string: ['{}']", s))
+            },
+            Token::Boolean(b) => {
+                let wrapped = Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b)}])};
+                self.workspace.push(wrapped);
+                Ok(format!("Pushed wrapped boolean: [{}]", b))
+            },
+            Token::Nil => {
+                let wrapped = Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }])};
+                self.workspace.push(wrapped);
+                Ok("Pushed wrapped nil: [nil]".to_string())
+            },
+            Token::Symbol(name) => {
+                console::log_1(&JsValue::from_str(&format!("Executing word: {}", name)));
+                self.execute_word(name)?;
+                let output = self.get_output();
+                Ok(if output.is_empty() { format!("Executed word: {}", name) } else { output })
+            },
+            _ => Ok(format!("Skipped token: {:?}", token)),
+        }
+    }
+
+    pub fn get_word_definition(&self, name: &str) -> Option<String> {
+        self.dictionary.get(name).and_then(|def| {
+            if def.is_builtin { return None; }
+            // 簡易実装
+            Some(format!("Word definition for {}", name))
+        })
+    }
+
+    pub fn restore_custom_word(&mut self, name: String, _tokens: Vec<Token>, description: Option<String>) -> Result<()> {
+        // 簡易実装
+        self.dictionary.insert(name.to_uppercase(), InterpreterWordDefinition {
+            lines: vec![],
+            is_builtin: false,
+            description,
+        });
         Ok(())
     }
 
