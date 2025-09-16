@@ -1,4 +1,4 @@
-// rust/src/types.rs - 新しいAjisai構文対応版
+// rust/src/types.rs - ビルドエラー修正版
 
 use std::fmt;
 use num_bigint::BigInt;
@@ -74,6 +74,9 @@ pub struct Fraction {
     pub numerator: BigInt,
     pub denominator: BigInt,
 }
+
+// Workspaceの型エイリアスを追加
+pub type Workspace = Vec<Value>;
 
 impl Fraction {
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
@@ -258,5 +261,30 @@ fn get_bracket_for_depth(depth: usize) -> (char, char) {
         1 => ('{', '}'),  // レベル 1, 4, 7, ...
         2 => ('(', ')'),  // レベル 2, 5, 8, ...
         _ => unreachable!(),
+    }
+}
+
+impl fmt::Display for RepeatControl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RepeatControl::Times(n) => write!(f, "{}x", n),
+            RepeatControl::Repetitions(n) => write!(f, "{}rep", n),
+            RepeatControl::Iterations(n) => write!(f, "{}iter", n),
+            RepeatControl::While => write!(f, "WHILE"),
+            RepeatControl::Until => write!(f, "UNTIL"),
+            RepeatControl::Forever => write!(f, "FOREVER"),
+            RepeatControl::Once => write!(f, "ONCE"),
+        }
+    }
+}
+
+impl fmt::Display for TimeControl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TimeControl::Seconds(s) => write!(f, "{}s", s),
+            TimeControl::Milliseconds(ms) => write!(f, "{}ms", ms),
+            TimeControl::FPS(fps) => write!(f, "{}fps", fps),
+            TimeControl::Immediate => write!(f, "immediate"),
+        }
     }
 }
