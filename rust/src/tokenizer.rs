@@ -1,17 +1,33 @@
-// rust/src/tokenizer.rs (BigInt対応・完全修正版)
+// rust/src/tokenizer.rs - 新しい構文対応版
 
-use crate::types::{Token, BracketType};
+use crate::types::{Token, RepeatControl, TimeControl};
 use std::collections::HashSet;
+use web_sys::console;
+use wasm_bindgen::JsValue;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
-    tokenize_with_custom_words(input, &HashSet::new())
+    console::log_1(&JsValue::from_str(&format!("=== TOKENIZER START ===\nInput: '{}'", input)));
+    
+    let result = tokenize_with_custom_words(input, &HashSet::new());
+    
+    match &result {
+        Ok(tokens) => console::log_1(&JsValue::from_str(&format!("Tokenized successfully: {:?}", tokens))),
+        Err(e) => console::log_1(&JsValue::from_str(&format!("Tokenization error: {}", e))),
+    }
+    
+    console::log_1(&JsValue::from_str("=== TOKENIZER END ==="));
+    result
 }
 
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let lines: Vec<&str> = input.lines().collect();
 
+    console::log_1(&JsValue::from_str(&format!("Processing {} lines", lines.len())));
+
     for (line_idx, line) in lines.iter().enumerate() {
+        console::log_1(&JsValue::from_str(&format!("Line {}: '{}'", line_idx, line)));
+        
         let chars: Vec<char> = line.chars().collect();
         let mut i = 0;
 
@@ -21,42 +37,56 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 continue;
             }
 
+            // コメント
+            if chars[i] == '#' {
+                console::log_1(&JsValue::from_str(&format!("Comment found at position {}", i)));
+                break;
+            }
+            
+            // ブラケット記号
+            if chars[i] == '[' {
+                console::log_1(&JsValue::from_str("Found VectorStart"));
+                tokens.push(Token::VectorStart);
+                i += 1;
+                continue;
+            }
+            if chars[i] == ']' {
+                console::log_1(&JsValue::from_str("Found VectorEnd"));
+                tokens.push(Token::VectorEnd);
+                i += 1;
+                continue;
+            }
+            
             // 文字列リテラル
             if chars[i] == '\'' {
+                console::log_1(&JsValue::from_str(&format!("String literal found at position {}", i)));
                 if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
+                    console::log_1(&JsValue::from_str(&format!("Parsed string: {:?}, consumed: {}", token, consumed)));
                     tokens.push(token);
                     i += consumed;
                     continue;
                 }
             }
             
-            // ブラケット記号
-            match chars[i] {
-                '[' => { 
-                    tokens.push(Token::VectorStart(BracketType::Square)); 
-                    i += 1; 
-                    continue; 
-                },
-                ']' => { 
-                    tokens.push(Token::VectorEnd(BracketType::Square)); 
-                    i += 1; 
-                    continue; 
-                },
-                ':' => { 
-                    tokens.push(Token::Colon); 
-                    i += 1; 
-                    continue; 
-                },
-                _ => {}
+            // 反復制御単位
+            if let Some((token, consumed)) = try_parse_repeat_unit(&chars[i..]) {
+                console::log_1(&JsValue::from_str(&format!("Parsed repeat unit: {:?}, consumed: {}", token, consumed)));
+                tokens.push(token);
+                i += consumed;
+                continue;
             }
             
-            // コメント
-            if chars[i] == '#' {
-                break;
+            // 時間制御単位
+            if let Some((token, consumed)) = try_parse_time_unit(&chars[i..]) {
+                console::log_1(&JsValue::from_str(&format!("Parsed time unit: {:?}, consumed: {}", token, consumed)));
+                tokens.push(token);
+                i += consumed;
+                continue;
             }
             
-            // 数値のパース（最優先）
+            // 数値のパース
             if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
+                console::log_1(&JsValue::from_str(&format!("Parsed number: {:?}, consumed: {}", token, consumed)));
                 tokens.push(token);
                 i += consumed;
                 continue;
@@ -64,6 +94,15 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             
             // カスタムワード
             if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
+                console::log_1(&JsValue::from_str(&format!("Parsed custom word: {:?}, consumed: {}", token, consumed)));
+                tokens.push(token);
+                i += consumed;
+                continue;
+            }
+            
+            // ビルトインワード
+            if let Some((token, consumed)) = try_parse_builtin_word(&chars[i..]) {
+                console::log_1(&JsValue::from_str(&format!("Parsed builtin word: {:?}, consumed: {}", token, consumed)));
                 tokens.push(token);
                 i += consumed;
                 continue;
@@ -71,96 +110,129 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             
             // 演算子
             if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+                console::log_1(&JsValue::from_str(&format!("Parsed operator: {:?}, consumed: {}", token, consumed)));
                 tokens.push(token);
                 i += consumed;
                 continue;
             }
             
-            // ビルトインワード
-            if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
-                tokens.push(token);
-                i += consumed;
-                continue;
-            }
-            
-            // 認識できない文字はスキップ
+            console::log_1(&JsValue::from_str(&format!("Unrecognized character at position {}: '{}'", i, chars[i])));
             i += 1;
-        }
-        
-        if line_idx < lines.len() - 1 {
-            tokens.push(Token::LineBreak);
         }
     }
 
-    convert_vector_brackets_by_depth(&mut tokens)?;
-    
+    console::log_1(&JsValue::from_str(&format!("Final tokens: {:?}", tokens)));
     Ok(tokens)
 }
 
-fn convert_vector_brackets_by_depth(tokens: &mut [Token]) -> Result<(), String> {
-    let mut i = 0;
-    while i < tokens.len() {
-        if matches!(tokens[i], Token::VectorStart(_)) {
-            match find_matching_vector_end(tokens, i) {
-                Ok(vector_end) => {
-                    convert_single_vector_brackets(&mut tokens[i..=vector_end])?;
-                    i = vector_end + 1;
-                },
-                Err(e) => return Err(e),
+fn try_parse_repeat_unit(chars: &[char]) -> Option<(Token, usize)> {
+    console::log_1(&JsValue::from_str("=== try_parse_repeat_unit ==="));
+    
+    // 特殊キーワード
+    let special_units = [
+        ("WHILE", RepeatControl::While),
+        ("UNTIL", RepeatControl::Until),
+        ("FOREVER", RepeatControl::Forever),
+        ("ONCE", RepeatControl::Once),
+    ];
+    
+    for (keyword, unit) in &special_units {
+        if chars.len() >= keyword.len() {
+            let candidate: String = chars[..keyword.len()].iter().collect();
+            if candidate == *keyword && (chars.len() == keyword.len() || !is_word_char(chars[keyword.len()])) {
+                console::log_1(&JsValue::from_str(&format!("Found special repeat unit: {}", keyword)));
+                return Some((Token::RepeatUnit(unit.clone()), keyword.len()));
             }
-        } else {
-            i += 1;
         }
     }
-    Ok(())
+    
+    // 数値+単位のパターン
+    let mut i = 0;
+    
+    // 数値部分の解析
+    while i < chars.len() && chars[i].is_ascii_digit() {
+        i += 1;
+    }
+    
+    if i == 0 {
+        return None; // 数値がない
+    }
+    
+    let number_str: String = chars[..i].iter().collect();
+    let number = match number_str.parse::<u32>() {
+        Ok(n) => n,
+        Err(_) => return None,
+    };
+    
+    // 単位部分の解析
+    if i >= chars.len() {
+        return None; // 単位がない
+    }
+    
+    let remaining: String = chars[i..].iter().collect();
+    
+    if remaining.starts_with("x") && (remaining.len() == 1 || !is_word_char(remaining.chars().nth(1).unwrap())) {
+        console::log_1(&JsValue::from_str(&format!("Found Times unit: {}x", number)));
+        return Some((Token::RepeatUnit(RepeatControl::Times(number)), i + 1));
+    }
+    
+    if remaining.starts_with("rep") && (remaining.len() == 3 || !is_word_char(remaining.chars().nth(3).unwrap())) {
+        console::log_1(&JsValue::from_str(&format!("Found Repetitions unit: {}rep", number)));
+        return Some((Token::RepeatUnit(RepeatControl::Repetitions(number)), i + 3));
+    }
+    
+    if remaining.starts_with("iter") && (remaining.len() == 4 || !is_word_char(remaining.chars().nth(4).unwrap())) {
+        console::log_1(&JsValue::from_str(&format!("Found Iterations unit: {}iter", number)));
+        return Some((Token::RepeatUnit(RepeatControl::Iterations(number)), i + 4));
+    }
+    
+    None
 }
 
-fn find_matching_vector_end(tokens: &[Token], start: usize) -> Result<usize, String> {
-    let mut depth = 0;
-    for i in start..tokens.len() {
-        match &tokens[i] {
-            Token::VectorStart(_) => depth += 1,
-            Token::VectorEnd(_) => {
-                depth -= 1;
-                if depth == 0 {
-                    return Ok(i);
-                }
-            },
-            _ => {}
+fn try_parse_time_unit(chars: &[char]) -> Option<(Token, usize)> {
+    console::log_1(&JsValue::from_str("=== try_parse_time_unit ==="));
+    
+    let mut i = 0;
+    
+    // 数値部分の解析（小数点対応）
+    while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
+        i += 1;
+    }
+    
+    if i == 0 {
+        return None; // 数値がない
+    }
+    
+    let number_str: String = chars[..i].iter().collect();
+    
+    if i >= chars.len() {
+        return None; // 単位がない
+    }
+    
+    let remaining: String = chars[i..].iter().collect();
+    
+    if remaining.starts_with("s") && (remaining.len() == 1 || !is_word_char(remaining.chars().nth(1).unwrap())) {
+        if let Ok(seconds) = number_str.parse::<f64>() {
+            console::log_1(&JsValue::from_str(&format!("Found Seconds unit: {}s", seconds)));
+            return Some((Token::TimeUnit(TimeControl::Seconds(seconds)), i + 1));
         }
     }
-    Err("Unclosed vector found".to_string())
-}
-
-fn convert_single_vector_brackets(vector_tokens: &mut [Token]) -> Result<(), String> {
-    let mut depth_stack = Vec::new();
-    for token in vector_tokens.iter_mut() {
-        match token {
-            Token::VectorStart(_) => {
-                let current_depth = depth_stack.len();
-                if current_depth >= 6 {
-                    return Err("Maximum nesting depth of 6 exceeded".to_string());
-                }
-                let bracket_type = match current_depth % 3 {
-                    0 => BracketType::Square,
-                    1 => BracketType::Curly,
-                    2 => BracketType::Round,
-                    _ => unreachable!(),
-                };
-                *token = Token::VectorStart(bracket_type.clone());
-                depth_stack.push(bracket_type);
-            },
-            Token::VectorEnd(_) => {
-                if let Some(opening_type) = depth_stack.pop() {
-                    *token = Token::VectorEnd(opening_type);
-                } else {
-                    return Err("Unexpected closing bracket".to_string());
-                }
-            },
-            _ => {}
+    
+    if remaining.starts_with("ms") && (remaining.len() == 2 || !is_word_char(remaining.chars().nth(2).unwrap())) {
+        if let Ok(ms) = number_str.parse::<u32>() {
+            console::log_1(&JsValue::from_str(&format!("Found Milliseconds unit: {}ms", ms)));
+            return Some((Token::TimeUnit(TimeControl::Milliseconds(ms)), i + 2));
         }
     }
-    Ok(())
+    
+    if remaining.starts_with("fps") && (remaining.len() == 3 || !is_word_char(remaining.chars().nth(3).unwrap())) {
+        if let Ok(fps) = number_str.parse::<u32>() {
+            console::log_1(&JsValue::from_str(&format!("Found FPS unit: {}fps", fps)));
+            return Some((Token::TimeUnit(TimeControl::FPS(fps)), i + 3));
+        }
+    }
+    
+    None
 }
 
 fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
@@ -213,7 +285,6 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     // 符号の処理
     if chars[i] == '-' || chars[i] == '+' {
         i += 1;
-        // 符号の後に数字が続かない場合は演算子として扱う
         if i >= chars.len() || !chars[i].is_ascii_digit() {
             return None;
         }
@@ -225,7 +296,6 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
         i += 1;
     }
     
-    // 少なくとも1つの数字が必要
     if i == int_start {
         return None;
     }
@@ -233,20 +303,14 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     // 小数点の処理
     if i < chars.len() && chars[i] == '.' {
         i += 1;
-        // 小数部
-        let frac_start = i;
         while i < chars.len() && chars[i].is_ascii_digit() {
             i += 1;
         }
-        // 小数点の後に数字がない場合も有効（例: "3."）
     }
-    
     // 分数の処理
     else if i < chars.len() && chars[i] == '/' {
         i += 1;
-        // 分母は必須
         if i >= chars.len() || !chars[i].is_ascii_digit() {
-            // 分母がない場合は整数として扱う
             i -= 1;
         } else {
             while i < chars.len() && chars[i].is_ascii_digit() {
@@ -255,7 +319,6 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
         }
     }
     
-    // 次の文字が数字やアルファベットの場合は無効
     if i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '.') {
         return None;
     }
@@ -264,22 +327,21 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     Some((Token::Number(number_str), i - start))
 }
 
-fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
+fn try_parse_builtin_word(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = [
-        "true", "false", "nil", "NIL", 
+        "true", "false", "nil", "NIL", "DEF",
         "DUP", "SWAP", "ROT", 
         "GET", "INSERT", "REPLACE", "REMOVE", 
         "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
         "CONCAT", "REVERSE", 
         "AND", "OR", "NOT", 
-        "PRINT", "DEF", "DEL", "RESET"
+        "PRINT", "DEL", "RESET"
     ];
     
     for word in &builtin_words {
         if chars.len() >= word.len() {
             let candidate: String = chars[..word.len()].iter().collect();
             if candidate == *word {
-                // 次の文字がアルファベットや数字でないことを確認
                 if chars.len() > word.len() && is_word_char(chars[word.len()]) {
                     continue;
                 }
@@ -310,10 +372,9 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
         }
     }
     
-    // 1文字演算子（単独の+/-は数値の符号と区別する必要がある）
+    // 1文字演算子
     match chars[0] {
         '+' | '-' => {
-            // 次の文字が数字の場合は数値の符号として扱うため、ここでは処理しない
             if chars.len() > 1 && chars[1].is_ascii_digit() {
                 None
             } else {
