@@ -1,4 +1,4 @@
-// rust/src/types.rs - ビルドエラー修正版
+// rust/src/types.rs - Lisp的統一構文対応版
 
 use std::fmt;
 use num_bigint::BigInt;
@@ -38,6 +38,64 @@ pub enum TimeControl {
     Immediate,         // 即座実行
 }
 
+// 新しい式型（統一構文用）
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expression {
+    // 基本値
+    Number(Fraction),
+    String(String),
+    Boolean(bool),
+    Symbol(String),
+    Nil,
+    
+    // S式（アクションファースト）
+    SExpression {
+        action: Box<Expression>,
+        args: Vec<Expression>,
+    },
+    
+    // Vector（データとして）
+    Vector(Vec<Expression>),
+    
+    // 制御構造
+    Repeat {
+        spec: RepeatSpec,
+        body: Box<Expression>,
+    },
+    Delay {
+        spec: TimeSpec,
+        body: Box<Expression>,
+    },
+    If {
+        condition: Box<Expression>,
+        then_branch: Box<Expression>,
+        else_branch: Option<Box<Expression>>,
+    },
+    
+    // LINE構文（GOTO命令風）
+    Line {
+        repeat: RepeatSpec,
+        timing: TimeSpec,
+        condition: Option<Box<Expression>>,
+        action: Box<Expression>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum RepeatSpec {
+    Times(u32),           // 3x
+    Forever,              // FOREVER
+    Once,                 // デフォルト
+    While(Box<Expression>), // WHILE condition
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TimeSpec {
+    Immediate,            // デフォルト
+    Seconds(f64),         // 2s, 1.5s
+    Milliseconds(u32),    // 500ms
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub val_type: ValueType,
@@ -75,7 +133,6 @@ pub struct Fraction {
     pub denominator: BigInt,
 }
 
-// Workspaceの型エイリアスを追加
 pub type Workspace = Vec<Value>;
 
 impl Fraction {
@@ -220,6 +277,18 @@ impl Default for TimeControl {
     }
 }
 
+impl Default for RepeatSpec {
+    fn default() -> Self {
+        RepeatSpec::Once
+    }
+}
+
+impl Default for TimeSpec {
+    fn default() -> Self {
+        TimeSpec::Immediate
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.fmt_with_depth(f, 0)
@@ -257,9 +326,9 @@ impl Value {
 
 fn get_bracket_for_depth(depth: usize) -> (char, char) {
     match depth % 3 {
-        0 => ('[', ']'),  // レベル 0, 3, 6, ...
-        1 => ('{', '}'),  // レベル 1, 4, 7, ...
-        2 => ('(', ')'),  // レベル 2, 5, 8, ...
+        0 => ('[', ']'),
+        1 => ('{', '}'),
+        2 => ('(', ')'),
         _ => unreachable!(),
     }
 }
@@ -285,6 +354,27 @@ impl fmt::Display for TimeControl {
             TimeControl::Milliseconds(ms) => write!(f, "{}ms", ms),
             TimeControl::FPS(fps) => write!(f, "{}fps", fps),
             TimeControl::Immediate => write!(f, "immediate"),
+        }
+    }
+}
+
+impl fmt::Display for RepeatSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RepeatSpec::Times(n) => write!(f, "{}x", n),
+            RepeatSpec::Forever => write!(f, "FOREVER"),
+            RepeatSpec::Once => write!(f, "ONCE"),
+            RepeatSpec::While(_) => write!(f, "WHILE"),
+        }
+    }
+}
+
+impl fmt::Display for TimeSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TimeSpec::Seconds(s) => write!(f, "{}s", s),
+            TimeSpec::Milliseconds(ms) => write!(f, "{}ms", ms),
+            TimeSpec::Immediate => write!(f, "immediate"),
         }
     }
 }
