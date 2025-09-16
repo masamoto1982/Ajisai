@@ -1,8 +1,8 @@
-// rust/src/lib.rs (BigInt対応・シリアライゼーション修正版)
+// rust/src/lib.rs - ビルドエラー修正版
 
 use wasm_bindgen::prelude::*;
-use serde_wasm_bindgen::{to_value, Serializer};
-use crate::types::{Value, ValueType, Fraction, BracketType};
+use serde_wasm_bindgen::to_value;
+use crate::types::{Value, ValueType, Fraction};
 use crate::interpreter::Interpreter;
 use num_bigint::BigInt;
 use std::str::FromStr;
@@ -34,7 +34,6 @@ impl AjisaiInterpreter {
     pub fn execute(&mut self, code: &str) -> JsValue {
         let obj = js_sys::Object::new();
         
-        // デバッグ出力を追加
         web_sys::console::log_1(&JsValue::from_str(&format!("Executing code: {}", code)));
         
         match self.interpreter.execute(code) {
@@ -75,7 +74,6 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn get_workspace(&self) -> JsValue {
-        // 手動でJSオブジェクトを構築する方法に変更
         let js_array = js_sys::Array::new();
         
         for value in self.interpreter.get_workspace() {
@@ -161,7 +159,6 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
-        // JSの配列から直接Valueに変換
         let js_array = js_sys::Array::from(&workspace_js);
         let mut workspace = Vec::new();
         
@@ -176,7 +173,6 @@ impl AjisaiInterpreter {
     }
 }
 
-// JSのValueオブジェクトをRustのValueに変換
 fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
     
@@ -215,16 +211,6 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             ValueType::Symbol(value_js.as_string().ok_or("value is not a string")?)
         },
         "vector" => {
-            let bracket_type_str = js_sys::Reflect::get(&obj, &"bracketType".into())
-                .ok()
-                .and_then(|v| v.as_string());
-            
-            let bracket_type = match bracket_type_str.as_deref() {
-                Some("curly") => BracketType::Curly,
-                Some("round") => BracketType::Round,
-                _ => BracketType::Square,
-            };
-            
             let js_array = js_sys::Array::from(&value_js);
             let mut vec = Vec::new();
             
@@ -233,7 +219,7 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 vec.push(elem);
             }
             
-            ValueType::Vector(vec, bracket_type)
+            ValueType::Vector(vec)
         },
         "nil" => ValueType::Nil,
         _ => return Err(format!("Unknown type: {}", type_str)),
@@ -242,7 +228,6 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     Ok(Value { val_type })
 }
 
-// RustのValueをJSのオブジェクトに変換（手動構築）
 fn value_to_js_value(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
     
@@ -268,7 +253,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
             js_sys::Reflect::set(&obj, &"type".into(), &"symbol".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
         },
-        ValueType::Vector(vec, bracket_type) => {
+        ValueType::Vector(vec) => {
             js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
             
             let js_array = js_sys::Array::new();
@@ -276,16 +261,17 @@ fn value_to_js_value(value: &Value) -> JsValue {
                 js_array.push(&value_to_js_value(elem));
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array.into()).unwrap();
-            
-            let bracket_str = match bracket_type {
-                BracketType::Square => "square",
-                BracketType::Curly => "curly",
-                BracketType::Round => "round",
-            };
-            js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
         },
         ValueType::Nil => {
             js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        },
+        ValueType::ExecutionLine(_) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"execution_line".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        },
+        ValueType::WordDefinition(_) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"word_definition".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
         },
     }
