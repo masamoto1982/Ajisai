@@ -1,35 +1,33 @@
-// rust/src/builtins.rs (REPEAT対応版)
+// rust/src/builtins.rs - 新しいビルトイン定義
 
 use std::collections::HashMap;
-use crate::interpreter::WordDefinition;
+use crate::interpreter::{InterpreterWordDefinition};
 
-pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
+pub fn register_builtins(dictionary: &mut HashMap<String, InterpreterWordDefinition>) {
     let builtin_definitions = get_builtin_definitions();
     
     for (name, description) in builtin_definitions {
-        dictionary.insert(name.to_string(), WordDefinition {
-            tokens: vec![],
+        dictionary.insert(name.to_string(), InterpreterWordDefinition {
+            lines: vec![],
             is_builtin: true,
             description: Some(description.to_string()),
-            category: None,
-            repeat_count: 1,
         });
     }
 }
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
     vec![
-        // 位置指定操作（0オリジン）
-        ("GET", "Get element at position (0-indexed)"),
+        // 位置指定操作
+        ("GET", "Get element at position"),
         ("INSERT", "Insert element at position"),
         ("REPLACE", "Replace element at position"),
         ("REMOVE", "Remove element at position"),
         
-        // 量指定操作（1オリジン）
+        // 量指定操作
         ("LENGTH", "Get vector length"),
         ("TAKE", "Take first N elements"),
         ("DROP", "Drop first N elements"),
-        ("REPEAT", "Repeat execution with count limit"),
+        ("REPEAT", "Repeat operation"),
         ("SPLIT", "Split vector by sizes"),
         
         // ワークスペース操作
@@ -66,10 +64,5 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("DEF", "Define new word"),
         ("DEL", "Delete word"),
         ("RESET", "Reset all memory and database"),
-        
-        // 条件分岐・反復制御
-        ("IF_SELECT", "Select action based on condition"),
-        ("EXECUTE_REPEAT", "Execute repeat with conditional lines"),
-        ("SIMPLE_REPEAT", "Simple repeat execution"),
     ]
 }
