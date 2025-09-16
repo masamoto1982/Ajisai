@@ -1,7 +1,6 @@
-// rust/src/interpreter/control.rs - DEL構文対応版
+// rust/src/interpreter/control.rs - 不要なimport削除版
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType};
 use web_sys::console;
 use wasm_bindgen::JsValue;
 
