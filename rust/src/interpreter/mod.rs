@@ -1,4 +1,4 @@
-// rust/src/interpreter/mod.rs (BigInt対応・デバッグ版)
+// rust/src/interpreter/mod.rs - 新しい実行エンジン
 
 pub mod vector_ops;
 pub mod arithmetic;
@@ -7,15 +7,14 @@ pub mod io;
 pub mod error;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction};
+use crate::types::{Workspace, Token, Value, ValueType, ExecutionLine, WordDefinition, RepeatControl, TimeControl, Fraction};
 use self::error::{Result, AjisaiError};
-use num_traits::ToPrimitive;
 use web_sys::console;
 use wasm_bindgen::JsValue;
 
 pub struct Interpreter {
     pub(crate) workspace: Workspace,
-    pub(crate) dictionary: HashMap<String, WordDefinition>,
+    pub(crate) dictionary: HashMap<String, InterpreterWordDefinition>,
     pub(crate) dependencies: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) debug_buffer: String,
@@ -23,22 +22,15 @@ pub struct Interpreter {
 }
 
 #[derive(Clone)]
-pub struct WordDefinition {
-    pub tokens: Vec<Token>,
+pub struct InterpreterWordDefinition {
+    pub lines: Vec<ExecutionLine>,
     pub is_builtin: bool,
     pub description: Option<String>,
-    pub category: Option<String>,
-    pub repeat_count: i64,
-}
-
-#[derive(Debug, Clone)]
-pub struct MultiLineDefinition {
-    pub lines: Vec<Vec<Token>>,
-    pub has_conditionals: bool,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        console::log_1(&JsValue::from_str("=== INTERPRETER NEW ==="));
         let mut interpreter = Interpreter {
             workspace: Vec::new(),
             dictionary: HashMap::new(),
@@ -48,186 +40,263 @@ impl Interpreter {
             call_stack: Vec::new(),
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
+        console::log_1(&JsValue::from_str(&format!("Interpreter created with {} builtin words", interpreter.dictionary.len())));
         interpreter
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
-        console::log_1(&JsValue::from_str(&format!("=== Execute: {} ===", code)));
+        console::log_1(&JsValue::from_str(&format!("=== EXECUTE START ===\nCode: '{}'", code)));
         
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
             .collect();
         
+        console::log_1(&JsValue::from_str(&format!("Custom words available: {:?}", custom_word_names)));
+        
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
         
-        console::log_1(&JsValue::from_str(&format!("Tokenized: {:?}", tokens)));
+        console::log_1(&JsValue::from_str(&format!("Parsed tokens: {:?}", tokens)));
         
-        if tokens.is_empty() { return Ok(()); }
-
-        if let Some((def_result, remaining_code)) = self.try_process_def_pattern_from_code(&tokens) {
-            def_result?;
-            if !remaining_code.trim().is_empty() {
-                self.execute(&remaining_code)?;
-            }
-            return Ok(());
+        if tokens.is_empty() { 
+            console::log_1(&JsValue::from_str("No tokens to execute"));
+            return Ok(()); 
         }
 
+        // ワード定義の検出
+        if self.is_word_definition(&tokens) {
+            console::log_1(&JsValue::from_str("Detected word definition"));
+            return self.process_word_definition(&tokens);
+        }
+
+        // 通常の実行
+        console::log_1(&JsValue::from_str("Processing as normal execution"));
         self.execute_tokens(&tokens)
     }
 
-    pub fn execute_reset(&mut self) -> Result<()> {
-        if let Some(window) = web_sys::window() {
-            let event = web_sys::CustomEvent::new("ajisai-reset").map_err(|_| AjisaiError::from("Failed to create reset event"))?;
-            window.dispatch_event(&event).map_err(|_| AjisaiError::from("Failed to dispatch reset event"))?;
-        }
-        self.workspace.clear();
-        self.dictionary.clear();
-        self.dependencies.clear();
-        self.output_buffer.clear();
-        self.call_stack.clear();
-        crate::builtins::register_builtins(&mut self.dictionary);
-        Ok(())
+    fn is_word_definition(&self, tokens: &[Token]) -> bool {
+        console::log_1(&JsValue::from_str("=== is_word_definition ==="));
+        
+        let result = tokens.len() >= 3 && 
+               matches!(tokens[0], Token::VectorStart) &&
+               matches!(tokens[1], Token::Symbol(ref s) if s == "DEF");
+        
+        console::log_1(&JsValue::from_str(&format!("Is word definition: {}", result)));
+        result
     }
 
-    pub fn execute_single_token(&mut self, token: &Token) -> Result<String> {
-        console::log_1(&JsValue::from_str(&format!("Execute single token: {:?}", token)));
+    fn process_word_definition(&mut self, tokens: &[Token]) -> Result<()> {
+        console::log_1(&JsValue::from_str("=== process_word_definition ==="));
+        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
         
-        self.output_buffer.clear();
-        match token {
-            Token::Number(s) => {
-                console::log_1(&JsValue::from_str(&format!("Parsing number string: {}", s)));
-                
-                let frac = Fraction::from_str(s)?;
-                
-                console::log_1(&JsValue::from_str(&format!("Parsed fraction: {}/{}", frac.numerator, frac.denominator)));
-                
-                let wrapped = Value { 
-                    val_type: ValueType::Vector(
-                        vec![Value { val_type: ValueType::Number(frac) }], 
-                        BracketType::Square
-                    ) 
-                };
-                
-                let display = format!("{}", wrapped);
-                console::log_1(&JsValue::from_str(&format!("Pushing to workspace: {}", display)));
-                
-                self.workspace.push(wrapped);
-                
-                console::log_1(&JsValue::from_str(&format!("Workspace size after push: {}", self.workspace.len())));
-                
-                Ok(format!("Pushed {}", display))
-            },
-            Token::String(s) => {
-                let wrapped = Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone())}], BracketType::Square) };
-                self.workspace.push(wrapped);
-                Ok(format!("Pushed wrapped string: ['{}']", s))
-            },
-            Token::Boolean(b) => {
-                let wrapped = Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b)}], BracketType::Square) };
-                self.workspace.push(wrapped);
-                Ok(format!("Pushed wrapped boolean: [{}]", b))
-            },
-            Token::Nil => {
-                let wrapped = Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square) };
-                self.workspace.push(wrapped);
-                Ok("Pushed wrapped nil: [nil]".to_string())
-            },
-            Token::Symbol(name) => {
-                console::log_1(&JsValue::from_str(&format!("Executing word: {}", name)));
-                self.execute_word(name)?;
-                let output = self.get_output();
-                Ok(if output.is_empty() { format!("Executed word: {}", name) } else { output })
-            },
-            _ => Ok(format!("Skipped token: {:?}", token)),
+        // [ DEF [ ワード名 ] 実行行... ] の構造を解析
+        if tokens.len() < 6 {
+            return Err(AjisaiError::from("Word definition too short"));
         }
-    }
-
-    fn try_process_def_pattern_from_code(&mut self, tokens: &[Token]) -> Option<(Result<()>, String)> {
-        let def_pos = tokens.iter().rposition(|t| matches!(t, Token::Symbol(s) if s == "DEF"))?;
         
-        if def_pos > 0 {
-            if let Token::String(name) = &tokens[def_pos - 1] {
-                let mut body_tokens = &tokens[..def_pos - 1];
-                let mut repeat_count = 1;
-
-                if body_tokens.len() >= 2 {
-                    if let (Token::Number(num_str), Token::Symbol(s)) = (&body_tokens[0], &body_tokens[1]) {
-                        if s == "REPEAT" {
-                           if let Ok(frac) = Fraction::from_str(num_str) {
-                               if let Some(num) = frac.to_i64() {
-                                   repeat_count = num;
-                                   body_tokens = &body_tokens[2..];
-                               }
-                           }
-                        }
-                    }
-                }
-
-                if body_tokens.is_empty() { return Some((Err(AjisaiError::from("DEF requires a body")), String::new())); }
-                
-                let multiline_def = self.parse_multiline_definition(body_tokens);
-                let def_result = self.define_word_from_multiline(name.clone(), multiline_def, repeat_count);
-                
-                return Some((def_result, "".to_string()));
-            }
+        let mut i = 2; // "[ DEF" の次から
+        
+        // ワード名の抽出 [ ワード名 ]
+        if !matches!(tokens[i], Token::VectorStart) {
+            return Err(AjisaiError::from("Expected word name vector"));
         }
-        None
-    }
-
-    fn parse_multiline_definition(&mut self, tokens: &[Token]) -> MultiLineDefinition {
-        let mut lines = Vec::new();
-        let mut current_line = Vec::new();
-        let mut has_conditionals = false;
+        i += 1;
         
-        for token in tokens {
-            match token {
-                Token::LineBreak => {
-                    if !current_line.is_empty() {
-                        lines.push(current_line.clone());
-                        current_line.clear();
-                    }
-                },
-                Token::FunctionComment(_) => {},
-                Token::Colon => {
-                    has_conditionals = true;
-                    current_line.push(token.clone());
-                },
-                _ => current_line.push(token.clone()),
-            }
-        }
-        if !current_line.is_empty() { lines.push(current_line); }
-        
-        MultiLineDefinition { lines, has_conditionals }
-    }
-
-    fn define_word_from_multiline(&mut self, name: String, multiline_def: MultiLineDefinition, repeat_count: i64) -> Result<()> {
-        let name = name.to_uppercase();
-
-        let executable_tokens = if multiline_def.has_conditionals {
-            self.create_conditional_tokens(&multiline_def.lines)?
-        } else {
-            multiline_def.lines.into_iter().flatten().collect()
+        let word_name = match &tokens[i] {
+            Token::Symbol(name) => name.clone(),
+            _ => return Err(AjisaiError::from("Expected word name symbol")),
         };
-
-        self.dictionary.insert(name.clone(), WordDefinition {
-            tokens: executable_tokens,
+        i += 1;
+        
+        if !matches!(tokens[i], Token::VectorEnd) {
+            return Err(AjisaiError::from("Expected end of word name vector"));
+        }
+        i += 1;
+        
+        console::log_1(&JsValue::from_str(&format!("Defining word: '{}'", word_name)));
+        
+        // 実行行の解析
+        let mut execution_lines = Vec::new();
+        
+        while i < tokens.len() - 1 { // 最後の ] を除く
+            if matches!(tokens[i], Token::VectorStart) {
+                console::log_1(&JsValue::from_str(&format!("Parsing execution line starting at token {}", i)));
+                let (line, consumed) = self.parse_execution_line(&tokens[i..])?;
+                console::log_1(&JsValue::from_str(&format!("Parsed execution line: {:?}", line)));
+                execution_lines.push(line);
+                i += consumed;
+            } else {
+                i += 1;
+            }
+        }
+        
+        console::log_1(&JsValue::from_str(&format!("Total execution lines: {}", execution_lines.len())));
+        
+        // ワード登録
+        self.dictionary.insert(word_name.clone(), InterpreterWordDefinition {
+            lines: execution_lines,
             is_builtin: false,
             description: None,
-            category: None,
-            repeat_count,
         });
-
-        self.output_buffer.push_str(&format!("Defined word: {}\n", name));
+        
+        self.output_buffer.push_str(&format!("Defined word: {}\n", word_name));
+        console::log_1(&JsValue::from_str(&format!("Word '{}' defined successfully", word_name)));
+        
         Ok(())
     }
 
-    fn create_conditional_tokens(&mut self, _lines: &[Vec<Token>]) -> Result<Vec<Token>> {
-        Ok(vec![])
+    fn parse_execution_line(&self, tokens: &[Token]) -> Result<(ExecutionLine, usize)> {
+        console::log_1(&JsValue::from_str("=== parse_execution_line ==="));
+        console::log_1(&JsValue::from_str(&format!("Input tokens: {:?}", tokens)));
+        
+        if !matches!(tokens[0], Token::VectorStart) {
+            return Err(AjisaiError::from("Expected vector start"));
+        }
+        
+        let mut i = 1;
+        let mut repeat = RepeatControl::default();
+        let mut timing = TimeControl::default();
+        let mut condition: Option<Vec<Value>> = None;
+        let mut action = Vec::new();
+        
+        // ネストレベル0で要素を解析
+        let mut nesting_level = 0;
+        let mut current_element_start = i;
+        let mut element_count = 0;
+        
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::VectorStart => {
+                    if nesting_level == 0 {
+                        // 新しい要素の開始
+                        current_element_start = i;
+                    }
+                    nesting_level += 1;
+                },
+                Token::VectorEnd => {
+                    nesting_level -= 1;
+                    if nesting_level == 0 {
+                        // 要素の終了
+                        let element_tokens = &tokens[current_element_start..=i];
+                        console::log_1(&JsValue::from_str(&format!("Element {}: {:?}", element_count, element_tokens)));
+                        
+                        let element_values = self.tokens_to_values(element_tokens)?;
+                        
+                        match element_count {
+                            0 => { 
+                                // 最初の要素：時間指定
+                                console::log_1(&JsValue::from_str("Processing timing element"));
+                                if element_values.len() == 1 {
+                                    if let ValueType::Symbol(ref s) = element_values[0].val_type {
+                                        timing = self.parse_time_from_string(s)?;
+                                    }
+                                }
+                            },
+                            1 => { 
+                                // 2番目の要素：条件
+                                console::log_1(&JsValue::from_str("Processing condition element"));
+                                if !element_values.is_empty() {
+                                    condition = Some(element_values);
+                                }
+                            },
+                            2 => { 
+                                // 3番目の要素：実行内容
+                                console::log_1(&JsValue::from_str("Processing action element"));
+                                action = element_values;
+                            },
+                            _ => {
+                                console::log_1(&JsValue::from_str(&format!("Unexpected element at position {}", element_count)));
+                            }
+                        }
+                        
+                        element_count += 1;
+                        i += 1;
+                        current_element_start = i;
+                        continue;
+                    }
+                    if nesting_level < 0 {
+                        // 実行行の終了
+                        console::log_1(&JsValue::from_str(&format!("Execution line ended. Consumed {} tokens", i + 1)));
+                        break;
+                    }
+                },
+                Token::RepeatUnit(ref r) => {
+                    if nesting_level == 0 {
+                        console::log_1(&JsValue::from_str(&format!("Found repeat unit: {:?}", r)));
+                        repeat = r.clone();
+                        element_count += 1;
+                    }
+                },
+                Token::TimeUnit(ref t) => {
+                    if nesting_level == 0 {
+                        console::log_1(&JsValue::from_str(&format!("Found time unit: {:?}", t)));
+                        timing = t.clone();
+                        element_count += 1;
+                    }
+                },
+                _ => {}
+            }
+            
+            i += 1;
+        }
+        
+        let line = ExecutionLine {
+            repeat,
+            timing,
+            condition,
+            action,
+        };
+        
+        console::log_1(&JsValue::from_str(&format!("Final execution line: repeat={}, timing={}, has_condition={}, action_count={}", 
+            line.repeat, line.timing, line.condition.is_some(), line.action.len())));
+        
+        Ok((line, i))
     }
-    
+
+    fn tokens_to_values(&self, tokens: &[Token]) -> Result<Vec<Value>> {
+        console::log_1(&JsValue::from_str(&format!("=== tokens_to_values ===\nTokens: {:?}", tokens)));
+        
+        let mut values = Vec::new();
+        let mut i = 0;
+        
+        // 外側のベクトル記号をスキップ
+        if tokens.len() >= 2 && matches!(tokens[0], Token::VectorStart) && matches!(tokens[tokens.len()-1], Token::VectorEnd) {
+            i = 1;
+            let end = tokens.len() - 1;
+            
+            while i < end {
+                let value = self.token_to_value(&tokens[i])?;
+                console::log_1(&JsValue::from_str(&format!("Converted token {:?} to value {:?}", tokens[i], value)));
+                values.push(value);
+                i += 1;
+            }
+        }
+        
+        console::log_1(&JsValue::from_str(&format!("Final values: {:?}", values)));
+        Ok(values)
+    }
+
+    fn token_to_value(&self, token: &Token) -> Result<Value> {
+        match token {
+            Token::Number(s) => {
+                let frac = Fraction::from_str(s)?;
+                Ok(Value { val_type: ValueType::Number(frac) })
+            },
+            Token::String(s) => Ok(Value { val_type: ValueType::String(s.clone()) }),
+            Token::Boolean(b) => Ok(Value { val_type: ValueType::Boolean(*b) }),
+            Token::Nil => Ok(Value { val_type: ValueType::Nil }),
+            Token::Symbol(s) => Ok(Value { val_type: ValueType::Symbol(s.clone()) }),
+            _ => Err(AjisaiError::from("Cannot convert this token to a value")),
+        }
+    }
+
+    fn parse_time_from_string(&self, s: &str) -> Result<TimeControl> {
+        // 簡易実装
+        Ok(TimeControl::Immediate)
+    }
+
     pub(crate) fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        console::log_1(&JsValue::from_str(&format!("=== execute_tokens: {:?} ===", tokens)));
+        console::log_1(&JsValue::from_str(&format!("=== execute_tokens ===\nTokens: {:?}", tokens)));
         
         let mut i = 0;
         while i < tokens.len() {
@@ -249,7 +318,7 @@ impl Interpreter {
                     };
                     
                     let val = Value { val_type: ValueType::Number(frac) };
-                    let wrapped = Value { val_type: ValueType::Vector(vec![val], BracketType::Square)};
+                    let wrapped = Value { val_type: ValueType::Vector(vec![val])};
                     
                     console::log_1(&JsValue::from_str(&format!("Pushing wrapped number: {}", wrapped)));
                     self.workspace.push(wrapped);
@@ -258,22 +327,22 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::String(s) => {
-                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
+                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }])});
                     i += 1;
                 },
                 Token::Boolean(b) => {
-                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)});
+                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }])});
                     i += 1;
                 },
                 Token::Nil => {
-                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)});
+                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }])});
                     i += 1;
                 },
-                Token::VectorStart(bracket_type) => {
+                Token::VectorStart => {
                     console::log_1(&JsValue::from_str("Vector start"));
-                    let (vector_values, consumed) = self.collect_vector(tokens, i, bracket_type.clone())?;
+                    let (vector_values, consumed) = self.collect_vector(tokens, i)?;
                     console::log_1(&JsValue::from_str(&format!("Collected vector with {} elements", vector_values.len())));
-                    self.workspace.push(Value { val_type: ValueType::Vector(vector_values, bracket_type.clone())});
+                    self.workspace.push(Value { val_type: ValueType::Vector(vector_values)});
                     i += consumed;
                 },
                 Token::Symbol(name) => {
@@ -281,11 +350,10 @@ impl Interpreter {
                     self.execute_word(name)?;
                     i += 1;
                 },
-                Token::VectorEnd(_) => return Err(AjisaiError::from("Unexpected vector end")),
+                Token::VectorEnd => return Err(AjisaiError::from("Unexpected vector end")),
                 _ => { i += 1; }
             }
             
-            // ワークスペースの現在の状態を表示
             if !self.workspace.is_empty() {
                 console::log_1(&JsValue::from_str(&format!("Workspace top: {}", self.workspace.last().unwrap())));
             }
@@ -295,22 +363,19 @@ impl Interpreter {
         Ok(())
     }
 
-    fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
         console::log_1(&JsValue::from_str(&format!("Collecting vector starting at {}", start)));
         
         let mut values = Vec::new();
         let mut i = start + 1;
         while i < tokens.len() {
             match &tokens[i] {
-                Token::VectorStart(inner_bracket_type) => {
-                    let (nested_values, consumed) = self.collect_vector(tokens, i, inner_bracket_type.clone())?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values, inner_bracket_type.clone())});
+                Token::VectorStart => {
+                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                    values.push(Value { val_type: ValueType::Vector(nested_values)});
                     i += consumed;
                 },
-                Token::VectorEnd(end_bracket_type) => {
-                    if *end_bracket_type != expected_bracket_type {
-                        return Err(AjisaiError::from("Mismatched bracket types"));
-                    }
+                Token::VectorEnd => {
                     console::log_1(&JsValue::from_str(&format!("Vector complete with {} elements", values.len())));
                     return Ok((values, i - start + 1));
                 },
@@ -324,22 +389,6 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
-    fn token_to_value(&self, token: &Token) -> Result<Value> {
-        match token {
-            Token::Number(s) => {
-                console::log_1(&JsValue::from_str(&format!("token_to_value: Number {}", s)));
-                let frac = Fraction::from_str(s)?;
-                console::log_1(&JsValue::from_str(&format!("token_to_value: Fraction {}/{}", frac.numerator, frac.denominator)));
-                Ok(Value { val_type: ValueType::Number(frac) })
-            },
-            Token::String(s) => Ok(Value { val_type: ValueType::String(s.clone()) }),
-            Token::Boolean(b) => Ok(Value { val_type: ValueType::Boolean(*b) }),
-            Token::Nil => Ok(Value { val_type: ValueType::Nil }),
-            Token::Symbol(s) => Ok(Value { val_type: ValueType::Symbol(s.clone()) }),
-            _ => Err(AjisaiError::from("Cannot convert this token to a value")),
-        }
-    }
-
     fn execute_word(&mut self, name: &str) -> Result<()> {
         console::log_1(&JsValue::from_str(&format!("execute_word: {}", name)));
         console::log_1(&JsValue::from_str(&format!("Workspace before: {} items", self.workspace.len())));
@@ -351,7 +400,7 @@ impl Interpreter {
                 result
             } else {
                 self.call_stack.push(name.to_string());
-                let result = self.execute_tokens(&def.tokens);
+                let result = self.execute_custom_word(name, &def);
                 self.call_stack.pop();
                 result.map_err(|e| e.with_context(&self.call_stack))
             }
@@ -360,43 +409,78 @@ impl Interpreter {
         }
     }
 
+    fn execute_custom_word(&mut self, name: &str, def: &InterpreterWordDefinition) -> Result<()> {
+        console::log_1(&JsValue::from_str(&format!("=== execute_custom_word: {} ===", name)));
+        console::log_1(&JsValue::from_str(&format!("Word has {} execution lines", def.lines.len())));
+        
+        for (line_idx, line) in def.lines.iter().enumerate() {
+            console::log_1(&JsValue::from_str(&format!("Executing line {}: {:?}", line_idx, line)));
+            
+            // 条件チェック
+            if let Some(ref condition) = line.condition {
+                console::log_1(&JsValue::from_str(&format!("Checking condition: {:?}", condition)));
+                // TODO: 条件評価の実装
+            }
+            
+            // アクション実行
+            console::log_1(&JsValue::from_str(&format!("Executing action: {:?}", line.action)));
+            for action in &line.action {
+                match &action.val_type {
+                    ValueType::Symbol(sym_name) => {
+                        self.execute_word(sym_name)?;
+                    },
+                    _ => {
+                        self.workspace.push(action.clone());
+                    }
+                }
+            }
+            
+            // 反復制御
+            match &line.repeat {
+                RepeatControl::Times(n) => {
+                    console::log_1(&JsValue::from_str(&format!("Repeat {} times (not implemented yet)", n)));
+                },
+                RepeatControl::Once => {
+                    console::log_1(&JsValue::from_str("Execute once"));
+                },
+                _ => {
+                    console::log_1(&JsValue::from_str(&format!("Repeat control {:?} not implemented yet", line.repeat)));
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         console::log_1(&JsValue::from_str(&format!("execute_builtin: {}", name)));
         
         match name {
             "GET" => vector_ops::op_get(self),
-            "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self),
-            "REMOVE" => vector_ops::op_remove(self),
-            "LENGTH" => vector_ops::op_length(self),
-            "TAKE" => vector_ops::op_take(self),
-            "DROP" => vector_ops::op_drop_vector(self),
-            "REPEAT" => vector_ops::op_repeat(self),
-            "SPLIT" => vector_ops::op_split(self),
             "DUP" => vector_ops::op_dup_workspace(self),
             "SWAP" => vector_ops::op_swap_workspace(self),
-            "ROT" => vector_ops::op_rot_workspace(self),
-            "CONCAT" => vector_ops::op_concat(self),
-            "REVERSE" => vector_ops::op_reverse(self),
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),
             "/" => arithmetic::op_div(self),
-            "=" => arithmetic::op_eq(self),
-            "<" => arithmetic::op_lt(self),
-            "<=" => arithmetic::op_le(self),
-            ">" => arithmetic::op_gt(self),
-            ">=" => arithmetic::op_ge(self),
-            "AND" => arithmetic::op_and(self),
-            "OR" => arithmetic::op_or(self),
-            "NOT" => arithmetic::op_not(self),
             "PRINT" => io::op_print(self),
-            "DEF" => control::op_def(self),
-            "DEL" => control::op_del(self),
             "RESET" => self.execute_reset(),
-            "IF_SELECT" => control::op_if_select(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
+    }
+
+    pub fn execute_reset(&mut self) -> Result<()> {
+        if let Some(window) = web_sys::window() {
+            let event = web_sys::CustomEvent::new("ajisai-reset").map_err(|_| AjisaiError::from("Failed to create reset event"))?;
+            window.dispatch_event(&event).map_err(|_| AjisaiError::from("Failed to dispatch reset event"))?;
+        }
+        self.workspace.clear();
+        self.dictionary.clear();
+        self.dependencies.clear();
+        self.output_buffer.clear();
+        self.call_stack.clear();
+        crate::builtins::register_builtins(&mut self.dictionary);
+        Ok(())
     }
 
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
@@ -414,32 +498,4 @@ impl Interpreter {
     }
    
     pub fn set_workspace(&mut self, workspace: Workspace) { self.workspace = workspace; }
-    
-    pub fn restore_custom_word(&mut self, name: String, tokens: Vec<Token>, description: Option<String>) -> Result<()> {
-        self.dictionary.insert(name.to_uppercase(), WordDefinition {
-            tokens, is_builtin: false, description, category: None, repeat_count: 1,
-        });
-        Ok(())
-    }
-   
-    pub fn get_word_definition(&self, name: &str) -> Option<String> {
-        self.dictionary.get(name).and_then(|def| {
-            if def.is_builtin { return None; }
-            let body = def.tokens.iter().map(|t| self.token_to_string(t)).collect::<Vec<_>>().join(" ");
-            Some(format!("[ {} ]", body))
-        })
-    }
-
-    fn token_to_string(&self, token: &Token) -> String {
-        match token {
-            Token::Number(s) => s.clone(),
-            Token::String(s) => format!("'{}'", s),
-            Token::Boolean(b) => b.to_string(),
-            Token::Nil => "nil".to_string(),
-            Token::Symbol(s) => s.clone(),
-            Token::VectorStart(bt) => bt.opening_char().to_string(),
-            Token::VectorEnd(bt) => bt.closing_char().to_string(),
-            _ => "".to_string(),
-        }
-    }
 }
