@@ -1,7 +1,7 @@
-// rust/src/interpreter/control.rs - 新しい制御構造
+// rust/src/interpreter/control.rs - DEL構文対応版
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Value};
+use crate::types::{ValueType};
 use web_sys::console;
 use wasm_bindgen::JsValue;
 
@@ -16,21 +16,17 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     console::log_1(&JsValue::from_str("=== op_del ==="));
+    console::log_1(&JsValue::from_str(&format!("Workspace size: {}", interp.workspace.len())));
     
-    let val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
-    console::log_1(&JsValue::from_str(&format!("Deleting word from value: {:?}", val)));
-    
-    let name = match val.val_type {
-        ValueType::Vector(v) if v.len() == 1 => match &v[0].val_type {
-            ValueType::String(s) => s.to_uppercase(),
-            ValueType::Symbol(s) => s.to_uppercase(),
-            _ => return Err(AjisaiError::type_error("string or symbol", "other type"))
-        },
-        ValueType::Symbol(s) => s.to_uppercase(),
-        ValueType::String(s) => s.to_uppercase(),
-        _ => return Err(AjisaiError::type_error("vector with string/symbol, string, or symbol", "other type")),
-    };
+    // 新しい構文では DEL は単体で呼ばれることはない
+    // [ DEL [ WORD_NAME ] ] の形式で処理される
+    Err(AjisaiError::from("DEL should be used in [ DEL [ WORD_NAME ] ] format"))
+}
 
+pub fn op_del_word(interp: &mut Interpreter, word_name: &str) -> Result<()> {
+    console::log_1(&JsValue::from_str(&format!("=== op_del_word: {} ===", word_name)));
+
+    let name = word_name.to_uppercase();
     console::log_1(&JsValue::from_str(&format!("Attempting to delete word: '{}'", name)));
 
     if interp.dictionary.get(&name).map_or(false, |d| d.is_builtin) {
