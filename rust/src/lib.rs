@@ -11,6 +11,7 @@ mod types;
 mod tokenizer;
 mod interpreter;
 mod builtins;
+mod parser;  // 新規モジュール追加
 
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
