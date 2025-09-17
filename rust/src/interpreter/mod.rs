@@ -1122,6 +1122,29 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
-    pub fn get_debug_output(&mut self) -> String { std::mem::take(&mut self.debug_buffer) }
-    pub fn get_worksp
+    pub fn get_output(&mut self) -> String { 
+        std::mem::take(&mut self.output_buffer) 
+    }
+    
+    pub fn get_debug_output(&mut self) -> String { 
+        std::mem::take(&mut self.debug_buffer) 
+    }
+    
+    pub fn get_workspace(&self) -> &Workspace { 
+        &self.workspace 
+    }
+    
+    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
+        self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| {
+                let protected = self.dependencies.get(name).map_or(false, |deps| !deps.is_empty());
+                (name.clone(), def.description.clone(), protected)
+            })
+            .collect()
+    }
+   
+    pub fn set_workspace(&mut self, workspace: Workspace) { 
+        self.workspace = workspace; 
+    }
+}
