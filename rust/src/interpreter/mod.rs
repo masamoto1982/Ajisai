@@ -8,12 +8,13 @@ pub mod error;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Workspace, Token, Value, ValueType, ExecutionLine, RepeatControl, TimeControl, Fraction};
-use crate::parser::{Parser, Expression, RepeatSpec, TimeSpec};
+use crate::types::{Expression, RepeatSpec, TimeSpec};  // typesから直接インポート
+use crate::parser::Parser;  // Parserのみparserからインポート
 use self::error::{Result, AjisaiError};
 use web_sys::console;
 use wasm_bindgen::JsValue;
 use num_bigint::BigInt;
-use num_traits::{Zero, One, ToPrimitive};
+use num_traits::{Zero, One};  // ToPrimitiveを削除
 
 pub struct Interpreter {
     pub(crate) workspace: Workspace,
