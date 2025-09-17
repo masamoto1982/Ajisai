@@ -1,4 +1,4 @@
-// rust/src/parser.rs - 統一S式パーサー
+// rust/src/parser.rs - 完全版（借用チェッカーエラー修正済み）
 
 use crate::types::{Expression, RepeatSpec, TimeSpec, Token, Fraction};
 use web_sys::console;
@@ -180,11 +180,13 @@ impl Parser {
             return Ok(RepeatSpec::Once);
         }
         
-        let spec = match self.current_token() {
+        // current_tokenの結果を一時変数に保存して借用問題を回避
+        let token_clone = self.current_token().cloned();
+        let spec = match token_clone {
             Some(Token::RepeatUnit(r)) => {
                 self.position += 1;
                 match r {
-                    crate::types::RepeatControl::Times(n) => RepeatSpec::Times(*n),
+                    crate::types::RepeatControl::Times(n) => RepeatSpec::Times(n),
                     crate::types::RepeatControl::Forever => RepeatSpec::Forever,
                     _ => RepeatSpec::Once,
                 }
@@ -241,12 +243,14 @@ impl Parser {
             return Ok(TimeSpec::Immediate);
         }
         
-        let spec = match self.current_token() {
+        // current_tokenの結果を一時変数に保存して借用問題を回避
+        let token_clone = self.current_token().cloned();
+        let spec = match token_clone {
             Some(Token::TimeUnit(t)) => {
                 self.position += 1;
                 match t {
-                    crate::types::TimeControl::Seconds(s) => TimeSpec::Seconds(*s),
-                    crate::types::TimeControl::Milliseconds(ms) => TimeSpec::Milliseconds(*ms),
+                    crate::types::TimeControl::Seconds(s) => TimeSpec::Seconds(s),
+                    crate::types::TimeControl::Milliseconds(ms) => TimeSpec::Milliseconds(ms),
                     _ => TimeSpec::Immediate,
                 }
             },
