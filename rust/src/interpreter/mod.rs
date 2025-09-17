@@ -664,75 +664,87 @@ impl Interpreter {
     
     // ヘルパー関数
     fn expression_to_value(&mut self, expr: &Expression) -> Result<Value> {
-        match expr {
-            Expression::Number(n) => {
-                Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(n.clone()) }]) })
-            },
-            Expression::String(s) => {
-                Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }]) })
-            },
-            Expression::Boolean(b) => {
-                Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }]) })
-            },
-            Expression::Nil => {
-                Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }]) })
-            },
-            Expression::Vector(elements) => {
-                let mut values = Vec::new();
-                for elem in elements {
-                    let value = self.expression_to_value(elem)?;
-                    // ネストを解除
-                    if let ValueType::Vector(v) = value.val_type {
-                        if v.len() == 1 {
-                            values.push(v[0].clone());
-                        } else {
-                            values.push(Value { val_type: ValueType::Vector(v) });
-                        }
-                    }
-                }
-                Ok(Value { val_type: ValueType::Vector(values) })
-            },
-            Expression::Symbol(s) => {
-                // HEADやWORKSPACE_SIZEなどの特殊シンボル
-                match s.as_str() {
-                    "HEAD" => {
-                        self.workspace.last().cloned()
-                            .ok_or(AjisaiError::WorkspaceUnderflow)
-                    },
-                    "WORKSPACE_SIZE" => {
-                        Ok(Value {
-                            val_type: ValueType::Vector(vec![Value {
-                                val_type: ValueType::Number(Fraction::new(
-                                    BigInt::from(self.workspace.len()),
-                                    BigInt::one()
-                                ))
-                            }])
-                        })
-                    },
-                    "LOOP_INDEX" => {
-                        let index = self.loop_index_stack.last().copied().unwrap_or(0);
-                        Ok(Value {
-                            val_type: ValueType::Vector(vec![Value {
-                                val_type: ValueType::Number(Fraction::new(
-                                    BigInt::from(index),
-                                    BigInt::one()
-                                ))
-                            }])
-                        })
-                    },
-                    _ => {
-                        // 通常のシンボル
-                        Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Symbol(s.clone()) }]) })
-                    }
-                }
-            },
-            _ => {
-                // その他の式は評価してから値を取得
-                self.eval_expression(expr)?;
-                self.workspace.pop().ok_or(AjisaiError::from("Failed to get expression value"))
+    match expr {
+        Expression::Number(n) => {
+            Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(n.clone()) }]) })
+        },
+        Expression::String(s) => {
+            Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }]) })
+        },
+        Expression::Boolean(b) => {
+            Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }]) })
+        },
+        Expression::Nil => {
+            Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }]) })
+        },
+        Expression::Vector(elements) => {
+            // データベクトルは要素を評価せずにそのまま変換
+            let mut values = Vec::new();
+            for elem in elements {
+                let value = self.expression_to_raw_value(elem)?;  // 新しいメソッドを使用
+                values.push(value);
             }
+            Ok(Value { val_type: ValueType::Vector(values) })
+        },
+        Expression::Symbol(s) => {
+            match s.as_str() {
+                "HEAD" => {
+                    self.workspace.last().cloned()
+                        .ok_or(AjisaiError::WorkspaceUnderflow)
+                },
+                "WORKSPACE_SIZE" => {
+                    Ok(Value {
+                        val_type: ValueType::Vector(vec![Value {
+                            val_type: ValueType::Number(Fraction::new(
+                                BigInt::from(self.workspace.len()),
+                                BigInt::one()
+                            ))
+                        }])
+                    })
+                },
+                "LOOP_INDEX" => {
+                    let index = self.loop_index_stack.last().copied().unwrap_or(0);
+                    Ok(Value {
+                        val_type: ValueType::Vector(vec![Value {
+                            val_type: ValueType::Number(Fraction::new(
+                                BigInt::from(index),
+                                BigInt::one()
+                            ))
+                        }])
+                    })
+                },
+                _ => {
+                    // 通常のシンボルは実行せずにシンボル値として返す
+                    Ok(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Symbol(s.clone()) }]) })
+                }
+            }
+        },
+        _ => {
+            // S式などの場合のみ評価
+            self.eval_expression(expr)?;
+            self.workspace.pop().ok_or(AjisaiError::from("Failed to get expression value"))
         }
     }
+}
+
+// 新しいヘルパーメソッドを追加
+fn expression_to_raw_value(&self, expr: &Expression) -> Result<Value> {
+    match expr {
+        Expression::Number(n) => Ok(Value { val_type: ValueType::Number(n.clone()) }),
+        Expression::String(s) => Ok(Value { val_type: ValueType::String(s.clone()) }),
+        Expression::Boolean(b) => Ok(Value { val_type: ValueType::Boolean(*b) }),
+        Expression::Nil => Ok(Value { val_type: ValueType::Nil }),
+        Expression::Symbol(s) => Ok(Value { val_type: ValueType::Symbol(s.clone()) }),
+        Expression::Vector(elements) => {
+            let mut values = Vec::new();
+            for elem in elements {
+                values.push(self.expression_to_raw_value(elem)?);
+            }
+            Ok(Value { val_type: ValueType::Vector(values) })
+        },
+        _ => Err(AjisaiError::from("Cannot convert complex expression to raw value")),
+    }
+}
     
     fn expression_line_to_execution_line(&mut self, repeat: &RepeatSpec, timing: &TimeSpec, 
                                          condition: Option<&Expression>, action: &Expression) -> Result<ExecutionLine> {
