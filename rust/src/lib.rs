@@ -1,8 +1,8 @@
 // rust/src/lib.rs (BigInt対応・シリアライゼーション修正版)
 
 use wasm_bindgen::prelude::*;
-use serde_wasm_bindgen::{to_value, Serializer};
-use crate::types::{Value, ValueType, Fraction, BracketType};
+use serde_wasm_bindgen::to_value;
+use crate::types::{Value, ValueType, Fraction, BracketType, Token};
 use crate::interpreter::Interpreter;
 use num_bigint::BigInt;
 use std::str::FromStr;
@@ -235,6 +235,10 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             
             ValueType::Vector(vec, bracket_type)
         },
+        "quotation" => {
+             // For now, we cannot receive quotations from JS, so we'll treat it as empty.
+             ValueType::Quotation(Vec::new())
+        }
         "nil" => ValueType::Nil,
         _ => return Err(format!("Unknown type: {}", type_str)),
     };
@@ -283,6 +287,10 @@ fn value_to_js_value(value: &Value) -> JsValue {
                 BracketType::Round => "round",
             };
             js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
+        },
+        ValueType::Quotation(_) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"quotation".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &": ... ;".into()).unwrap();
         },
         ValueType::Nil => {
             js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
