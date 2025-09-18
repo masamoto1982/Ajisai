@@ -7,13 +7,12 @@ pub mod io;
 pub mod error;
 pub mod flow_control;
 
-use std::collections::HashMap;
-use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction, WordDefinition, ExecutionLine};
+use std::collections::{HashMap, HashSet};
+use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction, WordDefinition};
 use self::error::{Result, AjisaiError};
-use web_sys::console;
-use wasm_bindgen::JsValue;
 use std::thread;
 use std::time::Duration;
+use num_traits::Zero;
 
 pub struct Interpreter {
     pub(crate) workspace: Workspace,
@@ -47,9 +46,6 @@ impl Interpreter {
             .map(|(name, _)| name.clone())
             .collect();
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
-        
-        // This is a simplified top-level. It doesn't handle definitions yet.
-        // The main logic for definitions is now in control::op_def
         self.execute_tokens(&tokens)
     }
 
@@ -66,21 +62,17 @@ impl Interpreter {
                 Token::Boolean(b) => self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
                 Token::Nil => self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)}),
                 Token::VectorStart(bt) => {
-                    let (values, consumed) = self.collect_vector(tokens, i, bt.clone())?;
+                    let (values, consumed) = self.collect_vector(tokens, i)?;
                     self.workspace.push(Value { val_type: ValueType::Vector(values, bt.clone()) });
                     i += consumed - 1;
                 },
                 Token::DefBlockStart => {
-                    // This is a placeholder for how definition blocks are pushed to the stack
                     let (body_tokens, consumed) = self.collect_def_block(tokens, i)?;
-                    let token_str_vec: Vec<String> = body_tokens.iter().map(|t| format!("{:?}", t)).collect();
-                    let body_as_string = token_str_vec.join(" ");
-                    // Push a placeholder onto the stack for op_def to consume
-                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value {val_type: ValueType::Symbol(body_as_string)}], BracketType::Square)});
+                    self.workspace.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
                     i += consumed - 1;
                 }
                 Token::Symbol(name) => self.execute_word(name)?,
-                _ => {} // Ignore others like DefBlockEnd, GuardSeparator etc. at top level
+                _ => {} 
             }
             i += 1;
         }
@@ -114,7 +106,6 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
-        // --- New execution model for custom words ---
         let mut state = WordExecutionState {
             program_counter: 0,
             repeat_counters: def.lines.iter().map(|line| line.repeat_count).collect(),
@@ -125,7 +116,7 @@ impl Interpreter {
         while state.program_counter < def.lines.len() {
             let pc = state.program_counter;
             
-            if state.repeat_counters[pc] == 0 {
+            if state.repeat_counters[pc] <= 0 {
                 state.program_counter += 1;
                 continue;
             }
@@ -133,32 +124,27 @@ impl Interpreter {
             
             let line = &def.lines[pc];
 
-            // 1. Execute Condition
             if !line.condition_tokens.is_empty() {
                 self.execute_tokens(&line.condition_tokens)?;
                 let condition_val = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
                 if !is_truthy(&condition_val) {
                     state.program_counter += 1;
-                    continue; // Skip body
+                    continue; 
                 }
             }
 
-            // 2. Execute Body
-            self.execution_state = Some(state); // Make state available for GOTO
+            self.execution_state = Some(state);
             self.execute_tokens(&line.body_tokens)?;
-            state = self.execution_state.take().unwrap(); // Reclaim ownership
+            state = self.execution_state.take().unwrap();
 
-            // 3. Handle Delay
             if line.delay_ms > 0 {
                 thread::sleep(Duration::from_millis(line.delay_ms));
             }
             
-            // 4. Update PC
             if state.continue_loop {
-                // GOTO was called, PC is already set. Reset flag.
                 state.continue_loop = false;
             } else if state.repeat_counters[pc] > 0 {
-                // Stay on the same line to repeat
+                // Stay on same line
             } else {
                 state.program_counter += 1;
             }
@@ -196,34 +182,56 @@ impl Interpreter {
             "PRINT" => io::op_print(self),
             "DEF" => control::op_def(self),
             "DEL" => control::op_del(self),
-            "RESET" => unimplemented!(),
+            "RESET" => self.execute_reset(),
             "GOTO" => flow_control::op_goto(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
     }
     
-    // (Other helper functions like collect_vector, etc. remain mostly unchanged)
-    fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new(); let mut i = start + 1;
+        let mut depth = 1;
         while i < tokens.len() {
             match &tokens[i] {
-                Token::VectorStart(inner_bracket_type) => {
-                    let (nested_values, consumed) = self.collect_vector(tokens, i, inner_bracket_type.clone())?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values, inner_bracket_type.clone()) });
-                    i += consumed;
-                },
-                Token::VectorEnd(end_bracket_type) => {
-                    if *end_bracket_type != expected_bracket_type { return Err(AjisaiError::from("Mismatched bracket types")); }
-                    return Ok((values, i - start + 1));
+                Token::VectorStart(_) => depth += 1,
+                Token::VectorEnd(_) => {
+                    depth -= 1;
+                    if depth == 0 { return Ok((values, i - start + 1)); }
                 },
                 _ => { 
-                    // This is a simplified version that doesn't create nested values from tokens
-                    // For a full implementation, you'd need a token-to-value conversion
-                    i+=1;
+                    // This is a simplified logic that doesn't parse tokens into values for now
                  }
             }
+            i += 1;
         }
         Err(AjisaiError::from("Unclosed vector"))
+    }
+
+    // Public methods for lib.rs
+    pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
+    pub fn get_workspace(&self) -> &Workspace { &self.workspace }
+    pub fn set_workspace(&mut self, workspace: Workspace) { self.workspace = workspace; }
+    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>)> {
+        self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.description.clone()))
+            .collect()
+    }
+    pub fn get_word_definition(&self, _name: &str) -> Option<String> {
+        // This needs to be re-implemented based on the new WordDefinition structure
+        None
+    }
+    pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> {
+        // This needs to be re-implemented based on the new WordDefinition structure
+        Ok(())
+    }
+     pub fn execute_reset(&mut self) -> Result<()> {
+        self.workspace.clear();
+        self.dictionary.clear();
+        self.output_buffer.clear();
+        self.execution_state = None;
+        crate::builtins::register_builtins(&mut self.dictionary);
+        Ok(())
     }
 }
 
