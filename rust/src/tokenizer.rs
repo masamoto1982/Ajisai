@@ -177,21 +177,20 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     } else if i < chars.len() && chars[i] == '/' {
         i += 1;
         if i == chars.len() || !chars[i].is_ascii_digit() { 
-            i -= 1; // It's not a fraction, just a number
+            i -= 1;
         } else {
             while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
         }
     }
     
-    let end = if start > 0 { i - 1 } else { i };
+    let end = if start > 0 && i > start { i } else if start == 0 { i } else { 0 };
 
-    if end > start && (i == chars.len() || !chars[i].is_alphanumeric()) {
+    if end > start && (i == chars.len() || !is_word_char(chars[i])) {
         let num_str: String = chars[..i].iter().collect();
         return Some((Token::Number(num_str), i));
     }
     None
 }
-
 
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
     let builtin_words = ["TRUE", "FALSE", "NIL", "DUP", "SWAP", "ROT", "GET", "INSERT", "REPLACE", "REMOVE", "LENGTH", "TAKE", "DROP", "SPLIT", "CONCAT", "REVERSE", "AND", "OR", "NOT", "PRINT", "DEF", "DEL", "RESET", "GOTO"];
@@ -221,7 +220,10 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     }
     if !chars.is_empty() {
         match chars[0] {
-            '+' | '-' | '*' | '/' | '<' | '>' | '=' => Some((Token::Symbol(chars[0].to_string()), 1)),
+            '+' | '-' | '*' | '/' | '<' | '>' | '=' => {
+                 if chars.len() > 1 && chars[1].is_ascii_digit() { return None; }
+                 Some((Token::Symbol(chars[0].to_string()), 1))
+            },
             _ => None
         }
     } else { None }
