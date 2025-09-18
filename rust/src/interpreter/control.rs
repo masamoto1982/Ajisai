@@ -1,8 +1,7 @@
 // rust/src/interpreter/control.rs (完全修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Token, Value, BracketType};
-use std::collections::HashSet;
+use crate::types::{ValueType, Token, Value};
 use num_bigint::BigInt;
 use num_traits::{Zero, One};
 
@@ -15,30 +14,13 @@ pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
     let selected_action = if is_truthy(&condition) { true_action } else { false_action };
     
     match selected_action.val_type {
-        ValueType::Vector(action_values, _) => {
-            let tokens = vector_to_tokens(action_values)?;
+        ValueType::Quotation(tokens) => {
             interp.execute_tokens(&tokens)
         },
         _ => {
-            interp.workspace.push(selected_action);
-            Ok(())
+             Err(AjisaiError::type_error("quotation", "other type"))
         }
     }
-}
-
-fn vector_to_tokens(values: Vec<Value>) -> Result<Vec<Token>> {
-    let mut tokens = Vec::new();
-    for value in values {
-        match value.val_type {
-            ValueType::Vector(inner_values, bracket_type) => {
-                tokens.push(Token::VectorStart(bracket_type.clone()));
-                tokens.extend(vector_to_tokens(inner_values)?);
-                tokens.push(Token::VectorEnd(bracket_type));
-            },
-            _ => tokens.push(value_to_token(value)?),
-        }
-    }
-    Ok(tokens)
 }
 
 fn is_truthy(value: &Value) -> bool {
@@ -51,24 +33,7 @@ fn is_truthy(value: &Value) -> bool {
             if v.len() == 1 { is_truthy(&v[0]) } else { !v.is_empty() }
         },
         ValueType::Symbol(_) => true,
-    }
-}
-
-fn value_to_token(value: Value) -> Result<Token> {
-    match value.val_type {
-        ValueType::Number(frac) => {
-            let s = if frac.denominator == BigInt::one() {
-                frac.numerator.to_string()
-            } else {
-                format!("{}/{}", frac.numerator, frac.denominator)
-            };
-            Ok(Token::Number(s))
-        },
-        ValueType::String(s) => Ok(Token::String(s)),
-        ValueType::Boolean(b) => Ok(Token::Boolean(b)),
-        ValueType::Symbol(s) => Ok(Token::Symbol(s)),
-        ValueType::Nil => Ok(Token::Nil),
-        ValueType::Vector(_, _) => Err(AjisaiError::from("Cannot convert nested vector to single token")),
+        ValueType::Quotation(t) => !t.is_empty(),
     }
 }
 
@@ -86,8 +51,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     };
 
     let tokens = match code_val.val_type {
-        ValueType::Vector(v, _) => vector_to_tokens(v)?,
-        _ => return Err(AjisaiError::from("DEF requires vector for its body")),
+        ValueType::Quotation(tokens) => tokens,
+        _ => return Err(AjisaiError::from("DEF requires a quotation for its body")),
     };
 
     if let Some(existing) = interp.dictionary.get(&name) {
