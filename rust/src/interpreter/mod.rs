@@ -10,7 +10,6 @@ pub mod execution_ops;
 use std::collections::{HashMap, HashSet};
 use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction};
 use self::error::{Result, AjisaiError};
-use num_traits::ToPrimitive;
 use web_sys::console;
 use wasm_bindgen::JsValue;
 
