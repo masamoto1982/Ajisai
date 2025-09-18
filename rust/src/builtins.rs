@@ -29,7 +29,6 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("LENGTH", "Get vector length"),
         ("TAKE", "Take first N elements"),
         ("DROP", "Drop first N elements"),
-        ("REPEAT", "Repeat execution with count limit"),
         ("SPLIT", "Split vector by sizes"),
         
         // ワークスペース操作
@@ -67,9 +66,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("DEL", "Delete word"),
         ("RESET", "Reset all memory and database"),
         
-        // 条件分岐・反復制御
-        ("IF_SELECT", "Select action based on condition"),
-        ("EXECUTE_REPEAT", "Execute repeat with conditional lines"),
-        ("SIMPLE_REPEAT", "Simple repeat execution"),
+        // クォーテーション／実行制御
+        ("IF_SELECT", "( B Qtrue Qfalse -- ) Select action based on condition"),
+        ("CALL", "( Q -- ) Execute a quotation"),
+        ("REPEAT", "( N Q -- ) Execute a quotation N times"),
     ]
 }
