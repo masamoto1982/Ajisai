@@ -18,7 +18,7 @@ pub struct Interpreter {
     pub(crate) workspace: Workspace,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) output_buffer: String,
-    pub(crate) execution_state: Option<WordExecutionState>, // For GOTO
+    pub(crate) execution_state: Option<WordExecutionState>,
 }
 
 pub struct WordExecutionState {
@@ -120,9 +120,8 @@ impl Interpreter {
                 state.program_counter += 1;
                 continue;
             }
-            state.repeat_counters[pc] -= 1;
             
-            let line = &def.lines[pc];
+            let line = &def.lines[pc].clone();
 
             if !line.condition_tokens.is_empty() {
                 self.execute_tokens(&line.condition_tokens)?;
@@ -133,6 +132,7 @@ impl Interpreter {
                 }
             }
 
+            state.repeat_counters[pc] -= 1;
             self.execution_state = Some(state);
             self.execute_tokens(&line.body_tokens)?;
             state = self.execution_state.take().unwrap();
@@ -189,8 +189,11 @@ impl Interpreter {
     }
     
     fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
-        let mut values = Vec::new(); let mut i = start + 1;
+        let mut values = Vec::new(); 
+        let mut i = start + 1;
         let mut depth = 1;
+        // This is a placeholder implementation for vector collection.
+        // A proper implementation would parse tokens into values.
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart(_) => depth += 1,
@@ -198,9 +201,7 @@ impl Interpreter {
                     depth -= 1;
                     if depth == 0 { return Ok((values, i - start + 1)); }
                 },
-                _ => { 
-                    // This is a simplified logic that doesn't parse tokens into values for now
-                 }
+                _ => {}
             }
             i += 1;
         }
@@ -218,11 +219,9 @@ impl Interpreter {
             .collect()
     }
     pub fn get_word_definition(&self, _name: &str) -> Option<String> {
-        // This needs to be re-implemented based on the new WordDefinition structure
         None
     }
     pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> {
-        // This needs to be re-implemented based on the new WordDefinition structure
         Ok(())
     }
      pub fn execute_reset(&mut self) -> Result<()> {
