@@ -244,7 +244,7 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     if i < chars.len() && chars[i] == '.' {
         i += 1;
         // 小数部
-        let frac_start = i;
+        let _frac_start = i;
         while i < chars.len() && chars[i].is_ascii_digit() {
             i += 1;
         }
@@ -279,17 +279,17 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
         "true", "false", "nil", "NIL", 
         "DUP", "SWAP", "ROT", 
         "GET", "INSERT", "REPLACE", "REMOVE", 
-        "LENGTH", "TAKE", "DROP", "SPLIT", // REPEAT is now an execution word
+        "LENGTH", "TAKE", "DROP", "SPLIT",
         "CONCAT", "REVERSE", 
         "AND", "OR", "NOT", 
         "PRINT", "DEF", "DEL", "RESET",
-        "REPEAT", "CALL" // New execution words
+        "REPEAT", "CALL"
     ];
     
     for word in &builtin_words {
         if chars.len() >= word.len() {
             let candidate: String = chars[..word.len()].iter().collect();
-            if candidate.to_uppercase() == word.to_uppercase() {
+            if candidate.to_uppercase() == *word {
                 // 次の文字がアルファベットや数字でないことを確認
                 if chars.len() > word.len() && is_word_char(chars[word.len()]) {
                     continue;
