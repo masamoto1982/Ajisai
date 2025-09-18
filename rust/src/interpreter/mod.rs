@@ -427,7 +427,6 @@ impl Interpreter {
             "RESET" => self.execute_reset(),
             "IF_SELECT" => control::op_if_select(self),
             "CALL" => execution_ops::op_call(self),
-            "REPEAT" => execution_ops::op_repeat(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
     }
