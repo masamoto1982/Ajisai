@@ -2,7 +2,7 @@
 
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
-use crate::types::{Value, ValueType, Fraction, BracketType, Token};
+use crate::types::{Value, ValueType, Fraction, BracketType};
 use crate::interpreter::Interpreter;
 use num_bigint::BigInt;
 use std::str::FromStr;
@@ -99,21 +99,22 @@ impl AjisaiInterpreter {
 
 fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
-    let type_str = js_sys::Reflect::get(&obj, &"type".into()).map_err(|_| "Missing type")?.as_string().ok_or("Type not string")?;
-    let value_js = js_sys::Reflect::get(&obj, &"value".into()).map_err(|_| "Missing value")?;
+    let type_str = js_sys::Reflect::get(&obj, &"type".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?.as_string().ok_or("Type not string")?;
+    let value_js = js_sys::Reflect::get(&obj, &"value".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?;
 
     let val_type = match type_str.as_str() {
         "number" => {
             let num_obj = js_sys::Object::from(value_js);
-            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into())?.as_string().ok_or("Numerator not string")?;
-            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into())?.as_string().ok_or("Denominator not string")?;
+            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?.as_string().ok_or("Numerator not string")?;
+            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?.as_string().ok_or("Denominator not string")?;
             ValueType::Number(Fraction::new(BigInt::from_str(&num_str).unwrap(), BigInt::from_str(&den_str).unwrap()))
         },
         "string" => ValueType::String(value_js.as_string().ok_or("Value not string")?),
         "boolean" => ValueType::Boolean(value_js.as_bool().ok_or("Value not boolean")?),
         "symbol" => ValueType::Symbol(value_js.as_string().ok_or("Value not string")?),
         "vector" => {
-            let bracket_type = match js_sys::Reflect::get(&obj, &"bracketType".into())?.as_string().as_deref() {
+            let bracket_type_str = js_sys::Reflect::get(&obj, &"bracketType".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?.as_string();
+            let bracket_type = match bracket_type_str.as_deref() {
                 Some("curly") => BracketType::Curly, Some("round") => BracketType::Round, _ => BracketType::Square,
             };
             let js_array = js_sys::Array::from(&value_js);
