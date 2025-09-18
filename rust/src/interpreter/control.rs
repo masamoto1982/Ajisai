@@ -1,9 +1,8 @@
 // rust/src/interpreter/control.rs (完全修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{ValueType, Token, Value};
-use num_bigint::BigInt;
-use num_traits::{Zero, One};
+use crate::types::{ValueType, Value};
+use num_traits::Zero;
 
 pub fn op_if_select(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 3 { return Err(AjisaiError::WorkspaceUnderflow); }
