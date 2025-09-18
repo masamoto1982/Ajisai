@@ -5,6 +5,7 @@ pub mod arithmetic;
 pub mod control;
 pub mod io;
 pub mod error;
+pub mod execution_ops;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction};
@@ -189,7 +190,7 @@ impl Interpreter {
                     }
                 },
                 Token::FunctionComment(_) => {},
-                Token::Colon => {
+                Token::At => {
                     has_conditionals = true;
                     current_line.push(token.clone());
                 },
@@ -276,12 +277,18 @@ impl Interpreter {
                     self.workspace.push(Value { val_type: ValueType::Vector(vector_values, bracket_type.clone())});
                     i += consumed;
                 },
+                Token::QuotationStart => {
+                    let (quotation_tokens, consumed) = self.collect_quotation(&tokens[i..])?;
+                    self.workspace.push(Value { val_type: ValueType::Quotation(quotation_tokens) });
+                    i += consumed;
+                }
                 Token::Symbol(name) => {
                     console::log_1(&JsValue::from_str(&format!("Executing symbol: {}", name)));
                     self.execute_word(name)?;
                     i += 1;
                 },
                 Token::VectorEnd(_) => return Err(AjisaiError::from("Unexpected vector end")),
+                Token::QuotationEnd => return Err(AjisaiError::from("Unexpected quotation end")),
                 _ => { i += 1; }
             }
             
@@ -293,6 +300,32 @@ impl Interpreter {
         
         console::log_1(&JsValue::from_str(&format!("=== execute_tokens complete. Final workspace size: {} ===", self.workspace.len())));
         Ok(())
+    }
+
+    fn collect_quotation(&self, tokens: &[Token]) -> Result<(Vec<Token>, usize)> {
+        let mut body = Vec::new();
+        let mut i = 1;
+        let mut depth = 0;
+        while i < tokens.len() {
+            match tokens[i] {
+                Token::QuotationStart => {
+                    depth += 1;
+                    body.push(tokens[i].clone());
+                }
+                Token::QuotationEnd => {
+                    if depth == 0 {
+                        return Ok((body, i + 1));
+                    }
+                    depth -= 1;
+                    body.push(tokens[i].clone());
+                }
+                _ => {
+                    body.push(tokens[i].clone());
+                }
+            }
+            i += 1;
+        }
+        Err(AjisaiError::from("Unclosed quotation"))
     }
 
     fn collect_vector(&self, tokens: &[Token], start: usize, expected_bracket_type: BracketType) -> Result<(Vec<Value>, usize)> {
@@ -371,7 +404,6 @@ impl Interpreter {
             "LENGTH" => vector_ops::op_length(self),
             "TAKE" => vector_ops::op_take(self),
             "DROP" => vector_ops::op_drop_vector(self),
-            "REPEAT" => vector_ops::op_repeat(self),
             "SPLIT" => vector_ops::op_split(self),
             "DUP" => vector_ops::op_dup_workspace(self),
             "SWAP" => vector_ops::op_swap_workspace(self),
@@ -395,6 +427,8 @@ impl Interpreter {
             "DEL" => control::op_del(self),
             "RESET" => self.execute_reset(),
             "IF_SELECT" => control::op_if_select(self),
+            "CALL" => execution_ops::op_call(self),
+            "REPEAT" => execution_ops::op_repeat(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
     }
@@ -439,6 +473,9 @@ impl Interpreter {
             Token::Symbol(s) => s.clone(),
             Token::VectorStart(bt) => bt.opening_char().to_string(),
             Token::VectorEnd(bt) => bt.closing_char().to_string(),
+            Token::QuotationStart => ":".to_string(),
+            Token::QuotationEnd => ";".to_string(),
+            Token::At => "@".to_string(),
             _ => "".to_string(),
         }
     }
