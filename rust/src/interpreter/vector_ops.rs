@@ -3,7 +3,7 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
 use num_bigint::BigInt;
-use num_traits::{Zero, One, ToPrimitive};
+use num_traits::{One, ToPrimitive};
 use std::collections::VecDeque;
 
 fn get_index_from_value(value: &Value) -> Result<BigInt> {
