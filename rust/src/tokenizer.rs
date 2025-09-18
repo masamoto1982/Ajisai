@@ -3,6 +3,10 @@
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
 
+pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
+    tokenize_with_custom_words(input, &HashSet::new())
+}
+
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let lines: Vec<&str> = input.lines().collect();
@@ -77,8 +81,6 @@ fn try_parse_modifier(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-// (以下、他のヘルパー関数は変更なしのため省略)
-
 fn convert_vector_brackets_by_depth(tokens: &mut [Token]) -> Result<(), String> {
     let mut i = 0;
     while i < tokens.len() {
@@ -149,7 +151,7 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
 fn is_word_char(c: char) -> bool { c.is_alphanumeric() || c == '_' }
 
 fn parse_single_quote_string(chars: &[char]) -> Option<(Token, usize)> {
-    if chars[0] != '\'' { return None; }
+    if chars.is_empty() || chars[0] != '\'' { return None; }
     let mut string = String::new(); let mut i = 1;
     while i < chars.len() {
         if chars[i] == '\'' { return Some((Token::String(string), i + 1)); }
@@ -160,7 +162,13 @@ fn parse_single_quote_string(chars: &[char]) -> Option<(Token, usize)> {
 
 fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     let mut i = 0;
-    if i < chars.len() && (chars[i] == '-' || chars[i] == '+') { i += 1; }
+    if i < chars.len() && (chars[i] == '-' || chars[i] == '+') { 
+        if i + 1 < chars.len() && chars[i+1].is_ascii_digit() {
+             i += 1; 
+        } else {
+            return None;
+        }
+    }
     let start = i;
     while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
     if i < chars.len() && chars[i] == '.' {
@@ -168,20 +176,27 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
         while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
     } else if i < chars.len() && chars[i] == '/' {
         i += 1;
-        if i == chars.len() || !chars[i].is_ascii_digit() { return None; }
-        while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+        if i == chars.len() || !chars[i].is_ascii_digit() { 
+            i -= 1; // It's not a fraction, just a number
+        } else {
+            while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+        }
     }
-    if i > start && (i == chars.len() || !chars[i].is_alphanumeric()) {
+    
+    let end = if start > 0 { i - 1 } else { i };
+
+    if end > start && (i == chars.len() || !chars[i].is_alphanumeric()) {
         let num_str: String = chars[..i].iter().collect();
         return Some((Token::Number(num_str), i));
     }
     None
 }
 
+
 fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
-    let builtin_words = ["true", "false", "nil", "DUP", "SWAP", "ROT", "GET", "INSERT", "REPLACE", "REMOVE", "LENGTH", "TAKE", "DROP", "SPLIT", "CONCAT", "REVERSE", "AND", "OR", "NOT", "PRINT", "DEF", "DEL", "RESET", "GOTO"];
+    let builtin_words = ["TRUE", "FALSE", "NIL", "DUP", "SWAP", "ROT", "GET", "INSERT", "REPLACE", "REMOVE", "LENGTH", "TAKE", "DROP", "SPLIT", "CONCAT", "REVERSE", "AND", "OR", "NOT", "PRINT", "DEF", "DEL", "RESET", "GOTO"];
     for word in &builtin_words {
-        if chars.len() >= word.len() && &chars[..word.len()].iter().collect::<String>().to_uppercase() == *word {
+        if chars.len() >= word.len() && chars[..word.len()].iter().collect::<String>().to_uppercase() == *word {
             if chars.len() > word.len() && is_word_char(chars[word.len()]) { continue; }
             let token = match word.to_lowercase().as_str() {
                 "true" => Token::Boolean(true),
