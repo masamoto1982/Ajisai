@@ -30,7 +30,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 }
             }
             
-            // ブラケット記号
+            // 記号
             match chars[i] {
                 '[' => { 
                     tokens.push(Token::VectorStart(BracketType::Square)); 
@@ -43,10 +43,20 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                     continue; 
                 },
                 ':' => { 
-                    tokens.push(Token::Colon); 
+                    tokens.push(Token::QuotationStart); 
                     i += 1; 
                     continue; 
                 },
+                ';' => {
+                    tokens.push(Token::QuotationEnd);
+                    i += 1;
+                    continue;
+                },
+                '@' => {
+                    tokens.push(Token::At);
+                    i += 1;
+                    continue;
+                }
                 _ => {}
             }
             
@@ -269,25 +279,26 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
         "true", "false", "nil", "NIL", 
         "DUP", "SWAP", "ROT", 
         "GET", "INSERT", "REPLACE", "REMOVE", 
-        "LENGTH", "TAKE", "DROP", "REPEAT", "SPLIT",
+        "LENGTH", "TAKE", "DROP", "SPLIT", // REPEAT is now an execution word
         "CONCAT", "REVERSE", 
         "AND", "OR", "NOT", 
-        "PRINT", "DEF", "DEL", "RESET"
+        "PRINT", "DEF", "DEL", "RESET",
+        "REPEAT", "CALL" // New execution words
     ];
     
     for word in &builtin_words {
         if chars.len() >= word.len() {
             let candidate: String = chars[..word.len()].iter().collect();
-            if candidate == *word {
+            if candidate.to_uppercase() == word.to_uppercase() {
                 // 次の文字がアルファベットや数字でないことを確認
                 if chars.len() > word.len() && is_word_char(chars[word.len()]) {
                     continue;
                 }
                 
-                let token = match *word {
+                let token = match word.to_lowercase().as_str() {
                     "true" => Token::Boolean(true),
                     "false" => Token::Boolean(false),
-                    "nil" | "NIL" => Token::Nil,
+                    "nil" => Token::Nil,
                     _ => Token::Symbol(word.to_string()),
                 };
                 return Some((token, word.len()));
