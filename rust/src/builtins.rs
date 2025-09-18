@@ -69,6 +69,5 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         // クォーテーション／実行制御
         ("IF_SELECT", "( B Qtrue Qfalse -- ) Select action based on condition"),
         ("CALL", "( Q -- ) Execute a quotation"),
-        ("REPEAT", "( N Q -- ) Execute a quotation N times"),
     ]
 }
