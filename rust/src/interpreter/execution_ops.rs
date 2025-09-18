@@ -3,7 +3,7 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType, Value};
 use num_bigint::BigInt;
-use num_traits::{Zero, One, ToPrimitive};
+use num_traits::{One, ToPrimitive};
 
 fn get_integer_from_value(value: &Value) -> Result<i64> {
     match &value.val_type {
