@@ -283,7 +283,7 @@ fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
         "CONCAT", "REVERSE", 
         "AND", "OR", "NOT", 
         "PRINT", "DEF", "DEL", "RESET",
-        "REPEAT", "CALL"
+        "CALL"
     ];
     
     for word in &builtin_words {
