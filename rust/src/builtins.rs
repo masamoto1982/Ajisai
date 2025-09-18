@@ -1,7 +1,7 @@
 // rust/src/builtins.rs
 
 use std::collections::HashMap;
-use crate::interpreter::WordDefinition;
+use crate::types::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
     for (name, description) in get_builtin_definitions() {
@@ -15,7 +15,6 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
     vec![
-        // (省略) 他のビルトインワードは変更なし
         ("GET", "Get element at position (0-indexed)"),
         ("INSERT", "Insert element at position"),
         ("REPLACE", "Replace element at position"),
@@ -45,8 +44,6 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str)> {
         ("DEF", "Define new word"),
         ("DEL", "Delete word"),
         ("RESET", "Reset all memory and database"),
-        
-        // フロー制御
         ("GOTO", "( N -- ) Jump to N-th line in custom word (1-indexed)"),
     ]
 }
