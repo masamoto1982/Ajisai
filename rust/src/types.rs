@@ -14,9 +14,11 @@ pub enum Token {
     Symbol(String),
     VectorStart(BracketType),
     VectorEnd(BracketType),
+    QuotationStart,
+    QuotationEnd,
     Nil,
     FunctionComment(String),
-    Colon,
+    At,
     LineBreak,
 }
 
@@ -32,6 +34,7 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>, BracketType),
+    Quotation(Vec<Token>),
     Nil,
 }
 
@@ -227,6 +230,7 @@ impl fmt::Display for Value {
                 }
                 write!(f, "{}", bracket_type.closing_char())
             },
+            ValueType::Quotation(_) => write!(f, ": ... ;"),
             ValueType::Nil => write!(f, "nil"),
         }
     }
