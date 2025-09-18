@@ -1,6 +1,6 @@
 // rust/src/interpreter/flow_control.rs
 
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}, WordExecutionState};
+use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::ValueType;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -28,9 +28,8 @@ pub fn op_goto(interp: &mut Interpreter) -> Result<()> {
     }
 
     if let Some(state) = interp.execution_state.as_mut() {
-        // GOTOは次のイテレーションでジャンプするため、PCを(N-1)に設定し、ループを継続させる
         state.program_counter = (line_num - 1) as usize;
-        state.continue_loop = true; // ループを抜けないようにフラグを立てる
+        state.continue_loop = true;
     } else {
         return Err(AjisaiError::from("GOTO can only be used inside a custom word"));
     }
