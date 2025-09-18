@@ -202,28 +202,6 @@ pub fn op_drop_vector(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-pub fn op_repeat(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
-    let times_val = interp.workspace.pop().unwrap();
-    let elem_val = interp.workspace.pop().unwrap();
-    let times = get_index_from_value(&times_val)?;
-    
-    if times < BigInt::zero() { return Err(AjisaiError::from("Repeat times must be non-negative")); }
-    let times_usize = times.to_usize().ok_or_else(|| AjisaiError::from("Repeat count is too large"))?;
-
-    match elem_val.val_type {
-        ValueType::Vector(v, bracket_type) => {
-            let mut result = Vec::with_capacity(v.len() * times_usize);
-            for _ in 0..times_usize {
-                result.extend_from_slice(&v);
-            }
-            interp.workspace.push(Value { val_type: ValueType::Vector(result, bracket_type) });
-            Ok(())
-        },
-        _ => Err(AjisaiError::type_error("vector", "other type")),
-    }
-}
-
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
     
