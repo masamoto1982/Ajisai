@@ -2,7 +2,7 @@
 
 use std::fmt;
 use num_bigint::BigInt;
-use num_traits::{Zero, One, ToPrimitive};
+use num_traits::{Zero, One, ToPrimitive, Signed};
 use num_integer::Integer;
 use std::str::FromStr;
 
@@ -34,6 +34,7 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>, BracketType),
+    DefinitionBody(Vec<Token>),
     Nil,
 }
 
@@ -144,6 +145,7 @@ impl fmt::Display for Value {
                 }
                 write!(f, "{}", bracket_type.closing_char())
             },
+            ValueType::DefinitionBody(_) => write!(f, ": ... ;"),
             ValueType::Nil => write!(f, "nil"),
         }
     }
