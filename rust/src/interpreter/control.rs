@@ -29,7 +29,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::type_error("definition block for word body", "other type"));
     };
 
-    let lines = parse_definition_body(&tokens)?;
+    interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}' with {} tokens\n", name, tokens.len()));
+    let lines = parse_definition_body(interp, &tokens)?;
+    interp.output_buffer.push_str(&format!("[DEBUG] Parsed {} lines for word '{}'\n", lines.len(), name));
 
     interp.dictionary.insert(name.clone(), WordDefinition {
         lines,
@@ -40,22 +42,39 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
-    let lines: Result<Vec<ExecutionLine>> = tokens.split(|tok| matches!(tok, Token::LineBreak))
+fn parse_definition_body(interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
+    let line_groups: Vec<&[Token]> = tokens.split(|tok| matches!(tok, Token::LineBreak))
         .filter(|line| !line.is_empty())
-        .map(|line_tokens| {
+        .collect();
+    
+    interp.output_buffer.push_str(&format!("[DEBUG] Split definition into {} lines\n", line_groups.len()));
+    
+    let lines: Result<Vec<ExecutionLine>> = line_groups.iter().enumerate()
+        .map(|(line_num, line_tokens)| {
+            interp.output_buffer.push_str(&format!("[DEBUG] Processing line {}: {} tokens\n", line_num + 1, line_tokens.len()));
+            
             let mut repeat_count = 1;
             let mut delay_ms = 0;
             
             let mut modifier_tokens = 0;
             for token in line_tokens.iter().rev() {
                 if let Token::Modifier(m_str) = token {
+                    interp.output_buffer.push_str(&format!("[DEBUG] Line {} modifier: {}\n", line_num + 1, m_str));
                     if m_str.ends_with('x') {
-                        repeat_count = m_str[..m_str.len()-1].parse().unwrap_or(1);
+                        if let Ok(count) = m_str[..m_str.len()-1].parse::<i64>() {
+                            repeat_count = count;
+                            interp.output_buffer.push_str(&format!("[DEBUG] Line {} repeat count: {}\n", line_num + 1, count));
+                        }
                     } else if m_str.ends_with("ms") {
-                        delay_ms = m_str[..m_str.len()-2].parse().unwrap_or(0);
+                        if let Ok(ms) = m_str[..m_str.len()-2].parse::<u64>() {
+                            delay_ms = ms;
+                            interp.output_buffer.push_str(&format!("[DEBUG] Line {} delay: {}ms\n", line_num + 1, ms));
+                        }
                     } else if m_str.ends_with('s') {
-                        delay_ms = m_str[..m_str.len()-1].parse::<u64>().unwrap_or(0) * 1000;
+                        if let Ok(s) = m_str[..m_str.len()-1].parse::<u64>() {
+                            delay_ms = s * 1000;
+                            interp.output_buffer.push_str(&format!("[DEBUG] Line {} delay: {}s ({}ms)\n", line_num + 1, s, delay_ms));
+                        }
                     }
                     modifier_tokens += 1;
                 } else {
@@ -63,11 +82,14 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
                 }
             }
             let main_tokens = &line_tokens[..line_tokens.len() - modifier_tokens];
+            interp.output_buffer.push_str(&format!("[DEBUG] Line {} main tokens: {}, modifier tokens: {}\n", line_num + 1, main_tokens.len(), modifier_tokens));
 
             let (condition_tokens, body_tokens) = 
                 if let Some(pos) = main_tokens.iter().position(|t| matches!(t, Token::GuardSeparator)) {
+                    interp.output_buffer.push_str(&format!("[DEBUG] Line {} has condition (guard at position {})\n", line_num + 1, pos));
                     (main_tokens[..pos].to_vec(), main_tokens[pos+1..].to_vec())
                 } else {
+                    interp.output_buffer.push_str(&format!("[DEBUG] Line {} is default line (no condition)\n", line_num + 1));
                     (Vec::new(), main_tokens.to_vec())
                 };
 
@@ -78,11 +100,19 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let lines = lines?;
     
     // デフォルト行（条件なし）の存在チェック
-    let has_default = lines.iter().any(|line| line.condition_tokens.is_empty());
-    if !has_default {
+    let default_lines: Vec<usize> = lines.iter().enumerate()
+        .filter(|(_, line)| line.condition_tokens.is_empty())
+        .map(|(i, _)| i + 1)
+        .collect();
+    
+    interp.output_buffer.push_str(&format!("[DEBUG] Default lines found: {:?}\n", default_lines));
+    
+    if default_lines.is_empty() {
+        interp.output_buffer.push_str("[DEBUG] ERROR: No default line found!\n");
         return Err(AjisaiError::from("Custom word definition must have at least one default line (without condition)"));
     }
     
+    interp.output_buffer.push_str(&format!("[DEBUG] Definition validation passed. {} lines total, {} default lines\n", lines.len(), default_lines.len()));
     Ok(lines)
 }
 
