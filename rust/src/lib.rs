@@ -35,27 +35,27 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn execute(&mut self, code: &str) -> JsValue {
-        let obj = js_sys::Object::new();
-        match self.interpreter.execute(code) {
-            Ok(()) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                let output = self.interpreter.get_output();
-                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
-                
-                // デバッグ出力を追加
-                if !output.is_empty() {
-                    js_sys::Reflect::set(&obj, &"debugOutput".into(), &"Executed successfully".into()).unwrap();
-                }
-            }
-            Err(e) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
-                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+pub fn execute(&mut self, code: &str) -> JsValue {
+    let obj = js_sys::Object::new();
+    match self.interpreter.execute(code) {
+        Ok(()) => {
+            js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+            let output = self.interpreter.get_output();
+            js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
+            
+            // デバッグ出力を追加
+            if !output.is_empty() {
+                js_sys::Reflect::set(&obj, &"debugOutput".into(), &"Executed successfully".into()).unwrap();
             }
         }
-        obj.into()
+        Err(e) => {
+            js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
+            js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+        }
     }
+    obj.into()
+}
 
     #[wasm_bindgen]
     pub fn execute_step(&mut self, code: &str) -> JsValue {
