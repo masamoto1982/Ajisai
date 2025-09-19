@@ -171,15 +171,33 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     }
     let start = i;
     while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+    
+    // 小数点の処理
     if i < chars.len() && chars[i] == '.' {
         i += 1;
         while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
-    } else if i < chars.len() && chars[i] == '/' {
+    } 
+    // 分数の処理
+    else if i < chars.len() && chars[i] == '/' {
         i += 1;
         if i == chars.len() || !chars[i].is_ascii_digit() { 
             i -= 1;
         } else {
             while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+        }
+    }
+    
+    // 科学的記数法の処理を追加
+    if i < chars.len() && (chars[i] == 'e' || chars[i] == 'E') {
+        i += 1;
+        if i < chars.len() && (chars[i] == '+' || chars[i] == '-') {
+            i += 1;
+        }
+        let exp_start = i;
+        while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+        if i == exp_start {
+            // 指数部に数字がない場合は無効
+            return None;
         }
     }
     
