@@ -189,24 +189,46 @@ impl Interpreter {
     }
     
     fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
-        let mut values = Vec::new(); 
-        let mut i = start + 1;
-        let mut depth = 1;
-        // This is a placeholder implementation for vector collection.
-        // A proper implementation would parse tokens into values.
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::VectorStart(_) => depth += 1,
-                Token::VectorEnd(_) => {
-                    depth -= 1;
-                    if depth == 0 { return Ok((values, i - start + 1)); }
-                },
-                _ => {}
-            }
-            i += 1;
+    let mut values = Vec::new();
+    let mut i = start + 1;
+    let mut depth = 1;
+    
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::VectorStart(bt) => {
+                depth += 1;
+                let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                values.push(Value { val_type: ValueType::Vector(nested_values, bt.clone()) });
+                i += consumed - 1;
+            },
+            Token::VectorEnd(_) => {
+                depth -= 1;
+                if depth == 0 { 
+                    return Ok((values, i - start + 1)); 
+                }
+            },
+            Token::Number(s) => {
+                let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
+                values.push(Value { val_type: ValueType::Number(frac) });
+            },
+            Token::String(s) => {
+                values.push(Value { val_type: ValueType::String(s.clone()) });
+            },
+            Token::Boolean(b) => {
+                values.push(Value { val_type: ValueType::Boolean(*b) });
+            },
+            Token::Nil => {
+                values.push(Value { val_type: ValueType::Nil });
+            },
+            Token::Symbol(name) => {
+                values.push(Value { val_type: ValueType::Symbol(name.clone()) });
+            },
+            _ => {}
         }
-        Err(AjisaiError::from("Unclosed vector"))
+        i += 1;
     }
+    Err(AjisaiError::from("Unclosed vector"))
+}
 
     // Public methods for lib.rs
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
