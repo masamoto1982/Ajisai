@@ -18,6 +18,7 @@ pub struct AjisaiInterpreter {
     step_tokens: Vec<Token>,
     step_position: usize,
     step_mode: bool,
+    current_step_code: String,
 }
 
 #[wasm_bindgen]
@@ -29,6 +30,7 @@ impl AjisaiInterpreter {
             step_tokens: Vec::new(),
             step_position: 0,
             step_mode: false,
+            current_step_code: String::new(),
         }
     }
 
@@ -56,9 +58,80 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn execute_step(&mut self, code: &str) -> JsValue {
+        let obj = js_sys::Object::new();
+        
+        // 新しいコードが来た場合または初回実行の場合は初期化
+        if !self.step_mode || code != self.current_step_code {
+            self.step_mode = true;
+            self.step_position = 0;
+            self.current_step_code = code.to_string();
+            
+            let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
+                .filter(|(_, def)| !def.is_builtin)
+                .map(|(name, _)| name.clone())
+                .collect();
+                
+            match crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
+                Ok(tokens) => {
+                    self.step_tokens = tokens;
+                }
+                Err(e) => {
+                    self.step_mode = false;
+                    js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"message".into(), &format!("Tokenization error: {}", e).into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                    return obj.into();
+                }
+            }
+        }
+
+        // ステップ実行完了チェック
+        if self.step_position >= self.step_tokens.len() {
+            self.step_mode = false;
+            js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"output".into(), &"Step execution completed".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
+            js_sys::Reflect::set(&obj, &"debugOutput".into(), &"All steps completed".into()).unwrap();
+            return obj.into();
+        }
+
+        // 1ステップ実行
+        let token = &self.step_tokens[self.step_position].clone();
+        let result = self.interpreter.execute_tokens(&[token]);
+        
+        match result {
+            Ok(()) => {
+                let output = self.interpreter.get_output();
+                self.step_position += 1;
+                
+                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
+                js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.step_position < self.step_tokens.len()).into()).unwrap();
+                js_sys::Reflect::set(&obj, &"position".into(), &(self.step_position as u32).into()).unwrap();
+                js_sys::Reflect::set(&obj, &"total".into(), &(self.step_tokens.len() as u32).into()).unwrap();
+                
+                // 進捗メッセージ
+                let progress_msg = format!("Step {}/{} completed", self.step_position, self.step_tokens.len());
+                js_sys::Reflect::set(&obj, &"debugOutput".into(), &progress_msg.into()).unwrap();
+            }
+            Err(e) => {
+                self.step_mode = false;
+                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
+                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
+            }
+        }
+        
+        obj.into()
+    }
+
+    #[wasm_bindgen]
     pub fn init_step(&mut self, code: &str) -> String {
         self.step_mode = true;
         self.step_position = 0;
+        self.current_step_code = code.to_string();
         
         // トークン化
         let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
@@ -129,6 +202,7 @@ impl AjisaiInterpreter {
         self.step_mode = false;
         self.step_tokens.clear();
         self.step_position = 0;
+        self.current_step_code.clear();
         
         match self.interpreter.execute_reset() {
             Ok(()) => {
