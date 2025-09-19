@@ -123,26 +123,22 @@ export class GUI {
         }
 
         this.elements.codeInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                if (e.shiftKey) {
-                    e.preventDefault();
-                    this.runCode();
-                } else if (e.ctrlKey && e.altKey) {
-                    e.preventDefault();
-                    this.executeReset();
-                } else if (e.ctrlKey) {
-                    e.preventDefault();
-                    if (this.stepMode) {
-                        this.executeNextStep();
-                    } else {
-                        this.startStepExecution();
-                    }
-                }
-            } else if (e.key === 'Escape' && this.stepMode) {
-                e.preventDefault();
-                this.endStepExecution();
-            }
-        });
+    if (e.key === 'Enter') {
+        if (e.shiftKey) {
+            e.preventDefault();
+            this.runCode();
+        } else if (e.ctrlKey) {
+            e.preventDefault();
+            this.executeStepByStep(); // 新しいメソッド
+        } else if (e.ctrlKey && e.altKey) {
+            e.preventDefault();
+            this.executeReset();
+        }
+    } else if (e.key === 'Escape' && this.stepMode) {
+        e.preventDefault();
+        this.endStepExecution();
+    }
+});
 
         this.elements.workspaceArea.addEventListener('click', () => {
             if (this.mobile.isMobile() && this.mode === 'execution') {
