@@ -95,6 +95,21 @@ impl AjisaiInterpreter {
         self.interpreter.set_workspace(workspace);
         Ok(())
     }
+
+    #[wasm_bindgen]
+    pub fn init_step(&mut self, code: &str) -> String {
+        // ステップ実行の初期化（簡易実装）
+        format!("Step mode initialized for: {}", code)
+    }
+
+    #[wasm_bindgen]
+    pub fn step(&mut self) -> JsValue {
+        let obj = js_sys::Object::new();
+        // ステップ実行（簡易実装）
+        js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
+        js_sys::Reflect::set(&obj, &"output".into(), &"Step completed".into()).unwrap();
+        obj.into()
+    }
 }
 
 fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
