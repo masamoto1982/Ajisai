@@ -13,6 +13,35 @@ mod interpreter;
 mod builtins;
 
 #[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+    
+    #[wasm_bindgen(js_name = "setTimeout")]
+    fn set_timeout(closure: &Closure<dyn FnMut()>, time: u32) -> u32;
+    
+    #[wasm_bindgen(js_name = "performance")]
+    type Performance;
+    
+    #[wasm_bindgen(method, js_name = "now")]
+    fn now(this: &Performance) -> f64;
+    
+    #[wasm_bindgen(js_name = "performance")]
+    static PERFORMANCE: Performance;
+}
+
+// 同期的な遅延のための簡易実装
+fn wasm_sleep(ms: u64) {
+    let start = PERFORMANCE.now();
+    let target = start + ms as f64;
+    
+    // ビジーウェイトによる遅延（テスト用）
+    while PERFORMANCE.now() < target {
+        // 空のループで時間を消費
+    }
+}
+
+#[wasm_bindgen]
 pub struct AjisaiInterpreter {
     interpreter: Interpreter,
     step_tokens: Vec<Token>,
