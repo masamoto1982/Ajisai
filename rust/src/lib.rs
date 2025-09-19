@@ -2,7 +2,7 @@
 
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
-use crate::types::{Value, ValueType, Fraction, BracketType};
+use crate::types::{Value, ValueType, Fraction, BracketType, Token};
 use crate::interpreter::Interpreter;
 use num_bigint::BigInt;
 use std::str::FromStr;
@@ -15,6 +15,9 @@ mod builtins;
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
     interpreter: Interpreter,
+    step_tokens: Vec<Token>,
+    step_position: usize,
+    step_mode: bool,
 }
 
 #[wasm_bindgen]
@@ -23,6 +26,9 @@ impl AjisaiInterpreter {
     pub fn new() -> Self {
         AjisaiInterpreter {
             interpreter: Interpreter::new(),
+            step_tokens: Vec::new(),
+            step_position: 0,
+            step_mode: false,
         }
     }
 
@@ -32,27 +38,112 @@ impl AjisaiInterpreter {
         match self.interpreter.execute(code) {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"output".into(), &self.interpreter.get_output().into()).unwrap();
+                let output = self.interpreter.get_output();
+                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
+                
+                // デバッグ出力を追加
+                if !output.is_empty() {
+                    js_sys::Reflect::set(&obj, &"debugOutput".into(), &"Executed successfully".into()).unwrap();
+                }
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
+                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
             }
         }
         obj.into()
     }
 
     #[wasm_bindgen]
+    pub fn init_step(&mut self, code: &str) -> String {
+        self.step_mode = true;
+        self.step_position = 0;
+        
+        // トークン化
+        let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect();
+            
+        match crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
+            Ok(tokens) => {
+                self.step_tokens = tokens;
+                format!("Step mode initialized. {} tokens to execute.", self.step_tokens.len())
+            }
+            Err(e) => {
+                self.step_mode = false;
+                format!("Error initializing step mode: {}", e)
+            }
+        }
+    }
+
+    #[wasm_bindgen]
+    pub fn step(&mut self) -> JsValue {
+        let obj = js_sys::Object::new();
+        
+        if !self.step_mode {
+            js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
+            js_sys::Reflect::set(&obj, &"output".into(), &"Step mode not initialized".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+            return obj.into();
+        }
+
+        if self.step_position >= self.step_tokens.len() {
+            self.step_mode = false;
+            js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
+            js_sys::Reflect::set(&obj, &"output".into(), &"Step execution completed".into()).unwrap();
+            return obj.into();
+        }
+
+        // 1つのトークンを実行
+        let token = &self.step_tokens[self.step_position].clone();
+        let result = self.interpreter.execute_tokens(&[token]);
+        
+        match result {
+            Ok(()) => {
+                let output = self.interpreter.get_output();
+                self.step_position += 1;
+                
+                js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.step_position < self.step_tokens.len()).into()).unwrap();
+                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
+                js_sys::Reflect::set(&obj, &"position".into(), &(self.step_position as u32).into()).unwrap();
+                js_sys::Reflect::set(&obj, &"total".into(), &(self.step_tokens.len() as u32).into()).unwrap();
+            }
+            Err(e) => {
+                self.step_mode = false;
+                js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
+                js_sys::Reflect::set(&obj, &"output".into(), &e.to_string().into()).unwrap();
+                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+            }
+        }
+        
+        obj.into()
+    }
+
+    #[wasm_bindgen]
     pub fn reset(&mut self) -> JsValue {
         let obj = js_sys::Object::new();
+        
+        // ステップモードをリセット
+        self.step_mode = false;
+        self.step_tokens.clear();
+        self.step_position = 0;
+        
         match self.interpreter.execute_reset() {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into()).unwrap();
+                
+                // RESETイベントを発火してデータベースクリア
+                let window = web_sys::window().unwrap();
+                let event = web_sys::CustomEvent::new("ajisai-reset").unwrap();
+                let _ = window.dispatch_event(&event);
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
+                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
             }
         }
         obj.into()
@@ -69,7 +160,11 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
-        to_value(&self.interpreter.get_custom_words_info()).unwrap_or(JsValue::NULL)
+        let words_info: Vec<(String, Option<String>, bool)> = self.interpreter.get_custom_words_info()
+            .into_iter()
+            .map(|(name, description)| (name, description, false)) // protectedフラグを追加
+            .collect();
+        to_value(&words_info).unwrap_or(JsValue::NULL)
     }
 
     #[wasm_bindgen]
@@ -97,44 +192,60 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn init_step(&mut self, code: &str) -> String {
-        // ステップ実行の初期化（簡易実装）
-        format!("Step mode initialized for: {}", code)
-    }
-
-    #[wasm_bindgen]
-    pub fn step(&mut self) -> JsValue {
-        let obj = js_sys::Object::new();
-        // ステップ実行（簡易実装）
-        js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
-        js_sys::Reflect::set(&obj, &"output".into(), &"Step completed".into()).unwrap();
-        obj.into()
+    pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
+        // カスタムワードの復元（簡易実装）
+        let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect();
+            
+        let tokens = crate::tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
+            .map_err(|e| format!("Failed to tokenize word definition: {}", e))?;
+            
+        self.interpreter.restore_custom_word(name, tokens, description)
+            .map_err(|e| format!("Failed to restore word: {}", e))
     }
 }
 
 fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
-    let type_str = js_sys::Reflect::get(&obj, &"type".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?.as_string().ok_or("Type not string")?;
-    let value_js = js_sys::Reflect::get(&obj, &"value".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?;
+    let type_str = js_sys::Reflect::get(&obj, &"type".into())
+        .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?
+        .as_string().ok_or("Type not string")?;
+    let value_js = js_sys::Reflect::get(&obj, &"value".into())
+        .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?;
 
     let val_type = match type_str.as_str() {
         "number" => {
             let num_obj = js_sys::Object::from(value_js);
-            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?.as_string().ok_or("Numerator not string")?;
-            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?.as_string().ok_or("Denominator not string")?;
-            ValueType::Number(Fraction::new(BigInt::from_str(&num_str).unwrap(), BigInt::from_str(&den_str).unwrap()))
+            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into())
+                .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?
+                .as_string().ok_or("Numerator not string")?;
+            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into())
+                .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?
+                .as_string().ok_or("Denominator not string")?;
+            ValueType::Number(Fraction::new(
+                BigInt::from_str(&num_str).unwrap(), 
+                BigInt::from_str(&den_str).unwrap()
+            ))
         },
         "string" => ValueType::String(value_js.as_string().ok_or("Value not string")?),
         "boolean" => ValueType::Boolean(value_js.as_bool().ok_or("Value not boolean")?),
         "symbol" => ValueType::Symbol(value_js.as_string().ok_or("Value not string")?),
         "vector" => {
-            let bracket_type_str = js_sys::Reflect::get(&obj, &"bracketType".into()).map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?.as_string();
+            let bracket_type_str = js_sys::Reflect::get(&obj, &"bracketType".into())
+                .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?
+                .as_string();
             let bracket_type = match bracket_type_str.as_deref() {
-                Some("curly") => BracketType::Curly, Some("round") => BracketType::Round, _ => BracketType::Square,
+                Some("curly") => BracketType::Curly,
+                Some("round") => BracketType::Round,
+                _ => BracketType::Square,
             };
             let js_array = js_sys::Array::from(&value_js);
             let mut vec = Vec::new();
-            for i in 0..js_array.length() { vec.push(js_value_to_value(js_array.get(i))?); }
+            for i in 0..js_array.length() {
+                vec.push(js_value_to_value(js_array.get(i))?);
+            }
             ValueType::Vector(vec, bracket_type)
         },
         "nil" => ValueType::Nil,
@@ -168,10 +279,14 @@ fn value_to_js_value(value: &Value) -> JsValue {
         ValueType::Vector(vec, bracket_type) => {
             js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
             let js_array = js_sys::Array::new();
-            for elem in vec { js_array.push(&value_to_js_value(elem)); }
+            for elem in vec {
+                js_array.push(&value_to_js_value(elem));
+            }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array.into()).unwrap();
             let bracket_str = match bracket_type {
-                BracketType::Square => "square", BracketType::Curly => "curly", BracketType::Round => "round",
+                BracketType::Square => "square",
+                BracketType::Curly => "curly",
+                BracketType::Round => "round",
             };
             js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
         },
