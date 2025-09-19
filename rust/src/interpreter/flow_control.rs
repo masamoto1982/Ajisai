@@ -28,6 +28,7 @@ pub fn op_goto(interp: &mut Interpreter) -> Result<()> {
     }
 
     if let Some(state) = interp.execution_state.as_mut() {
+        interp.output_buffer.push_str(&format!("[DEBUG] GOTO: jumping from line {} to line {}\n", state.program_counter + 1, line_num));
         state.program_counter = (line_num - 1) as usize;
         state.continue_loop = true;
     } else {
