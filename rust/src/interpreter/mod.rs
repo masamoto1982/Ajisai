@@ -84,8 +84,9 @@ impl Interpreter {
                         }
                     }
                     
-                    // 修飾子を解析
-                    let (repeat_count, delay_ms) = self.parse_modifiers(&modifiers);
+                    // 修飾子を解析（借用の問題を回避）
+                    let (repeat_count, delay_ms, debug_messages) = Self::parse_modifiers_static(&modifiers);
+                    self.output_buffer.push_str(&debug_messages);
                     self.output_buffer.push_str(&format!("[DEBUG] Parsed modifiers: repeat={}, delay={}ms\n", repeat_count, delay_ms));
                     
                     // ブロックを指定回数実行
@@ -110,40 +111,55 @@ impl Interpreter {
         Ok(())
     }
 
-    fn parse_modifiers(&mut self, modifiers: &[String]) -> (i64, u64) {
+    fn parse_modifiers_static(modifiers: &[String]) -> (i64, u64, String) {
         let mut repeat_count = 1;
         let mut delay_ms = 0;
+        let mut debug_messages = String::new();
         
-        self.output_buffer.push_str(&format!("[DEBUG] Parsing {} modifiers: {:?}\n", modifiers.len(), modifiers));
+        debug_messages.push_str(&format!("[DEBUG] Parsing {} modifiers: {:?}\n", modifiers.len(), modifiers));
         
         for modifier in modifiers {
+            debug_messages.push_str(&format!("[DEBUG] Processing modifier: {}\n", modifier));
+            
             if modifier.ends_with('x') {
-                if let Ok(count) = modifier[..modifier.len()-1].parse::<i64>() {
-                    repeat_count = count;
-                    self.output_buffer.push_str(&format!("[DEBUG] Set repeat count to {}\n", count));
-                } else {
-                    self.output_buffer.push_str(&format!("[DEBUG] Failed to parse repeat count from {}\n", modifier));
+                let num_part = &modifier[..modifier.len()-1];
+                match num_part.parse::<i64>() {
+                    Ok(count) => {
+                        repeat_count = count;
+                        debug_messages.push_str(&format!("[DEBUG] Set repeat count to {}\n", count));
+                    }
+                    Err(_) => {
+                        debug_messages.push_str(&format!("[DEBUG] Failed to parse repeat count from {}\n", modifier));
+                    }
                 }
             } else if modifier.ends_with("ms") {
-                if let Ok(ms) = modifier[..modifier.len()-2].parse::<u64>() {
-                    delay_ms = ms;
-                    self.output_buffer.push_str(&format!("[DEBUG] Set delay to {}ms\n", ms));
-                } else {
-                    self.output_buffer.push_str(&format!("[DEBUG] Failed to parse ms from {}\n", modifier));
+                let num_part = &modifier[..modifier.len()-2];
+                match num_part.parse::<u64>() {
+                    Ok(ms) => {
+                        delay_ms = ms;
+                        debug_messages.push_str(&format!("[DEBUG] Set delay to {}ms\n", ms));
+                    }
+                    Err(_) => {
+                        debug_messages.push_str(&format!("[DEBUG] Failed to parse ms from {}\n", modifier));
+                    }
                 }
             } else if modifier.ends_with('s') {
-                if let Ok(s) = modifier[..modifier.len()-1].parse::<u64>() {
-                    delay_ms = s * 1000;
-                    self.output_buffer.push_str(&format!("[DEBUG] Set delay to {}s ({}ms)\n", s, delay_ms));
-                } else {
-                    self.output_buffer.push_str(&format!("[DEBUG] Failed to parse seconds from {}\n", modifier));
+                let num_part = &modifier[..modifier.len()-1];
+                match num_part.parse::<u64>() {
+                    Ok(s) => {
+                        delay_ms = s * 1000;
+                        debug_messages.push_str(&format!("[DEBUG] Set delay to {}s ({}ms)\n", s, delay_ms));
+                    }
+                    Err(_) => {
+                        debug_messages.push_str(&format!("[DEBUG] Failed to parse seconds from {}\n", modifier));
+                    }
                 }
             } else {
-                self.output_buffer.push_str(&format!("[DEBUG] Unknown modifier format: {}\n", modifier));
+                debug_messages.push_str(&format!("[DEBUG] Unknown modifier format: {}\n", modifier));
             }
         }
         
-        (repeat_count, delay_ms)
+        (repeat_count, delay_ms, debug_messages)
     }
 
     fn collect_def_block(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
