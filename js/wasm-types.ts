@@ -6,6 +6,7 @@ export interface AjisaiInterpreterClass {
 
 export interface AjisaiInterpreter {
     execute(code: string): ExecuteResult;
+    execute_step(code: string): ExecuteResult; // 追加
     init_step(code: string): string;
     step(): StepResult;
     reset(): ExecuteResult;
@@ -23,6 +24,9 @@ export interface ExecuteResult {
     debugOutput?: string;
     message?: string;
     error?: boolean;
+    hasMore?: boolean; // ステップ実行用に追加
+    position?: number; // ステップ実行用に追加
+    total?: number;    // ステップ実行用に追加
 }
 
 export interface StepResult {
