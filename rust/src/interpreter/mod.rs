@@ -110,7 +110,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn parse_modifiers(&self, modifiers: &[String]) -> (i64, u64) {
+    fn parse_modifiers(&mut self, modifiers: &[String]) -> (i64, u64) {
         let mut repeat_count = 1;
         let mut delay_ms = 0;
         
