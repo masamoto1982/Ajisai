@@ -123,22 +123,22 @@ export class GUI {
         }
 
         this.elements.codeInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        if (e.shiftKey) {
-            e.preventDefault();
-            this.runCode();
-        } else if (e.ctrlKey) {
-            e.preventDefault();
-            this.executeStepByStep(); // 新しいメソッド
-        } else if (e.ctrlKey && e.altKey) {
-            e.preventDefault();
-            this.executeReset();
-        }
-    } else if (e.key === 'Escape' && this.stepMode) {
-        e.preventDefault();
-        this.endStepExecution();
-    }
-});
+            if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    this.runCode();
+                } else if (e.ctrlKey && e.altKey) {
+                    e.preventDefault();
+                    this.executeReset();
+                } else if (e.ctrlKey) {
+                    e.preventDefault();
+                    this.executeStepByStep();
+                }
+            } else if (e.key === 'Escape' && this.stepMode) {
+                e.preventDefault();
+                this.endStepExecution();
+            }
+        });
 
         this.elements.workspaceArea.addEventListener('click', () => {
             if (this.mobile.isMobile() && this.mode === 'execution') {
@@ -184,6 +184,42 @@ export class GUI {
         this.display.showInfo('State saved.', true);
     }
 
+    private async executeStepByStep(): Promise<void> {
+        const code = this.editor.getValue();
+        if (!code) return;
+
+        try {
+            const result = window.ajisaiInterpreter.execute_step(code) as any;
+            
+            if (result.status === 'OK' && !result.error) {
+                this.display.showExecutionResult(result);
+                
+                if (!result.hasMore) {
+                    this.stepMode = false;
+                    this.display.showInfo('Step execution completed.', true);
+                    this.editor.clear();
+                } else {
+                    this.stepMode = true;
+                    const progressInfo = result.debugOutput || 'Step completed';
+                    this.display.showInfo(`${progressInfo}. Press Ctrl+Enter for next step.`, true);
+                }
+                
+                if (this.mobile.isMobile()) {
+                    this.setMode('execution');
+                }
+            } else {
+                this.display.showError(result.message || 'Unknown error');
+                this.stepMode = false;
+            }
+        } catch (error) {
+            this.display.showError(error as Error);
+            this.stepMode = false;
+        }
+        
+        this.updateAllDisplays();
+        await this.persistence.saveCurrentState();
+    }
+
     private async executeReset(): Promise<void> {
         try {
             console.log('Executing RESET...');
@@ -192,6 +228,7 @@ export class GUI {
             if (result.status === 'OK' && !result.error) {
                 this.display.showOutput(result.output || 'RESET executed');
                 this.editor.clear();
+                this.stepMode = false;
                 
                 if (this.mobile.isMobile()) {
                     this.setMode('execution');
