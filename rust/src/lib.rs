@@ -30,15 +30,23 @@ extern "C" {
     static PERFORMANCE: Performance;
 }
 
-// 同期的な遅延のための簡易実装
-fn wasm_sleep(ms: u64) {
+// 同期的な遅延のための実装（1秒制限）
+fn wasm_sleep(ms: u64) -> String {
+    const MAX_SAFE_DELAY_MS: u64 = 1000; // 1秒まで
+    
+    if ms > MAX_SAFE_DELAY_MS {
+        return format!("[ERROR] Delay {}ms exceeds maximum allowed delay ({}ms). Execution aborted.", ms, MAX_SAFE_DELAY_MS);
+    }
+    
     let start = PERFORMANCE.now();
     let target = start + ms as f64;
     
-    // ビジーウェイトによる遅延（テスト用）
+    // 1秒以下の短時間ビジーウェイト
     while PERFORMANCE.now() < target {
         // 空のループで時間を消費
     }
+    
+    format!("[DEBUG] Actually waited {}ms", ms)
 }
 
 #[wasm_bindgen]
