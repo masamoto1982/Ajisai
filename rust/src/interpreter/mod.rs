@@ -67,7 +67,9 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::DefBlockStart => {
+                    self.output_buffer.push_str("[DEBUG] Found definition block start\n");
                     let (body_tokens, block_consumed) = self.collect_def_block(tokens, i)?;
+                    self.output_buffer.push_str(&format!("[DEBUG] Collected {} tokens in definition block\n", body_tokens.len()));
                     
                     // ブロック後の修飾子を収集
                     let mut modifier_start = i + block_consumed;
@@ -75,6 +77,7 @@ impl Interpreter {
                     while modifier_start < tokens.len() {
                         if let Token::Modifier(m) = &tokens[modifier_start] {
                             modifiers.push(m.clone());
+                            self.output_buffer.push_str(&format!("[DEBUG] Found modifier: {}\n", m));
                             modifier_start += 1;
                         } else {
                             break;
@@ -83,14 +86,19 @@ impl Interpreter {
                     
                     // 修飾子を解析
                     let (repeat_count, delay_ms) = self.parse_modifiers(&modifiers);
+                    self.output_buffer.push_str(&format!("[DEBUG] Parsed modifiers: repeat={}, delay={}ms\n", repeat_count, delay_ms));
                     
                     // ブロックを指定回数実行
-                    for _ in 0..repeat_count {
+                    for iteration in 0..repeat_count {
+                        self.output_buffer.push_str(&format!("[DEBUG] Executing iteration {}/{}\n", iteration + 1, repeat_count));
                         self.execute_tokens(&body_tokens)?;
+                        
                         if delay_ms > 0 {
+                            self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", delay_ms));
                             thread::sleep(Duration::from_millis(delay_ms));
                         }
                     }
+                    self.output_buffer.push_str("[DEBUG] Definition block execution completed\n");
                     
                     i = modifier_start - 1; // 次のループでi+=1されるので-1
                 }
@@ -106,19 +114,32 @@ impl Interpreter {
         let mut repeat_count = 1;
         let mut delay_ms = 0;
         
+        self.output_buffer.push_str(&format!("[DEBUG] Parsing {} modifiers: {:?}\n", modifiers.len(), modifiers));
+        
         for modifier in modifiers {
             if modifier.ends_with('x') {
                 if let Ok(count) = modifier[..modifier.len()-1].parse::<i64>() {
                     repeat_count = count;
+                    self.output_buffer.push_str(&format!("[DEBUG] Set repeat count to {}\n", count));
+                } else {
+                    self.output_buffer.push_str(&format!("[DEBUG] Failed to parse repeat count from {}\n", modifier));
                 }
             } else if modifier.ends_with("ms") {
                 if let Ok(ms) = modifier[..modifier.len()-2].parse::<u64>() {
                     delay_ms = ms;
+                    self.output_buffer.push_str(&format!("[DEBUG] Set delay to {}ms\n", ms));
+                } else {
+                    self.output_buffer.push_str(&format!("[DEBUG] Failed to parse ms from {}\n", modifier));
                 }
             } else if modifier.ends_with('s') {
                 if let Ok(s) = modifier[..modifier.len()-1].parse::<u64>() {
                     delay_ms = s * 1000;
+                    self.output_buffer.push_str(&format!("[DEBUG] Set delay to {}s ({}ms)\n", s, delay_ms));
+                } else {
+                    self.output_buffer.push_str(&format!("[DEBUG] Failed to parse seconds from {}\n", modifier));
                 }
+            } else {
+                self.output_buffer.push_str(&format!("[DEBUG] Unknown modifier format: {}\n", modifier));
             }
         }
         
@@ -152,6 +173,9 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
+        self.output_buffer.push_str(&format!("[DEBUG] Executing custom word: {}\n", name));
+        self.output_buffer.push_str(&format!("[DEBUG] Word has {} lines\n", def.lines.len()));
+
         let mut state = WordExecutionState {
             program_counter: 0,
             repeat_counters: def.lines.iter().map(|line| line.repeat_count).collect(),
@@ -161,8 +185,10 @@ impl Interpreter {
 
         while state.program_counter < def.lines.len() {
             let pc = state.program_counter;
+            self.output_buffer.push_str(&format!("[DEBUG] At line {} (PC={}), repeat_counter={}\n", pc + 1, pc, state.repeat_counters[pc]));
             
             if state.repeat_counters[pc] <= 0 {
+                self.output_buffer.push_str(&format!("[DEBUG] Line {} completed, moving to next line\n", pc + 1));
                 state.program_counter += 1;
                 continue;
             }
@@ -170,31 +196,47 @@ impl Interpreter {
             let line = &def.lines[pc].clone();
 
             if !line.condition_tokens.is_empty() {
+                self.output_buffer.push_str(&format!("[DEBUG] Checking condition for line {}\n", pc + 1));
                 self.execute_tokens(&line.condition_tokens)?;
                 let condition_val = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
-                if !is_truthy(&condition_val) {
+                let is_true = is_truthy(&condition_val);
+                self.output_buffer.push_str(&format!("[DEBUG] Condition result: {} (truthy: {})\n", condition_val, is_true));
+                
+                if !is_true {
+                    self.output_buffer.push_str(&format!("[DEBUG] Condition false, skipping line {}\n", pc + 1));
                     state.program_counter += 1;
                     continue; 
                 }
+                self.output_buffer.push_str(&format!("[DEBUG] Condition true, executing line {}\n", pc + 1));
+            } else {
+                self.output_buffer.push_str(&format!("[DEBUG] No condition, executing default line {}\n", pc + 1));
             }
 
             state.repeat_counters[pc] -= 1;
+            self.output_buffer.push_str(&format!("[DEBUG] Executing body of line {} (remaining repeats: {})\n", pc + 1, state.repeat_counters[pc]));
+            
             self.execution_state = Some(state);
             self.execute_tokens(&line.body_tokens)?;
             state = self.execution_state.take().unwrap();
 
             if line.delay_ms > 0 {
+                self.output_buffer.push_str(&format!("[DEBUG] Delaying {}ms after line {}\n", line.delay_ms, pc + 1));
                 thread::sleep(Duration::from_millis(line.delay_ms));
             }
             
             if state.continue_loop {
+                self.output_buffer.push_str(&format!("[DEBUG] GOTO detected, continuing loop\n"));
                 state.continue_loop = false;
             } else if state.repeat_counters[pc] > 0 {
+                self.output_buffer.push_str(&format!("[DEBUG] Staying on line {} for remaining repeats\n", pc + 1));
                 // Stay on same line
             } else {
+                self.output_buffer.push_str(&format!("[DEBUG] Line {} completed, moving to next\n", pc + 1));
                 state.program_counter += 1;
             }
         }
+        
+        self.output_buffer.push_str(&format!("[DEBUG] Custom word {} execution completed\n", name));
         Ok(())
     }
 
