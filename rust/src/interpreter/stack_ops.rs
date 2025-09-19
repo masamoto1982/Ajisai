@@ -1,52 +1,53 @@
+// rust/src/interpreter/stack_ops.rs
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 
 pub fn op_dup(interp: &mut Interpreter) -> Result<()> {
-    let top = interp.stack.last()
-        .ok_or(AjisaiError::StackUnderflow)?;
-    interp.stack.push(top.clone());
+    let top = interp.workspace.last()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
+    interp.workspace.push(top.clone());
     Ok(())
 }
 
 pub fn op_drop(interp: &mut Interpreter) -> Result<()> {
-    interp.stack.pop()
-        .ok_or(AjisaiError::StackUnderflow)?;
+    interp.workspace.pop()
+        .ok_or(AjisaiError::WorkspaceUnderflow)?;
     Ok(())
 }
 
 pub fn op_swap(interp: &mut Interpreter) -> Result<()> {
-    let len = interp.stack.len();
+    let len = interp.workspace.len();
     if len < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::WorkspaceUnderflow);
     }
-    interp.stack.swap(len - 1, len - 2);
+    interp.workspace.swap(len - 1, len - 2);
     Ok(())
 }
 
 pub fn op_over(interp: &mut Interpreter) -> Result<()> {
-    let len = interp.stack.len();
+    let len = interp.workspace.len();
     if len < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::WorkspaceUnderflow);
     }
-    let item = interp.stack[len - 2].clone();
-    interp.stack.push(item);
+    let item = interp.workspace[len - 2].clone();
+    interp.workspace.push(item);
     Ok(())
 }
 
 pub fn op_rot(interp: &mut Interpreter) -> Result<()> {
-    let len = interp.stack.len();
+    let len = interp.workspace.len();
     if len < 3 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::WorkspaceUnderflow);
     }
-    let third = interp.stack.remove(len - 3);
-    interp.stack.push(third);
+    let third = interp.workspace.remove(len - 3);
+    interp.workspace.push(third);
     Ok(())
 }
 
 pub fn op_nip(interp: &mut Interpreter) -> Result<()> {
-    let len = interp.stack.len();
+    let len = interp.workspace.len();
     if len < 2 {
-        return Err(AjisaiError::StackUnderflow);
+        return Err(AjisaiError::WorkspaceUnderflow);
     }
-    interp.stack.remove(len - 2);
+    interp.workspace.remove(len - 2);
     Ok(())
 }
