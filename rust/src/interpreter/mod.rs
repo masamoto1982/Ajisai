@@ -67,9 +67,32 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::DefBlockStart => {
-                    let (body_tokens, consumed) = self.collect_def_block(tokens, i)?;
-                    self.workspace.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
-                    i += consumed - 1;
+                    let (body_tokens, block_consumed) = self.collect_def_block(tokens, i)?;
+                    
+                    // ブロック後の修飾子を収集
+                    let mut modifier_start = i + block_consumed;
+                    let mut modifiers = Vec::new();
+                    while modifier_start < tokens.len() {
+                        if let Token::Modifier(m) = &tokens[modifier_start] {
+                            modifiers.push(m.clone());
+                            modifier_start += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    // 修飾子を解析
+                    let (repeat_count, delay_ms) = self.parse_modifiers(&modifiers);
+                    
+                    // ブロックを指定回数実行
+                    for _ in 0..repeat_count {
+                        self.execute_tokens(&body_tokens)?;
+                        if delay_ms > 0 {
+                            thread::sleep(Duration::from_millis(delay_ms));
+                        }
+                    }
+                    
+                    i = modifier_start - 1; // 次のループでi+=1されるので-1
                 }
                 Token::Symbol(name) => self.execute_word(name)?,
                 _ => {} 
@@ -77,6 +100,29 @@ impl Interpreter {
             i += 1;
         }
         Ok(())
+    }
+
+    fn parse_modifiers(&self, modifiers: &[String]) -> (i64, u64) {
+        let mut repeat_count = 1;
+        let mut delay_ms = 0;
+        
+        for modifier in modifiers {
+            if modifier.ends_with('x') {
+                if let Ok(count) = modifier[..modifier.len()-1].parse::<i64>() {
+                    repeat_count = count;
+                }
+            } else if modifier.ends_with("ms") {
+                if let Ok(ms) = modifier[..modifier.len()-2].parse::<u64>() {
+                    delay_ms = ms;
+                }
+            } else if modifier.ends_with('s') {
+                if let Ok(s) = modifier[..modifier.len()-1].parse::<u64>() {
+                    delay_ms = s * 1000;
+                }
+            }
+        }
+        
+        (repeat_count, delay_ms)
     }
 
     fn collect_def_block(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
