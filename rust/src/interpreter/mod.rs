@@ -95,9 +95,9 @@ impl Interpreter {
                         self.execute_tokens(&body_tokens)?;
                         
                         if delay_ms > 0 {
-                            self.output_buffer.push_str(&format!("[DEBUG] Would wait {}ms (WASM sleep disabled)\n", delay_ms));
-                            // WebAssemblyでは thread::sleep は安全でないため無効化
-                            // thread::sleep(Duration::from_millis(delay_ms));
+                            self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", delay_ms));
+                            // WebAssembly用の同期遅延を使用
+                            crate::wasm_sleep(delay_ms);
                         }
                     }
                     self.output_buffer.push_str("[DEBUG] Definition block execution completed\n");
