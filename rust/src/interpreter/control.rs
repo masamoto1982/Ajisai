@@ -41,7 +41,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 }
 
 fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
-    tokens.split(|tok| matches!(tok, Token::LineBreak))
+    let lines: Result<Vec<ExecutionLine>> = tokens.split(|tok| matches!(tok, Token::LineBreak))
         .filter(|line| !line.is_empty())
         .map(|line_tokens| {
             let mut repeat_count = 1;
@@ -73,7 +73,17 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
 
             Ok(ExecutionLine { condition_tokens, body_tokens, repeat_count, delay_ms })
         })
-        .collect()
+        .collect();
+    
+    let lines = lines?;
+    
+    // デフォルト行（条件なし）の存在チェック
+    let has_default = lines.iter().any(|line| line.condition_tokens.is_empty());
+    if !has_default {
+        return Err(AjisaiError::from("Custom word definition must have at least one default line (without condition)"));
+    }
+    
+    Ok(lines)
 }
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
