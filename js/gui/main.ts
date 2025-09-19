@@ -1,4 +1,4 @@
-// js/gui/main.ts (RESET対応版)
+// js/gui/main.ts (不要メソッド削除版)
 
 import { Display } from './display';
 import { Dictionary } from './dictionary';
@@ -6,7 +6,7 @@ import { Editor } from './editor';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
 import { TestRunner } from './test';  
-import type { AjisaiInterpreter, ExecuteResult, StepResult } from '../wasm-types';
+import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
 
 declare global {
     interface Window {
@@ -189,7 +189,7 @@ export class GUI {
         if (!code) return;
 
         try {
-            const result = window.ajisaiInterpreter.execute_step(code) as any;
+            const result = window.ajisaiInterpreter.execute_step(code) as ExecuteResult;
             
             if (result.status === 'OK' && !result.error) {
                 this.display.showExecutionResult(result);
@@ -241,54 +241,6 @@ export class GUI {
             }
         } catch (error) {
             this.display.showError(error as Error);
-        }
-    }
-
-    private startStepExecution(): void {
-        const code = this.editor.getValue();
-        if (!code) return;
-
-        try {
-            const message = window.ajisaiInterpreter.init_step(code);
-            this.stepMode = true;
-            this.display.showInfo(`Step mode started: ${message}\nPress Space to step, Escape to end.`);
-            
-            if (this.mobile.isMobile()) {
-                this.setMode('execution');
-            }
-        } catch (error) {
-            this.display.showError(error as Error);
-        }
-    }
-
-    private executeNextStep(): void {
-        if (!this.stepMode) return;
-
-        try {
-            const result = window.ajisaiInterpreter.step() as StepResult;
-            
-            if (result.error) {
-                this.display.showError(result.output || 'Step execution error');
-                this.endStepExecution();
-                return;
-            }
-
-            this.display.showOutput(result.output || 'Step executed');
-            
-            if (result.hasMore) {
-                const progress = result.position && result.total 
-                    ? ` (${result.position}/${result.total})`
-                    : '';
-                this.display.showInfo(`Step completed${progress}. Press Space for next step, Escape to end.`, true);
-            } else {
-                this.display.showInfo('Step execution completed.', true);
-                this.endStepExecution();
-            }
-            
-            this.updateAllDisplays();
-        } catch (error) {
-            this.display.showError(error as Error);
-            this.endStepExecution();
         }
     }
 
