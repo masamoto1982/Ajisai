@@ -141,7 +141,7 @@ impl Interpreter {
         Ok(has_nested_def)
     }
 
-    fn parse_nested_definition(&self, tokens: &[Token]) -> Result<(Vec<Token>, usize)> {
+    fn parse_nested_definition(&mut self, tokens: &[Token]) -> Result<(Vec<Token>, usize)> {
         self.output_buffer.push_str("[DEBUG] Parsing nested definition structure\n");
         
         let mut result_tokens = Vec::new();
@@ -310,7 +310,7 @@ impl Interpreter {
         
         if let Some(line_index) = selected_line_index {
             self.output_buffer.push_str(&format!("[DEBUG] Selected line {} for execution\n", line_index + 1));
-            self.execute_selected_line(&def.lines[line_index], name)?;
+            self.execute_selected_line(&def.lines[line_index])?;
         } else {
             return Err(AjisaiError::from("No matching condition found and no default line available"));
         }
@@ -318,7 +318,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn select_matching_line(&self, lines: &[ExecutionLine]) -> Result<Option<usize>> {
+    fn select_matching_line(&mut self, lines: &[ExecutionLine]) -> Result<Option<usize>> {
         // 各行の条件を上から順にパターンマッチング評価
         for (index, line) in lines.iter().enumerate() {
             if line.condition_tokens.is_empty() {
@@ -345,7 +345,7 @@ impl Interpreter {
         Ok(None)
     }
 
-    fn evaluate_pattern_condition(&self, condition_tokens: &[Token]) -> Result<bool> {
+    fn evaluate_pattern_condition(&mut self, condition_tokens: &[Token]) -> Result<bool> {
         // パターンマッチング的条件評価（スタックを消費しない）
         if condition_tokens.is_empty() {
             return Ok(true);
@@ -383,7 +383,7 @@ impl Interpreter {
         Ok((pattern_value, consumed - 1))
     }
 
-    fn compare_values(&self, workspace_value: &Value, pattern_value: &Value, operator: &str) -> Result<bool> {
+    fn compare_values(&mut self, workspace_value: &Value, pattern_value: &Value, operator: &str) -> Result<bool> {
         self.output_buffer.push_str(&format!("[DEBUG] Comparing {} {} {}\n", workspace_value, operator, pattern_value));
         
         match operator {
@@ -418,7 +418,7 @@ impl Interpreter {
         Ok(false)
     }
 
-    fn execute_selected_line(&mut self, line: &ExecutionLine, word_name: &str) -> Result<()> {
+    fn execute_selected_line(&mut self, line: &ExecutionLine) -> Result<()> {
         self.output_buffer.push_str(&format!("[DEBUG] Executing line with {} repeats, {}ms delay\n", line.repeat_count, line.delay_ms));
         
         for iteration in 0..line.repeat_count {
