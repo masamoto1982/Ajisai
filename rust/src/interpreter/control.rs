@@ -62,7 +62,7 @@ impl Interpreter {
         tokens.iter().any(|t| matches!(t, Token::Symbol(s) if s == "INNER_DEF_LINE"))
     }
     
-    pub(crate) fn parse_nested_definition_body(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
+    pub(crate) fn parse_nested_definition_body(&mut self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
         let mut lines = Vec::new();
         let mut i = 0;
         
