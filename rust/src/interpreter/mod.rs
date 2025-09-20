@@ -8,10 +8,8 @@ pub mod error;
 pub mod flow_control;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction, WordDefinition};
+use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction, WordDefinition, ExecutionLine};
 use self::error::{Result, AjisaiError};
-use std::thread;
-use std::time::Duration;
 use num_traits::Zero;
 
 pub struct Interpreter {
@@ -67,42 +65,48 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::DefBlockStart => {
-                    self.output_buffer.push_str("[DEBUG] Found definition block start\n");
-                    let (body_tokens, block_consumed) = self.collect_def_block(tokens, i)?;
-                    self.output_buffer.push_str(&format!("[DEBUG] Collected {} tokens in definition block\n", body_tokens.len()));
-                    
-                    // ブロック後の修飾子を収集
-                    let mut modifier_start = i + block_consumed;
-                    let mut modifiers = Vec::new();
-                    while modifier_start < tokens.len() {
-                        if let Token::Modifier(m) = &tokens[modifier_start] {
-                            modifiers.push(m.clone());
-                            self.output_buffer.push_str(&format!("[DEBUG] Found modifier: {}\n", m));
-                            modifier_start += 1;
-                        } else {
-                            break;
-                        }
-                    }
-                    
-                    // 修飾子を解析（借用の問題を回避）
-                    let (repeat_count, delay_ms, debug_messages) = Self::parse_modifiers_static(&modifiers);
-                    self.output_buffer.push_str(&debug_messages);
-                    self.output_buffer.push_str(&format!("[DEBUG] Parsed modifiers: repeat={}, delay={}ms\n", repeat_count, delay_ms));
-                    
-                    // ブロックを指定回数実行
-                    for iteration in 0..repeat_count {
-                        self.output_buffer.push_str(&format!("[DEBUG] Executing iteration {}/{}\n", iteration + 1, repeat_count));
-                        self.execute_tokens(&body_tokens)?;
+                    // ネストした定義ブロック構造の検出
+                    if self.is_nested_definition_structure(&tokens[i..])? {
+                        let (nested_def, consumed) = self.parse_nested_definition(&tokens[i..])?;
+                        self.workspace.push(Value { val_type: ValueType::DefinitionBody(nested_def) });
+                        i += consumed - 1;
+                    } else {
+                        // 従来の単一定義ブロック
+                        let (body_tokens, block_consumed) = self.collect_def_block(tokens, i)?;
+                        self.output_buffer.push_str(&format!("[DEBUG] Collected {} tokens in definition block\n", body_tokens.len()));
                         
-                        if delay_ms > 0 {
-                            self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", delay_ms));
-                            // WebAssembly用の同期遅延を使用
-                            crate::wasm_sleep(delay_ms);
+                        // ブロック後の修飾子を収集
+                        let mut modifier_start = i + block_consumed;
+                        let mut modifiers = Vec::new();
+                        while modifier_start < tokens.len() {
+                            if let Token::Modifier(m) = &tokens[modifier_start] {
+                                modifiers.push(m.clone());
+                                self.output_buffer.push_str(&format!("[DEBUG] Found modifier: {}\n", m));
+                                modifier_start += 1;
+                            } else {
+                                break;
+                            }
                         }
+                        
+                        // 修飾子を解析
+                        let (repeat_count, delay_ms, debug_messages) = Self::parse_modifiers_static(&modifiers);
+                        self.output_buffer.push_str(&debug_messages);
+                        self.output_buffer.push_str(&format!("[DEBUG] Parsed modifiers: repeat={}, delay={}ms\n", repeat_count, delay_ms));
+                        
+                        // ブロックを指定回数実行
+                        for iteration in 0..repeat_count {
+                            self.output_buffer.push_str(&format!("[DEBUG] Executing iteration {}/{}\n", iteration + 1, repeat_count));
+                            self.execute_tokens(&body_tokens)?;
+                            
+                            if delay_ms > 0 {
+                                self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", delay_ms));
+                                crate::wasm_sleep(delay_ms);
+                            }
+                        }
+                        self.output_buffer.push_str("[DEBUG] Definition block execution completed\n");
+                        
+                        i = modifier_start - 1;
                     }
-                    self.output_buffer.push_str("[DEBUG] Definition block execution completed\n");
-                    
-                    i = modifier_start - 1; // 次のループでi+=1されるので-1
                 }
                 Token::Symbol(name) => self.execute_word(name)?,
                 _ => {} 
@@ -110,6 +114,114 @@ impl Interpreter {
             i += 1;
         }
         Ok(())
+    }
+
+    fn is_nested_definition_structure(&self, tokens: &[Token]) -> Result<bool> {
+        let mut depth = 0;
+        let mut has_nested_def = false;
+        
+        for token in tokens {
+            match token {
+                Token::DefBlockStart => {
+                    depth += 1;
+                    if depth > 1 {
+                        has_nested_def = true;
+                    }
+                },
+                Token::DefBlockEnd => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                },
+                _ => {}
+            }
+        }
+        
+        Ok(has_nested_def)
+    }
+
+    fn parse_nested_definition(&self, tokens: &[Token]) -> Result<(Vec<Token>, usize)> {
+        self.output_buffer.push_str("[DEBUG] Parsing nested definition structure\n");
+        
+        let mut result_tokens = Vec::new();
+        let mut i = 1; // Skip the initial DefBlockStart
+        let mut outer_depth = 1;
+        
+        while i < tokens.len() && outer_depth > 0 {
+            match &tokens[i] {
+                Token::DefBlockStart => {
+                    // 内側の定義ブロックの開始
+                    let (inner_tokens, consumed) = self.collect_inner_def_block(tokens, i)?;
+                    
+                    // 内側のブロックを解析して ExecutionLine として保存
+                    let line_tokens = self.parse_inner_definition_line(&inner_tokens)?;
+                    result_tokens.extend(line_tokens);
+                    
+                    i += consumed;
+                },
+                Token::DefBlockEnd => {
+                    outer_depth -= 1;
+                    if outer_depth == 0 {
+                        // 外側のブロック終了
+                        break;
+                    }
+                    i += 1;
+                },
+                _ => {
+                    i += 1;
+                }
+            }
+        }
+        
+        self.output_buffer.push_str(&format!("[DEBUG] Parsed nested definition with {} result tokens\n", result_tokens.len()));
+        Ok((result_tokens, i + 1))
+    }
+
+    fn collect_inner_def_block(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
+        let mut depth = 1;
+        let mut i = start + 1;
+        
+        while i < tokens.len() {
+            match tokens[i] {
+                Token::DefBlockStart => depth += 1,
+                Token::DefBlockEnd => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok((tokens[start + 1..i].to_vec(), i - start + 1));
+                    }
+                },
+                _ => {}
+            }
+            i += 1;
+        }
+        
+        Err(AjisaiError::from("Unclosed inner definition block"))
+    }
+
+    fn parse_inner_definition_line(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+        // 内側の定義行を解析して、条件部・処理部・修飾子を識別
+        // 結果は特別なトークン形式で返す（後でcontrol.rsで処理）
+        
+        // Guard separatorの位置を探す
+        let guard_pos = tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
+        
+        let mut result = vec![Token::Symbol("INNER_DEF_LINE".to_string())];
+        
+        if let Some(pos) = guard_pos {
+            // 条件付きライン
+            result.push(Token::Symbol("WITH_CONDITION".to_string()));
+            result.extend(tokens[..pos].to_vec());
+            result.push(Token::GuardSeparator);
+            result.extend(tokens[pos + 1..].to_vec());
+        } else {
+            // デフォルトライン
+            result.push(Token::Symbol("DEFAULT_LINE".to_string()));
+            result.extend(tokens.to_vec());
+        }
+        
+        result.push(Token::Symbol("END_INNER_DEF_LINE".to_string()));
+        Ok(result)
     }
 
     fn parse_modifiers_static(modifiers: &[String]) -> (i64, u64, String) {
@@ -193,68 +305,134 @@ impl Interpreter {
         self.output_buffer.push_str(&format!("[DEBUG] Executing custom word: {}\n", name));
         self.output_buffer.push_str(&format!("[DEBUG] Word has {} lines\n", def.lines.len()));
 
-        let mut state = WordExecutionState {
-            program_counter: 0,
-            repeat_counters: def.lines.iter().map(|line| line.repeat_count).collect(),
-            word_name: name.to_string(),
-            continue_loop: false,
-        };
+        // パターンマッチング的条件評価による行選択
+        let selected_line_index = self.select_matching_line(&def.lines)?;
+        
+        if let Some(line_index) = selected_line_index {
+            self.output_buffer.push_str(&format!("[DEBUG] Selected line {} for execution\n", line_index + 1));
+            self.execute_selected_line(&def.lines[line_index], name)?;
+        } else {
+            return Err(AjisaiError::from("No matching condition found and no default line available"));
+        }
 
-        while state.program_counter < def.lines.len() {
-            let pc = state.program_counter;
-            self.output_buffer.push_str(&format!("[DEBUG] At line {} (PC={}), repeat_counter={}\n", pc + 1, pc, state.repeat_counters[pc]));
-            
-            if state.repeat_counters[pc] <= 0 {
-                self.output_buffer.push_str(&format!("[DEBUG] Line {} completed, moving to next line\n", pc + 1));
-                state.program_counter += 1;
+        Ok(())
+    }
+
+    fn select_matching_line(&self, lines: &[ExecutionLine]) -> Result<Option<usize>> {
+        // 各行の条件を上から順にパターンマッチング評価
+        for (index, line) in lines.iter().enumerate() {
+            if line.condition_tokens.is_empty() {
+                // デフォルト行は条件なしなので常に選択対象
+                self.output_buffer.push_str(&format!("[DEBUG] Found default line at index {}\n", index));
                 continue;
             }
             
-            let line = &def.lines[pc].clone();
-
-            if !line.condition_tokens.is_empty() {
-                self.output_buffer.push_str(&format!("[DEBUG] Checking condition for line {}\n", pc + 1));
-                self.execute_tokens(&line.condition_tokens)?;
-                let condition_val = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
-                let is_true = is_truthy(&condition_val);
-                self.output_buffer.push_str(&format!("[DEBUG] Condition result: {} (truthy: {})\n", condition_val, is_true));
-                
-                if !is_true {
-                    self.output_buffer.push_str(&format!("[DEBUG] Condition false, skipping line {}\n", pc + 1));
-                    state.program_counter += 1;
-                    continue; 
-                }
-                self.output_buffer.push_str(&format!("[DEBUG] Condition true, executing line {}\n", pc + 1));
-            } else {
-                self.output_buffer.push_str(&format!("[DEBUG] No condition, executing default line {}\n", pc + 1));
-            }
-
-            state.repeat_counters[pc] -= 1;
-            self.output_buffer.push_str(&format!("[DEBUG] Executing body of line {} (remaining repeats: {})\n", pc + 1, state.repeat_counters[pc]));
-            
-            self.execution_state = Some(state);
-            self.execute_tokens(&line.body_tokens)?;
-            state = self.execution_state.take().unwrap();
-
-            if line.delay_ms > 0 {
-                self.output_buffer.push_str(&format!("[DEBUG] Would delay {}ms (WASM sleep disabled)\n", line.delay_ms));
-                // WebAssemblyでは thread::sleep は安全でないため無効化
-                // thread::sleep(Duration::from_millis(line.delay_ms));
-            }
-            
-            if state.continue_loop {
-                self.output_buffer.push_str(&format!("[DEBUG] GOTO detected, continuing loop\n"));
-                state.continue_loop = false;
-            } else if state.repeat_counters[pc] > 0 {
-                self.output_buffer.push_str(&format!("[DEBUG] Staying on line {} for remaining repeats\n", pc + 1));
-                // Stay on same line
-            } else {
-                self.output_buffer.push_str(&format!("[DEBUG] Line {} completed, moving to next\n", pc + 1));
-                state.program_counter += 1;
+            // パターンマッチング評価（非破壊的）
+            if self.evaluate_pattern_condition(&line.condition_tokens)? {
+                self.output_buffer.push_str(&format!("[DEBUG] Pattern matched for line {}\n", index + 1));
+                return Ok(Some(index));
             }
         }
         
-        self.output_buffer.push_str(&format!("[DEBUG] Custom word {} execution completed\n", name));
+        // 条件に合致するものがなかった場合、デフォルト行を探す
+        for (index, line) in lines.iter().enumerate() {
+            if line.condition_tokens.is_empty() {
+                self.output_buffer.push_str(&format!("[DEBUG] Using default line at index {}\n", index));
+                return Ok(Some(index));
+            }
+        }
+        
+        Ok(None)
+    }
+
+    fn evaluate_pattern_condition(&self, condition_tokens: &[Token]) -> Result<bool> {
+        // パターンマッチング的条件評価（スタックを消費しない）
+        if condition_tokens.is_empty() {
+            return Ok(true);
+        }
+        
+        // ワークスペースのトップ値を取得（消費しない）
+        let workspace_top = self.workspace.last()
+            .ok_or(AjisaiError::from("Workspace is empty for condition evaluation"))?;
+        
+        // 基本的なパターン: [値] 演算子 の形式
+        if condition_tokens.len() >= 2 {
+            // 最初のトークンがベクトルかチェック
+            if let Token::VectorStart(_) = &condition_tokens[0] {
+                let (pattern_value, vector_end) = self.extract_pattern_value(condition_tokens)?;
+                
+                if vector_end + 1 < condition_tokens.len() {
+                    if let Token::Symbol(op) = &condition_tokens[vector_end + 1] {
+                        return self.compare_values(workspace_top, &pattern_value, op);
+                    }
+                }
+            }
+        }
+        
+        // パターンが認識できない場合はfalse
+        self.output_buffer.push_str(&format!("[DEBUG] Unrecognized pattern: {:?}\n", condition_tokens));
+        Ok(false)
+    }
+
+    fn extract_pattern_value(&self, tokens: &[Token]) -> Result<(Value, usize)> {
+        // ベクトル開始から終了までのトークンを解析して値を構築
+        let (values, consumed) = self.collect_vector(tokens, 0)?;
+        let pattern_value = Value { 
+            val_type: ValueType::Vector(values, BracketType::Square) 
+        };
+        Ok((pattern_value, consumed - 1))
+    }
+
+    fn compare_values(&self, workspace_value: &Value, pattern_value: &Value, operator: &str) -> Result<bool> {
+        self.output_buffer.push_str(&format!("[DEBUG] Comparing {} {} {}\n", workspace_value, operator, pattern_value));
+        
+        match operator {
+            "=" => Ok(workspace_value == pattern_value),
+            "!=" => Ok(workspace_value != pattern_value),
+            ">" | "<" | ">=" | "<=" => {
+                // 数値比較の場合
+                self.compare_numbers(workspace_value, pattern_value, operator)
+            },
+            _ => {
+                self.output_buffer.push_str(&format!("[DEBUG] Unknown comparison operator: {}\n", operator));
+                Ok(false)
+            }
+        }
+    }
+
+    fn compare_numbers(&self, workspace_value: &Value, pattern_value: &Value, operator: &str) -> Result<bool> {
+        // 両方が単一要素のベクトルで数値の場合のみ比較
+        if let (ValueType::Vector(w_vec, _), ValueType::Vector(p_vec, _)) = (&workspace_value.val_type, &pattern_value.val_type) {
+            if w_vec.len() == 1 && p_vec.len() == 1 {
+                if let (ValueType::Number(w_num), ValueType::Number(p_num)) = (&w_vec[0].val_type, &p_vec[0].val_type) {
+                    return Ok(match operator {
+                        ">" => w_num.gt(p_num),
+                        "<" => w_num.lt(p_num),
+                        ">=" => w_num.ge(p_num),
+                        "<=" => w_num.le(p_num),
+                        _ => false,
+                    });
+                }
+            }
+        }
+        Ok(false)
+    }
+
+    fn execute_selected_line(&mut self, line: &ExecutionLine, word_name: &str) -> Result<()> {
+        self.output_buffer.push_str(&format!("[DEBUG] Executing line with {} repeats, {}ms delay\n", line.repeat_count, line.delay_ms));
+        
+        for iteration in 0..line.repeat_count {
+            self.output_buffer.push_str(&format!("[DEBUG] Iteration {}/{}\n", iteration + 1, line.repeat_count));
+            
+            // 処理部を実行（他のカスタムワードも含む可能性がある）
+            self.execute_tokens(&line.body_tokens)?;
+            
+            if line.delay_ms > 0 && iteration < line.repeat_count - 1 {
+                self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", line.delay_ms));
+                crate::wasm_sleep(line.delay_ms);
+            }
+        }
+        
         Ok(())
     }
 
@@ -295,46 +473,46 @@ impl Interpreter {
     }
     
     fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
-    let mut values = Vec::new();
-    let mut i = start + 1;
-    let mut depth = 1;
-    
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::VectorStart(bt) => {
-                depth += 1;
-                let (nested_values, consumed) = self.collect_vector(tokens, i)?;
-                values.push(Value { val_type: ValueType::Vector(nested_values, bt.clone()) });
-                i += consumed - 1;
-            },
-            Token::VectorEnd(_) => {
-                depth -= 1;
-                if depth == 0 { 
-                    return Ok((values, i - start + 1)); 
-                }
-            },
-            Token::Number(s) => {
-                let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
-                values.push(Value { val_type: ValueType::Number(frac) });
-            },
-            Token::String(s) => {
-                values.push(Value { val_type: ValueType::String(s.clone()) });
-            },
-            Token::Boolean(b) => {
-                values.push(Value { val_type: ValueType::Boolean(*b) });
-            },
-            Token::Nil => {
-                values.push(Value { val_type: ValueType::Nil });
-            },
-            Token::Symbol(name) => {
-                values.push(Value { val_type: ValueType::Symbol(name.clone()) });
-            },
-            _ => {}
+        let mut values = Vec::new();
+        let mut i = start + 1;
+        let mut depth = 1;
+        
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::VectorStart(bt) => {
+                    depth += 1;
+                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                    values.push(Value { val_type: ValueType::Vector(nested_values, bt.clone()) });
+                    i += consumed - 1;
+                },
+                Token::VectorEnd(_) => {
+                    depth -= 1;
+                    if depth == 0 { 
+                        return Ok((values, i - start + 1)); 
+                    }
+                },
+                Token::Number(s) => {
+                    let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
+                    values.push(Value { val_type: ValueType::Number(frac) });
+                },
+                Token::String(s) => {
+                    values.push(Value { val_type: ValueType::String(s.clone()) });
+                },
+                Token::Boolean(b) => {
+                    values.push(Value { val_type: ValueType::Boolean(*b) });
+                },
+                Token::Nil => {
+                    values.push(Value { val_type: ValueType::Nil });
+                },
+                Token::Symbol(name) => {
+                    values.push(Value { val_type: ValueType::Symbol(name.clone()) });
+                },
+                _ => {}
+            }
+            i += 1;
         }
-        i += 1;
+        Err(AjisaiError::from("Unclosed vector"))
     }
-    Err(AjisaiError::from("Unclosed vector"))
-}
 
     // Public methods for lib.rs
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
@@ -352,7 +530,7 @@ impl Interpreter {
     pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> {
         Ok(())
     }
-     pub fn execute_reset(&mut self) -> Result<()> {
+    pub fn execute_reset(&mut self) -> Result<()> {
         self.workspace.clear();
         self.dictionary.clear();
         self.output_buffer.clear();
