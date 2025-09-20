@@ -233,6 +233,7 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
         match two_char.as_str() {
             "<=" => return Some((Token::Symbol("<=".to_string()), 2)),
             ">=" => return Some((Token::Symbol(">=".to_string()), 2)),
+            "!=" => return Some((Token::Symbol("!=".to_string()), 2)),
             _ => {}
         }
     }
