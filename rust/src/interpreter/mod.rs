@@ -352,8 +352,10 @@ impl Interpreter {
         }
         
         // ワークスペースのトップ値を取得（消費しない）
-        let workspace_top = self.workspace.last()
-            .ok_or(AjisaiError::from("Workspace is empty for condition evaluation"))?;
+        let workspace_top = match self.workspace.last() {
+            Some(value) => value.clone(), // borrowing issue を回避するためclone
+            None => return Err(AjisaiError::from("Workspace is empty for condition evaluation")),
+        };
         
         // 基本的なパターン: [値] 演算子 の形式
         if condition_tokens.len() >= 2 {
@@ -363,7 +365,7 @@ impl Interpreter {
                 
                 if vector_end + 1 < condition_tokens.len() {
                     if let Token::Symbol(op) = &condition_tokens[vector_end + 1] {
-                        return self.compare_values(workspace_top, &pattern_value, op);
+                        return self.compare_values(&workspace_top, &pattern_value, op);
                     }
                 }
             }
