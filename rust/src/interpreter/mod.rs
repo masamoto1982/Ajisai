@@ -67,11 +67,13 @@ impl Interpreter {
                 Token::DefBlockStart => {
                     // ネストした定義ブロック構造の検出
                     if self.is_nested_definition_structure(&tokens[i..])? {
+                        self.output_buffer.push_str("[DEBUG] Detected nested definition structure\n");
                         let (nested_def, consumed) = self.parse_nested_definition(&tokens[i..])?;
                         self.workspace.push(Value { val_type: ValueType::DefinitionBody(nested_def) });
                         i += consumed - 1;
                     } else {
                         // 従来の単一定義ブロック
+                        self.output_buffer.push_str("[DEBUG] Detected simple definition block\n");
                         let (body_tokens, block_consumed) = self.collect_def_block(tokens, i)?;
                         self.output_buffer.push_str(&format!("[DEBUG] Collected {} tokens in definition block\n", body_tokens.len()));
                         
@@ -117,20 +119,23 @@ impl Interpreter {
     }
 
     fn is_nested_definition_structure(&self, tokens: &[Token]) -> Result<bool> {
+        // 実際にネストした :...; 構造があるかチェック
         let mut depth = 0;
-        let mut has_nested_def = false;
+        let mut found_nested = false;
         
         for token in tokens {
             match token {
                 Token::DefBlockStart => {
                     depth += 1;
                     if depth > 1 {
-                        has_nested_def = true;
+                        // 2階層目以上の定義ブロックが見つかった
+                        found_nested = true;
                     }
                 },
                 Token::DefBlockEnd => {
                     depth -= 1;
                     if depth == 0 {
+                        // 外側のブロック終了
                         break;
                     }
                 },
@@ -138,7 +143,8 @@ impl Interpreter {
             }
         }
         
-        Ok(has_nested_def)
+        self.output_buffer.push_str(&format!("[DEBUG] Nested definition check: found_nested={}\n", found_nested));
+        Ok(found_nested)
     }
 
     fn parse_nested_definition(&mut self, tokens: &[Token]) -> Result<(Vec<Token>, usize)> {
@@ -152,11 +158,13 @@ impl Interpreter {
             match &tokens[i] {
                 Token::DefBlockStart => {
                     // 内側の定義ブロックの開始
+                    self.output_buffer.push_str(&format!("[DEBUG] Found inner definition block at position {}\n", i));
                     let (inner_tokens, consumed) = self.collect_inner_def_block(tokens, i)?;
+                    self.output_buffer.push_str(&format!("[DEBUG] Collected inner block with {} tokens\n", inner_tokens.len()));
                     
-                    // 内側のブロックを解析して ExecutionLine として保存
-                    let line_tokens = self.parse_inner_definition_line(&inner_tokens)?;
-                    result_tokens.extend(line_tokens);
+                    // 内側のブロックを解析してExecutionLineとして変換
+                    let execution_line_tokens = self.convert_inner_block_to_execution_line(&inner_tokens)?;
+                    result_tokens.extend(execution_line_tokens);
                     
                     i += consumed;
                 },
@@ -164,6 +172,7 @@ impl Interpreter {
                     outer_depth -= 1;
                     if outer_depth == 0 {
                         // 外側のブロック終了
+                        self.output_buffer.push_str("[DEBUG] Found outer definition block end\n");
                         break;
                     }
                     i += 1;
@@ -199,14 +208,12 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed inner definition block"))
     }
 
-    fn parse_inner_definition_line(&self, tokens: &[Token]) -> Result<Vec<Token>> {
-        // 内側の定義行を解析して、条件部・処理部・修飾子を識別
-        // 結果は特別なトークン形式で返す（後でcontrol.rsで処理）
-        
-        // Guard separatorの位置を探す
-        let guard_pos = tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
-        
+    fn convert_inner_block_to_execution_line(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+        // 内側のブロックをExecutionLine形式に変換
         let mut result = vec![Token::Symbol("INNER_DEF_LINE".to_string())];
+        
+        // ガードセパレータ（$）の位置を探す
+        let guard_pos = tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
         
         if let Some(pos) = guard_pos {
             // 条件付きライン
@@ -215,12 +222,14 @@ impl Interpreter {
             result.push(Token::GuardSeparator);
             result.extend(tokens[pos + 1..].to_vec());
         } else {
-            // デフォルトライン
+            // デフォルトライン（条件なし）
             result.push(Token::Symbol("DEFAULT_LINE".to_string()));
             result.extend(tokens.to_vec());
         }
         
         result.push(Token::Symbol("END_INNER_DEF_LINE".to_string()));
+        
+        self.output_buffer.push_str(&format!("[DEBUG] Converted inner block to {} tokens\n", result.len()));
         Ok(result)
     }
 
@@ -431,7 +440,7 @@ impl Interpreter {
             
             if line.delay_ms > 0 && iteration < line.repeat_count - 1 {
                 self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", line.delay_ms));
-                crate::wasm_sleep(line.delay_ms);
+                crate::wasm_sleep(delay_ms);
             }
         }
         
@@ -514,6 +523,148 @@ impl Interpreter {
             i += 1;
         }
         Err(AjisaiError::from("Unclosed vector"))
+    }
+
+    // control.rsで使用するメソッド
+    pub(crate) fn contains_nested_definition(&self, tokens: &[Token]) -> bool {
+        tokens.iter().any(|t| matches!(t, Token::Symbol(s) if s == "INNER_DEF_LINE"))
+    }
+    
+    pub(crate) fn parse_nested_definition_body(&mut self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
+        let mut lines = Vec::new();
+        let mut i = 0;
+        
+        while i < tokens.len() {
+            if let Token::Symbol(s) = &tokens[i] {
+                if s == "INNER_DEF_LINE" {
+                    let (line, consumed) = self.parse_single_inner_line(&tokens[i..])?;
+                    lines.push(line);
+                    i += consumed;
+                } else {
+                    i += 1;
+                }
+            } else {
+                i += 1;
+            }
+        }
+        
+        // デフォルト行の存在チェック
+        let has_default = lines.iter().any(|line| line.condition_tokens.is_empty());
+        if !has_default {
+            return Err(AjisaiError::from("Nested definition must have at least one default line (without condition)"));
+        }
+        
+        self.output_buffer.push_str(&format!("[DEBUG] Nested definition validation passed. {} lines total\n", lines.len()));
+        Ok(lines)
+    }
+    
+    fn parse_single_inner_line(&self, tokens: &[Token]) -> Result<(ExecutionLine, usize)> {
+        // INNER_DEF_LINE から END_INNER_DEF_LINE までを解析
+        let mut i = 1; // Skip INNER_DEF_LINE
+        let mut condition_tokens = Vec::new();
+        let mut body_tokens = Vec::new();
+        let mut repeat_count = 1;
+        let mut delay_ms = 0;
+        let mut is_default_line = false;
+        
+        // WITH_CONDITION または DEFAULT_LINE かチェック
+        if i < tokens.len() {
+            if let Token::Symbol(s) = &tokens[i] {
+                if s == "DEFAULT_LINE" {
+                    is_default_line = true;
+                    i += 1;
+                } else if s == "WITH_CONDITION" {
+                    i += 1;
+                } else {
+                    return Err(AjisaiError::from("Invalid inner definition line format"));
+                }
+            }
+        }
+        
+        // トークンを解析
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::Symbol(s) if s == "END_INNER_DEF_LINE" => {
+                    break;
+                },
+                Token::GuardSeparator => {
+                    // ガードセパレータが見つかった場合、それまでが条件部
+                    i += 1;
+                    // 残りが処理部（修飾子を除く）
+                    break;
+                },
+                Token::Modifier(m) => {
+                    // 修飾子の解析
+                    self.parse_modifier(m, &mut repeat_count, &mut delay_ms);
+                    i += 1;
+                },
+                _ => {
+                    if is_default_line || condition_tokens.is_empty() {
+                        // デフォルト行または条件部
+                        if !is_default_line && !tokens[i..].iter().any(|t| matches!(t, Token::GuardSeparator)) {
+                            // ガードセパレータがない場合はデフォルト行として扱う
+                            is_default_line = true;
+                        }
+                        
+                        if is_default_line {
+                            body_tokens.push(tokens[i].clone());
+                        } else {
+                            condition_tokens.push(tokens[i].clone());
+                        }
+                    } else {
+                        body_tokens.push(tokens[i].clone());
+                    }
+                    i += 1;
+                }
+            }
+        }
+        
+        // ガードセパレータ以降の処理部を取得
+        if !is_default_line {
+            while i < tokens.len() {
+                match &tokens[i] {
+                    Token::Symbol(s) if s == "END_INNER_DEF_LINE" => break,
+                    Token::Modifier(m) => {
+                        self.parse_modifier(m, &mut repeat_count, &mut delay_ms);
+                        i += 1;
+                    },
+                    _ => {
+                        body_tokens.push(tokens[i].clone());
+                        i += 1;
+                    }
+                }
+            }
+        }
+        
+        // END_INNER_DEF_LINE をスキップ
+        if i < tokens.len() {
+            i += 1;
+        }
+        
+        let final_condition_tokens = if is_default_line { Vec::new() } else { condition_tokens };
+        
+        Ok((ExecutionLine {
+            condition_tokens: final_condition_tokens,
+            body_tokens,
+            repeat_count,
+            delay_ms,
+        }, i))
+    }
+    
+    fn parse_modifier(&self, modifier: &str, repeat_count: &mut i64, delay_ms: &mut u64) {
+        if modifier.ends_with('x') {
+            if let Ok(count) = modifier[..modifier.len()-1].parse::<i64>() {
+                *repeat_count = count;
+            }
+        } else if modifier.ends_with("ms") {
+            if let Ok(ms) = modifier[..modifier.len()-2].parse::<u64>() {
+                *delay_ms = ms;
+            }
+        } else if modifier.ends_with('s') {
+            if let Ok(s) = modifier[..modifier.len()-1].parse::<u64>() {
+                *delay_ms = s * 1000;
+            }
+        }
     }
 
     // Public methods for lib.rs
