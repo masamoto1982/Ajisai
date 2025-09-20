@@ -26,23 +26,23 @@ extern "C" {
     #[wasm_bindgen(method, js_name = "now")]
     fn now(this: &Performance) -> f64;
     
-    #[wasm_bindgen(js_name = "performance", thread_local_v2)]
-    static PERFORMANCE: Performance;
+    #[wasm_bindgen(js_name = "performance")]
+    static performance: Performance;
 }
 
 // 同期的な遅延のための実装（1秒制限）
-fn wasm_sleep(ms: u64) -> String {
+pub fn wasm_sleep(ms: u64) -> String {
     const MAX_SAFE_DELAY_MS: u64 = 1000; // 1秒まで
     
     if ms > MAX_SAFE_DELAY_MS {
         return format!("[ERROR] Delay {}ms exceeds maximum allowed delay ({}ms). Execution aborted.", ms, MAX_SAFE_DELAY_MS);
     }
     
-    let start = PERFORMANCE.now();
+    let start = performance.now();
     let target = start + ms as f64;
     
     // 1秒以下の短時間ビジーウェイト
-    while PERFORMANCE.now() < target {
+    while performance.now() < target {
         // 空のループで時間を消費
     }
     
