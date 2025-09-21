@@ -81,22 +81,19 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::Symbol(name) if name.to_uppercase() == "DEF" => {
-                    // DEFは特別処理。次にStringトークンが来ることを期待する。
                     if let Some(Token::String(word_name)) = tokens.get(i + 1) {
-                        // ワード名が見つかったので、ワークスペースから定義本体を取得
                         if let Some(body_val) = self.workspace.pop() {
                              if let ValueType::DefinitionBody(body_tokens) = body_val.val_type {
                                 control::op_def_inner(self, &body_tokens, word_name)?;
-                                i += 1; // ワード名の分もインデックスを進める
+                                i += 1; 
                              } else {
-                                self.workspace.push(body_val); // 元に戻す
+                                self.workspace.push(body_val); 
                                 return Err(AjisaiError::from("DEF must be preceded by a definition block :...;"));
                              }
                         } else {
                             return Err(AjisaiError::from("DEF must be preceded by a definition block :...;"));
                         }
                     } else {
-                        // 'name' DEF のような古い（後置記法）形式もサポートする場合
                         if self.workspace.len() >= 2 {
                              self.execute_builtin("DEF")?;
                         } else {
@@ -164,7 +161,7 @@ impl Interpreter {
             }
         }
         
-        lines.iter().position(|line| line.condition_tokens.is_empty()).or(None)
+        Ok(lines.iter().position(|line| line.condition_tokens.is_empty()))
     }
 
     fn evaluate_pattern_condition(&mut self, condition_tokens: &[Token]) -> Result<bool> {
