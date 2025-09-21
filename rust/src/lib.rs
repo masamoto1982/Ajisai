@@ -73,6 +73,9 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn execute(&mut self, code: &str) -> JsValue {
+        // JavaScriptのconsoleにもログを出力
+        web_sys::console::log_1(&format!("Executing code: {:?}", code).into());
+        
         let obj = js_sys::Object::new();
         match self.interpreter.execute(code) {
             Ok(()) => {
@@ -80,20 +83,27 @@ impl AjisaiInterpreter {
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
                 
+                // JavaScriptのconsoleにも出力
+                web_sys::console::log_1(&format!("Execution output: {}", output).into());
+                
                 // デバッグ出力を追加
                 if !output.is_empty() {
                     js_sys::Reflect::set(&obj, &"debugOutput".into(), &"Executed successfully".into()).unwrap();
                 }
             }
             Err(e) => {
+                let error_msg = e.to_string();
+                web_sys::console::log_1(&format!("Execution error: {}", error_msg).into());
+                
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
+                js_sys::Reflect::set(&obj, &"message".into(), &error_msg.into()).unwrap();
                 js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
             }
         }
         obj.into()
     }
 
+    // ... 他のメソッドは同じ
     #[wasm_bindgen]
     pub fn execute_step(&mut self, code: &str) -> JsValue {
         let obj = js_sys::Object::new();
