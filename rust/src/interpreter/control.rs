@@ -3,16 +3,17 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Token, ExecutionLine, ValueType, WordDefinition};
 
-// 古い後置記法 `body 'name' DEF` のためのフォールバック
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 { return Err(AjisaiError::from("DEF requires a definition block and a name")); }
 
     let name_val = interp.workspace.pop().unwrap();
     let body_val = interp.workspace.pop().unwrap();
 
-    let name = if let ValueType::Vector(v, _) = name_val.val_type {
+    let name_str = if let ValueType::Vector(v, _) = name_val.val_type {
         if v.len() == 1 {
-            if let ValueType::String(s) = &v[0].val_type { s } else {
+            if let ValueType::String(s) = &v[0].val_type {
+                s.clone() // 所有権を移すためにクローン
+            } else {
                 return Err(AjisaiError::type_error("string for word name", "other type"));
             }
         } else {
@@ -28,10 +29,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::type_error("definition block for word body", "other type"));
     };
 
-    op_def_inner(interp, &tokens, name)
+    op_def_inner(interp, &tokens, &name_str)
 }
 
-// 新しい `DEF 'name'` 構文と `op_def` から呼び出される共通ロジック
 pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &str) -> Result<()> {
     interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}' with {} tokens in body\n", name, tokens.len()));
     
@@ -48,7 +48,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &st
     Ok(())
 }
 
-fn parse_definition_body(interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
+fn parse_definition_body(_interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut current_pos = 0;
     
