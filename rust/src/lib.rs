@@ -103,7 +103,6 @@ impl AjisaiInterpreter {
         obj.into()
     }
 
-    // ... 他のメソッドは同じ
     #[wasm_bindgen]
     pub fn execute_step(&mut self, code: &str) -> JsValue {
         let obj = js_sys::Object::new();
@@ -368,6 +367,10 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 vec.push(js_value_to_value(js_array.get(i))?);
             }
             ValueType::Vector(vec, bracket_type)
+        },
+        "definition" => {
+            // DefinitionBody タイプを追加
+            ValueType::DefinitionBody(Vec::new()) // 空のトークンベクトルで初期化
         },
         "nil" => ValueType::Nil,
         _ => return Err(format!("Unknown type: {}", type_str)),
