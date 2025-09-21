@@ -118,7 +118,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn is_nested_definition_structure(&self, tokens: &[Token]) -> Result<bool> {
+    fn is_nested_definition_structure(&mut self, tokens: &[Token]) -> Result<bool> {
         // 実際にネストした :...; 構造があるかチェック
         let mut depth = 0;
         let mut found_nested = false;
@@ -208,7 +208,7 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed inner definition block"))
     }
 
-    fn convert_inner_block_to_execution_line(&self, tokens: &[Token]) -> Result<Vec<Token>> {
+    fn convert_inner_block_to_execution_line(&mut self, tokens: &[Token]) -> Result<Vec<Token>> {
         // 内側のブロックをExecutionLine形式に変換
         let mut result = vec![Token::Symbol("INNER_DEF_LINE".to_string())];
         
@@ -440,7 +440,7 @@ impl Interpreter {
             
             if line.delay_ms > 0 && iteration < line.repeat_count - 1 {
                 self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", line.delay_ms));
-                crate::wasm_sleep(delay_ms);
+                crate::wasm_sleep(line.delay_ms);
             }
         }
         
