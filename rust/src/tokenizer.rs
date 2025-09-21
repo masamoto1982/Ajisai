@@ -8,20 +8,20 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 }
 
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
-    println!("[TOKENIZER DEBUG] Input: {:?}", input);
+    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Input: {:?}", input).into());
     
     let mut tokens = Vec::new();
     let lines: Vec<&str> = input.lines().collect();
-    println!("[TOKENIZER DEBUG] Lines: {:?}", lines);
+    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Lines: {:?}", lines).into());
 
     for (line_idx, line) in lines.iter().enumerate() {
         let preprocessed_line = line.split('#').next().unwrap_or("").trim();
-        println!("[TOKENIZER DEBUG] Line {}: {:?} -> {:?}", line_idx, line, preprocessed_line);
+        web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Line {}: {:?} -> {:?}", line_idx, line, preprocessed_line).into());
         
         if preprocessed_line.is_empty() {
             if line_idx < lines.len() - 1 { 
                 tokens.push(Token::LineBreak); 
-                println!("[TOKENIZER DEBUG] Added LineBreak");
+                web_sys::console::log_1(&"[TOKENIZER DEBUG] Added LineBreak".into());
             }
             continue;
         }
@@ -35,47 +35,47 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             let start_pos = i;
             
             if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
-                println!("[TOKENIZER DEBUG] Single char token at {}: {:?}", i, token);
+                web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Single char token at {}: {:?}", i, token).into());
                 tokens.push(token); i += consumed; continue;
             }
             if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
-                println!("[TOKENIZER DEBUG] String token at {}: {:?}", i, token);
+                web_sys::console::log_1(&format!("[TOKENIZER DEBUG] String token at {}: {:?}", i, token).into());
                 tokens.push(token); i += consumed; continue;
             }
             if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
-                println!("[TOKENIZER DEBUG] Modifier token at {}: {:?}", i, token);
+                web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Modifier token at {}: {:?}", i, token).into());
                 tokens.push(token); i += consumed; continue;
             }
             if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
-                println!("[TOKENIZER DEBUG] Number token at {}: {:?}", i, token);
+                web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Number token at {}: {:?}", i, token).into());
                 tokens.push(token); i += consumed; continue;
             }
             if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
-                println!("[TOKENIZER DEBUG] Custom word token at {}: {:?}", i, token);
+                web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Custom word token at {}: {:?}", i, token).into());
                 tokens.push(token); i += consumed; continue;
             }
             if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
-                println!("[TOKENIZER DEBUG] Operator token at {}: {:?}", i, token);
+                web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Operator token at {}: {:?}", i, token).into());
                 tokens.push(token); i += consumed; continue;
             }
             if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
-                println!("[TOKENIZER DEBUG] Builtin token at {}: {:?}", i, token);
+                web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Builtin token at {}: {:?}", i, token).into());
                 tokens.push(token); i += consumed; continue;
             }
             
-            println!("[TOKENIZER DEBUG] Unrecognized character at position {}: '{}'", i, chars[i]);
+            web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Unrecognized character at position {}: '{}'", i, chars[i]).into());
             i += 1;
         }
         
         if line_idx < lines.len() - 1 { 
             tokens.push(Token::LineBreak);
-            println!("[TOKENIZER DEBUG] Added LineBreak at end of line {}", line_idx);
+            web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Added LineBreak at end of line {}", line_idx).into());
         }
     }
     
-    println!("[TOKENIZER DEBUG] Before bracket conversion: {:?}", tokens);
+    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Before bracket conversion: {:?}", tokens).into());
     convert_vector_brackets_by_depth(&mut tokens)?;
-    println!("[TOKENIZER DEBUG] Final tokens: {:?}", tokens);
+    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Final tokens: {:?}", tokens).into());
     
     Ok(tokens)
 }
@@ -92,20 +92,20 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
 }
 
 fn try_parse_modifier(chars: &[char]) -> Option<(Token, usize)> {
-    println!("[TOKENIZER DEBUG] Trying to parse modifier from: {:?}", chars.iter().take(10).collect::<String>());
+    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Trying to parse modifier from: {:?}", chars.iter().take(10).collect::<String>()).into());
     
     let mut i = 0;
     while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
     
     if i > 0 && i < chars.len() {
         let unit: String = chars[i..].iter().take_while(|c| c.is_alphabetic()).collect();
-        println!("[TOKENIZER DEBUG] Found digits: {}, unit: '{}'", i, unit);
+        web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Found digits: {}, unit: '{}'", i, unit).into());
         
         if unit == "x" || unit == "s" || unit == "ms" {
             let end_of_modifier = i + unit.len();
             if end_of_modifier == chars.len() || !chars[end_of_modifier].is_alphanumeric() {
                 let modifier_str: String = chars[..end_of_modifier].iter().collect();
-                println!("[TOKENIZER DEBUG] Successfully parsed modifier: '{}'", modifier_str);
+                web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Successfully parsed modifier: '{}'", modifier_str).into());
                 return Some((Token::Modifier(modifier_str), end_of_modifier));
             }
         }
