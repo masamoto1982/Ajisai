@@ -44,6 +44,12 @@ impl Interpreter {
             .map(|(name, _)| name.clone())
             .collect();
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
+        
+        self.output_buffer.push_str(&format!("[DEBUG] Total tokens parsed: {}\n", tokens.len()));
+        for (i, token) in tokens.iter().enumerate() {
+            self.output_buffer.push_str(&format!("[DEBUG] Token {}: {:?}\n", i, token));
+        }
+        
         self.execute_tokens(&tokens)
     }
 
@@ -51,12 +57,17 @@ impl Interpreter {
         let mut i = 0;
         while i < tokens.len() {
             let token = &tokens[i];
+            self.output_buffer.push_str(&format!("[DEBUG] Processing token {}: {:?}\n", i, token));
+            
             match token {
                 Token::Number(s) => {
                     let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
                     self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
                 },
-                Token::String(s) => self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)}),
+                Token::String(s) => {
+                    self.output_buffer.push_str(&format!("[DEBUG] Pushing string to workspace: {}\n", s));
+                    self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
+                },
                 Token::Boolean(b) => self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
                 Token::Nil => self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)}),
                 Token::VectorStart(bt) => {
@@ -65,10 +76,12 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::DefBlockStart => {
+                    self.output_buffer.push_str(&format!("[DEBUG] Found DefBlockStart at position {}\n", i));
                     // ネストした定義ブロック構造の検出
                     if self.is_nested_definition_structure(&tokens[i..])? {
                         self.output_buffer.push_str("[DEBUG] Detected nested definition structure\n");
                         let (nested_def, consumed) = self.parse_nested_definition(&tokens[i..])?;
+                        self.output_buffer.push_str(&format!("[DEBUG] Pushing DefinitionBody to workspace with {} tokens\n", nested_def.len()));
                         self.workspace.push(Value { val_type: ValueType::DefinitionBody(nested_def) });
                         i += consumed - 1;
                     } else {
@@ -110,7 +123,20 @@ impl Interpreter {
                         i = modifier_start - 1;
                     }
                 }
-                Token::Symbol(name) => self.execute_word(name)?,
+                Token::Symbol(name) => {
+                    self.output_buffer.push_str(&format!("[DEBUG] Executing symbol: {}\n", name));
+                    if name == "DEF" {
+                        self.output_buffer.push_str(&format!("[DEBUG] DEF called with workspace size: {}\n", self.workspace.len()));
+                        for (idx, item) in self.workspace.iter().enumerate() {
+                            self.output_buffer.push_str(&format!("[DEBUG] Workspace[{}]: {}\n", idx, item));
+                        }
+                    }
+                    self.execute_word(name)?;
+                },
+                Token::LineBreak => {
+                    self.output_buffer.push_str("[DEBUG] Skipping line break\n");
+                    // Line breaks are ignored in continuous execution
+                },
                 _ => {} 
             }
             i += 1;
@@ -123,17 +149,23 @@ impl Interpreter {
         let mut depth = 0;
         let mut found_nested = false;
         
-        for token in tokens {
+        self.output_buffer.push_str(&format!("[DEBUG] Checking for nested structure in {} tokens\n", tokens.len()));
+        
+        for (idx, token) in tokens.iter().enumerate() {
+            self.output_buffer.push_str(&format!("[DEBUG] Nested check token {}: {:?}, depth={}\n", idx, token, depth));
             match token {
                 Token::DefBlockStart => {
                     depth += 1;
+                    self.output_buffer.push_str(&format!("[DEBUG] DefBlockStart found, depth now: {}\n", depth));
                     if depth > 1 {
                         // 2階層目以上の定義ブロックが見つかった
                         found_nested = true;
+                        self.output_buffer.push_str("[DEBUG] Nested structure detected!\n");
                     }
                 },
                 Token::DefBlockEnd => {
                     depth -= 1;
+                    self.output_buffer.push_str(&format!("[DEBUG] DefBlockEnd found, depth now: {}\n", depth));
                     if depth == 0 {
                         // 外側のブロック終了
                         break;
