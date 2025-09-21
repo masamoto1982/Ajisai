@@ -76,25 +76,36 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::DefBlockStart => {
-                    // DefBlockStartを見つけたら、対応するDefBlockEndまでを一つのDefinitionBodyとしてワークスペースに積む
-                    self.output_buffer.push_str(&format!("[DEBUG] Found DefBlockStart at position {}\n", i));
                     let (body_tokens, consumed) = self.collect_def_block(tokens, i)?;
-                    self.output_buffer.push_str(&format!("[DEBUG] Collected definition body with {} tokens.\n", body_tokens.len()));
                     self.workspace.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
                     i += consumed - 1;
-                }
-                Token::Symbol(name) => {
-                    self.output_buffer.push_str(&format!("[DEBUG] Executing symbol: {}\n", name));
-                    if name == "DEF" {
-                        self.output_buffer.push_str(&format!("[DEBUG] DEF called with workspace size: {}\n", self.workspace.len()));
-                        for (idx, item) in self.workspace.iter().enumerate() {
-                            self.output_buffer.push_str(&format!("[DEBUG] Workspace[{}]: {}\n", idx, item));
+                },
+                Token::Symbol(name) if name.to_uppercase() == "DEF" => {
+                    // DEFは特別処理。次にStringトークンが来ることを期待する。
+                    if let Some(Token::String(word_name)) = tokens.get(i + 1) {
+                        // ワード名が見つかったので、ワークスペースから定義本体を取得
+                        if let Some(body_val) = self.workspace.pop() {
+                             if let ValueType::DefinitionBody(body_tokens) = body_val.val_type {
+                                control::op_def_inner(self, &body_tokens, word_name)?;
+                                i += 1; // ワード名の分もインデックスを進める
+                             } else {
+                                self.workspace.push(body_val); // 元に戻す
+                                return Err(AjisaiError::from("DEF must be preceded by a definition block :...;"));
+                             }
+                        } else {
+                            return Err(AjisaiError::from("DEF must be preceded by a definition block :...;"));
+                        }
+                    } else {
+                        // 'name' DEF のような古い（後置記法）形式もサポートする場合
+                        if self.workspace.len() >= 2 {
+                             self.execute_builtin("DEF")?;
+                        } else {
+                             return Err(AjisaiError::from("DEF must be followed by a quoted name like 'WORD'"));
                         }
                     }
-                    self.execute_word(name)?;
                 },
-                Token::LineBreak => {
-                    self.output_buffer.push_str("[DEBUG] Skipping line break\n");
+                Token::Symbol(name) => {
+                    self.execute_word(name)?;
                 },
                 _ => {} 
             }
@@ -112,7 +123,6 @@ impl Interpreter {
                 Token::DefBlockEnd => {
                     depth -= 1;
                     if depth == 0 {
-                        // 開始の':'と終了の';'を含まない、中身のトークンだけを返す
                         return Ok((tokens[start + 1..i].to_vec(), i - start + 1));
                     }
                 },
@@ -132,16 +142,12 @@ impl Interpreter {
         }
 
         self.output_buffer.push_str(&format!("[DEBUG] Executing custom word: {}\n", name));
-        self.output_buffer.push_str(&format!("[DEBUG] Word has {} lines\n", def.lines.len()));
-
-        // 条件にマッチする行を選択
         let selected_line_index = self.select_matching_line(&def.lines)?;
         
         if let Some(line_index) = selected_line_index {
             self.output_buffer.push_str(&format!("[DEBUG] Selected line {} for execution\n", line_index + 1));
             self.execute_selected_line(&def.lines[line_index])?;
         } else {
-            // このエラーは `control.rs` の定義時チェックで防がれるはず
             return Err(AjisaiError::from("No matching condition found and no default line available"));
         }
 
@@ -149,7 +155,6 @@ impl Interpreter {
     }
 
     fn select_matching_line(&mut self, lines: &[ExecutionLine]) -> Result<Option<usize>> {
-        // 条件を持つ行を上から順に評価
         for (index, line) in lines.iter().enumerate() {
             if !line.condition_tokens.is_empty() {
                 if self.evaluate_pattern_condition(&line.condition_tokens)? {
@@ -159,19 +164,10 @@ impl Interpreter {
             }
         }
         
-        // 条件にマッチするものがなかった場合、最初のデフォルト行を探す
-        for (index, line) in lines.iter().enumerate() {
-            if line.condition_tokens.is_empty() {
-                self.output_buffer.push_str(&format!("[DEBUG] Using default line at index {}\n", index));
-                return Ok(Some(index));
-            }
-        }
-        
-        Ok(None)
+        lines.iter().position(|line| line.condition_tokens.is_empty()).or(None)
     }
 
     fn evaluate_pattern_condition(&mut self, condition_tokens: &[Token]) -> Result<bool> {
-        // スタックを消費せずに条件を評価するためのクローンを作成
         let mut temp_interp = Interpreter {
             workspace: self.workspace.clone(),
             dictionary: self.dictionary.clone(),
@@ -179,14 +175,11 @@ impl Interpreter {
             execution_state: None,
         };
         
-        // 条件トークンを実行して、結果を評価
         temp_interp.execute_tokens(condition_tokens)?;
 
-        // 結果がtrue（またはtruthyな値）であるかを確認
         if let Some(result_val) = temp_interp.workspace.pop() {
             Ok(is_truthy(&result_val))
         } else {
-            // 条件実行後にスタックが空の場合はfalseとみなす
             Ok(false)
         }
     }
@@ -195,15 +188,11 @@ impl Interpreter {
         self.output_buffer.push_str(&format!("[DEBUG] Executing line with {} repeats, {}ms delay\n", line.repeat_count, line.delay_ms));
         
         for iteration in 0..line.repeat_count {
-            self.output_buffer.push_str(&format!("[DEBUG] Iteration {}/{}\n", iteration + 1, line.repeat_count));
-            
-            // 処理部を実行
-            self.execute_tokens(&line.body_tokens)?;
-            
-            if line.delay_ms > 0 && iteration < line.repeat_count - 1 {
+            if iteration > 0 && line.delay_ms > 0 {
                 self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", line.delay_ms));
                 crate::wasm_sleep(line.delay_ms);
             }
+            self.execute_tokens(&line.body_tokens)?;
         }
         
         Ok(())
@@ -211,35 +200,21 @@ impl Interpreter {
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name.to_uppercase().as_str() {
-            "GET" => vector_ops::op_get(self),
-            "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self),
-            "REMOVE" => vector_ops::op_remove(self),
-            "LENGTH" => vector_ops::op_length(self),
-            "TAKE" => vector_ops::op_take(self),
-            "DROP" => vector_ops::op_drop_vector(self),
-            "SPLIT" => vector_ops::op_split(self),
-            "DUP" => vector_ops::op_dup_workspace(self),
-            "SWAP" => vector_ops::op_swap_workspace(self),
-            "ROT" => vector_ops::op_rot_workspace(self),
-            "CONCAT" => vector_ops::op_concat(self),
+            "GET" => vector_ops::op_get(self), "INSERT" => vector_ops::op_insert(self),
+            "REPLACE" => vector_ops::op_replace(self), "REMOVE" => vector_ops::op_remove(self),
+            "LENGTH" => vector_ops::op_length(self), "TAKE" => vector_ops::op_take(self),
+            "DROP" => vector_ops::op_drop_vector(self), "SPLIT" => vector_ops::op_split(self),
+            "DUP" => vector_ops::op_dup_workspace(self), "SWAP" => vector_ops::op_swap_workspace(self),
+            "ROT" => vector_ops::op_rot_workspace(self), "CONCAT" => vector_ops::op_concat(self),
             "REVERSE" => vector_ops::op_reverse(self),
-            "+" => arithmetic::op_add(self),
-            "-" => arithmetic::op_sub(self),
-            "*" => arithmetic::op_mul(self),
-            "/" => arithmetic::op_div(self),
-            "=" => arithmetic::op_eq(self),
-            "<" => arithmetic::op_lt(self),
-            "<=" => arithmetic::op_le(self),
-            ">" => arithmetic::op_gt(self),
-            ">=" => arithmetic::op_ge(self),
-            "AND" => arithmetic::op_and(self),
-            "OR" => arithmetic::op_or(self),
-            "NOT" => arithmetic::op_not(self),
-            "PRINT" => io::op_print(self),
-            "DEF" => control::op_def(self),
-            "DEL" => control::op_del(self),
-            "RESET" => self.execute_reset(),
+            "+" => arithmetic::op_add(self), "-" => arithmetic::op_sub(self),
+            "*" => arithmetic::op_mul(self), "/" => arithmetic::op_div(self),
+            "=" => arithmetic::op_eq(self), "<" => arithmetic::op_lt(self),
+            "<=" => arithmetic::op_le(self), ">" => arithmetic::op_gt(self),
+            ">=" => arithmetic::op_ge(self), "AND" => arithmetic::op_and(self),
+            "OR" => arithmetic::op_or(self), "NOT" => arithmetic::op_not(self),
+            "PRINT" => io::op_print(self), "DEF" => control::op_def(self),
+            "DEL" => control::op_del(self), "RESET" => self.execute_reset(),
             "GOTO" => flow_control::op_goto(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
@@ -260,26 +235,13 @@ impl Interpreter {
                 },
                 Token::VectorEnd(_) => {
                     depth -= 1;
-                    if depth == 0 { 
-                        return Ok((values, i - start + 1)); 
-                    }
+                    if depth == 0 { return Ok((values, i - start + 1)); }
                 },
-                Token::Number(s) => {
-                    let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
-                    values.push(Value { val_type: ValueType::Number(frac) });
-                },
-                Token::String(s) => {
-                    values.push(Value { val_type: ValueType::String(s.clone()) });
-                },
-                Token::Boolean(b) => {
-                    values.push(Value { val_type: ValueType::Boolean(*b) });
-                },
-                Token::Nil => {
-                    values.push(Value { val_type: ValueType::Nil });
-                },
-                Token::Symbol(name) => {
-                    values.push(Value { val_type: ValueType::Symbol(name.clone()) });
-                },
+                Token::Number(s) => values.push(Value { val_type: ValueType::Number(Fraction::from_str(s).map_err(AjisaiError::from)?) }),
+                Token::String(s) => values.push(Value { val_type: ValueType::String(s.clone()) }),
+                Token::Boolean(b) => values.push(Value { val_type: ValueType::Boolean(*b) }),
+                Token::Nil => values.push(Value { val_type: ValueType::Nil }),
+                Token::Symbol(name) => values.push(Value { val_type: ValueType::Symbol(name.clone()) }),
                 _ => {}
             }
             i += 1;
@@ -287,7 +249,6 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
-    // Public methods for lib.rs
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
     pub fn get_workspace(&self) -> &Workspace { &self.workspace }
     pub fn set_workspace(&mut self, workspace: Workspace) { self.workspace = workspace; }
@@ -297,29 +258,21 @@ impl Interpreter {
             .map(|(name, def)| (name.clone(), def.description.clone()))
             .collect()
     }
-    pub fn get_word_definition(&self, _name: &str) -> Option<String> {
-        None
-    }
-    pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> {
-        Ok(())
-    }
+    pub fn get_word_definition(&self, _name: &str) -> Option<String> { None }
+    pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> { Ok(()) }
     pub fn execute_reset(&mut self) -> Result<()> {
-        self.workspace.clear();
-        self.dictionary.clear();
-        self.output_buffer.clear();
-        self.execution_state = None;
+        self.workspace.clear(); self.dictionary.clear();
+        self.output_buffer.clear(); self.execution_state = None;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
 }
 
 fn is_truthy(value: &Value) -> bool {
-    // ワークスペース上の値は常に [ val ] の形式の単一要素ベクトルなので、その中身を評価する
     if let ValueType::Vector(v, _) = &value.val_type {
         if v.len() == 1 {
             return match &v[0].val_type {
-                ValueType::Boolean(b) => *b,
-                ValueType::Nil => false,
+                ValueType::Boolean(b) => *b, ValueType::Nil => false,
                 ValueType::Number(n) => !n.numerator.is_zero(),
                 ValueType::String(s) => !s.is_empty(),
                 ValueType::Vector(inner_v, _) => !inner_v.is_empty(),
@@ -327,6 +280,5 @@ fn is_truthy(value: &Value) -> bool {
             }
         }
     }
-    // 単一要素ベクトルでない場合はfalseとみなす
     false
 }
