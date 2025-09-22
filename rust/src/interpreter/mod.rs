@@ -15,6 +15,7 @@ use num_traits::Zero;
 pub struct Interpreter {
     pub(crate) workspace: Workspace,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
+    pub(crate) dependents: HashMap<String, HashSet<String>>, // キーのワードに依存しているワードのセット
     pub(crate) output_buffer: String,
     pub(crate) execution_state: Option<WordExecutionState>,
 }
@@ -31,6 +32,7 @@ impl Interpreter {
         let mut interpreter = Interpreter {
             workspace: Vec::new(),
             dictionary: HashMap::new(),
+            dependents: HashMap::new(),
             output_buffer: String::new(),
             execution_state: None,
         };
@@ -179,6 +181,7 @@ impl Interpreter {
         let mut temp_interp = Interpreter {
             workspace: vec![value_to_test.clone()],
             dictionary: self.dictionary.clone(),
+            dependents: HashMap::new(), // 評価用なので空で良い
             output_buffer: String::new(),
             execution_state: None,
         };
@@ -269,8 +272,11 @@ impl Interpreter {
     pub fn get_word_definition(&self, _name: &str) -> Option<String> { None }
     pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> { Ok(()) }
     pub fn execute_reset(&mut self) -> Result<()> {
-        self.workspace.clear(); self.dictionary.clear();
-        self.output_buffer.clear(); self.execution_state = None;
+        self.workspace.clear(); 
+        self.dictionary.clear();
+        self.dependents.clear();
+        self.output_buffer.clear(); 
+        self.execution_state = None;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
