@@ -2,10 +2,17 @@
 
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
-use crate::types::{Value, ValueType, Fraction, BracketType, Token};
 use crate::interpreter::Interpreter;
+use crate::types::{Value, ValueType, Fraction, BracketType, Token};
 use num_bigint::BigInt;
 use std::str::FromStr;
+
+// --- Module Declarations ---
+// These lines tell the compiler to include the other files.
+mod types;
+mod tokenizer;
+mod interpreter;
+mod builtins;
 
 #[wasm_bindgen]
 extern "C" {
@@ -21,10 +28,12 @@ extern "C" {
     #[wasm_bindgen(method, js_name = "now")]
     fn now(this: &Performance) -> f64;
     
+    // Correctly declare `performance` as a thread-local static variable
     #[wasm_bindgen(js_name = "performance", thread_local)]
     static performance: Performance;
 }
 
+// Corrected `wasm_sleep` function using the thread-local `performance` API
 pub fn wasm_sleep(ms: u64) -> String {
     const MAX_SAFE_DELAY_MS: u64 = 1000;
     
@@ -32,10 +41,11 @@ pub fn wasm_sleep(ms: u64) -> String {
         return format!("[ERROR] Delay {}ms exceeds maximum allowed delay ({}ms). Execution aborted.", ms, MAX_SAFE_DELAY_MS);
     }
     
-    let start = performance.now();
+    // Access the thread-local `performance` object using `.with()`
+    let start = performance.with(|p| p.now());
     let target = start + ms as f64;
     
-    while performance.now() < target {
+    while performance.with(|p| p.now()) < target {
         // Busy wait
     }
     
@@ -101,7 +111,7 @@ impl AjisaiInterpreter {
                 .map(|(name, _)| name.clone())
                 .collect();
                 
-            match crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
+            match tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
                 Ok(tokens) => { self.step_tokens = tokens; }
                 Err(e) => {
                     self.step_mode = false;
@@ -157,7 +167,7 @@ impl AjisaiInterpreter {
             .map(|(name, _)| name.clone())
             .collect();
             
-        match crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
+        match tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
             Ok(tokens) => {
                 self.step_tokens = tokens;
                 format!("Step mode initialized. {} tokens to execute.", self.step_tokens.len())
@@ -261,7 +271,7 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_builtin_words_info(&self) -> JsValue {
-        to_value(&crate::builtins::get_builtin_definitions()).unwrap_or(JsValue::NULL)
+        to_value(&builtins::get_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
     
     #[wasm_bindgen]
@@ -284,16 +294,16 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
+    pub fn restore_word(&mut self, name: String, definition: String, _description: Option<String>) -> Result<(), String> {
         let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
             .collect();
             
-        let tokens = crate::tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
+        let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
             .map_err(|e| format!("Failed to tokenize word definition: {}", e))?;
             
-        control::op_def_inner(&mut self.interpreter, &tokens, &name)
+        interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name)
              .map_err(|e| format!("Failed to restore word: {}", e))
     }
 }
