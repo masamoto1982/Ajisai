@@ -1,6 +1,6 @@
 // rust/src/builtins.rs
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use crate::types::WordDefinition;
 
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
@@ -9,6 +9,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
             lines: vec![],
             is_builtin: true,
             description: Some(description.to_string()),
+            dependencies: HashSet::new(), // Added missing field
         });
     }
 }
