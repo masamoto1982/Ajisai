@@ -1,5 +1,6 @@
 // rust/src/types.rs
 
+use std::collections::HashSet;
 use std::fmt;
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive, Signed};
@@ -73,6 +74,7 @@ pub struct WordDefinition {
     pub lines: Vec<ExecutionLine>,
     pub is_builtin: bool,
     pub description: Option<String>,
+    pub dependencies: HashSet<String>, // このワードが依存している他のワード
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -97,7 +99,6 @@ impl Fraction {
     pub fn from_str(s: &str) -> std::result::Result<Self, String> {
         if s.is_empty() { return Err("Empty string".to_string()); }
 
-        // 科学的記数法の処理
     if let Some(e_pos) = s.find(|c| c == 'e' || c == 'E') {
         let mantissa_str = &s[..e_pos];
         let exponent_str = &s[e_pos+1..];
