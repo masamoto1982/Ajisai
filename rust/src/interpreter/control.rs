@@ -1,7 +1,8 @@
 // rust/src/interpreter/control.rs
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Token, ExecutionLine, ValueType, WordDefinition};
+use crate::types::{Token, ExecutionLine, Value, ValueType, WordDefinition};
+use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.workspace.len() < 2 { return Err(AjisaiError::from("DEF requires a definition block and a name")); }
@@ -12,7 +13,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let name_str = if let ValueType::Vector(v, _) = name_val.val_type {
         if v.len() == 1 {
             if let ValueType::String(s) = &v[0].val_type {
-                s.clone() // 所有権を移すためにクローン
+                s.clone()
             } else {
                 return Err(AjisaiError::type_error("string for word name", "other type"));
             }
@@ -33,20 +34,58 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &str) -> Result<()> {
-    interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}' with {} tokens in body\n", name, tokens.len()));
-    
+    let upper_name = name.to_uppercase();
+    interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}'\n", upper_name));
+
+    // もしこのワードが他のワードから使われていたら、再定義をブロック
+    if let Some(dependents) = interp.dependents.get(&upper_name) {
+        if !dependents.is_empty() {
+            let dep_list: Vec<String> = dependents.iter().cloned().collect();
+            return Err(AjisaiError::ProtectedWord { name: upper_name, dependents: dep_list });
+        }
+    }
+
+    // 以前の定義があれば、古い依存関係を削除
+    if let Some(old_def) = interp.dictionary.get(&upper_name) {
+        for dep_name in &old_def.dependencies {
+            if let Some(dependents) = interp.dependents.get_mut(dep_name) {
+                dependents.remove(&upper_name);
+            }
+        }
+    }
+
     let lines = parse_definition_body(interp, tokens)?;
-    interp.output_buffer.push_str(&format!("[DEBUG] Parsed {} execution lines for word '{}'\n", lines.len(), name));
-        
-    interp.dictionary.insert(name.to_uppercase(), WordDefinition {
+    
+    // 新しい依存関係を計算
+    let mut new_dependencies = HashSet::new();
+    for line in &lines {
+        for token in line.condition_tokens.iter().chain(line.body_tokens.iter()) {
+            if let Token::Symbol(s) = token {
+                let upper_s = s.to_uppercase();
+                if interp.dictionary.contains_key(&upper_s) && !interp.dictionary.get(&upper_s).unwrap().is_builtin {
+                    new_dependencies.insert(upper_s);
+                }
+            }
+        }
+    }
+    
+    // 新しい依存関係を登録
+    for dep_name in &new_dependencies {
+        interp.dependents.entry(dep_name.clone()).or_default().insert(upper_name.clone());
+    }
+    
+    let new_def = WordDefinition {
         lines,
         is_builtin: false,
         description: None,
-    });
+        dependencies: new_dependencies,
+    };
     
+    interp.dictionary.insert(upper_name.clone(), new_def);
     interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
     Ok(())
 }
+
 
 fn parse_definition_body(_interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
@@ -119,7 +158,25 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::type_error("vector", "other type"));
     };
 
-    if interp.dictionary.remove(&name.to_uppercase()).is_some() {
+    let upper_name = name.to_uppercase();
+
+    // このワードに依存している他のワードがないかチェック
+    if let Some(dependents) = interp.dependents.get(&upper_name) {
+        if !dependents.is_empty() {
+            let dep_list: Vec<String> = dependents.iter().cloned().collect();
+            return Err(AjisaiError::ProtectedWord { name: upper_name, dependents: dep_list });
+        }
+    }
+
+    // 辞書からワードを削除
+    if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
+        // このワードが依存していた他のワードの依存リストから、このワードを削除
+        for dep_name in &removed_def.dependencies {
+            if let Some(dependents) = interp.dependents.get_mut(dep_name) {
+                dependents.remove(&upper_name);
+            }
+        }
+        interp.dependents.remove(&upper_name); // 自分自身の依存元マップもクリア
         interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
     }
     Ok(())
