@@ -133,13 +133,22 @@ impl Interpreter {
     fn execute_word(&mut self, name: &str) -> Result<()> {
         let def = self.dictionary.get(&name.to_uppercase()).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
-
+    
         if def.is_builtin {
             return self.execute_builtin(name);
         }
-
+    
         self.output_buffer.push_str(&format!("[DEBUG] Executing custom word: {}\n", name));
-        let selected_line_index = self.select_matching_line(&def.lines)?;
+    
+        let is_conditional = def.lines.iter().any(|line| !line.condition_tokens.is_empty());
+    
+        let selected_line_index = if is_conditional {
+            let value_to_test = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+            self.output_buffer.push_str(&format!("[DEBUG] Popped value for condition test: {}\n", value_to_test));
+            self.select_matching_line_conditional(&def.lines, &value_to_test)?
+        } else {
+            self.select_matching_line_default(&def.lines)?
+        };
         
         if let Some(line_index) = selected_line_index {
             self.output_buffer.push_str(&format!("[DEBUG] Selected line {} for execution\n", line_index + 1));
@@ -147,26 +156,28 @@ impl Interpreter {
         } else {
             return Err(AjisaiError::from("No matching condition found and no default line available"));
         }
-
+    
         Ok(())
     }
 
-    fn select_matching_line(&mut self, lines: &[ExecutionLine]) -> Result<Option<usize>> {
+    fn select_matching_line_conditional(&mut self, lines: &[ExecutionLine], value_to_test: &Value) -> Result<Option<usize>> {
         for (index, line) in lines.iter().enumerate() {
             if !line.condition_tokens.is_empty() {
-                if self.evaluate_pattern_condition(&line.condition_tokens)? {
-                    self.output_buffer.push_str(&format!("[DEBUG] Condition matched for line {}\n", index + 1));
+                if self.evaluate_pattern_condition(&line.condition_tokens, value_to_test)? {
                     return Ok(Some(index));
                 }
             }
         }
-        
         Ok(lines.iter().position(|line| line.condition_tokens.is_empty()))
     }
+    
+    fn select_matching_line_default(&self, lines: &[ExecutionLine]) -> Result<Option<usize>> {
+        Ok(lines.iter().position(|_| true))
+    }
 
-    fn evaluate_pattern_condition(&mut self, condition_tokens: &[Token]) -> Result<bool> {
+    fn evaluate_pattern_condition(&mut self, condition_tokens: &[Token], value_to_test: &Value) -> Result<bool> {
         let mut temp_interp = Interpreter {
-            workspace: self.workspace.clone(),
+            workspace: vec![value_to_test.clone()],
             dictionary: self.dictionary.clone(),
             output_buffer: String::new(),
             execution_state: None,
