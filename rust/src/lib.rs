@@ -7,11 +7,6 @@ use crate::interpreter::Interpreter;
 use num_bigint::BigInt;
 use std::str::FromStr;
 
-mod types;
-mod tokenizer;
-mod interpreter;
-mod builtins;
-
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -26,13 +21,12 @@ extern "C" {
     #[wasm_bindgen(method, js_name = "now")]
     fn now(this: &Performance) -> f64;
     
-    #[wasm_bindgen(js_name = "performance")]
+    #[wasm_bindgen(js_name = "performance", thread_local)]
     static performance: Performance;
 }
 
-// 同期的な遅延のための実装（1秒制限）
 pub fn wasm_sleep(ms: u64) -> String {
-    const MAX_SAFE_DELAY_MS: u64 = 1000; // 1秒まで
+    const MAX_SAFE_DELAY_MS: u64 = 1000;
     
     if ms > MAX_SAFE_DELAY_MS {
         return format!("[ERROR] Delay {}ms exceeds maximum allowed delay ({}ms). Execution aborted.", ms, MAX_SAFE_DELAY_MS);
@@ -41,9 +35,8 @@ pub fn wasm_sleep(ms: u64) -> String {
     let start = performance.now();
     let target = start + ms as f64;
     
-    // 1秒以下の短時間ビジーウェイト
     while performance.now() < target {
-        // 空のループで時間を消費
+        // Busy wait
     }
     
     format!("[DEBUG] Actually waited {}ms", ms)
@@ -73,7 +66,6 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn execute(&mut self, code: &str) -> JsValue {
-        // JavaScriptのconsoleにもログを出力
         web_sys::console::log_1(&format!("Executing code: {:?}", code).into());
         
         let obj = js_sys::Object::new();
@@ -82,19 +74,11 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
-                
-                // JavaScriptのconsoleにも出力
                 web_sys::console::log_1(&format!("Execution output: {}", output).into());
-                
-                // デバッグ出力を追加
-                if !output.is_empty() {
-                    js_sys::Reflect::set(&obj, &"debugOutput".into(), &"Executed successfully".into()).unwrap();
-                }
             }
             Err(e) => {
                 let error_msg = e.to_string();
                 web_sys::console::log_1(&format!("Execution error: {}", error_msg).into());
-                
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"message".into(), &error_msg.into()).unwrap();
                 js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
@@ -107,7 +91,6 @@ impl AjisaiInterpreter {
     pub fn execute_step(&mut self, code: &str) -> JsValue {
         let obj = js_sys::Object::new();
         
-        // 新しいコードが来た場合または初回実行の場合は初期化
         if !self.step_mode || code != self.current_step_code {
             self.step_mode = true;
             self.step_position = 0;
@@ -119,9 +102,7 @@ impl AjisaiInterpreter {
                 .collect();
                 
             match crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
-                Ok(tokens) => {
-                    self.step_tokens = tokens;
-                }
+                Ok(tokens) => { self.step_tokens = tokens; }
                 Err(e) => {
                     self.step_mode = false;
                     js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -132,17 +113,14 @@ impl AjisaiInterpreter {
             }
         }
 
-        // ステップ実行完了チェック
         if self.step_position >= self.step_tokens.len() {
             self.step_mode = false;
             js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
             js_sys::Reflect::set(&obj, &"output".into(), &"Step execution completed".into()).unwrap();
             js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
-            js_sys::Reflect::set(&obj, &"debugOutput".into(), &"All steps completed".into()).unwrap();
             return obj.into();
         }
 
-        // 1ステップ実行
         let token = self.step_tokens[self.step_position].clone();
         let result = self.interpreter.execute_tokens(&[token]);
         
@@ -150,16 +128,11 @@ impl AjisaiInterpreter {
             Ok(()) => {
                 let output = self.interpreter.get_output();
                 self.step_position += 1;
-                
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.step_position < self.step_tokens.len()).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"position".into(), &(self.step_position as u32).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"total".into(), &(self.step_tokens.len() as u32).into()).unwrap();
-                
-                // 進捗メッセージ
-                let progress_msg = format!("Step {}/{} completed", self.step_position, self.step_tokens.len());
-                js_sys::Reflect::set(&obj, &"debugOutput".into(), &progress_msg.into()).unwrap();
             }
             Err(e) => {
                 self.step_mode = false;
@@ -179,7 +152,6 @@ impl AjisaiInterpreter {
         self.step_position = 0;
         self.current_step_code = code.to_string();
         
-        // トークン化
         let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
@@ -215,7 +187,6 @@ impl AjisaiInterpreter {
             return obj.into();
         }
 
-        // 1つのトークンを実行
         let token = self.step_tokens[self.step_position].clone();
         let result = self.interpreter.execute_tokens(&[token]);
         
@@ -223,7 +194,6 @@ impl AjisaiInterpreter {
             Ok(()) => {
                 let output = self.interpreter.get_output();
                 self.step_position += 1;
-                
                 js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.step_position < self.step_tokens.len()).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
                 js_sys::Reflect::set(&obj, &"position".into(), &(self.step_position as u32).into()).unwrap();
@@ -244,7 +214,6 @@ impl AjisaiInterpreter {
     pub fn reset(&mut self) -> JsValue {
         let obj = js_sys::Object::new();
         
-        // ステップモードをリセット
         self.step_mode = false;
         self.step_tokens.clear();
         self.step_position = 0;
@@ -255,7 +224,6 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into()).unwrap();
                 
-                // RESETイベントを発火してデータベースクリア
                 let window = web_sys::window().unwrap();
                 let event = web_sys::CustomEvent::new("ajisai-reset").unwrap();
                 let _ = window.dispatch_event(&event);
@@ -280,9 +248,13 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
-        let words_info: Vec<(String, Option<String>, bool)> = self.interpreter.get_custom_words_info()
-            .into_iter()
-            .map(|(name, description)| (name, description, false)) // protectedフラグを追加
+        let words_info: Vec<(String, Option<String>, bool)> = self.interpreter.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| {
+                let is_protected = self.interpreter.dependents.get(name)
+                                      .map_or(false, |deps| !deps.is_empty());
+                (name.clone(), def.description.clone(), is_protected)
+            })
             .collect();
         to_value(&words_info).unwrap_or(JsValue::NULL)
     }
@@ -294,8 +266,8 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
-        match self.interpreter.get_word_definition(name) {
-            Some(def) => JsValue::from_str(&def),
+        match self.interpreter.dictionary.get(&name.to_uppercase()) {
+            Some(_) => JsValue::from_str(": ... ;"),
             None => JsValue::NULL,
         }
     }
@@ -313,7 +285,6 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
-        // カスタムワードの復元（簡易実装）
         let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
@@ -322,40 +293,34 @@ impl AjisaiInterpreter {
         let tokens = crate::tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
             .map_err(|e| format!("Failed to tokenize word definition: {}", e))?;
             
-        self.interpreter.restore_custom_word(name, tokens, description)
-            .map_err(|e| format!("Failed to restore word: {}", e))
+        control::op_def_inner(&mut self.interpreter, &tokens, &name)
+             .map_err(|e| format!("Failed to restore word: {}", e))
     }
 }
 
 fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
     let type_str = js_sys::Reflect::get(&obj, &"type".into())
-        .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?
+        .map_err(|_| "Failed to get 'type' property".to_string())?
         .as_string().ok_or("Type not string")?;
     let value_js = js_sys::Reflect::get(&obj, &"value".into())
-        .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?;
+        .map_err(|_| "Failed to get 'value' property".to_string())?;
 
     let val_type = match type_str.as_str() {
         "number" => {
             let num_obj = js_sys::Object::from(value_js);
-            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into())
-                .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?
-                .as_string().ok_or("Numerator not string")?;
-            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into())
-                .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?
-                .as_string().ok_or("Denominator not string")?;
+            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|_| "No numerator".to_string())?.as_string().ok_or("Numerator not string")?;
+            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|_| "No denominator".to_string())?.as_string().ok_or("Denominator not string")?;
             ValueType::Number(Fraction::new(
-                BigInt::from_str(&num_str).unwrap(), 
-                BigInt::from_str(&den_str).unwrap()
+                BigInt::from_str(&num_str).map_err(|e| e.to_string())?, 
+                BigInt::from_str(&den_str).map_err(|e| e.to_string())?
             ))
         },
         "string" => ValueType::String(value_js.as_string().ok_or("Value not string")?),
         "boolean" => ValueType::Boolean(value_js.as_bool().ok_or("Value not boolean")?),
         "symbol" => ValueType::Symbol(value_js.as_string().ok_or("Value not string")?),
         "vector" => {
-            let bracket_type_str = js_sys::Reflect::get(&obj, &"bracketType".into())
-                .map_err(|e| e.as_string().unwrap_or("Unknown error".to_string()))?
-                .as_string();
+            let bracket_type_str = js_sys::Reflect::get(&obj, &"bracketType".into()).map_err(|_| "No bracketType".to_string())?.as_string();
             let bracket_type = match bracket_type_str.as_deref() {
                 Some("curly") => BracketType::Curly,
                 Some("round") => BracketType::Round,
@@ -368,10 +333,7 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             }
             ValueType::Vector(vec, bracket_type)
         },
-        "definition" => {
-            // DefinitionBody タイプを追加
-            ValueType::DefinitionBody(Vec::new()) // 空のトークンベクトルで初期化
-        },
+        "definition" => ValueType::DefinitionBody(Vec::new()),
         "nil" => ValueType::Nil,
         _ => return Err(format!("Unknown type: {}", type_str)),
     };
