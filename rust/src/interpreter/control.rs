@@ -86,7 +86,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &st
     Ok(())
 }
 
-
 fn parse_definition_body(_interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut current_pos = 0;
@@ -160,7 +159,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name.to_uppercase();
 
-    // このワードに依存している他のワードがないかチェック
+    // このワードが他のワードから参照されているかチェック
     if let Some(dependents) = interp.dependents.get(&upper_name) {
         if !dependents.is_empty() {
             let dep_list: Vec<String> = dependents.iter().cloned().collect();
@@ -176,8 +175,11 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
                 dependents.remove(&upper_name);
             }
         }
-        interp.dependents.remove(&upper_name); // 自分自身の依存元マップもクリア
+        // このワードに対する依存関係マップも削除
+        interp.dependents.remove(&upper_name);
         interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
+    } else {
+        return Err(AjisaiError::UnknownWord(upper_name));
     }
     Ok(())
 }
