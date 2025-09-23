@@ -307,6 +307,7 @@ pub fn restore_word(&mut self, name: String, definition: String, description: Op
     interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name)
         .map_err(|e| format!("Failed to restore word: {}", e))
 }
+}
 
 fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
