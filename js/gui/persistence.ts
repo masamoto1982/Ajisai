@@ -100,6 +100,8 @@ export class Persistence {
 
     // js/gui/persistence.ts の restoreWordsInDependencyOrder メソッド修正
 
+// js/gui/persistence.ts の restoreWordsInDependencyOrder メソッド内の該当部分を修正
+
 private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<void> {
     console.log('[DEBUG] Starting word restoration with dependency order');
     
@@ -128,7 +130,7 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
             await window.ajisaiInterpreter.restore_word(
                 word.name, 
                 word.definition, 
-                word.description || null
+                word.description // nullの場合はそのまま渡す（undefinedに変換される）
             );
             console.log(`[DEBUG] Restored simple word: ${word.name}`);
         } catch (error) {
@@ -164,7 +166,7 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
                     await window.ajisaiInterpreter.restore_word(
                         word.name, 
                         word.definition, 
-                        word.description || null
+                        word.description // nullの場合はそのまま渡す
                     );
                     restored.add(word.name);
                     remaining.splice(i, 1);
@@ -189,7 +191,7 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
                         await window.ajisaiInterpreter.restore_word(
                             word.name, 
                             word.definition, 
-                            word.description || null
+                            word.description // nullの場合はそのまま渡す
                         );
                         console.log(`[DEBUG] Force restored word: ${word.name}`);
                     } catch (error) {
