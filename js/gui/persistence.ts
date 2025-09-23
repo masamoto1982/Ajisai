@@ -98,73 +98,120 @@ export class Persistence {
         }
     }
 
-    private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<void> {
-        const remaining = [...customWords];
-        const restored = new Set<string>();
-        let maxIterations = customWords.length * 2; // 循環依存回避
+    // js/gui/persistence.ts の restoreWordsInDependencyOrder メソッド修正
+
+private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<void> {
+    console.log('[DEBUG] Starting word restoration with dependency order');
+    
+    // まず全てのワードを定義のみで復元（依存関係は後で構築）
+    const simpleWords: CustomWord[] = [];
+    const complexWords: CustomWord[] = [];
+    
+    // シンプルなワード（他のカスタムワードに依存しない）と複雑なワードを分離
+    for (const word of customWords) {
+        if (!word || !word.name || !word.definition) continue;
         
-        while (remaining.length > 0 && maxIterations > 0) {
-            let progressMade = false;
+        const dependencies = this.extractDependencies(word.definition);
+        const hasCustomDependencies = dependencies.some(dep => this.isCustomWord(customWords, dep));
+        
+        if (hasCustomDependencies) {
+            complexWords.push(word);
+        } else {
+            simpleWords.push(word);
+        }
+    }
+    
+    // まずシンプルなワードを復元
+    console.log(`[DEBUG] Restoring ${simpleWords.length} simple words first`);
+    for (const word of simpleWords) {
+        try {
+            await window.ajisaiInterpreter.restore_word(
+                word.name, 
+                word.definition, 
+                word.description || null
+            );
+            console.log(`[DEBUG] Restored simple word: ${word.name}`);
+        } catch (error) {
+            console.error(`[DEBUG] Failed to restore simple word ${word.name}:`, error);
+        }
+    }
+    
+    // 次に複雑なワードを依存関係順で復元
+    console.log(`[DEBUG] Restoring ${complexWords.length} complex words with dependency order`);
+    const remaining = [...complexWords];
+    const restored = new Set<string>(simpleWords.map(w => w.name));
+    let maxIterations = complexWords.length * 3; // より多くの反復を許可
+    
+    while (remaining.length > 0 && maxIterations > 0) {
+        let progressMade = false;
+        
+        for (let i = remaining.length - 1; i >= 0; i--) {
+            const word = remaining[i];
+            if (!word || !word.name || !word.definition) {
+                remaining.splice(i, 1);
+                progressMade = true;
+                continue;
+            }
             
-            for (let i = remaining.length - 1; i >= 0; i--) {
-                const word = remaining[i];
-                
-                // wordが存在し、必要なプロパティが揃っているかチェック
-                if (!word || !word.name || !word.definition) {
+            // この単語の依存関係をチェック
+            const dependencies = this.extractDependencies(word.definition);
+            const canRestore = dependencies.every(dep => 
+                restored.has(dep) || !this.isCustomWord(customWords, dep)
+            );
+            
+            if (canRestore) {
+                try {
+                    await window.ajisaiInterpreter.restore_word(
+                        word.name, 
+                        word.definition, 
+                        word.description || null
+                    );
+                    restored.add(word.name);
                     remaining.splice(i, 1);
                     progressMade = true;
-                    continue;
+                    console.log(`[DEBUG] Restored complex word: ${word.name}`);
+                } catch (error) {
+                    console.error(`[DEBUG] Failed to restore complex word ${word.name}:`, error);
+                    remaining.splice(i, 1);
+                    progressMade = true;
                 }
-                
-                // この単語の依存関係をチェック
-                const dependencies = this.extractDependencies(word.definition);
-                const canRestore = dependencies.every(dep => restored.has(dep) || !this.isCustomWord(customWords, dep));
-                
-                if (canRestore) {
+            }
+        }
+        
+        if (!progressMade) {
+            console.warn('[DEBUG] Cannot resolve remaining word dependencies:', 
+                remaining.map(w => w?.name || 'unknown'));
+            
+            // 残りの単語を強制的に復元
+            for (const word of remaining) {
+                if (word && word.name && word.definition) {
                     try {
-                        window.ajisaiInterpreter.restore_word(
+                        await window.ajisaiInterpreter.restore_word(
                             word.name, 
                             word.definition, 
                             word.description || null
                         );
-                        restored.add(word.name);
-                        remaining.splice(i, 1);
-                        progressMade = true;
-                        console.log(`Restored word: ${word.name}`);
+                        console.log(`[DEBUG] Force restored word: ${word.name}`);
                     } catch (error) {
-                        console.error(`Failed to restore word ${word.name}:`, error);
-                        remaining.splice(i, 1);
-                        progressMade = true;
+                        console.error(`[DEBUG] Failed to force restore word ${word.name}:`, error);
                     }
                 }
             }
-            
-            if (!progressMade) {
-                // 循環依存または解決不可能な依存関係
-                console.warn('Cannot resolve all word dependencies. Remaining words:', 
-                    remaining.map(w => w?.name || 'unknown'));
-                
-                // 残りの単語を強制的に復元を試行
-                for (const word of remaining) {
-                    if (word && word.name && word.definition) {
-                        try {
-                            window.ajisaiInterpreter.restore_word(
-                                word.name, 
-                                word.definition, 
-                                word.description || null
-                            );
-                            console.log(`Force restored word: ${word.name}`);
-                        } catch (error) {
-                            console.error(`Failed to force restore word ${word.name}:`, error);
-                        }
-                    }
-                }
-                break;
-            }
-            
-            maxIterations--;
+            break;
         }
+        
+        maxIterations--;
     }
+    
+    console.log('[DEBUG] Word restoration completed');
+    
+    // 復元完了後にGUIを更新して依存関係の状態を確認
+    setTimeout(() => {
+        if (this.gui) {
+            this.gui.updateAllDisplays();
+        }
+    }, 100);
+}
     
     private extractDependencies(definition: string): string[] {
         const dependencies: string[] = [];
