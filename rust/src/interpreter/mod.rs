@@ -271,12 +271,25 @@ impl Interpreter {
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
     pub fn get_workspace(&self) -> &Workspace { &self.workspace }
     pub fn set_workspace(&mut self, workspace: Workspace) { self.workspace = workspace; }
-    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>)> {
-        self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, def)| (name.clone(), def.description.clone()))
-            .collect()
-    }
+    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
+    self.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, def)| {
+            // このワードが他のワードから参照されているかチェック
+            let is_protected = self.dependents.get(name)
+                .map_or(false, |deps| !deps.is_empty());
+            
+            // デバッグ出力
+            if let Some(deps) = self.dependents.get(name) {
+                if !deps.is_empty() {
+                    web_sys::console::log_1(&format!("[DEBUG] Word '{}' is referenced by: {:?}", name, deps).into());
+                }
+            }
+            
+            (name.clone(), def.description.clone(), is_protected)
+        })
+        .collect()
+}
     pub fn get_word_definition(&self, _name: &str) -> Option<String> { None }
     pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> { Ok(()) }
     pub fn execute_reset(&mut self) -> Result<()> {
