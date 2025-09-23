@@ -226,13 +226,13 @@ impl Interpreter {
             "OR" => arithmetic::op_or(self), "NOT" => arithmetic::op_not(self),
             "PRINT" => io::op_print(self), "DEF" => control::op_def(self),
             "DEL" => {
-            // DELの特別処理: workspaceが空でないことを確認
-            if !self.workspace.is_empty() {
-                control::op_del(self)
-            } else {
-                Err(AjisaiError::from("DEL requires a word name on the workspace. Usage: [ 'WORD_NAME' ] DEL"))
-            }
-        },
+                // DELの特別処理: workspaceが空でないことを確認
+                if !self.workspace.is_empty() {
+                    control::op_del(self)
+                } else {
+                    Err(AjisaiError::from("DEL requires a word name on the workspace. Usage: [ 'WORD_NAME' ] DEL"))
+                }
+            },
             "GOTO" => flow_control::op_goto(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
@@ -267,30 +267,44 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
+    pub fn debug_dependencies(&self) {
+        web_sys::console::log_1(&"[DEBUG] === Dependency Map ===".into());
+        for (word, deps) in &self.dependents {
+            if !deps.is_empty() {
+                web_sys::console::log_1(&format!("[DEBUG] '{}' is used by: {:?}", word, deps).into());
+            }
+        }
+        web_sys::console::log_1(&"[DEBUG] === End Dependency Map ===".into());
+    }
+
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
     pub fn get_workspace(&self) -> &Workspace { &self.workspace }
     pub fn set_workspace(&mut self, workspace: Workspace) { self.workspace = workspace; }
+    
     pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
-    self.dictionary.iter()
-        .filter(|(_, def)| !def.is_builtin)
-        .map(|(name, def)| {
-            // このワードが他のワードから参照されているかチェック
-            let is_protected = self.dependents.get(name)
-                .map_or(false, |deps| !deps.is_empty());
-            
-            // デバッグ出力
-            if let Some(deps) = self.dependents.get(name) {
-                if !deps.is_empty() {
-                    web_sys::console::log_1(&format!("[DEBUG] Word '{}' is referenced by: {:?}", name, deps).into());
+        // デバッグ出力を追加
+        self.debug_dependencies();
+        
+        self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| {
+                let is_protected = self.dependents.get(name)
+                    .map_or(false, |deps| !deps.is_empty());
+                
+                if is_protected {
+                    web_sys::console::log_1(&format!("[DEBUG] Word '{}' is PROTECTED", name).into());
+                } else {
+                    web_sys::console::log_1(&format!("[DEBUG] Word '{}' is DELETABLE", name).into());
                 }
-            }
-            
-            (name.clone(), def.description.clone(), is_protected)
-        })
-        .collect()
-}
+                
+                (name.clone(), def.description.clone(), is_protected)
+            })
+            .collect()
+    }
+    
     pub fn get_word_definition(&self, _name: &str) -> Option<String> { None }
     pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> { Ok(()) }
+    
     pub fn execute_reset(&mut self) -> Result<()> {
         self.workspace.clear(); 
         self.dictionary.clear();
