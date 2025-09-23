@@ -118,35 +118,67 @@ export class Dictionary {
         return null;
     }
 
-    private renderWordButtons(container: HTMLElement, words: WordInfo[], isCustom: boolean): void {
-        container.innerHTML = '';
+    // js/gui/dictionary.ts の renderWordButtons メソッドに追加
 
-        words.forEach(wordInfo => {
-            const button = document.createElement('button');
-            button.textContent = wordInfo.name;
-            button.className = 'word-button';
-            
-            if (wordInfo.description) {
-                button.title = wordInfo.description;
-            } else {
-                button.title = wordInfo.name;
-            }
-            
-            if (!isCustom) {
-                button.classList.add('builtin');
-            } else if (wordInfo.protected) {
-                button.classList.add('protected');
-            } else {
-                button.classList.add('deletable');
-            }
-            
-            button.addEventListener('click', () => {
-                if (this.onWordClick) {
-                    this.onWordClick(wordInfo.name);
-                }
+private renderWordButtons(container: HTMLElement, words: WordInfo[], isCustom: boolean): void {
+    container.innerHTML = '';
+
+    words.forEach(wordInfo => {
+        const button = document.createElement('button');
+        button.textContent = wordInfo.name;
+        button.className = 'word-button';
+        
+        if (wordInfo.description) {
+            button.title = wordInfo.description;
+        } else {
+            button.title = wordInfo.name;
+        }
+        
+        if (!isCustom) {
+            button.classList.add('builtin');
+        } else if (wordInfo.protected) {
+            button.classList.add('protected');
+            // 保護されたワードは右クリックで削除不可の説明を表示
+            button.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                alert(`Cannot delete '${wordInfo.name}' because it is used by other words.`);
             });
-            
-            container.appendChild(button);
+        } else {
+            button.classList.add('deletable');
+            // 削除可能なワードは右クリックで削除確認
+            button.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.confirmAndDeleteWord(wordInfo.name);
+            });
+        }
+        
+        button.addEventListener('click', () => {
+            if (this.onWordClick) {
+                this.onWordClick(wordInfo.name);
+            }
         });
+        
+        container.appendChild(button);
+    });
+}
+
+private confirmAndDeleteWord(wordName: string): void {
+    if (confirm(`Delete word '${wordName}'?`)) {
+        try {
+            // ワード名をworkspaceに積んでDELを実行
+            const result = window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
+            if (result.status === 'ERROR') {
+                alert(`Failed to delete word: ${result.message}`);
+            } else {
+                // GUI更新
+                if (this.gui) {
+                    this.gui.updateAllDisplays();
+                    this.gui.persistence.saveCurrentState();
+                }
+            }
+        } catch (error) {
+            alert(`Error deleting word: ${error}`);
+        }
     }
+}
 }
