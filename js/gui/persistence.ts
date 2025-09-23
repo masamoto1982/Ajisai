@@ -108,7 +108,9 @@ export class Persistence {
             
             for (let i = remaining.length - 1; i >= 0; i--) {
                 const word = remaining[i];
-                if (!word.name || !word.definition) {
+                
+                // wordが存在し、必要なプロパティが揃っているかチェック
+                if (!word || !word.name || !word.definition) {
                     remaining.splice(i, 1);
                     progressMade = true;
                     continue;
@@ -123,7 +125,7 @@ export class Persistence {
                         window.ajisaiInterpreter.restore_word(
                             word.name, 
                             word.definition, 
-                            word.description
+                            word.description || null
                         );
                         restored.add(word.name);
                         remaining.splice(i, 1);
@@ -140,18 +142,21 @@ export class Persistence {
             if (!progressMade) {
                 // 循環依存または解決不可能な依存関係
                 console.warn('Cannot resolve all word dependencies. Remaining words:', 
-                    remaining.map(w => w.name));
+                    remaining.map(w => w?.name || 'unknown'));
+                
                 // 残りの単語を強制的に復元を試行
                 for (const word of remaining) {
-                    try {
-                        window.ajisaiInterpreter.restore_word(
-                            word.name, 
-                            word.definition, 
-                            word.description
-                        );
-                        console.log(`Force restored word: ${word.name}`);
-                    } catch (error) {
-                        console.error(`Failed to force restore word ${word.name}:`, error);
+                    if (word && word.name && word.definition) {
+                        try {
+                            window.ajisaiInterpreter.restore_word(
+                                word.name, 
+                                word.definition, 
+                                word.description || null
+                            );
+                            console.log(`Force restored word: ${word.name}`);
+                        } catch (error) {
+                            console.error(`Failed to force restore word ${word.name}:`, error);
+                        }
                     }
                 }
                 break;
@@ -174,7 +179,7 @@ export class Persistence {
     }
     
     private isCustomWord(customWords: CustomWord[], wordName: string): boolean {
-        return customWords.some(w => w.name === wordName);
+        return customWords.some(w => w && w.name === wordName);
     }
     
     private isBuiltinWord(wordName: string): boolean {
