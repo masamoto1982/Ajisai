@@ -61,9 +61,9 @@ export class GUI {
         });
         
         this.dictionary.init({
-            builtinWordsDisplay: this.elements.builtinWordsDisplay,
-            customWordsDisplay: this.elements.customWordsDisplay
-        }, (word: string) => this.insertWord(word));
+    builtinWordsDisplay: this.elements.builtinWordsDisplay,
+    customWordsDisplay: this.elements.customWordsDisplay
+}, (word: string) => this.insertWord(word), this); // 第3引数でGUI参照を渡す
         
         this.editor.init(this.elements.codeInput);
         
