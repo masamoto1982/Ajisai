@@ -294,18 +294,18 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn restore_word(&mut self, name: String, definition: String, _description: Option<String>) -> Result<(), String> {
-        let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-            
-        let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
-            .map_err(|e| format!("Failed to tokenize word definition: {}", e))?;
-            
-        interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name)
-             .map_err(|e| format!("Failed to restore word: {}", e))
-    }
+pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
+    let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
+        
+    let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
+        .map_err(|e| format!("Failed to tokenize word definition: {}", e))?;
+        
+    // カスタムワード復元時に依存関係も構築
+    interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name)
+        .map_err(|e| format!("Failed to restore word: {}", e))
 }
 
 fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
