@@ -98,9 +98,7 @@ export class Persistence {
         }
     }
 
-    // js/gui/persistence.ts の restoreWordsInDependencyOrder メソッド修正
-
-// js/gui/persistence.ts の restoreWordsInDependencyOrder メソッド内の該当部分を修正
+    // js/gui/persistence.ts の restoreWordsInDependencyOrder メソッド完全修正版
 
 private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<void> {
     console.log('[DEBUG] Starting word restoration with dependency order');
@@ -127,11 +125,19 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
     console.log(`[DEBUG] Restoring ${simpleWords.length} simple words first`);
     for (const word of simpleWords) {
         try {
-            await window.ajisaiInterpreter.restore_word(
-                word.name, 
-                word.definition, 
-                word.description // nullの場合はそのまま渡す（undefinedに変換される）
-            );
+            // nullチェックを明示的に行う
+            if (word.description !== null) {
+                await window.ajisaiInterpreter.restore_word(
+                    word.name, 
+                    word.definition, 
+                    word.description
+                );
+            } else {
+                await window.ajisaiInterpreter.restore_word(
+                    word.name, 
+                    word.definition
+                );
+            }
             console.log(`[DEBUG] Restored simple word: ${word.name}`);
         } catch (error) {
             console.error(`[DEBUG] Failed to restore simple word ${word.name}:`, error);
@@ -163,11 +169,19 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
             
             if (canRestore) {
                 try {
-                    await window.ajisaiInterpreter.restore_word(
-                        word.name, 
-                        word.definition, 
-                        word.description // nullの場合はそのまま渡す
-                    );
+                    // nullチェックを明示的に行う
+                    if (word.description !== null) {
+                        await window.ajisaiInterpreter.restore_word(
+                            word.name, 
+                            word.definition, 
+                            word.description
+                        );
+                    } else {
+                        await window.ajisaiInterpreter.restore_word(
+                            word.name, 
+                            word.definition
+                        );
+                    }
                     restored.add(word.name);
                     remaining.splice(i, 1);
                     progressMade = true;
@@ -188,11 +202,19 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
             for (const word of remaining) {
                 if (word && word.name && word.definition) {
                     try {
-                        await window.ajisaiInterpreter.restore_word(
-                            word.name, 
-                            word.definition, 
-                            word.description // nullの場合はそのまま渡す
-                        );
+                        // nullチェックを明示的に行う
+                        if (word.description !== null) {
+                            await window.ajisaiInterpreter.restore_word(
+                                word.name, 
+                                word.definition, 
+                                word.description
+                            );
+                        } else {
+                            await window.ajisaiInterpreter.restore_word(
+                                word.name, 
+                                word.definition
+                            );
+                        }
                         console.log(`[DEBUG] Force restored word: ${word.name}`);
                     } catch (error) {
                         console.error(`[DEBUG] Failed to force restore word ${word.name}:`, error);
