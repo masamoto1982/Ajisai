@@ -225,7 +225,15 @@ impl Interpreter {
             ">=" => arithmetic::op_ge(self), "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self), "NOT" => arithmetic::op_not(self),
             "PRINT" => io::op_print(self), "DEF" => control::op_def(self),
-            "DEL" => control::op_del(self), "RESET" => self.execute_reset(),
+            "DEL" => {
+            // DELの特別処理: ワード名を直接受け取れるように
+            if !self.workspace.is_empty() {
+                control::op_del(self)
+            } else {
+                // workspaceが空の場合、対話的にワード削除
+                Err(AjisaiError::from("DEL requires a word name. Usage: 'WORD_NAME' DEL"))
+            }
+        },
             "GOTO" => flow_control::op_goto(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
