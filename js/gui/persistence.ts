@@ -123,20 +123,25 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
     
     // まずシンプルなワードを復元
     console.log(`[DEBUG] Restoring ${simpleWords.length} simple words first`);
-    for (const word of simpleWords) {
-        try {
-            // descriptionがnullでない場合のみ文字列として扱う
-            const description: string | undefined = word.description === null ? undefined : word.description;
-            await window.ajisaiInterpreter.restore_word(
-                word.name, 
-                word.definition, 
-                description
-            );
-            console.log(`[DEBUG] Restored simple word: ${word.name}`);
-        } catch (error) {
-            console.error(`[DEBUG] Failed to restore simple word ${word.name}:`, error);
+for (const word of simpleWords) {
+    try {
+        // definitionがnullでないことを確認
+        if (!word.definition) {
+            console.error(`[DEBUG] Skipping word ${word.name}: no definition`);
+            continue;
         }
+        // descriptionがnullでない場合のみ文字列として扱う
+        const description: string | undefined = word.description === null ? undefined : word.description;
+        await window.ajisaiInterpreter.restore_word(
+            word.name, 
+            word.definition,  // ここでword.definitionは確実にstring
+            description
+        );
+        console.log(`[DEBUG] Restored simple word: ${word.name}`);
+    } catch (error) {
+        console.error(`[DEBUG] Failed to restore simple word ${word.name}:`, error);
     }
+}
     
     // 次に複雑なワードを依存関係順で復元
     console.log(`[DEBUG] Restoring ${complexWords.length} complex words with dependency order`);
@@ -162,24 +167,31 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
             );
             
             if (canRestore) {
-                try {
-                    // descriptionがnullでない場合のみ文字列として扱う
-                    const description: string | undefined = word.description === null ? undefined : word.description;
-                    await window.ajisaiInterpreter.restore_word(
-                        word.name, 
-                        word.definition, 
-                        description
-                    );
-                    restored.add(word.name);
-                    remaining.splice(i, 1);
-                    progressMade = true;
-                    console.log(`[DEBUG] Restored complex word: ${word.name}`);
-                } catch (error) {
-                    console.error(`[DEBUG] Failed to restore complex word ${word.name}:`, error);
-                    remaining.splice(i, 1);
-                    progressMade = true;
-                }
-            }
+    try {
+        // definitionがnullでないことを確認
+        if (!word.definition) {
+            console.error(`[DEBUG] Skipping word ${word.name}: no definition`);
+            remaining.splice(i, 1);
+            progressMade = true;
+            continue;
+        }
+        // descriptionがnullでない場合のみ文字列として扱う
+        const description: string | undefined = word.description === null ? undefined : word.description;
+        await window.ajisaiInterpreter.restore_word(
+            word.name, 
+            word.definition,  // ここでword.definitionは確実にstring
+            description
+        );
+        restored.add(word.name);
+        remaining.splice(i, 1);
+        progressMade = true;
+        console.log(`[DEBUG] Restored complex word: ${word.name}`);
+    } catch (error) {
+        console.error(`[DEBUG] Failed to restore complex word ${word.name}:`, error);
+        remaining.splice(i, 1);
+        progressMade = true;
+    }
+}
         }
         
         if (!progressMade) {
@@ -188,21 +200,22 @@ private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<
             
             // 残りの単語を強制的に復元
             for (const word of remaining) {
-                if (word && word.name && word.definition) {
-                    try {
-                        // descriptionがnullでない場合のみ文字列として扱う
-                        const description: string | undefined = word.description === null ? undefined : word.description;
-                        await window.ajisaiInterpreter.restore_word(
-                            word.name, 
-                            word.definition, 
-                            description
-                        );
-                        console.log(`[DEBUG] Force restored word: ${word.name}`);
-                    } catch (error) {
-                        console.error(`[DEBUG] Failed to force restore word ${word.name}:`, error);
-                    }
-                }
-            }
+    if (word && word.name && word.definition) {
+        try {
+            // definitionがnullでない場合のみ処理（上のif文で既にチェック済み）
+            // descriptionがnullでない場合のみ文字列として扱う
+            const description: string | undefined = word.description === null ? undefined : word.description;
+            await window.ajisaiInterpreter.restore_word(
+                word.name, 
+                word.definition,  // ここでword.definitionは確実にstring
+                description
+            );
+            console.log(`[DEBUG] Force restored word: ${word.name}`);
+        } catch (error) {
+            console.error(`[DEBUG] Failed to force restore word ${word.name}:`, error);
+        }
+    }
+}
             break;
         }
         
