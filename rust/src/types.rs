@@ -15,9 +15,9 @@ pub enum Token {
     Symbol(String),
     VectorStart(BracketType),
     VectorEnd(BracketType),
-    DefBlockStart, // :
-    DefBlockEnd,   // ;
-    GuardSeparator, // $
+    DefBlockStart, // : (now used for condition separator)
+    DefBlockEnd,   // ; (deprecated)
+    GuardSeparator, // : (replaces $)
     Modifier(String), // 3x, 5s
     Nil,
     LineBreak,
@@ -74,7 +74,8 @@ pub struct WordDefinition {
     pub lines: Vec<ExecutionLine>,
     pub is_builtin: bool,
     pub description: Option<String>,
-    pub dependencies: HashSet<String>, // このワードが依存している他のワード
+    pub dependencies: HashSet<String>,
+    pub original_source: Option<String>, // 🆕 元のソースコード保存
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -99,21 +100,21 @@ impl Fraction {
     pub fn from_str(s: &str) -> std::result::Result<Self, String> {
         if s.is_empty() { return Err("Empty string".to_string()); }
 
-    if let Some(e_pos) = s.find(|c| c == 'e' || c == 'E') {
-        let mantissa_str = &s[..e_pos];
-        let exponent_str = &s[e_pos+1..];
-        
-        let mantissa = Self::from_str(mantissa_str)?;
-        let exponent = exponent_str.parse::<i32>().map_err(|e| e.to_string())?;
-        
-        if exponent >= 0 {
-            let power = BigInt::from(10).pow(exponent as u32);
-            return Ok(Fraction::new(mantissa.numerator * power, mantissa.denominator));
-        } else {
-            let power = BigInt::from(10).pow((-exponent) as u32);
-            return Ok(Fraction::new(mantissa.numerator, mantissa.denominator * power));
+        if let Some(e_pos) = s.find(|c| c == 'e' || c == 'E') {
+            let mantissa_str = &s[..e_pos];
+            let exponent_str = &s[e_pos+1..];
+            
+            let mantissa = Self::from_str(mantissa_str)?;
+            let exponent = exponent_str.parse::<i32>().map_err(|e| e.to_string())?;
+            
+            if exponent >= 0 {
+                let power = BigInt::from(10).pow(exponent as u32);
+                return Ok(Fraction::new(mantissa.numerator * power, mantissa.denominator));
+            } else {
+                let power = BigInt::from(10).pow((-exponent) as u32);
+                return Ok(Fraction::new(mantissa.numerator, mantissa.denominator * power));
+            }
         }
-    }
         if let Some(pos) = s.find('/') {
             let num = BigInt::from_str(&s[..pos]).map_err(|e| e.to_string())?;
             let den = BigInt::from_str(&s[pos+1..]).map_err(|e| e.to_string())?;
