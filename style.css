@@ -219,7 +219,7 @@ button:hover {
 
 /* Outputエリア専用の追加スタイル */
 #output-display {
-    max-height: 500px;  /* Outputエリアはより高く */
+    max-height: 500px;
     overflow-y: auto;
     word-wrap: break-word;
     white-space: pre-wrap;
@@ -283,6 +283,14 @@ button:hover {
     width: 100%;
 }
 
+/* ワードボタングループのスタイル */
+.words-display > div {
+    margin-bottom: 4px;
+}
+.words-display > div:last-child {
+    margin-bottom: 0;
+}
+
 /* ワードボタン */
 .word-button {
     margin: 2px;
@@ -328,9 +336,10 @@ button:hover {
 }
 
 /* ワークスペース表示の左寄せ */
-.workspace-display>div {
+#workspace-display > div {
     justify-content: flex-start !important;
 }
+
 
 /* モバイル対応 */
 @media (max-width: 768px) {
@@ -370,11 +379,7 @@ button:hover {
         justify-content: flex-end;
     }
     
-    .reference-btn {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
-    }
-
+    .reference-btn,
     .test-btn {
         padding: 0.4rem 0.8rem;
         font-size: 0.8rem;
@@ -393,12 +398,16 @@ button:hover {
         width: 100%;
         height: auto;
         overflow-y: visible;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem; /* パネル間のマージンを半分に */
+    }
+    
+    #state-panel {
+        margin-bottom: 0;
     }
 
     .output-area,
     .input-area,
-    .workspace-area,  /* stack-area → workspace-area */
+    .workspace-area,
     .dictionary-area {
         height: auto;
         flex: none;
@@ -420,7 +429,7 @@ button:hover {
         font-size: 1rem;
     }
 
-    .workspace-area {  /* stack-area → workspace-area */
+    .workspace-area {
         cursor: pointer;
     }
 }
