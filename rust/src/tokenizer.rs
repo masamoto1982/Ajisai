@@ -1,25 +1,25 @@
-// rust/src/tokenizer.rs
-
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
+use crate::builtins;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     tokenize_with_custom_words(input, &HashSet::new())
 }
 
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
-    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Input: {:?}", input).into());
-    
     let mut tokens = Vec::new();
     let preprocessed_input = input.lines()
         .map(|line| line.split('#').next().unwrap_or(""))
         .collect::<Vec<&str>>()
         .join(" ");
 
-    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Preprocessed Input: {:?}", preprocessed_input).into());
-    
     let chars: Vec<char> = preprocessed_input.chars().collect();
     let mut i = 0;
+    
+    let builtin_words: HashSet<String> = builtins::get_builtin_definitions()
+        .iter()
+        .map(|(name, _, _)| name.to_string())
+        .collect();
 
     while i < chars.len() {
         if chars[i].is_whitespace() { i += 1; continue; }
@@ -42,17 +42,14 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
             tokens.push(token); i += consumed; continue;
         }
-        if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..]) {
+        if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..], &builtin_words) {
             tokens.push(token); i += consumed; continue;
         }
         
-        web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Unrecognized character at position {}: '{}'", i, chars[i]).into());
         i += 1;
     }
     
-    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Before bracket conversion: {:?}", tokens).into());
     convert_vector_brackets_by_depth(&mut tokens)?;
-    web_sys::console::log_1(&format!("[TOKENIZER DEBUG] Final tokens: {:?}", tokens).into());
     
     Ok(tokens)
 }
@@ -211,9 +208,11 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-fn try_parse_ascii_builtin(chars: &[char]) -> Option<(Token, usize)> {
-    let builtin_words = ["TRUE", "FALSE", "NIL", "DUP", "SWAP", "ROT", "GET", "INSERT", "REPLACE", "REMOVE", "LENGTH", "TAKE", "DROP", "SPLIT", "CONCAT", "REVERSE", "AND", "OR", "NOT", "PRINT", "DEF", "DEL", "RESET", "GOTO"];
-    for word in &builtin_words {
+fn try_parse_ascii_builtin(chars: &[char], builtin_words: &HashSet<String>) -> Option<(Token, usize)> {
+    let mut sorted_words: Vec<&String> = builtin_words.iter().collect();
+    sorted_words.sort_by(|a, b| b.len().cmp(&a.len()));
+
+    for word in sorted_words {
         if chars.len() >= word.len() && chars[..word.len()].iter().collect::<String>().to_uppercase() == *word {
             if chars.len() > word.len() && is_word_char(chars[word.len()]) { continue; }
             let token = match word.to_lowercase().as_str() {
