@@ -41,6 +41,12 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<()> {
+        // 新構文（DEF）の検出と処理
+        if code.contains(" DEF") {
+            return control::parse_multiple_word_definitions(self, code);
+        }
+        
+        // 既存の実行ロジック
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
@@ -77,6 +83,9 @@ impl Interpreter {
                 },
                 Token::Symbol(name) => {
                     self.execute_word(name)?;
+                },
+                Token::LineBreak => {
+                    // 改行トークンは通常スキップ（DEF構文内でのみ意味を持つ）
                 },
                 _ => {} 
             }
@@ -273,27 +282,45 @@ impl Interpreter {
     
     pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
         if let Some(def) = self.dictionary.get(&name.to_uppercase()) {
+            // 元ソースがあればそれを返す
+            if let Some(original_source) = &def.original_source {
+                return Some(original_source.clone());
+            }
+            
+            // フォールバック：従来の方式
             if !def.is_builtin && !def.lines.is_empty() {
                 let mut result = String::new();
                 for (i, line) in def.lines.iter().enumerate() {
-                    if i > 0 { result.push(' '); }
-                    result.push(':');
+                    if i > 0 { result.push('\n'); }
+                    
+                    // 条件がある場合
                     if !line.condition_tokens.is_empty() {
-                        result.push(' ');
                         for token in &line.condition_tokens {
                             result.push_str(&self.token_to_string(token));
                             result.push(' ');
                         }
-                        result.push('$');
+                        result.push_str(": ");
                     }
-                    result.push(' ');
+                    
+                    // 本体
                     for token in &line.body_tokens {
                         result.push_str(&self.token_to_string(token));
                         result.push(' ');
                     }
-                    result.push(';');
+                    
+                    // 修飾子
+                    if line.repeat_count != 1 {
+                        result.push_str(&format!("{}x ", line.repeat_count));
+                    }
+                    if line.delay_ms > 0 {
+                        if line.delay_ms >= 1000 && line.delay_ms % 1000 == 0 {
+                            result.push_str(&format!("{}s ", line.delay_ms / 1000));
+                        } else {
+                            result.push_str(&format!("{}ms ", line.delay_ms));
+                        }
+                    }
                 }
-                return Some(result);
+                return Some(result.trim().to_string());
             }
         }
         None
@@ -313,6 +340,10 @@ impl Interpreter {
             Token::VectorEnd(BracketType::Curly) => "}".to_string(),
             Token::VectorStart(BracketType::Round) => "(".to_string(),
             Token::VectorEnd(BracketType::Round) => ")".to_string(),
+            Token::GuardSeparator => ":".to_string(),
+            Token::DefBlockEnd => ";".to_string(),
+            Token::Modifier(s) => s.clone(),
+            Token::LineBreak => "\n".to_string(),
             _ => "".to_string(),
         }
     }
@@ -342,6 +373,7 @@ impl Interpreter {
         self.dependents.clear();
         self.output_buffer.clear(); 
         self.execution_state = None;
+        self.definition_to_load = None;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
