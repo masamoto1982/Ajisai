@@ -1,5 +1,3 @@
-// js/gui/test.ts (ビルドエラー完全修正版)
-
 import type { Value, Fraction } from '../wasm-types';
 
 interface TestCase {
@@ -109,7 +107,7 @@ export class TestRunner {
     private getTestCases(): TestCase[] {
         return [
             {
-                name: "巨大な整数の作成",
+                name: "Huge Integer Creation",
                 code: "[ 10000000000000000000000000000000000000000000000000000 ]",
                 expectedWorkspace: [{
                     type: 'vector', value: [{ 
@@ -122,7 +120,7 @@ export class TestRunner {
                 category: "BigInt"
             },
             {
-                name: "巨大な整数の足し算",
+                name: "Huge Integer Addition",
                 code: "[ 9007199254740991 ] [ 9007199254740991 ] +",
                 expectedWorkspace: [{
                     type: 'vector', value: [{
