@@ -2,6 +2,7 @@ interface WordInfo {
     name: string;
     description?: string | null;
     protected?: boolean;
+    definition?: string | null;
 }
 
 interface DictionaryElements {
@@ -74,7 +75,8 @@ export class Dictionary {
         const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
             name: wordData[0],
             description: wordData[1] || this.decodeWordName(wordData[0]) || wordData[0],
-            protected: wordData[2] || false
+            protected: wordData[2] || false,
+            definition: window.ajisaiInterpreter.get_word_definition(wordData[0])
         }));
         this.renderWordButtons(this.elements.customWordsDisplay, words, true);
     }
@@ -120,22 +122,24 @@ export class Dictionary {
             button.textContent = wordInfo.name;
             button.className = 'word-button';
             
-            if (wordInfo.description) {
-                button.title = wordInfo.description;
-            } else {
-                button.title = wordInfo.name;
+            let titleText = `Name: ${wordInfo.name}`;
+            if (wordInfo.definition) {
+                titleText += `\n\nDefinition:\n${wordInfo.definition}`;
             }
+            if (wordInfo.description) {
+                titleText += `\n\nDescription:\n${wordInfo.description}`;
+            }
+            button.title = titleText;
             
             if (!isCustom) {
                 button.classList.add('builtin');
-            } else if (wordInfo.protected) {
-                button.classList.add('protected');
-                button.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    alert(`Cannot delete '${wordInfo.name}' because it is used by other words.`);
-                });
             } else {
-                button.classList.add('deletable');
+                if (wordInfo.protected) {
+                    button.classList.add('dependency');
+                } else {
+                    button.classList.add('non-dependency');
+                }
+                
                 button.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     this.confirmAndDeleteWord(wordInfo.name);
