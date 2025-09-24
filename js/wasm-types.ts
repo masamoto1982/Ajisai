@@ -2,6 +2,12 @@ export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
 }
 
+export interface CustomWord {
+    name: string;
+    definition: string | null;
+    description: string | null;
+}
+
 export interface AjisaiInterpreter {
     execute(code: string): ExecuteResult;
     execute_step(code: string): ExecuteResult;
@@ -14,6 +20,7 @@ export interface AjisaiInterpreter {
     get_word_definition(name: string): string | null;
     restore_workspace(workspace_js: Value[]): void;
     restore_word(name: string, definition: string, description?: string | null): void;
+    restore_custom_words(words: CustomWord[]): void;
     rebuild_dependencies(): { status: string; message: string };
 }
 
