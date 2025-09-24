@@ -46,7 +46,7 @@ export class Dictionary {
             }
         });
 
-        Object.keys(groups).sort().forEach((category, groupIndex, categories) => {
+        Object.keys(groups).sort().forEach((category) => {
             const groupContainer = document.createElement('div');
             
             const categoryWords = groups[category];
@@ -67,11 +67,6 @@ export class Dictionary {
             }
             
             container.appendChild(groupContainer);
-
-            if (groupIndex < categories.length - 1) {
-                const lineBreak = document.createElement('br');
-                container.appendChild(lineBreak);
-            }
         });
     }
 
