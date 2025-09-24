@@ -30,10 +30,10 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::type_error("definition block for word body", "other type"));
     };
 
-    op_def_inner(interp, &tokens, &name_str)
+    op_def_inner(interp, &tokens, &name_str, None, None)
 }
 
-pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &str) -> Result<()> {
+pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &str, description: Option<String>, original_source: Option<String>) -> Result<()> {
     let upper_name = name.to_uppercase();
     interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}'\n", upper_name));
 
@@ -46,7 +46,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &st
         }
     }
 
-    let lines = parse_definition_body(interp, tokens)?;
+    let lines = parse_definition_body_new_syntax(interp, tokens)?;
     
     // 新しい依存関係を計算
     let mut new_dependencies = HashSet::new();
@@ -69,8 +69,9 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &st
     let new_def = WordDefinition {
         lines,
         is_builtin: false,
-        description: None,
+        description,
         dependencies: new_dependencies,
+        original_source,
     };
     
     interp.dictionary.insert(upper_name.clone(), new_def);
@@ -78,62 +79,85 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &st
     Ok(())
 }
 
-fn parse_definition_body(_interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
+// 新構文用のパーサー: 改行ベース + : 条件分岐
+fn parse_definition_body_new_syntax(_interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
-    let mut current_pos = 0;
+    let mut current_line_tokens = Vec::new();
     
-    while current_pos < tokens.len() {
-        if let Some(start_pos) = tokens[current_pos..].iter().position(|t| matches!(t, Token::DefBlockStart)) {
-            let block_start = current_pos + start_pos;
-            
-            let mut depth = 1;
-            let mut end_pos_opt = None;
-            for (i, token) in tokens.iter().enumerate().skip(block_start + 1) {
-                match token {
-                    Token::DefBlockStart => depth += 1,
-                    Token::DefBlockEnd => {
-                        depth -= 1;
-                        if depth == 0 { end_pos_opt = Some(i); break; }
-                    },
-                    _ => {}
+    for token in tokens {
+        match token {
+            Token::LineBreak => {
+                if !current_line_tokens.is_empty() {
+                    let execution_line = parse_single_execution_line(&current_line_tokens)?;
+                    lines.push(execution_line);
+                    current_line_tokens.clear();
                 }
+            },
+            _ => {
+                current_line_tokens.push(token.clone());
             }
-
-            if let Some(block_end) = end_pos_opt {
-                let line_tokens = &tokens[block_start + 1 .. block_end];
-                
-                let mut modifier_pos = block_end + 1;
-                let mut repeat_count = 1;
-                let mut delay_ms = 0;
-                while modifier_pos < tokens.len() {
-                    if let Token::Modifier(m_str) = &tokens[modifier_pos] {
-                        if m_str.ends_with('x') { if let Ok(count) = m_str[..m_str.len()-1].parse::<i64>() { repeat_count = count; } } 
-                        else if m_str.ends_with("ms") { if let Ok(ms) = m_str[..m_str.len()-2].parse::<u64>() { delay_ms = ms; } }
-                        else if m_str.ends_with('s') { if let Ok(s) = m_str[..m_str.len()-1].parse::<u64>() { delay_ms = s * 1000; } }
-                        modifier_pos += 1;
-                    } else { break; }
-                }
-
-                let (condition_tokens, body_tokens) = 
-                    if let Some(guard_pos) = line_tokens.iter().position(|t| matches!(t, Token::GuardSeparator)) {
-                        (line_tokens[..guard_pos].to_vec(), line_tokens[guard_pos+1..].to_vec())
-                    } else {
-                        (Vec::new(), line_tokens.to_vec())
-                    };
-                
-                lines.push(ExecutionLine { condition_tokens, body_tokens, repeat_count, delay_ms });
-                current_pos = modifier_pos;
-            } else {
-                return Err(AjisaiError::from("Mismatched : and ; in definition body"));
-            }
-        } else { break; }
+        }
     }
     
-    if !lines.iter().any(|line| line.condition_tokens.is_empty()) {
-        return Err(AjisaiError::from("Custom word definition must have at least one default line (without a $ guard)"));
+    // 最終行の処理
+    if !current_line_tokens.is_empty() {
+        let execution_line = parse_single_execution_line(&current_line_tokens)?;
+        lines.push(execution_line);
+    }
+    
+    if lines.is_empty() {
+        return Err(AjisaiError::from("Word definition cannot be empty"));
     }
     
     Ok(lines)
+}
+
+fn parse_single_execution_line(tokens: &[Token]) -> Result<ExecutionLine> {
+    // 修飾子（3x, 100msなど）を検出
+    let mut repeat_count = 1i64;
+    let mut delay_ms = 0u64;
+    let mut modifier_positions = Vec::new();
+    
+    for (i, token) in tokens.iter().enumerate() {
+        if let Token::Modifier(m_str) = token {
+            modifier_positions.push(i);
+            if m_str.ends_with('x') {
+                if let Ok(count) = m_str[..m_str.len()-1].parse::<i64>() {
+                    repeat_count = count;
+                }
+            } else if m_str.ends_with("ms") {
+                if let Ok(ms) = m_str[..m_str.len()-2].parse::<u64>() {
+                    delay_ms = ms;
+                }
+            } else if m_str.ends_with('s') {
+                if let Ok(s) = m_str[..m_str.len()-1].parse::<u64>() {
+                    delay_ms = s * 1000;
+                }
+            }
+        }
+    }
+    
+    // 修飾子を除いた実行部分を取得
+    let mut execution_tokens: Vec<Token> = tokens.iter().enumerate()
+        .filter(|(i, _)| !modifier_positions.contains(i))
+        .map(|(_, token)| token.clone())
+        .collect();
+    
+    // : による条件分岐の検出
+    let guard_position = execution_tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
+    
+    let (condition_tokens, body_tokens) = if let Some(guard_pos) = guard_position {
+        (execution_tokens[..guard_pos].to_vec(), execution_tokens[guard_pos+1..].to_vec())
+    } else {
+        (Vec::new(), execution_tokens)
+    };
+    
+    Ok(ExecutionLine {
+        condition_tokens,
+        body_tokens,
+        repeat_count,
+        delay_ms,
+    })
 }
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
@@ -185,11 +209,114 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     };
 
     let upper_name = name_str.to_uppercase();
-    if let Some(definition) = interp.get_word_definition_tokens(&upper_name) {
-        let full_definition = format!("{} '{}' DEF", definition, name_str);
+    if let Some(def) = interp.dictionary.get(&upper_name) {
+        // 元ソースコードがあればそれを優先、なければトークンから再構成
+        let definition = if let Some(original_source) = &def.original_source {
+            original_source.clone()
+        } else {
+            // フォールバック：既存の方式でトークンから再構成
+            interp.get_word_definition_tokens(&upper_name).unwrap_or_default()
+        };
+        
+        let full_definition = if definition.is_empty() {
+            // 説明なしの場合
+            format!("'{}' DEF", name_str)
+        } else {
+            // 説明ありの場合
+            if let Some(desc) = &def.description {
+                format!("{} '{}' '{}' DEF", definition, name_str, desc)
+            } else {
+                format!("{} '{}' DEF", definition, name_str)
+            }
+        };
+        
         interp.definition_to_load = Some(full_definition);
         Ok(())
     } else {
         Err(AjisaiError::UnknownWord(name_str))
     }
+}
+
+// 新構文用のDEF処理（複数ワード対応）
+pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) -> Result<()> {
+    let lines: Vec<&str> = input.lines().collect();
+    let mut current_word_lines = Vec::new();
+    let mut current_word_name: Option<String> = None;
+    let mut current_description: Option<String> = None;
+    let mut in_definition = false;
+    let mut definition_start_line = 0;
+    
+    for (line_num, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        
+        // 空行やコメント行をスキップ
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            if in_definition {
+                current_word_lines.push(line.to_string());
+            }
+            continue;
+        }
+        
+        // DEF パターンの検出
+        if trimmed.ends_with(" DEF") || trimmed.contains(" DEF ") {
+            // 前のワードがあれば定義実行
+            if let Some(word_name) = current_word_name.take() {
+                let word_source = lines[definition_start_line..line_num].join("\n");
+                define_word_from_lines(interp, &current_word_lines, &word_name, current_description.take(), Some(word_source))?;
+                current_word_lines.clear();
+            }
+            
+            // 新しいワード定義の開始
+            let def_parts = extract_word_name_and_description(trimmed)?;
+            current_word_name = Some(def_parts.0);
+            current_description = def_parts.1;
+            in_definition = true;
+            definition_start_line = line_num + 1;
+        } else if in_definition {
+            current_word_lines.push(line.to_string());
+        }
+    }
+    
+    // 最後のワードの定義
+    if let Some(word_name) = current_word_name {
+        let word_source = lines[definition_start_line..].join("\n");
+        define_word_from_lines(interp, &current_word_lines, &word_name, current_description, Some(word_source))?;
+    }
+    
+    Ok(())
+}
+
+fn extract_word_name_and_description(def_line: &str) -> Result<(String, Option<String>)> {
+    // 'NAME' 'DESCRIPTION' DEF または 'NAME' DEF のパターンを解析
+    let parts: Vec<&str> = def_line.split_whitespace().collect();
+    
+    if parts.len() == 2 && parts[1] == "DEF" {
+        // 'NAME' DEF パターン
+        let name = parts[0].trim_matches('\'');
+        Ok((name.to_string(), None))
+    } else if parts.len() == 3 && parts[2] == "DEF" {
+        // 'NAME' 'DESCRIPTION' DEF パターン
+        let name = parts[0].trim_matches('\'');
+        let description = parts[1].trim_matches('\'');
+        Ok((name.to_string(), Some(description.to_string())))
+    } else {
+        Err(AjisaiError::from("Invalid DEF syntax. Use 'NAME' DEF or 'NAME' 'DESCRIPTION' DEF"))
+    }
+}
+
+fn define_word_from_lines(interp: &mut Interpreter, lines: &[String], name: &str, description: Option<String>, original_source: Option<String>) -> Result<()> {
+    let definition_text = lines.join("\n");
+    
+    // カスタムワード名を収集
+    let custom_word_names: HashSet<String> = interp.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
+    
+    // トークン化
+    let tokens = crate::tokenizer::tokenize_with_custom_words(&definition_text, &custom_word_names)
+        .map_err(|e| AjisaiError::from(format!("Tokenization error: {}", e)))?;
+    
+    // 定義実行
+    op_def_inner(interp, &tokens, name, description, original_source)
 }
