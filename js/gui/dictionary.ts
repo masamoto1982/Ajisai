@@ -38,28 +38,33 @@ export class Dictionary {
         
         builtinWords.forEach((wordData: any[]) => {
             const category = wordData[2] || 'Other';
-            if (!groups[category]) {
-                groups[category] = [];
+            const group = groups[category];
+            if (group) {
+                group.push(wordData);
+            } else {
+                groups[category] = [wordData];
             }
-            groups[category].push(wordData);
         });
 
         Object.keys(groups).sort().forEach((category, groupIndex, categories) => {
             const groupContainer = document.createElement('div');
             
-            groups[category].forEach((wordData: any[]) => {
-                const button = document.createElement('button');
-                button.textContent = wordData[0];
-                button.className = 'word-button builtin';
-                button.title = wordData[1] || wordData[0];
-                
-                button.addEventListener('click', () => {
-                    if (this.onWordClick) {
-                        this.onWordClick(wordData[0]);
-                    }
+            const categoryWords = groups[category];
+            if (categoryWords) {
+                categoryWords.forEach((wordData: any[]) => {
+                    const button = document.createElement('button');
+                    button.textContent = wordData[0];
+                    button.className = 'word-button builtin';
+                    button.title = wordData[1] || wordData[0];
+                    
+                    button.addEventListener('click', () => {
+                        if (this.onWordClick) {
+                            this.onWordClick(wordData[0]);
+                        }
+                    });
+                    groupContainer.appendChild(button);
                 });
-                groupContainer.appendChild(button);
-            });
+            }
             
             container.appendChild(groupContainer);
 
