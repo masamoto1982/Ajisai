@@ -144,14 +144,18 @@ export class GUI {
     private async runCode(): Promise<void> {
         const code = this.editor.getValue();
         if (!code) return;
-
+    
         try {
             const result = window.ajisaiInterpreter.execute(code) as ExecuteResult;
-            
-            if (result.status === 'OK' && !result.error) {
+    
+            if (result.definition_to_load) {
+                this.editor.setValue(result.definition_to_load);
+                const wordName = code.replace("?", "").trim();
+                this.display.showInfo(`Loaded definition for ${wordName}.`);
+            } else if (result.status === 'OK' && !result.error) {
                 this.display.showExecutionResult(result);
                 this.editor.clear();
-                
+    
                 if (this.mobile.isMobile()) {
                     this.setMode('execution');
                 }
@@ -161,10 +165,13 @@ export class GUI {
         } catch (error) {
             this.display.showError(error as Error);
         }
-        
+    
         this.updateAllDisplays();
         await this.persistence.saveCurrentState();
-        this.display.showInfo('State saved.', true);
+
+        if (!code.trim().endsWith("?")) {
+            this.display.showInfo('State saved.', true);
+        }
     }
 
     private async executeStepByStep(): Promise<void> {
