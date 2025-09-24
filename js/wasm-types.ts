@@ -33,6 +33,7 @@ export interface ExecuteResult {
     hasMore?: boolean;
     position?: number;
     total?: number;
+    definition_to_load?: string;
 }
 
 export interface StepResult {
