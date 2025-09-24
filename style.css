@@ -398,7 +398,7 @@ button:hover {
         width: 100%;
         height: auto;
         overflow-y: visible;
-        margin-bottom: 0.5rem; /* パネル間のマージンを半分に */
+        margin-bottom: 0.25rem; /* パネル間のマージンを半分に */
     }
     
     #state-panel {
