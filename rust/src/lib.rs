@@ -1,14 +1,22 @@
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
-use crate::types::{Value, ValueType, Fraction, BracketType, Token};
+use crate.types::{Value, ValueType, Fraction, BracketType, Token};
 use num_bigint::BigInt;
 use std::str::FromStr;
+use serde::Deserialize;
 
 mod types;
 mod tokenizer;
 mod interpreter;
 mod builtins;
+
+#[derive(Deserialize)]
+struct CustomWordData {
+    name: String,
+    definition: String,
+    description: Option<String>,
+}
 
 #[wasm_bindgen]
 extern "C" {
@@ -310,6 +318,34 @@ impl AjisaiInterpreter {
             
         interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name)
             .map_err(|e| format!("Failed to restore word: {}", e))
+    }
+
+    #[wasm_bindgen]
+    pub fn restore_custom_words(&mut self, words_js: JsValue) -> Result<(), String> {
+        let words: Vec<CustomWordData> = serde_wasm_bindgen::from_value(words_js)
+            .map_err(|e| format!("Failed to deserialize words: {}", e))?;
+
+        let custom_word_names: std::collections::HashSet<String> = words.iter()
+            .map(|w| w.name.to_uppercase())
+            .collect();
+
+        for word in words {
+            let tokens = tokenizer::tokenize_with_custom_words(&word.definition, &custom_word_names)
+                .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
+
+            interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &word.name)
+                .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
+
+            if let Some(desc) = word.description {
+                if let Some(def) = self.interpreter.dictionary.get_mut(&word.name.to_uppercase()) {
+                    def.description = Some(desc);
+                }
+            }
+        }
+
+        self.interpreter.rebuild_dependencies().map_err(|e| e.to_string())?;
+
+        Ok(())
     }
 }
 
