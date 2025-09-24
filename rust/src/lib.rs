@@ -1,5 +1,3 @@
-// rust/src/lib.rs
-
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
@@ -7,8 +5,6 @@ use crate::types::{Value, ValueType, Fraction, BracketType, Token};
 use num_bigint::BigInt;
 use std::str::FromStr;
 
-// --- Module Declarations ---
-// These lines tell the compiler to include the other files.
 mod types;
 mod tokenizer;
 mod interpreter;
@@ -28,12 +24,10 @@ extern "C" {
     #[wasm_bindgen(method, js_name = "now")]
     fn now(this: &Performance) -> f64;
     
-    // Correctly declare `performance` as a thread-local static variable
     #[wasm_bindgen(js_name = "performance", thread_local)]
     static performance: Performance;
 }
 
-// Corrected `wasm_sleep` function using the thread-local `performance` API
 pub fn wasm_sleep(ms: u64) -> String {
     const MAX_SAFE_DELAY_MS: u64 = 1000;
     
@@ -41,7 +35,6 @@ pub fn wasm_sleep(ms: u64) -> String {
         return format!("[ERROR] Delay {}ms exceeds maximum allowed delay ({}ms). Execution aborted.", ms, MAX_SAFE_DELAY_MS);
     }
     
-    // Access the thread-local `performance` object using `.with()`
     let start = performance.with(|p| p.now());
     let target = start + ms as f64;
     
@@ -76,19 +69,15 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn execute(&mut self, code: &str) -> JsValue {
-        web_sys::console::log_1(&format!("Executing code: {:?}", code).into());
-        
         let obj = js_sys::Object::new();
         match self.interpreter.execute(code) {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
-                web_sys::console::log_1(&format!("Execution output: {}", output).into());
             }
             Err(e) => {
                 let error_msg = e.to_string();
-                web_sys::console::log_1(&format!("Execution error: {}", error_msg).into());
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"message".into(), &error_msg.into()).unwrap();
                 js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
@@ -319,7 +308,6 @@ impl AjisaiInterpreter {
         let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
             .map_err(|e| format!("Failed to tokenize word definition: {}", e))?;
             
-        // カスタムワード復元時に依存関係も構築
         interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name)
             .map_err(|e| format!("Failed to restore word: {}", e))
     }
