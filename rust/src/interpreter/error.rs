@@ -11,7 +11,6 @@ pub enum AjisaiError {
     DivisionByZero,
     IndexOutOfBounds { index: i64, length: usize },
     VectorLengthMismatch { len1: usize, len2: usize },
-    ProtectedWord { name: String, dependents: Vec<String> },
     Custom(String),
     WithContext { error: Box<AjisaiError>, context: Vec<String> },
 }
@@ -51,9 +50,6 @@ impl fmt::Display for AjisaiError {
             },
             AjisaiError::VectorLengthMismatch { len1, len2 } => {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
-            },
-            AjisaiError::ProtectedWord { name, dependents } => {
-                write!(f, "Cannot delete '{}' because it is used by: {}", name, dependents.join(", "))
             },
             AjisaiError::Custom(msg) => write!(f, "{}", msg),
             AjisaiError::WithContext { error, context } => {
