@@ -1,5 +1,3 @@
-// js/gui/dictionary.ts
-
 interface WordInfo {
     name: string;
     description?: string | null;
@@ -14,12 +12,12 @@ interface DictionaryElements {
 export class Dictionary {
     private elements!: DictionaryElements;
     private onWordClick!: (word: string) => void;
-    private gui: any; // GUI参照を追加
+    private gui: any;
 
     init(elements: DictionaryElements, onWordClick: (word: string) => void, gui?: any): void {
         this.elements = elements;
         this.onWordClick = onWordClick;
-        this.gui = gui; // GUI参照を保存
+        this.gui = gui;
     }
 
     renderBuiltinWords(): void {
@@ -36,42 +34,36 @@ export class Dictionary {
     private renderBuiltinWordsWithGroups(container: HTMLElement, builtinWords: any[]): void {
         container.innerHTML = '';
         
-        // 純粋Vector操作言語版のグループ分け
-        const positionWords = ['GET', 'INSERT', 'REPLACE', 'REMOVE'];
-        const quantityWords = ['LENGTH', 'TAKE', 'DROP', 'REPEAT', 'SPLIT'];
-        const workspaceWords = ['DUP', 'SWAP', 'ROT'];
-        const vectorWords = ['CONCAT', 'REVERSE'];
-        const arithmeticWords = ['+', '-', '*', '/'];
-        const comparisonWords = ['=', '<', '<=', '>', '>='];
-        const logicWords = ['AND', 'OR', 'NOT'];
-        const ioWords = ['PRINT'];
-        const systemWords = ['DEF', 'DEL', 'RESET'];
+        const groups: { [key: string]: any[] } = {};
         
-        const groups = [
-            positionWords, quantityWords, workspaceWords, vectorWords,
-            arithmeticWords, comparisonWords, logicWords, ioWords, systemWords
-        ];
-        
-        groups.forEach((group, groupIndex) => {
-            group.forEach(wordName => {
-                const wordData = builtinWords.find((item: any[]) => item[0] === wordName);
-                if (wordData) {
-                    const button = document.createElement('button');
-                    button.textContent = wordData[0];
-                    button.className = 'word-button builtin';
-                    button.title = wordData[1] || wordData[0];
-                    
-                    button.addEventListener('click', () => {
-                        if (this.onWordClick) {
-                            this.onWordClick(wordData[0]);
-                        }
-                    });
-                    
-                    container.appendChild(button);
-                }
+        builtinWords.forEach((wordData: any[]) => {
+            const category = wordData[2] || 'Other';
+            if (!groups[category]) {
+                groups[category] = [];
+            }
+            groups[category].push(wordData);
+        });
+
+        Object.keys(groups).sort().forEach((category, groupIndex, categories) => {
+            const groupContainer = document.createElement('div');
+            
+            groups[category].forEach((wordData: any[]) => {
+                const button = document.createElement('button');
+                button.textContent = wordData[0];
+                button.className = 'word-button builtin';
+                button.title = wordData[1] || wordData[0];
+                
+                button.addEventListener('click', () => {
+                    if (this.onWordClick) {
+                        this.onWordClick(wordData[0]);
+                    }
+                });
+                groupContainer.appendChild(button);
             });
             
-            if (groupIndex < groups.length - 1) {
+            container.appendChild(groupContainer);
+
+            if (groupIndex < categories.length - 1) {
                 const lineBreak = document.createElement('br');
                 container.appendChild(lineBreak);
             }
@@ -138,14 +130,12 @@ export class Dictionary {
                 button.classList.add('builtin');
             } else if (wordInfo.protected) {
                 button.classList.add('protected');
-                // 保護されたワードは右クリックで削除不可の説明を表示
                 button.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     alert(`Cannot delete '${wordInfo.name}' because it is used by other words.`);
                 });
             } else {
                 button.classList.add('deletable');
-                // 削除可能なワードは右クリックで削除確認
                 button.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     this.confirmAndDeleteWord(wordInfo.name);
@@ -165,12 +155,10 @@ export class Dictionary {
     private confirmAndDeleteWord(wordName: string): void {
         if (confirm(`Delete word '${wordName}'?`)) {
             try {
-                // ワード名をworkspaceに積んでDELを実行
                 const result = window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
                 if (result.status === 'ERROR') {
                     alert(`Failed to delete word: ${result.message}`);
                 } else {
-                    // GUI更新
                     if (this.gui) {
                         this.gui.updateAllDisplays();
                         this.gui.persistence.saveCurrentState();
