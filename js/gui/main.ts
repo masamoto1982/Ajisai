@@ -1,5 +1,3 @@
-// js/gui/main.ts (不要メソッド削除版)
-
 import { Display } from './display';
 import { Dictionary } from './dictionary';
 import { Editor } from './editor';
@@ -48,11 +46,9 @@ export class GUI {
         this.mobile = new MobileHandler();
         this.persistence = new Persistence(this);
         this.testRunner = new TestRunner(this);
-        console.log('GUI constructor: TestRunner initialized');
     }
 
     init(): void {
-        console.log('GUI.init() called');
         this.cacheElements();
 
         this.display.init({
@@ -61,9 +57,9 @@ export class GUI {
         });
         
         this.dictionary.init({
-    builtinWordsDisplay: this.elements.builtinWordsDisplay,
-    customWordsDisplay: this.elements.customWordsDisplay
-}, (word: string) => this.insertWord(word), this); // 第3引数でGUI参照を渡す
+            builtinWordsDisplay: this.elements.builtinWordsDisplay,
+            customWordsDisplay: this.elements.customWordsDisplay
+        }, (word: string) => this.insertWord(word), this);
         
         this.editor.init(this.elements.codeInput);
         
@@ -83,7 +79,6 @@ export class GUI {
     }
 
     private cacheElements(): void {
-        console.log('Caching elements...');
         this.elements = {
             codeInput: document.getElementById('code-input') as HTMLTextAreaElement,
             runBtn: document.getElementById('run-btn') as HTMLButtonElement,
@@ -98,28 +93,16 @@ export class GUI {
             workspaceArea: document.querySelector('.workspace-area')!,
             dictionaryArea: document.querySelector('.dictionary-area')!
         };
-
-        if (!this.elements.testBtn) {
-            console.error('Test button not found in DOM!');
-        } else {
-            console.log('Test button found:', this.elements.testBtn);
-        }
     }
     
     private setupEventListeners(): void {
-        console.log('Setting up event listeners...');
-        
         this.elements.runBtn.addEventListener('click', () => this.runCode());
         this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
         
         if (this.elements.testBtn) {
-            console.log('Adding test button event listener');
             this.elements.testBtn.addEventListener('click', () => {
-                console.log('Test button clicked!');
                 this.runTests();
             });
-        } else {
-            console.error('Cannot add event listener: test button not found');
         }
 
         this.elements.codeInput.addEventListener('keydown', (e) => {
@@ -222,7 +205,6 @@ export class GUI {
 
     private async executeReset(): Promise<void> {
         try {
-            console.log('Executing RESET...');
             const result = window.ajisaiInterpreter.reset() as ExecuteResult;
             
             if (result.status === 'OK' && !result.error) {
@@ -250,26 +232,19 @@ export class GUI {
     }
 
     private async runTests(): Promise<void> {
-        console.log('runTests called');
-        
         if (!window.ajisaiInterpreter) {
-            console.error('ajisaiInterpreter not available');
             this.display.showError('Interpreter not available');
             return;
         }
 
         try {
-            console.log('Starting test runner...');
             await this.testRunner.runAllTests();
             this.updateAllDisplays();
             
             if (this.mobile.isMobile()) {
                 this.setMode('execution');
             }
-            
-            console.log('Tests completed');
         } catch (error) {
-            console.error('Error running tests:', error);
             this.display.showError(error as Error);
         }
     }
