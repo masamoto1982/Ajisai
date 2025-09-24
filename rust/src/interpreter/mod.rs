@@ -16,6 +16,7 @@ pub struct Interpreter {
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) execution_state: Option<WordExecutionState>,
+    pub(crate) definition_to_load: Option<String>,
 }
 
 pub struct WordExecutionState {
@@ -33,6 +34,7 @@ impl Interpreter {
             dependents: HashMap::new(),
             output_buffer: String::new(),
             execution_state: None,
+            definition_to_load: None,
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -150,6 +152,7 @@ impl Interpreter {
             dependents: HashMap::new(),
             output_buffer: String::new(),
             execution_state: None,
+            definition_to_load: None,
         };
         
         temp_interp.execute_tokens(condition_tokens)?;
@@ -203,6 +206,7 @@ impl Interpreter {
                 }
             },
             "GOTO" => flow_control::op_goto(self),
+            "?" => control::op_lookup(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
     }
