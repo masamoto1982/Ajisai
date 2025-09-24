@@ -139,30 +139,4 @@ export class Persistence {
             }
         }, 100);
     }
-    
-    private extractDependencies(definition: string): string[] {
-        const dependencies: string[] = [];
-        // 簡単なワード名抽出（実際のトークナイザと同等の処理が必要）
-        const words = definition.match(/[A-Z_][A-Z0-9_]*/g) || [];
-        for (const word of words) {
-            if (!this.isBuiltinWord(word)) {
-                dependencies.push(word);
-            }
-        }
-        return [...new Set(dependencies)]; // 重複除去
-    }
-    
-    private isCustomWord(customWords: CustomWord[], wordName: string): boolean {
-        return customWords.some(w => w && w.name === wordName);
-    }
-    
-    private isBuiltinWord(wordName: string): boolean {
-        const builtins = [
-            'GET', 'INSERT', 'REPLACE', 'REMOVE', 'LENGTH', 'TAKE', 'DROP', 'SPLIT',
-            'DUP', 'SWAP', 'ROT', 'CONCAT', 'REVERSE',
-            '+', '-', '*', '/', '=', '<', '<=', '>', '>=', 'AND', 'OR', 'NOT',
-            'PRINT', 'DEF', 'DEL', 'RESET', 'GOTO'
-        ];
-        return builtins.includes(wordName);
-    }
 }
