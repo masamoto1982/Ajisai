@@ -1,5 +1,3 @@
-// rust/src/interpreter/mod.rs
-
 pub mod vector_ops;
 pub mod arithmetic;
 pub mod control;
@@ -15,7 +13,7 @@ use num_traits::Zero;
 pub struct Interpreter {
     pub(crate) workspace: Workspace,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
-    pub(crate) dependents: HashMap<String, HashSet<String>>, // キーのワードに依存しているワードのセット
+    pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) execution_state: Option<WordExecutionState>,
 }
@@ -47,11 +45,6 @@ impl Interpreter {
             .collect();
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
         
-        self.output_buffer.push_str(&format!("[DEBUG] Total tokens parsed: {}\n", tokens.len()));
-        for (i, token) in tokens.iter().enumerate() {
-            self.output_buffer.push_str(&format!("[DEBUG] Token {}: {:?}\n", i, token));
-        }
-        
         self.execute_tokens(&tokens)
     }
 
@@ -59,7 +52,6 @@ impl Interpreter {
         let mut i = 0;
         while i < tokens.len() {
             let token = &tokens[i];
-            self.output_buffer.push_str(&format!("[DEBUG] Processing token {}: {:?}\n", i, token));
             
             match token {
                 Token::Number(s) => {
@@ -67,7 +59,6 @@ impl Interpreter {
                     self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
                 },
                 Token::String(s) => {
-                    self.output_buffer.push_str(&format!("[DEBUG] Pushing string to workspace: {}\n", s));
                     self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
                 },
                 Token::Boolean(b) => self.workspace.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
@@ -119,20 +110,16 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
     
-        self.output_buffer.push_str(&format!("[DEBUG] Executing custom word: {}\n", name));
-    
         let is_conditional = def.lines.iter().any(|line| !line.condition_tokens.is_empty());
     
         let selected_line_index = if is_conditional {
             let value_to_test = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
-            self.output_buffer.push_str(&format!("[DEBUG] Popped value for condition test: {}\n", value_to_test));
             self.select_matching_line_conditional(&def.lines, &value_to_test)?
         } else {
             self.select_matching_line_default(&def.lines)?
         };
         
         if let Some(line_index) = selected_line_index {
-            self.output_buffer.push_str(&format!("[DEBUG] Selected line {} for execution\n", line_index + 1));
             self.execute_selected_line(&def.lines[line_index])?;
         } else {
             return Err(AjisaiError::from("No matching condition found and no default line available"));
@@ -160,7 +147,7 @@ impl Interpreter {
         let mut temp_interp = Interpreter {
             workspace: vec![value_to_test.clone()],
             dictionary: self.dictionary.clone(),
-            dependents: HashMap::new(), // 評価用なので空で良い
+            dependents: HashMap::new(),
             output_buffer: String::new(),
             execution_state: None,
         };
@@ -175,11 +162,8 @@ impl Interpreter {
     }
     
     fn execute_selected_line(&mut self, line: &ExecutionLine) -> Result<()> {
-        self.output_buffer.push_str(&format!("[DEBUG] Executing line with {} repeats, {}ms delay\n", line.repeat_count, line.delay_ms));
-        
         for iteration in 0..line.repeat_count {
             if iteration > 0 && line.delay_ms > 0 {
-                self.output_buffer.push_str(&format!("[DEBUG] Waiting {}ms...\n", line.delay_ms));
                 crate::wasm_sleep(line.delay_ms);
             }
             self.execute_tokens(&line.body_tokens)?;
@@ -205,7 +189,6 @@ impl Interpreter {
             "OR" => arithmetic::op_or(self), "NOT" => arithmetic::op_not(self),
             "PRINT" => io::op_print(self), 
             "DEF" => {
-                // 後置記法のみ: : ... ; 'ワード名' DEF
                 if self.workspace.len() >= 2 {
                     control::op_def(self)
                 } else {
@@ -213,7 +196,6 @@ impl Interpreter {
                 }
             },
             "DEL" => {
-                // 後置記法のみ: 'ワード名' DEL
                 if !self.workspace.is_empty() {
                     control::op_del(self)
                 } else {
@@ -254,21 +236,9 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
-    pub fn debug_dependencies(&self) {
-        web_sys::console::log_1(&"[DEBUG] === Dependency Map ===".into());
-        for (word, deps) in &self.dependents {
-            if !deps.is_empty() {
-                web_sys::console::log_1(&format!("[DEBUG] '{}' is used by: {:?}", word, deps).into());
-            }
-        }
-        web_sys::console::log_1(&"[DEBUG] === End Dependency Map ===".into());
-    }
-
     pub fn rebuild_dependencies(&mut self) -> Result<()> {
-        // 既存の依存関係をクリア
         self.dependents.clear();
         
-        // 各カスタムワードの依存関係を再構築
         let custom_words: Vec<(String, WordDefinition)> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| (name.clone(), def.clone()))
@@ -277,21 +247,18 @@ impl Interpreter {
         for (word_name, word_def) in custom_words {
             let mut dependencies = HashSet::new();
             
-            // 各行のトークンから依存関係を抽出
             for line in &word_def.lines {
                 for token in line.condition_tokens.iter().chain(line.body_tokens.iter()) {
                     if let Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
                         if self.dictionary.contains_key(&upper_s) && !self.dictionary.get(&upper_s).unwrap().is_builtin {
                             dependencies.insert(upper_s.clone());
-                            // 依存関係マップを更新
                             self.dependents.entry(upper_s).or_default().insert(word_name.clone());
                         }
                     }
                 }
             }
             
-            // ワード定義の依存関係も更新
             if let Some(def) = self.dictionary.get_mut(&word_name) {
                 def.dependencies = dependencies;
             }
@@ -303,14 +270,12 @@ impl Interpreter {
     pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
         if let Some(def) = self.dictionary.get(&name.to_uppercase()) {
             if !def.is_builtin && !def.lines.is_empty() {
-                // 簡単なトークン再構築（完全ではないが、依存関係構築には十分）
                 let mut result = String::new();
                 for (i, line) in def.lines.iter().enumerate() {
                     if i > 0 { result.push(' '); }
                     result.push(':');
                     if !line.condition_tokens.is_empty() {
                         result.push(' ');
-                        // 条件トークンを文字列化（簡略版）
                         for token in &line.condition_tokens {
                             result.push_str(&self.token_to_string(token));
                             result.push(' ');
@@ -318,7 +283,6 @@ impl Interpreter {
                         result.push('$');
                     }
                     result.push(' ');
-                    // 本体トークンを文字列化（簡略版）
                     for token in &line.body_tokens {
                         result.push_str(&self.token_to_string(token));
                         result.push(' ');
@@ -354,20 +318,11 @@ impl Interpreter {
     pub fn set_workspace(&mut self, workspace: Workspace) { self.workspace = workspace; }
     
     pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
-        // デバッグ出力を追加
-        self.debug_dependencies();
-        
         self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| {
                 let is_protected = self.dependents.get(name)
                     .map_or(false, |deps| !deps.is_empty());
-                
-                if is_protected {
-                    web_sys::console::log_1(&format!("[DEBUG] Word '{}' is PROTECTED", name).into());
-                } else {
-                    web_sys::console::log_1(&format!("[DEBUG] Word '{}' is DELETABLE", name).into());
-                }
                 
                 (name.clone(), def.description.clone(), is_protected)
             })
