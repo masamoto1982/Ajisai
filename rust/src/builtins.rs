@@ -44,5 +44,6 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("DEL", "Delete word", "System"),
         ("RESET", "Reset all memory and database", "System"),
         ("GOTO", "( N -- ) Jump to N-th line in custom word (1-indexed)", "System"),
+        ("?", "Load word definition into editor. Usage: 'WORD' ?", "System"),
     ]
 }
