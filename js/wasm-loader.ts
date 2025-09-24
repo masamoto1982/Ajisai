@@ -6,7 +6,7 @@ export async function initWasm(): Promise<WasmModule | null> {
     if (wasmModule) return wasmModule;
     
     try {
-        const module = await import('./pkg/ajisai_core.js') as WasmModule;
+        const module = await import('./pkg/ajisai_core.js') as unknown as WasmModule;
         
         if (module.default) {
             await module.default();
