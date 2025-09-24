@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
-use crate.types::{Value, ValueType, Fraction, BracketType, Token};
+use crate::types::{Value, ValueType, Fraction, BracketType, Token};
 use num_bigint::BigInt;
 use std::str::FromStr;
 use serde::Deserialize;
