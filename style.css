@@ -317,14 +317,14 @@ button:hover {
     background-color: #ffe0e0;
 }
 
-/* 依存されているカスタムワード (Dependency) - 紫 */
+/* 依存されているカスタムワード (Dependency) - オレンジ */
 .word-button.dependency {
-    border-color: #8a2be2; /* Purple */
-    background-color: #f5eefc;
+    border-color: #ff8c00; /* Dark Orange */
+    background-color: #fff5e6;
 }
 
 .word-button.dependency:hover {
-    background-color: #e6d4fa;
+    background-color: #ffe6c2;
 }
 
 /* 依存されていないカスタムワード (Non-dependency) - 緑 */
