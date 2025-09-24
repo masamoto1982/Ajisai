@@ -1,12 +1,6 @@
 // js/gui/persistence.ts
 
-import type { AjisaiInterpreter, Value } from '../wasm-types';
-
-interface CustomWord {
-    name: string;
-    description: string | null;
-    definition: string | null;
-}
+import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-types';
 
 interface InterpreterState {
     workspace: Value[];
@@ -82,11 +76,12 @@ export class Persistence {
 
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
-                if (state.workspace) window.ajisaiInterpreter.restore_workspace(state.workspace);
+                if (state.workspace) {
+                    window.ajisaiInterpreter.restore_workspace(state.workspace);
+                }
                 
                 if (state.customWords && state.customWords.length > 0) {
-                    // 依存関係を考慮した順序で復元
-                    await this.restoreWordsInDependencyOrder(state.customWords);
+                    await window.ajisaiInterpreter.restore_custom_words(state.customWords);
                 }
                 console.log('Interpreter state restored.');
             }
@@ -96,47 +91,5 @@ export class Persistence {
                 this.gui.display.showError(error as Error);
             }
         }
-    }
-
-    private async restoreWordsInDependencyOrder(customWords: CustomWord[]): Promise<void> {
-        console.log('[DEBUG] Starting word restoration with dependency order');
-        
-        // 全てのワードを一度に復元
-        for (const word of customWords) {
-            if (!word || !word.name || !word.definition) {
-                console.error(`[DEBUG] Skipping invalid word:`, word);
-                continue;
-            }
-            
-            try {
-                const description: string | undefined = word.description === null ? undefined : word.description;
-                await window.ajisaiInterpreter.restore_word(
-                    word.name, 
-                    word.definition,
-                    description
-                );
-                console.log(`[DEBUG] Restored word: ${word.name}`);
-            } catch (error) {
-                console.error(`[DEBUG] Failed to restore word ${word.name}:`, error);
-            }
-        }
-        
-        // 復元完了後に依存関係を再構築
-        console.log('[DEBUG] Rebuilding dependencies...');
-        const result = window.ajisaiInterpreter.rebuild_dependencies();
-        if (result.status === 'OK') {
-            console.log('[DEBUG] Dependencies rebuilt successfully');
-        } else {
-            console.error('[DEBUG] Failed to rebuild dependencies:', result.message);
-        }
-        
-        console.log('[DEBUG] Word restoration completed');
-        
-        // 復元完了後にGUIを更新
-        setTimeout(() => {
-            if (this.gui) {
-                this.gui.updateAllDisplays();
-            }
-        }, 100);
     }
 }
