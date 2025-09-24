@@ -1,18 +1,16 @@
-// js/wasm-types.ts (BigInt対応版)
-
 export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
 }
 
 export interface AjisaiInterpreter {
     execute(code: string): ExecuteResult;
-    execute_step(code: string): ExecuteResult; // 追加
+    execute_step(code: string): ExecuteResult;
     init_step(code: string): string;
     step(): StepResult;
     reset(): ExecuteResult;
     get_workspace(): Value[];
     get_custom_words_info(): Array<[string, string | null, boolean]>;
-    get_builtin_words_info(): Array<[string, string]>;
+    get_builtin_words_info(): Array<[string, string, string]>;
     get_word_definition(name: string): string | null;
     restore_workspace(workspace_js: Value[]): void;
     restore_word(name: string, definition: string, description?: string | null): void;
@@ -25,9 +23,9 @@ export interface ExecuteResult {
     debugOutput?: string;
     message?: string;
     error?: boolean;
-    hasMore?: boolean; // ステップ実行用に追加
-    position?: number; // ステップ実行用に追加
-    total?: number;    // ステップ実行用に追加
+    hasMore?: boolean;
+    position?: number;
+    total?: number;
 }
 
 export interface StepResult {
@@ -51,6 +49,6 @@ export interface Value {
 
 export interface WasmModule {
     AjisaiInterpreter: AjisaiInterpreterClass;
-    default?: () => Promise<void>;
-    init?: () => Promise<void>;
+    default?: () => Promise<any>;
+    init?: () => Promise<any>;
 }
