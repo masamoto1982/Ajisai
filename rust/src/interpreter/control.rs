@@ -37,14 +37,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &st
     let upper_name = name.to_uppercase();
     interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}'\n", upper_name));
 
-    // もしこのワードが他のワードから使われていたら、再定義をブロック
-    if let Some(dependents) = interp.dependents.get(&upper_name) {
-        if !dependents.is_empty() {
-            let dep_list: Vec<String> = dependents.iter().cloned().collect();
-            return Err(AjisaiError::ProtectedWord { name: upper_name, dependents: dep_list });
-        }
-    }
-
     // 以前の定義があれば、古い依存関係を削除
     if let Some(old_def) = interp.dictionary.get(&upper_name) {
         for dep_name in &old_def.dependencies {
@@ -161,14 +153,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     };
 
     let upper_name = name.to_uppercase();
-
-    // このワードが他のワードから参照されているかチェック
-    if let Some(dependents) = interp.dependents.get(&upper_name) {
-        if !dependents.is_empty() {
-            let dep_list: Vec<String> = dependents.iter().cloned().collect();
-            return Err(AjisaiError::ProtectedWord { name: upper_name, dependents: dep_list });
-        }
-    }
 
     // 辞書からワードを削除
     if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
