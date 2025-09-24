@@ -77,12 +77,18 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn execute(&mut self, code: &str) -> JsValue {
+        self.interpreter.definition_to_load = None; // Reset before each execution.
         let obj = js_sys::Object::new();
         match self.interpreter.execute(code) {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
+
+                // Check if a definition needs to be loaded into the editor
+                if let Some(def_str) = self.interpreter.definition_to_load.take() {
+                    js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into()).unwrap();
+                }
             }
             Err(e) => {
                 let error_msg = e.to_string();
