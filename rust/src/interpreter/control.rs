@@ -136,10 +136,7 @@ fn parse_definition_body(_interp: &mut Interpreter, tokens: &[Token]) -> Result<
     Ok(lines)
 }
 
-// rust/src/interpreter/control.rs の op_del 完全修正
-
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    // workspaceから文字列を取得（削除はしない、参照のみ）
     let val = interp.workspace.last().ok_or(AjisaiError::WorkspaceUnderflow)?;
     
     let name = match &val.val_type {
@@ -154,22 +151,45 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name.to_uppercase();
 
-    // 辞書からワードを削除
     if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
-        // このワードが依存していた他のワードの依存リストから、このワードを削除
         for dep_name in &removed_def.dependencies {
             if let Some(dependents) = interp.dependents.get_mut(dep_name) {
                 dependents.remove(&upper_name);
             }
         }
-        // このワードに対する依存関係マップも削除
         interp.dependents.remove(&upper_name);
         
-        // 成功した場合のみworkspaceから値を削除
         interp.workspace.pop();
         interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
         Ok(())
     } else {
         Err(AjisaiError::UnknownWord(upper_name))
+    }
+}
+
+pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
+    let name_val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+
+    let name_str = if let ValueType::Vector(v, _) = name_val.val_type {
+        if v.len() == 1 {
+            if let ValueType::String(s) = &v[0].val_type {
+                s.clone()
+            } else {
+                return Err(AjisaiError::type_error("string for word name", "other type"));
+            }
+        } else {
+            return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
+        }
+    } else {
+        return Err(AjisaiError::type_error("vector for word name", "other type"));
+    };
+
+    let upper_name = name_str.to_uppercase();
+    if let Some(definition) = interp.get_word_definition_tokens(&upper_name) {
+        let full_definition = format!("{} '{}' DEF", definition, name_str);
+        interp.definition_to_load = Some(full_definition);
+        Ok(())
+    } else {
+        Err(AjisaiError::UnknownWord(name_str))
     }
 }
