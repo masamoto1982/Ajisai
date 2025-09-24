@@ -8,45 +8,59 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
-    let preprocessed_input = input.lines()
-        .map(|line| line.split('#').next().unwrap_or(""))
-        .collect::<Vec<&str>>()
-        .join(" ");
-
-    let chars: Vec<char> = preprocessed_input.chars().collect();
-    let mut i = 0;
+    let lines: Vec<&str> = input.lines().collect();
     
     let builtin_words: HashSet<String> = builtins::get_builtin_definitions()
         .iter()
         .map(|(name, _, _)| name.to_string())
         .collect();
 
-    while i < chars.len() {
-        if chars[i].is_whitespace() { i += 1; continue; }
+    for (line_num, line) in lines.iter().enumerate() {
+        // #コメント処理：#以降を除去
+        let line_content = line.split('#').next().unwrap_or("").trim();
         
-        if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
-            tokens.push(token); i += consumed; continue;
+        if line_content.is_empty() {
+            if line_num < lines.len() - 1 { // 最終行でなければ改行トークン追加
+                tokens.push(Token::LineBreak);
+            }
+            continue;
         }
-        if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
-            tokens.push(token); i += consumed; continue;
-        }
-        if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
-            tokens.push(token); i += consumed; continue;
-        }
-        if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
-            tokens.push(token); i += consumed; continue;
-        }
-        if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
-            tokens.push(token); i += consumed; continue;
-        }
-        if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
-            tokens.push(token); i += consumed; continue;
-        }
-        if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..], &builtin_words) {
-            tokens.push(token); i += consumed; continue;
+
+        let chars: Vec<char> = line_content.chars().collect();
+        let mut i = 0;
+
+        while i < chars.len() {
+            if chars[i].is_whitespace() { i += 1; continue; }
+            
+            if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
+                tokens.push(token); i += consumed; continue;
+            }
+            if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
+                tokens.push(token); i += consumed; continue;
+            }
+            if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
+                tokens.push(token); i += consumed; continue;
+            }
+            if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
+                tokens.push(token); i += consumed; continue;
+            }
+            if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
+                tokens.push(token); i += consumed; continue;
+            }
+            if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+                tokens.push(token); i += consumed; continue;
+            }
+            if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..], &builtin_words) {
+                tokens.push(token); i += consumed; continue;
+            }
+            
+            i += 1;
         }
         
-        i += 1;
+        // 行末に改行トークン追加（最終行以外）
+        if line_num < lines.len() - 1 {
+            tokens.push(Token::LineBreak);
+        }
     }
     
     convert_vector_brackets_by_depth(&mut tokens)?;
@@ -58,9 +72,8 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
     match c {
         '[' => Some((Token::VectorStart(BracketType::Square), 1)),
         ']' => Some((Token::VectorEnd(BracketType::Square), 1)),
-        ':' => Some((Token::DefBlockStart, 1)),
-        ';' => Some((Token::DefBlockEnd, 1)),
-        '$' => Some((Token::GuardSeparator, 1)),
+        ':' => Some((Token::GuardSeparator, 1)), // : は条件分岐記号として使用
+        ';' => Some((Token::DefBlockEnd, 1)), // ; は互換性のため残すが使用頻度は減る
         _ => None,
     }
 }
