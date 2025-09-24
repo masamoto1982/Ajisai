@@ -307,25 +307,33 @@ button:hover {
     background-color: #e0e0e0;
 }
 
-/* 変更不可 */
-.word-button.builtin,
-.word-button.protected {
+/* 組み込みワード (Built-in) */
+.word-button.builtin {
     border-color: #dc3545;
     background-color: #fff5f5;
 }
 
-.word-button.builtin:hover,
-.word-button.protected:hover {
+.word-button.builtin:hover {
     background-color: #ffe0e0;
 }
 
-/* 変更可能 */
-.word-button.deletable {
+/* 依存されているカスタムワード (Dependency) - 紫 */
+.word-button.dependency {
+    border-color: #8a2be2; /* Purple */
+    background-color: #f5eefc;
+}
+
+.word-button.dependency:hover {
+    background-color: #e6d4fa;
+}
+
+/* 依存されていないカスタムワード (Non-dependency) - 緑 */
+.word-button.non-dependency {
     border-color: #28a745;
     background-color: #f0fff4;
 }
 
-.word-button.deletable:hover {
+.word-button.non-dependency:hover {
     background-color: #e0ffe8;
 }
 
