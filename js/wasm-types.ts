@@ -16,6 +16,7 @@ export interface AjisaiInterpreter {
     get_word_definition(name: string): string | null;
     restore_workspace(workspace_js: Value[]): void;
     restore_word(name: string, definition: string, description?: string | null): void;
+    rebuild_dependencies(): { status: string; message: string };
 }
 
 export interface ExecuteResult {
