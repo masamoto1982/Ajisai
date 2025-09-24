@@ -82,27 +82,6 @@ impl Interpreter {
                     self.workspace.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
                     i += consumed - 1;
                 },
-                Token::Symbol(name) if name.to_uppercase() == "DEF" => {
-                    if let Some(Token::String(word_name)) = tokens.get(i + 1) {
-                        if let Some(body_val) = self.workspace.pop() {
-                             if let ValueType::DefinitionBody(body_tokens) = body_val.val_type {
-                                control::op_def_inner(self, &body_tokens, word_name)?;
-                                i += 1; 
-                             } else {
-                                self.workspace.push(body_val); 
-                                return Err(AjisaiError::from("DEF must be preceded by a definition block :...;"));
-                             }
-                        } else {
-                            return Err(AjisaiError::from("DEF must be preceded by a definition block :...;"));
-                        }
-                    } else {
-                        if self.workspace.len() >= 2 {
-                             self.execute_builtin("DEF")?;
-                        } else {
-                             return Err(AjisaiError::from("DEF must be followed by a quoted name like 'WORD'"));
-                        }
-                    }
-                },
                 Token::Symbol(name) => {
                     self.execute_word(name)?;
                 },
@@ -224,13 +203,21 @@ impl Interpreter {
             "<=" => arithmetic::op_le(self), ">" => arithmetic::op_gt(self),
             ">=" => arithmetic::op_ge(self), "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self), "NOT" => arithmetic::op_not(self),
-            "PRINT" => io::op_print(self), "DEF" => control::op_def(self),
+            "PRINT" => io::op_print(self), 
+            "DEF" => {
+                // 後置記法のみ: : ... ; 'ワード名' DEF
+                if self.workspace.len() >= 2 {
+                    control::op_def(self)
+                } else {
+                    Err(AjisaiError::from("DEF requires definition and name on workspace. Usage: : ... ; 'WORD_NAME' DEF"))
+                }
+            },
             "DEL" => {
-                // DELの特別処理: workspaceが空でないことを確認
+                // 後置記法のみ: 'ワード名' DEL
                 if !self.workspace.is_empty() {
                     control::op_del(self)
                 } else {
-                    Err(AjisaiError::from("DEL requires a word name on the workspace. Usage: [ 'WORD_NAME' ] DEL"))
+                    Err(AjisaiError::from("DEL requires a word name on workspace. Usage: 'WORD_NAME' DEL"))
                 }
             },
             "GOTO" => flow_control::op_goto(self),
@@ -275,6 +262,91 @@ impl Interpreter {
             }
         }
         web_sys::console::log_1(&"[DEBUG] === End Dependency Map ===".into());
+    }
+
+    pub fn rebuild_dependencies(&mut self) -> Result<()> {
+        // 既存の依存関係をクリア
+        self.dependents.clear();
+        
+        // 各カスタムワードの依存関係を再構築
+        let custom_words: Vec<(String, WordDefinition)> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.clone()))
+            .collect();
+            
+        for (word_name, word_def) in custom_words {
+            let mut dependencies = HashSet::new();
+            
+            // 各行のトークンから依存関係を抽出
+            for line in &word_def.lines {
+                for token in line.condition_tokens.iter().chain(line.body_tokens.iter()) {
+                    if let Token::Symbol(s) = token {
+                        let upper_s = s.to_uppercase();
+                        if self.dictionary.contains_key(&upper_s) && !self.dictionary.get(&upper_s).unwrap().is_builtin {
+                            dependencies.insert(upper_s.clone());
+                            // 依存関係マップを更新
+                            self.dependents.entry(upper_s).or_default().insert(word_name.clone());
+                        }
+                    }
+                }
+            }
+            
+            // ワード定義の依存関係も更新
+            if let Some(def) = self.dictionary.get_mut(&word_name) {
+                def.dependencies = dependencies;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
+        if let Some(def) = self.dictionary.get(&name.to_uppercase()) {
+            if !def.is_builtin && !def.lines.is_empty() {
+                // 簡単なトークン再構築（完全ではないが、依存関係構築には十分）
+                let mut result = String::new();
+                for (i, line) in def.lines.iter().enumerate() {
+                    if i > 0 { result.push(' '); }
+                    result.push(':');
+                    if !line.condition_tokens.is_empty() {
+                        result.push(' ');
+                        // 条件トークンを文字列化（簡略版）
+                        for token in &line.condition_tokens {
+                            result.push_str(&self.token_to_string(token));
+                            result.push(' ');
+                        }
+                        result.push('$');
+                    }
+                    result.push(' ');
+                    // 本体トークンを文字列化（簡略版）
+                    for token in &line.body_tokens {
+                        result.push_str(&self.token_to_string(token));
+                        result.push(' ');
+                    }
+                    result.push(';');
+                }
+                return Some(result);
+            }
+        }
+        None
+    }
+    
+    fn token_to_string(&self, token: &Token) -> String {
+        match token {
+            Token::Number(s) => s.clone(),
+            Token::String(s) => format!("'{}'", s),
+            Token::Boolean(true) => "TRUE".to_string(),
+            Token::Boolean(false) => "FALSE".to_string(),
+            Token::Symbol(s) => s.clone(),
+            Token::Nil => "NIL".to_string(),
+            Token::VectorStart(BracketType::Square) => "[".to_string(),
+            Token::VectorEnd(BracketType::Square) => "]".to_string(),
+            Token::VectorStart(BracketType::Curly) => "{".to_string(),
+            Token::VectorEnd(BracketType::Curly) => "}".to_string(),
+            Token::VectorStart(BracketType::Round) => "(".to_string(),
+            Token::VectorEnd(BracketType::Round) => ")".to_string(),
+            _ => "".to_string(),
+        }
     }
 
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
