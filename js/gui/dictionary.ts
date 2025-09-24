@@ -2,7 +2,6 @@ interface WordInfo {
     name: string;
     description?: string | null;
     protected?: boolean;
-    definition?: string | null;
 }
 
 interface DictionaryElements {
@@ -75,8 +74,7 @@ export class Dictionary {
         const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
             name: wordData[0],
             description: wordData[1] || this.decodeWordName(wordData[0]) || wordData[0],
-            protected: wordData[2] || false,
-            definition: window.ajisaiInterpreter.get_word_definition(wordData[0])
+            protected: wordData[2] || false
         }));
         this.renderWordButtons(this.elements.customWordsDisplay, words, true);
     }
@@ -123,9 +121,6 @@ export class Dictionary {
             button.className = 'word-button';
             
             let titleText = `Name: ${wordInfo.name}`;
-            if (wordInfo.definition) {
-                titleText += `\n\nDefinition:\n${wordInfo.definition}`;
-            }
             if (wordInfo.description) {
                 titleText += `\n\nDescription:\n${wordInfo.description}`;
             }
