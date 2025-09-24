@@ -239,8 +239,8 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     }
     if !chars.is_empty() {
         match chars[0] {
-            '+' | '-' | '*' | '/' | '<' | '>' | '=' => {
-                 if chars.len() > 1 && chars[1].is_ascii_digit() { return None; }
+            '+' | '-' | '*' | '/' | '<' | '>' | '=' | '?' => {
+                 if chars.len() > 1 && chars[1].is_ascii_digit() && chars[0] != '?' { return None; }
                  Some((Token::Symbol(chars[0].to_string()), 1))
             },
             _ => None
