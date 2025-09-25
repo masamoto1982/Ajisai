@@ -120,11 +120,8 @@ export class Dictionary {
             button.textContent = wordInfo.name;
             button.className = 'word-button';
             
-            let titleText = `Name: ${wordInfo.name}`;
-            if (wordInfo.description) {
-                titleText += `\n\nDescription:\n${wordInfo.description}`;
-            }
-            button.title = titleText;
+            // 変更点：説明文のみをtitle属性に設定するように修正
+            button.title = wordInfo.description || '';
             
             if (!isCustom) {
                 button.classList.add('builtin');
