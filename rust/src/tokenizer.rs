@@ -16,16 +16,16 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         .collect();
 
     for (line_num, line) in lines.iter().enumerate() {
-        // #コメント処理：#以降を除去
-        let line_content = line.split('#').next().unwrap_or("").trim();
-        
-        if line_content.is_empty() {
+        // #コメント処理：行頭の#のみコメントとして扱う
+        let trimmed_line = line.trim_start();
+        if trimmed_line.starts_with('#') {
             if line_num < lines.len() - 1 { // 最終行でなければ改行トークン追加
                 tokens.push(Token::LineBreak);
             }
             continue;
         }
 
+        let line_content = line; // 行全体を処理対象とする
         let chars: Vec<char> = line_content.chars().collect();
         let mut i = 0;
 
@@ -54,7 +54,13 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 tokens.push(token); i += consumed; continue;
             }
             
-            i += 1;
+            // どのトークンにもマッチしない場合は、単に進む
+            // これにより未知の単語（日本語など）が無視される
+            let mut end = i;
+            while end < chars.len() && !chars[end].is_whitespace() {
+                end += 1;
+            }
+            i = end;
         }
         
         // 行末に改行トークン追加（最終行以外）
