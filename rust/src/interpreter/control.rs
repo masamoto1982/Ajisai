@@ -1,7 +1,7 @@
 // rust/src/interpreter/control.rs
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Token, ExecutionLine, Value, ValueType, WordDefinition};
+use crate::types::{Token, ExecutionLine, ValueType, WordDefinition}; // Value を削除
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
@@ -138,7 +138,7 @@ fn parse_single_execution_line(tokens: &[Token]) -> Result<ExecutionLine> {
     }
     
     // 修飾子を除いた実行部分を取得
-    let mut execution_tokens: Vec<Token> = tokens.iter().enumerate()
+    let execution_tokens: Vec<Token> = tokens.iter().enumerate() // mut を削除
         .filter(|(i, _)| !modifier_positions.contains(i))
         .map(|(_, token)| token.clone())
         .collect();
