@@ -1,3 +1,5 @@
+// rust/src/tokenizer.rs (修正版)
+
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
 use crate::builtins;
@@ -29,39 +31,28 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         let mut i = 0;
 
         while i < chars.len() {
-            // 既知のトークンパターンを順に試す
-            // 最も長くマッチするものを優先するために、解析の順序が重要
-            
-            // 1. 単一文字のトークン
             if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
                 tokens.push(token); i += consumed; continue;
             }
-            // 2. 文字列リテラル
             if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
                 tokens.push(token); i += consumed; continue;
             }
-            // 3. カスタムワード（組み込みワードより優先してチェック）
             if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
                 tokens.push(token); i += consumed; continue;
             }
-            // 4. 修飾子
             if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
                 tokens.push(token); i += consumed; continue;
             }
-            // 5. 数値
             if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
                 tokens.push(token); i += consumed; continue;
             }
-            // 6. 演算子
             if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
                 tokens.push(token); i += consumed; continue;
             }
-            // 7. 組み込みワード
             if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..], &builtin_words) {
                 tokens.push(token); i += consumed; continue;
             }
             
-            // どのパターンにも一致しない場合は、その1文字をスキップして次に進む
             i += 1;
         }
         
@@ -94,7 +85,7 @@ fn try_parse_modifier(chars: &[char]) -> Option<(Token, usize)> {
         
         if unit == "x" || unit == "s" || unit == "ms" {
             let end_of_modifier = i + unit.len();
-            if end_of_modifier == chars.len() || !chars[end_of_modifier].is_alphanumeric() {
+            if end_of_modifier == chars.len() || !is_word_char(chars[end_of_modifier]) {
                 let modifier_str: String = chars[..end_of_modifier].iter().collect();
                 return Some((Token::Modifier(modifier_str), end_of_modifier));
             }
@@ -170,7 +161,8 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
     None
 }
 
-fn is_word_char(c: char) -> bool { c.is_alphanumeric() || c == '_' }
+// 修正点：is_alphanumeric() から is_ascii_alphanumeric() へ変更
+fn is_word_char(c: char) -> bool { c.is_ascii_alphanumeric() || c == '_' }
 
 fn parse_single_quote_string(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() || chars[0] != '\'' { return None; }
