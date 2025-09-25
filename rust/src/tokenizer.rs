@@ -16,54 +16,55 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         .collect();
 
     for (line_num, line) in lines.iter().enumerate() {
-        // #コメント処理：行頭の#のみコメントとして扱う
         let trimmed_line = line.trim_start();
         if trimmed_line.starts_with('#') {
-            if line_num < lines.len() - 1 { // 最終行でなければ改行トークン追加
+            if line_num < lines.len() - 1 {
                 tokens.push(Token::LineBreak);
             }
             continue;
         }
 
-        let line_content = line; // 行全体を処理対象とする
+        let line_content = line;
         let chars: Vec<char> = line_content.chars().collect();
         let mut i = 0;
 
         while i < chars.len() {
-            if chars[i].is_whitespace() { i += 1; continue; }
+            // 既知のトークンパターンを順に試す
+            // 最も長くマッチするものを優先するために、解析の順序が重要
             
+            // 1. 単一文字のトークン
             if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
                 tokens.push(token); i += consumed; continue;
             }
+            // 2. 文字列リテラル
             if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
                 tokens.push(token); i += consumed; continue;
             }
-            if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
-                tokens.push(token); i += consumed; continue;
-            }
-            if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
-                tokens.push(token); i += consumed; continue;
-            }
+            // 3. カスタムワード（組み込みワードより優先してチェック）
             if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
                 tokens.push(token); i += consumed; continue;
             }
+            // 4. 修飾子
+            if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
+                tokens.push(token); i += consumed; continue;
+            }
+            // 5. 数値
+            if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
+                tokens.push(token); i += consumed; continue;
+            }
+            // 6. 演算子
             if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
                 tokens.push(token); i += consumed; continue;
             }
+            // 7. 組み込みワード
             if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..], &builtin_words) {
                 tokens.push(token); i += consumed; continue;
             }
             
-            // どのトークンにもマッチしない場合は、単に進む
-            // これにより未知の単語（日本語など）が無視される
-            let mut end = i;
-            while end < chars.len() && !chars[end].is_whitespace() {
-                end += 1;
-            }
-            i = end;
+            // どのパターンにも一致しない場合は、その1文字をスキップして次に進む
+            i += 1;
         }
         
-        // 行末に改行トークン追加（最終行以外）
         if line_num < lines.len() - 1 {
             tokens.push(Token::LineBreak);
         }
@@ -78,8 +79,8 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
     match c {
         '[' => Some((Token::VectorStart(BracketType::Square), 1)),
         ']' => Some((Token::VectorEnd(BracketType::Square), 1)),
-        ':' => Some((Token::GuardSeparator, 1)), // : は条件分岐記号として使用
-        ';' => Some((Token::DefBlockEnd, 1)), // ; は互換性のため残すが使用頻度は減る
+        ':' => Some((Token::GuardSeparator, 1)),
+        ';' => Some((Token::DefBlockEnd, 1)),
         _ => None,
     }
 }
