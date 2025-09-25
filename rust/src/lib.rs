@@ -322,7 +322,7 @@ impl AjisaiInterpreter {
         let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
             .map_err(|e| format!("Failed to tokenize word definition: {}", e))?;
             
-        interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name)
+        interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name, None, None)
             .map_err(|e| format!("Failed to restore word: {}", e))
     }
 
@@ -339,7 +339,7 @@ impl AjisaiInterpreter {
             let tokens = tokenizer::tokenize_with_custom_words(&word.definition, &custom_word_names)
                 .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
 
-            interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &word.name)
+            interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &word.name, word.description.clone(), None)
                 .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
 
             if let Some(desc) = word.description {
