@@ -8,6 +8,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
             is_builtin: true,
             description: Some(description.to_string()),
             dependencies: HashSet::new(),
+            original_source: None, // 🆕 追加
         });
     }
 }
