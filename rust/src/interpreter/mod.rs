@@ -174,40 +174,78 @@ impl Interpreter {
     }
 
     fn execute_word(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(&name.to_uppercase()).cloned()
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
+    let def = self.dictionary.get(&name.to_uppercase()).cloned()
+        .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
-        if def.is_builtin {
-            return self.execute_builtin(name);
-        }
+    if def.is_builtin {
+        return self.execute_builtin(name);
+    }
 
-        // シンプルに行を上から順に実行するだけ
+    // 条件付き行があるかチェック
+    let has_conditional_lines = def.lines.iter().any(|line| !line.condition_tokens.is_empty());
+    
+    if has_conditional_lines {
+        // 条件分岐モード: 最初に真になった条件の行のみ実行
+        let value_to_test = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+        
         for line in &def.lines {
-            // 各行のトークンを実行（:があれば条件実行、なければ無条件実行）
-            let mut all_tokens = Vec::new();
-            all_tokens.extend(line.condition_tokens.clone());
             if !line.condition_tokens.is_empty() {
-                all_tokens.push(Token::GuardSeparator);
-            }
-            all_tokens.extend(line.body_tokens.clone());
-            
-            // 修飾子を追加
-            if line.repeat_count != 1 {
-                all_tokens.push(Token::Modifier(format!("{}x", line.repeat_count)));
-            }
-            if line.delay_ms > 0 {
-                if line.delay_ms >= 1000 && line.delay_ms % 1000 == 0 {
-                    all_tokens.push(Token::Modifier(format!("{}s", line.delay_ms / 1000)));
-                } else {
-                    all_tokens.push(Token::Modifier(format!("{}ms", line.delay_ms)));
+                // 条件を評価
+                if self.evaluate_condition(&line.condition_tokens, &value_to_test)? {
+                    // 元の値をワークスペースに戻す
+                    self.workspace.push(value_to_test);
+                    // この行を実行して終了
+                    return self.execute_line(line);
                 }
+            } else {
+                // デフォルト行: 元の値をワークスペースに戻して実行
+                self.workspace.push(value_to_test);
+                return self.execute_line(line);
             }
-            
-            self.execute_tokens(&all_tokens)?;
         }
         
-        Ok(())
+        // どの条件にもマッチしなかった場合、値を戻す
+        self.workspace.push(value_to_test);
+    } else {
+        // 条件なしモード: 全ての行を順次実行
+        for line in &def.lines {
+            self.execute_line(line)?;
+        }
     }
+    
+    Ok(())
+}
+
+fn evaluate_condition(&mut self, condition_tokens: &[Token], value_to_test: &Value) -> Result<bool> {
+    // 一時的なインタープリターで条件を評価
+    let mut temp_interp = Interpreter {
+        workspace: vec![value_to_test.clone()],
+        dictionary: self.dictionary.clone(),
+        dependents: HashMap::new(),
+        output_buffer: String::new(),
+        execution_state: None,
+        definition_to_load: None,
+    };
+    
+    temp_interp.execute_tokens(condition_tokens)?;
+    
+    if let Some(result_val) = temp_interp.workspace.pop() {
+        Ok(is_truthy(&result_val))
+    } else {
+        Ok(false)
+    }
+}
+
+fn execute_line(&mut self, line: &ExecutionLine) -> Result<()> {
+    for iteration in 0..line.repeat_count {
+        if iteration > 0 && line.delay_ms > 0 {
+            let sleep_result = crate::wasm_sleep(line.delay_ms);
+            self.output_buffer.push_str(&format!("{}\n", sleep_result));
+        }
+        self.execute_tokens(&line.body_tokens)?;
+    }
+    Ok(())
+}
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name.to_uppercase().as_str() {
