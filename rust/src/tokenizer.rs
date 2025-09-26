@@ -29,39 +29,42 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         let line_content = line;
         let chars: Vec<char> = line_content.chars().collect();
         let mut i = 0;
+        let mut line_has_tokens = false;
 
         while i < chars.len() {
+            if chars[i].is_whitespace() {
+                i += 1;
+                continue;
+            }
+
+            let mut token_found = false;
+
             if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
-                tokens.push(token); i += consumed; continue;
-            }
-            if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
-                tokens.push(token); i += consumed; continue;
-            }
-            if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
-                tokens.push(token); i += consumed; continue;
-            }
-            if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
-                tokens.push(token); i += consumed; continue;
-            }
-            if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
-                tokens.push(token); i += consumed; continue;
-            }
-            if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
-                tokens.push(token); i += consumed; continue;
-            }
-            if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..], &builtin_words) {
-                tokens.push(token); i += consumed; continue;
+                tokens.push(token); i += consumed; token_found = true;
+            } else if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
+                tokens.push(token); i += consumed; token_found = true;
+            } else if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
+                tokens.push(token); i += consumed; token_found = true;
+            } else if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
+                tokens.push(token); i += consumed; token_found = true;
+            } else if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
+                tokens.push(token); i += consumed; token_found = true;
+            } else if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+                tokens.push(token); i += consumed; token_found = true;
+            } else if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..], &builtin_words) {
+                tokens.push(token); i += consumed; token_found = true;
             }
             
-            i += 1;
+            if !token_found {
+                return Err(format!("Unknown token starting with: {}", chars[i..].iter().collect::<String>()));
+            }
+            line_has_tokens = true;
         }
         
-        if line_num < lines.len() - 1 {
+        if line_has_tokens && line_num < lines.len() - 1 {
             tokens.push(Token::LineBreak);
         }
     }
-    
-    convert_brackets(&mut tokens)?;
     
     Ok(tokens)
 }
@@ -70,6 +73,10 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
     match c {
         '[' => Some((Token::VectorStart(BracketType::Square), 1)),
         ']' => Some((Token::VectorEnd(BracketType::Square), 1)),
+        '{' => Some((Token::VectorStart(BracketType::Curly), 1)),
+        '}' => Some((Token::VectorEnd(BracketType::Curly), 1)),
+        '(' => Some((Token::VectorStart(BracketType::Round), 1)),
+        ')' => Some((Token::VectorEnd(BracketType::Round), 1)),
         ':' => Some((Token::GuardSeparator, 1)),
         ';' => Some((Token::DefBlockEnd, 1)),
         _ => None,
@@ -94,36 +101,6 @@ fn try_parse_modifier(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-fn convert_brackets(tokens: &mut [Token]) -> Result<(), String> {
-    let mut depth_stack = Vec::new();
-    for token in tokens.iter_mut() {
-        match token {
-            Token::VectorStart(_) => {
-                let bracket_type = match depth_stack.len() % 3 {
-                    0 => BracketType::Square,
-                    1 => BracketType::Curly,
-                    2 => BracketType::Round,
-                    _ => unreachable!(),
-                };
-                *token = Token::VectorStart(bracket_type.clone());
-                depth_stack.push(bracket_type);
-            },
-            Token::VectorEnd(_) => {
-                if let Some(opening_type) = depth_stack.pop() {
-                    *token = Token::VectorEnd(opening_type);
-                } else {
-                    return Err("Unexpected closing bracket".to_string());
-                }
-            },
-            _ => {}
-        }
-    }
-    if !depth_stack.is_empty() {
-        return Err("Unclosed vector found".to_string());
-    }
-    Ok(())
-}
-
 fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
     let mut sorted_words: Vec<&String> = custom_words.iter().collect();
     sorted_words.sort_by(|a, b| b.len().cmp(&a.len()));
@@ -137,8 +114,7 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
     None
 }
 
-// 修正点：is_alphanumeric() から is_ascii_alphanumeric() へ変更
-fn is_word_char(c: char) -> bool { c.is_ascii_alphanumeric() || c == '_' }
+fn is_word_char(c: char) -> bool { c.is_ascii_alphanumeric() || c == '_' || c == '?' || c == '!' }
 
 fn parse_single_quote_string(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() || chars[0] != '\'' { return None; }
@@ -151,37 +127,42 @@ fn parse_single_quote_string(chars: &[char]) -> Option<(Token, usize)> {
 }
 
 fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
+    let original_len = chars.len();
+    let mut temp_chars = chars;
+
+    if temp_chars.is_empty() { return None; }
+
     let mut i = 0;
-    if i < chars.len() && (chars[i] == '-' || chars[i] == '+') { 
-        if i + 1 < chars.len() && chars[i+1].is_ascii_digit() {
-             i += 1; 
+    if i < temp_chars.len() && (temp_chars[i] == '-' || temp_chars[i] == '+') {
+        if i + 1 < temp_chars.len() && temp_chars[i+1].is_ascii_digit() {
+             i += 1;
         } else {
             return None;
         }
     }
     let start = i;
-    while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+    while i < temp_chars.len() && temp_chars[i].is_ascii_digit() { i += 1; }
     
-    if i < chars.len() && chars[i] == '.' {
+    if i < temp_chars.len() && temp_chars[i] == '.' {
         i += 1;
-        while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+        while i < temp_chars.len() && temp_chars[i].is_ascii_digit() { i += 1; }
     } 
-    else if i < chars.len() && chars[i] == '/' {
+    else if i < temp_chars.len() && temp_chars[i] == '/' {
         i += 1;
-        if i == chars.len() || !chars[i].is_ascii_digit() { 
+        if i == temp_chars.len() || !temp_chars[i].is_ascii_digit() { 
             i -= 1;
         } else {
-            while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+            while i < temp_chars.len() && temp_chars[i].is_ascii_digit() { i += 1; }
         }
     }
     
-    if i < chars.len() && (chars[i] == 'e' || chars[i] == 'E') {
+    if i < temp_chars.len() && (temp_chars[i] == 'e' || temp_chars[i] == 'E') {
         i += 1;
-        if i < chars.len() && (chars[i] == '+' || chars[i] == '-') {
+        if i < temp_chars.len() && (temp_chars[i] == '+' || temp_chars[i] == '-') {
             i += 1;
         }
         let exp_start = i;
-        while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
+        while i < temp_chars.len() && temp_chars[i].is_ascii_digit() { i += 1; }
         if i == exp_start {
             return None;
         }
@@ -189,9 +170,11 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     
     let end = if start > 0 && i > start { i } else if start == 0 { i } else { 0 };
 
-    if end > start && (i == chars.len() || !is_word_char(chars[i])) {
-        let num_str: String = chars[..i].iter().collect();
-        return Some((Token::Number(num_str), i));
+    if end > 0 && (i == temp_chars.len() || !is_word_char(temp_chars[i])) {
+        let num_str: String = temp_chars[..i].iter().collect();
+        if crate::types::Fraction::from_str(&num_str).is_ok() {
+            return Some((Token::Number(num_str), i));
+        }
     }
     None
 }
@@ -228,7 +211,7 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     if !chars.is_empty() {
         match chars[0] {
             '+' | '-' | '*' | '/' | '<' | '>' | '=' | '?' => {
-                 if chars.len() > 1 && chars[1].is_ascii_digit() && chars[0] != '?' { return None; }
+                 if chars.len() > 1 && (chars[1].is_ascii_digit() || chars[1] == '.') && chars[0] != '?' { return None; }
                  Some((Token::Symbol(chars[0].to_string()), 1))
             },
             _ => None
