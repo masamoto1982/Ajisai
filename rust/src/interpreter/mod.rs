@@ -11,7 +11,6 @@ use self::error::{Result, AjisaiError};
 use num_traits::Zero;
 use std::str::FromStr;
 
-
 pub struct Interpreter {
     pub(crate) workspace: Workspace,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
@@ -57,6 +56,11 @@ impl Interpreter {
     }
 
     pub fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        // 条件実行（:）の検出と処理
+        if let Some(guard_pos) = tokens.iter().position(|t| matches!(t, Token::GuardSeparator)) {
+            return self.execute_conditional_statement(tokens, guard_pos);
+        }
+        
         let mut i = 0;
         while i < tokens.len() {
             let token = &tokens[i];
@@ -92,6 +96,81 @@ impl Interpreter {
         Ok(())
     }
 
+    fn execute_conditional_statement(&mut self, tokens: &[Token], guard_pos: usize) -> Result<()> {
+        let condition_tokens = &tokens[..guard_pos];
+        let body_tokens = &tokens[guard_pos + 1..];
+        
+        // 修飾子を分離
+        let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(body_tokens);
+        
+        // 条件を評価（ワークスペースのトップ値を使用）
+        let value_to_test = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+        
+        // 一時的なインタープリターで条件を評価
+        let mut temp_interp = Interpreter {
+            workspace: vec![value_to_test.clone()],
+            dictionary: self.dictionary.clone(),
+            dependents: HashMap::new(),
+            output_buffer: String::new(),
+            execution_state: None,
+            definition_to_load: None,
+        };
+        
+        temp_interp.execute_tokens(condition_tokens)?;
+        
+        let condition_result = temp_interp.workspace.pop()
+            .ok_or(AjisaiError::from("Condition evaluation produced no result"))?;
+        
+        // 条件が真の場合のみ実行
+        if is_truthy(&condition_result) {
+            // 元の値をワークスペースに戻す
+            self.workspace.push(value_to_test);
+            
+            // 指定回数実行
+            for iteration in 0..repeat_count {
+                if iteration > 0 && delay_ms > 0 {
+                    let sleep_result = crate::wasm_sleep(delay_ms);
+                    self.output_buffer.push_str(&format!("{}\n", sleep_result));
+                }
+                self.execute_tokens(&execution_tokens)?;
+            }
+        } else {
+            // 条件が偽の場合、元の値をワークスペースに戻す
+            self.workspace.push(value_to_test);
+        }
+        
+        Ok(())
+    }
+
+    fn parse_modifiers(&self, tokens: &[Token]) -> (Vec<Token>, i64, u64) {
+        let mut execution_tokens = Vec::new();
+        let mut repeat_count = 1i64;
+        let mut delay_ms = 0u64;
+        
+        for token in tokens {
+            match token {
+                Token::Modifier(m_str) => {
+                    if m_str.ends_with('x') {
+                        if let Ok(count) = m_str[..m_str.len()-1].parse::<i64>() {
+                            repeat_count = count;
+                        }
+                    } else if m_str.ends_with("ms") {
+                        if let Ok(ms) = m_str[..m_str.len()-2].parse::<u64>() {
+                            delay_ms = ms;
+                        }
+                    } else if m_str.ends_with('s') {
+                        if let Ok(s) = m_str[..m_str.len()-1].parse::<u64>() {
+                            delay_ms = s * 1000;
+                        }
+                    }
+                },
+                _ => execution_tokens.push(token.clone()),
+            }
+        }
+        
+        (execution_tokens, repeat_count, delay_ms)
+    }
+
     fn collect_def_block(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
         let mut depth = 1;
         let mut i = start + 1;
@@ -114,69 +193,34 @@ impl Interpreter {
     fn execute_word(&mut self, name: &str) -> Result<()> {
         let def = self.dictionary.get(&name.to_uppercase()).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
-    
+
         if def.is_builtin {
             return self.execute_builtin(name);
         }
-    
-        let is_conditional = def.lines.iter().any(|line| !line.condition_tokens.is_empty());
-    
-        let selected_line_index = if is_conditional {
-            let value_to_test = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
-            self.select_matching_line_conditional(&def.lines, &value_to_test)?
-        } else {
-            self.select_matching_line_default(&def.lines)?
-        };
-        
-        if let Some(line_index) = selected_line_index {
-            self.execute_selected_line(&def.lines[line_index])?;
-        } else {
-            return Err(AjisaiError::from("No matching condition found and no default line available"));
-        }
-    
-        Ok(())
-    }
 
-    fn select_matching_line_conditional(&mut self, lines: &[ExecutionLine], value_to_test: &Value) -> Result<Option<usize>> {
-        for (index, line) in lines.iter().enumerate() {
+        // シンプルに行を上から順に実行するだけ
+        for line in &def.lines {
+            // 各行のトークンを実行（:があれば条件実行、なければ無条件実行）
+            let mut all_tokens = Vec::new();
+            all_tokens.extend(line.condition_tokens.clone());
             if !line.condition_tokens.is_empty() {
-                if self.evaluate_pattern_condition(&line.condition_tokens, value_to_test)? {
-                    return Ok(Some(index));
+                all_tokens.push(Token::GuardSeparator);
+            }
+            all_tokens.extend(line.body_tokens.clone());
+            
+            // 修飾子を追加
+            if line.repeat_count != 1 {
+                all_tokens.push(Token::Modifier(format!("{}x", line.repeat_count)));
+            }
+            if line.delay_ms > 0 {
+                if line.delay_ms >= 1000 && line.delay_ms % 1000 == 0 {
+                    all_tokens.push(Token::Modifier(format!("{}s", line.delay_ms / 1000)));
+                } else {
+                    all_tokens.push(Token::Modifier(format!("{}ms", line.delay_ms)));
                 }
             }
-        }
-        Ok(lines.iter().position(|line| line.condition_tokens.is_empty()))
-    }
-    
-    fn select_matching_line_default(&self, lines: &[ExecutionLine]) -> Result<Option<usize>> {
-        Ok(lines.iter().position(|_| true))
-    }
-
-    fn evaluate_pattern_condition(&mut self, condition_tokens: &[Token], value_to_test: &Value) -> Result<bool> {
-        let mut temp_interp = Interpreter {
-            workspace: vec![value_to_test.clone()],
-            dictionary: self.dictionary.clone(),
-            dependents: HashMap::new(),
-            output_buffer: String::new(),
-            execution_state: None,
-            definition_to_load: None,
-        };
-        
-        temp_interp.execute_tokens(condition_tokens)?;
-
-        if let Some(result_val) = temp_interp.workspace.pop() {
-            Ok(is_truthy(&result_val))
-        } else {
-            Ok(false)
-        }
-    }
-    
-    fn execute_selected_line(&mut self, line: &ExecutionLine) -> Result<()> {
-        for iteration in 0..line.repeat_count {
-            if iteration > 0 && line.delay_ms > 0 {
-                crate::wasm_sleep(line.delay_ms);
-            }
-            self.execute_tokens(&line.body_tokens)?;
+            
+            self.execute_tokens(&all_tokens)?;
         }
         
         Ok(())
