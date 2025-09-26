@@ -1,3 +1,5 @@
+![Rust](https://img.shields.io/badge/Rust-E05555?style=flat-square)
+
 # Ajisai
 
 ## 概要
