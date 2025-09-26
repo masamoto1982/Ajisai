@@ -61,7 +61,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         }
     }
     
-    convert_vector_brackets_by_depth(&mut tokens)?;
+    convert_brackets(&mut tokens)?;
     
     Ok(tokens)
 }
@@ -94,56 +94,32 @@ fn try_parse_modifier(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-fn convert_vector_brackets_by_depth(tokens: &mut [Token]) -> Result<(), String> {
-    let mut i = 0;
-    while i < tokens.len() {
-        if matches!(tokens[i], Token::VectorStart(_)) {
-            match find_matching_vector_end(tokens, i) {
-                Ok(vector_end) => {
-                    convert_single_vector_brackets(&mut tokens[i..=vector_end])?;
-                    i = vector_end + 1;
-                },
-                Err(e) => return Err(e),
-            }
-        } else {
-            i += 1;
-        }
-    }
-    Ok(())
-}
-
-fn find_matching_vector_end(tokens: &[Token], start: usize) -> Result<usize, String> {
-    let mut depth = 0;
-    for i in start..tokens.len() {
-        match &tokens[i] {
-            Token::VectorStart(_) => depth += 1,
-            Token::VectorEnd(_) => {
-                depth -= 1;
-                if depth == 0 { return Ok(i); }
-            },
-            _ => {}
-        }
-    }
-    Err("Unclosed vector found".to_string())
-}
-
-fn convert_single_vector_brackets(vector_tokens: &mut [Token]) -> Result<(), String> {
+fn convert_brackets(tokens: &mut [Token]) -> Result<(), String> {
     let mut depth_stack = Vec::new();
-    for token in vector_tokens.iter_mut() {
+    for token in tokens.iter_mut() {
         match token {
             Token::VectorStart(_) => {
                 let bracket_type = match depth_stack.len() % 3 {
-                    0 => BracketType::Square, 1 => BracketType::Curly, 2 => BracketType::Round, _ => unreachable!(),
+                    0 => BracketType::Square,
+                    1 => BracketType::Curly,
+                    2 => BracketType::Round,
+                    _ => unreachable!(),
                 };
                 *token = Token::VectorStart(bracket_type.clone());
                 depth_stack.push(bracket_type);
             },
             Token::VectorEnd(_) => {
-                if let Some(opening_type) = depth_stack.pop() { *token = Token::VectorEnd(opening_type); }
-                else { return Err("Unexpected closing bracket".to_string()); }
+                if let Some(opening_type) = depth_stack.pop() {
+                    *token = Token::VectorEnd(opening_type);
+                } else {
+                    return Err("Unexpected closing bracket".to_string());
+                }
             },
             _ => {}
         }
+    }
+    if !depth_stack.is_empty() {
+        return Err("Unclosed vector found".to_string());
     }
     Ok(())
 }
