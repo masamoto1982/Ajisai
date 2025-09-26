@@ -12,7 +12,7 @@
 
 ## 🌐 デモ
 
-[**https://ajisai.tech**](https://ajisai.tech) で実際に試すことができます。
+[**masamoto1982.github.io/Ajisai/**](masamoto1982.github.io/Ajisai/) で実際に試すことができます。
 
 ### 開発コンセプト
 - FORTHを参考にしたスタックベース、逆ポーランド記法
