@@ -37,19 +37,19 @@ export class TestRunner {
             
             for (const testCase of categoryTests) {
                 try {
-                    const result = await this.runSingleTest(testCase);
-                    if (result) {
+                    const result = await this.runSingleTestWithDetails(testCase);
+                    if (result.passed) {
                         totalPassed++;
-                        this.showColoredInfo(`  ✓ PASS: ${testCase.name}`, 'success');
+                        this.showTestResult(testCase, result, true);
                     } else {
                         totalFailed++;
                         failedTests.push(testCase.name);
-                        this.showColoredInfo(`  ✗ FAIL: ${testCase.name}`, 'error');
+                        this.showTestResult(testCase, result, false);
                     }
                 } catch (error) {
                     totalFailed++;
                     failedTests.push(testCase.name);
-                    this.showColoredInfo(`  ✗ ERROR: ${testCase.name}: ${error}`, 'error');
+                    this.showTestError(testCase, error);
                 }
             }
         }
@@ -66,49 +66,145 @@ export class TestRunner {
     }
     
     private async resetInterpreter(): Promise<void> {
-        // reset()ではなくworkspaceだけクリアしてイベント発火を避ける
         if (window.ajisaiInterpreter) {
             window.ajisaiInterpreter.restore_workspace([]);
         }
     }
     
-    private async runSingleTest(testCase: TestCase): Promise<boolean> {
-        // 各テスト前にworkspaceをクリア（reset()は使わない）
+    private async runSingleTestWithDetails(testCase: TestCase): Promise<{
+        passed: boolean;
+        actualWorkspace?: Value[];
+        actualOutput?: string;
+        errorMessage?: string;
+        reason?: string;
+    }> {
+        // 各テスト前にworkspaceをクリア
         await this.resetInterpreter();
         
         const result = window.ajisaiInterpreter.execute(testCase.code);
         
         if (testCase.expectError) {
-            return result.status === 'ERROR';
+            return {
+                passed: result.status === 'ERROR',
+                errorMessage: result.message,
+                reason: result.status === 'ERROR' ? 'Expected error occurred' : 'Expected error but execution succeeded'
+            };
         }
         
         if (result.status === 'ERROR') {
-            console.error(`Test "${testCase.name}" failed with error: ${result.message}`);
-            return false;
+            return {
+                passed: false,
+                errorMessage: result.message,
+                reason: 'Unexpected error during execution'
+            };
         }
 
         if (testCase.expectedWorkspace) {
             const workspace = window.ajisaiInterpreter.get_workspace();
             const matches = this.compareWorkspace(workspace, testCase.expectedWorkspace);
-            if (!matches) {
-                console.error(`Workspace mismatch in "${testCase.name}"`);
-                console.error('Expected:', testCase.expectedWorkspace);
-                console.error('Actual:', workspace);
-            }
-            return matches;
+            return {
+                passed: matches,
+                actualWorkspace: workspace,
+                reason: matches ? 'Workspace matches expected' : 'Workspace mismatch'
+            };
         }
         
         if (testCase.expectedOutput) {
             const matches = result.output?.trim() === testCase.expectedOutput.trim();
-            if (!matches) {
-                console.error(`Output mismatch in "${testCase.name}"`);
-                console.error('Expected:', testCase.expectedOutput);
-                console.error('Actual:', result.output);
-            }
-            return matches;
+            return {
+                passed: matches,
+                actualOutput: result.output,
+                reason: matches ? 'Output matches expected' : 'Output mismatch'
+            };
         }
         
-        return true;
+        return {
+            passed: true,
+            reason: 'Test completed successfully'
+        };
+    }
+    
+    private showTestResult(testCase: TestCase, result: any, passed: boolean): void {
+        const statusIcon = passed ? '✓' : '✗';
+        const statusText = passed ? 'PASS' : 'FAIL';
+        const statusColor = passed ? 'success' : 'error';
+        
+        this.showColoredInfo(`${statusIcon} ${statusText}: ${testCase.name}`, statusColor);
+        this.showColoredInfo(`  Code: ${testCase.code}`, 'info');
+        
+        if (testCase.expectError) {
+            this.showColoredInfo(`  Expected: Error should occur`, 'info');
+            if (result.errorMessage) {
+                this.showColoredInfo(`  Actual error: ${result.errorMessage}`, 'info');
+            }
+        } else if (testCase.expectedWorkspace) {
+            this.showColoredInfo(`  Expected workspace: ${this.formatWorkspaceForDisplay(testCase.expectedWorkspace)}`, 'info');
+            if (result.actualWorkspace) {
+                this.showColoredInfo(`  Actual workspace: ${this.formatWorkspaceForDisplay(result.actualWorkspace)}`, 'info');
+            }
+        } else if (testCase.expectedOutput) {
+            this.showColoredInfo(`  Expected output: "${testCase.expectedOutput}"`, 'info');
+            if (result.actualOutput !== undefined) {
+                this.showColoredInfo(`  Actual output: "${result.actualOutput}"`, 'info');
+            }
+        }
+        
+        if (result.reason) {
+            this.showColoredInfo(`  Result: ${result.reason}`, passed ? 'success' : 'error');
+        }
+        
+        this.showColoredInfo('', 'info'); // 空行
+    }
+    
+    private showTestError(testCase: TestCase, error: any): void {
+        this.showColoredInfo(`✗ ERROR: ${testCase.name}`, 'error');
+        this.showColoredInfo(`  Code: ${testCase.code}`, 'info');
+        this.showColoredInfo(`  Error: ${error}`, 'error');
+        this.showColoredInfo('', 'info'); // 空行
+    }
+    
+    private formatWorkspaceForDisplay(workspace: Value[]): string {
+        if (workspace.length === 0) {
+            return '[]';
+        }
+        
+        const formatted = workspace.map(value => this.formatValueForDisplay(value)).join(', ');
+        return `[${formatted}]`;
+    }
+    
+    private formatValueForDisplay(value: Value): string {
+        switch (value.type) {
+            case 'number':
+                const frac = value.value as Fraction;
+                if (frac.denominator === '1') {
+                    return frac.numerator;
+                } else {
+                    return `${frac.numerator}/${frac.denominator}`;
+                }
+            case 'string':
+                return `'${value.value}'`;
+            case 'boolean':
+                return value.value ? 'TRUE' : 'FALSE';
+            case 'nil':
+                return 'NIL';
+            case 'vector':
+                if (Array.isArray(value.value)) {
+                    const elements = value.value.map(v => this.formatValueForDisplay(v)).join(' ');
+                    const brackets = this.getBracketPair(value.bracketType);
+                    return `${brackets[0]}${elements ? ' ' + elements + ' ' : ''}${brackets[1]}`;
+                }
+                return '[]';
+            default:
+                return JSON.stringify(value.value);
+        }
+    }
+    
+    private getBracketPair(bracketType?: string): [string, string] {
+        switch (bracketType) {
+            case 'curly': return ['{', '}'];
+            case 'round': return ['(', ')'];
+            default: return ['[', ']'];
+        }
     }
     
     private compareWorkspace(actual: Value[], expected: Value[]): boolean {
@@ -255,19 +351,19 @@ export class TestRunner {
             },
             {
                 name: "真偽値true",
-                code: "[ TRUE ]", // 大文字に修正
+                code: "[ TRUE ]",
                 expectedWorkspace: [this.createVector([this.createBoolean(true)])],
                 category: "Basic Data Types"
             },
             {
                 name: "真偽値false",
-                code: "[ FALSE ]", // 大文字に修正
+                code: "[ FALSE ]",
                 expectedWorkspace: [this.createVector([this.createBoolean(false)])],
                 category: "Basic Data Types"
             },
             {
                 name: "Nil値",
-                code: "[ NIL ]", // 大文字に修正
+                code: "[ NIL ]",
                 expectedWorkspace: [this.createVector([this.createNil()])],
                 category: "Basic Data Types"
             },
@@ -385,37 +481,37 @@ export class TestRunner {
             // === 論理演算 ===
             {
                 name: "論理AND（真）",
-                code: "[ TRUE ] [ TRUE ] AND", // 大文字に修正
+                code: "[ TRUE ] [ TRUE ] AND",
                 expectedWorkspace: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
             },
             {
                 name: "論理AND（偽）",
-                code: "[ TRUE ] [ FALSE ] AND", // 大文字に修正
+                code: "[ TRUE ] [ FALSE ] AND",
                 expectedWorkspace: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理OR（真）",
-                code: "[ TRUE ] [ FALSE ] OR", // 大文字に修正
+                code: "[ TRUE ] [ FALSE ] OR",
                 expectedWorkspace: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
             },
             {
                 name: "論理OR（偽）",
-                code: "[ FALSE ] [ FALSE ] OR", // 大文字に修正
+                code: "[ FALSE ] [ FALSE ] OR",
                 expectedWorkspace: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理NOT（真→偽）",
-                code: "[ TRUE ] NOT", // 大文字に修正
+                code: "[ TRUE ] NOT",
                 expectedWorkspace: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理NOT（偽→真）",
-                code: "[ FALSE ] NOT", // 大文字に修正
+                code: "[ FALSE ] NOT",
                 expectedWorkspace: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
             },
