@@ -97,50 +97,33 @@ impl Interpreter {
     }
 
     fn execute_conditional_statement(&mut self, tokens: &[Token], guard_pos: usize) -> Result<()> {
-        let condition_tokens = &tokens[..guard_pos];
-        let body_tokens = &tokens[guard_pos + 1..];
-        
-        // 修飾子を分離
-        let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(body_tokens);
-        
-        // 条件を評価（ワークスペースのトップ値を使用）
-        let value_to_test = self.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
-        
-        // 一時的なインタープリターで条件を評価
-        let mut temp_interp = Interpreter {
-            workspace: vec![value_to_test.clone()],
-            dictionary: self.dictionary.clone(),
-            dependents: HashMap::new(),
-            output_buffer: String::new(),
-            execution_state: None,
-            definition_to_load: None,
-        };
-        
-        temp_interp.execute_tokens(condition_tokens)?;
-        
-        let condition_result = temp_interp.workspace.pop()
-            .ok_or(AjisaiError::from("Condition evaluation produced no result"))?;
-        
-        // 条件が真の場合のみ実行
-        if is_truthy(&condition_result) {
-            // 元の値をワークスペースに戻す
-            self.workspace.push(value_to_test);
-            
-            // 指定回数実行
-            for iteration in 0..repeat_count {
-                if iteration > 0 && delay_ms > 0 {
-                    let sleep_result = crate::wasm_sleep(delay_ms);
-                    self.output_buffer.push_str(&format!("{}\n", sleep_result));
-                }
-                self.execute_tokens(&execution_tokens)?;
+    let condition_tokens = &tokens[..guard_pos];
+    let body_tokens = &tokens[guard_pos + 1..];
+    
+    // 修飾子を分離
+    let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(body_tokens);
+    
+    // 条件トークンを実行して結果を取得
+    self.execute_tokens(condition_tokens)?;
+    
+    // 条件評価の結果をワークスペースから取得
+    let condition_result = self.workspace.pop()
+        .ok_or(AjisaiError::from("Condition evaluation produced no result"))?;
+    
+    // 条件が真の場合のみ実行
+    if is_truthy(&condition_result) {
+        // 指定回数実行
+        for iteration in 0..repeat_count {
+            if iteration > 0 && delay_ms > 0 {
+                let sleep_result = crate::wasm_sleep(delay_ms);
+                self.output_buffer.push_str(&format!("{}\n", sleep_result));
             }
-        } else {
-            // 条件が偽の場合、元の値をワークスペースに戻す
-            self.workspace.push(value_to_test);
+            self.execute_tokens(&execution_tokens)?;
         }
-        
-        Ok(())
     }
+    
+    Ok(())
+}
 
     fn parse_modifiers(&self, tokens: &[Token]) -> (Vec<Token>, i64, u64) {
         let mut execution_tokens = Vec::new();
@@ -241,6 +224,9 @@ impl Interpreter {
             "<=" => arithmetic::op_le(self), ">" => arithmetic::op_gt(self),
             ">=" => arithmetic::op_ge(self), "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self), "NOT" => arithmetic::op_not(self),
+            ":" => {
+            Err(AjisaiError::from("':' can only be used in conditional expressions. Usage: condition : action"))
+        },
             "PRINT" => io::op_print(self), 
             "DEF" => {
                 if self.workspace.len() >= 2 {
