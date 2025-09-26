@@ -40,6 +40,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("AND", "Vector logical AND", "Logic"),
         ("OR", "Vector logical OR", "Logic"),
         ("NOT", "Vector logical NOT", "Logic"),
+        (":", "Conditional execution. Usage: condition : action", "Control"),
         ("PRINT", "Print vector value", "IO"),
         ("DEF", "Define new word", "System"),
         ("DEL", "Delete word", "System"),
