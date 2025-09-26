@@ -152,6 +152,10 @@ export class TestRunner {
         if (result.reason) {
             this.showColoredInfo(`  Result: ${result.reason}`, passed ? 'success' : 'error');
         }
+
+        if (!passed && result.errorMessage) {
+            this.showColoredInfo(`  Error Message from Rust: ${result.errorMessage}`, 'error');
+        }
         
         this.showColoredInfo('', 'info'); // 空行
     }
