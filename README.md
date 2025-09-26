@@ -1,10 +1,18 @@
-![Rust](https://img.shields.io/badge/Rust-E05555?style=flat-square)
+![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)
+![WebAssembly](https://img.shields.io/badge/WebAssembly-654FF0?style=flat&logo=webassembly&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square)
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
 [![Build and Deploy Ajisai](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml/badge.svg)](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml)
 
 # Ajisai
+
+**Ajisai**は、FORTHにインスパイアされたスタックベースのプログラミング言語で、WebAssembly上で動作するインタープリターとWebベースのGUIを提供します。
+
+## 🌐 デモ
+
+[**https://ajisai.tech**](https://ajisai.tech) で実際に試すことができます。
 
 ### 開発コンセプト
 - FORTHを参考にしたスタックベース、逆ポーランド記法
