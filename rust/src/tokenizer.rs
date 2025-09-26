@@ -45,6 +45,8 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
                 tokens.push(token); i += consumed; token_found = true;
+            } else if let Some((token, consumed)) = try_parse_keyword(&chars[i..]) { // 修正点: キーワード解析を追加
+                tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
@@ -81,6 +83,27 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
         ';' => Some((Token::DefBlockEnd, 1)),
         _ => None,
     }
+}
+
+// 修正点: 新しい関数を追加
+fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
+    const KEYWORDS: [(&str, Token); 3] = [
+        ("TRUE", Token::Boolean(true)),
+        ("FALSE", Token::Boolean(false)),
+        ("NIL", Token::Nil),
+    ];
+
+    for (keyword_str, token) in KEYWORDS.iter() {
+        if chars.len() >= keyword_str.len() {
+            let potential_match: String = chars[..keyword_str.len()].iter().collect();
+            if potential_match.eq_ignore_ascii_case(keyword_str) {
+                if chars.len() == keyword_str.len() || !is_word_char(chars[keyword_str.len()]) {
+                    return Some((token.clone(), keyword_str.len()));
+                }
+            }
+        }
+    }
+    None
 }
 
 fn try_parse_modifier(chars: &[char]) -> Option<(Token, usize)> {
@@ -179,6 +202,7 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
+// 修正点: `true`, `false`, `nil` の特別扱いを削除
 fn try_parse_ascii_builtin(chars: &[char], builtin_words: &HashSet<String>) -> Option<(Token, usize)> {
     let mut sorted_words: Vec<&String> = builtin_words.iter().collect();
     sorted_words.sort_by(|a, b| b.len().cmp(&a.len()));
@@ -186,12 +210,7 @@ fn try_parse_ascii_builtin(chars: &[char], builtin_words: &HashSet<String>) -> O
     for word in sorted_words {
         if chars.len() >= word.len() && chars[..word.len()].iter().collect::<String>().to_uppercase() == *word {
             if chars.len() > word.len() && is_word_char(chars[word.len()]) { continue; }
-            let token = match word.to_lowercase().as_str() {
-                "true" => Token::Boolean(true),
-                "false" => Token::Boolean(false),
-                "nil" => Token::Nil,
-                _ => Token::Symbol(word.to_string()),
-            };
+            let token = Token::Symbol(word.to_string());
             return Some((token, word.len()));
         }
     }
