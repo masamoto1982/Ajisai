@@ -246,9 +246,10 @@ impl Interpreter {
             match &tokens[i] {
                 Token::VectorStart(_) => {
                     let new_bracket_type = match depth % 3 {
-                        0 => BracketType::Curly,
-                        1 => BracketType::Round,
-                        _ => BracketType::Square,
+                        1 => BracketType::Curly,
+                        2 => BracketType::Round,
+                        0 => BracketType::Square,
+                        _ => unreachable!(),
                     };
                     let (nested_values, consumed) = self.collect_vector(tokens, i, depth + 1)?;
                     values.push(Value { val_type: ValueType::Vector(nested_values, new_bracket_type) });
