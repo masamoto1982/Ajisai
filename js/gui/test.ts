@@ -25,6 +25,9 @@ export class TestRunner {
         this.showColoredInfo('=== Ajisai Comprehensive Test Suite ===', 'info');
         this.showColoredInfo(`Running ${testCases.length} test cases...`, 'info');
 
+        // テスト開始前に一度だけリセット
+        await this.resetInterpreter();
+
         // カテゴリ別にテストを実行
         const categories = [...new Set(testCases.map(t => t.category))].filter(Boolean);
         
@@ -62,9 +65,17 @@ export class TestRunner {
         }
     }
     
+    private async resetInterpreter(): Promise<void> {
+        // reset()ではなくworkspaceだけクリアしてイベント発火を避ける
+        if (window.ajisaiInterpreter) {
+            window.ajisaiInterpreter.restore_workspace([]);
+        }
+    }
+    
     private async runSingleTest(testCase: TestCase): Promise<boolean> {
-        // テスト前にリセット
-        window.ajisaiInterpreter.reset();
+        // 各テスト前にworkspaceをクリア（reset()は使わない）
+        await this.resetInterpreter();
+        
         const result = window.ajisaiInterpreter.execute(testCase.code);
         
         if (testCase.expectError) {
@@ -109,7 +120,6 @@ export class TestRunner {
             const actualItem = actual[i];
             const expectedItem = expected[i];
             
-            // undefined チェックを追加
             if (actualItem === undefined || expectedItem === undefined) {
                 return false;
             }
@@ -245,19 +255,19 @@ export class TestRunner {
             },
             {
                 name: "真偽値true",
-                code: "[ true ]",
+                code: "[ TRUE ]", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createBoolean(true)])],
                 category: "Basic Data Types"
             },
             {
                 name: "真偽値false",
-                code: "[ false ]",
+                code: "[ FALSE ]", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createBoolean(false)])],
                 category: "Basic Data Types"
             },
             {
                 name: "Nil値",
-                code: "[ nil ]",
+                code: "[ NIL ]", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createNil()])],
                 category: "Basic Data Types"
             },
@@ -375,37 +385,37 @@ export class TestRunner {
             // === 論理演算 ===
             {
                 name: "論理AND（真）",
-                code: "[ true ] [ true ] AND",
+                code: "[ TRUE ] [ TRUE ] AND", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
             },
             {
                 name: "論理AND（偽）",
-                code: "[ true ] [ false ] AND",
+                code: "[ TRUE ] [ FALSE ] AND", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理OR（真）",
-                code: "[ true ] [ false ] OR",
+                code: "[ TRUE ] [ FALSE ] OR", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
             },
             {
                 name: "論理OR（偽）",
-                code: "[ false ] [ false ] OR",
+                code: "[ FALSE ] [ FALSE ] OR", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理NOT（真→偽）",
-                code: "[ true ] NOT",
+                code: "[ TRUE ] NOT", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理NOT（偽→真）",
-                code: "[ false ] NOT",
+                code: "[ FALSE ] NOT", // 大文字に修正
                 expectedWorkspace: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
             },
