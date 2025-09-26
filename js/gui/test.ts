@@ -106,7 +106,15 @@ export class TestRunner {
         }
         
         for (let i = 0; i < actual.length; i++) {
-            if (!this.compareValue(actual[i], expected[i])) {
+            const actualItem = actual[i];
+            const expectedItem = expected[i];
+            
+            // undefined チェックを追加
+            if (actualItem === undefined || expectedItem === undefined) {
+                return false;
+            }
+            
+            if (!this.compareValue(actualItem, expectedItem)) {
                 return false;
             }
         }
@@ -127,6 +135,9 @@ export class TestRunner {
                        actualFrac.denominator === expectedFrac.denominator;
             
             case 'vector':
+                if (!Array.isArray(actual.value) || !Array.isArray(expected.value)) {
+                    return false;
+                }
                 return this.compareWorkspace(actual.value, expected.value);
             
             case 'string':
