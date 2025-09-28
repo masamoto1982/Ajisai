@@ -170,4 +170,4 @@ impl fmt::Display for Value {
     }
 }
 
-pub type Workspace = Vec<Value>;
+pub type Stack = Vec<Value>;
