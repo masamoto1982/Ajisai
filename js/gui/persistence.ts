@@ -3,7 +3,7 @@
 import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-types';
 
 interface InterpreterState {
-    workspace: Value[];
+    stack: Value[];
     customWords: CustomWord[];
 }
 
@@ -57,7 +57,7 @@ export class Persistence {
             }));
 
             const interpreterState: InterpreterState = {
-                workspace: window.ajisaiInterpreter.get_workspace(),
+                stack: window.ajisaiInterpreter.get_stack(),
                 customWords: customWords,
             };
 
@@ -76,8 +76,8 @@ export class Persistence {
 
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
-                if (state.workspace) {
-                    window.ajisaiInterpreter.restore_workspace(state.workspace);
+                if (state.stack) {
+                    window.ajisaiInterpreter.restore_stack(state.stack);
                 }
                 
                 if (state.customWords && state.customWords.length > 0) {
