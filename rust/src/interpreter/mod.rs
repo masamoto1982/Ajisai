@@ -4,6 +4,7 @@ pub mod control;
 pub mod io;
 pub mod error;
 pub mod flow_control;
+pub mod audio;  // 新規追加
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Workspace, Token, Value, ValueType, BracketType, Fraction, WordDefinition, ExecutionLine};
@@ -266,6 +267,7 @@ fn execute_line(&mut self, line: &ExecutionLine) -> Result<()> {
             Err(AjisaiError::from("':' can only be used in conditional expressions. Usage: condition : action"))
         },
             "PRINT" => io::op_print(self), 
+            "SOUND" => audio::op_sound(self),  // 新規追加
             "DEF" => {
                 if self.workspace.len() >= 2 {
                     control::op_def(self)
