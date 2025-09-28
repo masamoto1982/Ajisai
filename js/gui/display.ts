@@ -66,14 +66,26 @@ export class Display {
     
     for (const line of lines) {
         if (line.startsWith('AUDIO:')) {
+            console.log('=== DEBUG: Found AUDIO line ===');
+            console.log('Raw line:', line);
+            
             const audioJson = line.substring(6); // Remove 'AUDIO:' prefix
+            console.log('Audio JSON:', audioJson);
+            
             try {
                 const audioCommand = JSON.parse(audioJson);
-                console.log('Audio command received:', audioCommand); // デバッグ用
+                console.log('=== Parsed Audio Command ===');
+                console.log('Type:', audioCommand.type);
+                console.log('Tracks count:', audioCommand.tracks?.length);
+                
+                if (audioCommand.tracks && audioCommand.tracks[0]) {
+                    console.log('First track notes:', audioCommand.tracks[0].notes);
+                }
+                
                 AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
             } catch (error) {
                 console.error('Failed to parse audio command:', error);
-                console.error('Raw audio JSON:', audioJson); // デバッグ用
+                console.error('Raw audio JSON:', audioJson);
             }
         }
     }
