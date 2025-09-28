@@ -10,6 +10,8 @@ use crate::types::{Stack, Token, Value, ValueType, BracketType, Fraction, WordDe
 use self::error::{Result, AjisaiError};
 use num_traits::Zero;
 use std::str::FromStr;
+use async_recursion::async_recursion;
+use gloo_timers::future::TimeoutFuture;
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
@@ -27,6 +29,10 @@ pub struct WordExecutionState {
     pub continue_loop: bool,
 }
 
+async fn sleep(ms: u64) {
+    TimeoutFuture::new(ms as u32).await;
+}
+
 impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
@@ -41,7 +47,7 @@ impl Interpreter {
         interpreter
     }
 
-    pub fn execute(&mut self, code: &str) -> Result<()> {
+    pub async fn execute(&mut self, code: &str) -> Result<()> {
         if code.contains(" DEF") {
             return control::parse_multiple_word_definitions(self, code);
         }
@@ -52,22 +58,61 @@ impl Interpreter {
             .collect();
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
         
-        self.execute_tokens(&tokens)
+        self.execute_tokens(&tokens).await
     }
 
-    pub fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        // 条件実行（:）の検出と処理
+    // A synchronous version for step-by-step execution
+    pub fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
+         // This is a simplified synchronous execution path for stepping.
+         // It does not handle delays or async operations.
+        let mut i = 0;
+        while i < tokens.len() {
+            let token = &tokens[i];
+            
+            match token {
+                Token::Number(s) => {
+                    let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
+                },
+                Token::String(s) => {
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
+                },
+                Token::Boolean(b) => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
+                Token::Nil => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)}),
+                Token::VectorStart(_) => {
+                    let (values, consumed) = self.collect_vector(&tokens, i, 1)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
+                    i += consumed - 1;
+                },
+                Token::DefBlockStart => {
+                    let (body_tokens, consumed) = self.collect_def_block(&tokens, i)?;
+                    self.stack.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
+                    i += consumed - 1;
+                },
+                Token::Symbol(name) => {
+                    // For simplicity, synchronous step execution doesn't execute async words.
+                    // A more complete implementation would need to handle this differently.
+                    self.execute_builtin(name)?;
+                },
+                _ => {}
+            }
+            i += 1;
+        }
+        Ok(())
+    }
+
+    #[async_recursion(?Send)]
+    pub async fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         if let Some(guard_pos) = tokens.iter().position(|t| matches!(t, Token::GuardSeparator)) {
-            return self.execute_conditional_statement(tokens, guard_pos);
+            return self.execute_conditional_statement(tokens, guard_pos).await;
         }
 
-        // 行全体の修飾子を解析
         let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(tokens);
 
         for iteration in 0..repeat_count {
             if iteration > 0 && delay_ms > 0 {
-                let sleep_result = crate::wasm_sleep(delay_ms);
-                self.output_buffer.push_str(&format!("{}\n", sleep_result));
+                sleep(delay_ms).await;
+                self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", delay_ms));
             }
 
             let mut i = 0;
@@ -95,10 +140,9 @@ impl Interpreter {
                         i += consumed - 1;
                     },
                     Token::Symbol(name) => {
-                        self.execute_word(name)?;
+                        self.execute_word(name).await?;
                     },
                     Token::LineBreak => {},
-                    // Modifierトークンはここで無視される
                     Token::Modifier(_) => {},
                     _ => {} 
                 }
@@ -108,13 +152,14 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_conditional_statement(&mut self, tokens: &[Token], guard_pos: usize) -> Result<()> {
+    #[async_recursion(?Send)]
+    async fn execute_conditional_statement(&mut self, tokens: &[Token], guard_pos: usize) -> Result<()> {
         let condition_tokens = &tokens[..guard_pos];
         let body_tokens = &tokens[guard_pos + 1..];
         
         let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(body_tokens);
         
-        self.execute_tokens(condition_tokens)?;
+        self.execute_tokens(condition_tokens).await?;
         
         let condition_result = self.stack.pop()
             .ok_or(AjisaiError::from("Condition evaluation produced no result"))?;
@@ -122,10 +167,10 @@ impl Interpreter {
         if is_truthy(&condition_result) {
             for iteration in 0..repeat_count {
                 if iteration > 0 && delay_ms > 0 {
-                    let sleep_result = crate::wasm_sleep(delay_ms);
-                    self.output_buffer.push_str(&format!("{}\n", sleep_result));
+                    sleep(delay_ms).await;
+                    self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", delay_ms));
                 }
-                self.execute_tokens(&execution_tokens)?;
+                self.execute_tokens(&execution_tokens).await?;
             }
         }
         
@@ -180,7 +225,8 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed definition block"))
     }
 
-    fn execute_word(&mut self, name: &str) -> Result<()> {
+    #[async_recursion(?Send)]
+    async fn execute_word(&mut self, name: &str) -> Result<()> {
         let def = self.dictionary.get(&name.to_uppercase()).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
@@ -195,27 +241,27 @@ impl Interpreter {
             
             for line in &def.lines {
                 if !line.condition_tokens.is_empty() {
-                    if self.evaluate_condition(&line.condition_tokens, &value_to_test)? {
+                    if self.evaluate_condition(&line.condition_tokens, &value_to_test).await? {
                         self.stack.push(value_to_test);
-                        return self.execute_line(line);
+                        return self.execute_line(line).await;
                     }
                 } else {
                     self.stack.push(value_to_test);
-                    return self.execute_line(line);
+                    return self.execute_line(line).await;
                 }
             }
             
             self.stack.push(value_to_test);
         } else {
             for line in &def.lines {
-                self.execute_line(line)?;
+                self.execute_line(line).await?;
             }
         }
         
         Ok(())
     }
 
-    fn evaluate_condition(&mut self, condition_tokens: &[Token], value_to_test: &Value) -> Result<bool> {
+    async fn evaluate_condition(&mut self, condition_tokens: &[Token], value_to_test: &Value) -> Result<bool> {
         let mut temp_interp = Interpreter {
             stack: vec![value_to_test.clone()],
             dictionary: self.dictionary.clone(),
@@ -225,7 +271,7 @@ impl Interpreter {
             definition_to_load: None,
         };
         
-        temp_interp.execute_tokens(condition_tokens)?;
+        temp_interp.execute_tokens(condition_tokens).await?;
         
         if let Some(result_val) = temp_interp.stack.pop() {
             Ok(is_truthy(&result_val))
@@ -234,13 +280,14 @@ impl Interpreter {
         }
     }
 
-    fn execute_line(&mut self, line: &ExecutionLine) -> Result<()> {
+    #[async_recursion(?Send)]
+    async fn execute_line(&mut self, line: &ExecutionLine) -> Result<()> {
         for iteration in 0..line.repeat_count {
             if iteration > 0 && line.delay_ms > 0 {
-                let sleep_result = crate::wasm_sleep(line.delay_ms);
-                self.output_buffer.push_str(&format!("{}\n", sleep_result));
+                sleep(line.delay_ms).await;
+                self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", line.delay_ms));
             }
-            self.execute_tokens(&line.body_tokens)?;
+            self.execute_tokens(&line.body_tokens).await?;
         }
         Ok(())
     }
