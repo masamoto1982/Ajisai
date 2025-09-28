@@ -29,9 +29,35 @@ pub struct WordExecutionState {
     pub continue_loop: bool,
 }
 
+// ヘルパー関数として外に定義
 async fn sleep(ms: u64) {
     TimeoutFuture::new(ms as u32).await;
 }
+
+// evaluate_condition を Interpreter の外に定義
+async fn evaluate_condition(
+    dictionary: &HashMap<String, WordDefinition>,
+    condition_tokens: &[Token],
+    value_to_test: &Value
+) -> Result<bool> {
+    let mut temp_interp = Interpreter {
+        stack: vec![value_to_test.clone()],
+        dictionary: dictionary.clone(),
+        dependents: HashMap::new(),
+        output_buffer: String::new(),
+        execution_state: None,
+        definition_to_load: None,
+    };
+    
+    temp_interp.execute_tokens(condition_tokens).await?;
+    
+    if let Some(result_val) = temp_interp.stack.pop() {
+        Ok(is_truthy(&result_val))
+    } else {
+        Ok(false)
+    }
+}
+
 
 impl Interpreter {
     pub fn new() -> Self {
@@ -63,8 +89,6 @@ impl Interpreter {
 
     // A synchronous version for step-by-step execution
     pub fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
-         // This is a simplified synchronous execution path for stepping.
-         // It does not handle delays or async operations.
         let mut i = 0;
         while i < tokens.len() {
             let token = &tokens[i];
@@ -90,8 +114,6 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
-                    // For simplicity, synchronous step execution doesn't execute async words.
-                    // A more complete implementation would need to handle this differently.
                     self.execute_builtin(name)?;
                 },
                 _ => {}
@@ -241,51 +263,31 @@ impl Interpreter {
         if has_conditional_lines {
             let value_to_test = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let mut matched_line: Option<ExecutionLine> = None;
+            let dictionary_clone = self.dictionary.clone();
 
-            // Phase 1: Find the line to execute.
             for line in &def.lines {
                 if line.condition_tokens.is_empty() {
                     matched_line = Some(line.clone());
                     break;
                 }
-                if self.evaluate_condition(&line.condition_tokens, &value_to_test).await? {
+                
+                if evaluate_condition(&dictionary_clone, &line.condition_tokens, &value_to_test).await? {
                     matched_line = Some(line.clone());
                     break;
                 }
             }
 
-            // Phase 2: Push the value back and execute if a line was found.
             self.stack.push(value_to_test);
             if let Some(line) = matched_line {
                 self.execute_line(&line).await?;
             }
         } else {
-            // No conditional lines, just execute them all.
             for line in &def.lines {
                 self.execute_line(line).await?;
             }
         }
         
         Ok(())
-    }
-
-    async fn evaluate_condition(&mut self, condition_tokens: &[Token], value_to_test: &Value) -> Result<bool> {
-        let mut temp_interp = Interpreter {
-            stack: vec![value_to_test.clone()],
-            dictionary: self.dictionary.clone(),
-            dependents: HashMap::new(),
-            output_buffer: String::new(),
-            execution_state: None,
-            definition_to_load: None,
-        };
-        
-        temp_interp.execute_tokens(condition_tokens).await?;
-        
-        if let Some(result_val) = temp_interp.stack.pop() {
-            Ok(is_truthy(&result_val))
-        } else {
-            Ok(false)
-        }
     }
 
     #[async_recursion(?Send)]
