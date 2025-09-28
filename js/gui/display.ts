@@ -1,11 +1,11 @@
-// js/gui/display.ts (音声機能追加版)
+// js/gui/display.ts (音声機能追加・Stack対応版)
 
 import type { Value, ExecuteResult } from '../wasm-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
 
 interface DisplayElements {
     outputDisplay: HTMLElement;
-    workspaceDisplay: HTMLElement;
+    stackDisplay: HTMLElement;
 }
 
 export class Display {
@@ -62,34 +62,20 @@ export class Display {
     }
 
     private processAudioCommands(output: string): void {
-    const lines = output.split('\n');
-    
-    for (const line of lines) {
-        if (line.startsWith('AUDIO:')) {
-            console.log('=== DEBUG: Found AUDIO line ===');
-            console.log('Raw line:', line);
-            
-            const audioJson = line.substring(6); // Remove 'AUDIO:' prefix
-            console.log('Audio JSON:', audioJson);
-            
-            try {
-                const audioCommand = JSON.parse(audioJson);
-                console.log('=== Parsed Audio Command ===');
-                console.log('Type:', audioCommand.type);
-                console.log('Tracks count:', audioCommand.tracks?.length);
-                
-                if (audioCommand.tracks && audioCommand.tracks[0]) {
-                    console.log('First track notes:', audioCommand.tracks[0].notes);
+        const lines = output.split('\n');
+        
+        for (const line of lines) {
+            if (line.startsWith('AUDIO:')) {
+                const audioJson = line.substring(6);
+                try {
+                    const audioCommand = JSON.parse(audioJson);
+                    AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
+                } catch (error) {
+                    console.error('Failed to parse audio command:', error);
                 }
-                
-                AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
-            } catch (error) {
-                console.error('Failed to parse audio command:', error);
-                console.error('Raw audio JSON:', audioJson);
             }
         }
     }
-}
 
     private filterAudioCommands(output: string): string {
         const lines = output.split('\n');
@@ -98,10 +84,7 @@ export class Display {
     }
     
     showOutput(text: string): void {
-        // Process audio commands
         this.processAudioCommands(text);
-        
-        // Filter out audio commands from displayed output
         const filteredText = this.filterAudioCommands(text);
         
         this.mainOutput = filteredText;
@@ -142,11 +125,11 @@ export class Display {
         }
     }
 
-    updateWorkspace(workspace: Value[]): void {
-        const display = this.elements.workspaceDisplay;
+    updateStack(stack: Value[]): void {
+        const display = this.elements.stackDisplay;
         display.innerHTML = '';
         
-        if (!Array.isArray(workspace) || workspace.length === 0) {
+        if (!Array.isArray(stack) || stack.length === 0) {
             display.textContent = '(empty)';
             display.style.color = '#ccc';
             return;
@@ -160,9 +143,9 @@ export class Display {
         container.style.alignContent = 'flex-end';
         container.style.flexDirection = 'row';
         
-        workspace.forEach((item, index) => {
+        stack.forEach((item, index) => {
             const elem = document.createElement('span');
-            elem.className = 'workspace-item';
+            elem.className = 'stack-item';
             
             try {
                 elem.textContent = this.formatValue(item);
@@ -171,7 +154,7 @@ export class Display {
                 elem.textContent = 'ERROR';
             }
             
-            if (index === workspace.length - 1) {
+            if (index === stack.length - 1) {
                 elem.style.fontWeight = 'bold';
                 elem.style.backgroundColor = '#4CAF50';
                 elem.style.color = 'white';
@@ -193,46 +176,25 @@ export class Display {
     }
 
     private formatValue(item: Value): string {
-        if (!item) {
-            return 'undefined';
-        }
-        
-        if (!item.type) {
+        if (!item || !item.type) {
             return 'unknown';
         }
         
         switch (item.type) {
             case 'number': {
-                // item.valueの型を確認
-                if (!item.value || typeof item.value !== 'object') {
-                    return '?';
-                }
-                
-                // Fractionオブジェクトとして扱う
+                if (!item.value || typeof item.value !== 'object') return '?';
                 const frac = item.value as any;
-                
-                // numeratorとdenominatorが存在することを確認
-                if (!('numerator' in frac) || !('denominator' in frac)) {
-                    return '?';
-                }
-                
-                // 両方を文字列に変換
+                if (!('numerator' in frac) || !('denominator' in frac)) return '?';
                 const denomStr = String(frac.denominator);
                 const numerStr = String(frac.numerator);
-                
-                // 分数を科学的記数法で表示
                 return this.formatFractionScientific(numerStr, denomStr);
             }
-                
             case 'string':
                 return `'${item.value}'`;
-                
             case 'symbol':
                 return String(item.value);
-                
             case 'boolean':
                 return item.value ? 'true' : 'false';
-                
             case 'vector': {
                 if (Array.isArray(item.value)) {
                     const bracketType = item.bracketType || 'square';
@@ -245,87 +207,55 @@ export class Display {
                     }
                     
                     const elements = item.value.map((v: Value) => {
-                        try {
-                            return this.formatValue(v);
-                        } catch (e) {
-                            console.error('Error formatting vector element:', e);
-                            return '?';
-                        }
+                        try { return this.formatValue(v); } catch { return '?'; }
                     }).join(' ');
                     
                     return `${openBracket}${elements ? ' ' + elements + ' ' : ''}${closeBracket}`;
                 }
                 return '[ ]';
             }
-                
             case 'nil':
                 return 'nil';
-                
             default:
                 return JSON.stringify(item.value);
         }
     }
 
     private formatFractionScientific(numerStr: string, denomStr: string): string {
-        // 整数の場合（分母が1）
         if (denomStr === '1') {
             return this.formatIntegerScientific(numerStr);
         }
         
-        // 真の分数の場合
-        // 分子と分母それぞれを科学的記数法に変換
         const numSci = this.formatIntegerScientific(numerStr);
         const denSci = this.formatIntegerScientific(denomStr);
         
-        // 両方が科学的記数法の場合、指数を計算して一つの科学的記数法にまとめる
         if (numSci.includes('e') && denSci.includes('e')) {
             const numMatch = numSci.match(/^([+-]?\d+\.?\d*)e([+-]?\d+)$/);
             const denMatch = denSci.match(/^([+-]?\d+\.?\d*)e([+-]?\d+)$/);
             
             if (numMatch && denMatch) {
-                // 配列要素の存在を確認
-                const numMantissaStr = numMatch[1];
-                const numExponentStr = numMatch[2];
-                const denMantissaStr = denMatch[1];
-                const denExponentStr = denMatch[2];
+                const numMantissa = parseFloat(numMatch[1]!);
+                const numExponent = parseInt(numMatch[2]!);
+                const denMantissa = parseFloat(denMatch[1]!);
+                const denExponent = parseInt(denMatch[2]!);
                 
-                if (numMantissaStr && numExponentStr && denMantissaStr && denExponentStr) {
-                    const numMantissa = parseFloat(numMantissaStr);
-                    const numExponent = parseInt(numExponentStr);
-                    const denMantissa = parseFloat(denMantissaStr);
-                    const denExponent = parseInt(denExponentStr);
-                    
-                    // 仮数部の除算
-                    const resultMantissa = numMantissa / denMantissa;
-                    // 指数部の減算
-                    const resultExponent = numExponent - denExponent;
-                    
-                    // 仮数部を正規化（1 <= |m| < 10）
-                    let normalizedMantissa = resultMantissa;
-                    let normalizedExponent = resultExponent;
-                    
-                    while (Math.abs(normalizedMantissa) >= 10) {
-                        normalizedMantissa /= 10;
-                        normalizedExponent += 1;
-                    }
-                    while (Math.abs(normalizedMantissa) < 1 && normalizedMantissa !== 0) {
-                        normalizedMantissa *= 10;
-                        normalizedExponent -= 1;
-                    }
-                    
-                    // 精度を制限
-                    const rounded = normalizedMantissa.toPrecision(this.mantissaPrecision);
-                    
-                    if (normalizedExponent === 0) {
-                        return rounded;
-                    } else {
-                        return `${rounded}e${normalizedExponent}`;
-                    }
+                let resultMantissa = numMantissa / denMantissa;
+                let resultExponent = numExponent - denExponent;
+                
+                while (Math.abs(resultMantissa) >= 10) {
+                    resultMantissa /= 10;
+                    resultExponent += 1;
                 }
+                while (Math.abs(resultMantissa) < 1 && resultMantissa !== 0) {
+                    resultMantissa *= 10;
+                    resultExponent -= 1;
+                }
+                
+                const rounded = resultMantissa.toPrecision(this.mantissaPrecision);
+                return resultExponent === 0 ? rounded : `${rounded}e${resultExponent}`;
             }
         }
         
-        // 片方だけが科学的記数法、または両方とも通常の数値の場合
         return `${numSci}/${denSci}`;
     }
 
@@ -333,42 +263,24 @@ export class Display {
         const isNegative = numStr.startsWith('-');
         const absNumStr = isNegative ? numStr.substring(1) : numStr;
         
-        // 空文字列チェック
-        if (absNumStr.length === 0) {
-            return '0';
-        }
-        
-        // 小さい数値はそのまま表示
         if (absNumStr.length < this.scientificThreshold) {
             return numStr;
         }
         
-        // 科学的記数法に変換
         const firstDigit = absNumStr[0];
-        if (!firstDigit) {
-            return '0';
-        }
-        
         const remainingDigits = absNumStr.substring(1);
         const exponent = remainingDigits.length;
         
-        // 仮数部を構成（最初の数桁のみ使用）
-        let mantissa: string = firstDigit;
+        let mantissa = firstDigit!;
         if (remainingDigits.length > 0) {
-            // 小数点以下の桁数を計算
             const fractionalDigits = Math.min(this.mantissaPrecision - 1, remainingDigits.length);
             if (fractionalDigits > 0) {
                 mantissa += '.' + remainingDigits.substring(0, fractionalDigits);
             }
         }
         
-        // 末尾の0を削除
         mantissa = mantissa.replace(/\.?0+$/, '');
-        
-        // 符号を付加
-        if (isNegative) {
-            mantissa = '-' + mantissa;
-        }
+        if (isNegative) mantissa = '-' + mantissa;
         
         return `${mantissa}e${exponent}`;
     }
