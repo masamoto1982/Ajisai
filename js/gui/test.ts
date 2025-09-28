@@ -3,7 +3,7 @@ import type { Value, Fraction } from '../wasm-types';
 interface TestCase {
     name: string;
     code: string;
-    expectedWorkspace?: Value[];
+    expectedStack?: Value[];
     expectedOutput?: string;
     expectError?: boolean;
     category?: string;
@@ -67,18 +67,18 @@ export class TestRunner {
     
     private async resetInterpreter(): Promise<void> {
         if (window.ajisaiInterpreter) {
-            window.ajisaiInterpreter.restore_workspace([]);
+            window.ajisaiInterpreter.restore_stack([]);
         }
     }
     
     private async runSingleTestWithDetails(testCase: TestCase): Promise<{
         passed: boolean;
-        actualWorkspace?: Value[];
+        actualStack?: Value[];
         actualOutput?: string;
         errorMessage?: string;
         reason?: string;
     }> {
-        // 各テスト前にworkspaceをクリア
+        // 各テスト前にstackをクリア
         await this.resetInterpreter();
         
         const result = window.ajisaiInterpreter.execute(testCase.code);
@@ -99,13 +99,13 @@ export class TestRunner {
             };
         }
 
-        if (testCase.expectedWorkspace) {
-            const workspace = window.ajisaiInterpreter.get_workspace();
-            const matches = this.compareWorkspace(workspace, testCase.expectedWorkspace);
+        if (testCase.expectedStack) {
+            const stack = window.ajisaiInterpreter.get_stack();
+            const matches = this.compareStack(stack, testCase.expectedStack);
             return {
                 passed: matches,
-                actualWorkspace: workspace,
-                reason: matches ? 'Workspace matches expected' : 'Workspace mismatch'
+                actualStack: stack,
+                reason: matches ? 'Stack matches expected' : 'Stack mismatch'
             };
         }
         
@@ -137,10 +137,10 @@ export class TestRunner {
             if (result.errorMessage) {
                 this.showColoredInfo(`  Actual error: ${result.errorMessage}`, 'info');
             }
-        } else if (testCase.expectedWorkspace) {
-            this.showColoredInfo(`  Expected workspace: ${this.formatWorkspaceForDisplay(testCase.expectedWorkspace)}`, 'info');
-            if (result.actualWorkspace) {
-                this.showColoredInfo(`  Actual workspace: ${this.formatWorkspaceForDisplay(result.actualWorkspace)}`, 'info');
+        } else if (testCase.expectedStack) {
+            this.showColoredInfo(`  Expected stack: ${this.formatStackForDisplay(testCase.expectedStack)}`, 'info');
+            if (result.actualStack) {
+                this.showColoredInfo(`  Actual stack: ${this.formatStackForDisplay(result.actualStack)}`, 'info');
             }
         } else if (testCase.expectedOutput) {
             this.showColoredInfo(`  Expected output: "${testCase.expectedOutput}"`, 'info');
@@ -167,12 +167,12 @@ export class TestRunner {
         this.showColoredInfo('', 'info'); // 空行
     }
     
-    private formatWorkspaceForDisplay(workspace: Value[]): string {
-        if (workspace.length === 0) {
+    private formatStackForDisplay(stack: Value[]): string {
+        if (stack.length === 0) {
             return '[]';
         }
         
-        const formatted = workspace.map(value => this.formatValueForDisplay(value)).join(', ');
+        const formatted = stack.map(value => this.formatValueForDisplay(value)).join(', ');
         return `[${formatted}]`;
     }
     
@@ -211,7 +211,7 @@ export class TestRunner {
         }
     }
     
-    private compareWorkspace(actual: Value[], expected: Value[]): boolean {
+    private compareStack(actual: Value[], expected: Value[]): boolean {
         if (actual.length !== expected.length) {
             return false;
         }
@@ -248,7 +248,7 @@ export class TestRunner {
                 if (!Array.isArray(actual.value) || !Array.isArray(expected.value)) {
                     return false;
                 }
-                return this.compareWorkspace(actual.value, expected.value);
+                return this.compareStack(actual.value, expected.value);
             
             case 'string':
             case 'boolean':
@@ -326,61 +326,61 @@ export class TestRunner {
             {
                 name: "整数リテラル",
                 code: "[ 42 ]",
-                expectedWorkspace: [this.createVector([this.createNumber('42')])],
+                expectedStack: [this.createVector([this.createNumber('42')])],
                 category: "Basic Data Types"
             },
             {
                 name: "負の整数",
                 code: "[ -15 ]",
-                expectedWorkspace: [this.createVector([this.createNumber('-15')])],
+                expectedStack: [this.createVector([this.createNumber('-15')])],
                 category: "Basic Data Types"
             },
             {
                 name: "小数",
                 code: "[ 3.14 ]",
-                expectedWorkspace: [this.createVector([this.createNumber('157', '50')])],
+                expectedStack: [this.createVector([this.createNumber('157', '50')])],
                 category: "Basic Data Types"
             },
             {
                 name: "分数",
                 code: "[ 3/4 ]",
-                expectedWorkspace: [this.createVector([this.createNumber('3', '4')])],
+                expectedStack: [this.createVector([this.createNumber('3', '4')])],
                 category: "Basic Data Types"
             },
             {
                 name: "文字列リテラル",
                 code: "[ 'Hello World' ]",
-                expectedWorkspace: [this.createVector([this.createString('Hello World')])],
+                expectedStack: [this.createVector([this.createString('Hello World')])],
                 category: "Basic Data Types"
             },
             {
                 name: "真偽値true",
                 code: "[ TRUE ]",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Basic Data Types"
             },
             {
                 name: "真偽値false",
                 code: "[ FALSE ]",
-                expectedWorkspace: [this.createVector([this.createBoolean(false)])],
+                expectedStack: [this.createVector([this.createBoolean(false)])],
                 category: "Basic Data Types"
             },
             {
                 name: "Nil値",
                 code: "[ NIL ]",
-                expectedWorkspace: [this.createVector([this.createNil()])],
+                expectedStack: [this.createVector([this.createNil()])],
                 category: "Basic Data Types"
             },
             {
                 name: "空のベクトル",
                 code: "[ ]",
-                expectedWorkspace: [this.createVector([])],
+                expectedStack: [this.createVector([])],
                 category: "Basic Data Types"
             },
             {
                 name: "複数要素のベクトル",
                 code: "[ 1 2 3 ]",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('1'),
                     this.createNumber('2'),
                     this.createNumber('3')
@@ -392,49 +392,49 @@ export class TestRunner {
             {
                 name: "整数の加算",
                 code: "[ 5 ] [ 3 ] +",
-                expectedWorkspace: [this.createVector([this.createNumber('8')])],
+                expectedStack: [this.createVector([this.createNumber('8')])],
                 category: "Arithmetic"
             },
             {
                 name: "整数の減算",
                 code: "[ 10 ] [ 3 ] -",
-                expectedWorkspace: [this.createVector([this.createNumber('7')])],
+                expectedStack: [this.createVector([this.createNumber('7')])],
                 category: "Arithmetic"
             },
             {
                 name: "整数の乗算",
                 code: "[ 4 ] [ 7 ] *",
-                expectedWorkspace: [this.createVector([this.createNumber('28')])],
+                expectedStack: [this.createVector([this.createNumber('28')])],
                 category: "Arithmetic"
             },
             {
                 name: "整数の除算",
                 code: "[ 15 ] [ 3 ] /",
-                expectedWorkspace: [this.createVector([this.createNumber('5')])],
+                expectedStack: [this.createVector([this.createNumber('5')])],
                 category: "Arithmetic"
             },
             {
                 name: "分数の加算",
                 code: "[ 1/2 ] [ 1/3 ] +",
-                expectedWorkspace: [this.createVector([this.createNumber('5', '6')])],
+                expectedStack: [this.createVector([this.createNumber('5', '6')])],
                 category: "Arithmetic"
             },
             {
                 name: "分数の減算",
                 code: "[ 3/4 ] [ 1/4 ] -",
-                expectedWorkspace: [this.createVector([this.createNumber('1', '2')])],
+                expectedStack: [this.createVector([this.createNumber('1', '2')])],
                 category: "Arithmetic"
             },
             {
                 name: "分数の乗算",
                 code: "[ 2/3 ] [ 3/4 ] *",
-                expectedWorkspace: [this.createVector([this.createNumber('1', '2')])],
+                expectedStack: [this.createVector([this.createNumber('1', '2')])],
                 category: "Arithmetic"
             },
             {
                 name: "分数の除算",
                 code: "[ 2/3 ] [ 1/2 ] /",
-                expectedWorkspace: [this.createVector([this.createNumber('4', '3')])],
+                expectedStack: [this.createVector([this.createNumber('4', '3')])],
                 category: "Arithmetic"
             },
 
@@ -442,43 +442,43 @@ export class TestRunner {
             {
                 name: "等価判定（真）",
                 code: "[ 5 ] [ 5 ] =",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Comparison"
             },
             {
                 name: "等価判定（偽）",
                 code: "[ 5 ] [ 3 ] =",
-                expectedWorkspace: [this.createVector([this.createBoolean(false)])],
+                expectedStack: [this.createVector([this.createBoolean(false)])],
                 category: "Comparison"
             },
             {
                 name: "より小さい（真）",
                 code: "[ 3 ] [ 5 ] <",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Comparison"
             },
             {
                 name: "より小さい（偽）",
                 code: "[ 5 ] [ 3 ] <",
-                expectedWorkspace: [this.createVector([this.createBoolean(false)])],
+                expectedStack: [this.createVector([this.createBoolean(false)])],
                 category: "Comparison"
             },
             {
                 name: "以下（真）",
                 code: "[ 5 ] [ 5 ] <=",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Comparison"
             },
             {
                 name: "より大きい（真）",
                 code: "[ 7 ] [ 3 ] >",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Comparison"
             },
             {
                 name: "以上（真）",
                 code: "[ 5 ] [ 5 ] >=",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Comparison"
             },
 
@@ -486,87 +486,57 @@ export class TestRunner {
             {
                 name: "論理AND（真）",
                 code: "[ TRUE ] [ TRUE ] AND",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
             },
             {
                 name: "論理AND（偽）",
                 code: "[ TRUE ] [ FALSE ] AND",
-                expectedWorkspace: [this.createVector([this.createBoolean(false)])],
+                expectedStack: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理OR（真）",
                 code: "[ TRUE ] [ FALSE ] OR",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
             },
             {
                 name: "論理OR（偽）",
                 code: "[ FALSE ] [ FALSE ] OR",
-                expectedWorkspace: [this.createVector([this.createBoolean(false)])],
+                expectedStack: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理NOT（真→偽）",
                 code: "[ TRUE ] NOT",
-                expectedWorkspace: [this.createVector([this.createBoolean(false)])],
+                expectedStack: [this.createVector([this.createBoolean(false)])],
                 category: "Logic"
             },
             {
                 name: "論理NOT（偽→真）",
                 code: "[ FALSE ] NOT",
-                expectedWorkspace: [this.createVector([this.createBoolean(true)])],
+                expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Logic"
-            },
-
-            // === ワークスペース操作 ===
-            {
-                name: "DUP - 複製",
-                code: "[ 42 ] DUP",
-                expectedWorkspace: [
-                    this.createVector([this.createNumber('42')]),
-                    this.createVector([this.createNumber('42')])
-                ],
-                category: "Workspace"
-            },
-            {
-                name: "SWAP - 交換",
-                code: "[ 1 ] [ 2 ] SWAP",
-                expectedWorkspace: [
-                    this.createVector([this.createNumber('2')]),
-                    this.createVector([this.createNumber('1')])
-                ],
-                category: "Workspace"
-            },
-            {
-                name: "ROT - 回転",
-                code: "[ 1 ] [ 2 ] [ 3 ] ROT",
-                expectedWorkspace: [
-                    this.createVector([this.createNumber('2')]),
-                    this.createVector([this.createNumber('3')]),
-                    this.createVector([this.createNumber('1')])
-                ],
-                category: "Workspace"
             },
 
             // === ベクトル操作 - 位置指定（0オリジン） ===
             {
                 name: "GET - 正のインデックス",
                 code: "[ 10 20 30 ] [ 1 ] GET",
-                expectedWorkspace: [this.createVector([this.createNumber('20')])],
+                expectedStack: [this.createVector([this.createNumber('20')])],
                 category: "Vector Operations"
             },
             {
                 name: "GET - 負のインデックス",
                 code: "[ 10 20 30 ] [ -1 ] GET",
-                expectedWorkspace: [this.createVector([this.createNumber('30')])],
+                expectedStack: [this.createVector([this.createNumber('30')])],
                 category: "Vector Operations"
             },
             {
                 name: "INSERT - 要素挿入",
                 code: "[ 1 3 ] [ 1 ] [ 2 ] INSERT",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('1'),
                     this.createNumber('2'),
                     this.createNumber('3')
@@ -576,7 +546,7 @@ export class TestRunner {
             {
                 name: "REPLACE - 要素置換",
                 code: "[ 1 2 3 ] [ 1 ] [ 5 ] REPLACE",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('1'),
                     this.createNumber('5'),
                     this.createNumber('3')
@@ -586,7 +556,7 @@ export class TestRunner {
             {
                 name: "REMOVE - 要素削除",
                 code: "[ 1 2 3 ] [ 1 ] REMOVE",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('1'),
                     this.createNumber('3')
                 ])],
@@ -597,13 +567,13 @@ export class TestRunner {
             {
                 name: "LENGTH - 長さ取得",
                 code: "[ 1 2 3 4 5 ] LENGTH",
-                expectedWorkspace: [this.createVector([this.createNumber('5')])],
+                expectedStack: [this.createVector([this.createNumber('5')])],
                 category: "Vector Operations"
             },
             {
                 name: "TAKE - 先頭から取得",
                 code: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('1'),
                     this.createNumber('2'),
                     this.createNumber('3')
@@ -613,7 +583,7 @@ export class TestRunner {
             {
                 name: "TAKE - 負の数で末尾から",
                 code: "[ 1 2 3 4 5 ] [ -2 ] TAKE",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('4'),
                     this.createNumber('5')
                 ])],
@@ -622,7 +592,7 @@ export class TestRunner {
             {
                 name: "DROP - 先頭から削除",
                 code: "[ 1 2 3 4 5 ] [ 2 ] DROP",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('3'),
                     this.createNumber('4'),
                     this.createNumber('5')
@@ -632,7 +602,7 @@ export class TestRunner {
             {
                 name: "SPLIT - 分割",
                 code: "[ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] [ 1 ] SPLIT",
-                expectedWorkspace: [
+                expectedStack: [
                     this.createVector([
                         this.createNumber('1'),
                         this.createNumber('2')
@@ -653,7 +623,7 @@ export class TestRunner {
             {
                 name: "CONCAT - 連結",
                 code: "[ 1 2 ] [ 3 4 ] CONCAT",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('1'),
                     this.createNumber('2'),
                     this.createNumber('3'),
@@ -664,7 +634,7 @@ export class TestRunner {
             {
                 name: "REVERSE - 反転",
                 code: "[ 1 2 3 4 ] REVERSE",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('4'),
                     this.createNumber('3'),
                     this.createNumber('2'),
@@ -677,7 +647,7 @@ export class TestRunner {
             {
                 name: "巨大整数作成",
                 code: "[ 10000000000000000000000000000000000000000000000000000 ]",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('10000000000000000000000000000000000000000000000000000')
                 ])],
                 category: "BigInt"
@@ -685,7 +655,7 @@ export class TestRunner {
             {
                 name: "巨大整数の加算",
                 code: "[ 9007199254740991 ] [ 9007199254740991 ] +",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('18014398509481982')
                 ])],
                 category: "BigInt"
@@ -693,7 +663,7 @@ export class TestRunner {
             {
                 name: "巨大分数の計算",
                 code: "[ 999999999999999999999/1000000000000000000000 ] [ 1/1000000000000000000000 ] +",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createNumber('1', '1')
                 ])],
                 category: "BigInt"
@@ -717,13 +687,13 @@ export class TestRunner {
             {
                 name: "科学的記数法 - 正の指数",
                 code: "[ 1.5e3 ]",
-                expectedWorkspace: [this.createVector([this.createNumber('1500')])],
+                expectedStack: [this.createVector([this.createNumber('1500')])],
                 category: "Scientific Notation"
             },
             {
                 name: "科学的記数法 - 負の指数",
                 code: "[ 2.5e-2 ]",
-                expectedWorkspace: [this.createVector([this.createNumber('1', '40')])],
+                expectedStack: [this.createVector([this.createNumber('1', '40')])],
                 category: "Scientific Notation"
             },
 
@@ -731,13 +701,13 @@ export class TestRunner {
             {
                 name: "連続計算",
                 code: "[ 2 ] [ 3 ] + [ 4 ] *",
-                expectedWorkspace: [this.createVector([this.createNumber('20')])],
+                expectedStack: [this.createVector([this.createNumber('20')])],
                 category: "Complex Calculations"
             },
             {
                 name: "ベクトルの算術連鎖",
                 code: "[ 1 ] [ 2 ] + [ 3 ] + [ 4 ] +",
-                expectedWorkspace: [this.createVector([this.createNumber('10')])],
+                expectedStack: [this.createVector([this.createNumber('10')])],
                 category: "Complex Calculations"
             },
 
@@ -745,7 +715,7 @@ export class TestRunner {
             {
                 name: "ネストしたベクトル",
                 code: "[ [ 1 2 ] [ 3 4 ] ]",
-                expectedWorkspace: [this.createVector([
+                expectedStack: [this.createVector([
                     this.createVector([this.createNumber('1'), this.createNumber('2')]),
                     this.createVector([this.createNumber('3'), this.createNumber('4')])
                 ])],
@@ -772,7 +742,7 @@ export class TestRunner {
                 category: "Error Cases"
             },
             {
-                name: "ワークスペース不足エラー",
+                name: "スタック不足エラー",
                 code: "+",
                 expectError: true,
                 category: "Error Cases"
