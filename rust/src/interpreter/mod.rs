@@ -261,7 +261,9 @@ impl Interpreter {
         let has_conditional_lines = def.lines.iter().any(|line| !line.condition_tokens.is_empty());
         
         if has_conditional_lines {
-            let value_to_test = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let value_to_test = self.stack.last().cloned()
+                .ok_or(AjisaiError::StackUnderflow)?;
+            
             let mut matched_line: Option<ExecutionLine> = None;
             let dictionary_clone = self.dictionary.clone();
 
@@ -277,13 +279,15 @@ impl Interpreter {
                 }
             }
 
-            self.stack.push(value_to_test);
             if let Some(line) = matched_line {
+                let _ = self.stack.pop(); // Consume the value now that we know it's being used.
+                self.stack.push(value_to_test);
                 self.execute_line(&line).await?;
             }
+            // If no line matches, the value remains on the stack, untouched.
         } else {
             for line in &def.lines {
-                self.execute_line(line).await?;
+                self.execute_line(&line).await?;
             }
         }
         
