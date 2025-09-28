@@ -125,7 +125,7 @@ header h1 {
 }
 
 /* 作業領域パネル */
-#workspace-panel {
+#stack-panel {
     flex: 3;
     display: flex;
     flex-direction: column;
@@ -267,7 +267,7 @@ button:hover {
 }
 
 /* ワークスペースエリア（stack → workspace） */
-.workspace-area {
+.stack-area {
     width: 100%;
 }
 
@@ -337,14 +337,14 @@ button:hover {
     background-color: #e0ffe8;
 }
 
-/* ワークスペース項目（stack-item → workspace-item） */
-.workspace-item {
+/* ワークスペース項目（stack-item → stack-item） */
+.stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
 }
 
 /* ワークスペース表示の左寄せ */
-#workspace-display > div {
+#stack-display > div {
     justify-content: flex-start !important;
 }
 
@@ -400,7 +400,7 @@ button:hover {
         overflow: visible;
     }
 
-    #workspace-panel,
+    #stack-panel,
     #state-panel {
         flex: none;
         width: 100%;
@@ -415,7 +415,7 @@ button:hover {
 
     .output-area,
     .input-area,
-    .workspace-area,
+    .stack-area,
     .dictionary-area {
         height: auto;
         flex: none;
@@ -437,7 +437,7 @@ button:hover {
         font-size: 1rem;
     }
 
-    .workspace-area {
+    .stack-area {
         cursor: pointer;
     }
 }
