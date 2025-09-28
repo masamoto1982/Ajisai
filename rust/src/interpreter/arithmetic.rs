@@ -22,12 +22,12 @@ fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Fraction,
 {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
     
-    let b_vec = interp.workspace.pop().unwrap();
-    let a_vec = interp.workspace.pop().unwrap();
+    let b_vec = interp.stack.pop().unwrap();
+    let a_vec = interp.stack.pop().unwrap();
     
     let a_val = extract_single_element_value(&a_vec)?;
     let b_val = extract_single_element_value(&b_vec)?;
@@ -39,7 +39,7 @@ where
         _ => return Err(AjisaiError::type_error("number", "other type")),
     };
     
-    interp.workspace.push(wrap_result_value(result));
+    interp.stack.push(wrap_result_value(result));
     Ok(())
 }
 
@@ -47,12 +47,12 @@ fn binary_comparison_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
     
-    let b_vec = interp.workspace.pop().unwrap();
-    let a_vec = interp.workspace.pop().unwrap();
+    let b_vec = interp.stack.pop().unwrap();
+    let a_vec = interp.stack.pop().unwrap();
     
     let a_val = extract_single_element_value(&a_vec)?;
     let b_val = extract_single_element_value(&b_vec)?;
@@ -64,7 +64,7 @@ where
         _ => return Err(AjisaiError::type_error("number", "other type")),
     };
     
-    interp.workspace.push(wrap_result_value(result));
+    interp.stack.push(wrap_result_value(result));
     Ok(())
 }
 
@@ -81,12 +81,12 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
     
-    let b_vec = interp.workspace.pop().unwrap();
-    let a_vec = interp.workspace.pop().unwrap();
+    let b_vec = interp.stack.pop().unwrap();
+    let a_vec = interp.stack.pop().unwrap();
     
     let a_val = extract_single_element_value(&a_vec)?;
     let b_val = extract_single_element_value(&b_vec)?;
@@ -104,7 +104,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         _ => return Err(AjisaiError::type_error("number", "other type")),
     };
     
-    interp.workspace.push(wrap_result_value(result));
+    interp.stack.push(wrap_result_value(result));
     Ok(())
 }
 
@@ -125,20 +125,20 @@ pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 {
-        return Err(AjisaiError::WorkspaceUnderflow);
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
     
-    let b_vec = interp.workspace.pop().unwrap();
-    let a_vec = interp.workspace.pop().unwrap();
+    let b_vec = interp.stack.pop().unwrap();
+    let a_vec = interp.stack.pop().unwrap();
     
     let result = Value { val_type: ValueType::Boolean(a_vec == b_vec) };
-    interp.workspace.push(wrap_result_value(result));
+    interp.stack.push(wrap_result_value(result));
     Ok(())
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
-    let val_vec = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val_vec = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let val = extract_single_element_value(&val_vec)?;
     
     let result = match &val.val_type {
@@ -147,14 +147,14 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
         _ => return Err(AjisaiError::type_error("boolean or nil", "other type")),
     };
     
-    interp.workspace.push(wrap_result_value(result));
+    interp.stack.push(wrap_result_value(result));
     Ok(())
 }
 
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
-    let b_vec = interp.workspace.pop().unwrap();
-    let a_vec = interp.workspace.pop().unwrap();
+    if interp.stack.len() < 2 { return Err(AjisaiError::StackUnderflow); }
+    let b_vec = interp.stack.pop().unwrap();
+    let a_vec = interp.stack.pop().unwrap();
     let a_val = extract_single_element_value(&a_vec)?;
     let b_val = extract_single_element_value(&b_vec)?;
     
@@ -164,14 +164,14 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
         (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) | (ValueType::Nil, ValueType::Nil) => Value { val_type: ValueType::Nil },
         _ => return Err(AjisaiError::type_error("boolean or nil", "other types")),
     };
-    interp.workspace.push(wrap_result_value(result));
+    interp.stack.push(wrap_result_value(result));
     Ok(())
 }
 
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 { return Err(AjisaiError::WorkspaceUnderflow); }
-    let b_vec = interp.workspace.pop().unwrap();
-    let a_vec = interp.workspace.pop().unwrap();
+    if interp.stack.len() < 2 { return Err(AjisaiError::StackUnderflow); }
+    let b_vec = interp.stack.pop().unwrap();
+    let a_vec = interp.stack.pop().unwrap();
     let a_val = extract_single_element_value(&a_vec)?;
     let b_val = extract_single_element_value(&b_vec)?;
 
@@ -181,6 +181,6 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
         (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) | (ValueType::Nil, ValueType::Nil) => Value { val_type: ValueType::Nil },
         _ => return Err(AjisaiError::type_error("boolean or nil", "other types")),
     };
-    interp.workspace.push(wrap_result_value(result));
+    interp.stack.push(wrap_result_value(result));
     Ok(())
 }
