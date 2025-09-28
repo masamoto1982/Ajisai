@@ -227,8 +227,6 @@ impl Interpreter {
 
     #[async_recursion(?Send)]
     async fn execute_word(&mut self, name: &str) -> Result<()> {
-        // *** ここが修正点です ***
-        // 辞書からの借用をブロック内にスコープすることで、awaitをまたぐ借用を防ぎます。
         let def = {
             self.dictionary.get(&name.to_uppercase()).cloned()
                 .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
@@ -242,21 +240,27 @@ impl Interpreter {
         
         if has_conditional_lines {
             let value_to_test = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            
+            let mut matched_line: Option<ExecutionLine> = None;
+
+            // Phase 1: Find the line to execute.
             for line in &def.lines {
-                if !line.condition_tokens.is_empty() {
-                    if self.evaluate_condition(&line.condition_tokens, &value_to_test).await? {
-                        self.stack.push(value_to_test);
-                        return self.execute_line(line).await;
-                    }
-                } else {
-                    self.stack.push(value_to_test);
-                    return self.execute_line(line).await;
+                if line.condition_tokens.is_empty() {
+                    matched_line = Some(line.clone());
+                    break;
+                }
+                if self.evaluate_condition(&line.condition_tokens, &value_to_test).await? {
+                    matched_line = Some(line.clone());
+                    break;
                 }
             }
-            
+
+            // Phase 2: Push the value back and execute if a line was found.
             self.stack.push(value_to_test);
+            if let Some(line) = matched_line {
+                self.execute_line(&line).await?;
+            }
         } else {
+            // No conditional lines, just execute them all.
             for line in &def.lines {
                 self.execute_line(line).await?;
             }
