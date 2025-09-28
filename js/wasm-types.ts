@@ -14,11 +14,11 @@ export interface AjisaiInterpreter {
     init_step(code: string): string;
     step(): StepResult;
     reset(): ExecuteResult;
-    get_workspace(): Value[];
+    get_stack(): Value[];
     get_custom_words_info(): Array<[string, string | null, boolean]>;
     get_builtin_words_info(): Array<[string, string, string]>;
     get_word_definition(name: string): string | null;
-    restore_workspace(workspace_js: Value[]): void;
+    restore_stack(stack_js: Value[]): void;
     restore_word(name: string, definition: string, description?: string | null): void;
     restore_custom_words(words: CustomWord[]): void;
     rebuild_dependencies(): { status: string; message: string };
