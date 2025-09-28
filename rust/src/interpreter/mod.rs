@@ -227,8 +227,12 @@ impl Interpreter {
 
     #[async_recursion(?Send)]
     async fn execute_word(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(&name.to_uppercase()).cloned()
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
+        // *** ここが修正点です ***
+        // 辞書からの借用をブロック内にスコープすることで、awaitをまたぐ借用を防ぎます。
+        let def = {
+            self.dictionary.get(&name.to_uppercase()).cloned()
+                .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
+        };
 
         if def.is_builtin {
             return self.execute_builtin(name);
