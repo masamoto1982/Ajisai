@@ -251,9 +251,9 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
-    pub fn get_workspace(&self) -> JsValue {
+    pub fn get_stack(&self) -> JsValue {
         let js_array = js_sys::Array::new();
-        for value in self.interpreter.get_workspace() {
+        for value in self.interpreter.get_stack() {
             js_array.push(&value_to_js_value(value));
         }
         js_array.into()
@@ -302,7 +302,7 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
-    pub fn restore_workspace(&mut self, workspace_js: JsValue) -> Result<(), String> {
+    pub fn restore_stack(&mut self, workspace_js: JsValue) -> Result<(), String> {
         let js_array = js_sys::Array::from(&workspace_js);
         let mut workspace = Vec::new();
         for i in 0..js_array.length() {
