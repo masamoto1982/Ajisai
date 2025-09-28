@@ -55,26 +55,31 @@ export class AudioEngine {
     }
 
     private async playTrack(track: AudioTrack): Promise<void> {
-        if (!this.audioContext) return;
+    if (!this.audioContext) return;
 
-        const stepDuration = 0.5; // 0.5 seconds per step
-        let currentTime = this.audioContext.currentTime;
+    console.log(`Playing track ${track.track} with ${track.notes.length} notes`);
+    
+    const stepDuration = 0.5; // 0.5 seconds per step
+    let currentTime = this.audioContext.currentTime;
 
-        for (const note of track.notes) {
-            const duration = this.getNoteDuration(note.duration, stepDuration);
-            
-            if (note.type === 'single' && note.frequency) {
-                this.playTone(note.frequency, currentTime, duration);
-            } else if (note.type === 'chord' && note.frequencies) {
-                for (const freq of note.frequencies) {
-                    this.playTone(freq, currentTime, duration);
-                }
+    for (const note of track.notes) {
+        const duration = this.getNoteDuration(note.duration, stepDuration);
+        
+        console.log('Processing note:', note);
+        
+        if (note.type === 'single' && note.frequency) {
+            console.log(`Playing single tone: ${note.frequency}Hz for ${duration}s at time ${currentTime}`);
+            this.playTone(note.frequency, currentTime, duration);
+        } else if (note.type === 'chord' && note.frequencies) {
+            console.log(`Playing chord: ${note.frequencies.join(', ')}Hz for ${duration}s at time ${currentTime}`);
+            for (const freq of note.frequencies) {
+                this.playTone(freq, currentTime, duration);
             }
-            // 'rest' and 'duration_marker' types don't produce sound
-            
-            currentTime += stepDuration;
         }
+        
+        currentTime += stepDuration;
     }
+}
 
     private getNoteDuration(duration: string, stepDuration: number): number {
         switch (duration) {
@@ -86,25 +91,29 @@ export class AudioEngine {
     }
 
     private playTone(frequency: number, startTime: number, duration: number): void {
-        if (!this.audioContext) return;
+    if (!this.audioContext) return;
 
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
+    console.log(`Creating oscillator: ${frequency}Hz, start: ${startTime}, duration: ${duration}`);
+    
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
 
-        oscillator.frequency.setValueAtTime(frequency, startTime);
-        oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, startTime);
+    oscillator.type = 'sine';
 
-        // Envelope for smooth sound
-        gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+    // Envelope for smooth sound
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
 
-        oscillator.start(startTime);
-        oscillator.stop(startTime + duration);
-    }
+    oscillator.start(startTime);
+    oscillator.stop(startTime + duration);
+    
+    console.log(`Oscillator started for ${frequency}Hz`);
+}
 
     // Test function
     async playTestTone(): Promise<void> {
