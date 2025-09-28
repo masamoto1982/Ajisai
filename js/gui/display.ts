@@ -1,6 +1,7 @@
-// js/gui/display.ts (科学的記数法対応・完全修正版)
+// js/gui/display.ts (音声機能追加版)
 
 import type { Value, ExecuteResult } from '../wasm-types';
+import { AUDIO_ENGINE } from '../audio/audio-engine';
 
 interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -16,13 +17,22 @@ export class Display {
     init(elements: DisplayElements): void {
         this.elements = elements;
         this.elements.outputDisplay.style.whiteSpace = 'pre-wrap';
+        
+        // Audio engine initialization
+        AUDIO_ENGINE.init().catch(console.error);
     }
 
     showExecutionResult(result: ExecuteResult): void {
         const debugText = (result.debugOutput || '').trim();
         const programOutput = (result.output || '').trim();
         
-        this.mainOutput = `${debugText}\n${programOutput}`;
+        // Process audio commands
+        this.processAudioCommands(programOutput);
+        
+        // Filter out audio commands from displayed output
+        const filteredOutput = this.filterAudioCommands(programOutput);
+        
+        this.mainOutput = `${debugText}\n${filteredOutput}`;
         this.elements.outputDisplay.innerHTML = '';
 
         if (debugText) {
@@ -32,31 +42,59 @@ export class Display {
             this.elements.outputDisplay.appendChild(debugSpan);
         }
 
-        if (debugText && programOutput) {
+        if (debugText && filteredOutput) {
             this.elements.outputDisplay.appendChild(document.createElement('br'));
         }
 
-        if (programOutput) {
+        if (filteredOutput) {
             const outputSpan = document.createElement('span');
             outputSpan.style.color = '#007bff';
-            outputSpan.textContent = programOutput.replace(/\\n/g, '\n');
+            outputSpan.textContent = filteredOutput.replace(/\\n/g, '\n');
             this.elements.outputDisplay.appendChild(outputSpan);
         }
 
-        if (!debugText && !programOutput && result.status === 'OK') {
+        if (!debugText && !filteredOutput && result.status === 'OK') {
             const okSpan = document.createElement('span');
             okSpan.style.color = '#333';
             okSpan.textContent = 'OK';
             this.elements.outputDisplay.appendChild(okSpan);
         }
     }
+
+    private processAudioCommands(output: string): void {
+        const lines = output.split('\n');
+        
+        for (const line of lines) {
+            if (line.startsWith('AUDIO:')) {
+                const audioJson = line.substring(6); // Remove 'AUDIO:' prefix
+                try {
+                    const audioCommand = JSON.parse(audioJson);
+                    AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
+                } catch (error) {
+                    console.error('Failed to parse audio command:', error);
+                }
+            }
+        }
+    }
+
+    private filterAudioCommands(output: string): string {
+        const lines = output.split('\n');
+        const filteredLines = lines.filter(line => !line.startsWith('AUDIO:'));
+        return filteredLines.join('\n');
+    }
     
     showOutput(text: string): void {
-        this.mainOutput = text;
+        // Process audio commands
+        this.processAudioCommands(text);
+        
+        // Filter out audio commands from displayed output
+        const filteredText = this.filterAudioCommands(text);
+        
+        this.mainOutput = filteredText;
         this.elements.outputDisplay.innerHTML = '';
         const span = document.createElement('span');
         span.style.color = '#007bff';
-        span.textContent = text.replace(/\\n/g, '\n');
+        span.textContent = filteredText.replace(/\\n/g, '\n');
         this.elements.outputDisplay.appendChild(span);
     }
 
