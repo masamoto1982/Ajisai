@@ -62,20 +62,22 @@ export class Display {
     }
 
     private processAudioCommands(output: string): void {
-        const lines = output.split('\n');
-        
-        for (const line of lines) {
-            if (line.startsWith('AUDIO:')) {
-                const audioJson = line.substring(6); // Remove 'AUDIO:' prefix
-                try {
-                    const audioCommand = JSON.parse(audioJson);
-                    AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
-                } catch (error) {
-                    console.error('Failed to parse audio command:', error);
-                }
+    const lines = output.split('\n');
+    
+    for (const line of lines) {
+        if (line.startsWith('AUDIO:')) {
+            const audioJson = line.substring(6); // Remove 'AUDIO:' prefix
+            try {
+                const audioCommand = JSON.parse(audioJson);
+                console.log('Audio command received:', audioCommand); // デバッグ用
+                AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
+            } catch (error) {
+                console.error('Failed to parse audio command:', error);
+                console.error('Raw audio JSON:', audioJson); // デバッグ用
             }
         }
     }
+}
 
     private filterAudioCommands(output: string): string {
         const lines = output.split('\n');
