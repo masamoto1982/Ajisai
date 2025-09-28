@@ -1,13 +1,13 @@
 // rust/src/interpreter/audio.rs (修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType, BracketType};
+use crate::types::{Value, ValueType};
 use num_bigint::BigInt;
 use num_traits::{ToPrimitive, One};
 use serde_json::json;
 
 pub fn op_sound(interp: &mut Interpreter) -> Result<()> {
-    let music_data = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let music_data = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     
     match &music_data.val_type {
         ValueType::Vector(tracks, _) => {
@@ -180,7 +180,7 @@ fn convert_fraction_to_frequencies(num: f64, den: f64) -> (f64, f64) {
     let base_freq = 261.63;
     
     // 分数の比率を音楽的な間隔に変換
-    let ratio = num / den;
+    let _ratio = num / den;
     
     // 比率を適切な周波数範囲にマッピング
     let freq1 = base_freq * num.powf(0.5); // 分子に基づく周波数
