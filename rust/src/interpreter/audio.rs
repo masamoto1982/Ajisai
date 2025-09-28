@@ -1,4 +1,4 @@
-// rust/src/interpreter/audio.rs
+// rust/src/interpreter/audio.rs (修正版)
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, BracketType};
@@ -85,11 +85,12 @@ fn process_single_note(note: &Value) -> Result<Option<serde_json::Value>> {
                     Ok(None)
                 }
             } else {
-                // 二和音
-                if let (Some(freq1), Some(freq2)) = (
+                // 二和音 - 約分された値を音楽的に有用な周波数に変換
+                if let (Some(num), Some(den)) = (
                     frac.numerator.to_f64(),
                     frac.denominator.to_f64()
                 ) {
+                    let (freq1, freq2) = convert_fraction_to_frequencies(num, den);
                     Ok(Some(json!({
                         "type": "chord",
                         "frequencies": [freq1, freq2],
@@ -133,10 +134,11 @@ fn process_single_note(note: &Value) -> Result<Option<serde_json::Value>> {
                         }
                     } else {
                         // 二和音
-                        if let (Some(freq1), Some(freq2)) = (
+                        if let (Some(num), Some(den)) = (
                             frac.numerator.to_f64(),
                             frac.denominator.to_f64()
                         ) {
+                            let (freq1, freq2) = convert_fraction_to_frequencies(num, den);
                             Ok(Some(json!({
                                 "type": "chord",
                                 "frequencies": [freq1, freq2],
@@ -170,4 +172,23 @@ fn process_single_note(note: &Value) -> Result<Option<serde_json::Value>> {
         },
         _ => Ok(None)
     }
+}
+
+// 約分された分数を音楽的に有用な周波数に変換
+fn convert_fraction_to_frequencies(num: f64, den: f64) -> (f64, f64) {
+    // 基準周波数（C4 = 261.63Hz）
+    let base_freq = 261.63;
+    
+    // 分数の比率を音楽的な間隔に変換
+    let ratio = num / den;
+    
+    // 比率を適切な周波数範囲にマッピング
+    let freq1 = base_freq * num.powf(0.5); // 分子に基づく周波数
+    let freq2 = base_freq * den.powf(0.5); // 分母に基づく周波数
+    
+    // 可聴域に収まるように調整
+    let freq1_adjusted = freq1.max(100.0).min(2000.0);
+    let freq2_adjusted = freq2.max(100.0).min(2000.0);
+    
+    (freq1_adjusted, freq2_adjusted)
 }
