@@ -146,7 +146,7 @@ export class GUI {
         if (!code) return;
     
         try {
-            const result = window.ajisaiInterpreter.execute(code) as ExecuteResult;
+            const result = await window.ajisaiInterpreter.execute(code) as ExecuteResult;
     
             if (result.definition_to_load) {
                 this.editor.setValue(result.definition_to_load);
