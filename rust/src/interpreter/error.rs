@@ -38,7 +38,7 @@ impl AjisaiError {
 impl fmt::Display for AjisaiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AjisaiError::WorkspaceUnderflow => write!(f, "Workspace underflow"),
+            AjisaiError::StackUnderflow => write!(f, "Stack underflow"),
             AjisaiError::TypeError { expected, got } => {
                 write!(f, "Type error: expected {}, got {}", expected, got)
             },
