@@ -32,7 +32,7 @@ extern "C" {
     #[wasm_bindgen(method, js_name = "now")]
     fn now(this: &Performance) -> f64;
     
-    #[wasm_bindgen(js_name = "performance", thread_local)]
+    #[wasm_bindgen(js_name = "performance", thread_local_v2)]
     static performance: Performance;
 }
 
@@ -302,18 +302,18 @@ impl AjisaiInterpreter {
     }
     
     #[wasm_bindgen]
-    pub fn restore_stack(&mut self, workspace_js: JsValue) -> Result<(), String> {
-        let js_array = js_sys::Array::from(&workspace_js);
-        let mut workspace = Vec::new();
+    pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
+        let js_array = js_sys::Array::from(&stack_js);
+        let mut stack = Vec::new();
         for i in 0..js_array.length() {
-            workspace.push(js_value_to_value(js_array.get(i))?);
+            stack.push(js_value_to_value(js_array.get(i))?);
         }
-        self.interpreter.set_workspace(workspace);
+        self.interpreter.set_stack(stack);
         Ok(())
     }
 
     #[wasm_bindgen]
-    pub fn restore_word(&mut self, name: String, definition: String, description: Option<String>) -> Result<(), String> {
+    pub fn restore_word(&mut self, name: String, definition: String, _description: Option<String>) -> Result<(), String> {
         let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
