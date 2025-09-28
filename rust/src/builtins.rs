@@ -8,7 +8,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
             is_builtin: true,
             description: Some(description.to_string()),
             dependencies: HashSet::new(),
-            original_source: None, // 🆕 追加
+            original_source: None,
         });
     }
 }
@@ -42,6 +42,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("NOT", "Vector logical NOT", "Logic"),
         (":", "Conditional execution. Usage: condition : action", "Control"),
         ("PRINT", "Print vector value", "IO"),
+        ("SOUND", "Play sound sequence. Usage: [ notes ] SOUND", "Audio"),  // 新規追加
         ("DEF", "Define new word", "System"),
         ("DEL", "Delete word", "System"),
         ("RESET", "Reset all memory and database", "System"),
