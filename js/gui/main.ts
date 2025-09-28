@@ -3,7 +3,7 @@ import { Dictionary } from './dictionary';
 import { Editor } from './editor';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
-import { TestRunner } from './test';  
+import { TestRunner } from './test';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
 
 declare global {
@@ -18,12 +18,12 @@ interface GUIElements {
     clearBtn: HTMLButtonElement;
     testBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
-    workspaceDisplay: HTMLElement;
+    stackDisplay: HTMLElement;
     builtinWordsDisplay: HTMLElement;
     customWordsDisplay: HTMLElement;
     inputArea: HTMLElement;
     outputArea: HTMLElement;
-    workspaceArea: HTMLElement;
+    stackArea: HTMLElement;
     dictionaryArea: HTMLElement;
 }
 
@@ -53,7 +53,7 @@ export class GUI {
 
         this.display.init({
             outputDisplay: this.elements.outputDisplay,
-            workspaceDisplay: this.elements.workspaceDisplay,
+            stackDisplay: this.elements.stackDisplay,
         });
         
         this.dictionary.init({
@@ -66,7 +66,7 @@ export class GUI {
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
-            workspaceArea: this.elements.workspaceArea,
+            stackArea: this.elements.stackArea,
             dictionaryArea: this.elements.dictionaryArea
         });
         
@@ -85,12 +85,12 @@ export class GUI {
             clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
             testBtn: document.getElementById('test-btn') as HTMLButtonElement,
             outputDisplay: document.getElementById('output-display')!,
-            workspaceDisplay: document.getElementById('workspace-display')!,
+            stackDisplay: document.getElementById('stack-display')!,
             builtinWordsDisplay: document.getElementById('builtin-words-display')!,
             customWordsDisplay: document.getElementById('custom-words-display')!,
             inputArea: document.querySelector('.input-area')!,
             outputArea: document.querySelector('.output-area')!,
-            workspaceArea: document.querySelector('.workspace-area')!,
+            stackArea: document.querySelector('.stack-area')!,
             dictionaryArea: document.querySelector('.dictionary-area')!
         };
     }
@@ -123,7 +123,7 @@ export class GUI {
             }
         });
 
-        this.elements.workspaceArea.addEventListener('click', () => {
+        this.elements.stackArea.addEventListener('click', () => {
             if (this.mobile.isMobile() && this.mode === 'execution') {
                 this.setMode('input');
             }
@@ -259,7 +259,7 @@ export class GUI {
     updateAllDisplays(): void {
         if (!window.ajisaiInterpreter) return;
         try {
-            this.display.updateWorkspace(window.ajisaiInterpreter.get_workspace());
+            this.display.updateStack(window.ajisaiInterpreter.get_stack());
             this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
         } catch (error) {
             console.error('Failed to update display:', error);
