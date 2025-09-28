@@ -6,7 +6,7 @@ use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive};
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     interp.output_buffer.push_str(&format!("{} ", val));
     Ok(())
 }
@@ -22,7 +22,7 @@ pub fn op_space(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     match val.val_type {
         ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
             ValueType::Number(n) => {
@@ -41,7 +41,7 @@ pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_emit(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     match val.val_type {
         ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
             ValueType::Number(n) => {
