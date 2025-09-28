@@ -53,7 +53,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 3 { return Err(AjisaiError::stackUnderflow); }
+    if interp.stack.len() < 3 { return Err(AjisaiError::StackUnderflow); }
     let element = interp.stack.pop().unwrap();
     let index_val = interp.stack.pop().unwrap();
     let vector_val = interp.stack.pop().unwrap();
@@ -83,7 +83,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 3 { return Err(AjisaiError::stackUnderflow); }
+    if interp.stack.len() < 3 { return Err(AjisaiError::StackUnderflow); }
     let new_element = interp.stack.pop().unwrap();
     let index_val = interp.stack.pop().unwrap();
     let vector_val = interp.stack.pop().unwrap();
@@ -113,7 +113,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 { return Err(AjisaiError::stackUnderflow); }
+    if interp.stack.len() < 2 { return Err(AjisaiError::StackUnderflow); }
     let index_val = interp.stack.pop().unwrap();
     let vector_val = interp.stack.pop().unwrap();
     let index = get_index_from_value(&index_val)?;
@@ -138,7 +138,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
 // ========== 量指定操作（1オリジン）==========
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    let target_val = interp.stack.pop().ok_or(AjisaiError::stackUnderflow)?;
+    let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     match target_val.val_type {
         ValueType::Vector(v, _) => {
             let len_frac = Fraction::new(BigInt::from(v.len()), BigInt::one());
@@ -151,7 +151,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 { return Err(AjisaiError::stackUnderflow); }
+    if interp.stack.len() < 2 { return Err(AjisaiError::StackUnderflow); }
     let count_val = interp.stack.pop().unwrap();
     let vector_val = interp.stack.pop().unwrap();
     let count = get_index_from_value(&count_val)?;
@@ -177,7 +177,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_drop_vector(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 { return Err(AjisaiError::stackUnderflow); }
+    if interp.stack.len() < 2 { return Err(AjisaiError::StackUnderflow); }
     let count_val = interp.stack.pop().unwrap();
     let vector_val = interp.stack.pop().unwrap();
     let count = get_index_from_value(&count_val)?;
@@ -203,7 +203,7 @@ pub fn op_drop_vector(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 { return Err(AjisaiError::stackUnderflow); }
+    if interp.stack.len() < 2 { return Err(AjisaiError::StackUnderflow); }
     
     let mut sizes_values = VecDeque::new();
     while let Some(top) = interp.stack.last() {
@@ -240,33 +240,10 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// ========== ワークスペース操作 ==========
-
-pub fn op_dup_stack(interp: &mut Interpreter) -> Result<()> {
-    let top = interp.stack.last().ok_or(AjisaiError::stackUnderflow)?;
-    interp.stack.push(top.clone());
-    Ok(())
-}
-
-pub fn op_swap_stack(interp: &mut Interpreter) -> Result<()> {
-    let len = interp.stack.len();
-    if len < 2 { return Err(AjisaiError::stackUnderflow); }
-    interp.stack.swap(len - 1, len - 2);
-    Ok(())
-}
-
-pub fn op_rot_stack(interp: &mut Interpreter) -> Result<()> {
-    let len = interp.stack.len();
-    if len < 3 { return Err(AjisaiError::stackUnderflow); }
-    let third = interp.stack.remove(len - 3);
-    interp.stack.push(third);
-    Ok(())
-}
-
 // ========== Vector構造操作 ==========
 
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 { return Err(AjisaiError::stackUnderflow); }
+    if interp.stack.len() < 2 { return Err(AjisaiError::StackUnderflow); }
     let vec2_val = interp.stack.pop().unwrap();
     let vec1_val = interp.stack.pop().unwrap();
     
@@ -281,7 +258,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::stackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     match val.val_type {
         ValueType::Vector(mut v, bracket_type) => {
             v.reverse();
