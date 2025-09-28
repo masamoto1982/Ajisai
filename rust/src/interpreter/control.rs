@@ -5,10 +5,10 @@ use crate::types::{Token, ExecutionLine, ValueType, WordDefinition}; // Value ã‚
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
-    if interp.workspace.len() < 2 { return Err(AjisaiError::from("DEF requires a definition block and a name")); }
+    if interp.stack.len() < 2 { return Err(AjisaiError::from("DEF requires a definition block and a name")); }
 
-    let name_val = interp.workspace.pop().unwrap();
-    let body_val = interp.workspace.pop().unwrap();
+    let name_val = interp.stack.pop().unwrap();
+    let body_val = interp.stack.pop().unwrap();
 
     let name_str = if let ValueType::Vector(v, _) = name_val.val_type {
         if v.len() == 1 {
@@ -161,7 +161,7 @@ fn parse_single_execution_line(tokens: &[Token]) -> Result<ExecutionLine> {
 }
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.workspace.last().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
     
     let name = match &val.val_type {
         ValueType::Vector(v, _) if v.len() == 1 => {
@@ -183,7 +183,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         }
         interp.dependents.remove(&upper_name);
         
-        interp.workspace.pop();
+        interp.stack.pop();
         interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
         Ok(())
     } else {
@@ -192,7 +192,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
-    let name_val = interp.workspace.pop().ok_or(AjisaiError::WorkspaceUnderflow)?;
+    let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let name_str = if let ValueType::Vector(v, _) = name_val.val_type {
         if v.len() == 1 {
