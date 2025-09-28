@@ -19,41 +19,6 @@ struct CustomWordData {
 }
 
 #[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-    
-    #[wasm_bindgen(js_name = "setTimeout")]
-    fn set_timeout(closure: &Closure<dyn FnMut()>, time: u32) -> u32;
-    
-    #[wasm_bindgen(js_name = "performance")]
-    type Performance;
-    
-    #[wasm_bindgen(method, js_name = "now")]
-    fn now(this: &Performance) -> f64;
-    
-    #[wasm_bindgen(js_name = "performance", thread_local_v2)]
-    static performance: Performance;
-}
-
-pub fn wasm_sleep(ms: u64) -> String {
-    const MAX_SAFE_DELAY_MS: u64 = 1000;
-    
-    if ms > MAX_SAFE_DELAY_MS {
-        return format!("[ERROR] Delay {}ms exceeds maximum allowed delay ({}ms). Execution aborted.", ms, MAX_SAFE_DELAY_MS);
-    }
-    
-    let start = performance.with(|p| p.now());
-    let target = start + ms as f64;
-    
-    while performance.with(|p| p.now()) < target {
-        // Busy wait
-    }
-    
-    format!("[DEBUG] Actually waited {}ms", ms)
-}
-
-#[wasm_bindgen]
 pub struct AjisaiInterpreter {
     interpreter: Interpreter,
     step_tokens: Vec<Token>,
@@ -76,10 +41,10 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn execute(&mut self, code: &str) -> JsValue {
+    pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
         self.interpreter.definition_to_load = None; // Reset before each execution.
         let obj = js_sys::Object::new();
-        match self.interpreter.execute(code) {
+        match self.interpreter.execute(code).await {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 let output = self.interpreter.get_output();
@@ -97,7 +62,7 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
             }
         }
-        obj.into()
+        Ok(obj.into())
     }
 
     #[wasm_bindgen]
@@ -135,7 +100,7 @@ impl AjisaiInterpreter {
         }
 
         let token = self.step_tokens[self.step_position].clone();
-        let result = self.interpreter.execute_tokens(&[token]);
+        let result = self.interpreter.execute_tokens_sync(&[token]);
         
         match result {
             Ok(()) => {
@@ -201,7 +166,7 @@ impl AjisaiInterpreter {
         }
 
         let token = self.step_tokens[self.step_position].clone();
-        let result = self.interpreter.execute_tokens(&[token]);
+        let result = self.interpreter.execute_tokens_sync(&[token]);
         
         match result {
             Ok(()) => {
