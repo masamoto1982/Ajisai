@@ -4,7 +4,7 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
-    WorkspaceUnderflow,  // StackUnderflow → WorkspaceUnderflow
+    StackUnderflow,
     TypeError { expected: String, got: String },
     UnknownWord(String),
     UnknownBuiltin(String),
