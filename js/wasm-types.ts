@@ -28,7 +28,7 @@ export interface AjisaiInterpreter {
 }
 
 export interface ExecuteResult {
-    status: 'OK' | 'ERROR' | 'PROGRESSIVE';
+    status: 'OK' | 'ERROR' | 'PROGRESSIVE' | 'COMPLETED';  // 🆕 'COMPLETED'を追加
     output?: string;
     debugOutput?: string;
     message?: string;
@@ -40,7 +40,9 @@ export interface ExecuteResult {
     // Progressive execution fields
     isProgressive?: boolean;
     totalIterations?: number;
+    currentIteration?: number;  // 🆕 追加
     delayMs?: number;
+    isCompleted?: boolean;  // 🆕 追加
 }
 
 export interface ProgressiveInitResult {
