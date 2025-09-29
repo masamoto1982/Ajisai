@@ -1,4 +1,4 @@
-// js/gui/display.ts (音声機能追加・Stack対応版)
+// js/gui/display.ts (音声機能追加・Stack対応版 + 段階的実行追加出力対応)
 
 import type { Value, ExecuteResult } from '../wasm-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
@@ -58,6 +58,23 @@ export class Display {
             okSpan.style.color = '#333';
             okSpan.textContent = 'OK';
             this.elements.outputDisplay.appendChild(okSpan);
+        }
+    }
+
+    appendExecutionResult(result: ExecuteResult): void {
+        const programOutput = (result.output || '').trim();
+        
+        // Process audio commands
+        this.processAudioCommands(programOutput);
+        
+        // Filter out audio commands from displayed output
+        const filteredOutput = this.filterAudioCommands(programOutput);
+        
+        if (filteredOutput) {
+            const outputSpan = document.createElement('span');
+            outputSpan.style.color = '#007bff';
+            outputSpan.textContent = filteredOutput.replace(/\\n/g, '\n');
+            this.elements.outputDisplay.appendChild(outputSpan);
         }
     }
 
