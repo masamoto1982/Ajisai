@@ -337,41 +337,55 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        match name.to_uppercase().as_str() {
-            "GET" => vector_ops::op_get(self), "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self), "REMOVE" => vector_ops::op_remove(self),
-            "LENGTH" => vector_ops::op_length(self), "TAKE" => vector_ops::op_take(self),
-            "SPLIT" => vector_ops::op_split(self),
-            "CONCAT" => vector_ops::op_concat(self), "REVERSE" => vector_ops::op_reverse(self),
-            "+" => arithmetic::op_add(self), "-" => arithmetic::op_sub(self),
-            "*" => arithmetic::op_mul(self), "/" => arithmetic::op_div(self),
-            "=" => arithmetic::op_eq(self), "<" => arithmetic::op_lt(self),
-            "<=" => arithmetic::op_le(self), ">" => arithmetic::op_gt(self),
-            ">=" => arithmetic::op_ge(self), "AND" => arithmetic::op_and(self),
-            "OR" => arithmetic::op_or(self), "NOT" => arithmetic::op_not(self),
-            ":" => {
-                Err(AjisaiError::from("':' can only be used in conditional expressions. Usage: condition : action"))
-            },
-            "PRINT" => io::op_print(self), 
-            "AUDIO" => audio::op_sound(self),
-            "DEF" => {
-                if self.stack.len() >= 2 {
-                    control::op_def(self)
-                } else {
-                    Err(AjisaiError::from("DEF requires definition and name on stack. Usage: : ... ; 'WORD_NAME' DEF"))
-                }
-            },
-            "DEL" => {
-                if !self.stack.is_empty() {
-                    control::op_del(self)
-                } else {
-                    Err(AjisaiError::from("DEL requires a word name on stack. Usage: 'WORD_NAME' DEL"))
-                }
-            },
-            "?" => control::op_lookup(self),
-            _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
-        }
+    match name.to_uppercase().as_str() {
+        "GET" => vector_ops::op_get(self), 
+        "INSERT" => vector_ops::op_insert(self),
+        "REPLACE" => vector_ops::op_replace(self), 
+        "REMOVE" => vector_ops::op_remove(self),
+        "LENGTH" => vector_ops::op_length(self), 
+        "TAKE" => vector_ops::op_take(self),
+        "SPLIT" => vector_ops::op_split(self),
+        "CONCAT" => vector_ops::op_concat(self), 
+        "REVERSE" => vector_ops::op_reverse(self),
+        "+" => arithmetic::op_add(self), 
+        "-" => arithmetic::op_sub(self),
+        "*" => arithmetic::op_mul(self), 
+        "/" => arithmetic::op_div(self),
+        "=" => arithmetic::op_eq(self), 
+        "<" => arithmetic::op_lt(self),
+        "<=" => arithmetic::op_le(self), 
+        ">" => arithmetic::op_gt(self),
+        ">=" => arithmetic::op_ge(self), 
+        "AND" => arithmetic::op_and(self),
+        "OR" => arithmetic::op_or(self), 
+        "NOT" => arithmetic::op_not(self),
+        ":" => {
+            Err(AjisaiError::from("':' can only be used in conditional expressions. Usage: condition : action"))
+        },
+        "PRINT" => io::op_print(self), 
+        "AUDIO" => audio::op_sound(self),
+        "DEF" => {
+            if self.stack.len() >= 2 {
+                control::op_def(self)
+            } else {
+                Err(AjisaiError::from("DEF requires definition and name on stack. Usage: : ... ; 'WORD_NAME' DEF"))
+            }
+        },
+        "DEL" => {
+            if !self.stack.is_empty() {
+                control::op_del(self)
+            } else {
+                Err(AjisaiError::from("DEL requires a word name on stack. Usage: 'WORD_NAME' DEL"))
+            }
+        },
+        "?" => control::op_lookup(self),
+        "RESET" => {
+            // モバイル環境でのアクセスのため、ボタンから実行可能にする
+            self.execute_reset()
+        },
+        _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
     }
+}
     
     fn collect_vector(&self, tokens: &[Token], start: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
