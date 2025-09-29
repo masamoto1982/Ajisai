@@ -13,6 +13,7 @@ interface WorkerTask {
         totalIterations: number;
         currentIteration: number;
     };
+    onProgress?: (result: any) => void;  // 🆕 プログレスコールバック
 }
 
 interface WorkerInstance {
@@ -134,6 +135,12 @@ export class WorkerManager {
                 console.log(`[WorkerManager] Progressive step for ${message.id}:`, message.data);
                 if (task.progressiveState) {
                     task.progressiveState.currentIteration = message.data.currentIteration || 0;
+                }
+                
+                // 🆕 プログレスコールバックを呼び出してGUIに即座に通知
+                if (task.onProgress) {
+                    console.log(`[WorkerManager] Calling progress callback for ${message.id}`);
+                    task.onProgress(message.data);
                 }
                 
                 if (message.data.status === 'COMPLETED' || !message.data.hasMore) {
@@ -261,7 +268,8 @@ export class WorkerManager {
         });
     }
 
-    async execute(code: string): Promise<any> {
+    // 🆕 プログレスコールバック付きのexecuteメソッド
+    async execute(code: string, onProgress?: (result: any) => void): Promise<any> {
         const taskId = `task_${++this.taskIdCounter}`;
         console.log(`[WorkerManager] Queuing execute task: ${taskId}`);
         
@@ -277,7 +285,8 @@ export class WorkerManager {
                 code,
                 type: taskType as 'execute' | 'step' | 'progressive',
                 resolve,
-                reject
+                reject,
+                onProgress  // 🆕 コールバックを保存
             };
 
             const availableWorker = this.workers.find(w => !w.busy);
