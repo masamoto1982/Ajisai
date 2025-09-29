@@ -39,7 +39,6 @@ export class GUI {
 
     public elements: GUIElements = {} as GUIElements;
     private mode: 'input' | 'execution' = 'input';
-    private stepMode: boolean = false;
     private workerInitialized = false;
 
     constructor() {
@@ -177,8 +176,6 @@ export class GUI {
         if (this.workerInitialized) {
             PARALLEL_EXECUTOR.abortAll();
         }
-        
-        this.stepMode = false;
     }
 
     private setMode(newMode: 'input' | 'execution'): void {
@@ -259,11 +256,9 @@ export class GUI {
                 this.display.showExecutionResult(result);
                 
                 if (!result.hasMore) {
-                    this.stepMode = false;
                     this.display.showInfo('Step execution completed.', true);
                     this.editor.clear();
                 } else {
-                    this.stepMode = true;
                     const progressInfo = result.debugOutput || 'Step completed';
                     this.display.showInfo(`${progressInfo}. Press Ctrl+Enter for next step.`, true);
                 }
@@ -273,7 +268,6 @@ export class GUI {
                 }
             } else {
                 this.display.showError(result.message || 'Unknown error');
-                this.stepMode = false;
             }
         } catch (error) {
             console.error('[GUI] Step execution failed:', error);
@@ -283,7 +277,6 @@ export class GUI {
             } else {
                 this.display.showError(error as Error);
             }
-            this.stepMode = false;
         }
         
         this.updateAllDisplays();
@@ -304,7 +297,6 @@ export class GUI {
             if (result.status === 'OK' && !result.error) {
                 this.display.showOutput(result.output || 'RESET executed');
                 this.editor.clear();
-                this.stepMode = false;
                 
                 if (this.mobile.isMobile()) {
                     this.setMode('execution');
