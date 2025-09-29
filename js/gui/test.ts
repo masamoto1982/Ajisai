@@ -81,7 +81,7 @@ export class TestRunner {
         // 各テスト前にstackをクリア
         await this.resetInterpreter();
         
-        const result = window.ajisaiInterpreter.execute(testCase.code);
+        const result = await window.ajisaiInterpreter.execute(testCase.code);
         
         if (testCase.expectError) {
             return {
