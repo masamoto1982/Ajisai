@@ -148,10 +148,10 @@ export class Dictionary {
         });
     }
 
-    private confirmAndDeleteWord(wordName: string): void {
+    private async confirmAndDeleteWord(wordName: string): Promise<void> {
         if (confirm(`Delete word '${wordName}'?`)) {
             try {
-                const result = window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
+                const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
                 if (result.status === 'ERROR') {
                     alert(`Failed to delete word: ${result.message}`);
                 } else {
