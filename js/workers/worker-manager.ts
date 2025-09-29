@@ -105,6 +105,12 @@ export class WorkerManager {
     }
 
     private handleWorkerMessage(workerInstance: WorkerInstance, message: any): void {
+        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 修正点 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+        // 初期化メッセージはタスクではないため、ここで無視して警告を抑制する
+        if (message.id === 'init') {
+            return;
+        }
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 修正点 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
         console.log(`[WorkerManager] Worker message: ${message.type}, ID: ${message.id}`);
 
         const task = this.activeTasks.get(message.id);
