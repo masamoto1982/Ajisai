@@ -1,3 +1,5 @@
+// rust/src/interpreter/mod.rs (完全修正版)
+
 pub mod vector_ops;
 pub mod arithmetic;
 pub mod control;
@@ -29,12 +31,11 @@ pub struct WordExecutionState {
     pub continue_loop: bool,
 }
 
-// ヘルパー関数として外に定義
+// ヘルパー関数
 async fn sleep(ms: u64) {
     TimeoutFuture::new(ms as u32).await;
 }
 
-// evaluate_condition を Interpreter の外に定義
 async fn evaluate_condition(
     dictionary: &HashMap<String, WordDefinition>,
     condition_tokens: &[Token],
@@ -57,7 +58,6 @@ async fn evaluate_condition(
         Ok(false)
     }
 }
-
 
 impl Interpreter {
     pub fn new() -> Self {
@@ -87,7 +87,6 @@ impl Interpreter {
         self.execute_tokens(&tokens).await
     }
 
-    // A synchronous version for step-by-step execution
     pub fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
         while i < tokens.len() {
@@ -113,32 +112,18 @@ impl Interpreter {
                     self.stack.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
                     i += consumed - 1;
                 },
-                // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 修正点 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-                // 簡略化された `execute_builtin` ではなく、メインの `execute_word` を呼び出すように変更。
-                // これにより、`1 2 +` のような複数のトークンからなる処理も正しく解釈される。
-                // `tokio::runtime` を使って非同期関数を同期的に呼び出す。
                 Token::Symbol(name) => {
-                    // ここでは async_recursion が使えないため、Tokioのランタイムでブロックする
-                    // ただし、WASM環境では新しいスレッドを立てられないため、この方法は使えない。
-                    // そのため、execute_wordを呼び出す別の方法を考える必要がある。
-                    // 今回は、execute_wordを直接呼び出さずに、
-                    // execute_builtinとカスタムワード実行のロジックをここにインライン化する。
-                    
                     let upper_name = name.to_uppercase();
                     if let Some(def) = self.dictionary.get(&upper_name).cloned() {
                         if def.is_builtin {
                             self.execute_builtin(&upper_name)?;
                         } else {
-                            // カスタムワードの同期実行は複雑なので、
-                            // ここでは単純なビルトインのみをサポートするという制約にする。
-                            // より完全な実装には、インタープリタの状態マシン化が必要。
                             return Err(AjisaiError::from("Custom words not supported in sync execution mode"));
                         }
                     } else {
                         return Err(AjisaiError::UnknownWord(name.clone()));
                     }
                 },
-                // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 修正点 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
                 _ => {}
             }
             i += 1;
@@ -146,80 +131,130 @@ impl Interpreter {
         Ok(())
     }
 
-    #[async_recursion(?Send)]
-    pub async fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        if let Some(guard_pos) = tokens.iter().position(|t| matches!(t, Token::GuardSeparator)) {
-            return self.execute_conditional_statement(tokens, guard_pos).await;
-        }
-
-        let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(tokens);
-
-        let mut iteration = 0;
-        while iteration < repeat_count {
-            if iteration > 0 && delay_ms > 0 {
-                sleep(delay_ms).await;
-                self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", delay_ms));
-            }
-
-            let mut i = 0;
-            while i < execution_tokens.len() {
-                let token = &execution_tokens[i];
-                
-                match token {
-                    Token::Number(s) => {
-                        let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
-                        self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
-                    },
-                    Token::String(s) => {
-                        self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
-                    },
-                    Token::Boolean(b) => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
-                    Token::Nil => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)}),
-                    Token::VectorStart(_) => {
-                        let (values, consumed) = self.collect_vector(&execution_tokens, i, 1)?;
-                        self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
-                        i += consumed - 1;
-                    },
-                    Token::DefBlockStart => {
-                        let (body_tokens, consumed) = self.collect_def_block(&execution_tokens, i)?;
-                        self.stack.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
-                        i += consumed - 1;
-                    },
-                    Token::Symbol(name) => {
-                        self.execute_word(name).await?;
-                    },
-                    Token::LineBreak => {},
-                    Token::Modifier(_) => {},
-                    _ => {} 
+    // 🆕 行ごとにトークンを分割
+    fn split_tokens_by_lines(&self, tokens: &[Token]) -> Vec<Vec<Token>> {
+        let mut lines = Vec::new();
+        let mut current_line = Vec::new();
+        
+        for token in tokens {
+            if matches!(token, Token::LineBreak) {
+                if !current_line.is_empty() {
+                    lines.push(std::mem::take(&mut current_line));
                 }
-                i += 1;
+            } else {
+                current_line.push(token.clone());
             }
-            iteration += 1;
         }
-        Ok(())
+        
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+        
+        lines
     }
 
+    // 🆕 修正版：行ごとに修飾子を適用
     #[async_recursion(?Send)]
-    async fn execute_conditional_statement(&mut self, tokens: &[Token], guard_pos: usize) -> Result<()> {
-        let condition_tokens = &tokens[..guard_pos];
-        let body_tokens = &tokens[guard_pos + 1..];
+    pub async fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        // トークンを行ごとに分割
+        let lines = self.split_tokens_by_lines(tokens);
         
-        let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(body_tokens);
-        
-        self.execute_tokens(condition_tokens).await?;
-        
-        let condition_result = self.stack.pop()
-            .ok_or(AjisaiError::from("Condition evaluation produced no result"))?;
-        
-        if is_truthy(&condition_result) {
-            let mut iteration = 0;
-            while iteration < repeat_count {
+        // 各行を実行
+        for line_tokens in lines {
+            if line_tokens.is_empty() {
+                continue;
+            }
+            
+            // 行に条件分岐がある場合
+            if let Some(guard_pos) = line_tokens.iter().position(|t| matches!(t, Token::GuardSeparator)) {
+                self.execute_conditional_line(&line_tokens, guard_pos).await?;
+                continue;
+            }
+            
+            // 修飾子を解析
+            let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(&line_tokens);
+            
+            // 繰り返し実行
+            for iteration in 0..repeat_count {
                 if iteration > 0 && delay_ms > 0 {
                     sleep(delay_ms).await;
                     self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", delay_ms));
                 }
-                self.execute_tokens(&execution_tokens).await?;
-                iteration += 1;
+                
+                // この行のトークンを実行
+                self.execute_single_line_tokens(&execution_tokens).await?;
+            }
+        }
+        
+        Ok(())
+    }
+
+    // 🆕 単一行のトークンを実行
+    #[async_recursion(?Send)]
+    async fn execute_single_line_tokens(&mut self, tokens: &[Token]) -> Result<()> {
+        let mut i = 0;
+        while i < tokens.len() {
+            let token = &tokens[i];
+            
+            match token {
+                Token::Number(s) => {
+                    let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
+                },
+                Token::String(s) => {
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
+                },
+                Token::Boolean(b) => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
+                Token::Nil => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)}),
+                Token::VectorStart(_) => {
+                    let (values, consumed) = self.collect_vector(tokens, i, 1)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
+                    i += consumed - 1;
+                },
+                Token::DefBlockStart => {
+                    let (body_tokens, consumed) = self.collect_def_block(tokens, i)?;
+                    self.stack.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
+                    i += consumed - 1;
+                },
+                Token::Symbol(name) => {
+                    self.execute_word(name).await?;
+                },
+                Token::Modifier(_) => {
+                    // 修飾子は既に parse_modifiers で処理済みなのでスキップ
+                },
+                Token::LineBreak => {
+                    // 行内では無視
+                },
+                _ => {} 
+            }
+            i += 1;
+        }
+        Ok(())
+    }
+
+    // 🆕 条件付き行の実行（修飾子対応）
+    #[async_recursion(?Send)]
+    async fn execute_conditional_line(&mut self, tokens: &[Token], guard_pos: usize) -> Result<()> {
+        let condition_tokens = &tokens[..guard_pos];
+        let body_tokens = &tokens[guard_pos + 1..];
+        
+        // body部分の修飾子を解析
+        let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(body_tokens);
+        
+        // 条件を評価
+        self.execute_single_line_tokens(condition_tokens).await?;
+        
+        let condition_result = self.stack.pop()
+            .ok_or(AjisaiError::from("Condition evaluation produced no result"))?;
+        
+        // 条件が真の場合のみ実行
+        if is_truthy(&condition_result) {
+            for iteration in 0..repeat_count {
+                if iteration > 0 && delay_ms > 0 {
+                    sleep(delay_ms).await;
+                    self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", delay_ms));
+                }
+                self.execute_single_line_tokens(&execution_tokens).await?;
             }
         }
         
@@ -337,55 +372,52 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-    match name.to_uppercase().as_str() {
-        "GET" => vector_ops::op_get(self), 
-        "INSERT" => vector_ops::op_insert(self),
-        "REPLACE" => vector_ops::op_replace(self), 
-        "REMOVE" => vector_ops::op_remove(self),
-        "LENGTH" => vector_ops::op_length(self), 
-        "TAKE" => vector_ops::op_take(self),
-        "SPLIT" => vector_ops::op_split(self),
-        "CONCAT" => vector_ops::op_concat(self), 
-        "REVERSE" => vector_ops::op_reverse(self),
-        "+" => arithmetic::op_add(self), 
-        "-" => arithmetic::op_sub(self),
-        "*" => arithmetic::op_mul(self), 
-        "/" => arithmetic::op_div(self),
-        "=" => arithmetic::op_eq(self), 
-        "<" => arithmetic::op_lt(self),
-        "<=" => arithmetic::op_le(self), 
-        ">" => arithmetic::op_gt(self),
-        ">=" => arithmetic::op_ge(self), 
-        "AND" => arithmetic::op_and(self),
-        "OR" => arithmetic::op_or(self), 
-        "NOT" => arithmetic::op_not(self),
-        ":" => {
-            Err(AjisaiError::from("':' can only be used in conditional expressions. Usage: condition : action"))
-        },
-        "PRINT" => io::op_print(self), 
-        "AUDIO" => audio::op_sound(self),
-        "DEF" => {
-            if self.stack.len() >= 2 {
-                control::op_def(self)
-            } else {
-                Err(AjisaiError::from("DEF requires definition and name on stack. Usage: : ... ; 'WORD_NAME' DEF"))
-            }
-        },
-        "DEL" => {
-            if !self.stack.is_empty() {
-                control::op_del(self)
-            } else {
-                Err(AjisaiError::from("DEL requires a word name on stack. Usage: 'WORD_NAME' DEL"))
-            }
-        },
-        "?" => control::op_lookup(self),
-        "RESET" => {
-            // モバイル環境でのアクセスのため、ボタンから実行可能にする
-            self.execute_reset()
-        },
-        _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
+        match name.to_uppercase().as_str() {
+            "GET" => vector_ops::op_get(self), 
+            "INSERT" => vector_ops::op_insert(self),
+            "REPLACE" => vector_ops::op_replace(self), 
+            "REMOVE" => vector_ops::op_remove(self),
+            "LENGTH" => vector_ops::op_length(self), 
+            "TAKE" => vector_ops::op_take(self),
+            "SPLIT" => vector_ops::op_split(self),
+            "CONCAT" => vector_ops::op_concat(self), 
+            "REVERSE" => vector_ops::op_reverse(self),
+            "+" => arithmetic::op_add(self), 
+            "-" => arithmetic::op_sub(self),
+            "*" => arithmetic::op_mul(self), 
+            "/" => arithmetic::op_div(self),
+            "=" => arithmetic::op_eq(self), 
+            "<" => arithmetic::op_lt(self),
+            "<=" => arithmetic::op_le(self), 
+            ">" => arithmetic::op_gt(self),
+            ">=" => arithmetic::op_ge(self), 
+            "AND" => arithmetic::op_and(self),
+            "OR" => arithmetic::op_or(self), 
+            "NOT" => arithmetic::op_not(self),
+            ":" => {
+                Err(AjisaiError::from("':' can only be used in conditional expressions. Usage: condition : action"))
+            },
+            "PRINT" => io::op_print(self), 
+            "AUDIO" => audio::op_sound(self),
+            "DEF" => {
+                if self.stack.len() >= 2 {
+                    control::op_def(self)
+                } else {
+                    Err(AjisaiError::from("DEF requires definition and name on stack. Usage: : ... ; 'WORD_NAME' DEF"))
+                }
+            },
+            "DEL" => {
+                if !self.stack.is_empty() {
+                    control::op_del(self)
+                } else {
+                    Err(AjisaiError::from("DEL requires a word name on stack. Usage: 'WORD_NAME' DEL"))
+                }
+            },
+            "?" => control::op_lookup(self),
+            "RESET" => self.execute_reset(),
+            _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
+        }
     }
-}
     
     fn collect_vector(&self, tokens: &[Token], start: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
@@ -580,7 +612,8 @@ fn is_truthy(value: &Value) -> bool {
     if let ValueType::Vector(v, _) = &value.val_type {
         if v.len() == 1 {
             return match &v[0].val_type {
-                ValueType::Boolean(b) => *b, ValueType::Nil => false,
+                ValueType::Boolean(b) => *b, 
+                ValueType::Nil => false,
                 ValueType::Number(n) => !n.numerator.is_zero(),
                 ValueType::String(s) => !s.is_empty(),
                 ValueType::Vector(inner_v, _) => !inner_v.is_empty(),
