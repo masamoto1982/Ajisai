@@ -73,6 +73,11 @@ export class ParallelExecutor {
         
         for (let i = 0; i < codes.length; i++) {
             const code = codes[i];
+            if (!code) {
+                console.warn(`[ParallelExecutor] Skipping undefined code at index ${i}`);
+                continue;
+            }
+            
             const id = `sequential_${++this.taskCounter}_${i}`;
             
             console.log(`[ParallelExecutor] Executing task ${i + 1}/${codes.length}: ${id}`);
