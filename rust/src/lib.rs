@@ -138,7 +138,10 @@ impl AjisaiInterpreter {
         }
         
         // 1回分の処理を実行
-        match self.interpreter.execute_tokens_sync(&self.progressive_tokens) {
+        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 修正点 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+        // 同期関数 `execute_tokens_sync` の代わりに、非同期のメイン実行エンジン `execute_tokens` を呼び出す。
+        match self.interpreter.execute_tokens(&self.progressive_tokens).await {
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 修正点 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
             Ok(()) => {
                 self.progressive_current_iteration += 1;
                 let output = self.interpreter.get_output();
