@@ -4,14 +4,14 @@ use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueType, Fraction, BracketType, Token};
 use num_bigint::BigInt;
 use std::str::FromStr;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 mod types;
 mod tokenizer;
 mod interpreter;
 mod builtins;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct CustomWordData {
     name: String,
     definition: String,
@@ -68,6 +68,10 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
+
+                // 実行後の状態を結果に含める
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_info()).unwrap();
 
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
                     js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into()).unwrap();
@@ -138,10 +142,7 @@ impl AjisaiInterpreter {
         }
         
         // 1回分の処理を実行
-        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 修正点 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-        // 同期関数 `execute_tokens_sync` の代わりに、非同期のメイン実行エンジン `execute_tokens` を呼び出す。
         match self.interpreter.execute_tokens(&self.progressive_tokens).await {
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 修正点 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
             Ok(()) => {
                 self.progressive_current_iteration += 1;
                 let output = self.interpreter.get_output();
@@ -152,6 +153,10 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"totalIterations".into(), &(self.progressive_repeat_count as u32).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.progressive_current_iteration < self.progressive_repeat_count).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"delayMs".into(), &(self.progressive_delay_ms as u32).into()).unwrap();
+
+                // 実行後の状態を結果に含める
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_info()).unwrap();
             }
             Err(e) => {
                 self.progressive_mode = false;
@@ -244,6 +249,10 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.step_position < self.step_tokens.len()).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"position".into(), &(self.step_position as u32).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"total".into(), &(self.step_tokens.len() as u32).into()).unwrap();
+
+                // 実行後の状態を結果に含める
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_info()).unwrap();
             }
             Err(e) => {
                 self.step_mode = false;
@@ -365,12 +374,14 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
-        let words_info: Vec<(String, Option<String>, bool)> = self.interpreter.dictionary.iter()
+        let words_info: Vec<CustomWordData> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| {
-                let is_protected = self.interpreter.dependents.get(name)
-                                      .map_or(false, |deps| !deps.is_empty());
-                (name.clone(), def.description.clone(), is_protected)
+                CustomWordData {
+                    name: name.clone(),
+                    definition: self.interpreter.get_word_definition_tokens(name).unwrap_or_default(),
+                    description: def.description.clone(),
+                }
             })
             .collect();
         to_value(&words_info).unwrap_or(JsValue::NULL)
