@@ -4,6 +4,8 @@ import { Editor } from './editor';
 import { MobileHandler } from './mobile';
 import { Persistence } from './persistence';
 import { TestRunner } from './test';
+import { WORKER_MANAGER } from '../workers/worker-manager';
+import { PARALLEL_EXECUTOR } from '../workers/parallel-executor';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
 
 declare global {
@@ -38,6 +40,7 @@ export class GUI {
     public elements: GUIElements = {} as GUIElements;
     private mode: 'input' | 'execution' = 'input';
     private stepMode: boolean = false;
+    private workerInitialized = false;
 
     constructor() {
         this.display = new Display();
@@ -48,7 +51,9 @@ export class GUI {
         this.testRunner = new TestRunner(this);
     }
 
-    init(): void {
+    async init(): Promise<void> {
+        console.log('[GUI] Initializing GUI...');
+        
         this.cacheElements();
 
         this.display.init({
@@ -76,6 +81,32 @@ export class GUI {
         this.dictionary.renderBuiltinWords();
         this.updateAllDisplays();
         this.mobile.updateView(this.mode);
+
+        // Initialize Workers
+        await this.initializeWorkers();
+        
+        console.log('[GUI] GUI initialization completed');
+    }
+
+    private async initializeWorkers(): Promise<void> {
+        try {
+            console.log('[GUI] Initializing worker system...');
+            this.display.showInfo('Initializing parallel execution system...');
+            
+            await WORKER_MANAGER.init();
+            this.workerInitialized = true;
+            
+            console.log('[GUI] Worker system initialized successfully');
+            this.display.showInfo('Parallel execution system ready.', true);
+            
+        } catch (error) {
+            console.error('[GUI] Failed to initialize workers:', error);
+            this.display.showError(`Failed to initialize parallel execution: ${error}`);
+            
+            // Fall back to main thread execution
+            this.workerInitialized = false;
+            this.display.showInfo('Falling back to main thread execution.', true);
+        }
     }
 
     private cacheElements(): void {
@@ -117,9 +148,6 @@ export class GUI {
                     e.preventDefault();
                     this.executeStepByStep();
                 }
-            } else if (e.key === 'Escape' && this.stepMode) {
-                e.preventDefault();
-                this.endStepExecution();
             }
         });
 
@@ -130,6 +158,27 @@ export class GUI {
         });
 
         window.addEventListener('resize', () => this.mobile.updateView(this.mode));
+        
+        // Global escape key handler (higher priority)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                console.log('[GUI] Escape key detected - emergency stop');
+                this.emergencyStop();
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }
+        }, true);
+    }
+
+    private emergencyStop(): void {
+        console.log('[GUI] Emergency stop initiated');
+        this.display.showInfo('🛑 EMERGENCY STOP - All executions aborted', true);
+        
+        if (this.workerInitialized) {
+            PARALLEL_EXECUTOR.abortAll();
+        }
+        
+        this.stepMode = false;
     }
 
     private setMode(newMode: 'input' | 'execution'): void {
@@ -144,10 +193,21 @@ export class GUI {
     private async runCode(): Promise<void> {
         const code = this.editor.getValue();
         if (!code) return;
-    
+
         try {
-            const result = await window.ajisaiInterpreter.execute(code) as ExecuteResult;
-    
+            console.log('[GUI] Executing code via workers');
+            this.display.showInfo('Executing...', true);
+            
+            let result: ExecuteResult;
+            
+            if (this.workerInitialized) {
+                // Use worker system
+                result = await WORKER_MANAGER.execute(code);
+            } else {
+                // Fallback to main thread
+                result = await window.ajisaiInterpreter.execute(code) as ExecuteResult;
+            }
+
             if (result.definition_to_load) {
                 this.editor.setValue(result.definition_to_load);
                 const wordName = code.replace("?", "").trim();
@@ -155,7 +215,7 @@ export class GUI {
             } else if (result.status === 'OK' && !result.error) {
                 this.display.showExecutionResult(result);
                 this.editor.clear();
-    
+
                 if (this.mobile.isMobile()) {
                     this.setMode('execution');
                 }
@@ -163,9 +223,15 @@ export class GUI {
                 this.display.showError(result.message || 'Unknown error');
             }
         } catch (error) {
-            this.display.showError(error as Error);
+            console.error('[GUI] Code execution failed:', error);
+            
+            if (error instanceof Error && error.message.includes('aborted')) {
+                this.display.showInfo('Execution aborted by user.', true);
+            } else {
+                this.display.showError(error as Error);
+            }
         }
-    
+
         this.updateAllDisplays();
         await this.persistence.saveCurrentState();
 
@@ -179,7 +245,15 @@ export class GUI {
         if (!code) return;
 
         try {
-            const result = window.ajisaiInterpreter.execute_step(code) as ExecuteResult;
+            console.log('[GUI] Executing step-by-step via workers');
+            
+            let result: ExecuteResult;
+            
+            if (this.workerInitialized) {
+                result = await WORKER_MANAGER.executeStep(code);
+            } else {
+                result = window.ajisaiInterpreter.execute_step(code) as ExecuteResult;
+            }
             
             if (result.status === 'OK' && !result.error) {
                 this.display.showExecutionResult(result);
@@ -202,7 +276,13 @@ export class GUI {
                 this.stepMode = false;
             }
         } catch (error) {
-            this.display.showError(error as Error);
+            console.error('[GUI] Step execution failed:', error);
+            
+            if (error instanceof Error && error.message.includes('aborted')) {
+                this.display.showInfo('Step execution aborted by user.', true);
+            } else {
+                this.display.showError(error as Error);
+            }
             this.stepMode = false;
         }
         
@@ -212,6 +292,13 @@ export class GUI {
 
     private async executeReset(): Promise<void> {
         try {
+            console.log('[GUI] Executing reset');
+            
+            // Abort all worker tasks first
+            if (this.workerInitialized) {
+                PARALLEL_EXECUTOR.abortAll();
+            }
+            
             const result = window.ajisaiInterpreter.reset() as ExecuteResult;
             
             if (result.status === 'OK' && !result.error) {
@@ -229,13 +316,9 @@ export class GUI {
                 this.display.showError(result.message || 'RESET execution failed');
             }
         } catch (error) {
+            console.error('[GUI] Reset execution failed:', error);
             this.display.showError(error as Error);
         }
-    }
-
-    private endStepExecution(): void {
-        this.stepMode = false;
-        this.display.showInfo('Step mode ended.', true);
     }
 
     private async runTests(): Promise<void> {
@@ -261,11 +344,32 @@ export class GUI {
         try {
             this.display.updateStack(window.ajisaiInterpreter.get_stack());
             this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
+            
+            // Show worker status
+            if (this.workerInitialized) {
+                const status = WORKER_MANAGER.getStatus();
+                console.log(`[GUI] Worker status: ${status.activeJobs} active, ${status.queuedJobs} queued, ${status.workers} workers`);
+            }
         } catch (error) {
             console.error('Failed to update display:', error);
             this.display.showError('Failed to update display.');
         }
     }
+
+    cleanup(): void {
+        console.log('[GUI] Cleaning up...');
+        
+        if (this.workerInitialized) {
+            WORKER_MANAGER.terminate();
+        }
+        
+        console.log('[GUI] Cleanup completed');
+    }
 }
 
 export const GUI_INSTANCE = new GUI();
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    GUI_INSTANCE.cleanup();
+});
