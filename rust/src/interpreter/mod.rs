@@ -278,16 +278,15 @@ impl Interpreter {
                     break;
                 }
             }
-
+            
             if let Some(line) = matched_line {
-                let _ = self.stack.pop(); // Consume the value now that we know it's being used.
+                let _ = self.stack.pop().unwrap(); // Now it's safe to pop the value.
                 self.stack.push(value_to_test);
                 self.execute_line(&line).await?;
             }
-            // If no line matches, the value remains on the stack, untouched.
         } else {
             for line in &def.lines {
-                self.execute_line(&line).await?;
+                self.execute_line(line).await?;
             }
         }
         
