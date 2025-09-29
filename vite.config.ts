@@ -27,5 +27,8 @@ export default defineConfig({
     alias: {
       '@': '/js'
     }
+  },
+  worker: {
+    format: 'es'
   }
 });
