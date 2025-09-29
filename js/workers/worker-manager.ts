@@ -3,10 +3,16 @@
 interface WorkerTask {
     id: string;
     code: string;
-    type: 'execute' | 'step';
+    type: 'execute' | 'step' | 'progressive';
     resolve: (result: any) => void;
     reject: (error: any) => void;
     worker?: Worker;
+    isProgressive?: boolean;
+    progressiveState?: {
+        delayMs: number;
+        totalIterations: number;
+        currentIteration: number;
+    };
 }
 
 interface WorkerInstance {
@@ -113,6 +119,33 @@ export class WorkerManager {
                 this.completeTask(workerInstance, task);
                 break;
 
+            case 'progressive_init':
+                console.log(`[WorkerManager] Progressive execution initialized for ${message.id}`);
+                task.isProgressive = true;
+                task.progressiveState = {
+                    delayMs: message.data.delayMs || 0,
+                    totalIterations: message.data.totalIterations || 1,
+                    currentIteration: 0
+                };
+                this.startProgressiveExecution(workerInstance, task);
+                break;
+
+            case 'progressive_step':
+                console.log(`[WorkerManager] Progressive step for ${message.id}:`, message.data);
+                if (task.progressiveState) {
+                    task.progressiveState.currentIteration = message.data.currentIteration || 0;
+                }
+                
+                if (message.data.status === 'COMPLETED' || !message.data.hasMore) {
+                    console.log(`[WorkerManager] Progressive execution completed for ${message.id}`);
+                    task.resolve(message.data);
+                    this.completeTask(workerInstance, task);
+                } else {
+                    // Continue progressive execution
+                    this.scheduleNextProgressiveStep(workerInstance, task);
+                }
+                break;
+
             case 'error':
                 console.error(`[WorkerManager] Task ${message.id} failed:`, message.data);
                 task.reject(new Error(message.data));
@@ -137,6 +170,34 @@ export class WorkerManager {
             default:
                 console.warn(`[WorkerManager] Unknown message type: ${message.type}`);
         }
+    }
+
+    private startProgressiveExecution(workerInstance: WorkerInstance, task: WorkerTask): void {
+        console.log(`[WorkerManager] Starting progressive execution for ${task.id}`);
+        this.scheduleNextProgressiveStep(workerInstance, task);
+    }
+
+    private scheduleNextProgressiveStep(workerInstance: WorkerInstance, task: WorkerTask): void {
+        if (!task.progressiveState) {
+            console.error(`[WorkerManager] No progressive state for task ${task.id}`);
+            return;
+        }
+
+        const delayMs = task.progressiveState.delayMs;
+        
+        console.log(`[WorkerManager] Scheduling next step for ${task.id} in ${delayMs}ms`);
+        
+        setTimeout(() => {
+            if (this.activeTasks.has(task.id)) {
+                console.log(`[WorkerManager] Executing progressive step for ${task.id}`);
+                workerInstance.worker.postMessage({
+                    type: 'progressive_step',
+                    id: task.id
+                });
+            } else {
+                console.log(`[WorkerManager] Task ${task.id} no longer active, skipping step`);
+            }
+        }, delayMs);
     }
 
     private handleWorkerError(workerInstance: WorkerInstance, error: ErrorEvent): void {
@@ -188,8 +249,13 @@ export class WorkerManager {
         
         this.activeTasks.set(task.id, task);
         
+        let messageType = task.type;
+        if (task.type === 'progressive') {
+            messageType = 'progressive';
+        }
+        
         workerInstance.worker.postMessage({
-            type: task.type,
+            type: messageType,
             id: task.id,
             code: task.code
         });
@@ -199,11 +265,17 @@ export class WorkerManager {
         const taskId = `task_${++this.taskIdCounter}`;
         console.log(`[WorkerManager] Queuing execute task: ${taskId}`);
         
+        // Check if this should be progressive execution
+        const isProgressive = this.shouldUseProgressiveExecution(code);
+        const taskType = isProgressive ? 'progressive' : 'execute';
+        
+        console.log(`[WorkerManager] Task ${taskId} type: ${taskType}`);
+        
         return new Promise((resolve, reject) => {
             const task: WorkerTask = {
                 id: taskId,
                 code,
-                type: 'execute',
+                type: taskType as 'execute' | 'step' | 'progressive',
                 resolve,
                 reject
             };
@@ -216,6 +288,11 @@ export class WorkerManager {
                 this.taskQueue.push(task);
             }
         });
+    }
+
+    private shouldUseProgressiveExecution(code: string): boolean {
+        // Check for delay and repeat modifiers
+        return /\d+x\s+\d+m?s|\d+m?s\s+\d+x/.test(code) || /\d+(ms|s)\s/.test(code);
     }
 
     async executeStep(code: string): Promise<any> {
