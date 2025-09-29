@@ -131,7 +131,8 @@ impl Interpreter {
 
         let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers(tokens);
 
-        for iteration in 0..repeat_count {
+        let mut iteration = 0;
+        while iteration < repeat_count {
             if iteration > 0 && delay_ms > 0 {
                 sleep(delay_ms).await;
                 self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", delay_ms));
@@ -170,6 +171,7 @@ impl Interpreter {
                 }
                 i += 1;
             }
+            iteration += 1;
         }
         Ok(())
     }
@@ -187,12 +189,14 @@ impl Interpreter {
             .ok_or(AjisaiError::from("Condition evaluation produced no result"))?;
         
         if is_truthy(&condition_result) {
-            for iteration in 0..repeat_count {
+            let mut iteration = 0;
+            while iteration < repeat_count {
                 if iteration > 0 && delay_ms > 0 {
                     sleep(delay_ms).await;
                     self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", delay_ms));
                 }
                 self.execute_tokens(&execution_tokens).await?;
+                iteration += 1;
             }
         }
         
@@ -280,13 +284,15 @@ impl Interpreter {
             }
             
             if let Some(line) = matched_line {
-                let _ = self.stack.pop().unwrap(); // Now it's safe to pop the value.
+                let _ = self.stack.pop().unwrap();
                 self.stack.push(value_to_test);
                 self.execute_line(&line).await?;
             }
         } else {
-            for line in &def.lines {
-                self.execute_line(line).await?;
+            let mut i = 0;
+            while i < def.lines.len() {
+                self.execute_line(&def.lines[i]).await?;
+                i += 1;
             }
         }
         
@@ -295,12 +301,14 @@ impl Interpreter {
 
     #[async_recursion(?Send)]
     async fn execute_line(&mut self, line: &ExecutionLine) -> Result<()> {
-        for iteration in 0..line.repeat_count {
+        let mut iteration = 0;
+        while iteration < line.repeat_count {
             if iteration > 0 && line.delay_ms > 0 {
                 sleep(line.delay_ms).await;
                 self.output_buffer.push_str(&format!("[DEBUG] Waited {}ms\n", line.delay_ms));
             }
             self.execute_tokens(&line.body_tokens).await?;
+            iteration += 1;
         }
         Ok(())
     }
