@@ -3,10 +3,11 @@
 import type { WasmModule, AjisaiInterpreter } from '../wasm-types';
 
 interface WorkerMessage {
-    type: 'execute' | 'step' | 'abort' | 'init' | 'progressive' | 'progressive_step';
+    type: 'execute' | 'step' | 'abort' | 'init' | 'progressive' | 'progressive_step' | 'sync_words';
     id: string;
     code?: string;
     payload?: any;
+    customWords?: any[];
 }
 
 interface WorkerResponse {
@@ -69,6 +70,10 @@ class AjisaiWorkerInstance {
                 await this.init();
                 break;
                 
+            case 'sync_words':
+                await this.syncCustomWords(message.id, message.customWords || []);
+                break;
+                
             case 'execute':
                 await this.executeCode(message.id, message.code || '');
                 break;
@@ -91,6 +96,39 @@ class AjisaiWorkerInstance {
                 
             default:
                 console.warn(`[Worker] Unknown message type: ${message.type}`);
+        }
+    }
+
+    private async syncCustomWords(id: string, customWords: any[]): Promise<void> {
+        if (!this.interpreter) {
+            this.postMessage({
+                type: 'error',
+                id,
+                data: 'Interpreter not initialized'
+            });
+            return;
+        }
+        
+        try {
+            console.log(`[Worker] Syncing ${customWords?.length || 0} custom words`);
+            
+            if (customWords && customWords.length > 0) {
+                // カスタムワードを復元
+                await this.interpreter.restore_custom_words(customWords);
+            }
+            
+            this.postMessage({
+                type: 'result',
+                id,
+                data: { status: 'OK', synced: customWords?.length || 0 }
+            });
+        } catch (error) {
+            console.error(`[Worker] Failed to sync custom words:`, error);
+            this.postMessage({
+                type: 'error',
+                id,
+                data: `Failed to sync custom words: ${error}`
+            });
         }
     }
 
