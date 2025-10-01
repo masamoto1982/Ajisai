@@ -237,21 +237,18 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-// 新構文用のDEF処理（複数ワード対応）
 pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) -> Result<()> {
     let lines: Vec<&str> = input.lines().collect();
     let mut current_word_lines = Vec::new();
-    let mut current_word_name: Option<String> = None;
-    let mut current_description: Option<String> = None;
-    let mut in_definition = false;
     let mut definition_start_line = 0;
+    let mut found_first_content = false;
     
     for (line_num, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
         
-        // 空行やコメント行をスキップ
+        // 空行やコメント行の処理
         if trimmed.is_empty() || trimmed.starts_with('#') {
-            if in_definition {
+            if found_first_content {
                 current_word_lines.push(line.to_string());
             }
             continue;
@@ -259,48 +256,76 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
         
         // DEF パターンの検出
         if trimmed.ends_with(" DEF") || trimmed.contains(" DEF ") {
-            // 前のワードがあれば定義実行
-            if let Some(word_name) = current_word_name.take() {
-                let word_source = lines[definition_start_line..line_num].join("\n");
-                define_word_from_lines(interp, &current_word_lines, &word_name, current_description.take(), Some(word_source))?;
-                current_word_lines.clear();
-            }
-            
-            // 新しいワード定義の開始
+            // ワード定義を実行
             let def_parts = extract_word_name_and_description(trimmed)?;
-            current_word_name = Some(def_parts.0);
-            current_description = def_parts.1;
-            in_definition = true;
+            let word_name = def_parts.0;
+            let description = def_parts.1;
+            
+            let word_source = lines[definition_start_line..line_num].join("\n");
+            define_word_from_lines(interp, &current_word_lines, &word_name, description, Some(word_source))?;
+            
+            // 次のワードのための準備
+            current_word_lines.clear();
             definition_start_line = line_num + 1;
-        } else if in_definition {
+            found_first_content = false;
+        } else {
+            // 通常の行を追加
+            if !found_first_content {
+                found_first_content = true;
+                definition_start_line = line_num;
+            }
             current_word_lines.push(line.to_string());
         }
     }
     
-    // 最後のワードの定義
-    if let Some(word_name) = current_word_name {
-        let word_source = lines[definition_start_line..].join("\n");
-        define_word_from_lines(interp, &current_word_lines, &word_name, current_description, Some(word_source))?;
+    // 最後にDEFがなかった場合のエラーチェック
+    if !current_word_lines.is_empty() {
+        return Err(AjisaiError::from("Word definition without DEF keyword"));
     }
     
     Ok(())
 }
 
 fn extract_word_name_and_description(def_line: &str) -> Result<(String, Option<String>)> {
-    // 'NAME' 'DESCRIPTION' DEF または 'NAME' DEF のパターンを解析
-    let parts: Vec<&str> = def_line.split_whitespace().collect();
+    let trimmed = def_line.trim();
     
-    if parts.len() == 2 && parts[1] == "DEF" {
-        // 'NAME' DEF パターン
-        let name = parts[0].trim_matches('\'');
-        Ok((name.to_string(), None))
-    } else if parts.len() == 3 && parts[2] == "DEF" {
-        // 'NAME' 'DESCRIPTION' DEF パターン
-        let name = parts[0].trim_matches('\'');
-        let description = parts[1].trim_matches('\'');
-        Ok((name.to_string(), Some(description.to_string())))
+    // DEFの位置を探す
+    let def_pos = if let Some(pos) = trimmed.rfind(" DEF") {
+        if pos + 4 == trimmed.len() {
+            pos
+        } else {
+            return Err(AjisaiError::from("Invalid DEF syntax. DEF must be at the end of the line"));
+        }
     } else {
-        Err(AjisaiError::from("Invalid DEF syntax. Use 'NAME' DEF or 'NAME' 'DESCRIPTION' DEF"))
+        return Err(AjisaiError::from("DEF keyword not found"));
+    };
+    
+    let before_def = trimmed[..def_pos].trim();
+    
+    // シングルクォートで囲まれた文字列を抽出
+    let mut strings = Vec::new();
+    let mut current_pos = 0;
+    
+    while current_pos < before_def.len() {
+        if before_def.chars().nth(current_pos) == Some('\'') {
+            // 開始クォートを見つけた
+            let start = current_pos + 1;
+            if let Some(end_relative) = before_def[start..].find('\'') {
+                let end = start + end_relative;
+                strings.push(before_def[start..end].to_string());
+                current_pos = end + 1;
+            } else {
+                return Err(AjisaiError::from("Unclosed quote in DEF line"));
+            }
+        } else {
+            current_pos += 1;
+        }
+    }
+    
+    match strings.len() {
+        1 => Ok((strings[0].clone(), None)),
+        2 => Ok((strings[0].clone(), Some(strings[1].clone()))),
+        _ => Err(AjisaiError::from("Invalid DEF syntax. Use 'NAME' DEF or 'NAME' 'DESCRIPTION' DEF")),
     }
 }
 
