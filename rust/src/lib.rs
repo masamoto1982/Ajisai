@@ -71,7 +71,7 @@ impl AjisaiInterpreter {
 
                 // 実行後の状態を結果に含める
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_info()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
 
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
                     js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into()).unwrap();
@@ -156,7 +156,7 @@ impl AjisaiInterpreter {
 
                 // 実行後の状態を結果に含める
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_info()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
             }
             Err(e) => {
                 self.progressive_mode = false;
@@ -252,7 +252,7 @@ impl AjisaiInterpreter {
 
                 // 実行後の状態を結果に含める
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_info()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
             }
             Err(e) => {
                 self.step_mode = false;
@@ -374,12 +374,39 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
+        // タプル配列 [name, description, is_protected] を返す
+        let js_array = js_sys::Array::new();
+        
+        for (name, def) in self.interpreter.dictionary.iter() {
+            if def.is_builtin {
+                continue;
+            }
+            
+            let is_protected = self.interpreter.dependents.get(name)
+                .map_or(false, |deps| !deps.is_empty());
+            
+            let item = js_sys::Array::new();
+            item.push(&name.clone().into());
+            item.push(&match &def.description {
+                Some(desc) => JsValue::from_str(desc),
+                None => JsValue::NULL,
+            });
+            item.push(&is_protected.into());
+            
+            js_array.push(&item);
+        }
+        
+        js_array.into()
+    }
+
+    // 状態同期用の内部メソッド（CustomWordData形式）
+    fn get_custom_words_for_state(&self) -> JsValue {
         let words_info: Vec<CustomWordData> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| {
                 CustomWordData {
                     name: name.clone(),
-                    definition: self.interpreter.get_word_definition_tokens(name).unwrap_or_default(),
+                    definition: self.get_word_definition_internal(name),
                     description: def.description.clone(),
                 }
             })
@@ -394,10 +421,18 @@ impl AjisaiInterpreter {
     
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
-        match self.interpreter.get_word_definition_tokens(name) {
-            Some(def) => JsValue::from_str(&def),
-            None => JsValue::NULL,
+        let upper_name = name.to_uppercase();
+        let def = self.get_word_definition_internal(&upper_name);
+        if def.is_empty() {
+            JsValue::NULL
+        } else {
+            JsValue::from_str(&def)
         }
+    }
+
+    // 内部用のワード定義取得メソッド
+    fn get_word_definition_internal(&self, upper_name: &str) -> String {
+        self.interpreter.get_word_definition_tokens(upper_name).unwrap_or_default()
     }
     
     #[wasm_bindgen]
