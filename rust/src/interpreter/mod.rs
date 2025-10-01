@@ -513,13 +513,12 @@ impl Interpreter {
         
         Ok(())
     }
-    
-    pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
+
+pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
     // nameは既に大文字化されている前提で処理
     if let Some(def) = self.dictionary.get(name) {
-        if let Some(original_source) = &def.original_source {
-            return Some(original_source.clone());
-        }
+        // 🆕 original_sourceは返さない（本体のみを返す）
+        // これにより、フォールバック処理でのDEF行重複を防ぐ
         
         if !def.is_builtin && !def.lines.is_empty() {
             let mut result = String::new();
