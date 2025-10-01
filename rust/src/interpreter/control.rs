@@ -248,11 +248,18 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
     let mut found_first_content = false;
     
     for (line_num, line) in lines.iter().enumerate() {
-        let trimmed = line.trim();
+        // 🆕 コメントを除去してから処理
+        let line_without_comment = if let Some(pos) = line.find('#') {
+            &line[..pos]
+        } else {
+            line
+        };
+        let trimmed = line_without_comment.trim();
         
-        // 空行やコメント行の処理
-        if trimmed.is_empty() || trimmed.starts_with('#') {
+        // 空行の処理
+        if trimmed.is_empty() {
             if found_first_content {
+                // 🆕 元の行（コメント付き）を保存
                 current_word_lines.push(line.to_string());
             }
             continue;
@@ -265,7 +272,7 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
             let word_name = def_parts.0;
             let description = def_parts.1;
             
-            // 🆕 DEF行も含めた完全なソースコードを保存
+            // DEF行も含めた完全なソースコードを保存
             let word_source = lines[definition_start_line..=line_num].join("\n");
             define_word_from_lines(interp, &current_word_lines, &word_name, description, Some(word_source))?;
             
@@ -279,6 +286,7 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
                 found_first_content = true;
                 definition_start_line = line_num;
             }
+            // 🆕 元の行（コメント付き）を保存
             current_word_lines.push(line.to_string());
         }
     }
