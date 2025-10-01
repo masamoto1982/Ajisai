@@ -209,28 +209,32 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     };
 
     let upper_name = name_str.to_uppercase();
+    
     if let Some(def) = interp.dictionary.get(&upper_name) {
-        // 元ソースコードがあればそれを優先、なければトークンから再構成
-        let definition = if let Some(original_source) = &def.original_source {
-            original_source.clone()
-        } else {
-            // フォールバック：既存の方式でトークンから再構成
-            interp.get_word_definition_tokens(&upper_name).unwrap_or_default()
-        };
+        // 🆕 組み込みワードの場合は詳細説明を表示
+        if def.is_builtin {
+            let detailed_info = crate::builtins::get_builtin_detail(&upper_name);
+            interp.definition_to_load = Some(detailed_info);
+            return Ok(());
+        }
         
-        let full_definition = if definition.is_empty() {
-            // 説明なしの場合
-            format!("'{}' DEF", name_str)
+        // 🆕 カスタムワードの場合は元のソースコードをそのまま表示
+        if let Some(original_source) = &def.original_source {
+            interp.definition_to_load = Some(original_source.clone());
         } else {
-            // 説明ありの場合
-            if let Some(desc) = &def.description {
-                format!("{} '{}' '{}' DEF", definition, name_str, desc)
+            // フォールバック：トークンから再構成
+            let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
+            let full_definition = if definition.is_empty() {
+                format!("'{}' DEF", name_str)
             } else {
-                format!("{} '{}' DEF", definition, name_str)
-            }
-        };
-        
-        interp.definition_to_load = Some(full_definition);
+                if let Some(desc) = &def.description {
+                    format!("{}\n'{}' '{}' DEF", definition, name_str, desc)
+                } else {
+                    format!("{}\n'{}' DEF", definition, name_str)
+                }
+            };
+            interp.definition_to_load = Some(full_definition);
+        }
         Ok(())
     } else {
         Err(AjisaiError::UnknownWord(name_str))
@@ -261,7 +265,8 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
             let word_name = def_parts.0;
             let description = def_parts.1;
             
-            let word_source = lines[definition_start_line..line_num].join("\n");
+            // 🆕 DEF行も含めた完全なソースコードを保存
+            let word_source = lines[definition_start_line..=line_num].join("\n");
             define_word_from_lines(interp, &current_word_lines, &word_name, description, Some(word_source))?;
             
             // 次のワードのための準備
