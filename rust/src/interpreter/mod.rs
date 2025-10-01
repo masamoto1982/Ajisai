@@ -515,45 +515,46 @@ impl Interpreter {
     }
     
     pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
-        if let Some(def) = self.dictionary.get(&name.to_uppercase()) {
-            if let Some(original_source) = &def.original_source {
-                return Some(original_source.clone());
-            }
-            
-            if !def.is_builtin && !def.lines.is_empty() {
-                let mut result = String::new();
-                for (i, line) in def.lines.iter().enumerate() {
-                    if i > 0 { result.push('\n'); }
-                    
-                    if !line.condition_tokens.is_empty() {
-                        for token in &line.condition_tokens {
-                            result.push_str(&self.token_to_string(token));
-                            result.push(' ');
-                        }
-                        result.push_str(": ");
-                    }
-                    
-                    for token in &line.body_tokens {
+    // nameは既に大文字化されている前提で処理
+    if let Some(def) = self.dictionary.get(name) {
+        if let Some(original_source) = &def.original_source {
+            return Some(original_source.clone());
+        }
+        
+        if !def.is_builtin && !def.lines.is_empty() {
+            let mut result = String::new();
+            for (i, line) in def.lines.iter().enumerate() {
+                if i > 0 { result.push('\n'); }
+                
+                if !line.condition_tokens.is_empty() {
+                    for token in &line.condition_tokens {
                         result.push_str(&self.token_to_string(token));
                         result.push(' ');
                     }
-                    
-                    if line.repeat_count != 1 {
-                        result.push_str(&format!("{}x ", line.repeat_count));
-                    }
-                    if line.delay_ms > 0 {
-                        if line.delay_ms >= 1000 && line.delay_ms % 1000 == 0 {
-                            result.push_str(&format!("{}s ", line.delay_ms / 1000));
-                        } else {
-                            result.push_str(&format!("{}ms ", line.delay_ms));
-                        }
+                    result.push_str(": ");
+                }
+                
+                for token in &line.body_tokens {
+                    result.push_str(&self.token_to_string(token));
+                    result.push(' ');
+                }
+                
+                if line.repeat_count != 1 {
+                    result.push_str(&format!("{}x ", line.repeat_count));
+                }
+                if line.delay_ms > 0 {
+                    if line.delay_ms >= 1000 && line.delay_ms % 1000 == 0 {
+                        result.push_str(&format!("{}s ", line.delay_ms / 1000));
+                    } else {
+                        result.push_str(&format!("{}ms ", line.delay_ms));
                     }
                 }
-                return Some(result.trim().to_string());
             }
+            return Some(result.trim().to_string());
         }
-        None
     }
+    None
+}
     
     fn token_to_string(&self, token: &Token) -> String {
         match token {
