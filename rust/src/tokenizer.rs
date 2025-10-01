@@ -8,6 +8,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     tokenize_with_custom_words(input, &HashSet::new())
 }
 
+// rust/src/tokenizer.rs
+
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let lines: Vec<&str> = input.lines().collect();
@@ -18,16 +20,24 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         .collect();
 
     for (line_num, line) in lines.iter().enumerate() {
-        let trimmed_line = line.trim_start();
-        if trimmed_line.starts_with('#') {
+        // 🆕 行の途中の#以降をコメントとして除去
+        let line_without_comment = if let Some(pos) = line.find('#') {
+            &line[..pos]
+        } else {
+            line
+        };
+        
+        let trimmed_line = line_without_comment.trim();
+        
+        // 空行の処理
+        if trimmed_line.is_empty() {
             if line_num < lines.len() - 1 {
                 tokens.push(Token::LineBreak);
             }
             continue;
         }
 
-        let line_content = line;
-        let chars: Vec<char> = line_content.chars().collect();
+        let chars: Vec<char> = line_without_comment.chars().collect();
         let mut i = 0;
         let mut line_has_tokens = false;
 
@@ -45,7 +55,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
                 tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = try_parse_keyword(&chars[i..]) { // 修正点: キーワード解析を追加
+            } else if let Some((token, consumed)) = try_parse_keyword(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
