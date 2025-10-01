@@ -208,6 +208,44 @@ export class GUI {
         }
     }
 
+    private async syncCustomWordsToWorker(): Promise<void> {
+        if (!window.ajisaiInterpreter) return;
+        
+        try {
+            const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
+            
+            // カスタムワードが存在する場合のみWorkerに送信
+            if (customWordsInfo && customWordsInfo.length > 0) {
+                const customWords = [];
+                
+                for (let i = 0; i < customWordsInfo.length; i++) {
+                    const wordData = customWordsInfo[i];
+                    if (!wordData) continue;
+                    
+                    const name = wordData[0];
+                    const description = wordData[1];
+                    const definition = window.ajisaiInterpreter.get_word_definition(name);
+                    
+                    if (name && definition) {
+                        customWords.push({
+                            name: name,
+                            description: description || null,
+                            definition: definition
+                        });
+                    }
+                }
+                
+                if (customWords.length > 0) {
+                    console.log(`[GUI] Syncing ${customWords.length} custom words to worker`);
+                    // Workerに同期コマンドを送信
+                    await WORKER_MANAGER.syncCustomWords(customWords);
+                }
+            }
+        } catch (error) {
+            console.error('[GUI] Failed to sync custom words to worker:', error);
+        }
+    }
+
     private async runCode(): Promise<void> {
         const code = this.editor.getValue();
         if (!code) return;
@@ -217,7 +255,13 @@ export class GUI {
             
             let result: ExecuteResult;
             
-            if (this.workerInitialized) {
+            // DEFを含む場合はメインスレッドで実行（状態管理のため）
+            const shouldUseMainThread = code.includes(' DEF') || code.includes('DEL') || code.includes('RESET');
+            
+            if (this.workerInitialized && !shouldUseMainThread) {
+                // Workerで実行する前に、メインスレッドのカスタムワードをWorkerに同期
+                await this.syncCustomWordsToWorker();
+                
                 result = await WORKER_MANAGER.execute(code, async (progressResult) => {
                     console.log('[GUI] Progress callback:', progressResult);
                     if (progressResult.output) {
@@ -228,6 +272,7 @@ export class GUI {
                     this.updateAllDisplays();
                 });
             } else {
+                // メインスレッドで実行
                 result = await window.ajisaiInterpreter.execute(code) as ExecuteResult;
             }
     
