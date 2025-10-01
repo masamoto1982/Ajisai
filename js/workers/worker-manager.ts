@@ -13,7 +13,7 @@ interface WorkerTask {
         totalIterations: number;
         currentIteration: number;
     };
-    onProgress?: (result: any) => void;  // 🆕 プログレスコールバック
+    onProgress?: (result: any) => void;
 }
 
 interface WorkerInstance {
@@ -105,12 +105,11 @@ export class WorkerManager {
     }
 
     private handleWorkerMessage(workerInstance: WorkerInstance, message: any): void {
-        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 修正点 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
         // 初期化メッセージはタスクではないため、ここで無視して警告を抑制する
-        if (message.id === 'init') {
+        if (message.id === 'init' || message.id?.startsWith('sync_')) {
             return;
         }
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 修正点 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        
         console.log(`[WorkerManager] Worker message: ${message.type}, ID: ${message.id}`);
 
         const task = this.activeTasks.get(message.id);
@@ -143,7 +142,7 @@ export class WorkerManager {
                     task.progressiveState.currentIteration = message.data.currentIteration || 0;
                 }
                 
-                // 🆕 プログレスコールバックを呼び出してGUIに即座に通知
+                // プログレスコールバックを呼び出してGUIに即座に通知
                 if (task.onProgress) {
                     console.log(`[WorkerManager] Calling progress callback for ${message.id}`);
                     task.onProgress(message.data);
@@ -274,7 +273,51 @@ export class WorkerManager {
         });
     }
 
-    // 🆕 プログレスコールバック付きのexecuteメソッド
+    async syncCustomWords(customWords: any[]): Promise<void> {
+        console.log(`[WorkerManager] Syncing ${customWords.length} custom words to all workers`);
+        
+        // すべてのWorkerに同期
+        const syncPromises = this.workers.map(workerInstance => {
+            return new Promise<void>((resolve, reject) => {
+                const syncId = `sync_${++this.taskIdCounter}`;
+                
+                const handleMessage = (event: MessageEvent) => {
+                    if (event.data.id === syncId) {
+                        workerInstance.worker.removeEventListener('message', handleMessage);
+                        if (event.data.type === 'result') {
+                            console.log(`[WorkerManager] Worker synced: ${event.data.data?.synced || 0} words`);
+                            resolve();
+                        } else {
+                            reject(new Error(event.data.data));
+                        }
+                    }
+                };
+                
+                workerInstance.worker.addEventListener('message', handleMessage);
+                
+                workerInstance.worker.postMessage({
+                    type: 'sync_words',
+                    id: syncId,
+                    customWords: customWords
+                });
+                
+                // タイムアウト
+                setTimeout(() => {
+                    workerInstance.worker.removeEventListener('message', handleMessage);
+                    reject(new Error('Sync timeout'));
+                }, 5000);
+            });
+        });
+        
+        try {
+            await Promise.all(syncPromises);
+            console.log('[WorkerManager] All workers synced');
+        } catch (error) {
+            console.error('[WorkerManager] Failed to sync some workers:', error);
+            throw error;
+        }
+    }
+
     async execute(code: string, onProgress?: (result: any) => void): Promise<any> {
         const taskId = `task_${++this.taskIdCounter}`;
         console.log(`[WorkerManager] Queuing execute task: ${taskId}`);
@@ -292,7 +335,7 @@ export class WorkerManager {
                 type: taskType as 'execute' | 'step' | 'progressive',
                 resolve,
                 reject,
-                onProgress  // 🆕 コールバックを保存
+                onProgress
             };
 
             const availableWorker = this.workers.find(w => !w.busy);
