@@ -1,7 +1,7 @@
 // rust/src/interpreter/control.rs
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Token, ExecutionLine, ValueType, WordDefinition}; // Value を削除
+use crate::types::{Token, ExecutionLine, ValueType, WordDefinition};
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
@@ -79,7 +79,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, tokens: &[Token], name: &st
     Ok(())
 }
 
-// 新構文用のパーサー: 改行ベース + : 条件分岐
+// 新構文用のパーサー: 改行ベース + : 条件分岐（装飾子なし）
 fn parse_definition_body_new_syntax(_interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut current_line_tokens = Vec::new();
@@ -113,50 +113,18 @@ fn parse_definition_body_new_syntax(_interp: &mut Interpreter, tokens: &[Token])
 }
 
 fn parse_single_execution_line(tokens: &[Token]) -> Result<ExecutionLine> {
-    // 修飾子（3x, 100msなど）を検出
-    let mut repeat_count = 1i64;
-    let mut delay_ms = 0u64;
-    let mut modifier_positions = Vec::new();
-    
-    for (i, token) in tokens.iter().enumerate() {
-        if let Token::Modifier(m_str) = token {
-            modifier_positions.push(i);
-            if m_str.ends_with('x') {
-                if let Ok(count) = m_str[..m_str.len()-1].parse::<i64>() {
-                    repeat_count = count;
-                }
-            } else if m_str.ends_with("ms") {
-                if let Ok(ms) = m_str[..m_str.len()-2].parse::<u64>() {
-                    delay_ms = ms;
-                }
-            } else if m_str.ends_with('s') {
-                if let Ok(s) = m_str[..m_str.len()-1].parse::<u64>() {
-                    delay_ms = s * 1000;
-                }
-            }
-        }
-    }
-    
-    // 修飾子を除いた実行部分を取得
-    let execution_tokens: Vec<Token> = tokens.iter().enumerate() // mut を削除
-        .filter(|(i, _)| !modifier_positions.contains(i))
-        .map(|(_, token)| token.clone())
-        .collect();
-    
     // : による条件分岐の検出
-    let guard_position = execution_tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
+    let guard_position = tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
     
     let (condition_tokens, body_tokens) = if let Some(guard_pos) = guard_position {
-        (execution_tokens[..guard_pos].to_vec(), execution_tokens[guard_pos+1..].to_vec())
+        (tokens[..guard_pos].to_vec(), tokens[guard_pos+1..].to_vec())
     } else {
-        (Vec::new(), execution_tokens)
+        (Vec::new(), tokens.to_vec())
     };
     
     Ok(ExecutionLine {
         condition_tokens,
         body_tokens,
-        repeat_count,
-        delay_ms,
     })
 }
 
@@ -211,14 +179,14 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     let upper_name = name_str.to_uppercase();
     
     if let Some(def) = interp.dictionary.get(&upper_name) {
-        // 🆕 組み込みワードの場合は詳細説明を表示
+        // 組み込みワードの場合は詳細説明を表示
         if def.is_builtin {
             let detailed_info = crate::builtins::get_builtin_detail(&upper_name);
             interp.definition_to_load = Some(detailed_info);
             return Ok(());
         }
         
-        // 🆕 カスタムワードの場合は元のソースコードをそのまま表示
+        // カスタムワードの場合は元のソースコードをそのまま表示
         if let Some(original_source) = &def.original_source {
             interp.definition_to_load = Some(original_source.clone());
         } else {
@@ -248,7 +216,7 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
     let mut found_first_content = false;
     
     for (line_num, line) in lines.iter().enumerate() {
-        // 🆕 コメントを除去してから処理
+        // コメントを除去してから処理
         let line_without_comment = if let Some(pos) = line.find('#') {
             &line[..pos]
         } else {
@@ -259,7 +227,7 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
         // 空行の処理
         if trimmed.is_empty() {
             if found_first_content {
-                // 🆕 元の行（コメント付き）を保存
+                // 元の行（コメント付き）を保存
                 current_word_lines.push(line.to_string());
             }
             continue;
@@ -286,7 +254,7 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
                 found_first_content = true;
                 definition_start_line = line_num;
             }
-            // 🆕 元の行（コメント付き）を保存
+            // 元の行（コメント付き）を保存
             current_word_lines.push(line.to_string());
         }
     }
@@ -315,15 +283,17 @@ fn extract_word_name_and_description(def_line: &str) -> Result<(String, Option<S
     
     let before_def = trimmed[..def_pos].trim();
     
-    // シングルクォートで囲まれた文字列を抽出
+    // シングルクォートまたはダブルクォートで囲まれた文字列を抽出
     let mut strings = Vec::new();
     let mut current_pos = 0;
     
     while current_pos < before_def.len() {
-        if before_def.chars().nth(current_pos) == Some('\'') {
+        let current_char = before_def.chars().nth(current_pos);
+        if current_char == Some('\'') || current_char == Some('"') {
+            let quote_char = current_char.unwrap();
             // 開始クォートを見つけた
             let start = current_pos + 1;
-            if let Some(end_relative) = before_def[start..].find('\'') {
+            if let Some(end_relative) = before_def[start..].find(quote_char) {
                 let end = start + end_relative;
                 strings.push(before_def[start..end].to_string());
                 current_pos = end + 1;
