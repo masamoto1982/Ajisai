@@ -674,7 +674,7 @@ export class TestRunner {
         // === カスタムワード定義 ===
         {
             name: "DEF - 最小の定義",
-            code: "[ 42 ]\n'ANSWER' DEF\n'ANSWER'",
+            code: "[ 42 ]\n'ANSWER' DEF\n ANSWER",
             expectedStack: [this.createVector([this.createNumber('42')])],
             category: "Custom Word Definition"
         },
