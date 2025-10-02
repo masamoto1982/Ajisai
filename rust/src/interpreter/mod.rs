@@ -164,73 +164,85 @@ impl Interpreter {
         Ok(())
     }
 
-    // `:` または `;` で区切られた複数の条件付き実行を処理
     #[async_recursion(?Send)]
-    async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()> {
-        // `:` または `;` の位置を全て見つける
-        let guard_positions: Vec<usize> = tokens.iter()
-            .enumerate()
-            .filter(|(_, t)| matches!(t, Token::GuardSeparator))
-            .map(|(i, _)| i)
-            .collect();
-        
-        if guard_positions.is_empty() {
-            // ガードがない場合は通常実行
-            return self.execute_single_line_tokens(tokens).await;
+async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()> {
+    let guard_positions: Vec<usize> = tokens.iter()
+        .enumerate()
+        .filter(|(_, t)| matches!(t, Token::GuardSeparator))
+        .map(|(i, _)| i)
+        .collect();
+    
+    if guard_positions.is_empty() {
+        return self.execute_single_line_tokens(tokens).await;
+    }
+    
+    // ガードで区切られたセグメントを処理
+    let mut segments = Vec::new();
+    let mut start = 0;
+    
+    for &guard_pos in &guard_positions {
+        segments.push(&tokens[start..guard_pos]);
+        start = guard_pos + 1;
+    }
+    if start < tokens.len() {
+        segments.push(&tokens[start..]);
+    }
+    
+    // 最初のセグメントが空（先頭が:）の場合、デフォルト節として処理
+    if segments[0].is_empty() {
+        if segments.len() > 1 {
+            return self.execute_single_line_tokens(segments[1]).await;
         }
+        return Ok(());
+    }
+    
+    // 各条件-アクションペアを評価
+    let mut i = 0;
+    while i < segments.len() {
+        let condition_segment = segments[i];
         
-        // ガードで区切られたセグメントを処理
-        let mut segments = Vec::new();
-        let mut start = 0;
-        
-        for &guard_pos in &guard_positions {
-            segments.push(&tokens[start..guard_pos]);
-            start = guard_pos + 1;
-        }
-        // 最後のセグメント
-        if start < tokens.len() {
-            segments.push(&tokens[start..]);
-        }
-        
-        // 各セグメントを順に評価
-        for (i, segment) in segments.iter().enumerate() {
-            if segment.is_empty() {
-                continue;
+        if condition_segment.is_empty() {
+            // 空のセグメント（デフォルト節）
+            if i + 1 < segments.len() {
+                return self.execute_single_line_tokens(segments[i + 1]).await;
             }
-            
-            // 最後のセグメントかどうか
-            let is_last = i == segments.len() - 1;
-            
-            // 条件がない（デフォルト節）かどうかの判定
-            // セグメントの最初がGuardSeparatorの場合は条件なし
-            let has_condition = i < guard_positions.len();
-            
-            if !has_condition || is_last {
-                // デフォルト節：無条件実行
-                self.execute_single_line_tokens(segment).await?;
+            return Ok(());
+        }
+        
+        // 条件を評価（スタックトップの値を保持）
+        let stack_before = self.stack.clone();
+        self.execute_single_line_tokens(condition_segment).await?;
+        
+        if let Some(condition_result) = self.stack.pop() {
+            if is_truthy(&condition_result) {
+                // 条件が真：次のセグメントを実行
+                if i + 1 < segments.len() {
+                    // スタックを条件評価前に戻す
+                    self.stack = stack_before;
+                    return self.execute_single_line_tokens(segments[i + 1]).await;
+                }
                 return Ok(());
             } else {
-                // 条件付きセグメント：条件を評価
-                self.execute_single_line_tokens(segment).await?;
+                // 条件が偽：スタックを復元して次の条件へ
+                self.stack = stack_before;
+                i += 2; // 条件とアクションをスキップ
                 
-                // 条件の結果を確認
-                if let Some(condition_result) = self.stack.pop() {
-                    if is_truthy(&condition_result) {
-                        // 条件が真：次のセグメントを実行して終了
-                        if i + 1 < segments.len() {
-                            self.execute_single_line_tokens(segments[i + 1]).await?;
-                        }
-                        return Ok(());
+                // 次のセグメントがない、または最後のセグメントの場合
+                if i >= segments.len() {
+                    // 最後のセグメントが残っていればデフォルトとして実行
+                    if !segments.is_empty() && segments.len() % 2 == 1 {
+                        return self.execute_single_line_tokens(segments[segments.len() - 1]).await;
                     }
-                    // 条件が偽：次のセグメントに進む
-                } else {
-                    return Err(AjisaiError::from("Condition evaluation produced no result"));
+                    return Ok(());
                 }
             }
+        } else {
+            return Err(AjisaiError::from("Condition evaluation produced no result"));
         }
-        
-        Ok(())
     }
+    
+    Ok(())
+}
 
     #[async_recursion(?Send)]
     async fn execute_single_line_tokens(&mut self, tokens: &[Token]) -> Result<()> {
