@@ -10,6 +10,7 @@ pub mod audio;
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, BracketType, Fraction, WordDefinition, ExecutionLine};
 use self::error::{Result, AjisaiError};
+use num_traits::{Zero, One, ToPrimitive};
 use num_traits::Zero;
 use std::str::FromStr;
 use async_recursion::async_recursion;
