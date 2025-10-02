@@ -72,15 +72,78 @@ export class TestRunner {
     }
     
     private async runSingleTestWithDetails(testCase: TestCase): Promise<{
-        passed: boolean;
-        actualStack?: Value[];
-        actualOutput?: string;
-        errorMessage?: string;
-        reason?: string;
-    }> {
-        // 各テスト前にstackをクリア
-        await this.resetInterpreter();
+    passed: boolean;
+    actualStack?: Value[];
+    actualOutput?: string;
+    errorMessage?: string;
+    reason?: string;
+}> {
+    // 各テスト前にstackをクリア
+    await this.resetInterpreter();
+    
+    // DEFを含む場合は特別処理
+    if (testCase.code.includes(' DEF')) {
+        const lines = testCase.code.split('\n');
+        const defLines: string[] = [];
+        const execLines: string[] = [];
+        let inDef = false;
         
+        for (const line of lines) {
+            if (line.includes(' DEF')) {
+                defLines.push(line);
+                inDef = false;
+            } else if (line.trim().startsWith('[') || line.trim().startsWith(':')) {
+                // DEF定義の一部
+                defLines.push(line);
+                inDef = true;
+            } else if (line.trim().startsWith("'") || line.trim().startsWith('"')) {
+                if (inDef) {
+                    defLines.push(line);
+                } else {
+                    execLines.push(line);
+                }
+            } else if (line.trim()) {
+                execLines.push(line);
+            }
+        }
+        
+        // まずDEF部分を実行
+        if (defLines.length > 0) {
+            const defCode = defLines.join('\n');
+            const defResult = await window.ajisaiInterpreter.execute(defCode);
+            
+            if (defResult.status === 'ERROR') {
+                return {
+                    passed: false,
+                    errorMessage: defResult.message,
+                    reason: 'Error during word definition'
+                };
+            }
+        }
+        
+        // 実行部分がある場合は実行
+        if (execLines.length > 0) {
+            const execCode = execLines.join('\n');
+            const result = await window.ajisaiInterpreter.execute(execCode);
+            
+            if (testCase.expectError) {
+                return {
+                    passed: result.status === 'ERROR',
+                    errorMessage: result.message,
+                    reason: result.status === 'ERROR' ? 'Expected error occurred' : 'Expected error but execution succeeded'
+                };
+            }
+            
+            if (result.status === 'ERROR') {
+                return {
+                    passed: false,
+                    errorMessage: result.message,
+                    reason: 'Unexpected error during execution'
+                };
+            }
+        }
+    } else {
+        // 通常の実行
         const result = await window.ajisaiInterpreter.execute(testCase.code);
         
         if (testCase.expectError) {
@@ -98,31 +161,34 @@ export class TestRunner {
                 reason: 'Unexpected error during execution'
             };
         }
+    }
 
-        if (testCase.expectedStack) {
-            const stack = window.ajisaiInterpreter.get_stack();
-            const matches = this.compareStack(stack, testCase.expectedStack);
-            return {
-                passed: matches,
-                actualStack: stack,
-                reason: matches ? 'Stack matches expected' : 'Stack mismatch'
-            };
-        }
-        
-        if (testCase.expectedOutput) {
-            const matches = result.output?.trim() === testCase.expectedOutput.trim();
-            return {
-                passed: matches,
-                actualOutput: result.output,
-                reason: matches ? 'Output matches expected' : 'Output mismatch'
-            };
-        }
-        
+    // スタックまたは出力のチェック
+    if (testCase.expectedStack) {
+        const stack = window.ajisaiInterpreter.get_stack();
+        const matches = this.compareStack(stack, testCase.expectedStack);
         return {
-            passed: true,
-            reason: 'Test completed successfully'
+            passed: matches,
+            actualStack: stack,
+            reason: matches ? 'Stack matches expected' : 'Stack mismatch'
         };
     }
+    
+    if (testCase.expectedOutput) {
+        const result = await window.ajisaiInterpreter.execute(testCase.code);
+        const matches = result.output?.trim() === testCase.expectedOutput.trim();
+        return {
+            passed: matches,
+            actualOutput: result.output,
+            reason: matches ? 'Output matches expected' : 'Output mismatch'
+        };
+    }
+    
+    return {
+        passed: true,
+        reason: 'Test completed successfully'
+    };
+}
     
     private showTestResult(testCase: TestCase, result: any, passed: boolean): void {
         const statusIcon = passed ? '✓' : '✗';
