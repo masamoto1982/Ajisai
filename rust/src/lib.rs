@@ -181,21 +181,7 @@ impl AjisaiInterpreter {
         
         for token in tokens {
             match token {
-                Token::Modifier(m_str) => {
-                    if m_str.ends_with('x') {
-                        if let Ok(count) = m_str[..m_str.len()-1].parse::<i64>() {
-                            repeat_count = count;
-                        }
-                    } else if m_str.ends_with("ms") {
-                        if let Ok(ms) = m_str[..m_str.len()-2].parse::<u64>() {
-                            delay_ms = ms;
-                        }
-                    } else if m_str.ends_with('s') {
-                        if let Ok(s) = m_str[..m_str.len()-1].parse::<u64>() {
-                            delay_ms = s * 1000;
-                        }
-                    }
-                },
+                
                 _ => execution_tokens.push(token.clone()),
             }
         }
