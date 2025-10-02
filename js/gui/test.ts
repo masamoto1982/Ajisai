@@ -746,67 +746,67 @@ export class TestRunner {
 },
 {
     name: "DEF - 定義したワードの実行",
-    code: "[ 42 ]\n'ANSWER' DEF\n'ANSWER'",
+    code: "[ 42 ]\n'ANSWER' DEF\nANSWER",  // ← 'ANSWER' ではなく ANSWER
     expectedStack: [this.createVector([this.createNumber('42')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - 算術演算の定義と実行",
-    code: "[ 1 ] [ 2 ] +\n'ADD12' DEF\n'ADD12'",
+    code: "[ 1 ] [ 2 ] +\n'ADD12' DEF\nADD12",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('3')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - 説明付き定義と実行",
-    code: "[ 2 ] [ 2 ] *\n'SQUARE2' '2を二乗する' DEF\n'SQUARE2'",
+    code: "[ 2 ] [ 2 ] *\n'SQUARE2' '2を二乗する' DEF\nSQUARE2",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('4')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - 複数行の定義と実行",
-    code: "[ 1 ] [ 2 ] +\n[ 3 ] +\n'ADD123' DEF\n'ADD123'",
+    code: "[ 1 ] [ 2 ] +\n[ 3 ] +\n'ADD123' DEF\nADD123",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('6')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - 条件付き定義（真の場合）",
-    code: "[ 0 ] > : [ 100 ]\n'POS_TO_100' DEF\n[ 5 ] 'POS_TO_100'",
+    code: "[ 0 ] > : [ 100 ]\n'POS_TO_100' DEF\n[ 5 ] POS_TO_100",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('100')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - 条件付き定義（偽の場合）",
-    code: "[ 0 ] > : [ 100 ]\n'POS_TO_100' DEF\n[ -5 ] 'POS_TO_100'",
+    code: "[ 0 ] > : [ 100 ]\n'POS_TO_100' DEF\n[ -5 ] POS_TO_100",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('-5')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - 複数条件の連鎖定義（正）",
-    code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 5 ] 'SIGN'",
+    code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 5 ] SIGN",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('1')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - 複数条件の連鎖定義（ゼロ）",
-    code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 0 ] 'SIGN'",
+    code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 0 ] SIGN",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('0')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - 複数条件の連鎖定義（負）",
-    code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ -3 ] 'SIGN'",
+    code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ -3 ] SIGN",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('-1')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - デフォルト節のみ",
-    code: ": [ 999 ]\n'ALWAYS_999' DEF\n[ 123 ] 'ALWAYS_999'",
+    code: ": [ 999 ]\n'ALWAYS_999' DEF\n[ 123 ] ALWAYS_999",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('999')])],
     category: "Custom Word Definition"
 },
 {
     name: "DEF - ワードの再利用",
-    code: "[ 2 ] *\n'DOUBLE' DEF\n[ 3 ]\n'DOUBLE'\n'DOUBLE'",
+    code: "[ 2 ] *\n'DOUBLE' DEF\n[ 3 ]\nDOUBLE\nDOUBLE",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('12')])],
     category: "Custom Word Definition"
 },
@@ -814,7 +814,7 @@ export class TestRunner {
 // === TIMES/WAIT制御構造 ===
 {
     name: "TIMES - 基本的な繰り返し",
-    code: "[ 1 ] [ 2 ] +\n'ADD12' DEF\n'ADD12' [ 3 ] TIMES",
+    code: "[ 1 ] [ 2 ] +\n'ADD12' DEF\nADD12 [ 3 ] TIMES",  // ← 修正
     expectedStack: [
         this.createVector([this.createNumber('3')]),
         this.createVector([this.createNumber('3')]),
@@ -824,30 +824,36 @@ export class TestRunner {
 },
 {
     name: "TIMES - 1回の実行",
-    code: "[ 5 ] [ 5 ] *\n'SQUARE5' DEF\n'SQUARE5' [ 1 ] TIMES",
+    code: "[ 5 ] [ 5 ] *\n'SQUARE5' DEF\nSQUARE5 [ 1 ] TIMES",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('25')])],
     category: "Control Flow - TIMES/WAIT"
 },
 {
     name: "WAIT - 基本的な遅延実行",
-    code: "[ 100 ]\n'HUNDRED' DEF\n'HUNDRED' [ 10 ] WAIT",
+    code: "[ 100 ]\n'HUNDRED' DEF\nHUNDRED [ 10 ] WAIT",  // ← 修正
     expectedStack: [this.createVector([this.createNumber('100')])],
     category: "Control Flow - TIMES/WAIT"
 },
-        {
-            name: "WAIT - 組み込みワードでエラー",
-            code: "'PRINT' [ 100 ] WAIT",
-            expectError: true,
-            category: "Control Flow - TIMES/WAIT"
-        },
+{
+    name: "TIMES - 組み込みワードでエラー",
+    code: "PRINT [ 3 ] TIMES",  // ← 修正（'PRINT' ではなく PRINT）
+    expectError: true,
+    category: "Control Flow - TIMES/WAIT"
+},
+{
+    name: "WAIT - 組み込みワードでエラー",
+    code: "PRINT [ 100 ] WAIT",  // ← 修正（'PRINT' ではなく PRINT）
+    expectError: true,
+    category: "Control Flow - TIMES/WAIT"
+},
 
-        // === DEL（ワード削除） ===
-        {
-            name: "DEL - ワードの削除",
-            code: "[ 42 ]\n'TEMP' DEF\n'TEMP' DEL",
-            expectedStack: [],
-            category: "Word Management"
-        },
+// === ワード管理（DEL） ===
+{
+    name: "DEL - ワードの削除",
+    code: "[ 42 ]\n'TEMP' DEF\n'TEMP' DEL",  // ← DELは文字列を取るのでこれはOK
+    expectedStack: [],
+    category: "Word Management"
+},
 
         // === BigInt対応 ===
         {
