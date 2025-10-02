@@ -443,8 +443,7 @@ impl Interpreter {
         // 注意: この実装は同期的なので、実際には即座に全て実行される
         // 本来は async で実装すべきだが、ここでは簡易実装
         for _ in 0..count {
-            // トークンとして実行
-            let tokens = vec![Token::Symbol(upper_name.clone())];
+            
             // execute_tokens は async なので、ここでは execute_tokens_sync を使うか
             // 別の方法が必要... これは問題
             // とりあえず同期実行を試みる
