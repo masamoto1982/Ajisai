@@ -1,4 +1,4 @@
-// rust/src/tokenizer.rs (修正版)
+// rust/src/tokenizer.rs
 
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
@@ -7,8 +7,6 @@ use crate::builtins;
 pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     tokenize_with_custom_words(input, &HashSet::new())
 }
-
-// rust/src/tokenizer.rs
 
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
@@ -20,7 +18,6 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         .collect();
 
     for (line_num, line) in lines.iter().enumerate() {
-        // 🆕 行の途中の#以降をコメントとして除去
         let line_without_comment = if let Some(pos) = line.find('#') {
             &line[..pos]
         } else {
@@ -29,7 +26,6 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         
         let trimmed_line = line_without_comment.trim();
         
-        // 空行の処理
         if trimmed_line.is_empty() {
             if line_num < lines.len() - 1 {
                 tokens.push(Token::LineBreak);
@@ -51,13 +47,11 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
 
             if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
                 tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = parse_single_quote_string(&chars[i..]) {
+            } else if let Some((token, consumed)) = parse_quote_string(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_keyword(&chars[i..]) {
-                tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = try_parse_modifier(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
@@ -89,13 +83,32 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
         '}' => Some((Token::VectorEnd(BracketType::Curly), 1)),
         '(' => Some((Token::VectorStart(BracketType::Round), 1)),
         ')' => Some((Token::VectorEnd(BracketType::Round), 1)),
-        ':' => Some((Token::GuardSeparator, 1)),
-        ';' => Some((Token::DefBlockEnd, 1)),
+        ':' | ';' => Some((Token::GuardSeparator, 1)),
         _ => None,
     }
 }
 
-// 修正点: 新しい関数を追加
+// ' または " で囲まれた文字列をパース
+fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
+    if chars.is_empty() { return None; }
+    
+    let quote_char = chars[0];
+    if quote_char != '\'' && quote_char != '"' { return None; }
+    
+    let mut string = String::new();
+    let mut i = 1;
+    
+    while i < chars.len() {
+        if chars[i] == quote_char {
+            return Some((Token::String(string), i + 1));
+        }
+        string.push(chars[i]);
+        i += 1;
+    }
+    
+    None
+}
+
 fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
     const KEYWORDS: [(&str, Token); 3] = [
         ("TRUE", Token::Boolean(true)),
@@ -110,24 +123,6 @@ fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
                 if chars.len() == keyword_str.len() || !is_word_char(chars[keyword_str.len()]) {
                     return Some((token.clone(), keyword_str.len()));
                 }
-            }
-        }
-    }
-    None
-}
-
-fn try_parse_modifier(chars: &[char]) -> Option<(Token, usize)> {
-    let mut i = 0;
-    while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
-    
-    if i > 0 && i < chars.len() {
-        let unit: String = chars[i..].iter().take_while(|c| c.is_alphabetic()).collect();
-        
-        if unit == "x" || unit == "s" || unit == "ms" {
-            let end_of_modifier = i + unit.len();
-            if end_of_modifier == chars.len() || !is_word_char(chars[end_of_modifier]) {
-                let modifier_str: String = chars[..end_of_modifier].iter().collect();
-                return Some((Token::Modifier(modifier_str), end_of_modifier));
             }
         }
     }
@@ -149,53 +144,38 @@ fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Opti
 
 fn is_word_char(c: char) -> bool { c.is_ascii_alphanumeric() || c == '_' || c == '?' || c == '!' }
 
-fn parse_single_quote_string(chars: &[char]) -> Option<(Token, usize)> {
-    if chars.is_empty() || chars[0] != '\'' { return None; }
-    let mut string = String::new(); let mut i = 1;
-    while i < chars.len() {
-        if chars[i] == '\'' { return Some((Token::String(string), i + 1)); }
-        string.push(chars[i]); i += 1;
-    }
-    None
-}
-
 fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
-    let original_len = chars.len();
-    let mut temp_chars = chars;
-
-    if temp_chars.is_empty() { return None; }
-
     let mut i = 0;
-    if i < temp_chars.len() && (temp_chars[i] == '-' || temp_chars[i] == '+') {
-        if i + 1 < temp_chars.len() && temp_chars[i+1].is_ascii_digit() {
+    if i < chars.len() && (chars[i] == '-' || chars[i] == '+') {
+        if i + 1 < chars.len() && chars[i+1].is_ascii_digit() {
              i += 1;
         } else {
             return None;
         }
     }
     let start = i;
-    while i < temp_chars.len() && temp_chars[i].is_ascii_digit() { i += 1; }
+    while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
     
-    if i < temp_chars.len() && temp_chars[i] == '.' {
+    if i < chars.len() && chars[i] == '.' {
         i += 1;
-        while i < temp_chars.len() && temp_chars[i].is_ascii_digit() { i += 1; }
+        while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
     } 
-    else if i < temp_chars.len() && temp_chars[i] == '/' {
+    else if i < chars.len() && chars[i] == '/' {
         i += 1;
-        if i == temp_chars.len() || !temp_chars[i].is_ascii_digit() { 
+        if i == chars.len() || !chars[i].is_ascii_digit() { 
             i -= 1;
         } else {
-            while i < temp_chars.len() && temp_chars[i].is_ascii_digit() { i += 1; }
+            while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
         }
     }
     
-    if i < temp_chars.len() && (temp_chars[i] == 'e' || temp_chars[i] == 'E') {
+    if i < chars.len() && (chars[i] == 'e' || chars[i] == 'E') {
         i += 1;
-        if i < temp_chars.len() && (temp_chars[i] == '+' || temp_chars[i] == '-') {
+        if i < chars.len() && (chars[i] == '+' || chars[i] == '-') {
             i += 1;
         }
         let exp_start = i;
-        while i < temp_chars.len() && temp_chars[i].is_ascii_digit() { i += 1; }
+        while i < chars.len() && chars[i].is_ascii_digit() { i += 1; }
         if i == exp_start {
             return None;
         }
@@ -203,8 +183,8 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     
     let end = if start > 0 && i > start { i } else if start == 0 { i } else { 0 };
 
-    if end > 0 && (i == temp_chars.len() || !is_word_char(temp_chars[i])) {
-        let num_str: String = temp_chars[..i].iter().collect();
+    if end > 0 && (i == chars.len() || !is_word_char(chars[i])) {
+        let num_str: String = chars[..i].iter().collect();
         if crate::types::Fraction::from_str(&num_str).is_ok() {
             return Some((Token::Number(num_str), i));
         }
@@ -212,7 +192,6 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-// 修正点: `true`, `false`, `nil` の特別扱いを削除
 fn try_parse_ascii_builtin(chars: &[char], builtin_words: &HashSet<String>) -> Option<(Token, usize)> {
     let mut sorted_words: Vec<&String> = builtin_words.iter().collect();
     sorted_words.sort_by(|a, b| b.len().cmp(&a.len()));
