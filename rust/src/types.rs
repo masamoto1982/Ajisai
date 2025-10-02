@@ -15,10 +15,9 @@ pub enum Token {
     Symbol(String),
     VectorStart(BracketType),
     VectorEnd(BracketType),
-    DefBlockStart, // : (now used for condition separator)
-    DefBlockEnd,   // ; (deprecated)
-    GuardSeparator, // : (replaces $)
-    Modifier(String), // 3x, 5s
+    DefBlockStart,
+    DefBlockEnd,
+    GuardSeparator, // : または ;
     Nil,
     LineBreak,
 }
@@ -65,8 +64,6 @@ impl BracketType {
 pub struct ExecutionLine {
     pub condition_tokens: Vec<Token>,
     pub body_tokens: Vec<Token>,
-    pub repeat_count: i64,
-    pub delay_ms: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +72,7 @@ pub struct WordDefinition {
     pub is_builtin: bool,
     pub description: Option<String>,
     pub dependencies: HashSet<String>,
-    pub original_source: Option<String>, // 🆕 元のソースコード保存
+    pub original_source: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
