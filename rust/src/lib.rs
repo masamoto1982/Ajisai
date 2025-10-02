@@ -1,3 +1,5 @@
+// rust/src/lib.rs
+
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
@@ -25,13 +27,6 @@ pub struct AjisaiInterpreter {
     step_position: usize,
     step_mode: bool,
     current_step_code: String,
-    // 段階的実行用の新しいフィールド
-    progressive_mode: bool,
-    progressive_tokens: Vec<Token>,
-    progressive_position: usize,
-    progressive_repeat_count: i64,
-    progressive_current_iteration: i64,
-    progressive_delay_ms: u64,
 }
 
 #[wasm_bindgen]
@@ -44,12 +39,6 @@ impl AjisaiInterpreter {
             step_position: 0,
             step_mode: false,
             current_step_code: String::new(),
-            progressive_mode: false,
-            progressive_tokens: Vec::new(),
-            progressive_position: 0,
-            progressive_repeat_count: 1,
-            progressive_current_iteration: 0,
-            progressive_delay_ms: 0,
         }
     }
 
@@ -57,11 +46,6 @@ impl AjisaiInterpreter {
     pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
         self.interpreter.definition_to_load = None;
         let obj = js_sys::Object::new();
-        
-        // 遅延・繰り返し処理をチェック
-        if self.should_use_progressive_execution(code) {
-            return self.init_progressive_execution(code).await;
-        }
         
         match self.interpreter.execute(code).await {
             Ok(()) => {
@@ -88,37 +72,13 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub async fn init_progressive_execution(&mut self, code: &str) -> Result<JsValue, JsValue> {
+    pub async fn init_progressive_execution(&mut self, _code: &str) -> Result<JsValue, JsValue> {
         let obj = js_sys::Object::new();
         
-        let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-            
-        match tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
-            Ok(tokens) => {
-                let (execution_tokens, repeat_count, delay_ms) = self.parse_modifiers_from_tokens(&tokens);
-                
-                self.progressive_mode = true;
-                self.progressive_tokens = execution_tokens;
-                self.progressive_position = 0;
-                self.progressive_repeat_count = repeat_count;
-                self.progressive_current_iteration = 0;
-                self.progressive_delay_ms = delay_ms;
-                
-                js_sys::Reflect::set(&obj, &"status".into(), &"PROGRESSIVE".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"isProgressive".into(), &true.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"totalIterations".into(), &(repeat_count as u32).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"delayMs".into(), &(delay_ms as u32).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &format!("Progressive execution initialized: {} iterations with {}ms delay", repeat_count, delay_ms).into()).unwrap();
-            }
-            Err(e) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &format!("Tokenization error: {}", e).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
-            }
-        }
+        // 装飾子システム廃止により、progressive executionは使用しない
+        js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+        js_sys::Reflect::set(&obj, &"message".into(), &"Progressive execution is no longer supported. Use TIMES and WAIT instead.".into()).unwrap();
+        js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
         
         Ok(obj.into())
     }
@@ -127,66 +87,12 @@ impl AjisaiInterpreter {
     pub async fn execute_progressive_step(&mut self) -> Result<JsValue, JsValue> {
         let obj = js_sys::Object::new();
         
-        if !self.progressive_mode {
-            js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"message".into(), &"Progressive mode not initialized".into()).unwrap();
-            return Ok(obj.into());
-        }
-        
-        if self.progressive_current_iteration >= self.progressive_repeat_count {
-            self.progressive_mode = false;
-            js_sys::Reflect::set(&obj, &"status".into(), &"COMPLETED".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"isCompleted".into(), &true.into()).unwrap();
-            js_sys::Reflect::set(&obj, &"message".into(), &"Progressive execution completed".into()).unwrap();
-            return Ok(obj.into());
-        }
-        
-        // 1回分の処理を実行
-        match self.interpreter.execute_tokens(&self.progressive_tokens).await {
-            Ok(()) => {
-                self.progressive_current_iteration += 1;
-                let output = self.interpreter.get_output();
-                
-                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"currentIteration".into(), &(self.progressive_current_iteration as u32).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"totalIterations".into(), &(self.progressive_repeat_count as u32).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.progressive_current_iteration < self.progressive_repeat_count).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"delayMs".into(), &(self.progressive_delay_ms as u32).into()).unwrap();
-
-                // 実行後の状態を結果に含める
-                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
-            }
-            Err(e) => {
-                self.progressive_mode = false;
-                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
-                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
-            }
-        }
+        // 装飾子システム廃止により、progressive executionは使用しない
+        js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+        js_sys::Reflect::set(&obj, &"message".into(), &"Progressive execution is no longer supported. Use TIMES and WAIT instead.".into()).unwrap();
+        js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
         
         Ok(obj.into())
-    }
-
-    fn should_use_progressive_execution(&self, code: &str) -> bool {
-        // 遅延や繰り返し修飾子が含まれている場合はtrue
-        code.contains("ms") || code.contains("s ") || code.contains("x ")
-    }
-
-    fn parse_modifiers_from_tokens(&self, tokens: &[Token]) -> (Vec<Token>, i64, u64) {
-        let mut execution_tokens = Vec::new();
-        let mut repeat_count = 1i64;
-        let mut delay_ms = 0u64;
-        
-        for token in tokens {
-            match token {
-                
-                _ => execution_tokens.push(token.clone()),
-            }
-        }
-        
-        (execution_tokens, repeat_count, delay_ms)
     }
 
     #[wasm_bindgen]
@@ -324,12 +230,6 @@ impl AjisaiInterpreter {
         self.step_tokens.clear();
         self.step_position = 0;
         self.current_step_code.clear();
-        self.progressive_mode = false;
-        self.progressive_tokens.clear();
-        self.progressive_position = 0;
-        self.progressive_repeat_count = 1;
-        self.progressive_current_iteration = 0;
-        self.progressive_delay_ms = 0;
         
         match self.interpreter.execute_reset() {
             Ok(()) => {
