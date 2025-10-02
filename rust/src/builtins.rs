@@ -52,6 +52,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         
         // 制御構造
         (":", "Conditional execution. Usage: condition : action", "Control"),
+        (";", "Alternative to ':' for conditional execution", "Control"),
+        ("TIMES", "Execute custom word N times. Usage: 'WORD' [ n ] TIMES", "Control"),
+        ("WAIT", "Execute custom word after delay. Usage: 'WORD' [ ms ] WAIT", "Control"),
         
         // 入出力
         ("PRINT", "Print vector value", "IO"),
@@ -61,13 +64,12 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         
         // システム
         ("DEF", "Define new word. Usage: body 'NAME' DEF or body 'NAME' 'DESCRIPTION' DEF", "System"),
-        ("DEL", "Delete word. Usage: 'NAME' DEL", "System"),
+        ("DEL", "Delete word. Usage: 'WORD_NAME' DEL", "System"),
         ("?", "Load word definition into editor. Usage: 'WORD' ?", "System"),
         ("RESET", "Reset all memory and database", "System"),
     ]
 }
 
-// 🆕 組み込みワードの詳細説明を返す関数
 pub fn get_builtin_detail(name: &str) -> String {
     match name {
         // === 位置指定操作（0オリジン） ===
@@ -377,22 +379,86 @@ pub fn get_builtin_detail(name: &str) -> String {
 [ FALSE ] NOT  # → [ TRUE ]"#.to_string(),
 
         // === 制御構造 ===
-        ":" => r#"# : - 条件分岐
+        ":" | ";" => r#"# : または ; - 条件分岐ゲート
 
 ## 説明
-条件が真の場合のみ、後続の処理を実行します。
-カスタムワード定義内で使用します。
+条件が真の場合のみ、後続の処理を実行する「ゲート」です。
+`:` と `;` は同じ意味で使えます。
+
+一行の中で複数のゲートを連鎖させることで、
+ケース式のような分岐が実現できます。
 
 ## 使用法
 condition : action
+または
+condition ; action
+
+## 複数ゲートの連鎖
+cond1 : action1 : cond2 : action2 : default-action
 
 ## 例
-# カスタムワード内で使用
-[ 5 ] [ 5 ] = : [ 10 ] +
-'CONDITIONAL_ADD' DEF
+# 単純な条件分岐
+[ 5 ] [ 5 ] = : [ 'Equal' ] PRINT
 
-# 使用
-[ 5 ] CONDITIONAL_ADD  # 条件が真なので10が加算される"#.to_string(),
+# 複数条件の連鎖（ケース式）
+[ 0 ] = : [ 'Zero' ] PRINT : [ 0 ] > : [ 'Positive' ] PRINT : [ 'Negative' ] PRINT
+
+# カスタムワード定義内で使用
+[ 0 ] = : [ 'Zero' ] PRINT
+[ 0 ] > : [ 'Positive' ] PRINT
+: [ 'Negative' ] PRINT
+'CHECK-NUM' DEF"#.to_string(),
+
+        "TIMES" => r#"# TIMES - カスタムワードの繰り返し実行
+
+## 説明
+指定したカスタムワードを指定回数だけ実行します。
+組み込みワードには使用できません。
+
+## 使用法
+'WORD_NAME' [ count ] TIMES
+
+## 例
+# カスタムワードを定義
+[ 'Hello' ] PRINT
+'GREET' DEF
+
+# 3回実行
+'GREET' [ 3 ] TIMES
+
+# WAITと組み合わせる
+'GREET' [ 3 ] TIMES [ 1000 ] WAIT  # 3回実行後、1秒待つ
+
+## 注意
+- カスタムワードのみが対象です
+- ワード名は文字列（'または"）で囲みます
+- 回数は [ ] で囲んだ整数です"#.to_string(),
+
+        "WAIT" => r#"# WAIT - カスタムワードの遅延実行
+
+## 説明
+指定したカスタムワードを指定時間待機してから実行します。
+組み込みワードには使用できません。
+
+## 使用法
+'WORD_NAME' [ milliseconds ] WAIT
+
+## 例
+# カスタムワードを定義
+[ 'Delayed message' ] PRINT
+'MSG' DEF
+
+# 2秒後に実行
+'MSG' [ 2000 ] WAIT
+
+# TIMESと組み合わせる
+'MSG' [ 1000 ] WAIT [ 3 ] TIMES  # 1秒待機後、3回実行
+
+## 注意
+- カスタムワードのみが対象です
+- ワード名は文字列（'または"）で囲みます
+- 待機時間はミリ秒単位です
+- 1000ms = 1秒"#.to_string(),
 
         // === 入出力 ===
         "PRINT" => r#"# PRINT - 値の出力
@@ -415,25 +481,36 @@ condition : action
 
 ## 説明
 新しいカスタムワードを定義します。
+スタックからワード名と定義を取得します。
 
-## 使用法
-body 'NAME' DEF
+## 使用法（スタック経由）
+: body ; 'NAME' DEF
 または
-body 'NAME' 'DESCRIPTION' DEF
+: body ; 'NAME' 'DESCRIPTION' DEF
+
+## 使用法（複数行記法）
+body-line1
+body-line2
+'NAME' DEF
+
+または
+
+body-line1
+body-line2
+'NAME' 'DESCRIPTION' DEF
 
 ## 例
 # 基本的な定義
-[ 1 ] [ 2 ] +
-'ADD_ONE_TWO' DEF
+[ 'Hello' ] PRINT
+'GREET' DEF
 
 # 説明付きの定義
-[ DUP ] [ * ]
-'SQUARE' '数を二乗する' DEF
+[ 1 ] [ 2 ] +
+'ADD_ONE_TWO' '1と2を足す' DEF
 
-# 複数行の定義
-[ 10 ] [ > ] : [ 'Large' ] PRINT
-[ 10 ] [ <= ] : [ 'Small' ] PRINT
-'SIZE_CHECK' '10と比較してサイズをチェック' DEF"#.to_string(),
+# 条件分岐を含む定義
+[ 10 ] > : [ 'Large' ] PRINT : [ 'Small' ] PRINT
+'SIZE_CHECK' DEF"#.to_string(),
 
         "DEL" => r#"# DEL - カスタムワードの削除
 
@@ -442,19 +519,26 @@ body 'NAME' 'DESCRIPTION' DEF
 組み込みワードは削除できません。
 
 ## 使用法
-'NAME' DEL
+'WORD_NAME' DEL
+または
+"WORD_NAME" DEL
 
 ## 例
-'MY_WORD' DEL"#.to_string(),
+'MY_WORD' DEL
+"ANOTHER_WORD" DEL"#.to_string(),
 
         "?" => r#"# ? - ワード定義の表示
 
 ## 説明
-カスタムワードの場合：定義時のソースコードをエディタに表示
+ワードの定義や詳細情報をエディタに表示します。
+
+カスタムワードの場合：定義時のソースコードを表示
 組み込みワードの場合：詳細説明と使用例を表示
 
 ## 使用法
 'WORD_NAME' ?
+または
+"WORD_NAME" ?
 
 ## 例
 # カスタムワードの定義を確認
@@ -463,6 +547,7 @@ body 'NAME' 'DESCRIPTION' DEF
 # 組み込みワードの使い方を確認
 'GET' ?
 '+' ?
+'TIMES' ?
 '?' ?  # このヘルプを表示"#.to_string(),
 
         "RESET" => r#"# RESET - システムのリセット
