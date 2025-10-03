@@ -422,584 +422,584 @@ private showStackDifference(expected: Value[], actual: Value[]): void {
     }
     
     private getTestCases(): TestCase[] {
-        return [
-            // === 基本データ型 ===
-            {
-                name: "整数リテラル",
-                code: "[ 42 ]",
-                expectedStack: [this.createVector([this.createNumber('42')])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "負の整数",
-                code: "[ -15 ]",
-                expectedStack: [this.createVector([this.createNumber('-15')])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "小数",
-                code: "[ 3.14 ]",
-                expectedStack: [this.createVector([this.createNumber('157', '50')])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "分数",
-                code: "[ 3/4 ]",
-                expectedStack: [this.createVector([this.createNumber('3', '4')])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "文字列リテラル",
-                code: "[ 'Hello World' ]",
-                expectedStack: [this.createVector([this.createString('Hello World')])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "真偽値true",
-                code: "[ TRUE ]",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "真偽値false",
-                code: "[ FALSE ]",
-                expectedStack: [this.createVector([this.createBoolean(false)])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "Nil値",
-                code: "[ NIL ]",
-                expectedStack: [this.createVector([this.createNil()])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "空のベクトル",
-                code: "[ ]",
-                expectedStack: [this.createVector([])],
-                category: "Basic Data Types"
-            },
-            {
-                name: "複数要素のベクトル",
-                code: "[ 1 2 3 ]",
-                expectedStack: [this.createVector([
-                    this.createNumber('1'),
-                    this.createNumber('2'),
-                    this.createNumber('3')
-                ])],
-                category: "Basic Data Types"
-            },
+    return [
+        // === 基本データ型 ===
+        {
+            name: "整数リテラル",
+            code: "[ 42 ]",
+            expectedStack: [this.createVector([this.createNumber('42')])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "負の整数",
+            code: "[ -15 ]",
+            expectedStack: [this.createVector([this.createNumber('-15')])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "小数",
+            code: "[ 3.14 ]",
+            expectedStack: [this.createVector([this.createNumber('157', '50')])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "分数",
+            code: "[ 3/4 ]",
+            expectedStack: [this.createVector([this.createNumber('3', '4')])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "文字列リテラル",
+            code: "[ 'Hello World' ]",
+            expectedStack: [this.createVector([this.createString('Hello World')])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "真偽値true",
+            code: "[ TRUE ]",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "真偽値false",
+            code: "[ FALSE ]",
+            expectedStack: [this.createVector([this.createBoolean(false)])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "Nil値",
+            code: "[ NIL ]",
+            expectedStack: [this.createVector([this.createNil()])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "空のベクトル",
+            code: "[ ]",
+            expectedStack: [this.createVector([])],
+            category: "Basic Data Types"
+        },
+        {
+            name: "複数要素のベクトル",
+            code: "[ 1 2 3 ]",
+            expectedStack: [this.createVector([
+                this.createNumber('1'),
+                this.createNumber('2'),
+                this.createNumber('3')
+            ])],
+            category: "Basic Data Types"
+        },
 
-            // === 算術演算 ===
-            {
-                name: "整数の加算",
-                code: "[ 5 ] [ 3 ] +",
-                expectedStack: [this.createVector([this.createNumber('8')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "整数の減算",
-                code: "[ 10 ] [ 3 ] -",
-                expectedStack: [this.createVector([this.createNumber('7')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "整数の乗算",
-                code: "[ 4 ] [ 7 ] *",
-                expectedStack: [this.createVector([this.createNumber('28')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "整数の除算",
-                code: "[ 15 ] [ 3 ] /",
-                expectedStack: [this.createVector([this.createNumber('5')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "分数の加算",
-                code: "[ 1/2 ] [ 1/3 ] +",
-                expectedStack: [this.createVector([this.createNumber('5', '6')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "分数の減算",
-                code: "[ 3/4 ] [ 1/4 ] -",
-                expectedStack: [this.createVector([this.createNumber('1', '2')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "分数の乗算",
-                code: "[ 2/3 ] [ 3/4 ] *",
-                expectedStack: [this.createVector([this.createNumber('1', '2')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "分数の除算",
-                code: "[ 2/3 ] [ 1/2 ] /",
-                expectedStack: [this.createVector([this.createNumber('4', '3')])],
-                category: "Arithmetic"
-            },
+        // === 算術演算 ===
+        {
+            name: "整数の加算",
+            code: "[ 5 ] [ 3 ] +",
+            expectedStack: [this.createVector([this.createNumber('8')])],
+            category: "Arithmetic"
+        },
+        {
+            name: "整数の減算",
+            code: "[ 10 ] [ 3 ] -",
+            expectedStack: [this.createVector([this.createNumber('7')])],
+            category: "Arithmetic"
+        },
+        {
+            name: "整数の乗算",
+            code: "[ 4 ] [ 7 ] *",
+            expectedStack: [this.createVector([this.createNumber('28')])],
+            category: "Arithmetic"
+        },
+        {
+            name: "整数の除算",
+            code: "[ 15 ] [ 3 ] /",
+            expectedStack: [this.createVector([this.createNumber('5')])],
+            category: "Arithmetic"
+        },
+        {
+            name: "分数の加算",
+            code: "[ 1/2 ] [ 1/3 ] +",
+            expectedStack: [this.createVector([this.createNumber('5', '6')])],
+            category: "Arithmetic"
+        },
+        {
+            name: "分数の減算",
+            code: "[ 3/4 ] [ 1/4 ] -",
+            expectedStack: [this.createVector([this.createNumber('1', '2')])],
+            category: "Arithmetic"
+        },
+        {
+            name: "分数の乗算",
+            code: "[ 2/3 ] [ 3/4 ] *",
+            expectedStack: [this.createVector([this.createNumber('1', '2')])],
+            category: "Arithmetic"
+        },
+        {
+            name: "分数の除算",
+            code: "[ 2/3 ] [ 1/2 ] /",
+            expectedStack: [this.createVector([this.createNumber('4', '3')])],
+            category: "Arithmetic"
+        },
 
-            // === 比較演算 ===
-            {
-                name: "等価判定（真）",
-                code: "[ 5 ] [ 5 ] =",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Comparison"
-            },
-            {
-                name: "等価判定（偽）",
-                code: "[ 5 ] [ 3 ] =",
-                expectedStack: [this.createVector([this.createBoolean(false)])],
-                category: "Comparison"
-            },
-            {
-                name: "より小さい（真）",
-                code: "[ 3 ] [ 5 ] <",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Comparison"
-            },
-            {
-                name: "より小さい（偽）",
-                code: "[ 5 ] [ 3 ] <",
-                expectedStack: [this.createVector([this.createBoolean(false)])],
-                category: "Comparison"
-            },
-            {
-                name: "以下（真）",
-                code: "[ 5 ] [ 5 ] <=",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Comparison"
-            },
-            {
-                name: "より大きい（真）",
-                code: "[ 7 ] [ 3 ] >",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Comparison"
-            },
-            {
-                name: "以上（真）",
-                code: "[ 5 ] [ 5 ] >=",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Comparison"
-            },
+        // === 比較演算 ===
+        {
+            name: "等価判定（真）",
+            code: "[ 5 ] [ 5 ] =",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Comparison"
+        },
+        {
+            name: "等価判定（偽）",
+            code: "[ 5 ] [ 3 ] =",
+            expectedStack: [this.createVector([this.createBoolean(false)])],
+            category: "Comparison"
+        },
+        {
+            name: "より小さい（真）",
+            code: "[ 3 ] [ 5 ] <",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Comparison"
+        },
+        {
+            name: "より小さい（偽）",
+            code: "[ 5 ] [ 3 ] <",
+            expectedStack: [this.createVector([this.createBoolean(false)])],
+            category: "Comparison"
+        },
+        {
+            name: "以下（真）",
+            code: "[ 5 ] [ 5 ] <=",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Comparison"
+        },
+        {
+            name: "より大きい（真）",
+            code: "[ 7 ] [ 3 ] >",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Comparison"
+        },
+        {
+            name: "以上（真）",
+            code: "[ 5 ] [ 5 ] >=",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Comparison"
+        },
 
-            // === 論理演算 ===
-            {
-                name: "論理AND（真）",
-                code: "[ TRUE ] [ TRUE ] AND",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Logic"
-            },
-            {
-                name: "論理AND（偽）",
-                code: "[ TRUE ] [ FALSE ] AND",
-                expectedStack: [this.createVector([this.createBoolean(false)])],
-                category: "Logic"
-            },
-            {
-                name: "論理OR（真）",
-                code: "[ TRUE ] [ FALSE ] OR",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Logic"
-            },
-            {
-                name: "論理OR（偽）",
-                code: "[ FALSE ] [ FALSE ] OR",
-                expectedStack: [this.createVector([this.createBoolean(false)])],
-                category: "Logic"
-            },
-            {
-                name: "論理NOT（真→偽）",
-                code: "[ TRUE ] NOT",
-                expectedStack: [this.createVector([this.createBoolean(false)])],
-                category: "Logic"
-            },
-            {
-                name: "論理NOT（偽→真）",
-                code: "[ FALSE ] NOT",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Logic"
-            },
+        // === 論理演算 ===
+        {
+            name: "論理AND（真）",
+            code: "[ TRUE ] [ TRUE ] AND",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Logic"
+        },
+        {
+            name: "論理AND（偽）",
+            code: "[ TRUE ] [ FALSE ] AND",
+            expectedStack: [this.createVector([this.createBoolean(false)])],
+            category: "Logic"
+        },
+        {
+            name: "論理OR（真）",
+            code: "[ TRUE ] [ FALSE ] OR",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Logic"
+        },
+        {
+            name: "論理OR（偽）",
+            code: "[ FALSE ] [ FALSE ] OR",
+            expectedStack: [this.createVector([this.createBoolean(false)])],
+            category: "Logic"
+        },
+        {
+            name: "論理NOT（真→偽）",
+            code: "[ TRUE ] NOT",
+            expectedStack: [this.createVector([this.createBoolean(false)])],
+            category: "Logic"
+        },
+        {
+            name: "論理NOT（偽→真）",
+            code: "[ FALSE ] NOT",
+            expectedStack: [this.createVector([this.createBoolean(true)])],
+            category: "Logic"
+        },
 
-            // === ベクトル操作 - 位置指定（0オリジン） ===
-            {
-                name: "GET - 正のインデックス",
-                code: "[ 10 20 30 ] [ 1 ] GET",
-                expectedStack: [this.createVector([this.createNumber('20')])],
-                category: "Vector Operations"
-            },
-            {
-                name: "GET - 負のインデックス",
-                code: "[ 10 20 30 ] [ -1 ] GET",
-                expectedStack: [this.createVector([this.createNumber('30')])],
-                category: "Vector Operations"
-            },
-            {
-                name: "INSERT - 要素挿入",
-                code: "[ 1 3 ] [ 1 ] [ 2 ] INSERT",
-                expectedStack: [this.createVector([
-                    this.createNumber('1'),
-                    this.createNumber('2'),
-                    this.createNumber('3')
-                ])],
-                category: "Vector Operations"
-            },
-            {
-                name: "REPLACE - 要素置換",
-                code: "[ 1 2 3 ] [ 1 ] [ 5 ] REPLACE",
-                expectedStack: [this.createVector([
-                    this.createNumber('1'),
-                    this.createNumber('5'),
-                    this.createNumber('3')
-                ])],
-                category: "Vector Operations"
-            },
-            {
-                name: "REMOVE - 要素削除",
-                code: "[ 1 2 3 ] [ 1 ] REMOVE",
-                expectedStack: [this.createVector([
-                    this.createNumber('1'),
-                    this.createNumber('3')
-                ])],
-                category: "Vector Operations"
-            },
+        // === ベクトル操作 - 位置指定（0オリジン） ===
+        {
+            name: "GET - 正のインデックス",
+            code: "[ 10 20 30 ] [ 1 ] GET",
+            expectedStack: [this.createVector([this.createNumber('20')])],
+            category: "Vector Operations"
+        },
+        {
+            name: "GET - 負のインデックス",
+            code: "[ 10 20 30 ] [ -1 ] GET",
+            expectedStack: [this.createVector([this.createNumber('30')])],
+            category: "Vector Operations"
+        },
+        {
+            name: "INSERT - 要素挿入",
+            code: "[ 1 3 ] [ 1 ] [ 2 ] INSERT",
+            expectedStack: [this.createVector([
+                this.createNumber('1'),
+                this.createNumber('2'),
+                this.createNumber('3')
+            ])],
+            category: "Vector Operations"
+        },
+        {
+            name: "REPLACE - 要素置換",
+            code: "[ 1 2 3 ] [ 1 ] [ 5 ] REPLACE",
+            expectedStack: [this.createVector([
+                this.createNumber('1'),
+                this.createNumber('5'),
+                this.createNumber('3')
+            ])],
+            category: "Vector Operations"
+        },
+        {
+            name: "REMOVE - 要素削除",
+            code: "[ 1 2 3 ] [ 1 ] REMOVE",
+            expectedStack: [this.createVector([
+                this.createNumber('1'),
+                this.createNumber('3')
+            ])],
+            category: "Vector Operations"
+        },
 
-            // === ベクトル操作 - 量指定（1オリジン） ===
-            {
-                name: "LENGTH - 長さ取得",
-                code: "[ 1 2 3 4 5 ] LENGTH",
-                expectedStack: [this.createVector([this.createNumber('5')])],
-                category: "Vector Operations"
-            },
-            {
-                name: "TAKE - 先頭から取得",
-                code: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
-                expectedStack: [this.createVector([
+        // === ベクトル操作 - 量指定（1オリジン） ===
+        {
+            name: "LENGTH - 長さ取得",
+            code: "[ 1 2 3 4 5 ] LENGTH",
+            expectedStack: [this.createVector([this.createNumber('5')])],
+            category: "Vector Operations"
+        },
+        {
+            name: "TAKE - 先頭から取得",
+            code: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
+            expectedStack: [this.createVector([
+                this.createNumber('1'),
+                this.createNumber('2'),
+                this.createNumber('3')
+            ])],
+            category: "Vector Operations"
+        },
+        {
+            name: "TAKE - 負の数で末尾から",
+            code: "[ 1 2 3 4 5 ] [ -2 ] TAKE",
+            expectedStack: [this.createVector([
+                this.createNumber('4'),
+                this.createNumber('5')
+            ])],
+            category: "Vector Operations"
+        },
+        {
+            name: "SPLIT - 分割",
+            code: "[ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] [ 1 ] SPLIT",
+            expectedStack: [
+                this.createVector([
                     this.createNumber('1'),
-                    this.createNumber('2'),
-                    this.createNumber('3')
-                ])],
-                category: "Vector Operations"
-            },
-            {
-                name: "TAKE - 負の数で末尾から",
-                code: "[ 1 2 3 4 5 ] [ -2 ] TAKE",
-                expectedStack: [this.createVector([
+                    this.createNumber('2')
+                ]),
+                this.createVector([
+                    this.createNumber('3'),
                     this.createNumber('4'),
                     this.createNumber('5')
-                ])],
-                category: "Vector Operations"
-            },
-            {
-                name: "SPLIT - 分割",
-                code: "[ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] [ 1 ] SPLIT",
-                expectedStack: [
-                    this.createVector([
-                        this.createNumber('1'),
-                        this.createNumber('2')
-                    ]),
-                    this.createVector([
-                        this.createNumber('3'),
-                        this.createNumber('4'),
-                        this.createNumber('5')
-                    ]),
-                    this.createVector([
-                        this.createNumber('6')
-                    ])
-                ],
-                category: "Vector Operations"
-            },
+                ]),
+                this.createVector([
+                    this.createNumber('6')
+                ])
+            ],
+            category: "Vector Operations"
+        },
 
-            // === ベクトル構造操作 ===
-            {
-                name: "CONCAT - 連結",
-                code: "[ 1 2 ] [ 3 4 ] CONCAT",
-                expectedStack: [this.createVector([
-                    this.createNumber('1'),
-                    this.createNumber('2'),
-                    this.createNumber('3'),
-                    this.createNumber('4')
-                ])],
-                category: "Vector Operations"
-            },
-            {
-                name: "REVERSE - 反転",
-                code: "[ 1 2 3 4 ] REVERSE",
-                expectedStack: [this.createVector([
-                    this.createNumber('4'),
-                    this.createNumber('3'),
-                    this.createNumber('2'),
-                    this.createNumber('1')
-                ])],
-                category: "Vector Operations"
-            },
+        // === ベクトル構造操作 ===
+        {
+            name: "CONCAT - 連結",
+            code: "[ 1 2 ] [ 3 4 ] CONCAT",
+            expectedStack: [this.createVector([
+                this.createNumber('1'),
+                this.createNumber('2'),
+                this.createNumber('3'),
+                this.createNumber('4')
+            ])],
+            category: "Vector Operations"
+        },
+        {
+            name: "REVERSE - 反転",
+            code: "[ 1 2 3 4 ] REVERSE",
+            expectedStack: [this.createVector([
+                this.createNumber('4'),
+                this.createNumber('3'),
+                this.createNumber('2'),
+                this.createNumber('1')
+            ])],
+            category: "Vector Operations"
+        },
 
-            // === 条件分岐（:） ===
-            {
-                name: ": - 単純な条件分岐（真）",
-                code: "[ 5 ] [ 5 ] = : [ 10 ] [ 5 ] +",
-                expectedStack: [this.createVector([this.createNumber('15')])],
-                category: "Conditional Branching"
-            },
-            {
-                name: ": - 単純な条件分岐（偽）",
-                code: "[ 5 ] [ 3 ] = : [ 10 ] [ 5 ] +",
-                expectedStack: [this.createVector([this.createBoolean(false)])],
-                category: "Conditional Branching"
-            },
-            {
-                name: ": - 条件分岐の連鎖（正の数）",
-                code: "[ 5 ] [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]",
-                expectedStack: [this.createVector([this.createNumber('1')])],
-                category: "Conditional Branching"
-            },
-            {
-                name: ": - 条件分岐の連鎖（ゼロ）",
-                code: "[ 0 ] [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]",
-                expectedStack: [this.createVector([this.createNumber('0')])],
-                category: "Conditional Branching"
-            },
-            {
-               name: ": - 条件分岐の連鎖（負の数）",
-               code: "[ -5 ]\n[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]",
-               expectedStack: [this.createVector([this.createNumber('-1')])],
-               category: "Conditional Branching"
-            },
-            {
-                name: "; - セミコロンでの条件分岐",
-                code: "[ 5 ] [ 5 ] = ; [ 100 ]",
-                expectedStack: [this.createVector([this.createNumber('100')])],
-                category: "Conditional Branching"
-            },
+        // === 条件分岐（:） ===
+        {
+            name: ": - 単純な条件分岐（真）",
+            code: "[ 5 ] [ 5 ] = : [ 10 ] [ 5 ] +",
+            expectedStack: [this.createVector([this.createNumber('15')])],
+            category: "Conditional Branching"
+        },
+        {
+            name: ": - 単純な条件分岐（偽）",
+            code: "[ 5 ] [ 3 ] = : [ 10 ] [ 5 ] +",
+            expectedStack: [this.createVector([this.createBoolean(false)])],
+            category: "Conditional Branching"
+        },
+        {
+            name: ": - 条件分岐の連鎖（正の数）",
+            code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 5 ] SIGN",
+            expectedStack: [this.createVector([this.createNumber('1')])],
+            category: "Conditional Branching"
+        },
+        {
+            name: ": - 条件分岐の連鎖（ゼロ）",
+            code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 0 ] SIGN",
+            expectedStack: [this.createVector([this.createNumber('0')])],
+            category: "Conditional Branching"
+        },
+        {
+            name: ": - 条件分岐の連鎖（負の数）",
+            code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ -5 ] SIGN",
+            expectedStack: [this.createVector([this.createNumber('-1')])],
+            category: "Conditional Branching"
+        },
+        {
+            name: "; - セミコロンでの条件分岐",
+            code: "[ 5 ] [ 5 ] = ; [ 100 ]",
+            expectedStack: [this.createVector([this.createNumber('100')])],
+            category: "Conditional Branching"
+        },
 
-            // === カスタムワード定義 ===
-            {
-                name: "DEF - 最小の定義",
-                code: "[ 42 ]\n'ANSWER' DEF",
-                expectedStack: [],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 定義したワードの実行",
-                code: "[ 42 ]\n'ANSWER' DEF\nANSWER",
-                expectedStack: [this.createVector([this.createNumber('42')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 算術演算の定義と実行",
-                code: "[ 1 ] [ 2 ] +\n'ADD12' DEF\nADD12",
-                expectedStack: [this.createVector([this.createNumber('3')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 説明付き定義と実行",
-                code: "[ 2 ] [ 2 ] *\n'SQUARE2' '2を二乗する' DEF\nSQUARE2",
-                expectedStack: [this.createVector([this.createNumber('4')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 複数行の定義と実行",
-                code: "[ 1 ] [ 2 ] +\n[ 3 ] +\n'ADD123' DEF\nADD123",
-                expectedStack: [this.createVector([this.createNumber('6')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 条件付き定義（真の場合）",
-                code: "[ 0 ] > : [ 100 ]\n'POS_TO_100' DEF\n[ 5 ] POS_TO_100",
-                expectedStack: [this.createVector([this.createNumber('100')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 条件付き定義（偽の場合）",
-                code: "[ 0 ] > : [ 100 ]\n'POS_TO_100' DEF\n[ -5 ] POS_TO_100",
-                expectedStack: [this.createVector([this.createNumber('-5')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 複数条件の連鎖定義（正）",
-                code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 5 ] SIGN",
-                expectedStack: [this.createVector([this.createNumber('1')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 複数条件の連鎖定義（ゼロ）",
-                code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 0 ] SIGN",
-                expectedStack: [this.createVector([this.createNumber('0')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - 複数条件の連鎖定義（負）",
-                code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ -3 ] SIGN",
-                expectedStack: [this.createVector([this.createNumber('-1')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - デフォルト節のみ",
-                code: ": [ 999 ]\n'ALWAYS_999' DEF\n[ 123 ] ALWAYS_999",
-                expectedStack: [this.createVector([this.createNumber('999')])],
-                category: "Custom Word Definition"
-            },
-            {
-                name: "DEF - ワードの再利用",
-                code: "[ 2 ] *\n'DOUBLE' DEF\n[ 3 ]\nDOUBLE\nDOUBLE",
-                expectedStack: [this.createVector([this.createNumber('12')])],
-                category: "Custom Word Definition"
-            },
+        // === カスタムワード定義 ===
+        {
+            name: "DEF - 最小の定義",
+            code: "[ 42 ]\n'ANSWER' DEF",
+            expectedStack: [],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 定義したワードの実行",
+            code: "[ 42 ]\n'ANSWER' DEF\nANSWER",
+            expectedStack: [this.createVector([this.createNumber('42')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 算術演算の定義と実行",
+            code: "[ 1 ] [ 2 ] +\n'ADD12' DEF\nADD12",
+            expectedStack: [this.createVector([this.createNumber('3')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 説明付き定義と実行",
+            code: "[ 2 ] [ 2 ] *\n'SQUARE2' '2を二乗する' DEF\nSQUARE2",
+            expectedStack: [this.createVector([this.createNumber('4')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 複数行の定義と実行",
+            code: "[ 1 ] [ 2 ] +\n[ 3 ] +\n'ADD123' DEF\nADD123",
+            expectedStack: [this.createVector([this.createNumber('6')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 条件付き定義（真の場合）",
+            code: "[ 0 ] > : [ 100 ]\n'POS_TO_100' DEF\n[ 5 ] POS_TO_100",
+            expectedStack: [this.createVector([this.createNumber('100')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 条件付き定義（偽の場合）",
+            code: "[ 0 ] > : [ 100 ]\n'POS_TO_100' DEF\n[ -5 ] POS_TO_100",
+            expectedStack: [this.createVector([this.createNumber('-5')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 複数条件の連鎖定義（正）",
+            code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 5 ] SIGN",
+            expectedStack: [this.createVector([this.createNumber('1')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 複数条件の連鎖定義（ゼロ）",
+            code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ 0 ] SIGN",
+            expectedStack: [this.createVector([this.createNumber('0')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - 複数条件の連鎖定義（負）",
+            code: "[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]\n'SIGN' DEF\n[ -3 ] SIGN",
+            expectedStack: [this.createVector([this.createNumber('-1')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - デフォルト節のみ",
+            code: ": [ 999 ]\n'ALWAYS_999' DEF\n[ 123 ] ALWAYS_999",
+            expectedStack: [this.createVector([this.createNumber('999')])],
+            category: "Custom Word Definition"
+        },
+        {
+            name: "DEF - ワードの再利用",
+            code: "[ 2 ] *\n'DOUBLE' DEF\n[ 3 ]\nDOUBLE\nDOUBLE",
+            expectedStack: [this.createVector([this.createNumber('12')])],
+            category: "Custom Word Definition"
+        },
 
-            // === TIMES/WAIT制御構造 ===
-            {
-                name: "TIMES - 基本的な繰り返し",
-                code: "[ 1 ] [ 2 ] +\n'ADD12' DEF\n'ADD12' [ 3 ] TIMES",
-                expectedStack: [
-                    this.createVector([this.createNumber('3')]),
-                    this.createVector([this.createNumber('3')]),
-                    this.createVector([this.createNumber('3')])
-                ],
-                category: "Control Flow - TIMES/WAIT"
-            },
-            {
-                name: "TIMES - 1回の実行",
-                code: "[ 5 ] [ 5 ] *\n'SQUARE5' DEF\n'SQUARE5' [ 1 ] TIMES",
-                expectedStack: [this.createVector([this.createNumber('25')])],
-                category: "Control Flow - TIMES/WAIT"
-            },
-            {
-                name: "WAIT - 基本的な遅延実行",
-                code: "[ 100 ]\n'HUNDRED' DEF\n'HUNDRED' [ 10 ] WAIT",
-                expectedStack: [this.createVector([this.createNumber('100')])],
-                category: "Control Flow - TIMES/WAIT"
-            },
-            {
-                name: "TIMES - 組み込みワードでエラー",
-                code: "'PRINT' [ 3 ] TIMES",
-                expectError: true,
-                category: "Control Flow - TIMES/WAIT"
-            },
-            {
-                name: "WAIT - 組み込みワードでエラー",
-                code: "'PRINT' [ 100 ] WAIT",
-                expectError: true,
-                category: "Control Flow - TIMES/WAIT"
-            },
+        // === TIMES/WAIT制御構造 ===
+        {
+            name: "TIMES - 基本的な繰り返し",
+            code: "[ 1 ] [ 2 ] +\n'ADD12' DEF\n'ADD12' [ 3 ] TIMES",
+            expectedStack: [
+                this.createVector([this.createNumber('3')]),
+                this.createVector([this.createNumber('3')]),
+                this.createVector([this.createNumber('3')])
+            ],
+            category: "Control Flow - TIMES/WAIT"
+        },
+        {
+            name: "TIMES - 1回の実行",
+            code: "[ 5 ] [ 5 ] *\n'SQUARE5' DEF\n'SQUARE5' [ 1 ] TIMES",
+            expectedStack: [this.createVector([this.createNumber('25')])],
+            category: "Control Flow - TIMES/WAIT"
+        },
+        {
+            name: "WAIT - 基本的な遅延実行",
+            code: "[ 100 ]\n'HUNDRED' DEF\n'HUNDRED' [ 10 ] WAIT",
+            expectedStack: [this.createVector([this.createNumber('100')])],
+            category: "Control Flow - TIMES/WAIT"
+        },
+        {
+            name: "TIMES - 組み込みワードでエラー",
+            code: "'PRINT' [ 3 ] TIMES",
+            expectError: true,
+            category: "Control Flow - TIMES/WAIT"
+        },
+        {
+            name: "WAIT - 組み込みワードでエラー",
+            code: "'PRINT' [ 100 ] WAIT",
+            expectError: true,
+            category: "Control Flow - TIMES/WAIT"
+        },
 
-            // === ワード管理（DEL） ===
-            {
-                name: "DEL - ワードの削除",
-                code: "[ 42 ]\n'TEMP' DEF\n'TEMP' DEL",
-                expectedStack: [],
-                category: "Word Management"
-            },
+        // === ワード管理（DEL） ===
+        {
+            name: "DEL - ワードの削除",
+            code: "[ 42 ]\n'TEMP' DEF\n'TEMP' DEL",
+            expectedStack: [],
+            category: "Word Management"
+        },
 
-            // === BigInt対応 ===
-            {
-                name: "巨大整数作成",
-                code: "[ 10000000000000000000000000000000000000000000000000000 ]",
-                expectedStack: [this.createVector([
-                    this.createNumber('10000000000000000000000000000000000000000000000000000')
-                ])],
-                category: "BigInt"
-            },
-            {
-                name: "巨大整数の加算",
-                code: "[ 9007199254740991 ] [ 9007199254740991 ] +",
-                expectedStack: [this.createVector([
-                    this.createNumber('18014398509481982')
-                ])],
-                category: "BigInt"
-            },
-            {
-                name: "巨大分数の計算",
-                code: "[ 999999999999999999999/1000000000000000000000 ] [ 1/1000000000000000000000 ] +",
-                expectedStack: [this.createVector([
-                    this.createNumber('1', '1')
-                ])],
-                category: "BigInt"
-            },
+        // === BigInt対応 ===
+        {
+            name: "巨大整数作成",
+            code: "[ 10000000000000000000000000000000000000000000000000000 ]",
+            expectedStack: [this.createVector([
+                this.createNumber('10000000000000000000000000000000000000000000000000000')
+            ])],
+            category: "BigInt"
+        },
+        {
+            name: "巨大整数の加算",
+            code: "[ 9007199254740991 ] [ 9007199254740991 ] +",
+            expectedStack: [this.createVector([
+                this.createNumber('18014398509481982')
+            ])],
+            category: "BigInt"
+        },
+        {
+            name: "巨大分数の計算",
+            code: "[ 999999999999999999999/1000000000000000000000 ] [ 1/1000000000000000000000 ] +",
+            expectedStack: [this.createVector([
+                this.createNumber('1', '1')
+            ])],
+            category: "BigInt"
+        },
 
-            // === 入出力 ===
-            {
-                name: "PRINT - 数値出力",
-                code: "[ 42 ] PRINT",
-                expectedOutput: "[42] ",
-                category: "I/O"
-            },
-            {
-                name: "PRINT - 文字列出力",
-                code: "[ 'Hello' ] PRINT",
-                expectedOutput: "['Hello'] ",
-                category: "I/O"
-            },
+        // === 入出力 ===
+        {
+            name: "PRINT - 数値出力",
+            code: "[ 42 ] PRINT",
+            expectedOutput: "[42] ",
+            category: "I/O"
+        },
+        {
+            name: "PRINT - 文字列出力",
+            code: "[ 'Hello' ] PRINT",
+            expectedOutput: "['Hello'] ",
+            category: "I/O"
+        },
 
-            // === 科学的記数法 ===
-            {
-                name: "科学的記数法 - 正の指数",
-                code: "[ 1.5e3 ]",
-                expectedStack: [this.createVector([this.createNumber('1500')])],
-                category: "Scientific Notation"
-            },
-            {
-                name: "科学的記数法 - 負の指数",
-                code: "[ 2.5e-2 ]",
-                expectedStack: [this.createVector([this.createNumber('1', '40')])],
-                category: "Scientific Notation"
-            },
+        // === 科学的記数法 ===
+        {
+            name: "科学的記数法 - 正の指数",
+            code: "[ 1.5e3 ]",
+            expectedStack: [this.createVector([this.createNumber('1500')])],
+            category: "Scientific Notation"
+        },
+        {
+            name: "科学的記数法 - 負の指数",
+            code: "[ 2.5e-2 ]",
+            expectedStack: [this.createVector([this.createNumber('1', '40')])],
+            category: "Scientific Notation"
+        },
 
-            // === 複雑な計算 ===
-            {
-                name: "連続計算",
-                code: "[ 2 ] [ 3 ] + [ 4 ] *",
-                expectedStack: [this.createVector([this.createNumber('20')])],
-                category: "Complex Calculations"
-            },
-            {
-                name: "ベクトルの算術連鎖",
-                code: "[ 1 ] [ 2 ] + [ 3 ] + [ 4 ] +",
-                expectedStack: [this.createVector([this.createNumber('10')])],
-                category: "Complex Calculations"
-            },
+        // === 複雑な計算 ===
+        {
+            name: "連続計算",
+            code: "[ 2 ] [ 3 ] + [ 4 ] *",
+            expectedStack: [this.createVector([this.createNumber('20')])],
+            category: "Complex Calculations"
+        },
+        {
+            name: "ベクトルの算術連鎖",
+            code: "[ 1 ] [ 2 ] + [ 3 ] + [ 4 ] +",
+            expectedStack: [this.createVector([this.createNumber('10')])],
+            category: "Complex Calculations"
+        },
 
-            // === ネストしたベクトル ===
-            {
-                name: "ネストしたベクトル",
-                code: "[ [ 1 2 ] [ 3 4 ] ]",
-                expectedStack: [this.createVector([
-                    this.createVector([this.createNumber('1'), this.createNumber('2')]),
-                    this.createVector([this.createNumber('3'), this.createNumber('4')])
-                ])],
-                category: "Nested Vectors"
-            },
+        // === ネストしたベクトル ===
+        {
+            name: "ネストしたベクトル",
+            code: "[ [ 1 2 ] [ 3 4 ] ]",
+            expectedStack: [this.createVector([
+                this.createVector([this.createNumber('1'), this.createNumber('2')]),
+                this.createVector([this.createNumber('3'), this.createNumber('4')])
+            ])],
+            category: "Nested Vectors"
+        },
 
-            // === エラーケース ===
-            {
-                name: "ゼロ除算エラー",
-                code: "[ 5 ] [ 0 ] /",
-                expectError: true,
-                category: "Error Cases"
-            },
-            {
-                name: "範囲外インデックス",
-                code: "[ 1 2 3 ] [ 10 ] GET",
-                expectError: true,
-                category: "Error Cases"
-            },
-            {
-                name: "空ベクトルへのアクセス",
-                code: "[ ] [ 0 ] GET",
-                expectError: true,
-                category: "Error Cases"
-            },
-            {
-                name: "スタック不足エラー",
-                code: "+",
-                expectError: true,
-                category: "Error Cases"
-            },
-            {
-                name: "未定義ワードのTIMES",
-                code: "'UNKNOWN' [ 3 ] TIMES",
-                expectError: true,
-                category: "Error Cases"
-            }
-        ];
-    }
+        // === エラーケース ===
+        {
+            name: "ゼロ除算エラー",
+            code: "[ 5 ] [ 0 ] /",
+            expectError: true,
+            category: "Error Cases"
+        },
+        {
+            name: "範囲外インデックス",
+            code: "[ 1 2 3 ] [ 10 ] GET",
+            expectError: true,
+            category: "Error Cases"
+        },
+        {
+            name: "空ベクトルへのアクセス",
+            code: "[ ] [ 0 ] GET",
+            expectError: true,
+            category: "Error Cases"
+        },
+        {
+            name: "スタック不足エラー",
+            code: "+",
+            expectError: true,
+            category: "Error Cases"
+        },
+        {
+            name: "未定義ワードのTIMES",
+            code: "'UNKNOWN' [ 3 ] TIMES",
+            expectError: true,
+            category: "Error Cases"
+        }
+    ];
+}
 }
