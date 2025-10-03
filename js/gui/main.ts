@@ -250,14 +250,20 @@ export class GUI {
     const code = this.editor.getValue();
     if (!code) return;
 
+    // RESETコマンドの特別処理
+    if (code.trim().toUpperCase() === 'RESET') {
+        await this.executeReset();
+        return;
+    }
+
     try {
         this.display.showInfo('Executing...', false);
         
         let result: ExecuteResult;
-        let usedWorker = false;  // 🆕 Workerを使用したかを追跡
+        let usedWorker = false;
         
         // DEFを含む場合はメインスレッドで実行（状態管理のため）
-        const shouldUseMainThread = code.includes(' DEF') || code.includes('DEL') || code.includes('RESET');
+        const shouldUseMainThread = code.includes(' DEF') || code.includes('DEL');
         
         if (this.workerInitialized && !shouldUseMainThread) {
             // Workerで実行する前に、メインスレッドのカスタムワードをWorkerに同期
@@ -274,14 +280,13 @@ export class GUI {
                 }
                 this.updateAllDisplays();
             });
-            usedWorker = true;  // 🆕
+            usedWorker = true;
         } else {
             // メインスレッドで実行
             result = await window.ajisaiInterpreter.execute(code) as ExecuteResult;
         }
 
-        // 🆕 Workerで実行し、かつエラーでない場合のみ状態を同期
-        // メインスレッド実行の場合は既に状態が更新されているため同期不要
+        // Workerで実行し、かつエラーでない場合のみ状態を同期
         if (usedWorker && result.status !== 'ERROR') {
             await this.updateInterpreterState(result);
         }
