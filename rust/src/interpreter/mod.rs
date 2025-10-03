@@ -209,30 +209,26 @@ async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()
             return Ok(());
         }
         
-        // 条件を評価（スタックトップの値を保持）
+        // 条件を評価
         let stack_before = self.stack.clone();
         self.execute_single_line_tokens(condition_segment).await?;
         
         if let Some(condition_result) = self.stack.pop() {
             if is_truthy(&condition_result) {
-                // 条件が真：次のセグメントを実行
+                // 条件が真：スタックを復元して次のセグメントを実行
+                self.stack = stack_before;
                 if i + 1 < segments.len() {
-                    // スタックを条件評価前に戻す
-                    self.stack = stack_before;
                     return self.execute_single_line_tokens(segments[i + 1]).await;
                 }
                 return Ok(());
             } else {
-                // 条件が偽：スタックを復元して次の条件へ
+                // 条件が偽：次の条件へ
                 self.stack = stack_before;
                 i += 2; // 条件とアクションをスキップ
                 
-                // 次のセグメントがない、または最後のセグメントの場合
+                // 次のセグメントがない場合、条件評価結果を残す
                 if i >= segments.len() {
-                    // 最後のセグメントが残っていればデフォルトとして実行
-                    if !segments.is_empty() && segments.len() % 2 == 1 {
-                        return self.execute_single_line_tokens(segments[segments.len() - 1]).await;
-                    }
+                    self.stack.push(condition_result);
                     return Ok(());
                 }
             }
@@ -306,52 +302,56 @@ async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()
     }
 
     #[async_recursion(?Send)]
-    async fn execute_word(&mut self, name: &str) -> Result<()> {
-        let def = {
-            self.dictionary.get(&name.to_uppercase()).cloned()
-                .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
-        };
+async fn execute_word(&mut self, name: &str) -> Result<()> {
+    let def = {
+        self.dictionary.get(&name.to_uppercase()).cloned()
+            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
+    };
 
-        if def.is_builtin {
-            return self.execute_builtin(name);
-        }
-
-        let has_conditional_lines = def.lines.iter().any(|line| !line.condition_tokens.is_empty());
-        
-        if has_conditional_lines {
-            let value_to_test = self.stack.last().cloned()
-                .ok_or(AjisaiError::StackUnderflow)?;
-            
-            let mut matched_line: Option<ExecutionLine> = None;
-            let dictionary_clone = self.dictionary.clone();
-
-            for line in &def.lines {
-                if line.condition_tokens.is_empty() {
-                    matched_line = Some(line.clone());
-                    break;
-                }
-                
-                if evaluate_condition(&dictionary_clone, &line.condition_tokens, &value_to_test).await? {
-                    matched_line = Some(line.clone());
-                    break;
-                }
-            }
-            
-            if let Some(line) = matched_line {
-                let _ = self.stack.pop().unwrap();
-                self.stack.push(value_to_test);
-                self.execute_line(&line).await?;
-            }
-        } else {
-            let mut i = 0;
-            while i < def.lines.len() {
-                self.execute_line(&def.lines[i]).await?;
-                i += 1;
-            }
-        }
-        
-        Ok(())
+    if def.is_builtin {
+        return self.execute_builtin(name);
     }
+
+    let has_conditional_lines = def.lines.iter().any(|line| !line.condition_tokens.is_empty());
+    
+    if has_conditional_lines {
+        let value_to_test = self.stack.pop()
+            .ok_or(AjisaiError::StackUnderflow)?;
+        
+        let mut matched_line: Option<ExecutionLine> = None;
+        let dictionary_clone = self.dictionary.clone();
+
+        for line in &def.lines {
+            if line.condition_tokens.is_empty() {
+                // デフォルト節
+                matched_line = Some(line.clone());
+                break;
+            }
+            
+            if evaluate_condition(&dictionary_clone, &line.condition_tokens, &value_to_test).await? {
+                matched_line = Some(line.clone());
+                break;
+            }
+        }
+        
+        if let Some(line) = matched_line {
+            // マッチした行のアクションを実行（元の値は消費済み）
+            self.execute_line(&line).await?;
+        } else {
+            // どの条件にもマッチしなかった場合、元の値を戻す
+            self.stack.push(value_to_test);
+        }
+    } else {
+        // 条件なしのワード
+        let mut i = 0;
+        while i < def.lines.len() {
+            self.execute_line(&def.lines[i]).await?;
+            i += 1;
+        }
+    }
+    
+    Ok(())
+}
 
     #[async_recursion(?Send)]
     async fn execute_line(&mut self, line: &ExecutionLine) -> Result<()> {
