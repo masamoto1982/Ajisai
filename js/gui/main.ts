@@ -247,90 +247,92 @@ export class GUI {
     }
 
     private async runCode(): Promise<void> {
-    const code = this.editor.getValue();
-    if (!code) return;
+        const code = this.editor.getValue();
+        if (!code) return;
 
-    // RESETコマンドの特別処理
-    if (code.trim().toUpperCase() === 'RESET') {
-        await this.executeReset();
-        return;
-    }
+        // RESETコマンドの特別処理
+        if (code.trim().toUpperCase() === 'RESET') {
+            await this.executeReset();
+            return;
+        }
 
-    try {
-        this.display.showInfo('Executing...', false);
-        
-        let result: ExecuteResult;
-        let usedWorker = false;
-        
-        // DEFを含む場合はメインスレッドで実行（状態管理のため）
-        const shouldUseMainThread = code.includes(' DEF') || code.includes('DEL');
-        
-        if (this.workerInitialized && !shouldUseMainThread) {
-            // Workerで実行する前に、メインスレッドのカスタムワードをWorkerに同期
-            await this.syncCustomWordsToWorker();
+        try {
+            this.display.showInfo('Executing...', false);
             
-            result = await WORKER_MANAGER.execute(code, async (progressResult) => {
-                console.log('[GUI] Progress callback:', progressResult);
-                if (progressResult.output) {
-                    this.display.appendExecutionResult(progressResult);
+            let result: ExecuteResult;
+            let usedWorker = false;
+            
+            // DEFを含む場合はメインスレッドで実行（状態管理のため）
+            const shouldUseMainThread = code.includes(' DEF') || code.includes('DEL');
+            
+            if (this.workerInitialized && !shouldUseMainThread) {
+                // Workerで実行する前に、メインスレッドのスタックとカスタムワードをWorkerに同期
+                const currentStack = window.ajisaiInterpreter.get_stack();
+                await WORKER_MANAGER.syncStack(currentStack);
+                await this.syncCustomWordsToWorker();
+                
+                result = await WORKER_MANAGER.execute(code, async (progressResult) => {
+                    console.log('[GUI] Progress callback:', progressResult);
+                    if (progressResult.output) {
+                        this.display.appendExecutionResult(progressResult);
+                    }
+                    // 各ステップで状態を同期（エラーでない場合のみ）
+                    if (progressResult.status !== 'ERROR') {
+                        await this.updateInterpreterState(progressResult);
+                    }
+                    this.updateAllDisplays();
+                });
+                usedWorker = true;
+            } else {
+                // メインスレッドで実行
+                result = await window.ajisaiInterpreter.execute(code) as ExecuteResult;
+            }
+
+            // Workerで実行し、かつエラーでない場合のみ状態を同期
+            if (usedWorker && result.status !== 'ERROR') {
+                await this.updateInterpreterState(result);
+            }
+
+            if (result.definition_to_load) {
+                this.editor.setValue(result.definition_to_load);
+                const wordName = code.replace("?", "").trim();
+                this.display.showInfo(`Loaded definition for ${wordName}.`);
+            } else if (result.status === 'OK' && !result.error) {
+                if (!result.isProgressive) {
+                    this.display.showExecutionResult(result);
                 }
-                // 各ステップで状態を同期（エラーでない場合のみ）
-                if (progressResult.status !== 'ERROR') {
-                    await this.updateInterpreterState(progressResult);
+                this.editor.clear();
+
+                if (this.mobile.isMobile()) {
+                    this.setMode('execution');
                 }
-                this.updateAllDisplays();
-            });
-            usedWorker = true;
-        } else {
-            // メインスレッドで実行
-            result = await window.ajisaiInterpreter.execute(code) as ExecuteResult;
+            } else if (result.status === 'COMPLETED') {
+                this.display.showInfo('Progressive execution completed.', true);
+                this.editor.clear();
+
+                if (this.mobile.isMobile()) {
+                    this.setMode('execution');
+                }
+            } else {
+                this.display.showError(result.message || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('[GUI] Code execution failed:', error);
+            
+            if (error instanceof Error && error.message.includes('aborted')) {
+                this.display.showInfo('Execution aborted by user.', true);
+            } else {
+                this.display.showError(error as Error);
+            }
         }
 
-        // Workerで実行し、かつエラーでない場合のみ状態を同期
-        if (usedWorker && result.status !== 'ERROR') {
-            await this.updateInterpreterState(result);
-        }
+        this.updateAllDisplays();
+        await this.persistence.saveCurrentState();
 
-        if (result.definition_to_load) {
-            this.editor.setValue(result.definition_to_load);
-            const wordName = code.replace("?", "").trim();
-            this.display.showInfo(`Loaded definition for ${wordName}.`);
-        } else if (result.status === 'OK' && !result.error) {
-            if (!result.isProgressive) {
-                this.display.showExecutionResult(result);
-            }
-            this.editor.clear();
-
-            if (this.mobile.isMobile()) {
-                this.setMode('execution');
-            }
-        } else if (result.status === 'COMPLETED') {
-            this.display.showInfo('Progressive execution completed.', true);
-            this.editor.clear();
-
-            if (this.mobile.isMobile()) {
-                this.setMode('execution');
-            }
-        } else {
-            this.display.showError(result.message || 'Unknown error');
-        }
-    } catch (error) {
-        console.error('[GUI] Code execution failed:', error);
-        
-        if (error instanceof Error && error.message.includes('aborted')) {
-            this.display.showInfo('Execution aborted by user.', true);
-        } else {
-            this.display.showError(error as Error);
+        if (!code.trim().endsWith("?")) {
+            this.display.showInfo('State saved.', true);
         }
     }
-
-    this.updateAllDisplays();
-    await this.persistence.saveCurrentState();
-
-    if (!code.trim().endsWith("?")) {
-        this.display.showInfo('State saved.', true);
-    }
-}
 
     private async executeStepByStep(): Promise<void> {
         const code = this.editor.getValue();
@@ -342,6 +344,11 @@ export class GUI {
             let result: ExecuteResult;
             
             if (this.workerInitialized) {
+                // ステップ実行前にもスタックを同期
+                const currentStack = window.ajisaiInterpreter.get_stack();
+                await WORKER_MANAGER.syncStack(currentStack);
+                await this.syncCustomWordsToWorker();
+                
                 result = await WORKER_MANAGER.executeStep(code);
             } else {
                 result = window.ajisaiInterpreter.execute_step(code) as ExecuteResult;
@@ -382,38 +389,38 @@ export class GUI {
     }
 
     private async executeReset(): Promise<void> {
-    try {
-        console.log('[GUI] Executing reset');
-        
-        // まずWorkerをすべてリセット（終了して再初期化）
-        if (this.workerInitialized) {
-            console.log('[GUI] Terminating and reinitializing workers...');
-            WORKER_MANAGER.terminate();
-            await WORKER_MANAGER.init();
-            console.log('[GUI] Workers reinitialized');
-        }
-        
-        // メインスレッドのインタープリタをリセット
-        const result = window.ajisaiInterpreter.reset() as ExecuteResult;
-        
-        if (result.status === 'OK' && !result.error) {
-            this.display.showOutput(result.output || 'RESET executed');
-            this.editor.clear();
+        try {
+            console.log('[GUI] Executing reset');
             
-            if (this.mobile.isMobile()) {
-                this.setMode('execution');
+            // まずWorkerをすべてリセット（終了して再初期化）
+            if (this.workerInitialized) {
+                console.log('[GUI] Terminating and reinitializing workers...');
+                WORKER_MANAGER.terminate();
+                await WORKER_MANAGER.init();
+                console.log('[GUI] Workers reinitialized');
             }
             
-            this.updateAllDisplays();
-            this.display.showInfo('🔄 RESET: All memory cleared (main thread and workers).', true);
-        } else {
-            this.display.showError(result.message || 'RESET execution failed');
+            // メインスレッドのインタープリタをリセット
+            const result = window.ajisaiInterpreter.reset() as ExecuteResult;
+            
+            if (result.status === 'OK' && !result.error) {
+                this.display.showOutput(result.output || 'RESET executed');
+                this.editor.clear();
+                
+                if (this.mobile.isMobile()) {
+                    this.setMode('execution');
+                }
+                
+                this.updateAllDisplays();
+                this.display.showInfo('🔄 RESET: All memory cleared (main thread and workers).', true);
+            } else {
+                this.display.showError(result.message || 'RESET execution failed');
+            }
+        } catch (error) {
+            console.error('[GUI] Reset execution failed:', error);
+            this.display.showError(error as Error);
         }
-    } catch (error) {
-        console.error('[GUI] Reset execution failed:', error);
-        this.display.showError(error as Error);
     }
-}
 
     private async runTests(): Promise<void> {
         if (!window.ajisaiInterpreter) {
