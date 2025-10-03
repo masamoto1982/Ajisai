@@ -760,10 +760,10 @@ private showStackDifference(expected: Value[], actual: Value[]): void {
                 category: "Conditional Branching"
             },
             {
-                name: ": - 条件分岐の連鎖（負の数）",
-                code: "[ -5 ] [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]",
-                expectedStack: [this.createVector([this.createNumber('-1')])],
-                category: "Conditional Branching"
+               name: ": - 条件分岐の連鎖（負の数）",
+               code: "[ -5 ]\n[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]",
+               expectedStack: [this.createVector([this.createNumber('-1')])],
+               category: "Conditional Branching"
             },
             {
                 name: "; - セミコロンでの条件分岐",
