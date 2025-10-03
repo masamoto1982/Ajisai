@@ -3,11 +3,12 @@
 import type { WasmModule, AjisaiInterpreter } from '../wasm-types';
 
 interface WorkerMessage {
-    type: 'execute' | 'step' | 'abort' | 'init' | 'progressive' | 'progressive_step' | 'sync_words';
+    type: 'execute' | 'step' | 'abort' | 'init' | 'progressive' | 'progressive_step' | 'sync_words' | 'sync_stack';
     id: string;
     code?: string;
     payload?: any;
     customWords?: any[];
+    stack?: any[];
 }
 
 interface WorkerResponse {
@@ -74,6 +75,10 @@ class AjisaiWorkerInstance {
                 await this.syncCustomWords(message.id, message.customWords || []);
                 break;
                 
+            case 'sync_stack':
+                await this.syncStack(message.id, message.stack || []);
+                break;
+                
             case 'execute':
                 await this.executeCode(message.id, message.code || '');
                 break;
@@ -132,57 +137,93 @@ class AjisaiWorkerInstance {
         }
     }
 
-private async executeCode(id: string, code: string): Promise<void> {
-    if (!this.interpreter) {
-        this.postMessage({
-            type: 'error',
-            id,
-            data: 'Interpreter not initialized'
-        });
-        return;
+    private async syncStack(id: string, stack: any[]): Promise<void> {
+        if (!this.interpreter) {
+            this.postMessage({
+                type: 'error',
+                id,
+                data: 'Interpreter not initialized'
+            });
+            return;
+        }
+        
+        try {
+            console.log(`[Worker] Syncing stack with ${stack?.length || 0} items`);
+            
+            if (stack && stack.length > 0) {
+                await this.interpreter.restore_stack(stack);
+            } else {
+                // 空のスタックをセット（リセット）
+                await this.interpreter.restore_stack([]);
+            }
+            
+            this.postMessage({
+                type: 'result',
+                id,
+                data: { status: 'OK', synced: stack?.length || 0 }
+            });
+        } catch (error) {
+            console.error(`[Worker] Failed to sync stack:`, error);
+            this.postMessage({
+                type: 'error',
+                id,
+                data: `Failed to sync stack: ${error}`
+            });
+        }
     }
 
-    this.currentExecutionId = id;
-    this.isAborted = false;
-    
-    console.log(`[Worker] Executing code for ID: ${id}`);
-    this.postMessage({
-        type: 'debug',
-        id,
-        data: `Starting execution: ${code.substring(0, 50)}...`
-    });
-
-    try {
-        if (this.isAborted) {
-            this.postMessage({ type: 'aborted', id });
+    private async executeCode(id: string, code: string): Promise<void> {
+        if (!this.interpreter) {
+            this.postMessage({
+                type: 'error',
+                id,
+                data: 'Interpreter not initialized'
+            });
             return;
         }
 
-        const result = await this.interpreter.execute(code);
+        this.currentExecutionId = id;
+        this.isAborted = false;
         
-        if (this.isAborted) {
-            this.postMessage({ type: 'aborted', id });
-            return;
-        }
+        console.log(`[Worker] Executing code for ID: ${id}`);
+        this.postMessage({
+            type: 'debug',
+            id,
+            data: `Starting execution: ${code.substring(0, 50)}...`
+        });
 
-        console.log(`[Worker] Execution completed for ID: ${id}`);
-        this.postMessage({
-            type: 'result',
-            id,
-            data: result
-        });
-        
-    } catch (error) {
-        console.error(`[Worker] Execution error for ID: ${id}:`, error);
-        this.postMessage({
-            type: 'error',
-            id,
-            data: `Execution error: ${error}`
-        });
-    } finally {
-        this.currentExecutionId = null;
+        try {
+            // Check for abort before execution
+            if (this.isAborted) {
+                this.postMessage({ type: 'aborted', id });
+                return;
+            }
+
+            const result = await this.interpreter.execute(code);
+            
+            if (this.isAborted) {
+                this.postMessage({ type: 'aborted', id });
+                return;
+            }
+
+            console.log(`[Worker] Execution completed for ID: ${id}`);
+            this.postMessage({
+                type: 'result',
+                id,
+                data: result
+            });
+            
+        } catch (error) {
+            console.error(`[Worker] Execution error for ID: ${id}:`, error);
+            this.postMessage({
+                type: 'error',
+                id,
+                data: `Execution error: ${error}`
+            });
+        } finally {
+            this.currentExecutionId = null;
+        }
     }
-}
 
     private async initProgressiveExecution(id: string, code: string): Promise<void> {
         if (!this.interpreter) {
