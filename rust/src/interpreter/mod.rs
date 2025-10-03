@@ -164,7 +164,6 @@ impl Interpreter {
         Ok(())
     }
 
-    // ========== ここからデバッグコードを追加 ==========
     #[async_recursion(?Send)]
     async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()> {
         self.output_buffer.push_str(&format!("[DEBUG] === Start Guard Chain Processing ===\n"));
@@ -226,10 +225,9 @@ impl Interpreter {
                 let is_true = is_truthy(&condition_result);
                 self.output_buffer.push_str(&format!("[DEBUG] Condition result: {} -> {}\n", condition_result, if is_true { "TRUE" } else { "FALSE" }));
     
-                self.stack = stack_before; // Restore stack regardless of result
-    
                 if is_true {
-                    self.output_buffer.push_str(&format!("[DEBUG] Condition TRUE. Executing corresponding action.\n"));
+                    self.output_buffer.push_str(&format!("[DEBUG] Condition TRUE. Restoring stack and executing action.\n"));
+                    self.stack = stack_before; // Restore stack before action
                     if i + 1 < segments.len() {
                         let action_segment = segments[i + 1];
                         self.output_buffer.push_str(&format!("[DEBUG] Action: {}\n", self.tokens_to_string_for_debug(action_segment)));
@@ -237,12 +235,23 @@ impl Interpreter {
                         self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
                         return result;
                     } else {
-                        self.output_buffer.push_str(&format!("[DEBUG] Condition was true, but no action segment found. This is unusual.\n"));
+                        self.output_buffer.push_str(&format!("[DEBUG] Condition was true, but no action segment found.\n"));
                         self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
                         return Ok(());
                     }
                 } else {
-                    self.output_buffer.push_str(&format!("[DEBUG] Condition FALSE. Moving to next condition.\n"));
+                    self.output_buffer.push_str(&format!("[DEBUG] Condition FALSE. Restoring stack and moving to next condition.\n"));
+                    self.stack = stack_before; // Restore stack
+                    
+                    // ========== ▼▼▼ 修正箇所 ▼▼▼ ==========
+                    if (i + 2) >= segments.len() {
+                        self.output_buffer.push_str(&format!("[DEBUG] This was the last condition. Pushing its FALSE result back onto the stack.\n"));
+                        self.stack.push(condition_result);
+                        self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
+                        return Ok(());
+                    }
+                    // ========== ▲▲▲ 修正箇所 ▲▲▲ ==========
+
                     i += 2; // Skip this condition and its action
                 }
             } else {
@@ -252,21 +261,11 @@ impl Interpreter {
             }
         }
     
-        self.output_buffer.push_str(&format!("\n[DEBUG] No condition was met. Checking for a final default action.\n"));
-        if segments.len() % 2 != 0 {
-             let default_action_segment = segments.last().unwrap();
-             self.output_buffer.push_str(&format!("[DEBUG] Executing final default action: {}\n", self.tokens_to_string_for_debug(default_action_segment)));
-             let result = self.execute_single_line_tokens(default_action_segment).await;
-             self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
-             return result;
-        }
-    
-        self.output_buffer.push_str(&format!("[DEBUG] No conditions met and no final default action found. Leaving original stack unchanged.\n"));
+        self.output_buffer.push_str(&format!("\n[DEBUG] No conditions met. The line processing is complete.\n"));
         self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
         Ok(())
     }
-    // ========== ここまでデバッグコード ==========
-
+    
     #[async_recursion(?Send)]
     async fn execute_single_line_tokens(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
