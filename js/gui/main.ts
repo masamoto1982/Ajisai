@@ -6,7 +6,7 @@ import { Persistence } from './persistence';
 import { TestRunner } from './test';
 import { WORKER_MANAGER } from '../workers/worker-manager';
 import { PARALLEL_EXECUTOR } from '../workers/parallel-executor';
-import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
+import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-types';
 
 declare global {
     interface Window {
@@ -19,6 +19,8 @@ interface GUIElements {
     runBtn: HTMLButtonElement;
     clearBtn: HTMLButtonElement;
     testBtn: HTMLButtonElement;
+    exportBtn: HTMLButtonElement;
+    importBtn: HTMLButtonElement;
     outputDisplay: HTMLElement;
     stackDisplay: HTMLElement;
     builtinWordsDisplay: HTMLElement;
@@ -114,6 +116,8 @@ export class GUI {
             runBtn: document.getElementById('run-btn') as HTMLButtonElement,
             clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
             testBtn: document.getElementById('test-btn') as HTMLButtonElement,
+            exportBtn: document.getElementById('export-btn') as HTMLButtonElement,
+            importBtn: document.getElementById('import-btn') as HTMLButtonElement,
             outputDisplay: document.getElementById('output-display')!,
             stackDisplay: document.getElementById('stack-display')!,
             builtinWordsDisplay: document.getElementById('builtin-words-display')!,
@@ -133,6 +137,14 @@ export class GUI {
             this.elements.testBtn.addEventListener('click', () => {
                 this.runTests();
             });
+        }
+
+        if (this.elements.exportBtn) {
+            this.elements.exportBtn.addEventListener('click', () => this.exportCustomWords());
+        }
+
+        if (this.elements.importBtn) {
+            this.elements.importBtn.addEventListener('click', () => this.importCustomWords());
         }
 
         this.elements.codeInput.addEventListener('keydown', (e) => {
@@ -166,7 +178,7 @@ export class GUI {
                 e.preventDefault();
                 e.stopImmediatePropagation();
             }
-        }, true);
+        }, true); // Use capture phase for priority
     }
 
     private emergencyStop(): void {
@@ -455,6 +467,76 @@ export class GUI {
             console.error('Failed to update display:', error);
             this.display.showError('Failed to update display.');
         }
+    }
+    
+    private exportCustomWords(): void {
+        if (!window.ajisaiInterpreter) {
+            this.display.showError('Interpreter not available');
+            return;
+        }
+
+        const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
+        const exportData: CustomWord[] = customWordsInfo.map(wordData => {
+            const name = wordData[0];
+            const description = wordData[1];
+            const definition = window.ajisaiInterpreter.get_word_definition(name);
+            return {
+                name,
+                definition,
+                description,
+            };
+        });
+
+        const jsonString = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ajisai_words.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        this.display.showInfo('Custom words exported.', true);
+    }
+
+    private importCustomWords(): void {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const jsonString = event.target?.result as string;
+                    const importedWords = JSON.parse(jsonString) as CustomWord[];
+
+                    if (!Array.isArray(importedWords)) {
+                        throw new Error('Invalid file format. Expected an array of words.');
+                    }
+                    
+                    await window.ajisaiInterpreter.restore_custom_words(importedWords);
+                    
+                    this.updateAllDisplays();
+                    await this.persistence.saveCurrentState();
+                    this.display.showInfo(`${importedWords.length} custom words imported and saved.`, true);
+
+                } catch (error) {
+                    this.display.showError(error as Error);
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        input.click();
     }
 
     cleanup(): void {
