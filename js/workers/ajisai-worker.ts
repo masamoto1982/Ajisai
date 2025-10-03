@@ -132,58 +132,57 @@ class AjisaiWorkerInstance {
         }
     }
 
-    private async executeCode(id: string, code: string): Promise<void> {
-        if (!this.interpreter) {
-            this.postMessage({
-                type: 'error',
-                id,
-                data: 'Interpreter not initialized'
-            });
+private async executeCode(id: string, code: string): Promise<void> {
+    if (!this.interpreter) {
+        this.postMessage({
+            type: 'error',
+            id,
+            data: 'Interpreter not initialized'
+        });
+        return;
+    }
+
+    this.currentExecutionId = id;
+    this.isAborted = false;
+    
+    console.log(`[Worker] Executing code for ID: ${id}`);
+    this.postMessage({
+        type: 'debug',
+        id,
+        data: `Starting execution: ${code.substring(0, 50)}...`
+    });
+
+    try {
+        if (this.isAborted) {
+            this.postMessage({ type: 'aborted', id });
             return;
         }
 
-        this.currentExecutionId = id;
-        this.isAborted = false;
+        const result = await this.interpreter.execute(code);
         
-        console.log(`[Worker] Executing code for ID: ${id}`);
-        this.postMessage({
-            type: 'debug',
-            id,
-            data: `Starting execution: ${code.substring(0, 50)}...`
-        });
-
-        try {
-            // Check for abort before execution
-            if (this.isAborted) {
-                this.postMessage({ type: 'aborted', id });
-                return;
-            }
-
-            const result = await this.interpreter.execute(code);
-            
-            if (this.isAborted) {
-                this.postMessage({ type: 'aborted', id });
-                return;
-            }
-
-            console.log(`[Worker] Execution completed for ID: ${id}`);
-            this.postMessage({
-                type: 'result',
-                id,
-                data: result
-            });
-            
-        } catch (error) {
-            console.error(`[Worker] Execution error for ID: ${id}:`, error);
-            this.postMessage({
-                type: 'error',
-                id,
-                data: `Execution error: ${error}`
-            });
-        } finally {
-            this.currentExecutionId = null;
+        if (this.isAborted) {
+            this.postMessage({ type: 'aborted', id });
+            return;
         }
+
+        console.log(`[Worker] Execution completed for ID: ${id}`);
+        this.postMessage({
+            type: 'result',
+            id,
+            data: result
+        });
+        
+    } catch (error) {
+        console.error(`[Worker] Execution error for ID: ${id}:`, error);
+        this.postMessage({
+            type: 'error',
+            id,
+            data: `Execution error: ${error}`
+        });
+    } finally {
+        this.currentExecutionId = null;
     }
+}
 
     private async initProgressiveExecution(id: string, code: string): Promise<void> {
         if (!this.interpreter) {
