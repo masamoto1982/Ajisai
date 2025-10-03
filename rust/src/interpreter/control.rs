@@ -210,58 +210,71 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) -> Result<()> {
-    let lines: Vec<&str> = input.lines().collect();
-    let mut current_word_lines = Vec::new();
-    let mut definition_start_line = 0;
-    let mut found_first_content = false;
+    let custom_word_names: HashSet<String> = interp.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
     
-    for (line_num, line) in lines.iter().enumerate() {
-        // コメントを除去してから処理
-        let line_without_comment = if let Some(pos) = line.find('#') {
-            &line[..pos]
-        } else {
-            line
-        };
-        let trimmed = line_without_comment.trim();
-        
-        // 空行の処理
-        if trimmed.is_empty() {
-            if found_first_content {
-                // 元の行（コメント付き）を保存
-                current_word_lines.push(line.to_string());
+    // 全体をトークン化
+    let all_tokens = crate::tokenizer::tokenize_with_custom_words(input, &custom_word_names)
+        .map_err(|e| AjisaiError::from(format!("Tokenization error: {}", e)))?;
+    
+    // DEFの位置を探す（LineBreakを含むトークン列内で）
+    let mut definitions = Vec::new();
+    let mut i = 0;
+    let mut current_body_start = 0;
+    
+    while i < all_tokens.len() {
+        if let Token::Symbol(s) = &all_tokens[i] {
+            if s.to_uppercase() == "DEF" {
+                // DEFトークンを発見
+                if i == 0 || current_body_start >= i - 1 {
+                    return Err(AjisaiError::from("DEF requires a body and name"));
+                }
+                
+                // 直前のトークンが名前
+                let name = match &all_tokens[i - 1] {
+                    Token::String(s) => s.clone(),
+                    _ => return Err(AjisaiError::from("DEF requires a string name")),
+                };
+                
+                // DEFの後に説明があるかチェック
+                let mut description = None;
+                let mut next_start = i + 1;
+                
+                if i + 1 < all_tokens.len() {
+                    if let Token::String(desc) = &all_tokens[i + 1] {
+                        description = Some(desc.clone());
+                        next_start = i + 2;
+                    }
+                }
+                
+                // ボディのトークン範囲
+                let body_end = i - 1;
+                let body_tokens: Vec<Token> = all_tokens[current_body_start..body_end].to_vec();
+                
+                definitions.push((name, body_tokens, description));
+                
+                // 次のワード定義の開始位置
+                // LineBreakをスキップ
+                while next_start < all_tokens.len() && matches!(all_tokens[next_start], Token::LineBreak) {
+                    next_start += 1;
+                }
+                current_body_start = next_start;
+                i = next_start;
+                continue;
             }
-            continue;
         }
-        
-        // DEF パターンの検出
-        if trimmed.ends_with(" DEF") || trimmed.contains(" DEF ") {
-            // ワード定義を実行
-            let def_parts = extract_word_name_and_description(trimmed)?;
-            let word_name = def_parts.0;
-            let description = def_parts.1;
-            
-            // DEF行も含めた完全なソースコードを保存
-            let word_source = lines[definition_start_line..=line_num].join("\n");
-            define_word_from_lines(interp, &current_word_lines, &word_name, description, Some(word_source))?;
-            
-            // 次のワードのための準備
-            current_word_lines.clear();
-            definition_start_line = line_num + 1;
-            found_first_content = false;
-        } else {
-            // 通常の行を追加
-            if !found_first_content {
-                found_first_content = true;
-                definition_start_line = line_num;
-            }
-            // 元の行（コメント付き）を保存
-            current_word_lines.push(line.to_string());
-        }
+        i += 1;
     }
     
-    // 最後にDEFがなかった場合のエラーチェック
-    if !current_word_lines.is_empty() {
-        return Err(AjisaiError::from("Word definition without DEF keyword"));
+    if definitions.is_empty() {
+        return Err(AjisaiError::from("No DEF keyword found"));
+    }
+    
+    // 各定義を実行
+    for (name, body_tokens, description) in definitions {
+        op_def_inner(interp, &body_tokens, &name, description, None)?;
     }
     
     Ok(())
