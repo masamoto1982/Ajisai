@@ -169,60 +169,68 @@ impl Interpreter {
         self.output_buffer.push_str(&format!("[DEBUG] === Start Guard Chain ===\n"));
         self.output_buffer.push_str(&format!("[DEBUG] Input: {}\n", self.tokens_to_string_for_debug(tokens)));
     
-        let mut segments: Vec<&[Token]> = tokens.split(|t| matches!(t, Token::GuardSeparator)).collect();
+        let segments: Vec<&[Token]> = tokens.split(|t| matches!(t, Token::GuardSeparator)).collect();
         self.output_buffer.push_str(&format!("[DEBUG] Split into {} segments.\n", segments.len()));
     
         if segments.len() <= 1 {
             self.output_buffer.push_str("[DEBUG] No guards found, executing as single line.\n");
+            self.output_buffer.push_str("[DEBUG] === End Guard Chain ===\n");
             return self.execute_single_line_tokens(tokens).await;
         }
     
+        // The first segment always executes and sets up the stack for the first condition.
+        let initial_stack = self.stack.clone();
+        self.execute_single_line_tokens(segments[0]).await?;
+        let first_condition_result = self.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?;
+    
+        // Now, iterate through the condition/action pairs.
         let mut i = 0;
-        while i < segments.len() {
-            let condition_segment = segments[i];
+        while i + 1 < segments.len() {
+            let (condition_segment, action_segment) = (segments[i], segments[i + 1]);
     
-            // The last odd segment is a default action, not a condition.
-            if i == segments.len() - 1 && !condition_segment.is_empty() {
-                self.output_buffer.push_str(&format!("[DEBUG] Reached final default segment. Executing action: {}\n", self.tokens_to_string_for_debug(condition_segment)));
-                self.execute_single_line_tokens(condition_segment).await?;
-                return Ok(());
-            }
-    
-            let action_segment = if i + 1 < segments.len() { segments[i + 1] } else { &[] };
-    
-            let stack_before_condition = self.stack.clone();
             self.output_buffer.push_str(&format!("\n[DEBUG] --- Evaluating Pair starting at segment {} ---\n", i));
-            self.output_buffer.push_str(&format!("[DEBUG] Stack before condition: {}\n", self.stack_to_string_for_debug(&stack_before_condition)));
-            self.output_buffer.push_str(&format!("[DEBUG] Evaluating condition: {}\n", self.tokens_to_string_for_debug(condition_segment)));
             
-            self.execute_single_line_tokens(condition_segment).await?;
+            let stack_before_condition = self.stack.clone();
+            self.output_buffer.push_str(&format!("[DEBUG] Stack before condition: {}\n", self.stack_to_string_for_debug(&stack_before_condition)));
+            
+            // The first condition is already executed. For subsequent ones, execute them now.
+            if i > 0 {
+                self.output_buffer.push_str(&format!("[DEBUG] Evaluating condition: {}\n", self.tokens_to_string_for_debug(condition_segment)));
+                self.execute_single_line_tokens(condition_segment).await?;
+            } else {
+                 self.output_buffer.push_str(&format!("[DEBUG] Using result of first segment as condition: {}\n", self.tokens_to_string_for_debug(condition_segment)));
+            }
     
             let condition_result = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let is_true = is_truthy(&condition_result);
             self.output_buffer.push_str(&format!("[DEBUG] Condition result: {} -> {}\n", condition_result, if is_true { "TRUE" } else { "FALSE" }));
     
             if is_true {
-                // On success, we discard the subject and the condition result, then run the action.
                 self.output_buffer.push_str(&format!("[DEBUG] Condition TRUE. Executing action: {}\n", self.tokens_to_string_for_debug(action_segment)));
                 self.execute_single_line_tokens(action_segment).await?;
                 self.output_buffer.push_str("[DEBUG] === End Guard Chain (Action Taken) ===\n");
                 return Ok(());
             } else {
-                // On failure, restore the stack to how it was before this condition was even attempted.
+                // Restore stack to before this condition ran, so the next condition has the same subject.
                 self.stack = stack_before_condition;
-                self.output_buffer.push_str(&format!("[DEBUG] Condition FALSE. Restoring stack to: {}\n", self.stack_to_string_for_debug(&self.stack)));
-                i += 2; // Move to the next condition/action pair.
+                self.stack.pop(); // Remove the condition result itself, leaving the subject for the next iteration.
+                self.output_buffer.push_str(&format!("[DEBUG] Condition FALSE. Restoring stack for next condition to: {}\n", self.stack_to_string_for_debug(&self.stack)));
+                i += 2;
             }
         }
     
-        // If we exit the loop, it means all condition pairs failed.
-        // For cases like Test 2, we need to leave the result of the first condition on the stack.
-        self.output_buffer.push_str("[DEBUG] All condition pairs failed. No default action found.\n");
-        if !segments.is_empty() {
-             self.output_buffer.push_str("[DEBUG] Re-evaluating first condition to leave its result on the stack.\n");
-             self.execute_single_line_tokens(segments[0]).await?;
+        // Check for a final default action (an unpaired segment at the end).
+        if segments.len() % 2 != 0 {
+            let default_action_segment = segments.last().unwrap();
+            self.output_buffer.push_str(&format!("\n[DEBUG] All conditions failed. Executing default action: {}\n", self.tokens_to_string_for_debug(default_action_segment)));
+            self.execute_single_line_tokens(default_action_segment).await?;
+        } else {
+            // No default action, and all conditions failed. Leave the result of the first condition.
+            self.output_buffer.push_str("\n[DEBUG] All conditions failed and no default action. Restoring initial stack and pushing first result.\n");
+            self.stack = initial_stack;
+            self.stack.push(first_condition_result);
         }
-        
+    
         self.output_buffer.push_str("[DEBUG] === End Guard Chain ===\n");
         Ok(())
     }
