@@ -195,6 +195,9 @@ private async resetInterpreter(): Promise<void> {
     const statusText = passed ? 'PASS' : 'FAIL';
     const statusColor = passed ? 'success' : 'error';
     
+    // 必ず表示されるようにログにも出力
+    console.log(`${statusIcon} ${statusText}: ${testCase.name}`);
+    
     this.showColoredInfo(`${statusIcon} ${statusText}: ${testCase.name}`, statusColor);
     this.showColoredInfo(`  Code: ${testCase.code.replace(/\n/g, ' | ')}`, 'info');
     
