@@ -106,6 +106,35 @@ header h1 {
     height: 16px;
 }
 
+.header-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px solid #ddd;
+}
+
+#export-btn {
+    background-color: #17a2b8;
+    color: white;
+    border-color: #17a2b8;
+}
+
+#export-btn:hover {
+    background-color: #138496;
+}
+
+#import-btn {
+    background-color: #ffc107;
+    color: #212529;
+    border-color: #ffc107;
+}
+
+#import-btn:hover {
+    background-color: #e0a800;
+}
+
 /* デスクトップレイアウト */
 .main-layout {
     display: flex;
