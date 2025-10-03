@@ -4,7 +4,7 @@
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
 [![Build and Deploy Ajisai](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml/badge.svg)](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml)
-![Ajisai Logo](assets/ajisai-logo.png "Ajisai Programming Language Logo")
+![Ajisai Logo](images/ajisai-logo.png "Ajisai Programming Language Logo")
 # Ajisai
 
 Ajisaiは、FORTHを参考にしたスタックベースのプログラミング言語です。
