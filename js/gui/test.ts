@@ -86,7 +86,8 @@ export class TestRunner {
         // 最後のDEF行のインデックスを見つける（後ろから探索）
         let defEndIndex = -1;
         for (let i = lines.length - 1; i >= 0; i--) {
-            if (lines[i].trim().includes(' DEF')) {
+            const line = lines[i];
+            if (line && line.trim().includes(' DEF')) {
                 defEndIndex = i;
                 break;
             }
