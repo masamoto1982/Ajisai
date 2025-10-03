@@ -17,57 +17,63 @@ export class TestRunner {
     }
 
     async runAllTests(): Promise<void> {
-        const testCases = this.getTestCases();
-        let totalPassed = 0;
-        let totalFailed = 0;
-        const failedTests: string[] = [];
+    const testCases = this.getTestCases();
+    let totalPassed = 0;
+    let totalFailed = 0;
+    const failedTests: string[] = [];
 
-        this.showColoredInfo('=== Ajisai Comprehensive Test Suite ===', 'info');
-        this.showColoredInfo(`Running ${testCases.length} test cases...`, 'info');
+    // 出力エリアをクリア
+    this.gui.elements.outputDisplay.innerHTML = '';
 
-        // カテゴリ別にテストを実行
-        const categories = [...new Set(testCases.map(t => t.category))].filter(Boolean);
+    this.showColoredInfo('=== Ajisai Comprehensive Test Suite ===', 'info');
+    this.showColoredInfo(`Running ${testCases.length} test cases...`, 'info');
+
+    // カテゴリ別にテストを実行
+    const categories = [...new Set(testCases.map(t => t.category))].filter(Boolean);
+    
+    for (const category of categories) {
+        this.showColoredInfo(`\n--- ${category} Tests ---`, 'info');
+        const categoryTests = testCases.filter(t => t.category === category);
         
-        for (const category of categories) {
-            this.showColoredInfo(`\n--- ${category} Tests ---`, 'info');
-            const categoryTests = testCases.filter(t => t.category === category);
-            
-            for (const testCase of categoryTests) {
-                try {
-                    const result = await this.runSingleTestWithDetails(testCase);
-                    if (result.passed) {
-                        totalPassed++;
-                        this.showTestResult(testCase, result, true);
-                    } else {
-                        totalFailed++;
-                        failedTests.push(testCase.name);
-                        this.showTestResult(testCase, result, false);
-                    }
-                } catch (error) {
+        for (const testCase of categoryTests) {
+            try {
+                const result = await this.runSingleTestWithDetails(testCase);
+                if (result.passed) {
+                    totalPassed++;
+                    this.showTestResult(testCase, result, true);
+                } else {
                     totalFailed++;
                     failedTests.push(testCase.name);
-                    this.showTestError(testCase, error);
+                    this.showTestResult(testCase, result, false);
                 }
+            } catch (error) {
+                totalFailed++;
+                failedTests.push(testCase.name);
+                this.showTestError(testCase, error);
             }
         }
+    }
 
-        this.showColoredInfo(`\n=== Final Results ===`, 'info');
-        this.showColoredInfo(`Total Passed: ${totalPassed}`, 'success');
-        
-        if (totalFailed > 0) {
-            this.showColoredInfo(`Total Failed: ${totalFailed}`, 'error');
-            this.showColoredInfo(`Failed tests: ${failedTests.join(', ')}`, 'error');
-        } else {
-            this.showColoredInfo('🎉 All tests passed!', 'success');
-        }
-    }
+    this.showColoredInfo(`\n=== Final Results ===`, 'info');
+    this.showColoredInfo(`Total Passed: ${totalPassed}`, 'success');
     
-    private async resetInterpreter(): Promise<void> {
-        if (window.ajisaiInterpreter) {
-            // スタックだけでなく、カスタムワードも含めて完全リセット
-            await window.ajisaiInterpreter.reset();
-        }
+    if (totalFailed > 0) {
+        this.showColoredInfo(`Total Failed: ${totalFailed}`, 'error');
+        this.showColoredInfo(`Failed tests: ${failedTests.join(', ')}`, 'error');
+    } else {
+        this.showColoredInfo('🎉 All tests passed!', 'success');
     }
+}
+
+private async resetInterpreter(): Promise<void> {
+    if (window.ajisaiInterpreter) {
+        // リセットを実行するが、出力は保存して復元する
+        const currentOutput = this.gui.elements.outputDisplay.innerHTML;
+        await window.ajisaiInterpreter.reset();
+        // リセットメッセージを除去して元の出力を復元
+        this.gui.elements.outputDisplay.innerHTML = currentOutput;
+    }
+}
     
     private async runSingleTestWithDetails(testCase: TestCase): Promise<{
     passed: boolean;
