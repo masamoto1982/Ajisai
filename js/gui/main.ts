@@ -377,34 +377,38 @@ export class GUI {
     }
 
     private async executeReset(): Promise<void> {
-        try {
-            console.log('[GUI] Executing reset');
-            
-            // Abort all worker tasks first
-            if (this.workerInitialized) {
-                PARALLEL_EXECUTOR.abortAll();
-            }
-            
-            const result = window.ajisaiInterpreter.reset() as ExecuteResult;
-            
-            if (result.status === 'OK' && !result.error) {
-                this.display.showOutput(result.output || 'RESET executed');
-                this.editor.clear();
-                
-                if (this.mobile.isMobile()) {
-                    this.setMode('execution');
-                }
-                
-                this.updateAllDisplays();
-                this.display.showInfo('🔄 RESET: All memory cleared and database reset.', true);
-            } else {
-                this.display.showError(result.message || 'RESET execution failed');
-            }
-        } catch (error) {
-            console.error('[GUI] Reset execution failed:', error);
-            this.display.showError(error as Error);
+    try {
+        console.log('[GUI] Executing reset');
+        
+        // まずWorkerをすべてリセット（終了して再初期化）
+        if (this.workerInitialized) {
+            console.log('[GUI] Terminating and reinitializing workers...');
+            WORKER_MANAGER.terminate();
+            await WORKER_MANAGER.init();
+            console.log('[GUI] Workers reinitialized');
         }
+        
+        // メインスレッドのインタープリタをリセット
+        const result = window.ajisaiInterpreter.reset() as ExecuteResult;
+        
+        if (result.status === 'OK' && !result.error) {
+            this.display.showOutput(result.output || 'RESET executed');
+            this.editor.clear();
+            
+            if (this.mobile.isMobile()) {
+                this.setMode('execution');
+            }
+            
+            this.updateAllDisplays();
+            this.display.showInfo('🔄 RESET: All memory cleared (main thread and workers).', true);
+        } else {
+            this.display.showError(result.message || 'RESET execution failed');
+        }
+    } catch (error) {
+        console.error('[GUI] Reset execution failed:', error);
+        this.display.showError(error as Error);
     }
+}
 
     private async runTests(): Promise<void> {
         if (!window.ajisaiInterpreter) {
