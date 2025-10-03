@@ -164,81 +164,108 @@ impl Interpreter {
         Ok(())
     }
 
+    // ========== ここからデバッグコードを追加 ==========
     #[async_recursion(?Send)]
-async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()> {
-    let guard_positions: Vec<usize> = tokens.iter()
-        .enumerate()
-        .filter(|(_, t)| matches!(t, Token::GuardSeparator))
-        .map(|(i, _)| i)
-        .collect();
+    async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()> {
+        self.output_buffer.push_str(&format!("[DEBUG] === Start Guard Chain Processing ===\n"));
+        self.output_buffer.push_str(&format!("[DEBUG] Input: {}\n", self.tokens_to_string_for_debug(tokens)));
     
-    if guard_positions.is_empty() {
-        return self.execute_single_line_tokens(tokens).await;
-    }
+        let guard_positions: Vec<usize> = tokens.iter()
+            .enumerate()
+            .filter(|(_, t)| matches!(t, Token::GuardSeparator))
+            .map(|(i, _)| i)
+            .collect();
+        
+        self.output_buffer.push_str(&format!("[DEBUG] Found {} guards at positions: {:?}\n", guard_positions.len(), guard_positions));
     
-    // ガードで区切られたセグメントを処理
-    let mut segments = Vec::new();
-    let mut start = 0;
-    
-    for &guard_pos in &guard_positions {
-        segments.push(&tokens[start..guard_pos]);
-        start = guard_pos + 1;
-    }
-    if start < tokens.len() {
-        segments.push(&tokens[start..]);
-    }
-    
-    // 最初のセグメントが空（先頭が:）の場合、デフォルト節として処理
-    if segments[0].is_empty() {
-        if segments.len() > 1 {
-            return self.execute_single_line_tokens(segments[1]).await;
+        if guard_positions.is_empty() {
+            self.output_buffer.push_str(&format!("[DEBUG] No guards found. Executing as a single line.\n"));
+            self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
+            return self.execute_single_line_tokens(tokens).await;
         }
-        return Ok(());
-    }
     
-    // 各条件-アクションペアを評価
-    let mut i = 0;
-    while i < segments.len() {
-        let condition_segment = segments[i];
-        
-        if condition_segment.is_empty() {
-            // 空のセグメント（デフォルト節）
-            if i + 1 < segments.len() {
-                return self.execute_single_line_tokens(segments[i + 1]).await;
-            }
-            return Ok(());
+        let mut segments = Vec::new();
+        let mut start = 0;
+        for &guard_pos in &guard_positions {
+            segments.push(&tokens[start..guard_pos]);
+            start = guard_pos + 1;
         }
-        
-        // 条件を評価
-        let stack_before = self.stack.clone();
-        self.execute_single_line_tokens(condition_segment).await?;
-        
-        if let Some(condition_result) = self.stack.pop() {
-            if is_truthy(&condition_result) {
-                // 条件が真：スタックを復元して次のセグメントを実行
-                self.stack = stack_before;
+        if start < tokens.len() {
+            segments.push(&tokens[start..]);
+        }
+    
+        self.output_buffer.push_str(&format!("[DEBUG] Split into {} segments.\n", segments.len()));
+    
+        let mut i = 0;
+        while i < segments.len() {
+            self.output_buffer.push_str(&format!("\n[DEBUG] --- Evaluating Segment Pair {} ---\n", i / 2));
+            let condition_segment = segments[i];
+    
+            if condition_segment.is_empty() {
+                self.output_buffer.push_str(&format!("[DEBUG] Segment {} is empty. Treating as default (always true) condition.\n", i));
                 if i + 1 < segments.len() {
-                    return self.execute_single_line_tokens(segments[i + 1]).await;
-                }
-                return Ok(());
-            } else {
-                // 条件が偽：次の条件へ
-                self.stack = stack_before;
-                i += 2; // 条件とアクションをスキップ
-                
-                // 次のセグメントがない場合、条件評価結果を残す
-                if i >= segments.len() {
-                    self.stack.push(condition_result);
+                    let action_segment = segments[i + 1];
+                    self.output_buffer.push_str(&format!("[DEBUG] Executing default action: {}\n", self.tokens_to_string_for_debug(action_segment)));
+                    let result = self.execute_single_line_tokens(action_segment).await;
+                    self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
+                    return result;
+                } else {
+                    self.output_buffer.push_str(&format!("[DEBUG] Default condition has no action. Doing nothing.\n"));
+                    self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
                     return Ok(());
                 }
             }
-        } else {
-            return Err(AjisaiError::from("Condition evaluation produced no result"));
-        }
-    }
     
-    Ok(())
-}
+            self.output_buffer.push_str(&format!("[DEBUG] Evaluating condition: {}\n", self.tokens_to_string_for_debug(condition_segment)));
+            let stack_before = self.stack.clone();
+            self.output_buffer.push_str(&format!("[DEBUG] Stack before condition: {}\n", self.stack_to_string_for_debug(&stack_before)));
+    
+            self.execute_single_line_tokens(condition_segment).await?;
+    
+            if let Some(condition_result) = self.stack.pop() {
+                let is_true = is_truthy(&condition_result);
+                self.output_buffer.push_str(&format!("[DEBUG] Condition result: {} -> {}\n", condition_result, if is_true { "TRUE" } else { "FALSE" }));
+    
+                self.stack = stack_before; // Restore stack regardless of result
+    
+                if is_true {
+                    self.output_buffer.push_str(&format!("[DEBUG] Condition TRUE. Executing corresponding action.\n"));
+                    if i + 1 < segments.len() {
+                        let action_segment = segments[i + 1];
+                        self.output_buffer.push_str(&format!("[DEBUG] Action: {}\n", self.tokens_to_string_for_debug(action_segment)));
+                        let result = self.execute_single_line_tokens(action_segment).await;
+                        self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
+                        return result;
+                    } else {
+                        self.output_buffer.push_str(&format!("[DEBUG] Condition was true, but no action segment found. This is unusual.\n"));
+                        self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
+                        return Ok(());
+                    }
+                } else {
+                    self.output_buffer.push_str(&format!("[DEBUG] Condition FALSE. Moving to next condition.\n"));
+                    i += 2; // Skip this condition and its action
+                }
+            } else {
+                self.output_buffer.push_str(&format!("[DEBUG] ERROR: Condition evaluation produced no result on the stack.\n"));
+                self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
+                return Err(AjisaiError::from("Condition evaluation produced no result"));
+            }
+        }
+    
+        self.output_buffer.push_str(&format!("\n[DEBUG] No condition was met. Checking for a final default action.\n"));
+        if segments.len() % 2 != 0 {
+             let default_action_segment = segments.last().unwrap();
+             self.output_buffer.push_str(&format!("[DEBUG] Executing final default action: {}\n", self.tokens_to_string_for_debug(default_action_segment)));
+             let result = self.execute_single_line_tokens(default_action_segment).await;
+             self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
+             return result;
+        }
+    
+        self.output_buffer.push_str(&format!("[DEBUG] No conditions met and no final default action found. Leaving original stack unchanged.\n"));
+        self.output_buffer.push_str(&format!("[DEBUG] === End Guard Chain Processing ===\n"));
+        Ok(())
+    }
+    // ========== ここまでデバッグコード ==========
 
     #[async_recursion(?Send)]
     async fn execute_single_line_tokens(&mut self, tokens: &[Token]) -> Result<()> {
@@ -678,6 +705,17 @@ async fn execute_word(&mut self, name: &str) -> Result<()> {
         None
     }
     
+    // ========== デバッグ用ヘルパー関数 ==========
+    fn tokens_to_string_for_debug(&self, tokens: &[Token]) -> String {
+        tokens.iter().map(|t| self.token_to_string(t)).collect::<Vec<String>>().join(" ")
+    }
+    
+    fn stack_to_string_for_debug(&self, stack: &Stack) -> String {
+        let items: Vec<String> = stack.iter().map(|v| format!("{}", v)).collect();
+        format!("[ {} ]", items.join(", "))
+    }
+    // ========== デバッグ用ヘルパー関数ここまで ==========
+
     fn token_to_string(&self, token: &Token) -> String {
         match token {
             Token::Number(s) => s.clone(),
