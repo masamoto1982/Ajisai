@@ -279,7 +279,7 @@ export class WorkerManager {
         // すべてのWorkerに同期
         const syncPromises = this.workers.map(workerInstance => {
             return new Promise<void>((resolve, reject) => {
-                const syncId = `sync_${++this.taskIdCounter}`;
+                const syncId = `sync_words_${++this.taskIdCounter}`;
                 
                 const handleMessage = (event: MessageEvent) => {
                     if (event.data.id === syncId) {
@@ -314,6 +314,49 @@ export class WorkerManager {
             console.log('[WorkerManager] All workers synced');
         } catch (error) {
             console.error('[WorkerManager] Failed to sync some workers:', error);
+            throw error;
+        }
+    }
+
+    async syncStack(stack: any[]): Promise<void> {
+        console.log(`[WorkerManager] Syncing stack with ${stack.length} items to all workers`);
+        
+        const syncPromises = this.workers.map(workerInstance => {
+            return new Promise<void>((resolve, reject) => {
+                const syncId = `sync_stack_${++this.taskIdCounter}`;
+                
+                const handleMessage = (event: MessageEvent) => {
+                    if (event.data.id === syncId) {
+                        workerInstance.worker.removeEventListener('message', handleMessage);
+                        if (event.data.type === 'result') {
+                            console.log(`[WorkerManager] Worker stack synced: ${event.data.data?.synced || 0} items`);
+                            resolve();
+                        } else {
+                            reject(new Error(event.data.data));
+                        }
+                    }
+                };
+                
+                workerInstance.worker.addEventListener('message', handleMessage);
+                
+                workerInstance.worker.postMessage({
+                    type: 'sync_stack',
+                    id: syncId,
+                    stack: stack
+                });
+                
+                setTimeout(() => {
+                    workerInstance.worker.removeEventListener('message', handleMessage);
+                    reject(new Error('Stack sync timeout'));
+                }, 5000);
+            });
+        });
+        
+        try {
+            await Promise.all(syncPromises);
+            console.log('[WorkerManager] All workers stack synced');
+        } catch (error) {
+            console.error('[WorkerManager] Failed to sync stack to some workers:', error);
             throw error;
         }
     }
