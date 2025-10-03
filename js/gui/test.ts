@@ -185,40 +185,72 @@ export class TestRunner {
 }
     
     private showTestResult(testCase: TestCase, result: any, passed: boolean): void {
-        const statusIcon = passed ? '✓' : '✗';
-        const statusText = passed ? 'PASS' : 'FAIL';
-        const statusColor = passed ? 'success' : 'error';
-        
-        this.showColoredInfo(`${statusIcon} ${statusText}: ${testCase.name}`, statusColor);
-        this.showColoredInfo(`  Code: ${testCase.code}`, 'info');
-        
-        if (testCase.expectError) {
-            this.showColoredInfo(`  Expected: Error should occur`, 'info');
-            if (result.errorMessage) {
-                this.showColoredInfo(`  Actual error: ${result.errorMessage}`, 'info');
-            }
-        } else if (testCase.expectedStack) {
-            this.showColoredInfo(`  Expected stack: ${this.formatStackForDisplay(testCase.expectedStack)}`, 'info');
-            if (result.actualStack) {
-                this.showColoredInfo(`  Actual stack: ${this.formatStackForDisplay(result.actualStack)}`, 'info');
-            }
-        } else if (testCase.expectedOutput) {
-            this.showColoredInfo(`  Expected output: "${testCase.expectedOutput}"`, 'info');
-            if (result.actualOutput !== undefined) {
-                this.showColoredInfo(`  Actual output: "${result.actualOutput}"`, 'info');
-            }
+    const statusIcon = passed ? '✓' : '✗';
+    const statusText = passed ? 'PASS' : 'FAIL';
+    const statusColor = passed ? 'success' : 'error';
+    
+    this.showColoredInfo(`${statusIcon} ${statusText}: ${testCase.name}`, statusColor);
+    this.showColoredInfo(`  Code: ${testCase.code.replace(/\n/g, ' | ')}`, 'info');
+    
+    if (testCase.expectError) {
+        this.showColoredInfo(`  Expected: Error should occur`, 'info');
+        if (result.errorMessage) {
+            this.showColoredInfo(`  Actual error: ${result.errorMessage}`, 'info');
+        } else {
+            this.showColoredInfo(`  Actual: No error occurred`, passed ? 'info' : 'error');
         }
-        
-        if (result.reason) {
-            this.showColoredInfo(`  Result: ${result.reason}`, passed ? 'success' : 'error');
+    } else if (testCase.expectedStack !== undefined) {
+        this.showColoredInfo(`  Expected stack: ${this.formatStackForDisplay(testCase.expectedStack)}`, 'info');
+        if (result.actualStack !== undefined) {
+            this.showColoredInfo(`  Actual stack:   ${this.formatStackForDisplay(result.actualStack)}`, passed ? 'info' : 'error');
+            
+            // 失敗時には詳細な比較を表示
+            if (!passed) {
+                this.showStackDifference(testCase.expectedStack, result.actualStack);
+            }
+        } else {
+            this.showColoredInfo(`  Actual stack: (not captured)`, 'error');
         }
-
-        if (!passed && result.errorMessage) {
-            this.showColoredInfo(`  Error Message from Rust: ${result.errorMessage}`, 'error');
+    } else if (testCase.expectedOutput !== undefined) {
+        this.showColoredInfo(`  Expected output: "${testCase.expectedOutput}"`, 'info');
+        if (result.actualOutput !== undefined) {
+            this.showColoredInfo(`  Actual output:   "${result.actualOutput}"`, passed ? 'info' : 'error');
+        } else {
+            this.showColoredInfo(`  Actual output: (not captured)`, 'error');
         }
-        
-        this.showColoredInfo('', 'info'); // 空行
     }
+    
+    if (result.reason) {
+        this.showColoredInfo(`  Reason: ${result.reason}`, passed ? 'info' : 'error');
+    }
+
+    if (!passed && result.errorMessage) {
+        this.showColoredInfo(`  Error: ${result.errorMessage}`, 'error');
+    }
+    
+    this.showColoredInfo('', 'info'); // 空行
+}
+
+private showStackDifference(expected: Value[], actual: Value[]): void {
+    if (expected.length !== actual.length) {
+        this.showColoredInfo(`  Stack length mismatch: expected ${expected.length}, got ${actual.length}`, 'error');
+    }
+    
+    const maxLen = Math.max(expected.length, actual.length);
+    for (let i = 0; i < maxLen; i++) {
+        const exp = i < expected.length ? expected[i] : undefined;
+        const act = i < actual.length ? actual[i] : undefined;
+        
+        if (exp === undefined) {
+            this.showColoredInfo(`  [${i}] Extra: ${this.formatValueForDisplay(act!)}`, 'error');
+        } else if (act === undefined) {
+            this.showColoredInfo(`  [${i}] Missing: ${this.formatValueForDisplay(exp)}`, 'error');
+        } else if (!this.compareValue(exp, act)) {
+            this.showColoredInfo(`  [${i}] Expected: ${this.formatValueForDisplay(exp)}`, 'error');
+            this.showColoredInfo(`  [${i}] Got:      ${this.formatValueForDisplay(act)}`, 'error');
+        }
+    }
+}
     
     private showTestError(testCase: TestCase, error: any): void {
         this.showColoredInfo(`✗ ERROR: ${testCase.name}`, 'error');
