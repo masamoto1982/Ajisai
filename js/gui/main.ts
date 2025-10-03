@@ -491,15 +491,24 @@ export class GUI {
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
 
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const timestamp = `${year}${month}${day}${hours}${minutes}`;
+        const filename = `ajisai_word_${timestamp}.json`;
+
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'ajisai_words.json';
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        this.display.showInfo('Custom words exported.', true);
+        this.display.showInfo(`Custom words exported as ${filename}.`, true);
     }
 
     private importCustomWords(): void {
