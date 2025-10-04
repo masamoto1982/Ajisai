@@ -76,7 +76,7 @@ export class GUI {
             stackArea: this.elements.stackArea,
             dictionaryArea: this.elements.dictionaryArea
         });
-        this.persistence.init();
+        await this.persistence.init();
 
         this.setupEventListeners();
         this.dictionary.renderBuiltinWords();
@@ -95,7 +95,7 @@ export class GUI {
             this.display.showInfo('Parallel execution system ready.', true);
         } catch (error) {
             console.error('[GUI] Failed to initialize workers:', error);
-            this.display.showError(`Failed to initialize parallel execution: ${error}`);
+            this.display.showError(new Error(`Failed to initialize parallel execution: ${error}`));
         }
     }
 
@@ -149,7 +149,7 @@ export class GUI {
             this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
         } catch (error) {
             console.error('Failed to update display:', error);
-            this.display.showError('Failed to update display.');
+            this.display.showError(new Error('Failed to update display.'));
         }
     }
 }
