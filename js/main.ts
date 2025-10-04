@@ -1,3 +1,5 @@
+// js/main.ts
+
 import { GUI_INSTANCE } from './gui/main';
 import { initWasm } from './wasm-loader';
 import './db';
