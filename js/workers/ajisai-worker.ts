@@ -1,6 +1,6 @@
 // js/workers/ajisai-worker.ts
 
-import type { WasmModule, AjisaiInterpreter, ExecuteResult, Value, CustomWord } from '../wasm-types';
+import type { WasmModule, AjisaiInterpreter, ExecuteResult } from '../wasm-types';
 
 let interpreter: AjisaiInterpreter | null = null;
 let isAborted = false;
@@ -8,12 +8,20 @@ let currentTaskId: string | null = null;
 
 async function init() {
     if (interpreter) return;
-    const wasmModule = await import('../pkg/ajisai_core.js') as unknown as WasmModule;
-    if (wasmModule.default) {
-        await wasmModule.default();
+    try {
+        const wasmModule = await import('../pkg/ajisai_core.js') as unknown as WasmModule;
+        if (wasmModule.default) {
+            await wasmModule.default();
+        } else if (wasmModule.init) {
+            await wasmModule.init();
+        }
+        interpreter = new wasmModule.AjisaiInterpreter();
+        console.log('[Worker] WASM Interpreter Initialized');
+    } catch (e) {
+        console.error('[Worker] Failed to initialize WASM', e);
+        // 初期化失敗をメインスレッドに通知
+        self.postMessage({ type: 'error', id: 'init', data: 'Worker WASM initialization failed' });
     }
-    interpreter = new wasmModule.AjisaiInterpreter();
-    console.log('[Worker] WASM Interpreter Initialized');
 }
 
 self.onmessage = async (event: MessageEvent) => {
@@ -56,7 +64,7 @@ self.onmessage = async (event: MessageEvent) => {
         self.postMessage({ type: 'result', id, data: result });
 
     } catch (error: any) {
-        if (error.message === 'aborted') {
+        if (isAborted || error.message === 'aborted') {
             self.postMessage({ type: 'aborted', id });
         } else {
             self.postMessage({ type: 'error', id, data: error.toString() });
@@ -66,4 +74,5 @@ self.onmessage = async (event: MessageEvent) => {
     }
 };
 
+// Workerがロードされたらすぐに初期化を開始
 init();
