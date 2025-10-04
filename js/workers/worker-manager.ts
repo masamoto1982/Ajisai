@@ -1,19 +1,16 @@
-// js/workers/worker-manager.ts - Worker管理とプール
+// js/workers/worker-manager.ts
+
+import type { ExecuteResult, Value, CustomWord } from '../wasm-types';
 
 interface WorkerTask {
     id: string;
     code: string;
-    type: 'execute' | 'step' | 'progressive';
+    state: {
+        stack: Value[];
+        customWords: CustomWord[];
+    };
     resolve: (result: any) => void;
     reject: (error: any) => void;
-    worker?: Worker;
-    isProgressive?: boolean;
-    progressiveState?: {
-        delayMs: number;
-        totalIterations: number;
-        currentIteration: number;
-    };
-    onProgress?: (result: any) => void;
 }
 
 interface WorkerInstance {
@@ -26,7 +23,7 @@ export class WorkerManager {
     private workers: WorkerInstance[] = [];
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
-    private maxWorkers = 4;
+    private maxWorkers = navigator.hardwareConcurrency || 4;
     private taskIdCounter = 0;
 
     constructor() {
@@ -35,449 +32,118 @@ export class WorkerManager {
 
     async init(): Promise<void> {
         console.log('[WorkerManager] Initializing worker pool...');
-        
-        try {
-            // Create initial worker pool
-            for (let i = 0; i < this.maxWorkers; i++) {
-                await this.createWorker();
-            }
-            console.log(`[WorkerManager] Created ${this.workers.length} workers`);
-        } catch (error) {
-            console.error('[WorkerManager] Failed to initialize workers:', error);
-            throw error;
+        this.workers = [];
+        for (let i = 0; i < this.maxWorkers; i++) {
+            this.createWorker();
         }
     }
 
-    private async createWorker(): Promise<WorkerInstance> {
-        console.log('[WorkerManager] Creating new worker...');
+    private createWorker(): void {
+        const worker = new Worker(new URL('./ajisai-worker.ts', import.meta.url), { type: 'module' });
+        const instance: WorkerInstance = { worker, busy: false, currentTaskId: null };
+
+        worker.onmessage = (event) => this.handleWorkerMessage(instance, event.data);
+        worker.onerror = (error) => this.handleWorkerError(instance, error);
         
-        const worker = new Worker(
-            new URL('./ajisai-worker.ts', import.meta.url),
-            { type: 'module' }
-        );
-
-        const workerInstance: WorkerInstance = {
-            worker,
-            busy: false,
-            currentTaskId: null
-        };
-
-        // Setup worker message handler
-        worker.addEventListener('message', (event) => {
-            this.handleWorkerMessage(workerInstance, event.data);
-        });
-
-        worker.addEventListener('error', (error) => {
-            console.error('[WorkerManager] Worker error:', error);
-            this.handleWorkerError(workerInstance, error);
-        });
-
-        // Initialize worker
-        await this.initWorker(worker);
-        
-        this.workers.push(workerInstance);
-        console.log(`[WorkerManager] Worker created. Total workers: ${this.workers.length}`);
-        
-        return workerInstance;
+        this.workers.push(instance);
     }
-
-    private initWorker(worker: Worker): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Worker initialization timeout'));
-            }, 10000);
-
-            const handleMessage = (event: MessageEvent) => {
-                if (event.data.type === 'debug' && event.data.id === 'init') {
-                    clearTimeout(timeout);
-                    worker.removeEventListener('message', handleMessage);
-                    resolve();
-                } else if (event.data.type === 'error' && event.data.id === 'init') {
-                    clearTimeout(timeout);
-                    worker.removeEventListener('message', handleMessage);
-                    reject(new Error(event.data.data));
-                }
-            };
-
-            worker.addEventListener('message', handleMessage);
-            worker.postMessage({ type: 'init', id: 'init' });
-        });
-    }
-
-    private handleWorkerMessage(workerInstance: WorkerInstance, message: any): void {
-        // 初期化メッセージはタスクではないため、ここで無視して警告を抑制する
-        if (message.id === 'init' || message.id?.startsWith('sync_')) {
-            return;
-        }
-        
-        console.log(`[WorkerManager] Worker message: ${message.type}, ID: ${message.id}`);
-
+    
+    private handleWorkerMessage(instance: WorkerInstance, message: any): void {
         const task = this.activeTasks.get(message.id);
-        if (!task) {
-            console.warn(`[WorkerManager] No task found for ID: ${message.id}`);
-            return;
-        }
+        if (!task) return;
 
         switch (message.type) {
             case 'result':
-                console.log(`[WorkerManager] Task ${message.id} completed successfully`);
                 task.resolve(message.data);
-                this.completeTask(workerInstance, task);
                 break;
-
-            case 'progressive_init':
-                console.log(`[WorkerManager] Progressive execution initialized for ${message.id}`);
-                task.isProgressive = true;
-                task.progressiveState = {
-                    delayMs: message.data.delayMs || 0,
-                    totalIterations: message.data.totalIterations || 1,
-                    currentIteration: 0
-                };
-                this.startProgressiveExecution(workerInstance, task);
-                break;
-
-            case 'progressive_step':
-                console.log(`[WorkerManager] Progressive step for ${message.id}:`, message.data);
-                if (task.progressiveState) {
-                    task.progressiveState.currentIteration = message.data.currentIteration || 0;
-                }
-                
-                // プログレスコールバックを呼び出してGUIに即座に通知
-                if (task.onProgress) {
-                    console.log(`[WorkerManager] Calling progress callback for ${message.id}`);
-                    task.onProgress(message.data);
-                }
-                
-                if (message.data.status === 'COMPLETED' || !message.data.hasMore) {
-                    console.log(`[WorkerManager] Progressive execution completed for ${message.id}`);
-                    task.resolve(message.data);
-                    this.completeTask(workerInstance, task);
-                } else {
-                    // Continue progressive execution
-                    this.scheduleNextProgressiveStep(workerInstance, task);
-                }
-                break;
-
             case 'error':
-                console.error(`[WorkerManager] Task ${message.id} failed:`, message.data);
                 task.reject(new Error(message.data));
-                this.completeTask(workerInstance, task);
                 break;
-
             case 'aborted':
-                console.log(`[WorkerManager] Task ${message.id} aborted`);
                 task.reject(new Error('Execution aborted'));
-                this.completeTask(workerInstance, task);
                 break;
-
-            case 'progress':
-                // Handle progress updates if needed
-                console.log(`[WorkerManager] Progress for ${message.id}:`, message.progress);
-                break;
-
-            case 'debug':
-                console.log(`[WorkerManager] Debug for ${message.id}:`, message.data);
-                break;
-
-            default:
-                console.warn(`[WorkerManager] Unknown message type: ${message.type}`);
         }
+        this.completeTask(instance, task);
     }
-
-    private startProgressiveExecution(workerInstance: WorkerInstance, task: WorkerTask): void {
-        console.log(`[WorkerManager] Starting progressive execution for ${task.id}`);
-        this.scheduleNextProgressiveStep(workerInstance, task);
-    }
-
-    private scheduleNextProgressiveStep(workerInstance: WorkerInstance, task: WorkerTask): void {
-        if (!task.progressiveState) {
-            console.error(`[WorkerManager] No progressive state for task ${task.id}`);
-            return;
+    
+    private handleWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
+        console.error('[WorkerManager] Worker error:', error.message);
+        if (instance.currentTaskId) {
+            const task = this.activeTasks.get(instance.currentTaskId);
+            task?.reject(new Error(`Worker error: ${error.message}`));
+            this.activeTasks.delete(instance.currentTaskId);
         }
-
-        const delayMs = task.progressiveState.delayMs;
-        
-        console.log(`[WorkerManager] Scheduling next step for ${task.id} in ${delayMs}ms`);
-        
-        setTimeout(() => {
-            if (this.activeTasks.has(task.id)) {
-                console.log(`[WorkerManager] Executing progressive step for ${task.id}`);
-                workerInstance.worker.postMessage({
-                    type: 'progressive_step',
-                    id: task.id
-                });
-            } else {
-                console.log(`[WorkerManager] Task ${task.id} no longer active, skipping step`);
-            }
-        }, delayMs);
+        // ワーカーを再作成
+        const index = this.workers.indexOf(instance);
+        if (index > -1) this.workers.splice(index, 1);
+        this.createWorker();
+        this.processQueue();
     }
-
-    private handleWorkerError(workerInstance: WorkerInstance, error: ErrorEvent): void {
-        console.error('[WorkerManager] Worker error:', error);
-        
-        // Mark worker as failed and reject current task
-        if (workerInstance.currentTaskId) {
-            const task = this.activeTasks.get(workerInstance.currentTaskId);
-            if (task) {
-                task.reject(new Error(`Worker error: ${error.message}`));
-                this.activeTasks.delete(workerInstance.currentTaskId);
-            }
-        }
-
-        // Remove failed worker
-        const index = this.workers.indexOf(workerInstance);
-        if (index !== -1) {
-            this.workers.splice(index, 1);
-        }
-
-        // Create replacement worker
-        this.createWorker().catch(console.error);
-    }
-
-    private completeTask(workerInstance: WorkerInstance, task: WorkerTask): void {
-        workerInstance.busy = false;
-        workerInstance.currentTaskId = null;
+    
+    private completeTask(instance: WorkerInstance, task: WorkerTask): void {
+        instance.busy = false;
+        instance.currentTaskId = null;
         this.activeTasks.delete(task.id);
-        
-        // Process next task in queue
         this.processQueue();
     }
 
     private processQueue(): void {
         const availableWorker = this.workers.find(w => !w.busy);
         const nextTask = this.taskQueue.shift();
-        
         if (availableWorker && nextTask) {
-            this.executeTask(availableWorker, nextTask);
+            this.assignTaskToWorker(availableWorker, nextTask);
         }
     }
 
-    private executeTask(workerInstance: WorkerInstance, task: WorkerTask): void {
-        console.log(`[WorkerManager] Executing task ${task.id} on worker`);
-        
-        workerInstance.busy = true;
-        workerInstance.currentTaskId = task.id;
-        task.worker = workerInstance.worker;
-        
+    private assignTaskToWorker(instance: WorkerInstance, task: WorkerTask): void {
+        instance.busy = true;
+        instance.currentTaskId = task.id;
         this.activeTasks.set(task.id, task);
         
-        let messageType = task.type;
-        if (task.type === 'progressive') {
-            messageType = 'progressive';
-        }
-        
-        workerInstance.worker.postMessage({
-            type: messageType,
+        instance.worker.postMessage({
+            type: 'execute',
             id: task.id,
-            code: task.code
+            code: task.code,
+            state: task.state
         });
     }
 
-    async syncCustomWords(customWords: any[]): Promise<void> {
-        console.log(`[WorkerManager] Syncing ${customWords.length} custom words to all workers`);
-        
-        // すべてのWorkerに同期
-        const syncPromises = this.workers.map(workerInstance => {
-            return new Promise<void>((resolve, reject) => {
-                const syncId = `sync_words_${++this.taskIdCounter}`;
-                
-                const handleMessage = (event: MessageEvent) => {
-                    if (event.data.id === syncId) {
-                        workerInstance.worker.removeEventListener('message', handleMessage);
-                        if (event.data.type === 'result') {
-                            console.log(`[WorkerManager] Worker synced: ${event.data.data?.synced || 0} words`);
-                            resolve();
-                        } else {
-                            reject(new Error(event.data.data));
-                        }
-                    }
-                };
-                
-                workerInstance.worker.addEventListener('message', handleMessage);
-                
-                workerInstance.worker.postMessage({
-                    type: 'sync_words',
-                    id: syncId,
-                    customWords: customWords
-                });
-                
-                // タイムアウト
-                setTimeout(() => {
-                    workerInstance.worker.removeEventListener('message', handleMessage);
-                    reject(new Error('Sync timeout'));
-                }, 5000);
-            });
-        });
-        
-        try {
-            await Promise.all(syncPromises);
-            console.log('[WorkerManager] All workers synced');
-        } catch (error) {
-            console.error('[WorkerManager] Failed to sync some workers:', error);
-            throw error;
-        }
-    }
-
-    async syncStack(stack: any[]): Promise<void> {
-        console.log(`[WorkerManager] Syncing stack with ${stack.length} items to all workers`);
-        
-        const syncPromises = this.workers.map(workerInstance => {
-            return new Promise<void>((resolve, reject) => {
-                const syncId = `sync_stack_${++this.taskIdCounter}`;
-                
-                const handleMessage = (event: MessageEvent) => {
-                    if (event.data.id === syncId) {
-                        workerInstance.worker.removeEventListener('message', handleMessage);
-                        if (event.data.type === 'result') {
-                            console.log(`[WorkerManager] Worker stack synced: ${event.data.data?.synced || 0} items`);
-                            resolve();
-                        } else {
-                            reject(new Error(event.data.data));
-                        }
-                    }
-                };
-                
-                workerInstance.worker.addEventListener('message', handleMessage);
-                
-                workerInstance.worker.postMessage({
-                    type: 'sync_stack',
-                    id: syncId,
-                    stack: stack
-                });
-                
-                setTimeout(() => {
-                    workerInstance.worker.removeEventListener('message', handleMessage);
-                    reject(new Error('Stack sync timeout'));
-                }, 5000);
-            });
-        });
-        
-        try {
-            await Promise.all(syncPromises);
-            console.log('[WorkerManager] All workers stack synced');
-        } catch (error) {
-            console.error('[WorkerManager] Failed to sync stack to some workers:', error);
-            throw error;
-        }
-    }
-
-    async execute(code: string, onProgress?: (result: any) => void): Promise<any> {
-        const taskId = `task_${++this.taskIdCounter}`;
-        console.log(`[WorkerManager] Queuing execute task: ${taskId}`);
-        
-        // Check if this should be progressive execution
-        const isProgressive = this.shouldUseProgressiveExecution(code);
-        const taskType = isProgressive ? 'progressive' : 'execute';
-        
-        console.log(`[WorkerManager] Task ${taskId} type: ${taskType}`);
-        
+    execute(code: string, state: { stack: Value[], customWords: CustomWord[] }): Promise<ExecuteResult> {
         return new Promise((resolve, reject) => {
             const task: WorkerTask = {
-                id: taskId,
+                id: `task_${++this.taskIdCounter}`,
                 code,
-                type: taskType as 'execute' | 'step' | 'progressive',
-                resolve,
-                reject,
-                onProgress
-            };
-
-            const availableWorker = this.workers.find(w => !w.busy);
-            if (availableWorker) {
-                this.executeTask(availableWorker, task);
-            } else {
-                console.log(`[WorkerManager] No available workers, queuing task: ${taskId}`);
-                this.taskQueue.push(task);
-            }
-        });
-    }
-
-    private shouldUseProgressiveExecution(code: string): boolean {
-        // Check for delay and repeat modifiers
-        return /\d+x\s+\d+m?s|\d+m?s\s+\d+x/.test(code) || /\d+(ms|s)\s/.test(code);
-    }
-
-    async executeStep(code: string): Promise<any> {
-        const taskId = `step_${++this.taskIdCounter}`;
-        console.log(`[WorkerManager] Queuing step task: ${taskId}`);
-        
-        return new Promise((resolve, reject) => {
-            const task: WorkerTask = {
-                id: taskId,
-                code,
-                type: 'step',
+                state,
                 resolve,
                 reject
             };
-
-            const availableWorker = this.workers.find(w => !w.busy);
-            if (availableWorker) {
-                this.executeTask(availableWorker, task);
-            } else {
-                console.log(`[WorkerManager] No available workers, queuing step task: ${taskId}`);
-                this.taskQueue.push(task);
-            }
+            this.taskQueue.push(task);
+            this.processQueue();
         });
     }
 
     abortAll(): void {
         console.log('[WorkerManager] Aborting all tasks...');
-        
-        // Abort all active tasks
-        for (const [taskId, task] of this.activeTasks.entries()) {
-            if (task.worker) {
-                console.log(`[WorkerManager] Sending abort to task: ${taskId}`);
-                task.worker.postMessage({
-                    type: 'abort',
-                    id: taskId
-                });
-            }
+        this.taskQueue = [];
+        for (const [id, task] of this.activeTasks.entries()) {
+            const worker = this.workers.find(w => w.currentTaskId === id)?.worker;
+            worker?.postMessage({ type: 'abort', id });
         }
-        
-        // Clear task queue
-        const queuedTasks = this.taskQueue.splice(0);
-        for (const task of queuedTasks) {
-            task.reject(new Error('Execution aborted'));
-        }
-        
-        console.log(`[WorkerManager] Aborted ${this.activeTasks.size} active tasks and ${queuedTasks.length} queued tasks`);
+    }
+
+    async resetAllWorkers(): Promise<void> {
+        this.abortAll();
+        // ワーカーをすべて終了させて再作成
+        this.workers.forEach(w => w.worker.terminate());
+        await this.init();
     }
 
     private setupGlobalAbortHandler(): void {
-        // Setup escape key handler for global abort
-        if (typeof window !== 'undefined') {
-            window.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape') {
-                    console.log('[WorkerManager] Escape key pressed - aborting all tasks');
-                    this.abortAll();
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-            }, true); // Use capture phase for priority
-        }
-    }
-
-    getStatus(): { activeJobs: number; queuedJobs: number; workers: number } {
-        return {
-            activeJobs: this.activeTasks.size,
-            queuedJobs: this.taskQueue.length,
-            workers: this.workers.length
-        };
-    }
-
-    terminate(): void {
-        console.log('[WorkerManager] Terminating all workers...');
-        
-        this.abortAll();
-        
-        for (const workerInstance of this.workers) {
-            workerInstance.worker.terminate();
-        }
-        
-        this.workers.length = 0;
-        this.activeTasks.clear();
-        this.taskQueue.length = 0;
-        
-        console.log('[WorkerManager] All workers terminated');
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                this.abortAll();
+            }
+        });
     }
 }
 
