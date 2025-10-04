@@ -386,6 +386,10 @@ async fn execute_word(&mut self, name: &str) -> Result<()> {
             "AUDIO" => audio::op_sound(self),
             "TIMES" => self.execute_times(),
             "WAIT" => self.execute_wait(),
+            "MAP" => self.execute_map(),
+            "FILTER" => self.execute_filter(),
+            "REDUCE" => self.execute_reduce(),
+            "EACH" => self.execute_each(),
             "DEF" => {
                 if self.stack.len() >= 2 {
                     control::op_def(self)
@@ -552,6 +556,279 @@ async fn execute_word(&mut self, name: &str) -> Result<()> {
         // 実際には待機せずに実行
         self.execute_word_sync(&upper_name)?;
 
+        Ok(())
+    }
+
+    // === 高階関数の実装 ===
+
+    fn execute_map(&mut self) -> Result<()> {
+        if self.stack.len() < 2 {
+            return Err(AjisaiError::from("MAP requires vector and word name. Usage: [ data ] 'WORD' MAP"));
+        }
+
+        let name_val = self.stack.pop().unwrap();
+        let vector_val = self.stack.pop().unwrap();
+
+        // ワード名を取得
+        let word_name = match &name_val.val_type {
+            ValueType::Vector(v, _) if v.len() == 1 => {
+                match &v[0].val_type {
+                    ValueType::String(s) => s.clone(),
+                    _ => return Err(AjisaiError::type_error("string", "other type")),
+                }
+            },
+            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
+        };
+
+        // ベクトルを取得
+        let elements = match &vector_val.val_type {
+            ValueType::Vector(v, _) => v.clone(),
+            _ => return Err(AjisaiError::type_error("vector", "other type")),
+        };
+
+        let upper_name = word_name.to_uppercase();
+        
+        // ワードが存在するか確認
+        if !self.dictionary.contains_key(&upper_name) {
+            return Err(AjisaiError::UnknownWord(word_name));
+        }
+
+        // 各要素にワードを適用
+        let mut results = Vec::new();
+        for elem in elements {
+            // 要素をベクトルとしてスタックにプッシュ
+            self.stack.push(Value {
+                val_type: ValueType::Vector(vec![elem], BracketType::Square)
+            });
+            
+            // ワードを実行
+            self.execute_word_sync(&upper_name)?;
+            
+            // 結果を取得
+            if self.stack.is_empty() {
+                return Err(AjisaiError::from("MAP word must return a value"));
+            }
+            let result = self.stack.pop().unwrap();
+            
+            // 結果がベクトルの場合、その最初の要素を取得
+            match &result.val_type {
+                ValueType::Vector(v, _) if v.len() == 1 => {
+                    results.push(v[0].clone());
+                },
+                _ => {
+                    // ベクトルでない場合やサイズが1でない場合はそのまま追加
+                    results.push(result);
+                }
+            }
+        }
+
+        // 結果をベクトルとしてスタックにプッシュ
+        self.stack.push(Value {
+            val_type: ValueType::Vector(results, BracketType::Square)
+        });
+
+        Ok(())
+    }
+
+    fn execute_filter(&mut self) -> Result<()> {
+        if self.stack.len() < 2 {
+            return Err(AjisaiError::from("FILTER requires vector and word name. Usage: [ data ] 'WORD' FILTER"));
+        }
+
+        let name_val = self.stack.pop().unwrap();
+        let vector_val = self.stack.pop().unwrap();
+
+        // ワード名を取得
+        let word_name = match &name_val.val_type {
+            ValueType::Vector(v, _) if v.len() == 1 => {
+                match &v[0].val_type {
+                    ValueType::String(s) => s.clone(),
+                    _ => return Err(AjisaiError::type_error("string", "other type")),
+                }
+            },
+            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
+        };
+
+        // ベクトルを取得
+        let elements = match &vector_val.val_type {
+            ValueType::Vector(v, _) => v.clone(),
+            _ => return Err(AjisaiError::type_error("vector", "other type")),
+        };
+
+        let upper_name = word_name.to_uppercase();
+        
+        // ワードが存在するか確認
+        if !self.dictionary.contains_key(&upper_name) {
+            return Err(AjisaiError::UnknownWord(word_name));
+        }
+
+        // 各要素にワードを適用し、真の要素だけを残す
+        let mut results = Vec::new();
+        for elem in elements {
+            // 要素をベクトルとしてスタックにプッシュ
+            self.stack.push(Value {
+                val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square)
+            });
+            
+            // ワードを実行
+            self.execute_word_sync(&upper_name)?;
+            
+            // 結果を取得
+            if self.stack.is_empty() {
+                return Err(AjisaiError::from("FILTER word must return a value"));
+            }
+            let result = self.stack.pop().unwrap();
+            
+            // 結果が真かどうかをチェック
+            let is_true = match &result.val_type {
+                ValueType::Vector(v, _) if v.len() == 1 => {
+                    match &v[0].val_type {
+                        ValueType::Boolean(b) => *b,
+                        _ => false,
+                    }
+                },
+                ValueType::Boolean(b) => *b,
+                _ => false,
+            };
+            
+            if is_true {
+                results.push(elem);
+            }
+        }
+
+        // 結果をベクトルとしてスタックにプッシュ
+        self.stack.push(Value {
+            val_type: ValueType::Vector(results, BracketType::Square)
+        });
+
+        Ok(())
+    }
+
+    fn execute_reduce(&mut self) -> Result<()> {
+        if self.stack.len() < 3 {
+            return Err(AjisaiError::from("REDUCE requires vector, initial value, and word name. Usage: [ data ] [ init ] 'WORD' REDUCE"));
+        }
+
+        let name_val = self.stack.pop().unwrap();
+        let init_val = self.stack.pop().unwrap();
+        let vector_val = self.stack.pop().unwrap();
+
+        // ワード名を取得
+        let word_name = match &name_val.val_type {
+            ValueType::Vector(v, _) if v.len() == 1 => {
+                match &v[0].val_type {
+                    ValueType::String(s) => s.clone(),
+                    _ => return Err(AjisaiError::type_error("string", "other type")),
+                }
+            },
+            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
+        };
+
+        // ベクトルを取得
+        let elements = match &vector_val.val_type {
+            ValueType::Vector(v, _) => v.clone(),
+            _ => return Err(AjisaiError::type_error("vector", "other type")),
+        };
+
+        // 初期値を取得
+        let initial = match &init_val.val_type {
+            ValueType::Vector(v, _) if v.len() == 1 => v[0].clone(),
+            _ => return Err(AjisaiError::type_error("single-element vector", "other type")),
+        };
+
+        let upper_name = word_name.to_uppercase();
+        
+        // ワードが存在するか確認
+        if !self.dictionary.contains_key(&upper_name) {
+            return Err(AjisaiError::UnknownWord(word_name));
+        }
+
+        // アキュムレータを初期化
+        let mut accumulator = initial;
+
+        // 各要素で畳み込み
+        for elem in elements {
+            // アキュムレータと現在要素をスタックにプッシュ
+            self.stack.push(Value {
+                val_type: ValueType::Vector(vec![accumulator], BracketType::Square)
+            });
+            self.stack.push(Value {
+                val_type: ValueType::Vector(vec![elem], BracketType::Square)
+            });
+            
+            // ワードを実行
+            self.execute_word_sync(&upper_name)?;
+            
+            // 結果を取得
+            if self.stack.is_empty() {
+                return Err(AjisaiError::from("REDUCE word must return a value"));
+            }
+            let result = self.stack.pop().unwrap();
+            
+            // 結果を新しいアキュムレータとする
+            accumulator = match &result.val_type {
+                ValueType::Vector(v, _) if v.len() == 1 => v[0].clone(),
+                _ => result,
+            };
+        }
+
+        // 最終結果をベクトルとしてスタックにプッシュ
+        self.stack.push(Value {
+            val_type: ValueType::Vector(vec![accumulator], BracketType::Square)
+        });
+
+        Ok(())
+    }
+
+    fn execute_each(&mut self) -> Result<()> {
+        if self.stack.len() < 2 {
+            return Err(AjisaiError::from("EACH requires vector and word name. Usage: [ data ] 'WORD' EACH"));
+        }
+
+        let name_val = self.stack.pop().unwrap();
+        let vector_val = self.stack.pop().unwrap();
+
+        // ワード名を取得
+        let word_name = match &name_val.val_type {
+            ValueType::Vector(v, _) if v.len() == 1 => {
+                match &v[0].val_type {
+                    ValueType::String(s) => s.clone(),
+                    _ => return Err(AjisaiError::type_error("string", "other type")),
+                }
+            },
+            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
+        };
+
+        // ベクトルを取得
+        let elements = match &vector_val.val_type {
+            ValueType::Vector(v, _) => v.clone(),
+            _ => return Err(AjisaiError::type_error("vector", "other type")),
+        };
+
+        let upper_name = word_name.to_uppercase();
+        
+        // ワードが存在するか確認
+        if !self.dictionary.contains_key(&upper_name) {
+            return Err(AjisaiError::UnknownWord(word_name));
+        }
+
+        // 各要素にワードを適用（副作用のみ）
+        for elem in elements {
+            // 要素をベクトルとしてスタックにプッシュ
+            self.stack.push(Value {
+                val_type: ValueType::Vector(vec![elem], BracketType::Square)
+            });
+            
+            // ワードを実行
+            self.execute_word_sync(&upper_name)?;
+            
+            // 結果を破棄（副作用のみが目的）
+            if !self.stack.is_empty() {
+                self.stack.pop();
+            }
+        }
+
+        // EACHは何もスタックに残さない
         Ok(())
     }
     
