@@ -1,6 +1,7 @@
 // js/gui/persistence.ts
 
 import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-types';
+import type DB from '../db';
 
 interface InterpreterState {
     stack: Value[];
@@ -10,7 +11,7 @@ interface InterpreterState {
 declare global {
     interface Window {
         ajisaiInterpreter: AjisaiInterpreter;
-        AjisaiDB: any;
+        AjisaiDB: typeof DB;
     }
 }
 
