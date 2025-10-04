@@ -6,54 +6,18 @@ pub mod control;
 pub mod io;
 pub mod error;
 pub mod audio;
+pub mod higher_order;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, BracketType, Fraction, WordDefinition, ExecutionLine};
 use self::error::{Result, AjisaiError};
-use num_traits::{Zero, One, ToPrimitive};
-use async_recursion::async_recursion;
-use gloo_timers::future::TimeoutFuture;
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
-    pub(crate) execution_state: Option<WordExecutionState>,
     pub(crate) definition_to_load: Option<String>,
-}
-
-pub struct WordExecutionState {
-    pub program_counter: usize,
-    pub word_name: String,
-    pub continue_loop: bool,
-}
-
-async fn sleep(ms: u64) {
-    TimeoutFuture::new(ms as u32).await;
-}
-
-async fn evaluate_condition(
-    dictionary: &HashMap<String, WordDefinition>,
-    condition_tokens: &[Token],
-    value_to_test: &Value
-) -> Result<bool> {
-    let mut temp_interp = Interpreter {
-        stack: vec![value_to_test.clone()],
-        dictionary: dictionary.clone(),
-        dependents: HashMap::new(),
-        output_buffer: String::new(),
-        execution_state: None,
-        definition_to_load: None,
-    };
-    
-    temp_interp.execute_tokens(condition_tokens).await?;
-    
-    if let Some(result_val) = temp_interp.stack.pop() {
-        Ok(is_truthy(&result_val))
-    } else {
-        Ok(false)
-    }
 }
 
 impl Interpreter {
@@ -63,13 +27,13 @@ impl Interpreter {
             dictionary: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
-            execution_state: None,
             definition_to_load: None,
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
     }
 
+    // メインの実行エントリーポイント（asyncのまま残すが、内部は同期処理を呼び出す）
     pub async fn execute(&mut self, code: &str) -> Result<()> {
         if code.contains(" DEF") {
             return control::parse_multiple_word_definitions(self, code);
@@ -81,9 +45,10 @@ impl Interpreter {
             .collect();
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
         
-        self.execute_tokens(&tokens).await
+        self.execute_tokens_sync(&tokens)
     }
 
+    // トークンを同期的に実行するコアロジック
     pub fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
         while i < tokens.len() {
@@ -100,162 +65,7 @@ impl Interpreter {
                 Token::Boolean(b) => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
                 Token::Nil => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)}),
                 Token::VectorStart(_) => {
-                    let (values, consumed) = self.collect_vector(&tokens, i, 1)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
-                    i += consumed - 1;
-                },
-                Token::DefBlockStart => {
-                    let (body_tokens, consumed) = self.collect_def_block(&tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
-                    i += consumed - 1;
-                },
-                Token::Symbol(name) => {
-                    let upper_name = name.to_uppercase();
-                    if let Some(def) = self.dictionary.get(&upper_name).cloned() {
-                        if def.is_builtin {
-                            self.execute_builtin(&upper_name)?;
-                        } else {
-                            return Err(AjisaiError::from("Custom words not supported in sync execution mode"));
-                        }
-                    } else {
-                        return Err(AjisaiError::UnknownWord(name.clone()));
-                    }
-                },
-                _ => {}
-            }
-            i += 1;
-        }
-        Ok(())
-    }
-
-    fn split_tokens_by_lines(&self, tokens: &[Token]) -> Vec<Vec<Token>> {
-        let mut lines = Vec::new();
-        let mut current_line = Vec::new();
-        
-        for token in tokens {
-            if matches!(token, Token::LineBreak) {
-                if !current_line.is_empty() {
-                    lines.push(std::mem::take(&mut current_line));
-                }
-            } else {
-                current_line.push(token.clone());
-            }
-        }
-        
-        if !current_line.is_empty() {
-            lines.push(current_line);
-        }
-        
-        lines
-    }
-
-    #[async_recursion(?Send)]
-    pub async fn execute_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        let lines = self.split_tokens_by_lines(tokens);
-        
-        for line_tokens in lines {
-            if line_tokens.is_empty() {
-                continue;
-            }
-            
-            self.execute_line_with_guard_chain(&line_tokens).await?;
-        }
-        
-        Ok(())
-    }
-
-    #[async_recursion(?Send)]
-async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()> {
-    self.output_buffer.push_str(&format!("[DEBUG] === Start Guard Chain ===\n"));
-    self.output_buffer.push_str(&format!("[DEBUG] Input: {}\n", self.tokens_to_string_for_debug(tokens)));
-
-    let segments: Vec<&[Token]> = tokens.split(|t| matches!(t, Token::GuardSeparator)).collect();
-    self.output_buffer.push_str(&format!("[DEBUG] Split into {} segments.\n", segments.len()));
-
-    if segments.len() <= 1 {
-        self.output_buffer.push_str("[DEBUG] No guards found. Executing as a single line.\n");
-        self.output_buffer.push_str("[DEBUG] === End Guard Chain ===\n");
-        return self.execute_single_line_tokens(tokens).await;
-    }
-
-    // 条件分岐チェーン全体の開始時のスタック状態を保存
-    let initial_stack = self.stack.clone();
-    self.output_buffer.push_str(&format!("[DEBUG] Initial stack: {}\n", self.stack_to_string_for_debug(&initial_stack)));
-    
-    let mut first_condition_result = None;
-
-    let mut i = 0;
-    while i + 1 < segments.len() {
-        let condition_segment = segments[i];
-        let action_segment = segments[i + 1];
-
-        // 各条件評価の前に、スタックを初期状態に戻す
-        self.stack = initial_stack.clone();
-        
-        self.output_buffer.push_str(&format!("\n[DEBUG] --- Evaluating Pair starting at segment {} ---\n", i));
-        self.output_buffer.push_str(&format!("[DEBUG] Stack before condition: {}\n", self.stack_to_string_for_debug(&self.stack)));
-        self.output_buffer.push_str(&format!("[DEBUG] Evaluating condition: {}\n", self.tokens_to_string_for_debug(condition_segment)));
-        
-        self.execute_single_line_tokens(condition_segment).await?;
-
-        let condition_result = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        if i == 0 {
-            first_condition_result = Some(condition_result.clone());
-        }
-        let is_true = is_truthy(&condition_result);
-        self.output_buffer.push_str(&format!("[DEBUG] Condition result: {} -> {}\n", condition_result, if is_true { "TRUE" } else { "FALSE" }));
-
-        if is_true {
-            // 条件が真の場合、初期スタック状態から開始してアクションを実行
-            self.stack = initial_stack.clone();
-            self.output_buffer.push_str(&format!("[DEBUG] Condition TRUE. Executing action: {}\n", self.tokens_to_string_for_debug(action_segment)));
-            self.execute_single_line_tokens(action_segment).await?;
-            self.output_buffer.push_str("[DEBUG] === End Guard Chain (Action Taken) ===\n");
-            return Ok(());
-        } else {
-            self.output_buffer.push_str(&format!("[DEBUG] Condition FALSE. Moving to next pair.\n"));
-            i += 2;
-        }
-    }
-
-    // すべての条件が失敗した場合
-    if i < segments.len() {
-        // デフォルトアクションがある場合
-        let default_action_segment = segments.last().unwrap();
-        self.stack = initial_stack.clone();
-        self.output_buffer.push_str(&format!("\n[DEBUG] All conditions failed. Executing default action: {}\n", self.tokens_to_string_for_debug(default_action_segment)));
-        self.execute_single_line_tokens(default_action_segment).await?;
-    } else {
-        // デフォルトアクションがない場合、最初の条件結果を残す
-        if let Some(res) = first_condition_result {
-            self.output_buffer.push_str("\n[DEBUG] All conditions failed and no default action. Pushing first condition's result.\n");
-            self.stack = initial_stack;
-            self.stack.push(res);
-        }
-    }
-
-    self.output_buffer.push_str("[DEBUG] === End Guard Chain ===\n");
-    Ok(())
-}
-    
-    #[async_recursion(?Send)]
-    async fn execute_single_line_tokens(&mut self, tokens: &[Token]) -> Result<()> {
-        let mut i = 0;
-        while i < tokens.len() {
-            let token = &tokens[i];
-            
-            match token {
-                Token::Number(s) => {
-                    let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
-                },
-                Token::String(s) => {
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
-                },
-                Token::Boolean(b) => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
-                Token::Nil => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)}),
-                Token::VectorStart(_) => {
-                    let (values, consumed) = self.collect_vector(tokens, i, 1)?;
+                    let (values, consumed) = self.collect_vector(tokens, i)?;
                     self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
                     i += consumed - 1;
                 },
@@ -265,99 +75,35 @@ async fn execute_line_with_guard_chain(&mut self, tokens: &[Token]) -> Result<()
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
-                    self.execute_word(name).await?;
+                    self.execute_word_sync(name)?;
                 },
-                Token::GuardSeparator => {
-                    // ガードセパレータは既に上位で処理済みなのでスキップ
+                Token::GuardSeparator | Token::LineBreak => {
+                    // Top-levelでは無視
                 },
-                Token::LineBreak => {
-                    // 行内では無視
-                },
-                _ => {} 
+                _ => {}
             }
             i += 1;
         }
         Ok(())
     }
 
-    fn collect_def_block(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
-        let mut depth = 1;
-        let mut i = start + 1;
-        while i < tokens.len() {
-            match tokens[i] {
-                Token::DefBlockStart => depth += 1,
-                Token::DefBlockEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Ok((tokens[start + 1..i].to_vec(), i - start + 1));
-                    }
-                },
-                _ => {}
-            }
-            i += 1;
+    // 同期的なワード実行
+    pub(crate) fn execute_word_sync(&mut self, name: &str) -> Result<()> {
+        let def = self.dictionary.get(&name.to_uppercase()).cloned()
+            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
+
+        if def.is_builtin {
+            return self.execute_builtin(&name.to_uppercase());
         }
-        Err(AjisaiError::from("Unclosed definition block"))
-    }
-
-    #[async_recursion(?Send)]
-async fn execute_word(&mut self, name: &str) -> Result<()> {
-    let def = {
-        self.dictionary.get(&name.to_uppercase()).cloned()
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?
-    };
-
-    if def.is_builtin {
-        return self.execute_builtin(name);
-    }
-
-    let has_conditional_lines = def.lines.iter().any(|line| !line.condition_tokens.is_empty());
-    
-    if has_conditional_lines {
-        let value_to_test = self.stack.pop()
-            .ok_or(AjisaiError::StackUnderflow)?;
-        
-        let mut matched_line: Option<ExecutionLine> = None;
-        let dictionary_clone = self.dictionary.clone();
 
         for line in &def.lines {
-            if line.condition_tokens.is_empty() {
-                // デフォルト節
-                matched_line = Some(line.clone());
-                break;
-            }
-            
-            if evaluate_condition(&dictionary_clone, &line.condition_tokens, &value_to_test).await? {
-                matched_line = Some(line.clone());
-                break;
-            }
+            self.execute_tokens_sync(&line.body_tokens)?;
         }
-        
-        if let Some(line) = matched_line {
-            // マッチした行のアクションを実行（元の値は消費済み）
-            self.execute_line(&line).await?;
-        } else {
-            // どの条件にもマッチしなかった場合、元の値を戻す
-            self.stack.push(value_to_test);
-        }
-    } else {
-        // 条件なしのワード
-        let mut i = 0;
-        while i < def.lines.len() {
-            self.execute_line(&def.lines[i]).await?;
-            i += 1;
-        }
+        Ok(())
     }
     
-    Ok(())
-}
-
-    #[async_recursion(?Send)]
-    async fn execute_line(&mut self, line: &ExecutionLine) -> Result<()> {
-        self.execute_tokens(&line.body_tokens).await
-    }
-
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        match name.to_uppercase().as_str() {
+        match name {
             "GET" => vector_ops::op_get(self), 
             "INSERT" => vector_ops::op_insert(self),
             "REPLACE" => vector_ops::op_replace(self), 
@@ -379,470 +125,33 @@ async fn execute_word(&mut self, name: &str) -> Result<()> {
             "AND" => arithmetic::op_and(self),
             "OR" => arithmetic::op_or(self), 
             "NOT" => arithmetic::op_not(self),
-            ":" | ";" => {
-                Err(AjisaiError::from("':' and ';' can only be used for conditional branching within expressions"))
-            },
             "PRINT" => io::op_print(self), 
             "AUDIO" => audio::op_sound(self),
-            "TIMES" => self.execute_times(),
-            "WAIT" => self.execute_wait(),
+            "TIMES" => control::execute_times(self),
+            "WAIT" => control::execute_wait(self),
             "MAP" => self.execute_map(),
             "FILTER" => self.execute_filter(),
             "REDUCE" => self.execute_reduce(),
             "EACH" => self.execute_each(),
-            "DEF" => {
-                if self.stack.len() >= 2 {
-                    control::op_def(self)
-                } else {
-                    Err(AjisaiError::from("DEF requires definition and name on stack. Usage: : ... ; 'WORD_NAME' DEF"))
-                }
-            },
-            "DEL" => {
-                if !self.stack.is_empty() {
-                    control::op_del(self)
-                } else {
-                    Err(AjisaiError::from("DEL requires a word name on stack. Usage: 'WORD_NAME' DEL"))
-                }
-            },
+            "DEF" => control::op_def(self),
+            "DEL" => control::op_del(self),
             "?" => control::op_lookup(self),
             "RESET" => self.execute_reset(),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
     }
 
-    fn execute_times(&mut self) -> Result<()> {
-        if self.stack.len() < 2 {
-            return Err(AjisaiError::from("TIMES requires word name and count. Usage: 'WORD' [ n ] TIMES"));
-        }
-
-        let count_val = self.stack.pop().unwrap();
-        let name_val = self.stack.pop().unwrap();
-
-        let count = match &count_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::Number(n) if n.denominator == num_bigint::BigInt::one() => {
-                        n.numerator.to_i64().ok_or_else(|| AjisaiError::from("Count too large"))?
-                    },
-                    _ => return Err(AjisaiError::type_error("integer", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-        };
-
-        let word_name = match &name_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::String(s) => s.clone(),
-                    _ => return Err(AjisaiError::type_error("string", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
-        };
-
-        let upper_name = word_name.to_uppercase();
-        
-        // カスタムワードかどうかを確認
-        if let Some(def) = self.dictionary.get(&upper_name) {
-            if def.is_builtin {
-                return Err(AjisaiError::from("TIMES can only be used with custom words"));
-            }
-        } else {
-            return Err(AjisaiError::UnknownWord(word_name));
-        }
-
-        // スケジュール実行（非同期）
-        self.output_buffer.push_str(&format!("[DEBUG] Scheduling {} executions of '{}'\n", count, word_name));
-        
-        // 注意: この実装は同期的なので、実際には即座に全て実行される
-        // 本来は async で実装すべきだが、ここでは簡易実装
-        for _ in 0..count {
-            
-            // execute_tokens は async なので、ここでは execute_tokens_sync を使うか
-            // 別の方法が必要... これは問題
-            // とりあえず同期実行を試みる
-            self.execute_word_sync(&upper_name)?;
-        }
-
-        Ok(())
-    }
-
-    fn execute_word_sync(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(name).cloned()
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
-
-        if def.is_builtin {
-            return self.execute_builtin(name);
-        }
-
-        for line in &def.lines {
-            for token in &line.body_tokens {
-                match token {
-                    Token::Number(s) => {
-                        let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
-                        self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
-                    },
-                    Token::String(s) => {
-                        self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
-                    },
-                    Token::Boolean(b) => {
-                        self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)});
-                    },
-                    Token::Nil => {
-                        self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)});
-                    },
-                    Token::Symbol(sym_name) => {
-                        let sym_def = self.dictionary.get(&sym_name.to_uppercase()).cloned()
-                            .ok_or_else(|| AjisaiError::UnknownWord(sym_name.to_string()))?;
-                        if sym_def.is_builtin {
-                            self.execute_builtin(&sym_name.to_uppercase())?;
-                        } else {
-                            self.execute_word_sync(&sym_name.to_uppercase())?;
-                        }
-                    },
-                    _ => {}
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn execute_wait(&mut self) -> Result<()> {
-        if self.stack.len() < 2 {
-            return Err(AjisaiError::from("WAIT requires word name and delay. Usage: 'WORD' [ ms ] WAIT"));
-        }
-
-        let delay_val = self.stack.pop().unwrap();
-        let name_val = self.stack.pop().unwrap();
-
-        let delay_ms = match &delay_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::Number(n) if n.denominator == num_bigint::BigInt::one() => {
-                        n.numerator.to_u64().ok_or_else(|| AjisaiError::from("Delay too large"))?
-                    },
-                    _ => return Err(AjisaiError::type_error("integer", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-        };
-
-        let word_name = match &name_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::String(s) => s.clone(),
-                    _ => return Err(AjisaiError::type_error("string", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
-        };
-
-        let upper_name = word_name.to_uppercase();
-        
-        // カスタムワードかどうかを確認
-        if let Some(def) = self.dictionary.get(&upper_name) {
-            if def.is_builtin {
-                return Err(AjisaiError::from("WAIT can only be used with custom words"));
-            }
-        } else {
-            return Err(AjisaiError::UnknownWord(word_name));
-        }
-
-        // 注意: 同期実装では待機できない
-        // とりあえずメッセージだけ出力
-        self.output_buffer.push_str(&format!("[DEBUG] Would wait {}ms before executing '{}'\n", delay_ms, word_name));
-        
-        // 実際には待機せずに実行
-        self.execute_word_sync(&upper_name)?;
-
-        Ok(())
-    }
-
-    // === 高階関数の実装 ===
-
-    fn execute_map(&mut self) -> Result<()> {
-        if self.stack.len() < 2 {
-            return Err(AjisaiError::from("MAP requires vector and word name. Usage: [ data ] 'WORD' MAP"));
-        }
-
-        let name_val = self.stack.pop().unwrap();
-        let vector_val = self.stack.pop().unwrap();
-
-        // ワード名を取得
-        let word_name = match &name_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::String(s) => s.clone(),
-                    _ => return Err(AjisaiError::type_error("string", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
-        };
-
-        // ベクトルを取得
-        let elements = match &vector_val.val_type {
-            ValueType::Vector(v, _) => v.clone(),
-            _ => return Err(AjisaiError::type_error("vector", "other type")),
-        };
-
-        let upper_name = word_name.to_uppercase();
-        
-        // ワードが存在するか確認
-        if !self.dictionary.contains_key(&upper_name) {
-            return Err(AjisaiError::UnknownWord(word_name));
-        }
-
-        // 各要素にワードを適用
-        let mut results = Vec::new();
-        for elem in elements {
-            // 要素をベクトルとしてスタックにプッシュ
-            self.stack.push(Value {
-                val_type: ValueType::Vector(vec![elem], BracketType::Square)
-            });
-            
-            // ワードを実行
-            self.execute_word_sync(&upper_name)?;
-            
-            // 結果を取得
-            if self.stack.is_empty() {
-                return Err(AjisaiError::from("MAP word must return a value"));
-            }
-            let result = self.stack.pop().unwrap();
-            
-            // 結果がベクトルの場合、その最初の要素を取得
-            match &result.val_type {
-                ValueType::Vector(v, _) if v.len() == 1 => {
-                    results.push(v[0].clone());
-                },
-                _ => {
-                    // ベクトルでない場合やサイズが1でない場合はそのまま追加
-                    results.push(result);
-                }
-            }
-        }
-
-        // 結果をベクトルとしてスタックにプッシュ
-        self.stack.push(Value {
-            val_type: ValueType::Vector(results, BracketType::Square)
-        });
-
-        Ok(())
-    }
-
-    fn execute_filter(&mut self) -> Result<()> {
-        if self.stack.len() < 2 {
-            return Err(AjisaiError::from("FILTER requires vector and word name. Usage: [ data ] 'WORD' FILTER"));
-        }
-
-        let name_val = self.stack.pop().unwrap();
-        let vector_val = self.stack.pop().unwrap();
-
-        // ワード名を取得
-        let word_name = match &name_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::String(s) => s.clone(),
-                    _ => return Err(AjisaiError::type_error("string", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
-        };
-
-        // ベクトルを取得
-        let elements = match &vector_val.val_type {
-            ValueType::Vector(v, _) => v.clone(),
-            _ => return Err(AjisaiError::type_error("vector", "other type")),
-        };
-
-        let upper_name = word_name.to_uppercase();
-        
-        // ワードが存在するか確認
-        if !self.dictionary.contains_key(&upper_name) {
-            return Err(AjisaiError::UnknownWord(word_name));
-        }
-
-        // 各要素にワードを適用し、真の要素だけを残す
-        let mut results = Vec::new();
-        for elem in elements {
-            // 要素をベクトルとしてスタックにプッシュ
-            self.stack.push(Value {
-                val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square)
-            });
-            
-            // ワードを実行
-            self.execute_word_sync(&upper_name)?;
-            
-            // 結果を取得
-            if self.stack.is_empty() {
-                return Err(AjisaiError::from("FILTER word must return a value"));
-            }
-            let result = self.stack.pop().unwrap();
-            
-            // 結果が真かどうかをチェック
-            let is_true = match &result.val_type {
-                ValueType::Vector(v, _) if v.len() == 1 => {
-                    match &v[0].val_type {
-                        ValueType::Boolean(b) => *b,
-                        _ => false,
-                    }
-                },
-                ValueType::Boolean(b) => *b,
-                _ => false,
-            };
-            
-            if is_true {
-                results.push(elem);
-            }
-        }
-
-        // 結果をベクトルとしてスタックにプッシュ
-        self.stack.push(Value {
-            val_type: ValueType::Vector(results, BracketType::Square)
-        });
-
-        Ok(())
-    }
-
-    fn execute_reduce(&mut self) -> Result<()> {
-        if self.stack.len() < 3 {
-            return Err(AjisaiError::from("REDUCE requires vector, initial value, and word name. Usage: [ data ] [ init ] 'WORD' REDUCE"));
-        }
-
-        let name_val = self.stack.pop().unwrap();
-        let init_val = self.stack.pop().unwrap();
-        let vector_val = self.stack.pop().unwrap();
-
-        // ワード名を取得
-        let word_name = match &name_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::String(s) => s.clone(),
-                    _ => return Err(AjisaiError::type_error("string", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
-        };
-
-        // ベクトルを取得
-        let elements = match &vector_val.val_type {
-            ValueType::Vector(v, _) => v.clone(),
-            _ => return Err(AjisaiError::type_error("vector", "other type")),
-        };
-
-        // 初期値を取得
-        let initial = match &init_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => v[0].clone(),
-            _ => return Err(AjisaiError::type_error("single-element vector", "other type")),
-        };
-
-        let upper_name = word_name.to_uppercase();
-        
-        // ワードが存在するか確認
-        if !self.dictionary.contains_key(&upper_name) {
-            return Err(AjisaiError::UnknownWord(word_name));
-        }
-
-        // アキュムレータを初期化
-        let mut accumulator = initial;
-
-        // 各要素で畳み込み
-        for elem in elements {
-            // アキュムレータと現在要素をスタックにプッシュ
-            self.stack.push(Value {
-                val_type: ValueType::Vector(vec![accumulator], BracketType::Square)
-            });
-            self.stack.push(Value {
-                val_type: ValueType::Vector(vec![elem], BracketType::Square)
-            });
-            
-            // ワードを実行
-            self.execute_word_sync(&upper_name)?;
-            
-            // 結果を取得
-            if self.stack.is_empty() {
-                return Err(AjisaiError::from("REDUCE word must return a value"));
-            }
-            let result = self.stack.pop().unwrap();
-            
-            // 結果を新しいアキュムレータとする
-            accumulator = match &result.val_type {
-                ValueType::Vector(v, _) if v.len() == 1 => v[0].clone(),
-                _ => result,
-            };
-        }
-
-        // 最終結果をベクトルとしてスタックにプッシュ
-        self.stack.push(Value {
-            val_type: ValueType::Vector(vec![accumulator], BracketType::Square)
-        });
-
-        Ok(())
-    }
-
-    fn execute_each(&mut self) -> Result<()> {
-        if self.stack.len() < 2 {
-            return Err(AjisaiError::from("EACH requires vector and word name. Usage: [ data ] 'WORD' EACH"));
-        }
-
-        let name_val = self.stack.pop().unwrap();
-        let vector_val = self.stack.pop().unwrap();
-
-        // ワード名を取得
-        let word_name = match &name_val.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::String(s) => s.clone(),
-                    _ => return Err(AjisaiError::type_error("string", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
-        };
-
-        // ベクトルを取得
-        let elements = match &vector_val.val_type {
-            ValueType::Vector(v, _) => v.clone(),
-            _ => return Err(AjisaiError::type_error("vector", "other type")),
-        };
-
-        let upper_name = word_name.to_uppercase();
-        
-        // ワードが存在するか確認
-        if !self.dictionary.contains_key(&upper_name) {
-            return Err(AjisaiError::UnknownWord(word_name));
-        }
-
-        // 各要素にワードを適用（副作用のみ）
-        for elem in elements {
-            // 要素をベクトルとしてスタックにプッシュ
-            self.stack.push(Value {
-                val_type: ValueType::Vector(vec![elem], BracketType::Square)
-            });
-            
-            // ワードを実行
-            self.execute_word_sync(&upper_name)?;
-            
-            // 結果を破棄（副作用のみが目的）
-            if !self.stack.is_empty() {
-                self.stack.pop();
-            }
-        }
-
-        // EACHは何もスタックに残さない
-        Ok(())
-    }
-    
-    fn collect_vector(&self, tokens: &[Token], start: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
         let mut values = Vec::new();
-        let mut d = 1;
+        let mut depth = 1;
         let mut end = 0;
 
         for i in (start + 1)..tokens.len() {
             match tokens[i] {
-                Token::VectorStart(_) => d += 1,
+                Token::VectorStart(_) => depth += 1,
                 Token::VectorEnd(_) => {
-                    d -= 1;
-                    if d == 0 {
+                    depth -= 1;
+                    if depth == 0 {
                         end = i;
                         break;
                     }
@@ -859,14 +168,8 @@ async fn execute_word(&mut self, name: &str) -> Result<()> {
         while i < end {
             match &tokens[i] {
                 Token::VectorStart(_) => {
-                    let new_bracket_type = match depth % 3 {
-                        1 => BracketType::Curly,
-                        2 => BracketType::Round,
-                        0 => BracketType::Square,
-                        _ => unreachable!(),
-                    };
-                    let (nested_values, consumed) = self.collect_vector(tokens, i, depth + 1)?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values, new_bracket_type) });
+                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                    values.push(Value { val_type: ValueType::Vector(nested_values, BracketType::Square) });
                     i += consumed;
                 },
                 Token::Number(s) => {
@@ -896,35 +199,23 @@ async fn execute_word(&mut self, name: &str) -> Result<()> {
         Ok((values, end - start + 1))
     }
 
-    pub fn rebuild_dependencies(&mut self) -> Result<()> {
-        self.dependents.clear();
-        
-        let custom_words: Vec<(String, WordDefinition)> = self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, def)| (name.clone(), def.clone()))
-            .collect();
-            
-        for (word_name, word_def) in custom_words {
-            let mut dependencies = HashSet::new();
-            
-            for line in &word_def.lines {
-                for token in line.condition_tokens.iter().chain(line.body_tokens.iter()) {
-                    if let Token::Symbol(s) = token {
-                        let upper_s = s.to_uppercase();
-                        if self.dictionary.contains_key(&upper_s) && !self.dictionary.get(&upper_s).unwrap().is_builtin {
-                            dependencies.insert(upper_s.clone());
-                            self.dependents.entry(upper_s).or_default().insert(word_name.clone());
-                        }
+    fn collect_def_block(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
+        let mut depth = 1;
+        let mut i = start + 1;
+        while i < tokens.len() {
+            match tokens[i] {
+                Token::DefBlockStart => depth += 1,
+                Token::DefBlockEnd => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok((tokens[start + 1..i].to_vec(), i - start + 1));
                     }
-                }
+                },
+                _ => {}
             }
-            
-            if let Some(def) = self.dictionary.get_mut(&word_name) {
-                def.dependencies = dependencies;
-            }
+            i += 1;
         }
-        
-        Ok(())
+        Err(AjisaiError::from("Unclosed definition block"))
     }
 
     pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
@@ -952,15 +243,6 @@ async fn execute_word(&mut self, name: &str) -> Result<()> {
         }
         None
     }
-    
-    fn tokens_to_string_for_debug(&self, tokens: &[Token]) -> String {
-        tokens.iter().map(|t| self.token_to_string(t)).collect::<Vec<String>>().join(" ")
-    }
-    
-    fn stack_to_string_for_debug(&self, stack: &Stack) -> String {
-        let items: Vec<String> = stack.iter().map(|v| format!("{}", v)).collect();
-        format!("[ {} ]", items.join(", "))
-    }
 
     fn token_to_string(&self, token: &Token) -> String {
         match token {
@@ -970,62 +252,53 @@ async fn execute_word(&mut self, name: &str) -> Result<()> {
             Token::Boolean(false) => "FALSE".to_string(),
             Token::Symbol(s) => s.clone(),
             Token::Nil => "NIL".to_string(),
-            Token::VectorStart(BracketType::Square) => "[".to_string(),
-            Token::VectorEnd(BracketType::Square) => "]".to_string(),
-            Token::VectorStart(BracketType::Curly) => "{".to_string(),
-            Token::VectorEnd(BracketType::Curly) => "}".to_string(),
-            Token::VectorStart(BracketType::Round) => "(".to_string(),
-            Token::VectorEnd(BracketType::Round) => ")".to_string(),
+            Token::VectorStart(bt) => bt.opening_char().to_string(),
+            Token::VectorEnd(bt) => bt.closing_char().to_string(),
             Token::GuardSeparator => ":".to_string(),
             Token::DefBlockEnd => ";".to_string(),
             Token::LineBreak => "\n".to_string(),
             _ => "".to_string(),
         }
     }
-
-    pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
-    pub fn get_stack(&self) -> &Stack { &self.stack }
-    pub fn set_stack(&mut self, stack: Stack) { self.stack = stack; }
-    
-    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
-        self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, def)| {
-                let is_protected = self.dependents.get(name)
-                    .map_or(false, |deps| !deps.is_empty());
-                
-                (name.clone(), def.description.clone(), is_protected)
-            })
-            .collect()
-    }
-    
-    pub fn get_word_definition(&self, _name: &str) -> Option<String> { None }
-    pub fn restore_custom_word(&mut self, _name: String, _tokens: Vec<Token>, _description: Option<String>) -> Result<()> { Ok(()) }
     
     pub fn execute_reset(&mut self) -> Result<()> {
         self.stack.clear(); 
         self.dictionary.clear();
         self.dependents.clear();
         self.output_buffer.clear(); 
-        self.execution_state = None;
         self.definition_to_load = None;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
-}
 
-fn is_truthy(value: &Value) -> bool {
-    if let ValueType::Vector(v, _) = &value.val_type {
-        if v.len() == 1 {
-            return match &v[0].val_type {
-                ValueType::Boolean(b) => *b, 
-                ValueType::Nil => false,
-                ValueType::Number(n) => !n.numerator.is_zero(),
-                ValueType::String(s) => !s.is_empty(),
-                ValueType::Vector(inner_v, _) => !inner_v.is_empty(),
-                _ => true,
+    pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
+    pub fn get_stack(&self) -> &Stack { &self.stack }
+    pub fn set_stack(&mut self, stack: Stack) { self.stack = stack; }
+
+    pub fn rebuild_dependencies(&mut self) -> Result<()> {
+        self.dependents.clear();
+        let custom_words: Vec<(String, WordDefinition)> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.clone()))
+            .collect();
+            
+        for (word_name, word_def) in custom_words {
+            let mut dependencies = HashSet::new();
+            for line in &word_def.lines {
+                for token in line.condition_tokens.iter().chain(line.body_tokens.iter()) {
+                    if let Token::Symbol(s) = token {
+                        let upper_s = s.to_uppercase();
+                        if self.dictionary.contains_key(&upper_s) && !self.dictionary.get(&upper_s).unwrap().is_builtin {
+                            dependencies.insert(upper_s.clone());
+                            self.dependents.entry(upper_s).or_default().insert(word_name.clone());
+                        }
+                    }
+                }
+            }
+            if let Some(def) = self.dictionary.get_mut(&word_name) {
+                def.dependencies = dependencies;
             }
         }
+        Ok(())
     }
-    false
 }
