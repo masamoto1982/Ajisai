@@ -1,7 +1,7 @@
 // js/gui/execution-controller.ts
 
 import { WORKER_MANAGER } from '../workers/worker-manager';
-import type { AjisaiInterpreter, ExecuteResult, CustomWord, Value } from '../wasm-types';
+import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-types';
 
 export class ExecutionController {
     private gui: any;
@@ -23,7 +23,6 @@ export class ExecutionController {
         try {
             this.gui.display.showInfo('Executing...', false);
             
-            // 状態（スタック、カスタムワード）をWorkerに送信
             const currentState = {
                 stack: this.interpreter.get_stack(),
                 customWords: this.getCustomWords(),
@@ -31,7 +30,6 @@ export class ExecutionController {
             
             const result = await WORKER_MANAGER.execute(code, currentState);
 
-            // Workerの実行結果をメインスレッドのインタプリタに反映
             this.updateInterpreterStateFromResult(result);
 
             if (result.definition_to_load) {
@@ -61,10 +59,8 @@ export class ExecutionController {
         try {
             console.log('[ExecController] Executing reset');
             
-            // Workerをリセット
             await WORKER_MANAGER.resetAllWorkers();
             
-            // メインスレッドのインタプリタをリセット
             const result = this.interpreter.reset();
             
             if (result.status === 'OK' && !result.error) {
@@ -96,6 +92,8 @@ export class ExecutionController {
         if (!result || result.error) return;
 
         try {
+            // Workerの実行結果がメインスレッドの状態を上書きする
+            this.interpreter.reset(); // まずリセット
             if (result.stack) {
                 this.interpreter.restore_stack(result.stack);
             }
