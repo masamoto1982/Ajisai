@@ -25,8 +25,10 @@ export interface AjisaiInterpreter {
 export interface ExecuteResult {
     status: 'OK' | 'ERROR';
     output?: string;
+    debugOutput?: string; // Add this back for debug messages
     message?: string;
     error?: boolean;
+    hasMore?: boolean;
     definition_to_load?: string;
     // Workerから返されるインタプリタの状態
     stack?: Value[];
