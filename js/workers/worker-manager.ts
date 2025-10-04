@@ -63,7 +63,7 @@ export class WorkerManager {
                 task.reject(new Error('Execution aborted'));
                 break;
         }
-        this.completeTask(instance, task);
+        this.completeTask(instance);
     }
     
     private handleWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
@@ -71,19 +71,20 @@ export class WorkerManager {
         if (instance.currentTaskId) {
             const task = this.activeTasks.get(instance.currentTaskId);
             task?.reject(new Error(`Worker error: ${error.message}`));
-            this.activeTasks.delete(instance.currentTaskId);
         }
+        this.completeTask(instance);
         // ワーカーを再作成
         const index = this.workers.indexOf(instance);
         if (index > -1) this.workers.splice(index, 1);
         this.createWorker();
-        this.processQueue();
     }
     
-    private completeTask(instance: WorkerInstance, task: WorkerTask): void {
+    private completeTask(instance: WorkerInstance): void {
+        if (instance.currentTaskId) {
+            this.activeTasks.delete(instance.currentTaskId);
+        }
         instance.busy = false;
         instance.currentTaskId = null;
-        this.activeTasks.delete(task.id);
         this.processQueue();
     }
 
@@ -125,7 +126,7 @@ export class WorkerManager {
     abortAll(): void {
         console.log('[WorkerManager] Aborting all tasks...');
         this.taskQueue = [];
-        for (const [id, task] of this.activeTasks.entries()) {
+        for (const id of this.activeTasks.keys()) {
             const worker = this.workers.find(w => w.currentTaskId === id)?.worker;
             worker?.postMessage({ type: 'abort', id });
         }
