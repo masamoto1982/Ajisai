@@ -56,6 +56,12 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("TIMES", "Execute custom word N times. Usage: 'WORD' [ n ] TIMES", "Control"),
         ("WAIT", "Execute custom word after delay. Usage: 'WORD' [ ms ] WAIT", "Control"),
         
+        // 高階関数
+        ("MAP", "Apply word to each element. Usage: [ data ] 'WORD' MAP", "HigherOrder"),
+        ("FILTER", "Keep elements that satisfy condition. Usage: [ data ] 'WORD' FILTER", "HigherOrder"),
+        ("REDUCE", "Fold elements into single value. Usage: [ data ] [ init ] 'WORD' REDUCE", "HigherOrder"),
+        ("EACH", "Execute word for each element (side-effects). Usage: [ data ] 'WORD' EACH", "HigherOrder"),
+        
         // 入出力
         ("PRINT", "Print vector value", "IO"),
         
@@ -173,11 +179,10 @@ pub fn get_builtin_detail(name: &str) -> String {
         "SPLIT" => r#"# SPLIT - ベクトルの分割（1オリジン）
 
 ## 説明
-ベクトルを指定されたサイズに分割します。
-各サイズの合計が元のベクトルの長さと一致する必要があります。
+ベクトルを指定したサイズで分割します。
 
 ## 使用法
-[ vector ] [ size1 ] [ size2 ] ... SPLIT
+[ vector ] [ size1 ] [ size2 ] ... [ sizeN ] SPLIT
 
 ## 例
 [ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] [ 1 ] SPLIT
@@ -193,221 +198,192 @@ pub fn get_builtin_detail(name: &str) -> String {
 [ vector1 ] [ vector2 ] CONCAT
 
 ## 例
-[ 1 2 ] [ 3 4 ] CONCAT  # → [ 1 2 3 4 ]
-
-# 空ベクトルとの連結
-[ 1 2 ] [ ] CONCAT  # → [ 1 2 ]"#.to_string(),
+[ 1 2 ] [ 3 4 ] CONCAT  # → [ 1 2 3 4 ]"#.to_string(),
 
         "REVERSE" => r#"# REVERSE - ベクトルの反転
 
 ## 説明
-ベクトルの要素の順序を逆転させます。
+ベクトルの要素順序を逆にします。
 
 ## 使用法
 [ vector ] REVERSE
 
 ## 例
-[ 1 2 3 4 ] REVERSE  # → [ 4 3 2 1 ]
-
-[ 'a' 'b' 'c' ] REVERSE  # → [ 'c' 'b' 'a' ]"#.to_string(),
+[ 1 2 3 4 ] REVERSE  # → [ 4 3 2 1 ]"#.to_string(),
 
         // === 算術演算 ===
-        "+" => r#"# + - 加算
+        "+" => r#"# + - ベクトルの加算
 
 ## 説明
-2つの数値を加算します。すべての数値は分数として扱われます。
+2つのベクトルの要素を加算します。
 
 ## 使用法
-[ number1 ] [ number2 ] +
+[ vector1 ] [ vector2 ] +
 
 ## 例
-[ 5 ] [ 3 ] +  # → [ 8 ]
+[ 1 2 3 ] [ 4 5 6 ] +  # → [ 5 7 9 ]"#.to_string(),
 
-# 分数の計算
-[ 1/2 ] [ 1/3 ] +  # → [ 5/6 ]
-
-# 小数も正確に計算
-[ 0.1 ] [ 0.2 ] +  # → [ 3/10 ]"#.to_string(),
-
-        "-" => r#"# - - 減算
+        "-" => r#"# - - ベクトルの減算
 
 ## 説明
-2つの数値を減算します。
+2つのベクトルの要素を減算します。
 
 ## 使用法
-[ number1 ] [ number2 ] -
+[ vector1 ] [ vector2 ] -
 
 ## 例
-[ 10 ] [ 3 ] -  # → [ 7 ]
+[ 5 7 9 ] [ 1 2 3 ] -  # → [ 4 5 6 ]"#.to_string(),
 
-[ 3/4 ] [ 1/4 ] -  # → [ 1/2 ]"#.to_string(),
-
-        "*" => r#"# * - 乗算
+        "*" => r#"# * - ベクトルの乗算
 
 ## 説明
-2つの数値を乗算します。
+2つのベクトルの要素を乗算します。
 
 ## 使用法
-[ number1 ] [ number2 ] *
+[ vector1 ] [ vector2 ] *
 
 ## 例
-[ 4 ] [ 7 ] *  # → [ 28 ]
+[ 2 3 4 ] [ 5 6 7 ] *  # → [ 10 18 28 ]"#.to_string(),
 
-[ 2/3 ] [ 3/4 ] *  # → [ 1/2 ]"#.to_string(),
-
-        "/" => r#"# / - 除算
+        "/" => r#"# / - ベクトルの除算
 
 ## 説明
-2つの数値を除算します。ゼロ除算はエラーになります。
+2つのベクトルの要素を除算します。
 
 ## 使用法
-[ number1 ] [ number2 ] /
+[ vector1 ] [ vector2 ] /
 
 ## 例
-[ 15 ] [ 3 ] /  # → [ 5 ]
-
-[ 2/3 ] [ 1/2 ] /  # → [ 4/3 ]"#.to_string(),
+[ 10 20 30 ] [ 2 4 5 ] /  # → [ 5 5 6 ]"#.to_string(),
 
         // === 比較演算 ===
-        "=" => r#"# = - 等価判定
+        "=" => r#"# = - 等価比較
 
 ## 説明
-2つの値が等しいかどうかを判定します。
+2つのベクトルの要素が等しいかを比較します。
 
 ## 使用法
-[ value1 ] [ value2 ] =
+[ vector1 ] [ vector2 ] =
 
 ## 例
 [ 5 ] [ 5 ] =  # → [ TRUE ]
+[ 3 ] [ 5 ] =  # → [ FALSE ]"#.to_string(),
 
-[ 5 ] [ 3 ] =  # → [ FALSE ]
-
-[ 'hello' ] [ 'hello' ] =  # → [ TRUE ]"#.to_string(),
-
-        "<" => r#"# < - より小さい
+        "<" => r#"# < - 小なり比較
 
 ## 説明
-最初の数値が2番目の数値より小さいかを判定します。
+ベクトルの要素を比較します。
 
 ## 使用法
-[ number1 ] [ number2 ] 
+[ vector1 ] [ vector2 ] 
 
 ## 例
-[ 3 ] [ 5 ] <  # → [ TRUE ]
+[ 3 ] [ 5 ] <  # → [ TRUE ]"#.to_string(),
 
-[ 5 ] [ 3 ] <  # → [ FALSE ]"#.to_string(),
-
-        "<=" => r#"# <= - 以下
+        "<=" => r#"# <= - 小なりイコール比較
 
 ## 説明
-最初の数値が2番目の数値以下かを判定します。
+ベクトルの要素を比較します。
 
 ## 使用法
-[ number1 ] [ number2 ] <=
+[ vector1 ] [ vector2 ] <=
 
 ## 例
-[ 3 ] [ 5 ] <=  # → [ TRUE ]
-
 [ 5 ] [ 5 ] <=  # → [ TRUE ]"#.to_string(),
 
-        ">" => r#"# > - より大きい
+        ">" => r#"# > - 大なり比較
 
 ## 説明
-最初の数値が2番目の数値より大きいかを判定します。
+ベクトルの要素を比較します。
 
 ## 使用法
-[ number1 ] [ number2 ] >
+[ vector1 ] [ vector2 ] >
 
 ## 例
-[ 7 ] [ 3 ] >  # → [ TRUE ]
+[ 7 ] [ 5 ] >  # → [ TRUE ]"#.to_string(),
 
-[ 3 ] [ 7 ] >  # → [ FALSE ]"#.to_string(),
-
-        ">=" => r#"# >= - 以上
+        ">=" => r#"# >= - 大なりイコール比較
 
 ## 説明
-最初の数値が2番目の数値以上かを判定します。
+ベクトルの要素を比較します。
 
 ## 使用法
-[ number1 ] [ number2 ] >=
+[ vector1 ] [ vector2 ] >=
 
 ## 例
-[ 7 ] [ 3 ] >=  # → [ TRUE ]
-
 [ 5 ] [ 5 ] >=  # → [ TRUE ]"#.to_string(),
 
         // === 論理演算 ===
         "AND" => r#"# AND - 論理積
 
 ## 説明
-2つの真偽値の論理積を計算します。
+2つのベクトルの論理積を取ります。
 
 ## 使用法
-[ boolean1 ] [ boolean2 ] AND
+[ vector1 ] [ vector2 ] AND
 
 ## 例
 [ TRUE ] [ TRUE ] AND  # → [ TRUE ]
-
-[ TRUE ] [ FALSE ] AND  # → [ FALSE ]
-
-[ FALSE ] [ FALSE ] AND  # → [ FALSE ]"#.to_string(),
+[ TRUE ] [ FALSE ] AND  # → [ FALSE ]"#.to_string(),
 
         "OR" => r#"# OR - 論理和
 
 ## 説明
-2つの真偽値の論理和を計算します。
+2つのベクトルの論理和を取ります。
 
 ## 使用法
-[ boolean1 ] [ boolean2 ] OR
+[ vector1 ] [ vector2 ] OR
 
 ## 例
-[ TRUE ] [ FALSE ] OR  # → [ TRUE ]
-
-[ FALSE ] [ FALSE ] OR  # → [ FALSE ]"#.to_string(),
+[ TRUE ] [ FALSE ] OR  # → [ TRUE ]"#.to_string(),
 
         "NOT" => r#"# NOT - 論理否定
 
 ## 説明
-真偽値を反転させます。
+ベクトルの各要素の論理否定を取ります。
 
 ## 使用法
-[ boolean ] NOT
+[ vector ] NOT
 
 ## 例
-[ TRUE ] NOT  # → [ FALSE ]
-
-[ FALSE ] NOT  # → [ TRUE ]"#.to_string(),
+[ TRUE ] NOT  # → [ FALSE ]"#.to_string(),
 
         // === 制御構造 ===
-        ":" | ";" => r#"# : または ; - 条件分岐ゲート
+        ":" => r#"# : - 条件実行（ゲート）
 
 ## 説明
-条件が真の場合のみ、後続の処理を実行する「ゲート」です。
-`:` と `;` は同じ意味で使えます。
-
-一行の中で複数のゲートを連鎖させることで、
-ケース式のような分岐が実現できます。
+条件が真の場合のみ、後続の処理を実行します。
+条件が偽の場合、条件値自体を返します。
 
 ## 使用法
 condition : action
 または
-condition ; action
-
-## 複数ゲートの連鎖
-cond1 : action1 : cond2 : action2 : default-action
+condition : true-action : false-action
 
 ## 例
 # 単純な条件分岐
-[ 5 ] [ 5 ] = : [ 'Equal' ] PRINT
+[ 5 ] [ 5 ] = : [ 10 ] [ 5 ] +
+# 結果: [ 15 ]（5 = 5 が真なので実行される）
 
-# 複数条件の連鎖（ケース式）
-[ 0 ] = : [ 'Zero' ] PRINT : [ 0 ] > : [ 'Positive' ] PRINT : [ 'Negative' ] PRINT
+# 条件分岐の連鎖
+[ 5 ] [ 3 ] = : [ 10 ] [ 5 ] +
+# 結果: [ FALSE ]（5 = 3 が偽なので条件値を返す）
 
-# カスタムワード定義内で使用
-[ 0 ] = : [ 'Zero' ] PRINT
-[ 0 ] > : [ 'Positive' ] PRINT
-: [ 'Negative' ] PRINT
-'CHECK-NUM' DEF"#.to_string(),
+# 複数条件
+[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ] 'SIGN' DEF
+[ 5 ] SIGN  # → [ 1 ]"#.to_string(),
+
+        ";" => r#"# ; - 条件実行の代替記法
+
+## 説明
+':'と同じ機能を持つ条件実行演算子です。
+見た目の好みで使い分けられます。
+
+## 使用法
+condition ; action
+
+## 例
+[ 5 ] [ 5 ] = ; [ 'Equal' ] PRINT"#.to_string(),
 
         "TIMES" => r#"# TIMES - カスタムワードの繰り返し実行
 
@@ -425,6 +401,7 @@ cond1 : action1 : cond2 : action2 : default-action
 
 # 3回実行
 'GREET' [ 3 ] TIMES
+# Output: ['Hello'] ['Hello'] ['Hello']
 
 # WAITと組み合わせる
 'GREET' [ 3 ] TIMES [ 1000 ] WAIT  # 3回実行後、1秒待つ
@@ -459,6 +436,111 @@ cond1 : action1 : cond2 : action2 : default-action
 - ワード名は文字列（'または"）で囲みます
 - 待機時間はミリ秒単位です
 - 1000ms = 1秒"#.to_string(),
+
+        // === 高階関数 ===
+        "MAP" => r#"# MAP - 各要素への関数適用
+
+## 説明
+ベクトルの各要素に指定したワードを適用し、
+結果を新しいベクトルとして返します。
+
+## 使用法
+[ data ] 'WORD' MAP
+
+## 例
+# 各要素を2倍にする
+[ 2 ] * 'DOUBLE' DEF
+[ 1 2 3 4 5 ] 'DOUBLE' MAP
+# 結果: [ 2 4 6 8 10 ]
+
+# 各要素を二乗する
+: [ 1 ] GET DUP * 'SQUARE' DEF
+[ 3 4 5 ] 'SQUARE' MAP
+# 結果: [ 9 16 25 ]
+
+## 注意
+- ワードは1要素（ベクトル）を受け取り、1要素（ベクトル）を返す必要があります
+- カスタムワード、組み込みワードのどちらも使用可能です"#.to_string(),
+
+        "FILTER" => r#"# FILTER - 条件による絞り込み
+
+## 説明
+ベクトルの各要素に指定したワードを適用し、
+結果が真（TRUE）の要素だけを残します。
+
+## 使用法
+[ data ] 'WORD' FILTER
+
+## 例
+# 5より大きい要素だけを残す
+[ 5 ] > 'IS-BIG' DEF
+[ 3 7 2 8 1 9 ] 'IS-BIG' FILTER
+# 結果: [ 7 8 9 ]
+
+# 偶数だけを残す
+[ 2 ] % [ 0 ] = 'IS-EVEN' DEF
+[ 1 2 3 4 5 6 ] 'IS-EVEN' FILTER
+# 結果: [ 2 4 6 ]
+
+## 注意
+- ワードは1要素を受け取り、真偽値を返す必要があります
+- カスタムワード、組み込みワードのどちらも使用可能です"#.to_string(),
+
+        "REDUCE" => r#"# REDUCE - 畳み込み演算
+
+## 説明
+ベクトルの要素を順次処理し、1つの値に集約します。
+アキュムレータと各要素を指定したワードに渡して処理します。
+
+## 使用法
+[ data ] [ initial_value ] 'WORD' REDUCE
+
+## 例
+# 合計を計算
++ 'ADD' DEF
+[ 1 2 3 4 5 ] [ 0 ] 'ADD' REDUCE
+# 結果: [ 15 ]
+
+# 積を計算
+* 'MUL' DEF
+[ 1 2 3 4 ] [ 1 ] 'MUL' REDUCE
+# 結果: [ 24 ]
+
+# 最大値を求める
+[ 2 ] GET [ 1 ] GET > : [ 2 ] GET : [ 1 ] GET 'MAX2' DEF
+[ 3 7 2 9 1 ] [ 0 ] 'MAX2' REDUCE
+# 結果: [ 9 ]
+
+## 注意
+- ワードは2要素（アキュムレータと現在値）を受け取り、1要素を返す必要があります
+- 初期値は必須です
+- カスタムワード、組み込みワードのどちらも使用可能です"#.to_string(),
+
+        "EACH" => r#"# EACH - 各要素への副作用実行
+
+## 説明
+ベクトルの各要素に指定したワードを適用します。
+MAPと違い、結果は返さず副作用（出力など）のみを実行します。
+
+## 使用法
+[ data ] 'WORD' EACH
+
+## 例
+# 各要素を出力
+[ 1 2 3 ] 'PRINT' EACH
+# Output: [1] [2] [3]
+# スタック: 空
+
+# カスタムワードで処理
+'Value: ' CONCAT PRINT 'SHOW' DEF
+[ 'A' 'B' 'C' ] 'SHOW' EACH
+# Output: Value: A Value: B Value: C
+
+## 注意
+- ワードは1要素を受け取ります
+- 戻り値は破棄されます
+- スタックには何も残りません
+- カスタムワード、組み込みワードのどちらも使用可能です"#.to_string(),
 
         // === 入出力 ===
         "PRINT" => r#"# PRINT - 値の出力
@@ -547,7 +629,8 @@ body-line2
 # 組み込みワードの使い方を確認
 'GET' ?
 '+' ?
-'TIMES' ?
+'MAP' ?
+'FILTER' ?
 '?' ?  # このヘルプを表示"#.to_string(),
 
         "RESET" => r#"# RESET - システムのリセット
