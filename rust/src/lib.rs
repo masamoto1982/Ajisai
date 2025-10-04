@@ -52,8 +52,6 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
-
-                // 実行後の状態を結果に含める
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
                 js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
 
@@ -68,30 +66,6 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
             }
         }
-        Ok(obj.into())
-    }
-
-    #[wasm_bindgen]
-    pub async fn init_progressive_execution(&mut self, _code: &str) -> Result<JsValue, JsValue> {
-        let obj = js_sys::Object::new();
-        
-        // 装飾子システム廃止により、progressive executionは使用しない
-        js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-        js_sys::Reflect::set(&obj, &"message".into(), &"Progressive execution is no longer supported. Use TIMES and WAIT instead.".into()).unwrap();
-        js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
-        
-        Ok(obj.into())
-    }
-
-    #[wasm_bindgen]
-    pub async fn execute_progressive_step(&mut self) -> Result<JsValue, JsValue> {
-        let obj = js_sys::Object::new();
-        
-        // 装飾子システム廃止により、progressive executionは使用しない
-        js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-        js_sys::Reflect::set(&obj, &"message".into(), &"Progressive execution is no longer supported. Use TIMES and WAIT instead.".into()).unwrap();
-        js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
-        
         Ok(obj.into())
     }
 
@@ -141,8 +115,6 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.step_position < self.step_tokens.len()).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"position".into(), &(self.step_position as u32).into()).unwrap();
                 js_sys::Reflect::set(&obj, &"total".into(), &(self.step_tokens.len() as u32).into()).unwrap();
-
-                // 実行後の状態を結果に含める
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
                 js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
             }
@@ -157,71 +129,7 @@ impl AjisaiInterpreter {
         
         obj.into()
     }
-
-    #[wasm_bindgen]
-    pub fn init_step(&mut self, code: &str) -> String {
-        self.step_mode = true;
-        self.step_position = 0;
-        self.current_step_code = code.to_string();
-        
-        let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-            
-        match tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
-            Ok(tokens) => {
-                self.step_tokens = tokens;
-                format!("Step mode initialized. {} tokens to execute.", self.step_tokens.len())
-            }
-            Err(e) => {
-                self.step_mode = false;
-                format!("Error initializing step mode: {}", e)
-            }
-        }
-    }
-
-    #[wasm_bindgen]
-    pub fn step(&mut self) -> JsValue {
-        let obj = js_sys::Object::new();
-        
-        if !self.step_mode {
-            js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
-            js_sys::Reflect::set(&obj, &"output".into(), &"Step mode not initialized".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
-            return obj.into();
-        }
-
-        if self.step_position >= self.step_tokens.len() {
-            self.step_mode = false;
-            js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
-            js_sys::Reflect::set(&obj, &"output".into(), &"Step execution completed".into()).unwrap();
-            return obj.into();
-        }
-
-        let token = self.step_tokens[self.step_position].clone();
-        let result = self.interpreter.execute_tokens_sync(&[token]);
-        
-        match result {
-            Ok(()) => {
-                let output = self.interpreter.get_output();
-                self.step_position += 1;
-                js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.step_position < self.step_tokens.len()).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"position".into(), &(self.step_position as u32).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"total".into(), &(self.step_tokens.len() as u32).into()).unwrap();
-            }
-            Err(e) => {
-                self.step_mode = false;
-                js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"output".into(), &e.to_string().into()).unwrap();
-                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
-            }
-        }
-        
-        obj.into()
-    }
-
+    
     #[wasm_bindgen]
     pub fn reset(&mut self) -> JsValue {
         let obj = js_sys::Object::new();
@@ -235,10 +143,6 @@ impl AjisaiInterpreter {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into()).unwrap();
-                
-                let window = web_sys::window().unwrap();
-                let event = web_sys::CustomEvent::new("ajisai-reset").unwrap();
-                let _ = window.dispatch_event(&event);
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -260,23 +164,17 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
-        // タプル配列 [name, description, is_protected] を返す
         let js_array = js_sys::Array::new();
         
         for (name, def) in self.interpreter.dictionary.iter() {
-            if def.is_builtin {
-                continue;
-            }
+            if def.is_builtin { continue; }
             
             let is_protected = self.interpreter.dependents.get(name)
                 .map_or(false, |deps| !deps.is_empty());
             
             let item = js_sys::Array::new();
             item.push(&name.clone().into());
-            item.push(&match &def.description {
-                Some(desc) => JsValue::from_str(desc),
-                None => JsValue::NULL,
-            });
+            item.push(&def.description.clone().map(JsValue::from).unwrap_or(JsValue::NULL));
             item.push(&is_protected.into());
             
             js_array.push(&item);
@@ -285,14 +183,13 @@ impl AjisaiInterpreter {
         js_array.into()
     }
 
-    // 状態同期用の内部メソッド（CustomWordData形式）
     fn get_custom_words_for_state(&self) -> JsValue {
         let words_info: Vec<CustomWordData> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| {
                 CustomWordData {
                     name: name.clone(),
-                    definition: self.get_word_definition_internal(name),
+                    definition: self.interpreter.get_word_definition_tokens(name).unwrap_or_default(),
                     description: def.description.clone(),
                 }
             })
@@ -308,35 +205,11 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
         let upper_name = name.to_uppercase();
-        let def = self.get_word_definition_internal(&upper_name);
-        if def.is_empty() {
-            JsValue::NULL
-        } else {
-            JsValue::from_str(&def)
-        }
+        self.interpreter.get_word_definition_tokens(&upper_name)
+            .map(|def| JsValue::from_str(&def))
+            .unwrap_or(JsValue::NULL)
     }
 
-    // 内部用のワード定義取得メソッド
-    fn get_word_definition_internal(&self, upper_name: &str) -> String {
-        self.interpreter.get_word_definition_tokens(upper_name).unwrap_or_default()
-    }
-    
-    #[wasm_bindgen]
-    pub fn rebuild_dependencies(&mut self) -> JsValue {
-        let obj = js_sys::Object::new();
-        match self.interpreter.rebuild_dependencies() {
-            Ok(()) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &"Dependencies rebuilt".into()).unwrap();
-            }
-            Err(e) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
-            }
-        }
-        obj.into()
-    }
-    
     #[wasm_bindgen]
     pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
         let js_array = js_sys::Array::from(&stack_js);
@@ -346,20 +219,6 @@ impl AjisaiInterpreter {
         }
         self.interpreter.set_stack(stack);
         Ok(())
-    }
-
-    #[wasm_bindgen]
-    pub fn restore_word(&mut self, name: String, definition: String, _description: Option<String>) -> Result<(), String> {
-        let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-            
-        let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
-            .map_err(|e| format!("Failed to tokenize word definition: {}", e))?;
-            
-        interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &name, None, None)
-            .map_err(|e| format!("Failed to restore word: {}", e))
     }
 
     #[wasm_bindgen]
@@ -375,22 +234,16 @@ impl AjisaiInterpreter {
             let tokens = tokenizer::tokenize_with_custom_words(&word.definition, &custom_word_names)
                 .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
 
-            interpreter::control::op_def_inner(&mut self.interpreter, &tokens, &word.name, word.description.clone(), None)
+            interpreter::control::op_def_inner(&mut self.interpreter, &word.name, &tokens, word.description.clone())
                 .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
-
-            if let Some(desc) = word.description {
-                if let Some(def) = self.interpreter.dictionary.get_mut(&word.name.to_uppercase()) {
-                    def.description = Some(desc);
-                }
-            }
         }
 
         self.interpreter.rebuild_dependencies().map_err(|e| e.to_string())?;
-
         Ok(())
     }
 }
 
+// ... (value_to_js_value, js_value_to_value は変更なし)
 fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
     let type_str = js_sys::Reflect::get(&obj, &"type".into())
