@@ -30,5 +30,6 @@ export default defineConfig({
   },
   worker: {
     format: 'es'
-  }
+  },
+  publicDir: 'public'
 });
