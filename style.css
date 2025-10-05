@@ -1,4 +1,4 @@
-/* style.css (stack対応版 + テストボタン追加 + オフライン表示) */
+/* style.css (stack対応版 + テストボタン追加 + オフライン表示 + モバイルタップ領域) */
 * {
     margin: 0;
     padding: 0;
@@ -489,6 +489,29 @@ button:hover {
 
     .stack-area {
         cursor: pointer;
+    }
+    
+    /* モバイルでタップ可能な領域を示す */
+    .output-area,
+    .stack-area {
+        cursor: pointer;
+        position: relative;
+    }
+    
+    .output-area::after,
+    .stack-area::after {
+        content: 'タップして入力に戻る';
+        position: absolute;
+        bottom: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.75rem;
+        color: #999;
+        pointer-events: none;
+    }
+    
+    .input-area,
+    .dictionary-area {
+        cursor: default;
     }
 }
 
