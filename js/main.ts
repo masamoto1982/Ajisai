@@ -35,6 +35,9 @@ async function main(): Promise<void> {
         GUI_INSTANCE.updateAllDisplays();
         GUI_INSTANCE.display.showInfo('Ready. Press Esc for emergency stop.');
 
+        // GUI初期化完了後にオンライン状態を設定
+        setupOnlineStatusMonitoring();
+
         console.log('[Main] Application initialization completed successfully');
 
     } catch (error) {
@@ -79,31 +82,31 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// オフライン/オンライン状態の監視
-const offlineIndicator = document.getElementById('offline-indicator');
+// オフライン/オンライン状態の監視（GUI初期化後に呼ばれる）
+function setupOnlineStatusMonitoring(): void {
+    const offlineIndicator = document.getElementById('offline-indicator');
 
-function updateOnlineStatus() {
-    if (navigator.onLine) {
-        console.log('[Main] Online');
-        if (offlineIndicator) offlineIndicator.style.display = 'none';
-        if (GUI_INSTANCE && GUI_INSTANCE.display) {
-            GUI_INSTANCE.display.showInfo('オンラインに戻りました', true);
-        }
-    } else {
-        console.log('[Main] Offline');
-        if (offlineIndicator) offlineIndicator.style.display = 'inline';
-        if (GUI_INSTANCE && GUI_INSTANCE.display) {
-            GUI_INSTANCE.display.showInfo('⚠ オフラインモードで動作中', true);
+    function updateOnlineStatus() {
+        if (navigator.onLine) {
+            console.log('[Main] Online');
+            if (offlineIndicator) offlineIndicator.style.display = 'none';
+            if (GUI_INSTANCE && GUI_INSTANCE.display) {
+                GUI_INSTANCE.display.showInfo('オンラインに戻りました', true);
+            }
+        } else {
+            console.log('[Main] Offline');
+            if (offlineIndicator) offlineIndicator.style.display = 'inline';
+            if (GUI_INSTANCE && GUI_INSTANCE.display) {
+                GUI_INSTANCE.display.showInfo('⚠ オフラインモードで動作中', true);
+            }
         }
     }
-}
 
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-
-// 初期状態をチェック
-window.addEventListener('load', () => {
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // 初期状態をチェック
     updateOnlineStatus();
-});
+}
 
 document.addEventListener('DOMContentLoaded', main);
