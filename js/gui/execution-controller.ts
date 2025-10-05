@@ -21,6 +21,9 @@ export class ExecutionController {
         }
 
         try {
+            // モバイル表示を実行モードに切り替え
+            this.gui.mobile.updateView('execution');
+            
             this.gui.display.showInfo('Executing...', false);
             
             const currentState = {
@@ -36,9 +39,12 @@ export class ExecutionController {
                 this.gui.editor.setValue(result.definition_to_load);
                 const wordName = code.replace("?", "").trim();
                 this.gui.display.showInfo(`Loaded definition for ${wordName}.`);
+                // 定義ロード時は入力モードに戻す
+                this.gui.mobile.updateView('input');
             } else if (result.status === 'OK' && !result.error) {
                 this.gui.display.showExecutionResult(result);
                 this.gui.editor.clear();
+                // エディタクリア後も実行モードを維持（モバイルで結果を確認できるように）
             } else {
                 this.gui.display.showError(result.message || 'Unknown error');
             }
@@ -67,6 +73,8 @@ export class ExecutionController {
                 this.gui.display.showOutput(result.output || 'RESET executed');
                 this.gui.editor.clear();
                 this.gui.display.showInfo('🔄 RESET: All memory cleared.', true);
+                // リセット後は入力モードに戻す
+                this.gui.mobile.updateView('input');
             } else {
                 this.gui.display.showError(result.message || 'RESET execution failed');
             }
