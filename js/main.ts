@@ -56,7 +56,7 @@ async function main(): Promise<void> {
 // Service Worker Registration for PWA/Offline support
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('./service-worker.js')
             .then(registration => {
                 console.log('[Main] Service Worker registered:', registration.scope);
                 
