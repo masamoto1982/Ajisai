@@ -42,11 +42,11 @@ export class Editor {
         }
     }
 
-    clear(): void {
+    clear(switchView: boolean = true): void {
         this.element.value = '';
         this.element.focus();
         // クリア後は入力モードに戻す（モバイル用）
-        if (this.gui && this.gui.mobile) {
+        if (switchView && this.gui && this.gui.mobile) {
             this.gui.mobile.updateView('input');
         }
     }
