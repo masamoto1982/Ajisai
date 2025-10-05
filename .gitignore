@@ -12,9 +12,6 @@ pnpm-lock.yaml
 dist/
 *.tsbuildinfo
 
-# ビルド生成物は含めない（GitHub Actionsでビルドするため）
-# js/pkg/  ← この行をコメントアウトまたは削除
-
 # OS関連
 .DS_Store
 Thumbs.db
@@ -27,6 +24,7 @@ Thumbs.db
 
 # その他
 *.log
+
 # Temporarily allow pkg files
 !js/pkg/
 !js/pkg/**
