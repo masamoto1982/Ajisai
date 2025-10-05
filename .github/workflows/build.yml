@@ -48,12 +48,20 @@ jobs:
       - name: Create .nojekyll file
         run: touch dist/.nojekyll
 
-      - name: Copy PWA files
+      - name: Copy PWA manifest
+        run: cp manifest.json dist/manifest.json
+
+      - name: Copy Service Worker
+        run: cp service-worker.js dist/service-worker.js
+
+      - name: Create images directory
+        run: mkdir -p dist/images
+
+      - name: Copy images if they exist
         run: |
-          cp manifest.json dist/
-          cp service-worker.js dist/
-          mkdir -p dist/images
-          if [ -d "images" ]; then cp -r images/* dist/images/ || true; fi
+          if [ -d "images" ]; then
+            cp -r images/* dist/images/ 2>/dev/null || echo "No images to copy"
+          fi
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
