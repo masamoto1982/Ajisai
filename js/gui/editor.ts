@@ -1,10 +1,12 @@
-// js/gui/editor.ts (ラベル機能完全削除版)
+// js/gui/editor.ts (ラベル機能完全削除版 + モバイル対応)
 
 export class Editor {
     private element!: HTMLTextAreaElement;
+    private gui: any; // GUIインスタンスへの参照
 
-    init(element: HTMLTextAreaElement): void {
+    init(element: HTMLTextAreaElement, gui?: any): void {
         this.element = element;
+        this.gui = gui;
         this.setupEventListeners();
         
         if (this.element.value.trim() === '') {
@@ -14,6 +16,13 @@ export class Editor {
 
     private setupEventListeners(): void {
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        
+        // フォーカス時は入力モードに切り替え（モバイル用）
+        this.element.addEventListener('focus', () => {
+            if (this.gui && this.gui.mobile) {
+                this.gui.mobile.updateView('input');
+            }
+        });
     }
 
     handleKeyDown(_event: KeyboardEvent): void {
@@ -27,11 +36,19 @@ export class Editor {
 
     setValue(value: string): void {
         this.element.value = value;
+        // 値をセットしたら入力モードに切り替え（モバイル用）
+        if (this.gui && this.gui.mobile) {
+            this.gui.mobile.updateView('input');
+        }
     }
 
     clear(): void {
         this.element.value = '';
         this.element.focus();
+        // クリア後は入力モードに戻す（モバイル用）
+        if (this.gui && this.gui.mobile) {
+            this.gui.mobile.updateView('input');
+        }
     }
 
     insertWord(word: string): void {
@@ -46,9 +63,17 @@ export class Editor {
         this.element.selectionEnd = newPos;
         
         this.element.focus();
+        // ワード挿入時は入力モードに切り替え（モバイル用）
+        if (this.gui && this.gui.mobile) {
+            this.gui.mobile.updateView('input');
+        }
     }
 
     focus(): void {
         this.element.focus();
+        // フォーカス時は入力モードに切り替え（モバイル用）
+        if (this.gui && this.gui.mobile) {
+            this.gui.mobile.updateView('input');
+        }
     }
 }
