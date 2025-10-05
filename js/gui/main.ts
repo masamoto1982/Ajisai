@@ -69,7 +69,9 @@ export class GUI {
             customWordsDisplay: this.elements.customWordsDisplay
         }, (word: string) => this.editor.insertWord(word), this);
         
-        this.editor.init(this.elements.codeInput);
+        // エディタにGUIインスタンスを渡す
+        this.editor.init(this.elements.codeInput, this);
+        
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
@@ -81,6 +83,8 @@ export class GUI {
         this.setupEventListeners();
         this.dictionary.renderBuiltinWords();
         this.updateAllDisplays();
+        
+        // 初期表示は入力モード
         this.mobile.updateView('input');
 
         await this.initializeWorkers();
@@ -122,7 +126,12 @@ export class GUI {
         this.elements.runBtn.addEventListener('click', () => this.executionController.runCode(this.editor.getValue()));
         this.elements.clearBtn.addEventListener('click', () => this.editor.clear());
         
-        this.elements.testBtn?.addEventListener('click', () => this.testRunner.runAllTests());
+        this.elements.testBtn?.addEventListener('click', () => {
+            // テスト実行時は実行モードに切り替え
+            this.mobile.updateView('execution');
+            this.testRunner.runAllTests();
+        });
+        
         this.elements.exportBtn?.addEventListener('click', () => this.persistence.exportCustomWords());
         this.elements.importBtn?.addEventListener('click', () => this.persistence.importCustomWords());
 
@@ -140,6 +149,19 @@ export class GUI {
                 e.stopImmediatePropagation();
             }
         }, true);
+        
+        // モバイルでOutputエリアやStackエリアをタップしたら入力モードに戻す
+        if (this.mobile.isMobile()) {
+            this.elements.outputArea.addEventListener('click', () => {
+                this.mobile.updateView('input');
+                this.editor.focus();
+            });
+            
+            this.elements.stackArea.addEventListener('click', () => {
+                this.mobile.updateView('input');
+                this.editor.focus();
+            });
+        }
     }
 
     updateAllDisplays(): void {
