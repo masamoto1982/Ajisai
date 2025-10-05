@@ -43,7 +43,7 @@ export class ExecutionController {
                 this.gui.mobile.updateView('input');
             } else if (result.status === 'OK' && !result.error) {
                 this.gui.display.showExecutionResult(result);
-                this.gui.editor.clear();
+                this.gui.editor.clear(false); // ビューを切り替えずにエディタをクリア
                 // エディタクリア後も実行モードを維持（モバイルで結果を確認できるように）
             } else {
                 this.gui.display.showError(result.message || 'Unknown error');
