@@ -50,4 +50,60 @@ async function main(): Promise<void> {
     }
 }
 
+// Service Worker Registration for PWA/Offline support
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+                console.log('[Main] Service Worker registered:', registration.scope);
+                
+                // 更新チェック
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    console.log('[Main] New service worker found');
+                    
+                    newWorker?.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // 新しいバージョンが利用可能
+                            console.log('[Main] New version available');
+                            if (GUI_INSTANCE && GUI_INSTANCE.display) {
+                                GUI_INSTANCE.display.showInfo('新しいバージョンが利用可能です。ページを再読み込みしてください。', true);
+                            }
+                        }
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('[Main] Service Worker registration failed:', error);
+            });
+    });
+}
+
+// オフライン/オンライン状態の監視
+const offlineIndicator = document.getElementById('offline-indicator');
+
+function updateOnlineStatus() {
+    if (navigator.onLine) {
+        console.log('[Main] Online');
+        if (offlineIndicator) offlineIndicator.style.display = 'none';
+        if (GUI_INSTANCE && GUI_INSTANCE.display) {
+            GUI_INSTANCE.display.showInfo('オンラインに戻りました', true);
+        }
+    } else {
+        console.log('[Main] Offline');
+        if (offlineIndicator) offlineIndicator.style.display = 'inline';
+        if (GUI_INSTANCE && GUI_INSTANCE.display) {
+            GUI_INSTANCE.display.showInfo('⚠ オフラインモードで動作中', true);
+        }
+    }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+// 初期状態をチェック
+window.addEventListener('load', () => {
+    updateOnlineStatus();
+});
+
 document.addEventListener('DOMContentLoaded', main);
