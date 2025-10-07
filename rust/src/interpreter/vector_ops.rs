@@ -268,3 +268,43 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
         _ => Err(AjisaiError::type_error("vector", "other type")),
     }
 }
+
+pub fn op_slice(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    match val.val_type {
+        ValueType::Vector(v, bracket_type) => {
+            for item in v.into_iter().rev() {
+                interp.stack.push(Value {
+                    val_type: ValueType::Vector(vec![item], bracket_type.clone()),
+                });
+            }
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
+
+fn flatten_vector_recursive(vec: Vec<Value>, result: &mut Vec<Value>) {
+    for val in vec {
+        if let ValueType::Vector(inner_vec, _) = val.val_type {
+            flatten_vector_recursive(inner_vec, result);
+        } else {
+            result.push(val);
+        }
+    }
+}
+
+pub fn op_level(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    match val.val_type {
+        ValueType::Vector(v, bracket_type) => {
+            let mut flattened = Vec::new();
+            flatten_vector_recursive(v, &mut flattened);
+            interp.stack.push(Value {
+                val_type: ValueType::Vector(flattened, bracket_type),
+            });
+            Ok(())
+        },
+        _ => Err(AjisaiError::type_error("vector", "other type")),
+    }
+}
