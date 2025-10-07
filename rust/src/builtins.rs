@@ -31,7 +31,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         // Vector構造操作
         ("CONCAT", "Concatenate vectors", "Vector"),
         ("REVERSE", "Reverse vector elements", "Vector"),
-        
+        ("SLICE", "Slice vector into single-element vectors", "Vector"),
+        ("LEVEL", "Flatten a nested vector", "Vector"),
+
         // 算術演算
         ("+", "Vector addition", "Arithmetic"),
         ("-", "Vector subtraction", "Arithmetic"),
@@ -55,7 +57,8 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         (";", "Alternative to ':' for conditional execution", "Control"),
         ("TIMES", "Execute custom word N times. Usage: 'WORD' [ n ] TIMES", "Control"),
         ("WAIT", "Execute custom word after delay. Usage: 'WORD' [ ms ] WAIT", "Control"),
-        
+        ("EVAL", "Evaluate a vector as code", "Control"),
+
         // 高階関数
         ("MAP", "Apply word to each element. Usage: [ data ] 'WORD' MAP", "HigherOrder"),
         ("FILTER", "Keep elements that satisfy condition. Usage: [ data ] 'WORD' FILTER", "HigherOrder"),
@@ -211,6 +214,38 @@ pub fn get_builtin_detail(name: &str) -> String {
 ## 例
 [ 1 2 3 4 ] REVERSE  # → [ 4 3 2 1 ]"#.to_string(),
 
+        "SLICE" => r#"# SLICE - ベクトルの分解
+
+## 説明
+ベクトルを要素ごとに分解し、それぞれを単一要素のベクトルとしてスタックに積みます。
+
+## 使用法
+[ vector ] SLICE
+
+## 例
+[ 1 2 3 ] SLICE
+# スタックの状態 (上から):
+# [ 3 ]
+# [ 2 ]
+# [ 1 ]
+
+[ [ 1 2 ] 'A' ] SLICE
+# スタックの状態 (上から):
+# [ 'A' ]
+# [ [ 1 2 ] ]"#.to_string(),
+
+        "LEVEL" => r#"# LEVEL - ベクトルのフラット化
+
+## 説明
+ネスト（入れ子）されたベクトルを、ネストのない平坦なベクトルに変換します。
+
+## 使用法
+[ nested_vector ] LEVEL
+
+## 例
+[ [ 1 2 ] 'A' [ 3 [ 4 ] ] ] LEVEL
+# → [ 1 2 'A' 3 4 ]"#.to_string(),
+
         // === 算術演算 ===
         "+" => r#"# + - ベクトルの加算
 
@@ -243,7 +278,7 @@ pub fn get_builtin_detail(name: &str) -> String {
 [ vector1 ] [ vector2 ] *
 
 ## 例
-[ 2 3 4 ] [ 5 6 7 ] *  # → [ 10 18 28 ]"#.to_string(),
+[ 2 3 4 ] [ 5 6 7 ] * # → [ 10 18 28 ]"#.to_string(),
 
         "/" => r#"# / - ベクトルの除算
 
@@ -436,6 +471,25 @@ condition ; action
 - ワード名は文字列（'または"）で囲みます
 - 待機時間はミリ秒単位です
 - 1000ms = 1秒"#.to_string(),
+
+        "EVAL" => r#"# EVAL - ベクトルの評価実行
+
+## 説明
+ベクトルをコード片とみなし、その内容を実行します。
+動的にコードを生成して実行したい場合に使用します。
+
+## 使用法
+[ code_vector ] EVAL
+
+## 例
+# [ 1 2 + ] を実行する
+[ [ 1 ] [ 2 ] + ] EVAL
+# 結果: [ 3 ]
+
+# 文字列からワードを組み立てて実行
+[ 'PRINT' ] EVAL
+[ 'Hello' ] SWAP
+# → 'Hello' と表示される"#.to_string(),
 
         // === 高階関数 ===
         "MAP" => r#"# MAP - 各要素への関数適用
