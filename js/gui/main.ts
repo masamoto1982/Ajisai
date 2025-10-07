@@ -148,6 +148,14 @@ export class GUI {
                 e.preventDefault();
                 e.stopImmediatePropagation();
             }
+            // Ctrl+Alt+Enterでリセットを実行
+            if (e.key === 'Enter' && e.ctrlKey && e.altKey) {
+                if (confirm('Are you sure you want to reset the system?')) {
+                    this.executionController.executeReset();
+                }
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }
         }, true);
         
         // モバイルでOutputエリアやStackエリアをタップしたら入力モードに戻す
