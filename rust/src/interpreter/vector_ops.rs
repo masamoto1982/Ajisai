@@ -273,7 +273,8 @@ pub fn op_slice(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     match val.val_type {
         ValueType::Vector(v, bracket_type) => {
-            for item in v.into_iter().rev() {
+            // 正順でループすることで、ベクターの最後の要素がスタックのトップに来る
+            for item in v.into_iter() {
                 interp.stack.push(Value {
                     val_type: ValueType::Vector(vec![item], bracket_type.clone()),
                 });
