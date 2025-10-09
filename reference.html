@@ -16,7 +16,8 @@
         .container { background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .back-link { display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; transition: background-color 0.2s; }
         .back-link:hover { background-color: #0056b3; }
-        .note { background-color: #fffbe6; border-left: 5px solid #ffc107; padding: 1rem; margin: 1rem 0; }
+        .note { background-color: #e6f7ff; border-left: 5px solid #007bff; padding: 1rem; margin: 1rem 0; }
+        .specifier { color: #d9534f; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -26,57 +27,37 @@
         </header>
 
         <section>
-            <h2>1. はじめに</h2>
-            <h3>Ajisaiとは？</h3>
-            <p>Ajisaiは、FORTHという言語に影響を受けた**スタックベース**のプログラミング言語です。命令とデータを記述していくと、データが「ワークスペース」と呼ばれるスタックに積まれ、命令がそれを処理します。この方法は**逆ポーランド記法 (RPN)** と呼ばれ、<code>1 + 2</code> を <code>1 2 +</code> のように書くのが特徴です。</p>
+            <h2>1. 新しい設計思想：スタックはVectorである</h2>
+            <p>Ajisaiの最も重要なコンセプトは、「**スタックの実体はVectorである**」というものです。これにより、Vectorを操作するワードは、そのままスタック全体を操作するためにも使えます。この統一された考え方が、Ajisaiのシンプルさとパワフルさの源泉です。</p>
+            <p>この考え方を実現するため、多くの組み込みワードは操作対象を切り替えることができます。</p>
 
-            <h3>実行環境</h3>
-            <p>画面は大きく分けて4つの領域で構成されています。</p>
+            <h3>操作対象の指定子: <code class="specifier">STACKTOP</code> と <code class="specifier">STACK</code></h3>
+            <p>ワードがどこに対して作用するかを明示的に指定するための「指定子ワード」が導入されました。</p>
             <ul>
-                <li><strong>Output</strong>: プログラムの実行結果が表示されます。</li>
-                <li><strong>Input</strong>: ここにコードを記述して実行します。（Shift+Enterでも実行可能）</li>
-                <li><strong>Workspace</strong>: データが積まれるスタックです。一番最後に追加されたデータが一番上に表示されます。</li>
-                <li><strong>Dictionary</strong>: 利用可能な命令（ワード）の一覧です。</li>
+                <li><code class="specifier">STACKTOP</code>: ワードの操作対象を、スタックの一番上にあるVectorの**内部要素**に設定します。これは最も一般的な操作です。</li>
+                <li><code class="specifier">STACK</code>: ワードの操作対象を、**スタックそのもの**（スタック上に積まれている全Vector）に設定します。</li>
             </ul>
 
-            <h3>最初のプログラム</h3>
-            <p>まずは簡単な計算をしてみましょう。Inputエリアに以下のコードを入力して実行してみてください。</p>
-            <div class="code-block">[ 3 ] [ 5 ] +</div>
-            <p>Workspaceに <code>[8]</code> と表示されれば成功です。これは、<code>[3]</code> と <code>[5]</code> をワークスペースに積み、<code>+</code> ワードがそれらを取り出して加算し、結果の <code>[8]</code> を再びワークスペースに積んだことを示しています。</p>
-            
-            <h3>コメントと自然言語</h3>
-            <p><code>#</code> から始まる行はコメントとして扱われ、実行時に無視されます。</p>
-            <div class="code-block">
-# これはコメントです
-[ 10 ] [ 2 ] /
+            <div class="note">
+                <strong>デフォルト動作:</strong> 指定子ワードを省略した場合、Ajisaiは自動的に <code class="specifier">STACKTOP</code> が指定されたものとして動作します。これにより、従来のコードの簡潔さは維持されます。
             </div>
-            <p>また、Ajisaiは日本語などの自然言語を解釈しませんが、コードの一部として記述しておくことができます。インタープリタは自身が理解できるワード（<code>[</code>, <code>]</code>, <code>+</code>など）のみを評価するため、以下のような記述も許容されます。</p>
-            <div class="code-block">[ 3 ] と[ 5 ]を+せよ！</div>
-        </section>
-
-        <section>
-            <h2>2. 基本的な考え方</h2>
-            <h3>条件分岐 :</h3>
-            <p><code>:</code> は、条件に応じて処理を分岐させるためのワードです。<code>[ 条件 ] : [ 実行内容 ]</code> のように使います。条件が真（<code>TRUE</code>、<code>0</code>以外の数値など）の場合のみ、<code>:</code> の後の処理が実行されます。</p>
             <div class="code-block">
-# Workspaceのトップが [ 5 ] なので、条件は真となり、10 が加算される
-[ 5 ] [ 5 ] = : [ 10 ] +
-            </div>
+# これはSTACKTOPを指定した場合と同じ (デフォルト動作)
+[ 10 20 30 ] [ 1 ] GET
+# -> Workspace: [ 20 ]
 
-            <h3>繰り返しと待機</h3>
-            <p>すべての操作には、末尾に修飾子を付けることで繰り返し回数や待機時間を指定できます。</p>
-            <ul>
-                <li><strong>繰り返し</strong>: <code>3x</code> のように指定すると、その行の処理を3回繰り返します。</li>
-                <li><strong>待機</strong>: <code>100ms</code> や <code>2s</code> のように指定すると、処理の実行前に指定時間だけ待機します。（繰り返しと組み合わせることで、定期的な処理が実現できます）</li>
-            </ul>
-            <div class="code-block">
-# "Hello" を1秒おきに3回表示する
-[ 'Hello' ] PRINT 3x 1s
+# 明示的にSTACKTOPを指定
+[ 10 20 30 ] STACKTOP [ 1 ] GET
+# -> Workspace: [ 20 ]
+
+# STACKを指定して、スタックそのものを操作する
+[ 10 ] [ 20 ] [ 30 ] STACK [ 1 ] GET
+# -> Workspace: [ 10 ] [ 20 ] [ 30 ] [ 20 ] (スタックの1番目(20)をコピー)
             </div>
         </section>
 
         <section>
-            <h2>3. 基本的なデータ型</h2>
+            <h2>2. 基本的なデータ型</h2>
             <p>Ajisaiが扱うデータは、すべてVectorという形式で表現されます。</p>
             <ul>
                 <li><strong>数値</strong>: <code>[ 10 ]</code>, <code>[ 3/4 ]</code>, <code>[ 1.5e3 ]</code> のように記述します。内部的にはすべて分数として扱われるため、小数や巨大数も誤差なく計算できます。</li>
@@ -88,80 +69,70 @@
         </section>
 
         <section>
-            <h2>4. 算術演算と論理演算</h2>
-            <p>これらのワードは、Workspaceから2つの値を取り出して計算し、結果を1つ返します。</p>
-            <ul>
-                <li><strong>四則演算</strong>: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code></li>
-                <li><strong>比較演算</strong>: <code>=</code> (等しい), <code>&gt;</code> (より大きい), <code>&lt;</code> (より小さい), <code>&gt;=</code>, <code>&lt;=</code></li>
-                <li><strong>論理演算</strong>: <code>AND</code>, <code>OR</code>, <code>NOT</code> (<code>NOT</code>は値を1つだけ取ります)</li>
-            </ul>
+            <h2>3. Vectorとスタックの操作</h2>
+            <p>以下のワードは、<code class="specifier">STACKTOP</code> (デフォルト) と <code class="specifier">STACK</code> の両方で動作します。</p>
+            
+            <h3>GET: 要素の取得</h3>
             <div class="code-block">
-# (10 + 5) * 2 を計算する
-[ 10 ] [ 5 ] + [ 2 ] *
-            </div>
-        </section>
+# STACKTOP (デフォルト): Vectorの要素を取得
+[ 1 2 3 ] [ 0 ] GET  # -> [ 1 ]
 
-        <section>
-            <h2>5. Vectorの操作</h2>
-            <div class="note">
-                <strong>位置の指定は0オリジン、量の指定は1オリジン</strong><br>
-                Vector操作では、インデックス番号で「何番目」を指定する場合は <code>0</code> から始まります（0オリジン）。一方、「何個」のように量を指定する場合は <code>1</code> から数えます（1オリジン）。
+# STACK: スタック上のVectorを取得 (伝統的なPICK)
+[ 1 ] [ 2 ] [ 3 ] STACK [ 0 ] GET  # -> [ 1 ] [ 2 ] [ 3 ] [ 3 ]
             </div>
             
-            <h3>位置を指定する操作（0オリジン）</h3>
-            <ul>
-                <li><code>GET</code>: <code>[ Vector ] [ Index ] GET</code> → 指定したIndexの要素を取得します。負のインデックス（-1など）で末尾から数えることもできます。</li>
-                <li><code>REPLACE</code>: <code>[ Vector ] [ Index ] [ NewValue ] REPLACE</code> → 指定したIndexの要素を新しい値に置き換えます。</li>
-                <li><code>INSERT</code>: <code>[ Vector ] [ Index ] [ NewValue ] INSERT</code> → 指定したIndexに新しい値を挿入します。</li>
-                <li><code>REMOVE</code>: <code>[ Vector ] [ Index ] REMOVE</code> → 指定したIndexの要素を削除します。</li>
-            </ul>
+            <h3>REMOVE: 要素の削除</h3>
             <div class="code-block">
-# [ 10 20 30 ] の1番目の要素(20)を取得する
-[ 10 20 30 ] [ 1 ] GET
+# STACKTOP (デフォルト): Vectorの要素を削除
+[ 1 2 3 ] [ 1 ] REMOVE  # -> [ 1 3 ]
+
+# STACK: スタック上のVectorを削除 (伝統的なDROP)
+[ 1 ] [ 2 ] [ 3 ] STACK [ 0 ] REMOVE # -> [ 1 ] [ 2 ]
             </div>
 
-            <h3>量を指定する操作（1オリジン）</h3>
-            <ul>
-                <li><code>LENGTH</code>: <code>[ Vector ] LENGTH</code> → Vectorの要素数を取得します。</li>
-                <li><code>TAKE</code>: <code>[ Vector ] [ Count ] TAKE</code> → 先頭から指定した個数の要素を取り出します。</li>
-                <li><code>DROP</code>: <code>[ Vector ] [ Count ] DROP</code> → 先頭から指定した個数の要素を削除します。</li>
-            </ul>
+            <h3>REVERSE: 順序の反転</h3>
             <div class="code-block">
-# [ 1 2 3 4 5 ] の先頭から3個の要素を取得する
-[ 1 2 3 4 5 ] [ 3 ] TAKE
+# STACKTOP (デフォルト): Vectorの要素を反転
+[ 1 2 3 ] REVERSE  # -> [ 3 2 1 ]
+
+# STACK: スタック上の指定個数のVectorを反転 (伝統的なSWAP/ROT)
+[ 1 ] [ 2 ] [ 3 ] STACK [ 2 ] REVERSE # -> [ 1 ] [ 3 ] [ 2 ] (SWAP)
             </div>
 
-            <h3>構造操作</h3>
-            <ul>
-                <li><code>CONCAT</code>: <code>[ Vec1 ] [ Vec2 ] CONCAT</code> → 2つのVectorを連結します。</li>
-                <li><code>REVERSE</code>: <code>[ Vector ] REVERSE</code> → 要素の並び順を反転させます。</li>
-            </ul>
+            <div class="note">
+                <strong>位置の指定は0オリジン、量の指定は1オリジン</strong><br>
+                インデックス番号で「何番目」を指定する場合は <code>0</code> から始まります。一方、「何個」のように量を指定する場合は <code>1</code> から数えます。
+            </div>
         </section>
 
         <section>
-            <h2>6. カスタムワード（関数の定義）</h2>
-            <h3>ワードの定義 DEF</h3>
-            <p><code>DEF</code> を使うと、一連の処理をまとめて新しいワードとして定義できます。これにより、複雑な処理を再利用可能な部品として作成できます。</p>
+            <h2>4. 高階関数</h2>
+            <p>高階関数もまた、<code class="specifier">STACKTOP</code> と <code class="specifier">STACK</code> の両方で動作します。</p>
+
+            <h3>MAP: 各要素への適用</h3>
+            <div class="code-block">
+[ 2 ] * 'DOUBLE' DEF
+
+# STACKTOP (デフォルト): Vectorの各要素に 'DOUBLE' を適用
+[ 1 2 3 ] 'DOUBLE' MAP # -> [ 2 4 6 ]
+
+# STACK: スタック上の3つのVectorそれぞれに 'DOUBLE' を適用
+[ 1 ] [ 2 ] [ 3 ] STACK [ 3 ] 'DOUBLE' MAP # -> [ 2 ] [ 4 ] [ 6 ]
+            </div>
+        </section>
+        
+        <section>
+            <h2>5. カスタムワード（関数の定義）</h2>
+            <p><code>DEF</code> を使うと、一連の処理をまとめて新しいワードとして定義できます。この機能は設計変更の影響を受けません。</p>
             <div class="code-block">
 # 与えられた数値を二乗するワード 'SQUARE' を定義
-[ DUP * ] 'SQUARE' DEF
+[ DUP * ] 'SQUARE' '数を二乗する' DEF
 
 # 定義したワードを使ってみる
 [ 5 ] SQUARE
             </div>
-
-            <h3>機能説明の追加</h3>
-            <p>定義時に、ワードの名前の後に説明文を追加することができます。ここで追加した説明は、GUIの辞書（Custom Words）でワードにマウスカーソルを合わせたときに表示されます。</p>
-            <div class="code-block">
-# 説明付きでワードを定義
-[ DUP * ] 'SQUARE' '数を二乗する' DEF
-            </div>
-
-            <h3>ワードの削除 DEL</h3>
-            <p><code>DEL</code> を使うと、定義したカスタムワードを削除できます。</p>
-            <div class="code-block">'SQUARE' DEL</div>
         </section>
-        
+
         <a href="index.html" class="back-link">← アプリケーションに戻る</a>
     </div>
 </body>
