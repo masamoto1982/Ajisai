@@ -113,7 +113,6 @@ impl Interpreter {
             "SPLIT" => vector_ops::op_split(self),
             "CONCAT" => vector_ops::op_concat(self), 
             "REVERSE" => vector_ops::op_reverse(self),
-            "SLICE" => vector_ops::op_slice(self),
             "LEVEL" => vector_ops::op_level(self),
             "+" => arithmetic::op_add(self), 
             "-" => arithmetic::op_sub(self),
