@@ -110,10 +110,12 @@ fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
 }
 
 fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
-    const KEYWORDS: [(&str, Token); 3] = [
+    const KEYWORDS: [(&str, Token); 5] = [
         ("TRUE", Token::Boolean(true)),
         ("FALSE", Token::Boolean(false)),
         ("NIL", Token::Nil),
+        ("STACK", Token::Symbol("STACK".to_string())),
+        ("STACKTOP", Token::Symbol("STACKTOP".to_string())),
     ];
 
     for (keyword_str, token) in KEYWORDS.iter() {
