@@ -110,20 +110,20 @@ fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
 }
 
 fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
-    const KEYWORDS: [(&str, Token); 5] = [
-        ("TRUE", Token::Boolean(true)),
-        ("FALSE", Token::Boolean(false)),
-        ("NIL", Token::Nil),
-        ("STACK", Token::Symbol("STACK".to_string())),
-        ("STACKTOP", Token::Symbol("STACKTOP".to_string())),
+    const KEYWORDS: [(&str, fn() -> Token); 5] = [
+        ("TRUE", || Token::Boolean(true)),
+        ("FALSE", || Token::Boolean(false)),
+        ("NIL", || Token::Nil),
+        ("STACK", || Token::Symbol("STACK".to_string())),
+        ("STACKTOP", || Token::Symbol("STACKTOP".to_string())),
     ];
 
-    for (keyword_str, token) in KEYWORDS.iter() {
+    for (keyword_str, token_fn) in KEYWORDS.iter() {
         if chars.len() >= keyword_str.len() {
             let potential_match: String = chars[..keyword_str.len()].iter().collect();
             if potential_match.eq_ignore_ascii_case(keyword_str) {
                 if chars.len() == keyword_str.len() || !is_word_char(chars[keyword_str.len()]) {
-                    return Some((token.clone(), keyword_str.len()));
+                    return Some((token_fn(), keyword_str.len()));
                 }
             }
         }
