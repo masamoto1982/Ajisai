@@ -2,25 +2,27 @@
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
-use num_traits::Zero;
+use num_traits::{Zero, One, ToPrimitive};
 
-// スタックトップから数値の引数を取得する
-// 引数がなければデフォルト値(2)を返す
-fn get_optional_count(&mut self, default: usize) -> Result<usize> {
-    if let Some(top) = self.stack.last() {
-        if let ValueType::Vector(v, _) = &top.val_type {
-            if v.len() == 1 {
-                if let ValueType::Number(n) = &v[0].val_type {
-                    if n.denominator == num_bigint::BigInt::one() {
-                        let count = n.numerator.to_usize().ok_or_else(|| AjisaiError::from("Count too large"))?;
-                        self.stack.pop(); // countを消費
-                        return Ok(count);
+impl Interpreter {
+    // スタックトップから数値の引数を取得する
+    // 引数がなければデフォルト値(2)を返す
+    fn get_optional_count(&mut self, default: usize) -> Result<usize> {
+        if let Some(top) = self.stack.last() {
+            if let ValueType::Vector(v, _) = &top.val_type {
+                if v.len() == 1 {
+                    if let ValueType::Number(n) = &v[0].val_type {
+                        if n.denominator == One::one() {
+                            let count = n.numerator.to_usize().ok_or_else(|| AjisaiError::from("Count too large"))?;
+                            self.stack.pop(); // countを消費
+                            return Ok(count);
+                        }
                     }
                 }
             }
         }
+        Ok(default)
     }
-    Ok(default)
 }
 
 
@@ -28,7 +30,7 @@ fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Fraction,
 {
-    let n = get_optional_count(interp, 2)?;
+    let n = interp.get_optional_count(2)?;
     if interp.stack.len() < n { return Err(AjisaiError::StackUnderflow); }
 
     let mut vectors: Vec<Vec<Value>> = Vec::with_capacity(n);
