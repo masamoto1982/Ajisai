@@ -3,8 +3,7 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
 use num_bigint::BigInt;
-use num_traits::{One, ToPrimitive, Zero};
-use std::collections::VecDeque;
+use num_traits::{One, ToPrimitive};
 
 // スタックトップから数値の引数を取得する
 fn get_index_from_stack(interp: &mut Interpreter) -> Result<Option<BigInt>> {
@@ -44,16 +43,15 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             
             let result_element = v.get(actual_index).cloned().ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
             interp.stack.push(Value { val_type: ValueType::Vector(vec![result_element], BracketType::Square) });
-        } else {
-             return Err(AjisaiError::type_error("vector", "other type"));
+            return Ok(());
         }
-    } else {
-        // スタック操作
-        let len = interp.stack.len();
-        let actual_index = resolve_index(index, len)?;
-        let value_to_get = interp.stack.get(actual_index).cloned().ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
-        interp.stack.push(value_to_get);
     }
+    
+    // スタック操作
+    let len = interp.stack.len();
+    let actual_index = resolve_index(index, len)?;
+    let value_to_get = interp.stack.get(actual_index).cloned().ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
+    interp.stack.push(value_to_get);
     Ok(())
 }
 
@@ -61,33 +59,27 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let index_bigint = get_index_from_stack(interp)?.ok_or_else(|| AjisaiError::from("REMOVE requires an index"))?;
     let index = index_bigint.to_i64().ok_or_else(|| AjisaiError::from("Index is too large"))?;
 
-    if let Some(target_val) = interp.stack.last() {
-        if matches!(target_val.val_type, ValueType::Vector(_, _)) {
+    if let Some(target_val) = interp.stack.last_mut() {
+        if let ValueType::Vector(ref mut v, _) = target_val.val_type {
             // Vector操作
-            let mut target_vec = interp.stack.pop().unwrap();
-            if let ValueType::Vector(ref mut v, _) = target_vec.val_type {
-                let len = v.len();
-                let actual_index = resolve_index(index, len)?;
-                if actual_index < len {
-                    v.remove(actual_index);
-                } else {
-                    return Err(AjisaiError::IndexOutOfBounds { index, length: len });
-                }
+            let len = v.len();
+            let actual_index = resolve_index(index, len)?;
+            if actual_index < len {
+                v.remove(actual_index);
+            } else {
+                return Err(AjisaiError::IndexOutOfBounds { index, length: len });
             }
-            interp.stack.push(target_vec);
-
-        } else {
-            return Err(AjisaiError::type_error("vector", "other type"));
+            return Ok(());
         }
+    }
+    
+    // スタック操作
+    let len = interp.stack.len();
+    let actual_index = resolve_index(index, len)?;
+    if actual_index < len {
+        interp.stack.remove(actual_index);
     } else {
-        // スタック操作
-        let len = interp.stack.len();
-        let actual_index = resolve_index(index, len)?;
-        if actual_index < len {
-            interp.stack.remove(actual_index);
-        } else {
-            return Err(AjisaiError::IndexOutOfBounds { index, length: len });
-        }
+        return Err(AjisaiError::IndexOutOfBounds { index, length: len });
     }
     Ok(())
 }
@@ -133,8 +125,6 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// 他のワードも同様に修正...
-// ... op_insert, op_replace, op_length, op_take, op_level, op_split ...
 
 // ヘルパー関数: 負のインデックスを解決
 fn resolve_index(index: i64, len: usize) -> Result<usize> {
@@ -179,16 +169,15 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             let len = v.len() as i64;
             let insert_index = if index < 0 { (len + index + 1).max(0) } else { index.min(len) } as usize;
             v.insert(insert_index, insert_element);
-        } else {
-            // スタック操作
-            let len = interp.stack.len() as i64;
-            let insert_index = if index < 0 { (len + index + 1).max(0) } else { index.min(len) } as usize;
-            interp.stack.insert(insert_index, element);
+            return Ok(());
         }
-    } else {
-        // スタックが空の場合のスタック操作
-        interp.stack.insert(0, element);
     }
+
+    // スタック操作
+    let len = interp.stack.len() as i64;
+    let insert_index = if index < 0 { (len + index + 1).max(0) } else { index.min(len) } as usize;
+    interp.stack.insert(insert_index, element);
+    
     Ok(())
 }
 
@@ -207,33 +196,29 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             let len = v.len();
             let actual_index = resolve_index(index, len)?;
             v[actual_index] = replace_element;
-        } else {
-            // スタック操作
-            let len = interp.stack.len();
-            let actual_index = resolve_index(index, len)?;
-            interp.stack[actual_index] = new_element;
+            return Ok(());
         }
-    } else {
-        return Err(AjisaiError::StackUnderflow);
     }
+    
+    // スタック操作
+    let len = interp.stack.len();
+    let actual_index = resolve_index(index, len)?;
+    interp.stack[actual_index] = new_element;
+    
     Ok(())
 }
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    if get_index_from_stack(interp)?.is_some() {
-        return Err(AjisaiError::from("LENGTH with argument is not supported"));
-    }
     let len = if let Some(target_val) = interp.stack.last() {
-        match &target_val.val_type {
-            ValueType::Vector(v, _) => {
-                let val = interp.stack.pop().unwrap(); // drop the vector
-                v.len()
-            },
-            _ => interp.stack.len(), // スタック操作
+        if let ValueType::Vector(v, _) = &target_val.val_type {
+            v.len()
+        } else {
+            interp.stack.len() // スタック操作
         }
     } else {
         0 // 空のスタック
     };
+
     let len_frac = Fraction::new(BigInt::from(len), BigInt::one());
     let val = Value { val_type: ValueType::Vector(vec![Value{ val_type: ValueType::Number(len_frac)}], BracketType::Square) };
     interp.stack.push(val);
