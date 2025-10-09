@@ -26,12 +26,11 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         // 量指定操作（1オリジン）
         ("LENGTH", "Get vector length", "Quantity"),
         ("TAKE", "Take first N elements", "Quantity"),
-        ("SPLIT", "Split vector by sizes", "Quantity"),
         
         // Vector構造操作
-        ("CONCAT", "Concatenate vectors", "Vector"),
+        ("SPLIT", "Splits a vector. With arguments, it splits into specified sizes. Without arguments, it slices into single-element vectors.", "Vector"),
+        ("CONCAT", "Concatenate vectors. Default is 2. Specify count with an argument. Negative count reverses order.", "Vector"),
         ("REVERSE", "Reverse vector elements", "Vector"),
-        ("SLICE", "Slice vector into single-element vectors", "Vector"),
         ("LEVEL", "Flatten a nested vector", "Vector"),
 
         // 算術演算
@@ -179,29 +178,64 @@ pub fn get_builtin_detail(name: &str) -> String {
 # 負の数で末尾からN個
 [ 1 2 3 4 5 ] [ -2 ] TAKE  # → [ 4 5 ]"#.to_string(),
 
-        "SPLIT" => r#"# SPLIT - ベクトルの分割（1オリジン）
+        // === Vector構造操作 ===
+        "SPLIT" => r#"# SPLIT - ベクトルの分割・分解
 
 ## 説明
+引数の有無で動作が変わります。
+
+### 引数なしの場合 (SLICEの動作)
+ベクトルを要素ごとに分解し、それぞれを単一要素のベクトルとしてスタックに積みます。
+
+### 引数を指定した場合
 ベクトルを指定したサイズで分割します。
 
 ## 使用法
+# 引数なし
+[ vector ] SPLIT
+
+# 引数あり
 [ vector ] [ size1 ] [ size2 ] ... [ sizeN ] SPLIT
 
 ## 例
+# 引数なし
+[ 1 2 3 ] SPLIT
+# スタックの状態 (上から):
+# [ 3 ]
+# [ 2 ]
+# [ 1 ]
+
+# 引数あり
 [ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] [ 1 ] SPLIT
 # → [ 1 2 ] [ 3 4 5 ] [ 6 ]"#.to_string(),
 
-        // === Vector構造操作 ===
         "CONCAT" => r#"# CONCAT - ベクトルの連結
 
 ## 説明
-2つのベクトルを連結して1つのベクトルにします。
+引数の有無で動作が変わります。
+
+### 引数なしの場合
+スタック上の2つのベクトルを連結します。
+
+### 引数を指定した場合
+指定された個数のベクトルを連結します。引数が負の場合は逆順で連結します。
 
 ## 使用法
+# 引数なし (2つのベクトルを連結)
 [ vector1 ] [ vector2 ] CONCAT
 
+# 引数あり
+[ vec1 ] [ vec2 ] ... [ vecN ] [ N ] CONCAT
+
 ## 例
-[ 1 2 ] [ 3 4 ] CONCAT  # → [ 1 2 3 4 ]"#.to_string(),
+# 引数なし
+[ 1 2 ] [ 3 4 ] CONCAT  # → [ 1 2 3 4 ]
+
+# 引数あり (3つのベクトルを連結)
+[ 1 ] [ 2 ] [ 3 ] [ 3 ] CONCAT # → [ 1 2 3 ]
+
+# 引数あり (負の数で逆順連結)
+[ 1 ] [ 2 ] [ 3 ] [ -3 ] CONCAT # → [ 3 2 1 ]"#.to_string(),
 
         "REVERSE" => r#"# REVERSE - ベクトルの反転
 
@@ -213,26 +247,6 @@ pub fn get_builtin_detail(name: &str) -> String {
 
 ## 例
 [ 1 2 3 4 ] REVERSE  # → [ 4 3 2 1 ]"#.to_string(),
-
-        "SLICE" => r#"# SLICE - ベクトルの分解
-
-## 説明
-ベクトルを要素ごとに分解し、それぞれを単一要素のベクトルとしてスタックに積みます。
-
-## 使用法
-[ vector ] SLICE
-
-## 例
-[ 1 2 3 ] SLICE
-# スタックの状態 (上から):
-# [ 3 ]
-# [ 2 ]
-# [ 1 ]
-
-[ [ 1 2 ] 'A' ] SLICE
-# スタックの状態 (上から):
-# [ 'A' ]
-# [ [ 1 2 ] ]"#.to_string(),
 
         "LEVEL" => r#"# LEVEL - ベクトルのフラット化
 
