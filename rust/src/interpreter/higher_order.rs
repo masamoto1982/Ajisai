@@ -3,6 +3,7 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, BracketType};
 use num_bigint::BigInt;
+use num_traits::{One, ToPrimitive};
 
 // スタックトップから数値の引数を取得するヘルパー
 fn get_optional_count(interp: &mut Interpreter) -> Result<Option<usize>> {
@@ -35,13 +36,13 @@ impl Interpreter {
             // スタック上のN個のVectorに適用
             if self.stack.len() < n { return Err(AjisaiError::StackUnderflow); }
             let mut results = Vec::with_capacity(n);
-            for _ in 0..n {
-                let elem = self.stack.pop().unwrap();
+            let mut items_to_map = self.stack.drain(self.stack.len() - n ..).collect::<Vec<_>>();
+            
+            for elem in items_to_map.drain(..) {
                 self.stack.push(elem);
                 self.execute_word_sync(&upper_name)?;
                 results.push(self.stack.pop().unwrap());
             }
-            results.reverse();
             self.stack.extend(results);
 
         } else {
