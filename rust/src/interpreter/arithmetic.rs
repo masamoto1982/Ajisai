@@ -2,7 +2,7 @@
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}, OperationTarget};
 use crate::types::{Value, ValueType, Fraction, BracketType};
-use num_traits::{Zero, One, ToPrimitive};
+use num_traits::Zero;
 
 fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
@@ -37,7 +37,7 @@ where
 
             if interp.stack.len() < count { return Err(AjisaiError::StackUnderflow); }
             
-            let mut items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let mut result_vec = Vec::new();
 
             if let Some(first_item) = items.first() {
