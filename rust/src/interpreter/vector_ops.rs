@@ -3,7 +3,7 @@
 use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
 use num_bigint::BigInt;
-use num_traits::{One, ToPrimitive, Zero};
+use num_traits::{One, ToPrimitive};
 use std::collections::VecDeque;
 
 fn get_index_from_value(value: &Value) -> Result<BigInt> {
@@ -28,7 +28,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            match target_val.val_type {
+            match &target_val.val_type {
                 ValueType::Vector(v, bracket_type) => {
                     let len = v.len();
                     if len == 0 { return Err(AjisaiError::IndexOutOfBounds { index, length: 0 }); }
@@ -37,7 +37,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                     if actual_index < len {
                         let result_elem = v[actual_index].clone();
                         interp.stack.push(target_val); // Push back the original vector
-                        interp.stack.push(Value { val_type: ValueType::Vector(vec![result_elem], bracket_type) });
+                        interp.stack.push(Value { val_type: ValueType::Vector(vec![result_elem], bracket_type.clone()) });
                         Ok(())
                     } else {
                         Err(AjisaiError::IndexOutOfBounds { index, length: len })
@@ -70,11 +70,15 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let new_element = if let ValueType::Vector(v, _) = element.val_type {
+                if v.len() == 1 { v[0].clone() } else { element }
+            } else { element };
+
             match vector_val.val_type {
                 ValueType::Vector(mut v, bracket_type) => {
                     let len = v.len() as i64;
                     let insert_index = if index < 0 { (len + index + 1).max(0) as usize } else { (index as usize).min(v.len()) };
-                    v.insert(insert_index, element);
+                    v.insert(insert_index, new_element);
                     interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                     Ok(())
                 },
@@ -98,12 +102,16 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let replace_element = if let ValueType::Vector(v, _) = new_element.val_type {
+                if v.len() == 1 { v[0].clone() } else { new_element }
+            } else { new_element };
+
             match vector_val.val_type {
                 ValueType::Vector(mut v, bracket_type) => {
                     let len = v.len();
                     let actual_index = if index < 0 { (len as i64 + index) as usize } else { index as usize };
                     if actual_index < len {
-                        v[actual_index] = new_element;
+                        v[actual_index] = replace_element;
                         interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                         Ok(())
                     } else {
@@ -214,8 +222,8 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
             } else {
                 let take_count = count as usize;
                 if take_count > len { return Err(AjisaiError::from("Take count exceeds stack length")); }
-                let mut rest = interp.stack.split_off(take_count);
-                std::mem::replace(&mut interp.stack, rest)
+                let _ = interp.stack.split_off(take_count);
+                interp.stack.clone()
             };
             interp.stack = new_stack;
             Ok(())
@@ -272,11 +280,9 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
             let mut remaining_stack = interp.stack.split_off(0);
             let mut result_stack = Vec::new();
             
-            let mut current_pos = 0;
             for &size in &sizes {
                 let chunk = remaining_stack.drain(..size).collect();
                 result_stack.push(Value { val_type: ValueType::Vector(chunk, BracketType::Square) });
-                current_pos += size;
             }
             if !remaining_stack.is_empty() {
                  result_stack.push(Value { val_type: ValueType::Vector(remaining_stack, BracketType::Square) });
@@ -296,8 +302,8 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < count { return Err(AjisaiError::StackUnderflow); }
 
     match interp.operation_target {
-        OperationTarget::StackTop => { // This is equivalent to STACK mode for CONCAT
-            let mut vecs_to_concat = interp.stack.split_off(interp.stack.len() - count);
+        OperationTarget::StackTop => { 
+            let vecs_to_concat = interp.stack.split_off(interp.stack.len() - count);
             let mut result_vec = Vec::new();
             let mut final_bracket_type = BracketType::Square;
 
@@ -317,7 +323,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
         }
         OperationTarget::Stack => {
-            let mut vecs_to_concat = interp.stack.split_off(interp.stack.len() - count);
+            let vecs_to_concat = interp.stack.split_off(interp.stack.len() - count);
             let mut result_vec = Vec::new();
             
             for val in vecs_to_concat {
