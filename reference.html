@@ -22,147 +22,17 @@
 <body>
     <div class="container">
         <header>
-            <h1>Ajisai チュートリアル</h1>
+            <h1>Ajisai Tutorial</h1>
         </header>
 
         <section>
-            <h2>1. はじめに</h2>
-            <h3>Ajisaiとは？</h3>
-            <p>Ajisaiは、FORTHという言語に影響を受けた**スタックベース**のプログラミング言語です。命令とデータを記述していくと、データが「ワークスペース」と呼ばれるスタックに積まれ、命令がそれを処理します。この方法は**逆ポーランド記法 (RPN)** と呼ばれ、<code>1 + 2</code> を <code>1 2 +</code> のように書くのが特徴です。</p>
-
-            <h3>実行環境</h3>
-            <p>画面は大きく分けて4つの領域で構成されています。</p>
-            <ul>
-                <li><strong>Output</strong>: プログラムの実行結果が表示されます。</li>
-                <li><strong>Input</strong>: ここにコードを記述して実行します。（Shift+Enterでも実行可能）</li>
-                <li><strong>Workspace</strong>: データが積まれるスタックです。一番最後に追加されたデータが一番上に表示されます。</li>
-                <li><strong>Dictionary</strong>: 利用可能な命令（ワード）の一覧です。</li>
-            </ul>
-
-            <h3>最初のプログラム</h3>
-            <p>まずは簡単な計算をしてみましょう。Inputエリアに以下のコードを入力して実行してみてください。</p>
-            <div class="code-block">[ 3 ] [ 5 ] +</div>
-            <p>Workspaceに <code>[8]</code> と表示されれば成功です。これは、<code>[3]</code> と <code>[5]</code> をワークスペースに積み、<code>+</code> ワードがそれらを取り出して加算し、結果の <code>[8]</code> を再びワークスペースに積んだことを示しています。</p>
             
-            <h3>コメントと自然言語</h3>
-            <p><code>#</code> から始まる行はコメントとして扱われ、実行時に無視されます。</p>
-            <div class="code-block">
-# これはコメントです
-[ 10 ] [ 2 ] /
-            </div>
-            <p>また、Ajisaiは日本語などの自然言語を解釈しませんが、コードの一部として記述しておくことができます。インタープリタは自身が理解できるワード（<code>[</code>, <code>]</code>, <code>+</code>など）のみを評価するため、以下のような記述も許容されます。</p>
-            <div class="code-block">[ 3 ] と[ 5 ]を+せよ！</div>
-        </section>
-
-        <section>
-            <h2>2. 基本的な考え方</h2>
-            <h3>条件分岐 :</h3>
-            <p><code>:</code> は、条件に応じて処理を分岐させるためのワードです。<code>[ 条件 ] : [ 実行内容 ]</code> のように使います。条件が真（<code>TRUE</code>、<code>0</code>以外の数値など）の場合のみ、<code>:</code> の後の処理が実行されます。</p>
-            <div class="code-block">
-# Workspaceのトップが [ 5 ] なので、条件は真となり、10 が加算される
-[ 5 ] [ 5 ] = : [ 10 ] +
-            </div>
-
-            <h3>繰り返しと待機</h3>
-            <p>すべての操作には、末尾に修飾子を付けることで繰り返し回数や待機時間を指定できます。</p>
-            <ul>
-                <li><strong>繰り返し</strong>: <code>3x</code> のように指定すると、その行の処理を3回繰り返します。</li>
-                <li><strong>待機</strong>: <code>100ms</code> や <code>2s</code> のように指定すると、処理の実行前に指定時間だけ待機します。（繰り返しと組み合わせることで、定期的な処理が実現できます）</li>
-            </ul>
-            <div class="code-block">
-# "Hello" を1秒おきに3回表示する
-[ 'Hello' ] PRINT 3x 1s
-            </div>
-        </section>
-
-        <section>
-            <h2>3. 基本的なデータ型</h2>
-            <p>Ajisaiが扱うデータは、すべてVectorという形式で表現されます。</p>
-            <ul>
-                <li><strong>数値</strong>: <code>[ 10 ]</code>, <code>[ 3/4 ]</code>, <code>[ 1.5e3 ]</code> のように記述します。内部的にはすべて分数として扱われるため、小数や巨大数も誤差なく計算できます。</li>
-                <li><strong>文字列</strong>: <code>[ 'Hello' ]</code> のようにシングルクォートで囲みます。</li>
-                <li><strong>真偽値</strong>: <code>[ TRUE ]</code> または <code>[ FALSE ]</code> です。</li>
-                <li><strong>Nil</strong>: <code>[ NIL ]</code> は何もないことを示す値です。</li>
-                <li><strong>Vector</strong>: <code>[ 1 2 'Apple' ]</code> のように、複数の値をまとめて格納できます。Vectorの中にVectorを入れる（ネストする）ことも可能です。</li>
-            </ul>
-        </section>
-
-        <section>
-            <h2>4. 算術演算と論理演算</h2>
-            <p>これらのワードは、Workspaceから2つの値を取り出して計算し、結果を1つ返します。</p>
-            <ul>
-                <li><strong>四則演算</strong>: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code></li>
-                <li><strong>比較演算</strong>: <code>=</code> (等しい), <code>&gt;</code> (より大きい), <code>&lt;</code> (より小さい), <code>&gt;=</code>, <code>&lt;=</code></li>
-                <li><strong>論理演算</strong>: <code>AND</code>, <code>OR</code>, <code>NOT</code> (<code>NOT</code>は値を1つだけ取ります)</li>
-            </ul>
-            <div class="code-block">
-# (10 + 5) * 2 を計算する
-[ 10 ] [ 5 ] + [ 2 ] *
-            </div>
-        </section>
-
-        <section>
-            <h2>5. Vectorの操作</h2>
-            <div class="note">
-                <strong>位置の指定は0オリジン、量の指定は1オリジン</strong><br>
-                Vector操作では、インデックス番号で「何番目」を指定する場合は <code>0</code> から始まります（0オリジン）。一方、「何個」のように量を指定する場合は <code>1</code> から数えます（1オリジン）。
-            </div>
-            
-            <h3>位置を指定する操作（0オリジン）</h3>
-            <ul>
-                <li><code>GET</code>: <code>[ Vector ] [ Index ] GET</code> → 指定したIndexの要素を取得します。負のインデックス（-1など）で末尾から数えることもできます。</li>
-                <li><code>REPLACE</code>: <code>[ Vector ] [ Index ] [ NewValue ] REPLACE</code> → 指定したIndexの要素を新しい値に置き換えます。</li>
-                <li><code>INSERT</code>: <code>[ Vector ] [ Index ] [ NewValue ] INSERT</code> → 指定したIndexに新しい値を挿入します。</li>
-                <li><code>REMOVE</code>: <code>[ Vector ] [ Index ] REMOVE</code> → 指定したIndexの要素を削除します。</li>
-            </ul>
-            <div class="code-block">
-# [ 10 20 30 ] の1番目の要素(20)を取得する
-[ 10 20 30 ] [ 1 ] GET
-            </div>
-
-            <h3>量を指定する操作（1オリジン）</h3>
-            <ul>
-                <li><code>LENGTH</code>: <code>[ Vector ] LENGTH</code> → Vectorの要素数を取得します。</li>
-                <li><code>TAKE</code>: <code>[ Vector ] [ Count ] TAKE</code> → 先頭から指定した個数の要素を取り出します。</li>
-                <li><code>DROP</code>: <code>[ Vector ] [ Count ] DROP</code> → 先頭から指定した個数の要素を削除します。</li>
-            </ul>
-            <div class="code-block">
-# [ 1 2 3 4 5 ] の先頭から3個の要素を取得する
-[ 1 2 3 4 5 ] [ 3 ] TAKE
-            </div>
-
-            <h3>構造操作</h3>
-            <ul>
-                <li><code>CONCAT</code>: <code>[ Vec1 ] [ Vec2 ] CONCAT</code> → 2つのVectorを連結します。</li>
-                <li><code>REVERSE</code>: <code>[ Vector ] REVERSE</code> → 要素の並び順を反転させます。</li>
-            </ul>
-        </section>
-
-        <section>
-            <h2>6. カスタムワード（関数の定義）</h2>
-            <h3>ワードの定義 DEF</h3>
-            <p><code>DEF</code> を使うと、一連の処理をまとめて新しいワードとして定義できます。これにより、複雑な処理を再利用可能な部品として作成できます。</p>
-            <div class="code-block">
-# 与えられた数値を二乗するワード 'SQUARE' を定義
-[ DUP * ] 'SQUARE' DEF
-
-# 定義したワードを使ってみる
-[ 5 ] SQUARE
-            </div>
-
-            <h3>機能説明の追加</h3>
-            <p>定義時に、ワードの名前の後に説明文を追加することができます。ここで追加した説明は、GUIの辞書（Custom Words）でワードにマウスカーソルを合わせたときに表示されます。</p>
-            <div class="code-block">
-# 説明付きでワードを定義
-[ DUP * ] 'SQUARE' '数を二乗する' DEF
-            </div>
-
-            <h3>ワードの削除 DEL</h3>
-            <p><code>DEL</code> を使うと、定義したカスタムワードを削除できます。</p>
-            <div class="code-block">'SQUARE' DEL</div>
+       
+           
         </section>
         
-        <a href="index.html" class="back-link">← アプリケーションに戻る</a>
+        <a href="index.html" class="back-link">アプリケーションに戻る</a>
     </div>
 </body>
 </html>
+
