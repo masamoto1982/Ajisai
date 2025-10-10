@@ -53,10 +53,25 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
                 let mut results = Vec::new();
                 for elem in elements {
-                    // 各要素をスタックにプッシュ（Vector<T>ではなくTそのもの）
-                    interp.stack.push(elem);
+                    // 各要素を単一要素ベクトルでラップしてスタックにプッシュ
+                    interp.stack.push(Value { 
+                        val_type: ValueType::Vector(vec![elem], BracketType::Square) 
+                    });
                     interp.execute_word_sync(&word_name)?;
-                    results.push(interp.stack.pop().ok_or_else(|| AjisaiError::from("MAP word must return a value"))?);
+                    
+                    let result_vec = interp.stack.pop().ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
+                    
+                    // 結果ベクトルから要素を取り出して格納
+                    if let ValueType::Vector(mut v, _) = result_vec.val_type {
+                        if v.len() == 1 {
+                            results.push(v.remove(0));
+                        } else {
+                            // 結果が単一要素ベクトルでない場合は、ベクトルそのものを要素とする
+                            results.push(Value { val_type: ValueType::Vector(v, BracketType::Square) });
+                        }
+                    } else {
+                        return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
+                    }
                 }
                 interp.stack.push(Value { val_type: ValueType::Vector(results, bracket_type) });
             } else {
@@ -99,8 +114,12 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
                 let mut results = Vec::new();
                 for elem in elements {
-                    interp.stack.push(elem.clone()); // フィルター条件判定後も元の要素が必要なためclone
+                    // 各要素を単一要素ベクトルでラップしてスタックにプッシュ
+                    interp.stack.push(Value { 
+                        val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square) 
+                    });
                     interp.execute_word_sync(&word_name)?;
+                    
                     let condition_result = interp.stack.pop().ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
                     
                     if let ValueType::Vector(v, _) = condition_result.val_type {
@@ -109,8 +128,14 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                                 if b {
                                     results.push(elem);
                                 }
+                            } else {
+                                return Err(AjisaiError::type_error("boolean result from FILTER word", "other type"));
                             }
+                        } else {
+                            return Err(AjisaiError::type_error("single-element vector result from FILTER word", "multi-element vector"));
                         }
+                    } else {
+                         return Err(AjisaiError::type_error("vector result from FILTER word", "other type"));
                     }
                 }
                 interp.stack.push(Value { val_type: ValueType::Vector(results, bracket_type) });
