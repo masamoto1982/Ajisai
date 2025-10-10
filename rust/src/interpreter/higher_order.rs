@@ -85,14 +85,18 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let original_stack_below = interp.stack.clone();
-            interp.stack.clear();
-
+            
+            let mut results = Vec::new();
             for item in targets {
+                interp.stack.clear();  // 各反復前にスタックをクリア
                 interp.stack.push(item);
                 interp.execute_word_sync(&word_name)?;
+                
+                // 結果を取得（ワードは1つの値を返すべき）
+                let result = interp.stack.pop().ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
+                results.push(result);
             }
 
-            let results = interp.stack.clone();
             interp.stack = original_stack_below;
             interp.stack.extend(results);
         }
