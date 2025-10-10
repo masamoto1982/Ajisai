@@ -1,7 +1,7 @@
 // rust/src/interpreter/control.rs
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Token, ExecutionLine, ValueType, WordDefinition, Value};
+use crate::types::{Token, ExecutionLine, ValueType, WordDefinition};
 use std::collections::HashSet;
 use num_traits::{ToPrimitive, One};
 
