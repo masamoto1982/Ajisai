@@ -316,7 +316,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             2 // Default to 2 if the top is not a valid count
         }
     } else {
-        2 // Default to 2 if stack is empty
+        return Err(AjisaiError::StackUnderflow); // Not enough items to concat
     };
 
     if interp.stack.len() < count { return Err(AjisaiError::StackUnderflow); }
@@ -335,7 +335,6 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         if let ValueType::Vector(v, _) = val.val_type {
             result_vec.extend(v);
         } else {
-             // If not a vector, treat it as a single element to be concatenated
             result_vec.push(val);
         }
     }
@@ -386,6 +385,7 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
             match val.val_type {
                 ValueType::Vector(v, bracket_type) => {
                     if !is_nested(&v) {
+                        // Push back and return error
                         interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                         return Err(AjisaiError::from("Target vector is already flat"));
                     }
@@ -403,16 +403,10 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
             if !is_nested(&interp.stack) {
                 return Err(AjisaiError::from("Stack is already flat"));
             }
-            let mut flattened = Vec::new();
             let current_stack = std::mem::take(&mut interp.stack);
+            let mut flattened = Vec::new();
             flatten_vector_recursive(current_stack, &mut flattened);
-            interp.stack = flattened.into_iter().map(|v| {
-                if let ValueType::Vector(vec, bt) = v.val_type {
-                    Value { val_type: ValueType::Vector(vec, bt) }
-                } else {
-                    Value { val_type: ValueType::Vector(vec![v], BracketType::Square) }
-                }
-            }).collect();
+            interp.stack = flattened;
             Ok(())
         }
     }
