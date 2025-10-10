@@ -1,47 +1,157 @@
-// rust/src/interpreter/arithmetic.rs (ビルドエラー完全修正版)
+// rust/src/interpreter/arithmetic.rs
 
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, Fraction, BracketType};
-use num_traits::Zero;
+use num_bigint::BigInt;
+use num_traits::{One, ToPrimitive, Zero};
 
-fn extract_single_element_value(vector_val: &Value) -> Result<&Value> {
-    match &vector_val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => Ok(&v[0]),
-        ValueType::Vector(_, _) => Err(AjisaiError::from("Multi-element vector not supported in arithmetic")),
-        _ => Err(AjisaiError::type_error("single-element vector", "other type")),
+// === ヘルパー関数 ===
+
+fn get_integer_from_value(value: &Value) -> Result<i64> {
+    match &value.val_type {
+        ValueType::Vector(v, _) if v.len() == 1 => {
+            if let ValueType::Number(n) = &v[0].val_type {
+                if n.denominator == BigInt::one() {
+                    n.numerator.to_i64().ok_or_else(|| AjisaiError::from("Count is too large"))
+                } else {
+                    Err(AjisaiError::type_error("integer", "fraction"))
+                }
+            } else {
+                Err(AjisaiError::type_error("integer", "other type"))
+            }
+        },
+        _ => Err(AjisaiError::type_error("single-element vector with integer", "other type")),
     }
 }
 
-fn wrap_result_value(value: Value) -> Value {
-    Value {
-        val_type: ValueType::Vector(vec![value], BracketType::Square)
-    }
-}
+// === 新しい演算ロジック ===
 
-fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
+fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
-    F: Fn(&Fraction, &Fraction) -> Fraction,
+    F: Fn(&Fraction, &Fraction) -> Result<Fraction>,
 {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+    match interp.operation_target {
+        // STACKTOPモード: ベクトル間の要素ごと演算
+        OperationTarget::StackTop => {
+            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+            let (a_vec, a_bracket) = match a_val.val_type {
+                ValueType::Vector(v, b) => (v, b),
+                _ => return Err(AjisaiError::type_error("vector", "other type")),
+            };
+            let (b_vec, _) = match b_val.val_type {
+                ValueType::Vector(v, b) => (v, b),
+                _ => return Err(AjisaiError::type_error("vector", "other type")),
+            };
+
+            let mut result_vec = Vec::new();
+            
+            // ブロードキャスト判定
+            if a_vec.len() > 1 && b_vec.len() == 1 {
+                let scalar = &b_vec[0];
+                for elem in &a_vec {
+                    result_vec.push(apply_op_to_values(elem, scalar, &op, op_name)?);
+                }
+            } else if a_vec.len() == 1 && b_vec.len() > 1 {
+                let scalar = &a_vec[0];
+                for elem in &b_vec {
+                    result_vec.push(apply_op_to_values(scalar, elem, &op, op_name)?);
+                }
+            } else {
+                if a_vec.len() != b_vec.len() {
+                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_vec.len(), len2: b_vec.len() });
+                }
+                for (a, b) in a_vec.iter().zip(b_vec.iter()) {
+                    result_vec.push(apply_op_to_values(a, b, &op, op_name)?);
+                }
+            }
+
+            interp.stack.push(Value { val_type: ValueType::Vector(result_vec, a_bracket) });
+        },
+
+        // STACKモード: N個の要素を畳み込む
+        OperationTarget::Stack => {
+            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count = get_integer_from_value(&count_val)? as usize;
+
+            if interp.stack.len() < count {
+                return Err(AjisaiError::StackUnderflow);
+            }
+            if count == 0 {
+                return Ok(()); // 何もしない
+            }
+
+            let mut items: Vec<Value> = interp.stack.drain(interp.stack.len() - count ..).collect();
+            let mut accumulator = items.remove(0);
+
+            for item in items {
+                accumulator = apply_op_to_values(&accumulator, &item, &op, op_name)?;
+            }
+            
+            interp.stack.push(accumulator);
+        }
     }
-    
-    let b_vec = interp.stack.pop().unwrap();
-    let a_vec = interp.stack.pop().unwrap();
-    
-    let a_val = extract_single_element_value(&a_vec)?;
-    let b_val = extract_single_element_value(&b_vec)?;
-    
-    let result = match (&a_val.val_type, &b_val.val_type) {
-        (ValueType::Number(n1), ValueType::Number(n2)) => {
-            Value { val_type: ValueType::Number(op(n1, n2)) }
+    Ok(())
+}
+
+fn apply_op_to_values<F>(a: &Value, b: &Value, op: &F, op_name: &str) -> Result<Value>
+where
+    F: Fn(&Fraction, &Fraction) -> Result<Fraction>,
+{
+    let a_num = match &a.val_type {
+        ValueType::Number(n) => n,
+        // ネストしたベクトル内の単一要素も許容
+        ValueType::Vector(v, _) if v.len() == 1 => {
+            if let ValueType::Number(n) = &v[0].val_type { n } 
+            else { return Err(AjisaiError::type_error("number", "other type")); }
         },
         _ => return Err(AjisaiError::type_error("number", "other type")),
     };
-    
-    interp.stack.push(wrap_result_value(result));
-    Ok(())
+    let b_num = match &b.val_type {
+        ValueType::Number(n) => n,
+        ValueType::Vector(v, _) if v.len() == 1 => {
+            if let ValueType::Number(n) = &v[0].val_type { n } 
+            else { return Err(AjisaiError::type_error("number", "other type")); }
+        },
+        _ => return Err(AjisaiError::type_error("number", "other type")),
+    };
+
+    let result_frac = op(a_num, b_num)?;
+    let result_val = Value { val_type: ValueType::Number(result_frac) };
+
+    // STACKモードでの畳み込みの場合、結果を[N]の形に戻す
+    if matches!(op_name, "STACK") {
+        Ok(Value { val_type: ValueType::Vector(vec![result_val], BracketType::Square) })
+    } else {
+        Ok(result_val)
+    }
 }
+
+pub fn op_add(interp: &mut Interpreter) -> Result<()> {
+    binary_arithmetic_op(interp, |a, b| Ok(a.add(b)), "ADD")
+}
+
+pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
+    binary_arithmetic_op(interp, |a, b| Ok(a.sub(b)), "SUB")
+}
+
+pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
+    binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)), "MUL")
+}
+
+pub fn op_div(interp: &mut Interpreter) -> Result<()> {
+    binary_arithmetic_op(interp, |a, b| {
+        if b.numerator.is_zero() {
+            Err(AjisaiError::DivisionByZero)
+        } else {
+            Ok(a.div(b))
+        }
+    }, "DIV")
+}
+
+
+// === 比較・論理演算子は変更なし (従来通りスタックトップの2要素に作用) ===
 
 fn binary_comparison_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
@@ -68,45 +178,20 @@ where
     Ok(())
 }
 
-pub fn op_add(interp: &mut Interpreter) -> Result<()> {
-    binary_arithmetic_op(interp, |a, b| a.add(b))
-}
-
-pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
-    binary_arithmetic_op(interp, |a, b| a.sub(b))
-}
-
-pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
-    binary_arithmetic_op(interp, |a, b| a.mul(b))
-}
-
-pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+fn extract_single_element_value(vector_val: &Value) -> Result<&Value> {
+    match &vector_val.val_type {
+        ValueType::Vector(v, _) if v.len() == 1 => Ok(&v[0]),
+        ValueType::Vector(_, _) => Err(AjisaiError::from("Multi-element vector not supported in comparison/logic")),
+        _ => Err(AjisaiError::type_error("single-element vector", "other type")),
     }
-    
-    let b_vec = interp.stack.pop().unwrap();
-    let a_vec = interp.stack.pop().unwrap();
-    
-    let a_val = extract_single_element_value(&a_vec)?;
-    let b_val = extract_single_element_value(&b_vec)?;
-    
-    if let ValueType::Number(n) = &b_val.val_type {
-        if n.numerator.is_zero() {
-            return Err(AjisaiError::DivisionByZero);
-        }
-    }
-    
-    let result = match (&a_val.val_type, &b_val.val_type) {
-        (ValueType::Number(n1), ValueType::Number(n2)) => {
-            Value { val_type: ValueType::Number(n1.div(n2)) }
-        },
-        _ => return Err(AjisaiError::type_error("number", "other type")),
-    };
-    
-    interp.stack.push(wrap_result_value(result));
-    Ok(())
 }
+
+fn wrap_result_value(value: Value) -> Value {
+    Value {
+        val_type: ValueType::Vector(vec![value], BracketType::Square)
+    }
+}
+
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.lt(b))
