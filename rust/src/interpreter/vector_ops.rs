@@ -85,7 +85,11 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
                 ValueType::Vector(mut v, bracket_type) => {
                     let len = v.len() as i64;
                     let insert_index = if index < 0 { (len + index + 1).max(0) as usize } else { (index as usize).min(v.len()) };
-                    v.insert(insert_index, element_to_insert);
+                    if let ValueType::Vector(elems, _) = element_to_insert.val_type {
+                         v.splice(insert_index..insert_index, elems);
+                    } else {
+                        v.insert(insert_index, element_to_insert);
+                    }
                     interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                     Ok(())
                 },
@@ -306,39 +310,37 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let count = if let Some(top) = interp.stack.last() {
         if let Ok(count_bigint) = get_index_from_value(top) {
-            let count_val = interp.stack.pop().unwrap(); // We know it's there
+            interp.stack.pop(); // Pop the count value
             count_bigint.to_usize().ok_or_else(|| AjisaiError::from("Count is too large"))?
         } else {
-            2 // Default to 2 if no count is provided
+            2 // Default to 2 if the top is not a valid count
         }
     } else {
-        return Err(AjisaiError::StackUnderflow);
+        2 // Default to 2 if stack is empty
     };
 
     if interp.stack.len() < count { return Err(AjisaiError::StackUnderflow); }
 
-    match interp.operation_target {
-        OperationTarget::StackTop | OperationTarget::Stack => { 
-            let mut vecs_to_concat = interp.stack.split_off(interp.stack.len() - count);
-            let mut result_vec = Vec::new();
-            let mut final_bracket_type = BracketType::Square;
+    let vecs_to_concat = interp.stack.split_off(interp.stack.len() - count);
+    let mut result_vec = Vec::new();
+    let mut final_bracket_type = BracketType::Square;
 
-            if !vecs_to_concat.is_empty() {
-                if let ValueType::Vector(_, bracket_type) = &vecs_to_concat[0].val_type {
-                    final_bracket_type = bracket_type.clone();
-                }
-            }
-            
-            for val in vecs_to_concat {
-                if let ValueType::Vector(v, _) = val.val_type {
-                    result_vec.extend(v);
-                } else {
-                    return Err(AjisaiError::type_error("vector", "other type"));
-                }
-            }
-            interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
+    if !vecs_to_concat.is_empty() {
+        if let ValueType::Vector(_, bracket_type) = &vecs_to_concat[0].val_type {
+            final_bracket_type = bracket_type.clone();
         }
     }
+    
+    for val in vecs_to_concat {
+        if let ValueType::Vector(v, _) = val.val_type {
+            result_vec.extend(v);
+        } else {
+             // If not a vector, treat it as a single element to be concatenated
+            result_vec.push(val);
+        }
+    }
+    interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
+    
     Ok(())
 }
 
@@ -385,7 +387,7 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
                 ValueType::Vector(v, bracket_type) => {
                     if !is_nested(&v) {
                         interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
-                        return Err(AjisaiError::from("Vector is already flat"));
+                        return Err(AjisaiError::from("Target vector is already flat"));
                     }
                     let mut flattened = Vec::new();
                     flatten_vector_recursive(v, &mut flattened);
@@ -404,9 +406,13 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
             let mut flattened = Vec::new();
             let current_stack = std::mem::take(&mut interp.stack);
             flatten_vector_recursive(current_stack, &mut flattened);
-            interp.stack.push(Value {
-                val_type: ValueType::Vector(flattened, BracketType::Square),
-            });
+            interp.stack = flattened.into_iter().map(|v| {
+                if let ValueType::Vector(vec, bt) = v.val_type {
+                    Value { val_type: ValueType::Vector(vec, bt) }
+                } else {
+                    Value { val_type: ValueType::Vector(vec![v], BracketType::Square) }
+                }
+            }).collect();
             Ok(())
         }
     }
