@@ -1,7 +1,7 @@
 // rust/src/interpreter/control.rs
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Token, ExecutionLine, ValueType, WordDefinition, Value, BracketType};
+use crate::types::{Token, ExecutionLine, ValueType, WordDefinition, Value};
 use std::collections::HashSet;
 use num_traits::{ToPrimitive, One};
 
@@ -355,50 +355,4 @@ pub(crate) fn execute_wait(interp: &mut Interpreter) -> Result<()> {
     interp.execute_word_sync(&upper_name)?;
 
     Ok(())
-}
-
-fn value_to_token(value: &Value) -> Result<Token> {
-    match &value.val_type {
-        ValueType::Number(f) => Ok(Token::Number(if f.denominator == One::one() {
-            f.numerator.to_string()
-        } else {
-            format!("{}/{}", f.numerator, f.denominator)
-        })),
-        ValueType::String(s) => Ok(Token::String(s.clone())),
-        ValueType::Boolean(b) => Ok(Token::Boolean(*b)),
-        ValueType::Symbol(s) => Ok(Token::Symbol(s.clone())),
-        ValueType::Nil => Ok(Token::Nil),
-        ValueType::Vector(_, _) => Err(AjisaiError::from("Cannot convert nested vector directly to a single token for EVAL")),
-        _ => Err(AjisaiError::from("Cannot convert this value to a token for EVAL")),
-    }
-}
-
-fn values_to_tokens_recursive(values: &[Value], tokens: &mut Vec<Token>) -> Result<()> {
-    for value in values {
-        match &value.val_type {
-            ValueType::Vector(inner_values, bracket_type) => {
-                tokens.push(Token::VectorStart(bracket_type.clone()));
-                values_to_tokens_recursive(inner_values, tokens)?;
-                tokens.push(Token::VectorEnd(bracket_type.clone()));
-            }
-            _ => {
-                tokens.push(value_to_token(value)?);
-            }
-        }
-    }
-    Ok(())
-}
-
-pub fn op_eval(interp: &mut Interpreter) -> Result<()> {
-    let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let values = match code_val.val_type {
-        ValueType::Vector(v, _) => v,
-        _ => return Err(AjisaiError::type_error("vector", "other type")),
-    };
-
-    let mut tokens = Vec::new();
-    values_to_tokens_recursive(&values, &mut tokens)?;
-    
-    interp.execute_tokens_sync(&tokens)
 }
