@@ -6,11 +6,16 @@ pub mod control;
 pub mod io;
 pub mod error;
 pub mod audio;
-pub mod higher_order;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType, BracketType, Fraction, WordDefinition, ExecutionLine};
+use crate::types::{Stack, Token, Value, ValueType, BracketType, Fraction, WordDefinition};
 use self::error::{Result, AjisaiError};
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum OperationTarget {
+    Stack,
+    StackTop,
+}
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
@@ -18,6 +23,7 @@ pub struct Interpreter {
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
+    pub(crate) operation_target: OperationTarget,
 }
 
 impl Interpreter {
@@ -28,12 +34,12 @@ impl Interpreter {
             dependents: HashMap::new(),
             output_buffer: String::new(),
             definition_to_load: None,
+            operation_target: OperationTarget::StackTop,
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
     }
 
-    // メインの実行エントリーポイント（asyncのまま残すが、内部は同期処理を呼び出す）
     pub async fn execute(&mut self, code: &str) -> Result<()> {
         if code.contains(" DEF") {
             return control::parse_multiple_word_definitions(self, code);
@@ -48,7 +54,6 @@ impl Interpreter {
         self.execute_tokens_sync(&tokens)
     }
 
-    // トークンを同期的に実行するコアロジック
     pub fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
         while i < tokens.len() {
@@ -75,7 +80,16 @@ impl Interpreter {
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
-                    self.execute_word_sync(name)?;
+                    let upper_name = name.to_uppercase();
+                    match upper_name.as_str() {
+                        "STACK" => self.operation_target = OperationTarget::Stack,
+                        "STACKTOP" => self.operation_target = OperationTarget::StackTop,
+                        _ => {
+                            self.execute_word_sync(&upper_name)?;
+                            // Reset operation target after a word is executed
+                            self.operation_target = OperationTarget::StackTop;
+                        }
+                    }
                 },
                 Token::GuardSeparator | Token::LineBreak => {
                     // Top-levelでは無視
@@ -87,13 +101,12 @@ impl Interpreter {
         Ok(())
     }
 
-    // 同期的なワード実行
     pub(crate) fn execute_word_sync(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(&name.to_uppercase()).cloned()
+        let def = self.dictionary.get(name).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         if def.is_builtin {
-            return self.execute_builtin(&name.to_uppercase());
+            return self.execute_builtin(name);
         }
 
         for line in &def.lines {
@@ -130,11 +143,6 @@ impl Interpreter {
             "AUDIO" => audio::op_sound(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => control::execute_wait(self),
-            "EVAL" => control::op_eval(self),
-            "MAP" => self.execute_map(),
-            "FILTER" => self.execute_filter(),
-            "REDUCE" => self.execute_reduce(),
-            "EACH" => self.execute_each(),
             "DEF" => control::op_def(self),
             "DEL" => control::op_del(self),
             "?" => control::op_lookup(self),
@@ -269,6 +277,7 @@ impl Interpreter {
         self.dependents.clear();
         self.output_buffer.clear(); 
         self.definition_to_load = None;
+        self.operation_target = OperationTarget::StackTop;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
