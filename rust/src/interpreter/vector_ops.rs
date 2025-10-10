@@ -28,28 +28,27 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            match &target_val.val_type {
-                ValueType::Vector(v, bracket_type) => {
-                    let len = v.len();
-                    if len == 0 { return Err(AjisaiError::IndexOutOfBounds { index, length: 0 }); }
-                    let actual_index = if index < 0 { (len as i64 + index) as usize } else { index as usize };
-
-                    if actual_index < len {
-                        let result_elem = v[actual_index].clone();
-                        // Push back the original vector first, then the result.
-                        interp.stack.push(target_val); 
-                        interp.stack.push(Value { val_type: ValueType::Vector(vec![result_elem], bracket_type.clone()) });
-                        Ok(())
-                    } else {
-                        // Push back the original vector on error to preserve state.
-                        interp.stack.push(target_val);
-                        Err(AjisaiError::IndexOutOfBounds { index, length: len })
-                    }
-                },
-                _ => {
-                    interp.stack.push(target_val);
-                    Err(AjisaiError::type_error("vector", "other type"))
+            if let ValueType::Vector(v, bracket_type) = &target_val.val_type {
+                let len = v.len();
+                if len == 0 {
+                    interp.stack.push(target_val); // push back on error
+                    return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
                 }
+                let actual_index = if index < 0 { (len as i64 + index) as usize } else { index as usize };
+
+                if actual_index < len {
+                    let result_elem = v[actual_index].clone();
+                    let result_bracket = bracket_type.clone();
+                    interp.stack.push(target_val);
+                    interp.stack.push(Value { val_type: ValueType::Vector(vec![result_elem], result_bracket) });
+                    Ok(())
+                } else {
+                    interp.stack.push(target_val);
+                    Err(AjisaiError::IndexOutOfBounds { index, length: len })
+                }
+            } else {
+                interp.stack.push(target_val);
+                Err(AjisaiError::type_error("vector", "other type"))
             }
         }
         OperationTarget::Stack => {
@@ -76,19 +75,17 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let new_element = if let ValueType::Vector(ref v, _) = element.val_type {
-                if v.len() == 1 { Value{ val_type: v[0].val_type.clone()} } else { element }
-            } else { element };
+            
+            let element_to_insert = match element.val_type {
+                ValueType::Vector(mut v, _) if v.len() == 1 => v.remove(0),
+                _ => element,
+            };
 
             match vector_val.val_type {
                 ValueType::Vector(mut v, bracket_type) => {
                     let len = v.len() as i64;
                     let insert_index = if index < 0 { (len + index + 1).max(0) as usize } else { (index as usize).min(v.len()) };
-                    if let ValueType::Vector(elems, _) = new_element.val_type {
-                         v.splice(insert_index..insert_index, elems);
-                    } else {
-                        v.insert(insert_index, new_element);
-                    }
+                    v.insert(insert_index, element_to_insert);
                     interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                     Ok(())
                 },
@@ -105,16 +102,18 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
-    let new_element_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let new_element = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let index = get_index_from_value(&index_val)?.to_i64().ok_or_else(|| AjisaiError::from("Index too large"))?;
 
     match interp.operation_target {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let replace_element = if let ValueType::Vector(ref v, _) = new_element_val.val_type {
-                if v.len() == 1 { v[0].clone() } else { new_element_val }
-            } else { new_element_val };
+
+            let replace_element = match new_element.val_type {
+                ValueType::Vector(mut v, _) if v.len() == 1 => v.remove(0),
+                _ => new_element,
+            };
 
             match vector_val.val_type {
                 ValueType::Vector(mut v, bracket_type) => {
@@ -135,7 +134,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             let len = interp.stack.len();
             let actual_index = if index < 0 { (len as i64 + index) as usize } else { index as usize };
             if actual_index < len {
-                interp.stack[actual_index] = new_element_val;
+                interp.stack[actual_index] = new_element;
                 Ok(())
             } else {
                 Err(AjisaiError::IndexOutOfBounds { index, length: len })
@@ -143,6 +142,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
         }
     }
 }
+
 
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -225,18 +225,15 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTarget::Stack => {
             let len = interp.stack.len();
-            let new_stack = if count < 0 {
+            if count < 0 {
                 let abs_count = (-count) as usize;
                 if abs_count > len { return Err(AjisaiError::from("Take count exceeds stack length")); }
-                interp.stack.split_off(len - abs_count)
+                interp.stack = interp.stack.split_off(len - abs_count);
             } else {
                 let take_count = count as usize;
                 if take_count > len { return Err(AjisaiError::from("Take count exceeds stack length")); }
-                let mut original_stack = std::mem::take(&mut interp.stack);
-                let new_s: Vec<Value> = original_stack.drain(..take_count).collect();
-                new_s
+                interp.stack.truncate(take_count);
             };
-            interp.stack = new_stack;
             Ok(())
         }
     }
