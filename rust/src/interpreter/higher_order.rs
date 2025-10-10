@@ -53,7 +53,6 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
                 let mut results = Vec::new();
                 for elem in elements {
-                    // 各要素を単一要素ベクトルでラップしてスタックにプッシュ
                     interp.stack.push(Value { 
                         val_type: ValueType::Vector(vec![elem], BracketType::Square) 
                     });
@@ -61,12 +60,10 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     
                     let result_vec = interp.stack.pop().ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
                     
-                    // 結果ベクトルから要素を取り出して格納
                     if let ValueType::Vector(mut v, _) = result_vec.val_type {
                         if v.len() == 1 {
                             results.push(v.remove(0));
                         } else {
-                            // 結果が単一要素ベクトルでない場合は、ベクトルそのものを要素とする
                             results.push(Value { val_type: ValueType::Vector(v, BracketType::Square) });
                         }
                     } else {
@@ -87,9 +84,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             }
 
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            
-            // スタックを隔離して安全に処理を行う
-            let original_stack = interp.stack.clone();
+            let original_stack_below = interp.stack.clone();
             interp.stack.clear();
 
             for item in targets {
@@ -97,9 +92,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 interp.execute_word_sync(&word_name)?;
             }
 
-            // 結果を元のスタックに戻す
             let results = interp.stack.clone();
-            interp.stack = original_stack;
+            interp.stack = original_stack_below;
             interp.stack.extend(results);
         }
     }
@@ -120,7 +114,6 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
                 let mut results = Vec::new();
                 for elem in elements {
-                    // 各要素を単一要素ベクトルでラップしてスタックにプッシュ
                     interp.stack.push(Value { 
                         val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square) 
                     });
@@ -158,13 +151,11 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             }
             
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            
-            // スタックを隔離して安全に処理を行う
-            let original_stack = interp.stack.clone();
+            let original_stack_below = interp.stack.clone();
             let mut results = Vec::new();
 
             for item in targets {
-                interp.stack.clear(); // 各反復でスタックをクリア
+                interp.stack.clear();
                 interp.stack.push(item.clone());
                 interp.execute_word_sync(&word_name)?;
                 
@@ -181,8 +172,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 }
             }
             
-            // 結果を元のスタックに戻す
-            interp.stack = original_stack;
+            interp.stack = original_stack_below;
             interp.stack.extend(results);
         }
     }
