@@ -6,6 +6,7 @@ pub mod control;
 pub mod io;
 pub mod error;
 pub mod audio;
+pub mod higher_order;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, BracketType, Fraction, WordDefinition};
@@ -147,6 +148,8 @@ impl Interpreter {
             "DEL" => control::op_del(self),
             "?" => control::op_lookup(self),
             "RESET" => self.execute_reset(),
+            "MAP" => higher_order::op_map(self),
+            "FILTER" => higher_order::op_filter(self),
             _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
         }
     }
