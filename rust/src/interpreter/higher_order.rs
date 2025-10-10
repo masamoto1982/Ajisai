@@ -52,6 +52,11 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
                 let mut results = Vec::new();
+                
+                // operation_target を保存
+                let saved_target = interp.operation_target;
+                interp.operation_target = OperationTarget::StackTop;
+                
                 for elem in elements {
                     interp.stack.push(Value { 
                         val_type: ValueType::Vector(vec![elem], BracketType::Square) 
@@ -70,6 +75,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
                     }
                 }
+                
+                // operation_target を復元
+                interp.operation_target = saved_target;
                 interp.stack.push(Value { val_type: ValueType::Vector(results, bracket_type) });
             } else {
                 return Err(AjisaiError::type_error("vector", "other type"));
@@ -86,17 +94,22 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let original_stack_below = interp.stack.clone();
             
+            // operation_target を一時的に StackTop に設定
+            let saved_target = interp.operation_target;
+            interp.operation_target = OperationTarget::StackTop;
+            
             let mut results = Vec::new();
             for item in targets {
-                interp.stack.clear();  // 各反復前にスタックをクリア
+                interp.stack.clear();
                 interp.stack.push(item);
                 interp.execute_word_sync(&word_name)?;
                 
-                // 結果を取得（ワードは1つの値を返すべき）
                 let result = interp.stack.pop().ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
                 results.push(result);
             }
 
+            // operation_target を復元し、スタックを復元
+            interp.operation_target = saved_target;
             interp.stack = original_stack_below;
             interp.stack.extend(results);
         }
@@ -117,6 +130,11 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
                 let mut results = Vec::new();
+                
+                // operation_target を保存
+                let saved_target = interp.operation_target;
+                interp.operation_target = OperationTarget::StackTop;
+                
                 for elem in elements {
                     interp.stack.push(Value { 
                         val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square) 
@@ -141,6 +159,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                          return Err(AjisaiError::type_error("vector result from FILTER word", "other type"));
                     }
                 }
+                
+                // operation_target を復元
+                interp.operation_target = saved_target;
                 interp.stack.push(Value { val_type: ValueType::Vector(results, bracket_type) });
             } else {
                 return Err(AjisaiError::type_error("vector", "other type"));
@@ -156,8 +177,12 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let original_stack_below = interp.stack.clone();
+            
+            // operation_target を一時的に StackTop に設定
+            let saved_target = interp.operation_target;
+            interp.operation_target = OperationTarget::StackTop;
+            
             let mut results = Vec::new();
-
             for item in targets {
                 interp.stack.clear();
                 interp.stack.push(item.clone());
@@ -176,6 +201,8 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 }
             }
             
+            // operation_target を復元し、スタックを復元
+            interp.operation_target = saved_target;
             interp.stack = original_stack_below;
             interp.stack.extend(results);
         }
