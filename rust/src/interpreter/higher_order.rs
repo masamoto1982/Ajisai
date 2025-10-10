@@ -87,13 +87,19 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             }
 
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            let mut results = Vec::new();
+            
+            // スタックを隔離して安全に処理を行う
+            let original_stack = interp.stack.clone();
+            interp.stack.clear();
 
             for item in targets {
                 interp.stack.push(item);
                 interp.execute_word_sync(&word_name)?;
-                results.push(interp.stack.pop().ok_or_else(|| AjisaiError::from("MAP word must return a value"))?);
             }
+
+            // 結果を元のスタックに戻す
+            let results = interp.stack.clone();
+            interp.stack = original_stack;
             interp.stack.extend(results);
         }
     }
@@ -152,11 +158,16 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             }
             
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            
+            // スタックを隔離して安全に処理を行う
+            let original_stack = interp.stack.clone();
             let mut results = Vec::new();
 
             for item in targets {
+                interp.stack.clear(); // 各反復でスタックをクリア
                 interp.stack.push(item.clone());
                 interp.execute_word_sync(&word_name)?;
+                
                 let condition_result = interp.stack.pop().ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
                 if let ValueType::Vector(v, _) = condition_result.val_type {
@@ -169,6 +180,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     }
                 }
             }
+            
+            // 結果を元のスタックに戻す
+            interp.stack = original_stack;
             interp.stack.extend(results);
         }
     }
