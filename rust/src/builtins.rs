@@ -57,6 +57,10 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("TIMES", "Execute custom word N times. Usage: 'WORD' [ n ] TIMES", "Control"),
         ("WAIT", "Execute custom word after delay. Usage: 'WORD' [ ms ] WAIT", "Control"),
 
+        // 高階関数
+        ("MAP", "Apply word to each element. Usage: [ data ] 'WORD' MAP or ... [ N ] 'WORD' STACK MAP", "Higher-Order"),
+        ("FILTER", "Filter elements using word. Usage: [ data ] 'WORD' FILTER or ... [ N ] 'WORD' STACK FILTER", "Higher-Order"),
+
         // 入出力
         ("PRINT", "Print vector value", "IO"),
         
@@ -399,6 +403,36 @@ condition ; action
 ## 例
 [ 'Delayed' ] PRINT 'MSG' DEF
 'MSG' [ 2000 ] WAIT"#.to_string(),
+
+        // === 高階関数 ===
+        "MAP" => r#"# MAP - 各要素へのワード適用
+
+## 説明
+ベクトルまたはスタック上の各要素に指定したワードを適用し、結果で置き換えます。
+
+## 使用法
+[ data_vector ] 'WORD' MAP
+... [ N ] 'WORD' STACK MAP
+
+## 例
+[ 2 ] * 'DOUBLE' DEF
+[ 1 2 3 ] 'DOUBLE' MAP  # → [ [ 2 4 6 ] ]
+[ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' STACK MAP  # → [ 2 ] [ 4 ] [ 6 ]"#.to_string(),
+
+        "FILTER" => r#"# FILTER - 条件に合う要素の抽出
+
+## 説明
+ベクトルまたはスタック上の各要素に指定したワードを適用し、
+結果が [ TRUE ] となる要素だけを残します。
+
+## 使用法
+[ data_vector ] 'WORD' FILTER
+... [ N ] 'WORD' STACK FILTER
+
+## 例
+[ 5 ] > 'GT5' DEF
+[ 3 8 1 9 ] 'GT5' FILTER  # → [ [ 8 9 ] ]
+[ 3 ] [ 8 ] [ 1 ] [ 9 ] [ 4 ] 'GT5' STACK FILTER  # → [ 8 ] [ 9 ]"#.to_string(),
 
         // === 入出力 ===
         "PRINT" => r#"# PRINT - 値の出力
