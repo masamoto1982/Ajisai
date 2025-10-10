@@ -308,20 +308,28 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 // ========== Vector構造操作 ==========
 
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
-    let count = if let Some(top) = interp.stack.last() {
-        if let Ok(count_bigint) = get_index_from_value(top) {
-            interp.stack.pop(); // Pop the count value
-            count_bigint.to_usize().ok_or_else(|| AjisaiError::from("Count is too large"))?
-        } else {
-            2 // Default to 2 if the top is not a valid count
-        }
-    } else {
-        return Err(AjisaiError::StackUnderflow); // Not enough items to concat
-    };
+    // CONCATは必ず引数を必要とする
+    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    
+    let count_bigint = get_index_from_value(&count_val)?;
+    let count_i64 = count_bigint.to_i64()
+        .ok_or_else(|| AjisaiError::from("Count is too large"))?;
+    
+    // Get absolute value for count
+    let abs_count = count_i64.unsigned_abs() as usize;
+    let is_reversed = count_i64 < 0;
 
-    if interp.stack.len() < count { return Err(AjisaiError::StackUnderflow); }
+    if interp.stack.len() < abs_count {
+        return Err(AjisaiError::StackUnderflow);
+    }
 
-    let vecs_to_concat = interp.stack.split_off(interp.stack.len() - count);
+    let mut vecs_to_concat: Vec<Value> = interp.stack.split_off(interp.stack.len() - abs_count);
+    
+    // Reverse order if negative count was specified
+    if is_reversed {
+        vecs_to_concat.reverse();
+    }
+
     let mut result_vec = Vec::new();
     let mut final_bracket_type = BracketType::Square;
 
@@ -338,6 +346,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             result_vec.push(val);
         }
     }
+    
     interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
     
     Ok(())
