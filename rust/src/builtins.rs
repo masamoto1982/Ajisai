@@ -17,6 +17,10 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
     vec![
+        // 入力支援
+        ("'", "Insert single quote", "Input Helper"),
+        ("[ ]", "Insert empty vector brackets", "Input Helper"),
+        
         // 位置指定操作（0オリジン）
         ("GET", "Get element at position (0-indexed)", "Position"),
         ("INSERT", "Insert element at position", "Position"),
@@ -53,7 +57,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         
         // 制御構造
         (":", "Conditional execution. Usage: condition : action", "Control"),
-        (";", "Alternative to ':' for conditional execution", "Control"),
+        // 注：「;」は削除（「:」と同義のため）
         ("TIMES", "Execute custom word N times. Usage: 'WORD' [ n ] TIMES", "Control"),
         ("WAIT", "Execute custom word after delay. Usage: 'WORD' [ ms ] WAIT", "Control"),
 
