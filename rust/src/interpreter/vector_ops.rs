@@ -1,7 +1,9 @@
 // rust/src/interpreter/vector_ops.rs
 
 use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
-use crate::types::{Value, ValueType, Fraction, BracketType};
+// `Fraction` のインポートパスを修正
+use crate::types::fraction::Fraction;
+use crate::types::{Value, ValueType, BracketType};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 use std::collections::VecDeque;
