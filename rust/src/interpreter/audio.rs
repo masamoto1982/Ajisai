@@ -3,6 +3,7 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType};
 use num_bigint::BigInt;
+// `BigInt::one()` を使用するために `One` トレイトをスコープに入れる
 use num_traits::{ToPrimitive, One};
 use serde_json::json;
 
