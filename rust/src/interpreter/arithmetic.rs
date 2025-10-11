@@ -2,8 +2,10 @@
 
 use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, BracketType};
+// `Fraction` のインポートパスを修正
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
+// `BigInt::one()` を使用するために `One` トレイトをスコープに入れる
 use num_traits::{One, ToPrimitive, Zero};
 
 // === ヘルパー関数 ===
