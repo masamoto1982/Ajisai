@@ -1,8 +1,24 @@
-/* style.css (stack対応版 + テストボタン追加 + オフライン表示 + モバイルタップ領域) */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+:root {
+    /* 紫陽花カラーパレット */
+    --hydrangea-blue: #88c4e5;
+    --hydrangea-purple: #c3b1e1;
+    --hydrangea-deep-blue: #5a7fa3;
+    --hydrangea-deep-purple: #9b7eb5;
+    --bg-dark-blue: #3a4558;
+    --bg-light-blue: #5a6b8d;
+    
+    /* UI要素 */
+    --panel-bg: rgba(255, 255, 255, 0.08);
+    --display-bg: rgba(255, 255, 255, 0.05);
+    --text-color: #e8f4f8;
+    --border-color: rgba(136, 196, 229, 0.3);
+    --shadow-color: rgba(136, 196, 229, 0.2);
 }
 
 html,
@@ -12,10 +28,11 @@ body {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #f5f5f5;
-    color: #333;
+    font-family: 'Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'BIZ UDPGothic', sans-serif;
+    background: radial-gradient(ellipse at bottom, var(--bg-light-blue) 0%, var(--bg-dark-blue) 80%);
+    color: var(--text-color);
     line-height: 1.6;
+    min-height: 100vh;
 }
 
 /* コンテナ */
@@ -27,24 +44,35 @@ body {
     margin: 0 auto;
 }
 
+/* ヘッダー - 紫陽花グラデーション */
 header {
-    background-color: #fff;
+    background: linear-gradient(135deg, var(--hydrangea-blue) 0%, var(--hydrangea-purple) 100%);
     padding: 1rem 2rem;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
     position: relative;
+    box-shadow: 0 4px 20px rgba(136, 196, 229, 0.3);
+}
+
+/* ロゴ */
+.logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
 }
 
 header h1 {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .version {
     font-size: 0.875rem;
-    color: #666;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* オフライン表示 */
@@ -53,7 +81,7 @@ header h1 {
     color: #ff6b6b;
     font-weight: bold;
     padding: 0.25rem 0.5rem;
-    background-color: #ffe0e0;
+    background-color: rgba(255, 224, 224, 0.9);
     border-radius: 4px;
     animation: pulse 2s infinite;
 }
@@ -70,85 +98,38 @@ header h1 {
     gap: 0.5rem;
 }
 
-.reference-btn {
+/* ヘッダーボタン統一スタイル */
+.reference-btn,
+.test-btn,
+.header-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.95);
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.875rem;
     transition: all 0.2s ease;
-    border: 1px solid #ddd;
-}
-
-.reference-btn:hover {
-    background-color: #e0e0e0;
-    border-color: #ccc;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.reference-btn svg {
-    width: 16px;
-    height: 16px;
-}
-
-.test-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: #28a745;
-    color: white;
-    border: 1px solid #1e7e34;
-    border-radius: 4px;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     cursor: pointer;
+    backdrop-filter: blur(5px);
 }
 
-.test-btn:hover {
-    background-color: #218838;
-    border-color: #1c7430;
+.reference-btn:hover,
+.test-btn:hover,
+.header-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+.reference-btn svg,
 .test-btn svg {
     width: 16px;
     height: 16px;
-}
-
-.header-btn {
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    border: 1px solid #ddd;
-}
-
-#export-btn {
-    background-color: #17a2b8;
-    color: white;
-    border-color: #17a2b8;
-}
-
-#export-btn:hover {
-    background-color: #138496;
-}
-
-#import-btn {
-    background-color: #ffc107;
-    color: #212529;
-    border-color: #ffc107;
-}
-
-#import-btn:hover {
-    background-color: #e0a800;
 }
 
 /* デスクトップレイアウト */
@@ -160,13 +141,15 @@ header h1 {
     min-height: 0;
 }
 
-/* パネル共通 */
+/* パネル共通 - 半透明で瑞々しさを表現 */
 .panel {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: var(--panel-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px var(--shadow-color);
     padding: 1rem;
     overflow-y: auto;
+    border: 1px solid var(--border-color);
 }
 
 /* 作業領域パネル */
@@ -189,21 +172,23 @@ header h1 {
 
 /* 各セクション */
 section {
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
     padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
 }
 
 section h2 {
     font-size: 1.125rem;
     margin-bottom: 0.5rem;
-    color: #555;
+    color: var(--hydrangea-blue);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 section h3 {
     font-size: 1rem;
     margin-bottom: 0.5rem;
-    color: #666;
+    color: var(--hydrangea-purple);
 }
 
 /* 入力・出力エリア */
@@ -218,14 +203,22 @@ section h3 {
 #code-input {
     width: 100%;
     min-height: 200px;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
     font-family: 'Consolas', 'Monaco', monospace;
     resize: vertical;
     flex: 1;
     line-height: 1.4;
-    position: relative;
+    background: var(--display-bg);
+    color: var(--text-color);
+    backdrop-filter: blur(5px);
+}
+
+#code-input:focus {
+    outline: none;
+    border-color: var(--hydrangea-blue);
+    box-shadow: 0 0 0 3px rgba(136, 196, 229, 0.1);
 }
 
 .controls {
@@ -234,35 +227,59 @@ section h3 {
     gap: 0.5rem;
 }
 
-button {
-    padding: 0.5rem 1rem;
-    background-color: #007bff;
+/* Runボタン - 淡い青 */
+#run-btn {
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, var(--hydrangea-blue), var(--hydrangea-deep-blue));
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(136, 196, 229, 0.3);
 }
 
-button:hover {
-    background-color: #0056b3;
+#run-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(136, 196, 229, 0.4);
+}
+
+/* Clearボタン - 淡い紫 */
+#clear-btn {
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, var(--hydrangea-purple), var(--hydrangea-deep-purple));
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(195, 177, 225, 0.3);
+}
+
+#clear-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(195, 177, 225, 0.4);
 }
 
 /* 表示エリア */
 .display-area,
 .state-display,
 .words-display {
-    background-color: #f8f8f8;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    padding: 0.5rem;
+    background: var(--display-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem;
     min-height: 100px;
     max-height: 400px;
     overflow-y: auto;
     font-family: 'Consolas', 'Monaco', monospace;
+    backdrop-filter: blur(5px);
 }
 
-/* Outputエリア専用の追加スタイル */
 #output-display {
     max-height: 500px;
     overflow-y: auto;
@@ -270,7 +287,7 @@ button:hover {
     white-space: pre-wrap;
 }
 
-/* スクロールバーのスタイリング（Webkit系ブラウザ） */
+/* スクロールバー */
 .display-area::-webkit-scrollbar,
 .state-display::-webkit-scrollbar,
 .words-display::-webkit-scrollbar,
@@ -282,7 +299,7 @@ button:hover {
 .state-display::-webkit-scrollbar-track,
 .words-display::-webkit-scrollbar-track,
 #output-display::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
 }
 
@@ -290,25 +307,16 @@ button:hover {
 .state-display::-webkit-scrollbar-thumb,
 .words-display::-webkit-scrollbar-thumb,
 #output-display::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: var(--hydrangea-blue);
     border-radius: 4px;
+    opacity: 0.5;
 }
 
 .display-area::-webkit-scrollbar-thumb:hover,
 .state-display::-webkit-scrollbar-thumb:hover,
 .words-display::-webkit-scrollbar-thumb:hover,
 #output-display::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* empty表示を薄く */
-.state-display {
-    color: #333;
-}
-
-.state-display:empty::before,
-.state-display:has(> :only-child:contains("(empty)")) {
-    color: #ccc !important;
+    background: var(--hydrangea-deep-blue);
 }
 
 /* スタックエリア */
@@ -316,7 +324,7 @@ button:hover {
     width: 100%;
 }
 
-/* 辞書コンテナ - 縦並び */
+/* 辞書コンテナ */
 .dictionary-container {
     display: flex;
     flex-direction: column;
@@ -328,7 +336,6 @@ button:hover {
     width: 100%;
 }
 
-/* ワードボタングループのスタイル */
 .words-display > div {
     margin-bottom: 4px;
 }
@@ -339,66 +346,75 @@ button:hover {
 /* ワードボタン */
 .word-button {
     margin: 2px;
-    padding: 0.2rem 0.4rem;
-    background-color: #f0f0f0;
-    color: #333;
-    border: 1px solid #ccc;
+    padding: 0.3rem 0.6rem;
+    background: rgba(136, 196, 229, 0.15);
+    color: var(--hydrangea-blue);
+    border: 1px solid rgba(136, 196, 229, 0.3);
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
     transition: all 0.2s ease;
+    border-radius: 4px;
+    backdrop-filter: blur(5px);
 }
 
 .word-button:hover {
-    background-color: #e0e0e0;
+    background: rgba(136, 196, 229, 0.25);
+    border-color: var(--hydrangea-blue);
 }
 
-/* 組み込みワード (Built-in) */
+/* 組み込みワード */
 .word-button.builtin {
-    border-color: #dc3545;
-    background-color: #fff5f5;
+    border-color: rgba(195, 177, 225, 0.4);
+    background: rgba(195, 177, 225, 0.12);
+    color: var(--hydrangea-purple);
 }
 
 .word-button.builtin:hover {
-    background-color: #ffe0e0;
+    background: rgba(195, 177, 225, 0.22);
+    border-color: var(--hydrangea-purple);
 }
 
-/* 依存されているカスタムワード (Dependency) - オレンジ */
+/* 依存されているカスタムワード */
 .word-button.dependency {
-    border-color: #ff8c00;
-    background-color: #fff5e6;
+    border-color: rgba(255, 179, 71, 0.4);
+    background: rgba(255, 179, 71, 0.12);
+    color: #ffb347;
 }
 
 .word-button.dependency:hover {
-    background-color: #ffe6c2;
+    background: rgba(255, 179, 71, 0.22);
+    border-color: #ffb347;
 }
 
-/* 依存されていないカスタムワード (Non-dependency) - 緑 */
+/* 依存されていないカスタムワード */
 .word-button.non-dependency {
-    border-color: #28a745;
-    background-color: #f0fff4;
+    border-color: rgba(144, 238, 144, 0.4);
+    background: rgba(144, 238, 144, 0.12);
+    color: #90ee90;
 }
 
 .word-button.non-dependency:hover {
-    background-color: #e0ffe8;
+    background: rgba(144, 238, 144, 0.22);
+    border-color: #90ee90;
 }
 
 /* スタック項目 */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
+    background: linear-gradient(135deg, var(--hydrangea-blue), var(--hydrangea-purple));
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    color: white;
 }
 
-/* スタック表示の左寄せ */
 #stack-display > div {
     justify-content: flex-start !important;
 }
 
-
 /* モバイル対応 */
 @media (max-width: 768px) {
-
-    html,
-    body {
+    html, body {
         height: auto;
         overflow-x: hidden;
         overflow-y: auto;
@@ -414,8 +430,12 @@ button:hover {
         position: sticky;
         top: 0;
         z-index: 100;
-        background-color: #fff;
         flex-wrap: wrap;
+    }
+
+    .logo {
+        width: 32px;
+        height: 32px;
     }
 
     header h1 {
@@ -426,11 +446,6 @@ button:hover {
         font-size: 0.75rem;
     }
     
-    .offline-indicator {
-        font-size: 0.75rem;
-        padding: 0.2rem 0.4rem;
-    }
-    
     .header-actions {
         width: 100%;
         margin-top: 0.5rem;
@@ -438,7 +453,8 @@ button:hover {
     }
     
     .reference-btn,
-    .test-btn {
+    .test-btn,
+    .header-btn {
         padding: 0.4rem 0.8rem;
         font-size: 0.8rem;
     }
@@ -482,7 +498,8 @@ button:hover {
         min-height: 80px;
     }
 
-    button {
+    #run-btn,
+    #clear-btn {
         padding: 0.75rem 1rem;
         font-size: 1rem;
     }
@@ -491,7 +508,6 @@ button:hover {
         cursor: pointer;
     }
     
-    /* モバイルでタップ可能な領域を示す */
     .output-area,
     .stack-area {
         cursor: pointer;
@@ -505,13 +521,8 @@ button:hover {
         bottom: 0.5rem;
         right: 0.5rem;
         font-size: 0.75rem;
-        color: #999;
+        color: rgba(136, 196, 229, 0.6);
         pointer-events: none;
-    }
-    
-    .input-area,
-    .dictionary-area {
-        cursor: default;
     }
 }
 
