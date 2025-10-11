@@ -3,6 +3,7 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::ValueType;
 use num_bigint::BigInt;
+// `BigInt::one()` 等を使用するためにトレイトをスコープに入れる
 use num_traits::{Zero, One, ToPrimitive};
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
