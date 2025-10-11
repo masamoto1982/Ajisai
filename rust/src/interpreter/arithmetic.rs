@@ -24,7 +24,6 @@ fn get_integer_from_value(value: &Value) -> Result<i64> {
     }
 }
 
-// 数値を取り出すための内部ヘルパー
 fn extract_number(val: &Value) -> Result<&Fraction> {
     match &val.val_type {
         ValueType::Number(n) => Ok(n),
@@ -39,7 +38,6 @@ fn extract_number(val: &Value) -> Result<&Fraction> {
     }
 }
 
-
 // === 新しい演算ロジック ===
 
 fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
@@ -47,7 +45,6 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction>,
 {
     match interp.operation_target {
-        // STACKTOPモード: ベクトル間の要素ごと演算
         OperationTarget::StackTop => {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -63,7 +60,6 @@ where
 
             let mut result_vec = Vec::new();
             
-            // ブロードキャスト判定
             if a_vec.len() > 1 && b_vec.len() == 1 {
                 let scalar = &b_vec[0];
                 for elem in &a_vec {
@@ -89,7 +85,6 @@ where
             interp.stack.push(Value { val_type: ValueType::Vector(result_vec, a_bracket) });
         },
 
-        // STACKモード: N個の要素を畳み込む
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
@@ -98,11 +93,10 @@ where
                 return Err(AjisaiError::StackUnderflow);
             }
             if count == 0 {
-                return Ok(()); // 何もしない
+                return Ok(());
             }
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count ..).collect();
-            
             let mut acc_num = extract_number(&items[0])?.clone();
 
             for item in items.iter().skip(1) {
@@ -115,7 +109,6 @@ where
     }
     Ok(())
 }
-
 
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
     binary_arithmetic_op(interp, |a, b| Ok(a.add(b)))
@@ -138,9 +131,6 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         }
     })
 }
-
-
-// === 比較・論理演算子は変更なし (従来通りスタックトップの2要素に作用) ===
 
 fn binary_comparison_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
@@ -180,7 +170,6 @@ fn wrap_result_value(value: Value) -> Value {
         val_type: ValueType::Vector(vec![value], BracketType::Square)
     }
 }
-
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.lt(b))
