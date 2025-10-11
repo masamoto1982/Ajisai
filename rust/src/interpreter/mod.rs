@@ -2,14 +2,17 @@
 
 pub mod vector_ops;
 pub mod arithmetic;
+pub mod comparison;
 pub mod control;
+pub mod dictionary;
 pub mod io;
 pub mod error;
 pub mod audio;
 pub mod higher_order;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType, BracketType, Fraction, WordDefinition};
+use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition};
+use crate::types::fraction::Fraction;
 use self::error::{Result, AjisaiError};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -43,7 +46,7 @@ impl Interpreter {
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
         if code.contains(" DEF") {
-            return control::parse_multiple_word_definitions(self, code);
+            return dictionary::parse_multiple_word_definitions(self, code);
         }
         
         let custom_word_names: HashSet<String> = self.dictionary.iter()
@@ -132,21 +135,21 @@ impl Interpreter {
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self), 
             "/" => arithmetic::op_div(self),
-            "=" => arithmetic::op_eq(self), 
-            "<" => arithmetic::op_lt(self),
-            "<=" => arithmetic::op_le(self), 
-            ">" => arithmetic::op_gt(self),
-            ">=" => arithmetic::op_ge(self), 
-            "AND" => arithmetic::op_and(self),
-            "OR" => arithmetic::op_or(self), 
-            "NOT" => arithmetic::op_not(self),
+            "=" => comparison::op_eq(self), 
+            "<" => comparison::op_lt(self),
+            "<=" => comparison::op_le(self), 
+            ">" => comparison::op_gt(self),
+            ">=" => comparison::op_ge(self), 
+            "AND" => comparison::op_and(self),
+            "OR" => comparison::op_or(self), 
+            "NOT" => comparison::op_not(self),
             "PRINT" => io::op_print(self), 
             "AUDIO" => audio::op_sound(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => control::execute_wait(self),
-            "DEF" => control::op_def(self),
-            "DEL" => control::op_del(self),
-            "?" => control::op_lookup(self),
+            "DEF" => dictionary::op_def(self),
+            "DEL" => dictionary::op_del(self),
+            "?" => dictionary::op_lookup(self),
             "RESET" => self.execute_reset(),
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
