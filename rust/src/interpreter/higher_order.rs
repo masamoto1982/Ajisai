@@ -3,6 +3,7 @@
 use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
 use crate::types::{Value, ValueType, BracketType};
 use num_bigint::BigInt;
+// `BigInt::one()` を使用するために `One` トレイトをスコープに入れる
 use num_traits::{One, ToPrimitive};
 
 // === ヘルパー関数 ===
