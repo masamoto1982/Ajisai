@@ -40,7 +40,8 @@ fn vector_to_code_string(vec: &Value) -> Result<String> {
                     ValueType::Symbol(s) => Ok(s.clone()),
                     ValueType::Boolean(b) => Ok(if *b { "TRUE".to_string() } else { "FALSE".to_string() }),
                     ValueType::Nil => Ok("NIL".to_string()),
-                    ValueType::Vector(_, bracket_type) => {
+                    ValueType::Vector(_, _bracket_type) => {
+                        // ネストしたベクトルはそのまま文字列化
                         Ok(format!("{}", elem))
                     },
                     _ => Err(AjisaiError::from("EVAL cannot convert this element type to code")),
