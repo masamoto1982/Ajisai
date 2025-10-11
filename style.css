@@ -1,3 +1,4 @@
+/* style.css (完全版) */
 * {
     margin: 0;
     padding: 0;
@@ -326,6 +327,16 @@ section h3 {
     background: linear-gradient(135deg, #3498db, #9b59b6);
 }
 
+/* empty表示を薄く */
+.state-display {
+    color: #333;
+}
+
+.state-display:empty::before,
+.state-display:has(> :only-child:contains("(empty)")) {
+    color: #ccc !important;
+}
+
 /* スタックエリア */
 .stack-area {
     width: 100%;
@@ -350,24 +361,24 @@ section h3 {
     margin-bottom: 0;
 }
 
-/* ワードボタン */
+/* ワードボタン - 小ぶりに */
 .word-button {
     margin: 2px;
-    padding: 0.4rem 0.7rem;
+    padding: 0.25rem 0.5rem;
     background-color: #ffffff;
     color: #2c3e50;
     border: 1.5px solid #bdc3c7;
     font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     font-weight: 500;
     transition: all 0.2s ease;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
 }
 
 .word-button:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* 組み込みワード */
@@ -406,18 +417,23 @@ section h3 {
     border-color: #229954;
 }
 
-/* スタック項目 */
+/* スタック項目 - 元の視認性の良いデザインに戻す */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
     display: inline-block;
-    margin: 3px;
-    padding: 0.4rem 0.7rem;
-    background: linear-gradient(135deg, #4a90e2, #8e44ad);
-    color: #ffffff;
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    font-weight: 500;
+    margin: 2px 4px;
+    padding: 2px 6px;
+    background-color: #e0e0e0;
+    color: #333;
+    border-radius: 3px;
+}
+
+/* スタックトップ（最新の要素）を強調 */
+.stack-item:last-child {
+    font-weight: bold;
+    background-color: #4CAF50;
+    color: white;
 }
 
 #stack-display > div {
