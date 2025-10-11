@@ -3,19 +3,23 @@
 use crate::types::{Token, BracketType};
 use std::collections::HashSet;
 use crate::builtins;
-
-pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
-    tokenize_with_custom_words(input, &HashSet::new())
-}
+use daachorse::DoubleArrayAhoCorasick;
 
 pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let lines: Vec<&str> = input.lines().collect();
     
-    let builtin_words: HashSet<String> = builtins::get_builtin_definitions()
+    let builtin_words: Vec<String> = builtins::get_builtin_definitions()
         .iter()
         .map(|(name, _, _)| name.to_string())
         .collect();
+
+    let patterns: Vec<String> = builtin_words.iter()
+        .cloned()
+        .chain(custom_words.iter().cloned())
+        .collect();
+    
+    let pma = DoubleArrayAhoCorasick::new(&patterns).unwrap();
 
     for (line_num, line) in lines.iter().enumerate() {
         let line_without_comment = if let Some(pos) = line.find('#') {
@@ -38,10 +42,13 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         let mut line_has_tokens = false;
 
         while i < chars.len() {
-            if chars[i].is_whitespace() {
-                i += 1;
-                continue;
+            let current_slice = &line_without_comment[i..];
+            if current_slice.trim().is_empty() {
+                break;
             }
+            i = line_without_comment.len() - current_slice.len() + (current_slice.len() - current_slice.trim_start().len());
+
+            if i >= chars.len() { break; }
 
             let mut token_found = false;
 
@@ -49,20 +56,34 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = parse_quote_string(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = try_parse_custom_word(&chars[i..], custom_words) {
-                tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_keyword(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
             } else if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
-                tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = try_parse_ascii_builtin(&chars[i..], &builtin_words) {
-                tokens.push(token); i += consumed; token_found = true;
+            } else {
+                 let remaining_text = &line_without_comment[i..];
+                 let mut found_match = false;
+                 if !patterns.is_empty() {
+                    if let Some(mat) = pma.find_iter(remaining_text).next() {
+                        let word = &remaining_text[mat.start()..mat.end()];
+                        let next_char = remaining_text[mat.end()..].chars().next();
+                        if mat.start() == 0 && (next_char.is_none() || !is_word_char(next_char.unwrap())) {
+                           tokens.push(Token::Symbol(word.to_string().to_uppercase()));
+                           i += word.len();
+                           token_found = true;
+                           found_match = true;
+                        }
+                    }
+                 }
+                 if !found_match {
+                     if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+                         tokens.push(token); i += consumed; token_found = true;
+                     }
+                 }
             }
             
             if !token_found {
-                return Err(format!("Unknown token starting with: {}", chars[i..].iter().collect::<String>()));
+                return Err(format!("Unknown token starting with: {}", &line_without_comment[i..]));
             }
             line_has_tokens = true;
         }
@@ -74,6 +95,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
     
     Ok(tokens)
 }
+
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
     match c {
@@ -88,7 +110,6 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
     }
 }
 
-// ' または " で囲まれた文字列をパース
 fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() { return None; }
     
@@ -125,19 +146,6 @@ fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
                 if chars.len() == keyword_str.len() || !is_word_char(chars[keyword_str.len()]) {
                     return Some((token_fn(), keyword_str.len()));
                 }
-            }
-        }
-    }
-    None
-}
-
-fn try_parse_custom_word(chars: &[char], custom_words: &HashSet<String>) -> Option<(Token, usize)> {
-    let mut sorted_words: Vec<&String> = custom_words.iter().collect();
-    sorted_words.sort_by(|a, b| b.len().cmp(&a.len()));
-    for word in sorted_words {
-        if chars.starts_with(&word.chars().collect::<Vec<char>>()) {
-            if chars.len() == word.len() || !is_word_char(chars[word.len()]) {
-                return Some((Token::Symbol(word.clone()), word.len()));
             }
         }
     }
@@ -187,22 +195,8 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
 
     if end > 0 && (i == chars.len() || !is_word_char(chars[i])) {
         let num_str: String = chars[..i].iter().collect();
-        if crate::types::Fraction::from_str(&num_str).is_ok() {
+        if crate::types::fraction::Fraction::from_str(&num_str).is_ok() {
             return Some((Token::Number(num_str), i));
-        }
-    }
-    None
-}
-
-fn try_parse_ascii_builtin(chars: &[char], builtin_words: &HashSet<String>) -> Option<(Token, usize)> {
-    let mut sorted_words: Vec<&String> = builtin_words.iter().collect();
-    sorted_words.sort_by(|a, b| b.len().cmp(&a.len()));
-
-    for word in sorted_words {
-        if chars.len() >= word.len() && chars[..word.len()].iter().collect::<String>().to_uppercase() == *word {
-            if chars.len() > word.len() && is_word_char(chars[word.len()]) { continue; }
-            let token = Token::Symbol(word.to_string());
-            return Some((token, word.len()));
         }
     }
     None
