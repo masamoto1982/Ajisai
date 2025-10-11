@@ -19,7 +19,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
     vec![
         // 入力支援
         ("'", "Insert single quote", "Input Helper"),
-        ("[ ]", "Insert empty vector brackets", "Input Helper"),
+        ("[]", "Insert empty vector brackets", "Input Helper"),
         
         // 位置指定操作（0オリジン）
         ("GET", "Get element at position (0-indexed)", "Position"),
