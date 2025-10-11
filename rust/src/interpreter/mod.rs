@@ -88,14 +88,29 @@ impl Interpreter {
                         "STACKTOP" => self.operation_target = OperationTarget::StackTop,
                         _ => {
                             self.execute_word_sync(&upper_name)?;
-                            // Reset operation target after a word is executed
                             self.operation_target = OperationTarget::StackTop;
                         }
                     }
                 },
-                Token::GuardSeparator | Token::LineBreak => {
-                    // Top-levelでは無視
+                Token::GuardSeparator => {
+                    let condition_val = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                    let condition = match &condition_val.val_type {
+                        ValueType::Vector(v, _) if v.len() == 1 => {
+                            if let ValueType::Boolean(b) = v[0].val_type { *b }
+                            else { return Err(AjisaiError::type_error("boolean", "other type")); }
+                        },
+                        _ => return Err(AjisaiError::type_error("single-element boolean vector", "other type")),
+                    };
+
+                    if !condition {
+                        let mut end_of_line = i;
+                        while end_of_line < tokens.len() && !matches!(tokens[end_of_line], Token::LineBreak) {
+                            end_of_line += 1;
+                        }
+                        i = end_of_line;
+                    }
                 },
+                Token::LineBreak => {},
                 _ => {}
             }
             i += 1;
