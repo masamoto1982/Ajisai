@@ -88,6 +88,7 @@ impl Interpreter {
                         "STACKTOP" => self.operation_target = OperationTarget::StackTop,
                         _ => {
                             self.execute_word_sync(&upper_name)?;
+                            // Reset operation target after a word is executed
                             self.operation_target = OperationTarget::StackTop;
                         }
                     }
@@ -96,7 +97,7 @@ impl Interpreter {
                     let condition_val = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
                     let condition = match &condition_val.val_type {
                         ValueType::Vector(v, _) if v.len() == 1 => {
-                            if let ValueType::Boolean(b) = v[0].val_type { *b }
+                            if let ValueType::Boolean(b) = v[0].val_type { b }
                             else { return Err(AjisaiError::type_error("boolean", "other type")); }
                         },
                         _ => return Err(AjisaiError::type_error("single-element boolean vector", "other type")),
@@ -110,7 +111,9 @@ impl Interpreter {
                         i = end_of_line;
                     }
                 },
-                Token::LineBreak => {},
+                Token::LineBreak => {
+                    // Top-levelでは無視
+                },
                 _ => {}
             }
             i += 1;
