@@ -5,6 +5,8 @@ pub mod fraction;
 use std::collections::HashSet;
 use std::fmt;
 use num_bigint::BigInt;
+// `BigInt::one()` を使用するために `One` トレイトをスコープに入れる
+use num_traits::One;
 use self::fraction::Fraction;
 
 #[derive(Debug, Clone, PartialEq)]
