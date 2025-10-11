@@ -19,7 +19,8 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         .chain(custom_words.iter().cloned())
         .collect();
     
-    let pma = DoubleArrayAhoCorasick::new(&patterns).unwrap();
+    // `daachorse` の型を明示的に指定
+    let pma = DoubleArrayAhoCorasick::<u32>::new(&patterns).unwrap();
 
     for (line_num, line) in lines.iter().enumerate() {
         let line_without_comment = if let Some(pos) = line.find('#') {
