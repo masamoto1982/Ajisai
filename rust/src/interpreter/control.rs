@@ -2,7 +2,8 @@
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{ValueType};
-use num_traits::{ToPrimitive};
+// `BigInt::one()` を使用するために `One` トレイトをスコープに入れる
+use num_traits::{One, ToPrimitive};
 
 pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
