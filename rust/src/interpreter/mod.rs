@@ -44,12 +44,12 @@ impl Interpreter {
         interpreter
     }
 
-    // NEW HELPER: Checks if the stack contains non-Vector values at the top level ("bare stack").
+    // HELPER: Checks if the stack contains non-Vector values at the top level ("bare stack").
     fn is_bare_stack(&self) -> bool {
         self.stack.iter().any(|v| !matches!(v.val_type, ValueType::Vector(_, _)))
     }
 
-    // NEW HELPER: Wraps the stack in a single vector if it's bare.
+    // HELPER: Wraps the stack in a single vector if it's bare.
     fn ensure_wrapped_stack(&mut self) {
         if self.is_bare_stack() {
             let old_stack = std::mem::take(&mut self.stack);
@@ -114,6 +114,8 @@ impl Interpreter {
                         "STACK" => self.operation_target = OperationTarget::Stack,
                         "STACKTOP" => self.operation_target = OperationTarget::StackTop,
                         _ => {
+                            // MODIFIED: AUTO-NEST before executing a word on a bare stack
+                            self.ensure_wrapped_stack();
                             self.execute_word_sync(&upper_name)?;
                             // Reset operation target after a word is executed
                             self.operation_target = OperationTarget::StackTop;
