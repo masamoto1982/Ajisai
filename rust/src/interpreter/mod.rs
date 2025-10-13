@@ -44,6 +44,21 @@ impl Interpreter {
         interpreter
     }
 
+    // NEW HELPER: Checks if the stack contains non-Vector values at the top level ("bare stack").
+    fn is_bare_stack(&self) -> bool {
+        self.stack.iter().any(|v| !matches!(v.val_type, ValueType::Vector(_, _)))
+    }
+
+    // NEW HELPER: Wraps the stack in a single vector if it's bare.
+    fn ensure_wrapped_stack(&mut self) {
+        if self.is_bare_stack() {
+            let old_stack = std::mem::take(&mut self.stack);
+            self.stack.push(Value {
+                val_type: ValueType::Vector(old_stack, BracketType::Square),
+            });
+        }
+    }
+
     pub async fn execute(&mut self, code: &str) -> Result<()> {
         if code.contains(" DEF") {
             return dictionary::parse_multiple_word_definitions(self, code);
@@ -65,20 +80,30 @@ impl Interpreter {
             
             match token {
                 Token::Number(s) => {
+                    self.ensure_wrapped_stack(); // AUTO-NEST
                     let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
                     self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
                 },
                 Token::String(s) => {
+                    self.ensure_wrapped_stack(); // AUTO-NEST
                     self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
                 },
-                Token::Boolean(b) => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)}),
-                Token::Nil => self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)}),
+                Token::Boolean(b) => {
+                    self.ensure_wrapped_stack(); // AUTO-NEST
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)})
+                },
+                Token::Nil => {
+                    self.ensure_wrapped_stack(); // AUTO-NEST
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)})
+                },
                 Token::VectorStart(_) => {
+                    self.ensure_wrapped_stack(); // AUTO-NEST
                     let (values, consumed) = self.collect_vector(tokens, i)?;
                     self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
                     i += consumed - 1;
                 },
                 Token::DefBlockStart => {
+                    self.ensure_wrapped_stack(); // AUTO-NEST
                     let (body_tokens, consumed) = self.collect_def_block(tokens, i)?;
                     self.stack.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
                     i += consumed - 1;
@@ -110,9 +135,21 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         if def.is_builtin {
-            return self.execute_builtin(name);
+            let original_target = self.operation_target;
+            
+            // STACK/STACKTOP equivalence: If stack has one item OR is bare, STACK is treated as STACKTOP
+            if (self.stack.len() == 1 || self.is_bare_stack()) && self.operation_target == OperationTarget::Stack {
+                self.operation_target = OperationTarget::StackTop;
+            }
+            
+            let result = self.execute_builtin(name);
+            
+            // Restore the target to what it was before this word's execution
+            self.operation_target = original_target;
+            return result;
         }
 
+        // For custom words, the target persists through the execution of the definition.
         for line in &def.lines {
             self.execute_tokens_sync(&line.body_tokens)?;
         }
