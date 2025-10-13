@@ -361,15 +361,37 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match val.val_type {
                 ValueType::Vector(mut v, bracket_type) => {
+                    // "No change is an error" principle
+                    if v.len() < 2 {
+                        interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                        return Err(AjisaiError::from("REVERSE resulted in no change on a vector with less than 2 elements"));
+                    }
+                    let original_v = v.clone();
                     v.reverse();
+                    if v == original_v {
+                        interp.stack.push(Value { val_type: ValueType::Vector(original_v, bracket_type) });
+                        return Err(AjisaiError::from("REVERSE resulted in no change (vector is a palindrome)"));
+                    }
                     interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
+            // "No change is an error" principle
+            if interp.stack.len() < 2 {
+                return Err(AjisaiError::from("REVERSE resulted in no change on a stack with less than 2 elements"));
+            }
+            let original_stack = interp.stack.clone();
             interp.stack.reverse();
+            if interp.stack == original_stack {
+                interp.stack = original_stack; // revert
+                return Err(AjisaiError::from("REVERSE resulted in no change (stack is a palindrome)"));
+            }
             Ok(())
         }
     }
