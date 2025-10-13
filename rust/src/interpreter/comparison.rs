@@ -78,7 +78,12 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     
     let result = match &val.val_type {
         ValueType::Boolean(b) => Value { val_type: ValueType::Boolean(!b) },
-        ValueType::Nil => Value { val_type: ValueType::Nil },
+        ValueType::Nil => {
+            // "No change is an error" principle
+            // Re-push the original value before returning error
+            interp.stack.push(val_vec);
+            return Err(AjisaiError::from("NOT on NIL resulted in no change"));
+        },
         _ => return Err(AjisaiError::type_error("boolean or nil", "other type")),
     };
     
