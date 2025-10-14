@@ -72,26 +72,31 @@ where
                 }
             };
 
+            // 長さをチェック（エラーメッセージ用に先に保存）
+            let a_len = a_vec.len();
+            let b_len = b_vec.len();
+
             let mut result_vec = Vec::new();
             
             // ブロードキャスト判定
-            if a_vec.len() > 1 && b_vec.len() == 1 {
+            if a_len > 1 && b_len == 1 {
                 let scalar = &b_vec[0];
                 for elem in &a_vec {
                     let res_num = op(extract_number(elem)?, extract_number(scalar)?)?;
                     result_vec.push(Value { val_type: ValueType::Number(res_num) });
                 }
-            } else if a_vec.len() == 1 && b_vec.len() > 1 {
+            } else if a_len == 1 && b_len > 1 {
                 let scalar = &a_vec[0];
                 for elem in &b_vec {
                     let res_num = op(extract_number(scalar)?, extract_number(elem)?)?;
                     result_vec.push(Value { val_type: ValueType::Number(res_num) });
                 }
             } else {
-                if a_vec.len() != b_vec.len() {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket.clone()) });
+                if a_len != b_len {
+                    // 長さが異なる場合はエラー（先に長さを保存済み）
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
                     interp.stack.push(Value { val_type: ValueType::Vector(b_vec, BracketType::Square) });
-                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_vec.len(), len2: b_vec.len() });
+                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
                 }
                 for (a, b) in a_vec.iter().zip(b_vec.iter()) {
                     let res_num = op(extract_number(a)?, extract_number(b)?)?;
@@ -102,7 +107,7 @@ where
             // "No change is an error" 原則のチェック
             // 結果が元のいずれかと同一の場合はエラー
             let result_value = Value { val_type: ValueType::Vector(result_vec.clone(), a_bracket.clone()) };
-            let original_a = Value { val_type: ValueType::Vector(a_vec.clone(), a_bracket.clone()) };
+            let original_a = Value { val_type: ValueType::Vector(a_vec, a_bracket.clone()) };
             let original_b = Value { val_type: ValueType::Vector(b_vec, BracketType::Square) };
             
             if result_value == original_a || result_value == original_b {
