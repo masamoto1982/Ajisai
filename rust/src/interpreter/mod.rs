@@ -90,49 +90,226 @@ impl Interpreter {
     // HELPER: Wraps the stack in a single vector if it's bare.
     fn ensure_wrapped_stack(&mut self) {
         if self.is_bare_stack() {
-            let old_stack = std::mem::take(&mut self.stack);
+            let items = std::mem::take(&mut self.stack);
             self.stack.push(Value {
-                val_type: ValueType::Vector(old_stack, BracketType::Square),
+                val_type: ValueType::Vector(items, BracketType::Square)
             });
         }
     }
 
-    pub async fn execute(&mut self, code: &str) -> Result<()> {
-        if code.contains(" DEF") {
-            return dictionary::parse_multiple_word_definitions(self, code);
+    fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
+        let bracket_type = match &tokens[start_index] {
+            Token::VectorStart(bt) => bt.clone(),
+            _ => return Err(AjisaiError::from("Expected vector start")),
+        };
+        
+        let mut values = Vec::new();
+        let mut i = start_index + 1;
+        let mut depth = 1;
+
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::VectorStart(bt) if *bt == bracket_type => {
+                    depth += 1;
+                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                    values.push(Value { val_type: ValueType::Vector(nested_values, bracket_type.clone()) });
+                    i += consumed;
+                },
+                Token::VectorEnd(bt) if *bt == bracket_type => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok((values, i - start_index + 1));
+                    }
+                    i += 1;
+                },
+                Token::Number(n) => {
+                    values.push(Value { val_type: ValueType::Number(Fraction::from_string(n)?) });
+                    i += 1;
+                },
+                Token::String(s) => {
+                    values.push(Value { val_type: ValueType::String(s.clone()) });
+                    i += 1;
+                },
+                Token::Boolean(b) => {
+                    values.push(Value { val_type: ValueType::Boolean(*b) });
+                    i += 1;
+                },
+                Token::Nil => {
+                    values.push(Value { val_type: ValueType::Nil });
+                    i += 1;
+                },
+                Token::Symbol(s) => {
+                    values.push(Value { val_type: ValueType::Symbol(s.clone()) });
+                    i += 1;
+                },
+                _ => {
+                    i += 1;
+                }
+            }
         }
-        
-        let custom_word_names: HashSet<String> = self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
-        
-        self.execute_tokens_sync(&tokens)
+        Err(AjisaiError::from("Unclosed vector"))
     }
 
-    pub fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
+    fn collect_def_block(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Token>, usize)> {
+        let mut body_tokens = Vec::new();
+        let mut i = start_index + 1;
+        let mut depth = 1;
+
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::DefBlockStart => {
+                    depth += 1;
+                    body_tokens.push(tokens[i].clone());
+                },
+                Token::DefBlockEnd => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok((body_tokens, i - start_index + 1));
+                    }
+                    body_tokens.push(tokens[i].clone());
+                },
+                _ => {
+                    body_tokens.push(tokens[i].clone());
+                }
+            }
+            i += 1;
+        }
+        Err(AjisaiError::from("Unclosed definition block"))
+    }
+
+    // ガード構造のセクション収集
+    fn collect_guard_sections(&self, tokens: &[Token], start: usize) -> Result<(Vec<Vec<Token>>, usize)> {
+        let mut sections = Vec::new();
+        let mut current = Vec::new();
+        let mut i = start;
+        let mut last_was_guard = false;
+        
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::GuardSeparator => {
+                    sections.push(current.clone());
+                    current.clear();
+                    last_was_guard = true;
+                }
+                Token::LineBreak => {
+                    if last_was_guard {
+                        // 継続（: の後の改行）
+                        last_was_guard = false;
+                    } else {
+                        // ガード構造終了
+                        if !current.is_empty() {
+                            sections.push(current);
+                        }
+                        return Ok((sections, i - start + 1));
+                    }
+                }
+                _ => {
+                    current.push(tokens[i].clone());
+                    last_was_guard = false;
+                }
+            }
+            i += 1;
+        }
+        
+        // トークン列の終わり
+        if !current.is_empty() {
+            sections.push(current);
+        }
+        Ok((sections, i - start))
+    }
+
+    // ガード構造の実行
+    fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
+        // sectionsの構造：
+        // [0]: 処理1
+        // [1]: 条件2（あれば）
+        // [2]: 処理2（あれば）
+        // ...
+        // [last]: デフォルト処理
+        
+        if sections.is_empty() {
+            return Err(AjisaiError::from("Guard structure requires at least a default expression"));
+        }
+        
+        // 最初の条件を評価
+        let is_true = match &first_condition.val_type {
+            ValueType::Vector(v, _) if v.len() == 1 => {
+                match &v[0].val_type {
+                    ValueType::Boolean(b) => *b,
+                    _ => {
+                        self.stack.push(first_condition);
+                        return Err(AjisaiError::type_error("boolean condition", "other type"));
+                    }
+                }
+            },
+            _ => {
+                self.stack.push(first_condition);
+                return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
+            }
+        };
+        
+        if is_true {
+            // 最初の条件が真なら処理1を実行
+            self.execute_tokens_sync(&sections[0])?;
+            return Ok(());
+        }
+        
+        // 最初の条件が偽なら、残りの条件を順次評価
+        let mut section_idx = 1;
+        while section_idx < sections.len() - 1 {
+            // 条件を評価
+            self.execute_tokens_sync(&sections[section_idx])?;
+            let cond = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            
+            let is_true = match &cond.val_type {
+                ValueType::Vector(v, _) if v.len() == 1 => {
+                    match &v[0].val_type {
+                        ValueType::Boolean(b) => *b,
+                        _ => {
+                            self.stack.push(cond);
+                            return Err(AjisaiError::type_error("boolean condition", "other type"));
+                        }
+                    }
+                },
+                _ => {
+                    self.stack.push(cond);
+                    return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
+                }
+            };
+            
+            if is_true {
+                // 条件が真なら処理を実行
+                self.execute_tokens_sync(&sections[section_idx + 1])?;
+                return Ok(());
+            }
+            
+            section_idx += 2; // 次の条件へ
+        }
+        
+        // すべての条件が偽ならデフォルト処理を実行
+        self.execute_tokens_sync(&sections[sections.len() - 1])?;
+        Ok(())
+    }
+
+    pub(crate) fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
         while i < tokens.len() {
-            let token = &tokens[i];
-            
-            match token {
-                Token::Number(s) => {
+            match &tokens[i] {
+                Token::Number(n) => {
                     self.ensure_wrapped_stack(); // AUTO-NEST
-                    let frac = Fraction::from_str(s).map_err(AjisaiError::from)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Number(frac) }], BracketType::Square)});
+                    self.stack.push(Value { val_type: ValueType::Number(Fraction::from_string(n)?) });
                 },
                 Token::String(s) => {
                     self.ensure_wrapped_stack(); // AUTO-NEST
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::String(s.clone()) }], BracketType::Square)});
+                    self.stack.push(Value { val_type: ValueType::String(s.clone()) });
                 },
                 Token::Boolean(b) => {
                     self.ensure_wrapped_stack(); // AUTO-NEST
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Boolean(*b) }], BracketType::Square)})
+                    self.stack.push(Value { val_type: ValueType::Boolean(*b) });
                 },
                 Token::Nil => {
                     self.ensure_wrapped_stack(); // AUTO-NEST
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![Value { val_type: ValueType::Nil }], BracketType::Square)})
+                    self.stack.push(Value { val_type: ValueType::Nil });
                 },
                 Token::VectorStart(_) => {
                     self.ensure_wrapped_stack(); // AUTO-NEST
@@ -161,33 +338,17 @@ impl Interpreter {
                     }
                 },
                 Token::GuardSeparator => {
-                    // --- MODIFICATION START: Immediate guard logic ---
-                    let condition_val = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                    let is_true = match &condition_val.val_type {
-                        ValueType::Vector(v, _) if v.len() == 1 => {
-                            match &v[0].val_type {
-                                ValueType::Boolean(b) => *b,
-                                _ => {
-                                    self.stack.push(condition_val); // Push back on error
-                                    return Err(AjisaiError::type_error("boolean condition", "other type"));
-                                }
-                            }
-                        },
-                        _ => {
-                            self.stack.push(condition_val); // Push back on error
-                            return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
-                        }
-                    };
-
-                    if !is_true {
-                        // Condition is false, skip the next expression
-                        let next_token_index = i + 1;
-                        if next_token_index < tokens.len() {
-                            i = skip_expression(tokens, next_token_index)?;
-                        }
-                    }
-                    // If true, do nothing and proceed to the next token
-                    // --- MODIFICATION END ---
+                    // ガード構造の処理
+                    // スタックトップに最初の条件結果があるはず
+                    let first_condition = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                    
+                    // 後続のトークンをセクションに分割
+                    let (sections, consumed) = self.collect_guard_sections(tokens, i + 1)?;
+                    
+                    // ガード構造を実行
+                    self.execute_guard_structure(first_condition, &sections)?;
+                    
+                    i += consumed;
                 },
                 Token::LineBreak => {
                     // Top-levelでは無視
@@ -259,154 +420,98 @@ impl Interpreter {
                 break;
             }
         }
-        
         Ok(())
     }
-    
+
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
+        use crate::interpreter::arithmetic::*;
+        use crate::interpreter::comparison::*;
+        use crate::interpreter::vector_ops::*;
+        use crate::interpreter::control::*;
+        use crate::interpreter::dictionary::*;
+        use crate::interpreter::io::*;
+        use crate::interpreter::audio::*;
+        use crate::interpreter::higher_order::*;
+
         match name {
-            "GET" => vector_ops::op_get(self), 
-            "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self), 
-            "REMOVE" => vector_ops::op_remove(self),
-            "LENGTH" => vector_ops::op_length(self), 
-            "TAKE" => vector_ops::op_take(self),
-            "SPLIT" => vector_ops::op_split(self),
-            "CONCAT" => vector_ops::op_concat(self), 
-            "REVERSE" => vector_ops::op_reverse(self),
-            "LEVEL" => vector_ops::op_level(self),
-            "+" => arithmetic::op_add(self), 
-            "-" => arithmetic::op_sub(self),
-            "*" => arithmetic::op_mul(self), 
-            "/" => arithmetic::op_div(self),
-            "=" => comparison::op_eq(self), 
-            "<" => comparison::op_lt(self),
-            "<=" => comparison::op_le(self), 
-            ">" => comparison::op_gt(self),
-            ">=" => comparison::op_ge(self), 
-            "AND" => comparison::op_and(self),
-            "OR" => comparison::op_or(self), 
-            "NOT" => comparison::op_not(self),
-            "PRINT" => io::op_print(self), 
-            "AUDIO" => audio::op_sound(self),
-            "TIMES" => control::execute_times(self),
-            "WAIT" => control::execute_wait(self),
-            "DEF" => dictionary::op_def(self),
-            "DEL" => dictionary::op_del(self),
-            "?" => dictionary::op_lookup(self),
+            // 算術演算
+            "+" => op_add(self),
+            "-" => op_subtract(self),
+            "*" => op_multiply(self),
+            "/" => op_divide(self),
+            "MOD" => op_mod(self),
+            "ABS" => op_abs(self),
+            "SIGN" => op_sign(self),
+            "FLOOR" => op_floor(self),
+            "CEIL" => op_ceil(self),
+            "ROUND" => op_round(self),
+            "MIN" => op_min(self),
+            "MAX" => op_max(self),
+            "POW" => op_pow(self),
+            "SQRT" => op_sqrt(self),
+            "GCD" => op_gcd(self),
+            "LCM" => op_lcm(self),
+
+            // 比較演算
+            "=" => op_equal(self),
+            "!=" => op_not_equal(self),
+            "<" => op_less_than(self),
+            "<=" => op_less_equal(self),
+            ">" => op_greater_than(self),
+            ">=" => op_greater_equal(self),
+
+            // 論理演算
+            "NOT" => op_not(self),
+            "AND" => op_and(self),
+            "OR" => op_or(self),
+
+            // ベクトル操作
+            "GET" => op_get(self),
+            "SET" => op_set(self),
+            "LEN" => op_len(self),
+            "PUSH" => op_push(self),
+            "POP" => op_pop(self),
+            "DUP" => op_dup(self),
+            "DUP2" => op_dup2(self),
+            "DROP" => op_drop(self),
+            "SWAP" => op_swap(self),
+            "OVER" => op_over(self),
+            "ROT" => op_rot(self),
+            "TAKE" => op_take(self),
+            "SKIP" => op_skip(self),
+            "SPLIT" => op_split(self),
+            "CONCAT" => op_concat(self),
+            "REVERSE" => op_reverse(self),
+
+            // 高階関数
+            "MAP" => op_map(self),
+            "FILTER" => op_filter(self),
+
+            // 制御構造
+            "TIMES" => op_times(self),
+            "WAIT" => op_wait(self),
+
+            // ワード定義・管理
+            "DEF" => op_def(self),
+            "DEL" => op_del(self),
+            "?" => op_lookup(self),
+
+            // 入出力
+            "PRINT" => op_print(self),
+
+            // オーディオ
+            "AUDIO" => op_audio(self),
+
+            // システム
             "RESET" => self.execute_reset(),
-            "MAP" => higher_order::op_map(self),
-            "FILTER" => higher_order::op_filter(self),
-            _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
+
+            _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
 
-    fn collect_vector(&self, tokens: &[Token], start: usize) -> Result<(Vec<Value>, usize)> {
-        let mut values = Vec::new();
-        let mut depth = 1;
-        let mut end = 0;
-
-        for i in (start + 1)..tokens.len() {
-            match tokens[i] {
-                Token::VectorStart(_) => depth += 1,
-                Token::VectorEnd(_) => {
-                    depth -= 1;
-                    if depth == 0 {
-                        end = i;
-                        break;
-                    }
-                },
-                _ => {}
-            }
-        }
-
-        if end == 0 {
-            return Err(AjisaiError::from("Unclosed vector"));
-        }
-
-        let mut i = start + 1;
-        while i < end {
-            match &tokens[i] {
-                Token::VectorStart(_) => {
-                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values, BracketType::Square) });
-                    i += consumed;
-                },
-                Token::Number(s) => {
-                    values.push(Value { val_type: ValueType::Number(Fraction::from_str(s).map_err(AjisaiError::from)?) });
-                    i += 1;
-                },
-                Token::String(s) => {
-                    values.push(Value { val_type: ValueType::String(s.clone()) });
-                    i += 1;
-                },
-                Token::Boolean(b) => {
-                    values.push(Value { val_type: ValueType::Boolean(*b) });
-                    i += 1;
-                },
-                Token::Nil => {
-                    values.push(Value { val_type: ValueType::Nil });
-                    i += 1;
-                },
-                Token::Symbol(name) => {
-                    values.push(Value { val_type: ValueType::Symbol(name.clone()) });
-                    i += 1;
-                },
-                _ => { i += 1; }
-            }
-        }
-
-        Ok((values, end - start + 1))
-    }
-
-    fn collect_def_block(&self, tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
-        let mut depth = 1;
-        let mut i = start + 1;
-        while i < tokens.len() {
-            match tokens[i] {
-                Token::DefBlockStart => depth += 1,
-                Token::DefBlockEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Ok((tokens[start + 1..i].to_vec(), i - start + 1));
-                    }
-                },
-                _ => {}
-            }
-            i += 1;
-        }
-        Err(AjisaiError::from("Unclosed definition block"))
-    }
-
-    pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
-        if let Some(def) = self.dictionary.get(name) {
-            if !def.is_builtin && !def.lines.is_empty() {
-                let mut result = String::new();
-                for (i, line) in def.lines.iter().enumerate() {
-                    if i > 0 { result.push('\n'); }
-                    
-                    if !line.condition_tokens.is_empty() {
-                        for token in &line.condition_tokens {
-                            result.push_str(&self.token_to_string(token));
-                            result.push(' ');
-                        }
-                        result.push_str(": ");
-                    }
-                    
-                    for token in &line.body_tokens {
-                        result.push_str(&self.token_to_string(token));
-                        result.push(' ');
-                    }
-                }
-                return Some(result.trim().to_string());
-            }
-        }
-        None
-    }
-
-    fn token_to_string(&self, token: &Token) -> String {
+    pub fn token_to_string(&self, token: &Token) -> String {
         match token {
-            Token::Number(s) => s.clone(),
+            Token::Number(n) => n.clone(),
             Token::String(s) => format!("'{}'", s),
             Token::Boolean(true) => "TRUE".to_string(),
             Token::Boolean(false) => "FALSE".to_string(),
