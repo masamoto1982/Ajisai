@@ -536,7 +536,11 @@ impl Interpreter {
     }
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
-        let tokens = crate::tokenizer::tokenize(code)?;
+        let custom_word_names: HashSet<String> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect();
+        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
         self.execute_tokens_sync(&tokens)
     }
 
