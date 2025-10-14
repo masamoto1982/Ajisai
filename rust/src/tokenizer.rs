@@ -50,27 +50,26 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
 
             if i >= chars.len() { break; }
 
-            let mut token_found = false;
 
             // 1. 単一文字トークン（括弧など）
             if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
-                tokens.push(token); i += consumed; token_found = true;
+                tokens.push(token); i += consumed; 
             } 
             // 2. 引用文字列
             else if let Some((token, consumed)) = parse_quote_string(&chars[i..]) {
-                tokens.push(token); i += consumed; token_found = true;
+                tokens.push(token); i += consumed; 
             } 
             // 3. キーワード（TRUE, FALSE, NIL等）
             else if let Some((token, consumed)) = try_parse_keyword(&chars[i..]) {
-                tokens.push(token); i += consumed; token_found = true;
+                tokens.push(token); i += consumed; 
             } 
             // 4. 数値
             else if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
-                tokens.push(token); i += consumed; token_found = true;
+                tokens.push(token); i += consumed; 
             } 
             // 5. 演算子（2文字演算子を含む）- PMAマッチングより前に実行
             else if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
-                tokens.push(token); i += consumed; token_found = true;
+                tokens.push(token); i += consumed; 
             }
             // 6. PMAマッチング（組み込みワードとカスタムワード）
             else {
@@ -83,7 +82,7 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                         if mat.start() == 0 && (next_char.is_none() || !is_word_char(next_char.unwrap())) {
                             tokens.push(Token::Symbol(word.to_string().to_uppercase()));
                             i += word.len();
-                            token_found = true;
+                            
                             found_match = true;
                         }
                     }
