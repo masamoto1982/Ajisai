@@ -1,7 +1,5 @@
 // rust/src/lib.rs
 
-use wasm_bindgen::prelude::*;
-
 mod types;
 mod tokenizer;
 mod interpreter;
