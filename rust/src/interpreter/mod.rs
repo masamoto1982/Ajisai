@@ -30,6 +30,44 @@ pub struct Interpreter {
     pub(crate) operation_target: OperationTarget,
 }
 
+// スキップ処理のためのヘルパー関数
+fn skip_expression(tokens: &[Token], start_index: usize) -> Result<usize> {
+    if start_index >= tokens.len() {
+        return Ok(start_index);
+    }
+
+    match &tokens[start_index] {
+        Token::VectorStart(_) | Token::DefBlockStart => {
+            let start_token = &tokens[start_index];
+            let (end_token_type, block_name) = match start_token {
+                Token::VectorStart(bt) => (Token::VectorEnd(bt.clone()), "vector"),
+                Token::DefBlockStart => (Token::DefBlockEnd, "definition block"),
+                _ => unreachable!(),
+            };
+
+            let mut depth = 1;
+            let mut current_index = start_index + 1;
+            while current_index < tokens.len() {
+                if tokens[current_index] == *start_token {
+                    depth += 1;
+                } else if tokens[current_index] == end_token_type {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok(current_index);
+                    }
+                }
+                current_index += 1;
+            }
+            Err(AjisaiError::from(format!("Unclosed {}", block_name)))
+        }
+        _ => {
+            // 単一のトークン（ワード、数値など）はそれ自体が式
+            Ok(start_index)
+        }
+    }
+}
+
+
 impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
@@ -122,7 +160,36 @@ impl Interpreter {
                         }
                     }
                 },
-                Token::GuardSeparator | Token::LineBreak => {
+                Token::GuardSeparator => {
+                    // --- MODIFICATION START: Immediate guard logic ---
+                    let condition_val = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                    let is_true = match &condition_val.val_type {
+                        ValueType::Vector(v, _) if v.len() == 1 => {
+                            match &v[0].val_type {
+                                ValueType::Boolean(b) => *b,
+                                _ => {
+                                    self.stack.push(condition_val); // Push back on error
+                                    return Err(AjisaiError::type_error("boolean condition", "other type"));
+                                }
+                            }
+                        },
+                        _ => {
+                            self.stack.push(condition_val); // Push back on error
+                            return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
+                        }
+                    };
+
+                    if !is_true {
+                        // Condition is false, skip the next expression
+                        let next_token_index = i + 1;
+                        if next_token_index < tokens.len() {
+                            i = skip_expression(tokens, next_token_index)?;
+                        }
+                    }
+                    // If true, do nothing and proceed to the next token
+                    // --- MODIFICATION END ---
+                },
+                Token::LineBreak => {
                     // Top-levelでは無視
                 },
                 _ => {}
