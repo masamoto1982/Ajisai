@@ -151,10 +151,48 @@ impl Interpreter {
             return result;
         }
 
-        // For custom words, the target persists through the execution of the definition.
+        // カスタムワードの実行：ゲート（条件分岐）のサポート
         for line in &def.lines {
-            self.execute_tokens_sync(&line.body_tokens)?;
+            // 条件がある場合は評価
+            if !line.condition_tokens.is_empty() {
+                // 条件を実行
+                self.execute_tokens_sync(&line.condition_tokens)?;
+                
+                // スタックトップの値を取得
+                let condition_result = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                
+                // Boolean型であることを確認
+                let is_true = match &condition_result.val_type {
+                    ValueType::Vector(v, _) if v.len() == 1 => {
+                        match &v[0].val_type {
+                            ValueType::Boolean(b) => *b,
+                            _ => {
+                                self.stack.push(condition_result);
+                                return Err(AjisaiError::type_error("boolean condition", "other type"));
+                            }
+                        }
+                    },
+                    _ => {
+                        self.stack.push(condition_result);
+                        return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
+                    }
+                };
+                
+                if is_true {
+                    // 条件が真の場合、このボディを実行して終了
+                    self.execute_tokens_sync(&line.body_tokens)?;
+                    break;
+                } else {
+                    // 条件が偽の場合、次の行へ
+                    continue;
+                }
+            } else {
+                // 条件がない場合（デフォルト節）は常に実行
+                self.execute_tokens_sync(&line.body_tokens)?;
+                break;
+            }
         }
+        
         Ok(())
     }
     
