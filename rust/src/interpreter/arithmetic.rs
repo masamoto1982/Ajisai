@@ -57,11 +57,19 @@ where
 
             let (a_vec, a_bracket) = match a_val.val_type {
                 ValueType::Vector(v, b) => (v, b),
-                _ => return Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
             };
             let (b_vec, _) = match b_val.val_type {
                 ValueType::Vector(v, b) => (v, b),
-                _ => return Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
             };
 
             let mut result_vec = Vec::new();
@@ -81,6 +89,8 @@ where
                 }
             } else {
                 if a_vec.len() != b_vec.len() {
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket.clone()) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec, BracketType::Square) });
                     return Err(AjisaiError::VectorLengthMismatch{ len1: a_vec.len(), len2: b_vec.len() });
                 }
                 for (a, b) in a_vec.iter().zip(b_vec.iter()) {
@@ -89,7 +99,20 @@ where
                 }
             }
 
-            interp.stack.push(Value { val_type: ValueType::Vector(result_vec, a_bracket) });
+            // "No change is an error" 原則のチェック
+            // 結果が元のいずれかと同一の場合はエラー
+            let result_value = Value { val_type: ValueType::Vector(result_vec.clone(), a_bracket.clone()) };
+            let original_a = Value { val_type: ValueType::Vector(a_vec.clone(), a_bracket.clone()) };
+            let original_b = Value { val_type: ValueType::Vector(b_vec, BracketType::Square) };
+            
+            if result_value == original_a || result_value == original_b {
+                // 変化がない場合は元の値をpush backしてエラー
+                interp.stack.push(original_a);
+                interp.stack.push(original_b);
+                return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+            }
+
+            interp.stack.push(result_value);
         },
 
         // STACKモード: N個の要素を畳み込む
@@ -97,19 +120,39 @@ where
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
-            if interp.stack.len() < count {
-                return Err(AjisaiError::StackUnderflow);
-            }
+            // カウント0はエラー（"No change is an error"原則）
             if count == 0 {
-                return Ok(()); // 何もしない
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK operation with count 0 results in no change"));
+            }
+
+            // カウント1もエラー（1要素の畳み込みは変化なし）
+            if count == 1 {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK operation with count 1 results in no change"));
+            }
+
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::StackUnderflow);
             }
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count ..).collect();
             
             let mut acc_num = extract_number(&items[0])?.clone();
+            let original_first = acc_num.clone();
 
             for item in items.iter().skip(1) {
                 acc_num = op(&acc_num, extract_number(item)?)?;
+            }
+            
+            // "No change is an error" 原則のチェック
+            // 畳み込み結果が最初の要素と同一の場合はエラー
+            if acc_num == original_first {
+                // 元の要素をすべて戻す
+                interp.stack.extend(items);
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK operation resulted in no change"));
             }
             
             let result_val = Value { val_type: ValueType::Number(acc_num) };
