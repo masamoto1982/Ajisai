@@ -123,7 +123,7 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::Number(n) => {
-                    values.push(Value { val_type: ValueType::Number(Fraction::from_string(n)?) });
+                    values.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
                     i += 1;
                 },
                 Token::String(s) => {
@@ -297,7 +297,7 @@ impl Interpreter {
             match &tokens[i] {
                 Token::Number(n) => {
                     self.ensure_wrapped_stack(); // AUTO-NEST
-                    self.stack.push(Value { val_type: ValueType::Number(Fraction::from_string(n)?) });
+                    self.stack.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
                 },
                 Token::String(s) => {
                     self.ensure_wrapped_stack(); // AUTO-NEST
@@ -427,18 +427,16 @@ impl Interpreter {
         use crate::interpreter::arithmetic::*;
         use crate::interpreter::comparison::*;
         use crate::interpreter::vector_ops::*;
-        use crate::interpreter::control::*;
         use crate::interpreter::dictionary::*;
         use crate::interpreter::io::*;
-        use crate::interpreter::audio::*;
         use crate::interpreter::higher_order::*;
 
         match name {
             // 算術演算
             "+" => op_add(self),
-            "-" => op_subtract(self),
-            "*" => op_multiply(self),
-            "/" => op_divide(self),
+            "-" => op_sub(self),
+            "*" => op_mul(self),
+            "/" => op_div(self),
             "MOD" => op_mod(self),
             "ABS" => op_abs(self),
             "SIGN" => op_sign(self),
@@ -488,8 +486,8 @@ impl Interpreter {
             "FILTER" => op_filter(self),
 
             // 制御構造
-            "TIMES" => op_times(self),
-            "WAIT" => op_wait(self),
+            "TIMES" => control::op_times(self),
+            "WAIT" => control::op_wait(self),
 
             // ワード定義・管理
             "DEF" => op_def(self),
@@ -500,7 +498,7 @@ impl Interpreter {
             "PRINT" => op_print(self),
 
             // オーディオ
-            "AUDIO" => op_audio(self),
+            "AUDIO" => audio::op_audio(self),
 
             // システム
             "RESET" => self.execute_reset(),
@@ -520,10 +518,36 @@ impl Interpreter {
             Token::VectorStart(bt) => bt.opening_char().to_string(),
             Token::VectorEnd(bt) => bt.closing_char().to_string(),
             Token::GuardSeparator => ":".to_string(),
-            Token::DefBlockEnd => ";".to_string(),
+            Token::DefBlockStart => "{".to_string(),
+            Token::DefBlockEnd => "}".to_string(),
             Token::LineBreak => "\n".to_string(),
-            _ => "".to_string(),
         }
+    }
+    
+    pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
+        if let Some(def) = self.dictionary.get(name) {
+            if !def.is_builtin && !def.lines.is_empty() {
+                let mut result = String::new();
+                for (i, line) in def.lines.iter().enumerate() {
+                    if i > 0 { result.push('\n'); }
+                    
+                    if !line.condition_tokens.is_empty() {
+                        for token in &line.condition_tokens {
+                            result.push_str(&self.token_to_string(token));
+                            result.push(' ');
+                        }
+                        result.push_str(": ");
+                    }
+                    
+                    for token in &line.body_tokens {
+                        result.push_str(&self.token_to_string(token));
+                        result.push(' ');
+                    }
+                }
+                return Some(result.trim().to_string());
+            }
+        }
+        None
     }
     
     pub fn execute_reset(&mut self) -> Result<()> {
@@ -535,6 +559,11 @@ impl Interpreter {
         self.operation_target = OperationTarget::StackTop;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
+    }
+
+    pub async fn execute(&mut self, code: &str) -> Result<()> {
+        let tokens = crate::tokenizer::tokenize(code)?;
+        self.execute_tokens_sync(&tokens)
     }
 
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
