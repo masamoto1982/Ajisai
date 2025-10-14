@@ -19,7 +19,6 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         .chain(custom_words.iter().cloned())
         .collect();
     
-    // `daachorse` の型を明示的に指定
     let pma = DoubleArrayAhoCorasick::<u32>::new(&patterns).unwrap();
 
     for (line_num, line) in lines.iter().enumerate() {
@@ -53,39 +52,48 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
 
             let mut token_found = false;
 
+            // 1. 単一文字トークン（括弧など）
             if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
                 tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = parse_quote_string(&chars[i..]) {
+            } 
+            // 2. 引用文字列
+            else if let Some((token, consumed)) = parse_quote_string(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = try_parse_keyword(&chars[i..]) {
+            } 
+            // 3. キーワード（TRUE, FALSE, NIL等）
+            else if let Some((token, consumed)) = try_parse_keyword(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
-            } else if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
+            } 
+            // 4. 数値
+            else if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
                 tokens.push(token); i += consumed; token_found = true;
-            } else {
-                 let remaining_text = &line_without_comment[i..];
-                 let mut found_match = false;
-                 if !patterns.is_empty() {
+            } 
+            // 5. 演算子（2文字演算子を含む）- PMAマッチングより前に実行
+            else if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
+                tokens.push(token); i += consumed; token_found = true;
+            }
+            // 6. PMAマッチング（組み込みワードとカスタムワード）
+            else {
+                let remaining_text = &line_without_comment[i..];
+                let mut found_match = false;
+                if !patterns.is_empty() {
                     if let Some(mat) = pma.find_iter(remaining_text).next() {
                         let word = &remaining_text[mat.start()..mat.end()];
                         let next_char = remaining_text[mat.end()..].chars().next();
                         if mat.start() == 0 && (next_char.is_none() || !is_word_char(next_char.unwrap())) {
-                           tokens.push(Token::Symbol(word.to_string().to_uppercase()));
-                           i += word.len();
-                           token_found = true;
-                           found_match = true;
+                            tokens.push(Token::Symbol(word.to_string().to_uppercase()));
+                            i += word.len();
+                            token_found = true;
+                            found_match = true;
                         }
                     }
-                 }
-                 if !found_match {
-                     if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
-                         tokens.push(token); i += consumed; token_found = true;
-                     }
-                 }
+                }
+                
+                if !found_match {
+                    return Err(format!("Unknown token starting with: {}", &line_without_comment[i..]));
+                }
             }
             
-            if !token_found {
-                return Err(format!("Unknown token starting with: {}", &line_without_comment[i..]));
-            }
             line_has_tokens = true;
         }
         
@@ -204,6 +212,7 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
 }
 
 fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
+    // まず2文字演算子をチェック
     if chars.len() >= 2 {
         let two_char: String = chars[..2].iter().collect();
         match two_char.as_str() {
@@ -213,13 +222,20 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
             _ => {}
         }
     }
+    
+    // 次に1文字演算子をチェック
     if !chars.is_empty() {
         match chars[0] {
             '+' | '-' | '*' | '/' | '<' | '>' | '=' | '?' => {
-                 if chars.len() > 1 && (chars[1].is_ascii_digit() || chars[1] == '.') && chars[0] != '?' { return None; }
-                 Some((Token::Symbol(chars[0].to_string()), 1))
+                // 数値の一部でないことを確認（?は除く）
+                if chars.len() > 1 && (chars[1].is_ascii_digit() || chars[1] == '.') && chars[0] != '?' { 
+                    return None; 
+                }
+                Some((Token::Symbol(chars[0].to_string()), 1))
             },
             _ => None
         }
-    } else { None }
+    } else { 
+        None 
+    }
 }
