@@ -424,85 +424,59 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        use crate::interpreter::arithmetic::*;
-        use crate::interpreter::comparison::*;
-        use crate::interpreter::vector_ops::*;
-        use crate::interpreter::dictionary::*;
-        use crate::interpreter::io::*;
-        use crate::interpreter::higher_order::*;
-
         match name {
-            // 算術演算
-            "+" => op_add(self),
-            "-" => op_sub(self),
-            "*" => op_mul(self),
-            "/" => op_div(self),
-            "MOD" => op_mod(self),
-            "ABS" => op_abs(self),
-            "SIGN" => op_sign(self),
-            "FLOOR" => op_floor(self),
-            "CEIL" => op_ceil(self),
-            "ROUND" => op_round(self),
-            "MIN" => op_min(self),
-            "MAX" => op_max(self),
-            "POW" => op_pow(self),
-            "SQRT" => op_sqrt(self),
-            "GCD" => op_gcd(self),
-            "LCM" => op_lcm(self),
-
-            // 比較演算
-            "=" => op_equal(self),
-            "!=" => op_not_equal(self),
-            "<" => op_less_than(self),
-            "<=" => op_less_equal(self),
-            ">" => op_greater_than(self),
-            ">=" => op_greater_equal(self),
-
-            // 論理演算
-            "NOT" => op_not(self),
-            "AND" => op_and(self),
-            "OR" => op_or(self),
-
             // ベクトル操作
-            "GET" => op_get(self),
-            "SET" => op_set(self),
-            "LEN" => op_len(self),
-            "PUSH" => op_push(self),
-            "POP" => op_pop(self),
-            "DUP" => op_dup(self),
-            "DUP2" => op_dup2(self),
-            "DROP" => op_drop(self),
-            "SWAP" => op_swap(self),
-            "OVER" => op_over(self),
-            "ROT" => op_rot(self),
-            "TAKE" => op_take(self),
-            "SKIP" => op_skip(self),
-            "SPLIT" => op_split(self),
-            "CONCAT" => op_concat(self),
-            "REVERSE" => op_reverse(self),
-
-            // 高階関数
-            "MAP" => op_map(self),
-            "FILTER" => op_filter(self),
-
-            // 制御構造
-            "TIMES" => control::op_times(self),
-            "WAIT" => control::op_wait(self),
-
-            // ワード定義・管理
-            "DEF" => op_def(self),
-            "DEL" => op_del(self),
-            "?" => op_lookup(self),
-
+            "GET" => vector_ops::op_get(self),
+            "INSERT" => vector_ops::op_insert(self),
+            "REPLACE" => vector_ops::op_replace(self),
+            "REMOVE" => vector_ops::op_remove(self),
+            "LENGTH" => vector_ops::op_length(self),
+            "TAKE" => vector_ops::op_take(self),
+            "SPLIT" => vector_ops::op_split(self),
+            "CONCAT" => vector_ops::op_concat(self),
+            "REVERSE" => vector_ops::op_reverse(self),
+            "LEVEL" => vector_ops::op_level(self),
+            
+            // 算術演算
+            "+" => arithmetic::op_add(self),
+            "-" => arithmetic::op_sub(self),
+            "*" => arithmetic::op_mul(self),
+            "/" => arithmetic::op_div(self),
+            
+            // 比較演算
+            "=" => comparison::op_eq(self),
+            "<" => comparison::op_lt(self),
+            "<=" => comparison::op_le(self),
+            ">" => comparison::op_gt(self),
+            ">=" => comparison::op_ge(self),
+            
+            // 論理演算
+            "AND" => comparison::op_and(self),
+            "OR" => comparison::op_or(self),
+            "NOT" => comparison::op_not(self),
+            
             // 入出力
-            "PRINT" => op_print(self),
-
+            "PRINT" => io::op_print(self),
+            
             // オーディオ
-            "AUDIO" => audio::op_audio(self),
-
+            "AUDIO" => audio::op_sound(self),
+            
+            // 制御構造
+            "TIMES" => control::execute_times(self),
+            "WAIT" => control::execute_wait(self),
+            
+            // ワード定義・管理
+            "DEF" => dictionary::op_def(self),
+            "DEL" => dictionary::op_del(self),
+            "?" => dictionary::op_lookup(self),
+            
             // システム
             "RESET" => self.execute_reset(),
-
+            
+            // 高階関数
+            "MAP" => higher_order::op_map(self),
+            "FILTER" => higher_order::op_filter(self),
+            
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
