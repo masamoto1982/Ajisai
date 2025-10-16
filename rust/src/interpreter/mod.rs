@@ -167,60 +167,61 @@ impl Interpreter {
         Ok((sections, i - start))
     }
 
-    // [修正点2] ガードが偽の条件を正しくスキップするように修正
-    fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
-        let is_true = match &first_condition.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
-                ValueType::Boolean(b) => *b,
-                _ => {
-                    self.stack.push(first_condition);
-                    return Err(AjisaiError::type_error("boolean condition", "other type"));
-                }
-            },
+    // [修正] ガード構造：デフォルト処理がない場合はエラー
+fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
+    let is_true = match &first_condition.val_type {
+        ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
+            ValueType::Boolean(b) => *b,
             _ => {
                 self.stack.push(first_condition);
-                return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
+                return Err(AjisaiError::type_error("boolean condition", "other type"));
             }
-        };
-
-        if is_true {
-            if !sections.is_empty() {
-                self.execute_tokens_sync(&sections[0])?;
-            }
-            return Ok(());
+        },
+        _ => {
+            self.stack.push(first_condition);
+            return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
         }
+    };
 
-        // 最初の条件が偽の場合、残りのセクションを評価
-        // sections: [action1, condition2, action2, condition3, action3, default_action]
-        let mut section_idx = 1;
-        while section_idx < sections.len() {
-            if section_idx + 1 < sections.len() {
-                // `condition, action` のペアがある場合
-                self.execute_tokens_sync(&sections[section_idx])?;
-                let cond = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                
-                let is_true = match &cond.val_type {
-                    ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
-                        ValueType::Boolean(b) => *b,
-                        _ => { self.stack.push(cond); return Err(AjisaiError::type_error("boolean condition", "other type")); }
-                    },
-                    _ => { self.stack.push(cond); return Err(AjisaiError::type_error("single-element vector with boolean", "other type")); }
-                };
+    if is_true {
+        if sections.is_empty() {
+            return Err(AjisaiError::from("Guard structure requires an action after true condition"));
+        }
+        self.execute_tokens_sync(&sections[0])?;
+        return Ok(());
+    }
 
-                if is_true {
-                    self.execute_tokens_sync(&sections[section_idx + 1])?;
-                    return Ok(());
-                }
-                section_idx += 2; // 次の `condition, action` ペアへ
-            } else {
-                // デフォルトアクション (else節)
-                self.execute_tokens_sync(&sections[section_idx])?;
+    // 最初の条件が偽の場合、残りのセクションを評価
+    let mut section_idx = 1;
+    while section_idx < sections.len() {
+        if section_idx + 1 < sections.len() {
+            // `condition, action` のペアがある場合
+            self.execute_tokens_sync(&sections[section_idx])?;
+            let cond = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            
+            let is_true = match &cond.val_type {
+                ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
+                    ValueType::Boolean(b) => *b,
+                    _ => { self.stack.push(cond); return Err(AjisaiError::type_error("boolean condition", "other type")); }
+                },
+                _ => { self.stack.push(cond); return Err(AjisaiError::type_error("single-element vector with boolean", "other type")); }
+            };
+
+            if is_true {
+                self.execute_tokens_sync(&sections[section_idx + 1])?;
                 return Ok(());
             }
+            section_idx += 2; // 次の `condition, action` ペアへ
+        } else {
+            // デフォルトアクション (else節)
+            self.execute_tokens_sync(&sections[section_idx])?;
+            return Ok(());
         }
-        
-        Ok(())
     }
+    
+    // [修正点] デフォルト処理がない場合はエラー
+    Err(AjisaiError::from("Guard structure requires a default action"))
+}
 
     pub(crate) fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
