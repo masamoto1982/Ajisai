@@ -30,44 +30,6 @@ pub struct Interpreter {
     pub(crate) operation_target: OperationTarget,
 }
 
-// スキップ処理のためのヘルパー関数
-fn skip_expression(tokens: &[Token], start_index: usize) -> Result<usize> {
-    if start_index >= tokens.len() {
-        return Ok(start_index);
-    }
-
-    match &tokens[start_index] {
-        Token::VectorStart(_) | Token::DefBlockStart => {
-            let start_token = &tokens[start_index];
-            let (end_token_type, block_name) = match start_token {
-                Token::VectorStart(bt) => (Token::VectorEnd(bt.clone()), "vector"),
-                Token::DefBlockStart => (Token::DefBlockEnd, "definition block"),
-                _ => unreachable!(),
-            };
-
-            let mut depth = 1;
-            let mut current_index = start_index + 1;
-            while current_index < tokens.len() {
-                if tokens[current_index] == *start_token {
-                    depth += 1;
-                } else if tokens[current_index] == end_token_type {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Ok(current_index);
-                    }
-                }
-                current_index += 1;
-            }
-            Err(AjisaiError::from(format!("Unclosed {}", block_name)))
-        }
-        _ => {
-            // 単一のトークン（ワード、数値など）はそれ自体が式
-            Ok(start_index)
-        }
-    }
-}
-
-
 impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
@@ -97,30 +59,25 @@ impl Interpreter {
         }
     }
 
-    fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
+    // [修正点1] ネストされた異なる括弧を正しく解釈できるように修正
+    fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, BracketType, usize)> {
         let bracket_type = match &tokens[start_index] {
             Token::VectorStart(bt) => bt.clone(),
             _ => return Err(AjisaiError::from("Expected vector start")),
         };
-        
+
         let mut values = Vec::new();
         let mut i = start_index + 1;
-        let mut depth = 1;
 
         while i < tokens.len() {
             match &tokens[i] {
-                Token::VectorStart(bt) if *bt == bracket_type => {
-                    depth += 1;
-                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values, bracket_type.clone()) });
+                Token::VectorStart(_) => {
+                    let (nested_values, nested_bracket_type, consumed) = self.collect_vector(tokens, i)?;
+                    values.push(Value { val_type: ValueType::Vector(nested_values, nested_bracket_type) });
                     i += consumed;
                 },
                 Token::VectorEnd(bt) if *bt == bracket_type => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Ok((values, i - start_index + 1));
-                    }
-                    i += 1;
+                    return Ok((values, bracket_type.clone(), i - start_index + 1));
                 },
                 Token::Number(n) => {
                     values.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
@@ -143,12 +100,15 @@ impl Interpreter {
                     i += 1;
                 },
                 _ => {
+                    // ベクトルリテラル内に現れるべきでないトークンはエラーとするか、無視する
+                    // ここでは単純に進める
                     i += 1;
                 }
             }
         }
-        Err(AjisaiError::from("Unclosed vector"))
+        Err(AjisaiError::from(format!("Unclosed vector starting with {}", bracket_type.opening_char())))
     }
+
 
     fn collect_def_block(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Token>, usize)> {
         let mut body_tokens = Vec::new();
@@ -180,66 +140,41 @@ impl Interpreter {
     // ガード構造のセクション収集
     fn collect_guard_sections(&self, tokens: &[Token], start: usize) -> Result<(Vec<Vec<Token>>, usize)> {
         let mut sections = Vec::new();
-        let mut current = Vec::new();
+        let mut current_section = Vec::new();
         let mut i = start;
-        let mut last_was_guard = false;
-        
+    
         while i < tokens.len() {
             match &tokens[i] {
                 Token::GuardSeparator => {
-                    sections.push(current.clone());
-                    current.clear();
-                    last_was_guard = true;
+                    sections.push(current_section);
+                    current_section = Vec::new();
                 }
                 Token::LineBreak => {
-                    if last_was_guard {
-                        // 継続（: の後の改行）
-                        last_was_guard = false;
-                    } else {
-                        // ガード構造終了
-                        if !current.is_empty() {
-                            sections.push(current);
-                        }
-                        return Ok((sections, i - start + 1));
-                    }
+                    // LineBreakはガード構造を終了させる
+                    break;
                 }
                 _ => {
-                    current.push(tokens[i].clone());
-                    last_was_guard = false;
+                    current_section.push(tokens[i].clone());
                 }
             }
             i += 1;
         }
-        
-        // トークン列の終わり
-        if !current.is_empty() {
-            sections.push(current);
+    
+        if !current_section.is_empty() {
+            sections.push(current_section);
         }
+    
         Ok((sections, i - start))
     }
 
-    // ガード構造の実行
+    // [修正点2] ガードが偽の条件を正しくスキップするように修正
     fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
-        // sectionsの構造：
-        // [0]: 処理1
-        // [1]: 条件2（あれば）
-        // [2]: 処理2（あれば）
-        // ...
-        // [last]: デフォルト処理
-        
-        if sections.is_empty() {
-            return Err(AjisaiError::from("Guard structure requires at least a default expression"));
-        }
-        
-        // 最初の条件を評価
         let is_true = match &first_condition.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => {
-                match &v[0].val_type {
-                    ValueType::Boolean(b) => *b,
-                    _ => {
-                        self.stack.push(first_condition);
-                        return Err(AjisaiError::type_error("boolean condition", "other type"));
-                    }
+            ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
+                ValueType::Boolean(b) => *b,
+                _ => {
+                    self.stack.push(first_condition);
+                    return Err(AjisaiError::type_error("boolean condition", "other type"));
                 }
             },
             _ => {
@@ -247,47 +182,43 @@ impl Interpreter {
                 return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
             }
         };
-        
+
         if is_true {
-            // 最初の条件が真なら処理1を実行
-            self.execute_tokens_sync(&sections[0])?;
+            if !sections.is_empty() {
+                self.execute_tokens_sync(&sections[0])?;
+            }
             return Ok(());
         }
-        
-        // 最初の条件が偽なら、残りの条件を順次評価
+
+        // 最初の条件が偽の場合、残りのセクションを評価
+        // sections: [action1, condition2, action2, condition3, action3, default_action]
         let mut section_idx = 1;
-        while section_idx < sections.len() - 1 {
-            // 条件を評価
-            self.execute_tokens_sync(&sections[section_idx])?;
-            let cond = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            
-            let is_true = match &cond.val_type {
-                ValueType::Vector(v, _) if v.len() == 1 => {
-                    match &v[0].val_type {
+        while section_idx < sections.len() {
+            if section_idx + 1 < sections.len() {
+                // `condition, action` のペアがある場合
+                self.execute_tokens_sync(&sections[section_idx])?;
+                let cond = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                
+                let is_true = match &cond.val_type {
+                    ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
                         ValueType::Boolean(b) => *b,
-                        _ => {
-                            self.stack.push(cond);
-                            return Err(AjisaiError::type_error("boolean condition", "other type"));
-                        }
-                    }
-                },
-                _ => {
-                    self.stack.push(cond);
-                    return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
+                        _ => { self.stack.push(cond); return Err(AjisaiError::type_error("boolean condition", "other type")); }
+                    },
+                    _ => { self.stack.push(cond); return Err(AjisaiError::type_error("single-element vector with boolean", "other type")); }
+                };
+
+                if is_true {
+                    self.execute_tokens_sync(&sections[section_idx + 1])?;
+                    return Ok(());
                 }
-            };
-            
-            if is_true {
-                // 条件が真なら処理を実行
-                self.execute_tokens_sync(&sections[section_idx + 1])?;
+                section_idx += 2; // 次の `condition, action` ペアへ
+            } else {
+                // デフォルトアクション (else節)
+                self.execute_tokens_sync(&sections[section_idx])?;
                 return Ok(());
             }
-            
-            section_idx += 2; // 次の条件へ
         }
         
-        // すべての条件が偽ならデフォルト処理を実行
-        self.execute_tokens_sync(&sections[sections.len() - 1])?;
         Ok(())
     }
 
@@ -313,8 +244,8 @@ impl Interpreter {
                 },
                 Token::VectorStart(_) => {
                     self.ensure_wrapped_stack(); // AUTO-NEST
-                    let (values, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
+                    let (values, bracket_type, consumed) = self.collect_vector(tokens, i)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
                     i += consumed - 1;
                 },
                 Token::DefBlockStart => {
@@ -338,16 +269,9 @@ impl Interpreter {
                     }
                 },
                 Token::GuardSeparator => {
-                    // ガード構造の処理
-                    // スタックトップに最初の条件結果があるはず
                     let first_condition = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                    
-                    // 後続のトークンをセクションに分割
                     let (sections, consumed) = self.collect_guard_sections(tokens, i + 1)?;
-                    
-                    // ガード構造を実行
                     self.execute_guard_structure(first_condition, &sections)?;
-                    
                     i += consumed;
                 },
                 Token::LineBreak => {
@@ -367,37 +291,27 @@ impl Interpreter {
         if def.is_builtin {
             let original_target = self.operation_target;
             
-            // STACK/STACKTOP equivalence: If stack has one item OR is bare, STACK is treated as STACKTOP
             if (self.stack.len() == 1 || self.is_bare_stack()) && self.operation_target == OperationTarget::Stack {
                 self.operation_target = OperationTarget::StackTop;
             }
             
             let result = self.execute_builtin(name);
             
-            // Restore the target to what it was before this word's execution
             self.operation_target = original_target;
             return result;
         }
 
-        // カスタムワードの実行：ゲート（条件分岐）のサポート
         for line in &def.lines {
-            // 条件がある場合は評価
             if !line.condition_tokens.is_empty() {
-                // 条件を実行
                 self.execute_tokens_sync(&line.condition_tokens)?;
-                
-                // スタックトップの値を取得
                 let condition_result = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
                 
-                // Boolean型であることを確認
                 let is_true = match &condition_result.val_type {
-                    ValueType::Vector(v, _) if v.len() == 1 => {
-                        match &v[0].val_type {
-                            ValueType::Boolean(b) => *b,
-                            _ => {
-                                self.stack.push(condition_result);
-                                return Err(AjisaiError::type_error("boolean condition", "other type"));
-                            }
+                    ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
+                        ValueType::Boolean(b) => *b,
+                        _ => {
+                            self.stack.push(condition_result);
+                            return Err(AjisaiError::type_error("boolean condition", "other type"));
                         }
                     },
                     _ => {
@@ -407,15 +321,12 @@ impl Interpreter {
                 };
                 
                 if is_true {
-                    // 条件が真の場合、このボディを実行して終了
                     self.execute_tokens_sync(&line.body_tokens)?;
                     break;
                 } else {
-                    // 条件が偽の場合、次の行へ
                     continue;
                 }
             } else {
-                // 条件がない場合（デフォルト節）は常に実行
                 self.execute_tokens_sync(&line.body_tokens)?;
                 break;
             }
