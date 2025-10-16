@@ -167,8 +167,13 @@ impl Interpreter {
         Ok((sections, i - start))
     }
 
-    // [修正] ガード構造：デフォルト処理がない場合はエラー
-fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
+    fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
+    // [修正] デフォルト処理の有無を最初に確認
+    if sections.len() % 2 == 1 {
+        // セクション数が奇数 = デフォルト処理がない
+        return Err(AjisaiError::from("Guard structure requires a default action"));
+    }
+
     let is_true = match &first_condition.val_type {
         ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
             ValueType::Boolean(b) => *b,
@@ -184,10 +189,9 @@ fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<To
     };
 
     if is_true {
-        if sections.is_empty() {
-            return Err(AjisaiError::from("Guard structure requires an action after true condition"));
+        if !sections.is_empty() {
+            self.execute_tokens_sync(&sections[0])?;
         }
-        self.execute_tokens_sync(&sections[0])?;
         return Ok(());
     }
 
@@ -211,7 +215,7 @@ fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<To
                 self.execute_tokens_sync(&sections[section_idx + 1])?;
                 return Ok(());
             }
-            section_idx += 2; // 次の `condition, action` ペアへ
+            section_idx += 2;
         } else {
             // デフォルトアクション (else節)
             self.execute_tokens_sync(&sections[section_idx])?;
@@ -219,8 +223,8 @@ fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<To
         }
     }
     
-    // [修正点] デフォルト処理がない場合はエラー
-    Err(AjisaiError::from("Guard structure requires a default action"))
+    // この行に到達することはない（上記でデフォルト処理がない場合はエラーを返している）
+    Ok(())
 }
 
     pub(crate) fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
