@@ -168,10 +168,10 @@ impl Interpreter {
     }
 
     fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
-    // [修正] デフォルト処理が必須なので、セクション数は奇数でなければならない
-    if sections.len() % 2 == 0 {
-        return Err(AjisaiError::from("Guard structure requires a default action"));
-    }
+    // [修正] デフォルト処理が必須なので、セクション数は偶数でなければならない
+if sections.len() % 2 == 1 {
+    return Err(AjisaiError::from("Guard structure requires a default action"));
+}
 
     let is_true = match &first_condition.val_type {
         ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
