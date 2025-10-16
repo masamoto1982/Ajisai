@@ -168,9 +168,8 @@ impl Interpreter {
     }
 
     fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
-    // [修正] デフォルト処理の有無を最初に確認
-    if sections.len() % 2 == 1 {
-        // セクション数が奇数 = デフォルト処理がない
+    // [修正] デフォルト処理が必須なので、セクション数は奇数でなければならない
+    if sections.len() % 2 == 0 {
         return Err(AjisaiError::from("Guard structure requires a default action"));
     }
 
@@ -189,9 +188,7 @@ impl Interpreter {
     };
 
     if is_true {
-        if !sections.is_empty() {
-            self.execute_tokens_sync(&sections[0])?;
-        }
+        self.execute_tokens_sync(&sections[0])?;
         return Ok(());
     }
 
@@ -217,13 +214,12 @@ impl Interpreter {
             }
             section_idx += 2;
         } else {
-            // デフォルトアクション (else節)
+            // デフォルトアクション
             self.execute_tokens_sync(&sections[section_idx])?;
             return Ok(());
         }
     }
     
-    // この行に到達することはない（上記でデフォルト処理がない場合はエラーを返している）
     Ok(())
 }
 
