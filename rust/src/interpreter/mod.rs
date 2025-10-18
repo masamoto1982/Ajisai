@@ -131,58 +131,39 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed definition block"))
     }
 
-    // [FIXED] ガード構造のセクション収集 - デバッグ出力付き
-    fn collect_guard_sections(&mut self, tokens: &[Token], start: usize) -> Result<(Vec<Vec<Token>>, usize)> {
-        let mut sections = Vec::new();
-        let mut current_section = Vec::new();
-        let mut i = start;
-        
-        // セクション分割のデバッグログ
-        self.output_buffer.push_str(&format!(
-            "[GUARD_DEBUG] collect_guard_sections START: start={}, total_tokens={}\n",
-            start, tokens.len()
-        ));
-    
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::GuardSeparator => {
-                    sections.push(current_section);
-                    self.output_buffer.push_str(&format!(
-                        "[GUARD_DEBUG] Found ':' separator at pos {}, sections_count={}\n",
-                        i, sections.len()
-                    ));
-                    current_section = Vec::new();
-                }
-                Token::LineBreak => {
-                    self.output_buffer.push_str(&format!(
-                        "[GUARD_DEBUG] Found LineBreak at pos {}, stopping\n", i
-                    ));
+    fn collect_guard_sections(&self, tokens: &[Token], start: usize) -> Result<(Vec<Vec<Token>>, usize)> {
+    let mut sections = Vec::new();
+    let mut current_section = Vec::new();
+    let mut i = start;
+
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::GuardSeparator => {
+                sections.push(current_section);
+                current_section = Vec::new();
+            }
+            Token::LineBreak => {
+                // [修正] セクション数が偶数（デフォルト処理がない）なら改行を無視して続ける
+                if sections.len() % 2 == 0 {
+                    // 改行を無視して続ける
+                } else {
+                    // セクション数が奇数（デフォルト処理がある）なら、ガード構造終了
                     break;
                 }
-                _ => {
-                    current_section.push(tokens[i].clone());
-                }
             }
-            i += 1;
+            _ => {
+                current_section.push(tokens[i].clone());
+            }
         }
-    
-        if !current_section.is_empty() {
-            sections.push(current_section);
-        }
-        
-        self.output_buffer.push_str(&format!(
-            "[GUARD_DEBUG] collect_guard_sections END: final_sections_count={}\n",
-            sections.len()
-        ));
-        for (idx, section) in sections.iter().enumerate() {
-            self.output_buffer.push_str(&format!(
-                "[GUARD_DEBUG]   Section[{}]: {} tokens\n",
-                idx, section.len()
-            ));
-        }
-    
-        Ok((sections, i - start))
+        i += 1;
     }
+
+    if !current_section.is_empty() {
+        sections.push(current_section);
+    }
+
+    Ok((sections, i - start))
+}
 
     // [FIXED] 条件判定ヘルパー
     fn is_condition_true(&mut self, condition: &Value) -> Result<bool> {
