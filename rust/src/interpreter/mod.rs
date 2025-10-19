@@ -143,13 +143,9 @@ impl Interpreter {
                 current_section = Vec::new();
             }
             Token::LineBreak => {
-                // [修正] セクション数が偶数（デフォルト処理がない）なら改行を無視して続ける
-                if sections.len() % 2 == 0 {
-                    // 改行を無視して続ける
-                } else {
-                    // セクション数が奇数（デフォルト処理がある）なら、ガード構造終了
-                    break;
-                }
+                // [修正]
+                // 以前はここで break していたが、改行を無視して収集を続けるように変更
+                // if sections.len() % 2 == 0 { ... } else { break; } のロジックを削除
             }
             _ => {
                 current_section.push(tokens[i].clone());
