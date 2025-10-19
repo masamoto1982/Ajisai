@@ -55,9 +55,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("OR", "Vector logical OR", "Logic"),
         ("NOT", "Vector logical NOT", "Logic"),
         
-        // 制御構造
-        (":", "Guard operator for conditional execution. Usage: condition : action", "Control"),
-        (";", "Synonym for : (guard operator)", "Control"),
+        // 制御構造（ガード）
+        (":", "Guard separator for conditional execution. Usage: condition : action : condition : action : default", "Control"),
+        (";", "Synonym for : (guard separator)", "Control"),
         ("TIMES", "Execute custom word N times. Usage: 'WORD' [ n ] TIMES", "Control"),
         ("WAIT", "Execute custom word after delay. Usage: 'WORD' [ ms ] WAIT", "Control"),
 
@@ -101,3 +101,21 @@ pub fn get_builtin_detail(name: &str) -> String {
     }
     format!("No detailed information available for '{}'", name)
 }
+```
+
+---
+
+## 実装の要点
+
+1. **`Token::GuardSeparator`の再追加**: `:` と `;` を区別するためのトークン型を復活させました。
+
+2. **トークナイザでの処理**: `parse_single_char_tokens` 関数で `:` と `;` を `GuardSeparator` トークンとして認識します。
+
+3. **ガード構造の実行ロジック**:
+   - `execute_guard_structure`: ガードセパレータでトークン列を分割し、条件:処理のペアを順次評価
+   - `split_by_guard_separator`: トークン列をガードセパレータで分割
+   - `is_condition_true`: スタックトップの値を真偽値として評価
+
+4. **実行フロー**:
+```
+   条件1 : 処理1 : 条件2 : 処理2 : デフォルト処理
