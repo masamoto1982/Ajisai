@@ -49,7 +49,8 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     
     let mut new_dependencies = HashSet::new();
     for line in &lines {
-        for token in line.condition_tokens.iter().chain(line.body_tokens.iter()) {
+        // [修正] line.condition_tokens を削除
+        for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = s.to_uppercase();
                 if interp.dictionary.contains_key(&upper_s) && !interp.dictionary.get(&upper_s).unwrap().is_builtin {
@@ -108,17 +109,20 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
 }
 
 fn parse_single_execution_line(tokens: &[Token]) -> Result<ExecutionLine> {
-    let guard_position = tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
+    // [修正]
+    // ガード（:）の検索ロジックをすべて削除
+    // let guard_position = tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
     
-    let (condition_tokens, body_tokens) = if let Some(guard_pos) = guard_position {
-        (tokens[..guard_pos].to_vec(), tokens[guard_pos+1..].to_vec())
-    } else {
-        (Vec::new(), tokens.to_vec())
-    };
+    // let (condition_tokens, body_tokens) = if let Some(guard_pos) = guard_position {
+    //     (tokens[..guard_pos].to_vec(), tokens[guard_pos+1..].to_vec())
+    // } else {
+    //     (Vec::new(), tokens.to_vec())
+    // };
     
+    // 常に body_tokens のみで構成されるように変更
     Ok(ExecutionLine {
-        condition_tokens,
-        body_tokens,
+        // condition_tokens, <--- 削除
+        body_tokens: tokens.to_vec(),
     })
 }
 
