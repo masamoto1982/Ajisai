@@ -131,144 +131,10 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed definition block"))
     }
 
-    fn collect_guard_sections(&self, tokens: &[Token], start: usize) -> Result<(Vec<Vec<Token>>, usize)> {
-    let mut sections = Vec::new();
-    let mut current_section = Vec::new();
-    let mut i = start;
-
-    while i < tokens.len() {
-        match &tokens[i] {
-            Token::GuardSeparator => {
-                sections.push(current_section);
-                current_section = Vec::new();
-            }
-            Token::LineBreak => {
-                // [修正]
-                // 以前はここで break していたが、改行を無視して収集を続けるように変更
-                // if sections.len() % 2 == 0 { ... } else { break; } のロジックを削除
-            }
-            _ => {
-                current_section.push(tokens[i].clone());
-            }
-        }
-        i += 1;
-    }
-
-    if !current_section.is_empty() {
-        sections.push(current_section);
-    }
-
-    Ok((sections, i - start))
-}
-
-    // [FIXED] 条件判定ヘルパー
-    fn is_condition_true(&mut self, condition: &Value) -> Result<bool> {
-        match &condition.val_type {
-            ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
-                ValueType::Boolean(b) => {
-                    self.output_buffer.push_str(&format!(
-                        "[GUARD_DEBUG] is_condition_true: {}\n", b
-                    ));
-                    Ok(*b)
-                },
-                _ => {
-                    self.output_buffer.push_str(
-                        "[GUARD_DEBUG] ERROR: condition value is not boolean\n"
-                    );
-                    Err(AjisaiError::type_error("boolean", "other type"))
-                }
-            },
-            _ => {
-                self.output_buffer.push_str(
-                    "[GUARD_DEBUG] ERROR: condition is not single-element vector\n"
-                );
-                Err(AjisaiError::type_error("single-element vector with boolean", "other type"))
-            }
-        }
-    }
-
-    // [FIXED] ガード構造実行 - 正しい設計
-    fn execute_guard_structure(&mut self, first_condition: Value, sections: &[Vec<Token>]) -> Result<()> {
-        self.output_buffer.push_str(&format!(
-            "[GUARD_DEBUG] execute_guard_structure START: sections_count={}\n",
-            sections.len()
-        ));
-
-        // [修正]
-        // 構造 [action 1], [cond 2], [action 2], ..., [default] は偶数個のセクションを持つ
-        // したがって、奇数個のセクション (例: [action 1], [cond 2], [action 2] のみで default がない) がエラーとなる
-        if sections.len() % 2 != 0 {
-            self.output_buffer.push_str(&format!(
-                "[GUARD_DEBUG] ERROR: odd sections count ({}), need even (missing default?)\n",
-                sections.len()
-            ));
-            return Err(AjisaiError::from(
-                "Guard structure requires a default action (or has mismatched sections)"
-            ));
-        }
-
-        // 最初の条件を評価
-        let is_true = self.is_condition_true(&first_condition)?;
-        self.output_buffer.push_str(&format!(
-            "[GUARD_DEBUG] First condition: {}\n", is_true
-        ));
-
-        if is_true {
-            self.output_buffer.push_str(
-                "[GUARD_DEBUG] First condition TRUE, executing sections[0]\n"
-            );
-            // [修正]
-            // セクションが空 (例: [cond] : : [default]) の場合でも sections[0] は存在するが空
-            // したがって、空でないかチェックするか、execute_tokens_sync が空を許容する必要がある
-            // execute_tokens_sync は空を許容するのでこのままでOK
-            self.execute_tokens_sync(&sections[0])?;
-            return Ok(());
-        }
-
-        // 最初の条件が偽 → sections[1], sections[3], ... を条件として評価
-        let mut section_idx = 1;
-        while section_idx < sections.len() {
-            if section_idx + 1 < sections.len() {
-                // sections[section_idx] は条件、sections[section_idx + 1] はアクション
-                self.output_buffer.push_str(&format!(
-                    "[GUARD_DEBUG] Evaluating condition at section[{}]\n",
-                    section_idx
-                ));
-                
-                self.execute_tokens_sync(&sections[section_idx])?;
-                let cond = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                
-                let is_true = self.is_condition_true(&cond)?;
-                self.output_buffer.push_str(&format!(
-                    "[GUARD_DEBUG] Condition at section[{}]: {}\n",
-                    section_idx, is_true
-                ));
-
-                if is_true {
-                    self.output_buffer.push_str(&format!(
-                        "[GUARD_DEBUG] Condition TRUE, executing sections[{}]\n",
-                        section_idx + 1
-                    ));
-                    self.execute_tokens_sync(&sections[section_idx + 1])?;
-                    return Ok(());
-                }
-                section_idx += 2;
-            } else {
-                // デフォルトアクション（最後の要素）
-                self.output_buffer.push_str(&format!(
-                    "[GUARD_DEBUG] All conditions false, executing default at section[{}]\n",
-                    section_idx
-                ));
-                self.execute_tokens_sync(&sections[section_idx])?;
-                return Ok(());
-            }
-        }
-
-        self.output_buffer.push_str(
-            "[GUARD_DEBUG] execute_guard_structure END (normal)\n"
-        );
-        Ok(())
-    }
+    // [削除]
+    // fn collect_guard_sections(...)
+    // fn is_condition_true(...)
+    // fn execute_guard_structure(...)
 
     pub(crate) fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
@@ -314,18 +180,8 @@ impl Interpreter {
                         }
                     }
                 },
-                Token::GuardSeparator => {
-                    self.output_buffer.push_str(
-                        "[GUARD_DEBUG] >>> ENCOUNTERED GUARD SEPARATOR (:)\n"
-                    );
-                    let first_condition = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                    self.output_buffer.push_str(
-                        "[GUARD_DEBUG] >>> First condition popped\n"
-                    );
-                    let (sections, consumed) = self.collect_guard_sections(tokens, i + 1)?;
-                    self.execute_guard_structure(first_condition, &sections)?;
-                    i += consumed;
-                },
+                // [削除]
+                // Token::GuardSeparator => { ... }
                 Token::LineBreak => {
                     // Top-levelでは無視
                 },
@@ -353,35 +209,11 @@ impl Interpreter {
             return result;
         }
 
+        // [修正]
+        // ガードのロジック (`if !line.condition_tokens.is_empty() ...`) を削除
+        // 複数行の定義が実行されるように `break;` も削除
         for line in &def.lines {
-            if !line.condition_tokens.is_empty() {
-                self.execute_tokens_sync(&line.condition_tokens)?;
-                let condition_result = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                
-                let is_true = match &condition_result.val_type {
-                    ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
-                        ValueType::Boolean(b) => *b,
-                        _ => {
-                            self.stack.push(condition_result);
-                            return Err(AjisaiError::type_error("boolean condition", "other type"));
-                        }
-                    },
-                    _ => {
-                        self.stack.push(condition_result);
-                        return Err(AjisaiError::type_error("single-element vector with boolean", "other type"));
-                    }
-                };
-                
-                if is_true {
-                    self.execute_tokens_sync(&line.body_tokens)?;
-                    break;
-                } else {
-                    continue;
-                }
-            } else {
-                self.execute_tokens_sync(&line.body_tokens)?;
-                break;
-            }
+            self.execute_tokens_sync(&line.body_tokens)?;
         }
         Ok(())
     }
@@ -443,7 +275,7 @@ impl Interpreter {
             Token::Nil => "NIL".to_string(),
             Token::VectorStart(bt) => bt.opening_char().to_string(),
             Token::VectorEnd(bt) => bt.closing_char().to_string(),
-            Token::GuardSeparator => ":".to_string(),
+            // Token::GuardSeparator => ":".to_string(), // <--- 削除
             Token::DefBlockStart => "{".to_string(),
             Token::DefBlockEnd => "}".to_string(),
             Token::LineBreak => "\n".to_string(),
@@ -457,13 +289,8 @@ impl Interpreter {
                 for (i, line) in def.lines.iter().enumerate() {
                     if i > 0 { result.push('\n'); }
                     
-                    if !line.condition_tokens.is_empty() {
-                        for token in &line.condition_tokens {
-                            result.push_str(&self.token_to_string(token));
-                            result.push(' ');
-                        }
-                        result.push_str(": ");
-                    }
+                    // [修正]
+                    // if !line.condition_tokens.is_empty() { ... } のブロックを削除
                     
                     for token in &line.body_tokens {
                         result.push_str(&self.token_to_string(token));
@@ -510,7 +337,8 @@ impl Interpreter {
         for (word_name, word_def) in custom_words {
             let mut dependencies = HashSet::new();
             for line in &word_def.lines {
-                for token in line.condition_tokens.iter().chain(line.body_tokens.iter()) {
+                // [修正] line.condition_tokens を削除
+                for token in line.body_tokens.iter() {
                     if let Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
                         if self.dictionary.contains_key(&upper_s) && !self.dictionary.get(&upper_s).unwrap().is_builtin {
