@@ -49,7 +49,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     
     let mut new_dependencies = HashSet::new();
     for line in &lines {
-        // [修正] line.condition_tokens を削除
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = s.to_uppercase();
@@ -109,19 +108,7 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
 }
 
 fn parse_single_execution_line(tokens: &[Token]) -> Result<ExecutionLine> {
-    // [修正]
-    // ガード（:）の検索ロジックをすべて削除
-    // let guard_position = tokens.iter().position(|t| matches!(t, Token::GuardSeparator));
-    
-    // let (condition_tokens, body_tokens) = if let Some(guard_pos) = guard_position {
-    //     (tokens[..guard_pos].to_vec(), tokens[guard_pos+1..].to_vec())
-    // } else {
-    //     (Vec::new(), tokens.to_vec())
-    // };
-    
-    // 常に body_tokens のみで構成されるように変更
     Ok(ExecutionLine {
-        // condition_tokens, <--- 削除
         body_tokens: tokens.to_vec(),
     })
 }
@@ -213,54 +200,38 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
     let all_tokens = crate::tokenizer::tokenize_with_custom_words(input, &custom_word_names)
         .map_err(|e| AjisaiError::from(format!("Tokenization error: {}", e)))?;
     
-    let mut definitions = Vec::new();
+    let mut current_def_block = Vec::new();
+    let mut current_description: Option<String> = None;
     let mut i = 0;
-    let mut current_body_start = 0;
     
     while i < all_tokens.len() {
-        if let Token::Symbol(s) = &all_tokens[i] {
-            if s.to_uppercase() == "DEF" {
-                if i == 0 || current_body_start >= i - 1 {
-                    return Err(AjisaiError::from("DEF requires a body and name"));
-                }
-                
-                let name = match &all_tokens[i - 1] {
-                    Token::String(s) => s.clone(),
-                    _ => return Err(AjisaiError::from("DEF requires a string name")),
-                };
-                
-                let mut description = None;
-                let mut next_start = i + 1;
-                
-                if i + 1 < all_tokens.len() {
-                    if let Token::String(desc) = &all_tokens[i + 1] {
-                        description = Some(desc.clone());
-                        next_start = i + 2;
+        match &all_tokens[i] {
+            Token::Comment(desc) => {
+                current_description = Some(desc.clone());
+                i += 1;
+            },
+            Token::DefBlockStart => {
+                let (body_tokens, consumed) = interp.collect_def_block(&all_tokens, i)?;
+                current_def_block = body_tokens;
+                i += consumed;
+            },
+            Token::String(name) => {
+                if !current_def_block.is_empty() {
+                    if i + 1 < all_tokens.len() && all_tokens[i + 1] == Token::Symbol("DEF".to_string()) {
+                        op_def_inner(interp, name, &current_def_block, current_description.take())?;
+                        current_def_block.clear();
+                        i += 2;
+                    } else {
+                        i += 1;
                     }
+                } else {
+                    i += 1;
                 }
-                
-                let body_end = i - 1;
-                let body_tokens: Vec<Token> = all_tokens[current_body_start..body_end].to_vec();
-                
-                definitions.push((name, body_tokens, description));
-                
-                while next_start < all_tokens.len() && matches!(all_tokens[next_start], Token::LineBreak) {
-                    next_start += 1;
-                }
-                current_body_start = next_start;
-                i = next_start;
-                continue;
+            },
+            _ => {
+                i += 1;
             }
         }
-        i += 1;
-    }
-    
-    if definitions.is_empty() {
-        return Err(AjisaiError::from("No DEF keyword found"));
-    }
-    
-    for (name, body_tokens, description) in definitions {
-        op_def_inner(interp, &name, &body_tokens, description)?;
     }
     
     Ok(())
