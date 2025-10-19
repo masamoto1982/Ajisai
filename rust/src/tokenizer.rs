@@ -113,7 +113,7 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
         '}' => Some((Token::VectorEnd(BracketType::Curly), 1)),
         '(' => Some((Token::VectorStart(BracketType::Round), 1)),
         ')' => Some((Token::VectorEnd(BracketType::Round), 1)),
-        ':' | ';' => Some((Token::GuardSeparator, 1)),
+        // ':' | ';' => Some((Token::GuardSeparator, 1)), <--- 削除
         _ => None,
     }
 }
