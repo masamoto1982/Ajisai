@@ -19,7 +19,7 @@ pub enum Token {
     VectorEnd(BracketType),
     DefBlockStart,
     DefBlockEnd,
-    GuardSeparator, // : または ;
+    // GuardSeparator, // : または ;  <--- 削除
     Nil,
     LineBreak,
 }
@@ -64,7 +64,7 @@ impl BracketType {
 
 #[derive(Debug, Clone)]
 pub struct ExecutionLine {
-    pub condition_tokens: Vec<Token>,
+    // pub condition_tokens: Vec<Token>, <--- 削除
     pub body_tokens: Vec<Token>,
 }
 
