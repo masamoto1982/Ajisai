@@ -11,7 +11,7 @@ pub mod audio;
 pub mod higher_order;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition, ExecutionLine};
+use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition};
 use crate::types::fraction::Fraction;
 use self::error::{Result, AjisaiError};
 use std::str::FromStr;
@@ -325,19 +325,15 @@ impl Interpreter {
             "AND" => comparison::op_and(self),
             "OR" => comparison::op_or(self),
             "NOT" => comparison::op_not(self),
-            
-            // 制御構造
-            "TIMES" => control::op_times(self),
-            "WAIT" => control::op_wait(self),
 
             // スタック操作
-            "DROP" => io::op_drop(self),
-            "DUP" => io::op_dup(self),
-            "SWAP" => io::op_swap(self),
-            "OVER" => io::op_over(self),
-            "ROT" => io::op_rot(self),
-            "DEPTH" => io::op_depth(self),
-            "CLEAR" => io::op_clear(self),
+            "DROP" => vector_ops::op_drop(self),
+            "DUP" => vector_ops::op_dup(self),
+            "SWAP" => vector_ops::op_swap(self),
+            "OVER" => vector_ops::op_over(self),
+            "ROT" => vector_ops::op_rot(self),
+            "DEPTH" => vector_ops::op_depth(self),
+            "CLEAR" => vector_ops::op_clear(self),
             
             // 型変換・検査
             "TO_STRING" => io::op_to_string(self),
@@ -346,21 +342,18 @@ impl Interpreter {
             
             // 入出力
             "PRINT" => io::op_print(self),
-            "PRINTLN" => io::op_println(self),
             "'" => io::op_quote(self),
-            "[]" => io::op_empty_vector(self),
+            "[]" => io::op_empty_brackets(self),
             
             // カスタムワード管理
             "DEF" => dictionary::op_def(self),
             "DEL" => dictionary::op_del(self),
-            "WORDS" => dictionary::op_words(self),
             "LOOKUP" => dictionary::op_lookup(self),
             
             "RESET" => self.execute_reset(),
             
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
-            "REDUCE" => higher_order::op_reduce(self),
             
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
