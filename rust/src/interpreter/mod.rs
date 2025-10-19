@@ -194,14 +194,16 @@ impl Interpreter {
             sections.len()
         ));
 
-        // セクション数は必ず奇数（条件-アクション-条件-...-デフォルト）
-        if sections.len() % 2 == 0 {
+        // [修正]
+        // 構造 [action 1], [cond 2], [action 2], ..., [default] は偶数個のセクションを持つ
+        // したがって、奇数個のセクション (例: [action 1], [cond 2], [action 2] のみで default がない) がエラーとなる
+        if sections.len() % 2 != 0 {
             self.output_buffer.push_str(&format!(
-                "[GUARD_DEBUG] ERROR: even sections count ({}), need odd\n",
+                "[GUARD_DEBUG] ERROR: odd sections count ({}), need even (missing default?)\n",
                 sections.len()
             ));
             return Err(AjisaiError::from(
-                "Guard structure requires a default action"
+                "Guard structure requires a default action (or has mismatched sections)"
             ));
         }
 
@@ -215,6 +217,10 @@ impl Interpreter {
             self.output_buffer.push_str(
                 "[GUARD_DEBUG] First condition TRUE, executing sections[0]\n"
             );
+            // [修正]
+            // セクションが空 (例: [cond] : : [default]) の場合でも sections[0] は存在するが空
+            // したがって、空でないかチェックするか、execute_tokens_sync が空を許容する必要がある
+            // execute_tokens_sync は空を許容するのでこのままでOK
             self.execute_tokens_sync(&sections[0])?;
             return Ok(());
         }
