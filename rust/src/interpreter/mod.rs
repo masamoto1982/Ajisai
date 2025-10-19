@@ -368,4 +368,135 @@ impl Interpreter {
 
     pub fn token_to_string(&self, token: &Token) -> String {
         match token {
-            Token::Number(
+            Token::Number(n) => n.clone(),
+            Token::String(s) => format!("'{}'", s),
+            Token::Boolean(true) => "TRUE".to_string(),
+            Token::Boolean(false) => "FALSE".to_string(),
+            Token::Symbol(s) => s.clone(),
+            Token::Nil => "NIL".to_string(),
+            Token::VectorStart(bt) => bt.opening_char().to_string(),
+            Token::VectorEnd(bt) => bt.closing_char().to_string(),
+            Token::GuardSeparator => ":".to_string(),
+            Token::DefBlockStart => "{".to_string(),
+            Token::DefBlockEnd => "}".to_string(),
+            Token::LineBreak => "\n".to_string(),
+        }
+    }
+    
+    pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
+        if let Some(def) = self.dictionary.get(name) {
+            if !def.is_builtin && !def.lines.is_empty() {
+                let mut result = String::new();
+                for (i, line) in def.lines.iter().enumerate() {
+                    if i > 0 { result.push('\n'); }
+                    
+                    for token in &line.body_tokens {
+                        result.push_str(&self.token_to_string(token));
+                        result.push(' ');
+                    }
+                }
+                return Some(result.trim().to_string());
+            }
+        }
+        None
+    }
+    
+    pub fn execute_reset(&mut self) -> Result<()> {
+        self.stack.clear(); 
+        self.dictionary.clear();
+        self.dependents.clear();
+        self.output_buffer.clear(); 
+        self.definition_to_load = None;
+        self.operation_target = OperationTarget::StackTop;
+        crate::builtins::register_builtins(&mut self.dictionary);
+        Ok(())
+    }
+
+    pub async fn execute(&mut self, code: &str) -> Result<()> {
+        let custom_word_names: HashSet<String> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect();
+        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
+        self.execute_tokens_sync(&tokens)
+    }
+
+    pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
+    pub fn get_stack(&self) -> &Stack { &self.stack }
+    pub fn set_stack(&mut self, stack: Stack) { self.stack = stack; }
+
+    pub fn rebuild_dependencies(&mut self) -> Result<()> {
+        self.dependents.clear();
+        let custom_words: Vec<(String, WordDefinition)> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.clone()))
+            .collect();
+            
+        for (word_name, word_def) in custom_words {
+            let mut dependencies = HashSet::new();
+            for line in &word_def.lines {
+                for token in line.body_tokens.iter() {
+                    if let Token::Symbol(s) = token {
+                        let upper_s = s.to_uppercase();
+                        if self.dictionary.contains_key(&upper_s) && !self.dictionary.get(&upper_s).unwrap().is_builtin {
+                            dependencies.insert(upper_s.clone());
+                            self.dependents.entry(upper_s).or_default().insert(word_name.clone());
+                        }
+                    }
+                }
+            }
+            if let Some(def) = self.dictionary.get_mut(&word_name) {
+                def.dependencies = dependencies;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn init_step_execution(&mut self, code: &str) -> Result<()> {
+        let custom_word_names: HashSet<String> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect();
+        let _tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
+        Ok(())
+    }
+
+    pub fn execute_step(&mut self) -> Result<bool> {
+        Ok(false)
+    }
+
+    pub fn get_step_info(&self) -> Option<(usize, usize)> {
+        None
+    }
+
+    pub fn get_register(&self) -> Option<&Value> {
+        None
+    }
+
+    pub fn set_register(&mut self, _value: Option<Value>) {
+    }
+
+    pub fn get_custom_words(&self) -> Vec<String> {
+        self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect()
+    }
+
+    pub fn get_custom_words_with_descriptions(&self) -> Vec<(String, Option<String>)> {
+        self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.description.clone()))
+            .collect()
+    }
+
+    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
+        self.dictionary.iter()
+            .map(|(name, def)| (name.clone(), def.description.clone(), def.is_builtin))
+            .collect()
+    }
+
+    pub fn get_word_definition(&self, name: &str) -> Option<String> {
+        self.get_word_definition_tokens(name)
+    }
+}
