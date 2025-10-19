@@ -5,7 +5,6 @@ pub mod fraction;
 use std::collections::HashSet;
 use std::fmt;
 use num_bigint::BigInt;
-// `BigInt::one()` を使用するために `One` トレイトをスコープに入れる
 use num_traits::One;
 use self::fraction::Fraction;
 
@@ -19,7 +18,7 @@ pub enum Token {
     VectorEnd(BracketType),
     DefBlockStart,
     DefBlockEnd,
-    // GuardSeparator, // : または ;  <--- 削除
+    GuardSeparator,  // : または ;
     Nil,
     LineBreak,
 }
@@ -64,7 +63,6 @@ impl BracketType {
 
 #[derive(Debug, Clone)]
 pub struct ExecutionLine {
-    // pub condition_tokens: Vec<Token>, <--- 削除
     pub body_tokens: Vec<Token>,
 }
 
@@ -92,10 +90,64 @@ impl fmt::Display for Value {
                 }
                 write!(f, "{}", bracket_type.closing_char())
             },
-            ValueType::DefinitionBody(_) => write!(f, ": ... ;"),
+            ValueType::DefinitionBody(_) => write!(f, "{{ ... }}"),
             ValueType::Nil => write!(f, "nil"),
         }
     }
 }
 
 pub type Stack = Vec<Value>;
+
+#[derive(Debug, Clone)]
+pub enum AjisaiError {
+    StackUnderflow,
+    TypeError { expected: String, got: String },
+    IndexOutOfBounds(i64),
+    UnknownWord(String),
+    DivisionByZero,
+    InvalidOperation(String),
+    ParseError(String),
+    SyntaxError(String),
+    RedefinitionError(String),
+    Custom(String),
+}
+
+impl AjisaiError {
+    pub fn type_error(expected: &str, got: &str) -> Self {
+        AjisaiError::TypeError {
+            expected: expected.to_string(),
+            got: got.to_string(),
+        }
+    }
+}
+
+impl fmt::Display for AjisaiError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AjisaiError::StackUnderflow => write!(f, "Stack underflow"),
+            AjisaiError::TypeError { expected, got } => write!(f, "Type error: expected {}, got {}", expected, got),
+            AjisaiError::IndexOutOfBounds(idx) => write!(f, "Index out of bounds: {}", idx),
+            AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
+            AjisaiError::DivisionByZero => write!(f, "Division by zero"),
+            AjisaiError::InvalidOperation(msg) => write!(f, "Invalid operation: {}", msg),
+            AjisaiError::ParseError(msg) => write!(f, "Parse error: {}", msg),
+            AjisaiError::SyntaxError(msg) => write!(f, "Syntax error: {}", msg),
+            AjisaiError::RedefinitionError(msg) => write!(f, "Redefinition error: {}", msg),
+            AjisaiError::Custom(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
+impl std::error::Error for AjisaiError {}
+
+impl From<String> for AjisaiError {
+    fn from(s: String) -> Self {
+        AjisaiError::Custom(s)
+    }
+}
+
+impl From<&str> for AjisaiError {
+    fn from(s: &str) -> Self {
+        AjisaiError::Custom(s.to_string())
+    }
+}
