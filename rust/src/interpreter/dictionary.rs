@@ -201,15 +201,10 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
         .map_err(|e| AjisaiError::from(format!("Tokenization error: {}", e)))?;
     
     let mut current_def_block = Vec::new();
-    let mut current_description: Option<String> = None;
     let mut i = 0;
     
     while i < all_tokens.len() {
         match &all_tokens[i] {
-            Token::Comment(desc) => {
-                current_description = Some(desc.clone());
-                i += 1;
-            },
             Token::DefBlockStart => {
                 let (body_tokens, consumed) = interp.collect_def_block(&all_tokens, i)?;
                 current_def_block = body_tokens;
@@ -218,7 +213,7 @@ pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) ->
             Token::String(name) => {
                 if !current_def_block.is_empty() {
                     if i + 1 < all_tokens.len() && all_tokens[i + 1] == Token::Symbol("DEF".to_string()) {
-                        op_def_inner(interp, name, &current_def_block, current_description.take())?;
+                        op_def_inner(interp, name, &current_def_block, None)?;
                         current_def_block.clear();
                         i += 2;
                     } else {
