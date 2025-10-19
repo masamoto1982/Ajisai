@@ -325,25 +325,9 @@ impl Interpreter {
             "AND" => comparison::op_and(self),
             "OR" => comparison::op_or(self),
             "NOT" => comparison::op_not(self),
-
-            // スタック操作
-            "DROP" => vector_ops::op_drop(self),
-            "DUP" => vector_ops::op_dup(self),
-            "SWAP" => vector_ops::op_swap(self),
-            "OVER" => vector_ops::op_over(self),
-            "ROT" => vector_ops::op_rot(self),
-            "DEPTH" => vector_ops::op_depth(self),
-            "CLEAR" => vector_ops::op_clear(self),
-            
-            // 型変換・検査
-            "TO_STRING" => io::op_to_string(self),
-            "TO_NUMBER" => io::op_to_number(self),
-            "TYPE" => io::op_type(self),
             
             // 入出力
             "PRINT" => io::op_print(self),
-            "'" => io::op_quote(self),
-            "[]" => io::op_empty_brackets(self),
             
             // カスタムワード管理
             "DEF" => dictionary::op_def(self),
