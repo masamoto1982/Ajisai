@@ -56,7 +56,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("NOT", "Vector logical NOT", "Logic"),
         
         // 制御構造
-        (":", "Conditional execution. Usage: condition : action", "Control"),
+        // (":", "Conditional execution. Usage: condition : action", "Control"), // <--- 削除
         // 注：「;」は削除（「:」と同義のため）
         ("TIMES", "Execute custom word N times. Usage: 'WORD' [ n ] TIMES", "Control"),
         ("WAIT", "Execute custom word after delay. Usage: 'WORD' [ ms ] WAIT", "Control"),
