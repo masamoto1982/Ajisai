@@ -165,7 +165,7 @@ export class Display {
             elem.className = 'stack-item';
             
             try {
-                elem.textContent = this.formatValue(item);
+                elem.textContent = this.formatValue(item, 0); // <--- 修正点: depth 0で呼び出し
             } catch (error) {
                 console.error(`Error formatting item ${index}:`, error);
                 elem.textContent = 'ERROR';
@@ -192,7 +192,7 @@ export class Display {
         display.appendChild(container);
     }
 
-    private formatValue(item: Value): string {
+    private formatValue(item: Value, depth: number = 0): string { // <--- 修正点: depth引数を追加
         if (!item || !item.type) {
             return 'unknown';
         }
@@ -213,23 +213,28 @@ export class Display {
             case 'boolean':
                 return item.value ? 'true' : 'false';
             case 'vector': {
+                // ★ ここからが修正箇所
+                const bracketIndex = depth % 3; // ネストレベルを3で割った剰余
+                let openBracket: string, closeBracket: string;
+
+                switch (bracketIndex) {
+                    case 0: openBracket = '['; closeBracket = ']'; break; // レベル 0, 3, 6...
+                    case 1: openBracket = '{'; closeBracket = '}'; break; // レベル 1, 4, 7...
+                    case 2: openBracket = '('; closeBracket = ')'; break; // レベル 2, 5, 8...
+                    default: openBracket = '['; closeBracket = ']'; break;
+                }
+
                 if (Array.isArray(item.value)) {
-                    const bracketType = item.bracketType || 'square';
-                    let openBracket: string, closeBracket: string;
-                    
-                    switch (bracketType) {
-                        case 'curly': openBracket = '{'; closeBracket = '}'; break;
-                        case 'round': openBracket = '('; closeBracket = ')'; break;
-                        default: openBracket = '['; closeBracket = ']'; break;
-                    }
-                    
                     const elements = item.value.map((v: Value) => {
-                        try { return this.formatValue(v); } catch { return '?'; }
+                        // 再帰呼び出し時に depth を +1 する
+                        try { return this.formatValue(v, depth + 1); } catch { return '?'; }
                     }).join(' ');
                     
                     return `${openBracket}${elements ? ' ' + elements + ' ' : ''}${closeBracket}`;
                 }
-                return '[ ]';
+                // 空のベクタの場合
+                return `${openBracket}${closeBracket}`; 
+                // ★ 修正ここまで
             }
             case 'nil':
                 return 'nil';
