@@ -105,33 +105,6 @@ impl Interpreter {
         Err(AjisaiError::from(format!("Unclosed vector starting with {}", bracket_type.opening_char())))
     }
 
-    pub(crate) fn collect_def_block(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Token>, usize)> {
-        let mut body_tokens = Vec::new();
-        let mut i = start_index + 1;
-        let mut depth = 1;
-
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::DefBlockStart => {
-                    depth += 1;
-                    body_tokens.push(tokens[i].clone());
-                },
-                Token::DefBlockEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Ok((body_tokens, i - start_index + 1));
-                    }
-                    body_tokens.push(tokens[i].clone());
-                },
-                _ => {
-                    body_tokens.push(tokens[i].clone());
-                }
-            }
-            i += 1;
-        }
-        Err(AjisaiError::from("Unclosed definition block"))
-    }
-
     // ガード構造を分割して実行
     fn execute_guard_structure(&mut self, tokens: &[Token]) -> Result<()> {
         let sections = self.split_by_guard_separator(tokens);
@@ -253,12 +226,6 @@ impl Interpreter {
                     self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
                     i += consumed - 1;
                 },
-                Token::DefBlockStart => {
-                    self.ensure_wrapped_stack();
-                    let (body_tokens, consumed) = self.collect_def_block(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::DefinitionBody(body_tokens) });
-                    i += consumed - 1;
-                },
                 Token::Symbol(name) => {
                     let upper_name = name.to_uppercase();
                     match upper_name.as_str() {
@@ -363,8 +330,6 @@ impl Interpreter {
             Token::VectorStart(bt) => bt.opening_char().to_string(),
             Token::VectorEnd(bt) => bt.closing_char().to_string(),
             Token::GuardSeparator => ":".to_string(),
-            Token::DefBlockStart => "{".to_string(),
-            Token::DefBlockEnd => "}".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }
