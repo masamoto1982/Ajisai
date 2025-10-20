@@ -16,8 +16,6 @@ pub enum Token {
     Symbol(String),
     VectorStart(BracketType),
     VectorEnd(BracketType),
-    DefBlockStart,
-    DefBlockEnd,
     GuardSeparator,  // : または ;
     Nil,
     LineBreak,
@@ -35,7 +33,6 @@ pub enum ValueType {
     Boolean(bool),
     Symbol(String),
     Vector(Vec<Value>, BracketType),
-    DefinitionBody(Vec<Token>),
     Nil,
 }
 
@@ -90,7 +87,6 @@ impl fmt::Display for Value {
                 }
                 write!(f, "{}", bracket_type.closing_char())
             },
-            ValueType::DefinitionBody(_) => write!(f, "{{ ... }}"),
             ValueType::Nil => write!(f, "nil"),
         }
     }
