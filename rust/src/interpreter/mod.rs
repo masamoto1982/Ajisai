@@ -14,7 +14,6 @@ use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition};
 use crate::types::fraction::Fraction;
 use self::error::{Result, AjisaiError};
-use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTarget {
