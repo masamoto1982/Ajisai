@@ -3,9 +3,10 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::types::{Token, ExecutionLine, ValueType, WordDefinition};
 use std::collections::HashSet;
+use crate::tokenizer; // <--- 追加
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 { return Err(AjisaiError::from("DEF requires a definition block and a name")); }
+    if interp.stack.len() < 2 { return Err(AjisaiError::from("DEF requires a definition string and a name")); }
 
     let name_val = interp.stack.pop().unwrap();
     let body_val = interp.stack.pop().unwrap();
@@ -24,11 +25,27 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::type_error("vector for word name", "other type"));
     };
     
-    let tokens = if let ValueType::DefinitionBody(t) = body_val.val_type {
-        t
+    let body_str = if let ValueType::Vector(v, _) = body_val.val_type {
+         if v.len() == 1 {
+            if let ValueType::String(s) = &v[0].val_type {
+                s.clone()
+            } else {
+                return Err(AjisaiError::type_error("string for word body", "other type"));
+            }
+        } else {
+            return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
+        }
     } else {
-        return Err(AjisaiError::type_error("definition block for word body", "other type"));
+        return Err(AjisaiError::type_error("vector for word body", "other type"));
     };
+
+    let custom_word_names: HashSet<String> = interp.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
+    
+    let tokens = tokenizer::tokenize_with_custom_words(&body_str, &custom_word_names)
+        .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
 
     op_def_inner(interp, &name_str, &tokens, None)
 }
@@ -175,12 +192,12 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
         } else {
             let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
             let full_definition = if definition.is_empty() {
-                format!("'{}' DEF", name_str)
+                format!("[ '{}' ] [ '{}' ] DEF", "", name_str) // 空の定義
             } else {
                 if let Some(desc) = &def.description {
-                    format!("{}\n'{}' '{}' DEF", definition, name_str, desc)
+                    format!("[ '{}' ] [ '{}' ] '{}' DEF", definition, name_str, desc)
                 } else {
-                    format!("{}\n'{}' DEF", definition, name_str)
+                    format!("[ '{}' ] [ '{}' ] DEF", definition, name_str)
                 }
             };
             interp.definition_to_load = Some(full_definition);
@@ -189,45 +206,4 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     } else {
         Err(AjisaiError::UnknownWord(name_str))
     }
-}
-
-pub fn parse_multiple_word_definitions(interp: &mut Interpreter, input: &str) -> Result<()> {
-    let custom_word_names: HashSet<String> = interp.dictionary.iter()
-        .filter(|(_, def)| !def.is_builtin)
-        .map(|(name, _)| name.clone())
-        .collect();
-    
-    let all_tokens = crate::tokenizer::tokenize_with_custom_words(input, &custom_word_names)
-        .map_err(|e| AjisaiError::from(format!("Tokenization error: {}", e)))?;
-    
-    let mut current_def_block = Vec::new();
-    let mut i = 0;
-    
-    while i < all_tokens.len() {
-        match &all_tokens[i] {
-            Token::DefBlockStart => {
-                let (body_tokens, consumed) = interp.collect_def_block(&all_tokens, i)?;
-                current_def_block = body_tokens;
-                i += consumed;
-            },
-            Token::String(name) => {
-                if !current_def_block.is_empty() {
-                    if i + 1 < all_tokens.len() && all_tokens[i + 1] == Token::Symbol("DEF".to_string()) {
-                        op_def_inner(interp, name, &current_def_block, None)?;
-                        current_def_block.clear();
-                        i += 2;
-                    } else {
-                        i += 1;
-                    }
-                } else {
-                    i += 1;
-                }
-            },
-            _ => {
-                i += 1;
-            }
-        }
-    }
-    
-    Ok(())
 }
