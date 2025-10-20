@@ -136,9 +136,18 @@ impl Interpreter {
     fn execute_guard_structure(&mut self, tokens: &[Token]) -> Result<()> {
         let sections = self.split_by_guard_separator(tokens);
         
-        // 最後のセクションがデフォルト処理
+        // セクションが空の場合
         if sections.is_empty() {
             return Ok(());
+        }
+        
+        // セクション数が偶数の場合はエラー（条件:処理のペアが不完全）
+        // 正しい形式: 条件 : 処理 : 条件 : 処理 : デフォルト処理
+        // セクション数は奇数でなければならない（最後がデフォルト処理）
+        if sections.len() % 2 == 0 {
+            return Err(AjisaiError::SyntaxError(
+                "Guard structure must have default action. Expected odd number of sections separated by ':' or ';'".to_string()
+            ));
         }
         
         // 最後のセクション以外を条件:処理のペアとして処理
