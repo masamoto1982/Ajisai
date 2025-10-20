@@ -145,8 +145,8 @@ impl Interpreter {
         // 正しい形式: 条件 : 処理 : 条件 : 処理 : デフォルト処理
         // セクション数は奇数でなければならない（最後がデフォルト処理）
         if sections.len() % 2 == 0 {
-            return Err(AjisaiError::SyntaxError(
-                "Guard structure must have default action. Expected odd number of sections separated by ':' or ';'".to_string()
+            return Err(AjisaiError::from(
+                "Guard structure must have default action. Expected odd number of sections separated by ':' or ';'"
             ));
         }
         
