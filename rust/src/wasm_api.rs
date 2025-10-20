@@ -277,7 +277,6 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             }
             ValueType::Vector(vec, bracket_type)
         },
-        "definition" => ValueType::DefinitionBody(Vec::new()),
         "nil" => ValueType::Nil,
         _ => return Err(format!("Unknown type: {}", type_str)),
     };
@@ -319,10 +318,6 @@ fn value_to_js_value(value: &Value) -> JsValue {
                 BracketType::Round => "round",
             };
             js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
-        },
-        ValueType::DefinitionBody(_) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"definition".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &":...;".into()).unwrap();
         },
         ValueType::Nil => {
             js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
