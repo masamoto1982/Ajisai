@@ -44,6 +44,8 @@ impl Interpreter {
         interpreter
     }
 
+    // ★★★ is_bare_stack と ensure_wrapped_stack は削除 (前回の修正を維持) ★★★
+
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, BracketType, usize)> {
         let bracket_type = match &tokens[start_index] {
             Token::VectorStart(bt) => bt.clone(),
@@ -181,6 +183,7 @@ impl Interpreter {
         }
     }
 
+    // ★★★ 変更：リテラルを [ ] でラップしてプッシュする (Stringを除く) ★★★
     pub(crate) fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
         // ガードセパレータが含まれているかチェック
         if tokens.iter().any(|t| matches!(t, Token::GuardSeparator)) {
@@ -191,18 +194,26 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Number(n) => {
-                    self.stack.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
+                    // Numberは [ N ] としてプッシュ
+                    let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::String(s) => {
+                    // Stringは 'S' としてプッシュ (DEF構文のためラップしない)
                     self.stack.push(Value { val_type: ValueType::String(s.clone()) });
                 },
                 Token::Boolean(b) => {
-                    self.stack.push(Value { val_type: ValueType::Boolean(*b) });
+                    // Booleanは [ B ] としてプッシュ
+                    let val = Value { val_type: ValueType::Boolean(*b) };
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::Nil => {
-                    self.stack.push(Value { val_type: ValueType::Nil });
+                    // Nilは [ NIL ] としてプッシュ
+                    let val = Value { val_type: ValueType::Nil };
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::VectorStart(_) => {
+                    // Vectorは [ ... ] としてプッシュ (そのまま)
                     let (values, bracket_type, consumed) = self.collect_vector(tokens, i)?;
                     self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
                     i += consumed - 1;
@@ -213,6 +224,7 @@ impl Interpreter {
                         "STACK" => self.operation_target = OperationTarget::Stack,
                         "STACKTOP" => self.operation_target = OperationTarget::StackTop,
                         _ => {
+                            // ラップ処理は不要。演算(op_addなど)側が [ N ] を期待する。
                             self.execute_word_sync(&upper_name)?;
                             self.operation_target = OperationTarget::StackTop;
                         }
