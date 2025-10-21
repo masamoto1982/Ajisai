@@ -132,15 +132,25 @@ fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
     let mut string = String::new();
     let mut i = 1;
     
-    // ★ 複数行文字列に対応
+    // ★ 変更：エスケープ ('' or "") に対応
     while i < chars.len() {
         if chars[i] == quote_char {
-            return Some((Token::String(string), i + 1));
+            // 次の文字も同じクォート文字か？ (e.g., '')
+            if i + 1 < chars.len() && chars[i+1] == quote_char {
+                // エスケープされたクォート文字
+                string.push(quote_char);
+                i += 2; // 2文字スキップ
+            } else {
+                // 文字列の終端
+                return Some((Token::String(string), i + 1));
+            }
         }
-        // TODO: エスケープシーケンス（ \n, \t, \" など）の対応がここにはないが、
-        // リテラルの改行は許可する
-        string.push(chars[i]);
-        i += 1;
+        // TODO: \n, \t などの他のエスケープシーケンスの対応
+        else {
+            // 通常の文字（リテラルの改行も許可）
+            string.push(chars[i]);
+            i += 1;
+        }
     }
     
     // 閉じ引用符が見つからなかった
