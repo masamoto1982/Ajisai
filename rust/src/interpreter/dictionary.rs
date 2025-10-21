@@ -170,25 +170,42 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 
 fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
-    let mut current_line_tokens = Vec::new();
+    let mut processed_tokens = Vec::new();
     
-    for token in tokens {
-        match token {
+    // ガード文内の文字列をクォーテーションに変換
+    let mut i = 0;
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::String(s) if s.starts_with('\'') && s.ends_with('\'') => {
+                // シングルクォート文字列をクォーテーションとして扱う
+                let inner = &s[1..s.len()-1];
+                // 内部をトークン化
+                let inner_tokens = crate::tokenizer::tokenize(inner)
+                    .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
+                processed_tokens.push(Token::VectorStart(BracketType::Square));
+                processed_tokens.extend(inner_tokens);
+                processed_tokens.push(Token::VectorEnd(BracketType::Square));
+            },
             Token::LineBreak => {
-                if !current_line_tokens.is_empty() {
-                    let execution_line = parse_single_execution_line(&current_line_tokens)?;
+                if !processed_tokens.is_empty() {
+                    let execution_line = ExecutionLine {
+                        body_tokens: processed_tokens.clone(),
+                    };
                     lines.push(execution_line);
-                    current_line_tokens.clear();
+                    processed_tokens.clear();
                 }
             },
             _ => {
-                current_line_tokens.push(token.clone());
+                processed_tokens.push(tokens[i].clone());
             }
         }
+        i += 1;
     }
     
-    if !current_line_tokens.is_empty() {
-        let execution_line = parse_single_execution_line(&current_line_tokens)?;
+    if !processed_tokens.is_empty() {
+        let execution_line = ExecutionLine {
+            body_tokens: processed_tokens,
+        };
         lines.push(execution_line);
     }
     
