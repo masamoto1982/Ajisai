@@ -266,57 +266,57 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        match name {
-            // 位置指定操作（0オリジン）
-            "GET" => vector_ops::op_get(self),
-            "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self),
-            "REMOVE" => vector_ops::op_remove(self),
-            
-            // 量指定操作（1オリジン）
-            "LENGTH" => vector_ops::op_length(self),
-            "TAKE" => vector_ops::op_take(self),
-            
-            // Vector構造操作
-            "SPLIT" => vector_ops::op_split(self),
-            "CONCAT" => vector_ops::op_concat(self),
-            "REVERSE" => vector_ops::op_reverse(self),
-            "LEVEL" => vector_ops::op_level(self),
+    match name {
+        // 位置指定操作（0オリジン）
+        "GET" => vector_ops::op_get(self),
+        "INSERT" => vector_ops::op_insert(self),
+        "REPLACE" => vector_ops::op_replace(self),
+        "REMOVE" => vector_ops::op_remove(self),
+        
+        // 量指定操作(1オリジン)
+        "LENGTH" => vector_ops::op_length(self),
+        "TAKE" => vector_ops::op_take(self),
+        
+        // Vector構造操作
+        "SPLIT" => vector_ops::op_split(self),
+        "CONCAT" => vector_ops::op_concat(self),
+        "REVERSE" => vector_ops::op_reverse(self),
+        "LEVEL" => vector_ops::op_level(self),
 
-            // 算術演算
-            "+" => arithmetic::op_add(self),
-            "-" => arithmetic::op_sub(self),
-            "*" => arithmetic::op_mul(self),
-            "/" => arithmetic::op_div(self),
-            
-            // 比較演算
-            "=" => comparison::op_eq(self),
-            "<" => comparison::op_lt(self),
-            "<=" => comparison::op_le(self),
-            ">" => comparison::op_gt(self),
-            ">=" => comparison::op_ge(self),
-            
-            // 論理演算
-            "AND" => comparison::op_and(self),
-            "OR" => comparison::op_or(self),
-            "NOT" => comparison::op_not(self),
-            
-            // 入出力
-            "PRINT" => io::op_print(self),
-            
-            // カスタムワード管理
-            "DEF" => dictionary::op_def(self),
-            "DEL" => dictionary::op_del(self),
-            "LOOKUP" => dictionary::op_lookup(self),
-            
-            "RESET" => self.execute_reset(),
-            
-            "MAP" => higher_order::op_map(self),
-            "FILTER" => higher_order::op_filter(self),
-            
-            _ => Err(AjisaiError::UnknownWord(name.to_string())),
-        }
+        // 算術演算
+        "+" => arithmetic::op_add(self),
+        "-" => arithmetic::op_sub(self),
+        "*" => arithmetic::op_mul(self),
+        "/" => arithmetic::op_div(self),
+        
+        // 比較演算
+        "=" => comparison::op_eq(self),
+        "<" => comparison::op_lt(self),
+        "<=" => comparison::op_le(self),
+        ">" => comparison::op_gt(self),
+        ">=" => comparison::op_ge(self),
+        
+        // 論理演算
+        "AND" => comparison::op_and(self),
+        "OR" => comparison::op_or(self),
+        "NOT" => comparison::op_not(self),
+        
+        // 入出力
+        "PRINT" => io::op_print(self),
+        
+        // カスタムワード管理
+        "DEF" => dictionary::op_def(self),
+        "DEL" => dictionary::op_del(self),
+        "?" => dictionary::op_lookup(self),
+        
+        "RESET" => self.execute_reset(),
+        
+        "MAP" => higher_order::op_map(self),
+        "FILTER" => higher_order::op_filter(self),
+        
+        _ => Err(AjisaiError::UnknownWord(name.to_string())),
     }
+}
 
     pub fn token_to_string(&self, token: &Token) -> String {
         match token {
