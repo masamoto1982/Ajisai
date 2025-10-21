@@ -1,6 +1,9 @@
-use crate::interpreter::{Interpreter, WordDefinition, ExecutionLine};
+// rust/src/interpreter/dictionary.rs
+
+use crate::interpreter::{Interpreter, WordDefinition};
 use crate::interpreter::error::{AjisaiError, Result};
-use crate::types::{Token, BracketType, ValueType};
+// [FIX 1] Import ExecutionLine from crate::types
+use crate::types::{Token, BracketType, ValueType, ExecutionLine};
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
@@ -18,8 +21,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // 説明（オプション）を取得
     let mut description = None;
     
-    // スタックトップを確認
-    let def_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+    // [FIX 2] Use pop() instead of last() to avoid immutable borrow conflict.
+    let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     
     // 定義本体を文字列として取得
     let definition_str = match &def_val.val_type {
@@ -28,11 +31,13 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 match &vec[0].val_type {
                     ValueType::String(s) => {
                         // 文字列の前に説明がある可能性をチェック
-                        interp.stack.pop(); // 定義をポップ
+                        // [FIX 2] def_val was already popped, no need to pop again.
                         
                         // さらにスタックに説明があるかチェック
                         if !interp.stack.is_empty() {
+                            // [FIX 2] Use last() here for the check, *then* pop if it matches.
                             if let ValueType::String(desc_str) = &interp.stack.last().unwrap().val_type {
+                                // It's a description, so pop it.
                                 description = Some(desc_str.clone());
                                 interp.stack.pop(); // 説明をポップ
                             }
