@@ -1,123 +1,63 @@
-// rust/src/interpreter/dictionary.rs
-
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Token, ExecutionLine, ValueType, WordDefinition, Value}; // <--- Value を追加
+use crate::error::{AjisaiError, Result};
+use crate::interpreter::{Interpreter, WordDefinition, ExecutionLine};
+use crate::tokenizer::Token;
+use crate::interpreter::BracketType;  // 追加
+use crate::value::{Value, ValueType};
 use std::collections::HashSet;
-use crate::tokenizer; // <--- 追加
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.is_empty() { return Err(AjisaiError::StackUnderflow); }
-
-    let mut description: Option<String> = None;
-    let name_val: Value;
-    let body_val: Value;
-
-    // --- 修正 (E0502対策) ---
-    // 先にスタックトップの値の型をチェックし、
-    // descriptionの可能性のある文字列を先にクロ―ンする。
-    // これにより、この後の .pop() との借用競合を防ぐ。
-    let top_is_string = if let Some(top_val) = interp.stack.last() {
-        if let ValueType::String(s) = &top_val.val_type {
-            description = Some(s.clone()); // 文字列を先にクロ―ン
-            true
-        } else {
-            false
-        }
-    } else {
-        return Err(AjisaiError::StackUnderflow); // stack is empty (if check)
-    };
-    // -----------------------
-
-    if top_is_string {
-        // --- シナリオ 1: [ 'body' ] 'name' 'comment' DEF ---
-        if interp.stack.len() < 3 {
-            return Err(AjisaiError::from("DEF with comment requires [ 'body' ], 'name', and 'comment'"));
-        }
-        
-        let _comment_val = interp.stack.pop().unwrap(); // 'comment' をポップ (警告対応)
-        name_val = interp.stack.pop().unwrap(); // 'name' をポップ
-        body_val = interp.stack.pop().unwrap(); // [ 'body' ] をポップ
-    
-    } else {
-        // --- シナリオ 2: [ 'body' ] 'name' DEF ---
-        if interp.stack.len() < 2 {
-            return Err(AjisaiError::from("DEF requires [ 'body' ] and 'name'"));
-        }
-        
-        name_val = interp.stack.pop().unwrap(); // 'name' をポップ
-        body_val = interp.stack.pop().unwrap(); // [ 'body' ] をポップ
-        description = None;
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
-
-    // name_val ('name') が String型であることを確認
-    let name_str = if let ValueType::String(s) = &name_val.val_type {
-        s.clone()
-    } else {
-        // --- 修正 (E0382対策) ---
-        // 1. エラーメッセージ用の型情報を先に取得
-        let got_type = name_val.val_type.to_string();
-        // 2. スタックを元に戻す (ムーブ発生)
-        interp.stack.push(body_val);
-        interp.stack.push(name_val);
-        if let Some(desc_str) = description {
-            interp.stack.push(Value { val_type: ValueType::String(desc_str) });
-        }
-        // 3. 取得済みの型情報でエラーを返す
-        return Err(AjisaiError::type_error("string for word name", got_type.as_str()));
-        // -----------------------
+    
+    // スタックから名前を取得（文字列として）
+    let name_val = interp.stack.pop().unwrap();
+    let name_str = match name_val.val_type {
+        ValueType::String(s) => s,
+        _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
     };
     
-    // body_val ([ 'body' ]) が [ String ] 型であることを確認
-    let body_str = if let ValueType::Vector(v, _) = &body_val.val_type {
-         if v.len() == 1 {
-            if let ValueType::String(s) = &v[0].val_type {
-                s.clone()
-            } else {
-                // --- 修正 (E0505対策) ---
-                // 1. エラーメッセージ用の型情報を先に取得
-                let got_type = v[0].val_type.to_string();
-                // 2. スタックを元に戻す (ムーブ発生)
-                interp.stack.push(body_val);
-                interp.stack.push(name_val);
-                if let Some(desc_str) = description {
-                    interp.stack.push(Value { val_type: ValueType::String(desc_str) });
+    // 説明（オプション）を取得
+    let mut description = None;
+    
+    // スタックトップを確認
+    let def_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+    
+    // 定義本体を文字列として取得
+    let definition_str = match &def_val.val_type {
+        ValueType::Vector(vec, _) => {
+            if vec.len() == 1 {
+                match &vec[0].val_type {
+                    ValueType::String(s) => {
+                        // 文字列の前に説明がある可能性をチェック
+                        interp.stack.pop(); // 定義をポップ
+                        
+                        // さらにスタックに説明があるかチェック
+                        if !interp.stack.is_empty() {
+                            if let ValueType::String(desc_str) = &interp.stack.last().unwrap().val_type {
+                                description = Some(desc_str.clone());
+                                interp.stack.pop(); // 説明をポップ
+                            }
+                        }
+                        
+                        s.clone()
+                    },
+                    _ => return Err(AjisaiError::type_error("string in vector", "other type")),
                 }
-                // 3. 取得済みの型情報でエラーを返す
-                return Err(AjisaiError::type_error("string for word body", got_type.as_str()));
-                // -----------------------
+            } else {
+                return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
             }
-        } else {
-            // --- 修正 (E0382/E0505同様) ---
-            interp.stack.push(body_val);
-            interp.stack.push(name_val);
-            if let Some(desc_str) = description {
-                interp.stack.push(Value { val_type: ValueType::String(desc_str) });
-            }
-            return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
-            // -----------------------
-        }
-    } else {
-        // --- 修正 (E0382対策) ---
-        // 1. エラーメッセージ用の型情報を先に取得
-        let got_type = body_val.val_type.to_string();
-        // 2. スタックを元に戻す (ムーブ発生)
-        interp.stack.push(body_val);
-        interp.stack.push(name_val);
-        if let Some(desc_str) = description {
-            interp.stack.push(Value { val_type: ValueType::String(desc_str) });
-        }
-        // 3. 取得済みの型情報でエラーを返す
-        return Err(AjisaiError::type_error("vector for word body", got_type.as_str()));
-        // -----------------------
+        },
+        _ => return Err(AjisaiError::type_error("vector with string", "other type")),
     };
 
-    // 処理内容の文字列をトークン化
+    // 定義本体をトークン化
     let custom_word_names: HashSet<String> = interp.dictionary.iter()
         .filter(|(_, def)| !def.is_builtin)
         .map(|(name, _)| name.clone())
         .collect();
     
-    let tokens = tokenizer::tokenize_with_custom_words(&body_str, &custom_word_names)
+    let tokens = crate::tokenizer::tokenize_with_custom_words(&definition_str, &custom_word_names)
         .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
 
     // 内部定義関数を呼び出し
@@ -137,7 +77,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         }
     }
 
-    let lines = parse_definition_body(tokens)?;
+    let lines = parse_definition_body(tokens, &interp.dictionary)?;
     
     let mut new_dependencies = HashSet::new();
     for line in &lines {
@@ -168,7 +108,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     Ok(())
 }
 
-fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
+fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMap<String, WordDefinition>) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut processed_tokens = Vec::new();
     
@@ -179,8 +119,14 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
             Token::String(s) if s.starts_with('\'') && s.ends_with('\'') => {
                 // シングルクォート文字列をクォーテーションとして扱う
                 let inner = &s[1..s.len()-1];
-                // 内部をトークン化
-                let inner_tokens = crate::tokenizer::tokenize(inner)
+                // カスタムワード名のセットを作成
+                let custom_word_names: HashSet<String> = dictionary.iter()
+                    .filter(|(_, def)| !def.is_builtin)
+                    .map(|(name, _)| name.clone())
+                    .collect();
+                    
+                // 内部をトークン化（正しい関数名を使用）
+                let inner_tokens = crate::tokenizer::tokenize_with_custom_words(inner, &custom_word_names)
                     .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
                 processed_tokens.push(Token::VectorStart(BracketType::Square));
                 processed_tokens.extend(inner_tokens);
