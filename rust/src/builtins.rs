@@ -64,11 +64,6 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("FILTER", "Filter elements using word. Usage: [ data ] 'WORD' FILTER", "Higher-Order"),
 
         // スタック操作
-        ("DROP", "Remove top element from stack", "Stack"),
-        ("DUP", "Duplicate top element", "Stack"),
-        ("SWAP", "Swap top two elements", "Stack"),
-        ("OVER", "Copy second element to top", "Stack"),
-        ("ROT", "Rotate top three elements", "Stack"),
         ("DEPTH", "Get current stack depth", "Stack"),
         ("CLEAR", "Clear the stack", "Stack"),
         
