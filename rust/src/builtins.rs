@@ -17,43 +17,48 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
     vec![
-        // 位置指定操作（0オリジン）
-        ("GET", "Get element at index. Usage: [ vector ] [ index ] GET", "Vector Operations"),
-        ("INSERT", "Insert element at index. Usage: [ vector ] [ index ] [ element ] INSERT", "Vector Operations"),
-        ("REPLACE", "Replace element at index. Usage: [ vector ] [ index ] [ element ] REPLACE", "Vector Operations"),
-        ("REMOVE", "Remove element at index. Usage: [ vector ] [ index ] REMOVE", "Vector Operations"),
+        // 入力支援
+        ("'", "Insert single quote", "Input Helper"),
+        ("[ ]", "Insert empty vector brackets", "Input Helper"),
+        ("STACKTOP", "Insert STACKTOP keyword", "Input Helper"),
+        ("STACK", "Insert STACK keyword", "Input Helper"),
         
-        // 量指定操作（1オリジン）
-        ("LENGTH", "Get vector length", "Vector Operations"),
-        ("TAKE", "Take N elements. Usage: [ vector ] [ N ] TAKE", "Vector Operations"),
+        // 位置指定操作(0オリジン)
+        ("GET", "Get element at position (0-indexed)", "Position"),
+        ("INSERT", "Insert element at position", "Position"),
+        ("REPLACE", "Replace element at position", "Position"),
+        ("REMOVE", "Remove element at position", "Position"),
+        
+        // 量指定操作(1オリジン)
+        ("LENGTH", "Get vector length", "Quantity"),
+        ("TAKE", "Take first N elements", "Quantity"),
         
         // Vector構造操作
-        ("SPLIT", "Split vector. Usage: [ vector ] [ index ] SPLIT", "Vector Operations"),
-        ("CONCAT", "Concatenate vectors. Usage: [ v1 ] [ v2 ] CONCAT", "Vector Operations"),
-        ("REVERSE", "Reverse vector. Usage: [ vector ] REVERSE", "Vector Operations"),
-        ("LEVEL", "Flatten nested vector. Usage: [ vector ] LEVEL", "Vector Operations"),
-        
+        ("SPLIT", "Splits a vector. With arguments, it splits into specified sizes. Without arguments, it slices into single-element vectors.", "Vector"),
+        ("CONCAT", "Concatenate vectors. Default is 2. Specify count with an argument. Negative count reverses order.", "Vector"),
+        ("REVERSE", "Reverse vector elements", "Vector"),
+        ("LEVEL", "Flatten a nested vector", "Vector"),
+
         // 算術演算
-        ("+", "Add two numbers", "Arithmetic"),
-        ("-", "Subtract two numbers", "Arithmetic"),
-        ("*", "Multiply two numbers", "Arithmetic"),
-        ("/", "Divide two numbers", "Arithmetic"),
+        ("+", "Element-wise vector addition or Reduce N stack items.", "Arithmetic"),
+        ("-", "Element-wise vector subtraction or Reduce N stack items.", "Arithmetic"),
+        ("*", "Element-wise vector multiplication or Reduce N stack items.", "Arithmetic"),
+        ("/", "Element-wise vector division or Reduce N stack items.", "Arithmetic"),
         
         // 比較演算
-        ("=", "Equal comparison", "Comparison"),
-        ("<", "Less than", "Comparison"),
-        ("<=", "Less than or equal", "Comparison"),
-        (">", "Greater than", "Comparison"),
-        (">=", "Greater than or equal", "Comparison"),
+        ("=", "Vector equality test", "Comparison"),
+        ("<", "Vector less than test", "Comparison"),
+        ("<=", "Vector less than or equal test", "Comparison"),
+        (">", "Vector greater than test", "Comparison"),
+        (">=", "Vector greater than or equal test", "Comparison"),
         
         // 論理演算
-        ("AND", "Logical AND", "Logic"),
-        ("OR", "Logical OR", "Logic"),
-        ("NOT", "Logical NOT", "Logic"),
+        ("AND", "Vector logical AND", "Logic"),
+        ("OR", "Vector logical OR", "Logic"),
+        ("NOT", "Vector logical NOT", "Logic"),
         
-        // 制御構造
-        (":", "Guard separator. Usage: condition : action : condition : action : default", "Control"),
-        (";", "Synonym for : (guard separator)", "Control"),
+        // 制御構造(ガード)
+        (":", "Guard separator for conditional execution. Usage: condition : action : condition : action : default", "Control"),
         
         // 高階関数
         ("MAP", "Apply word to each element. Usage: [ data ] 'WORD' MAP or ... [ N ] 'WORD' STACK MAP", "Higher-Order"),
