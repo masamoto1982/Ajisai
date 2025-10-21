@@ -1,8 +1,5 @@
-use crate::error::{AjisaiError, Result};
-use crate::interpreter::{Interpreter, WordDefinition, ExecutionLine};
-use crate::tokenizer::Token;
-use crate::interpreter::BracketType;  // 追加
-use crate::value::{Value, ValueType};
+use crate::types::{AjisaiError, Result, Token, BracketType, Value, ValueType, ExecutionLine, WordDefinition};
+use crate::interpreter::Interpreter;
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
@@ -125,7 +122,7 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
                     .map(|(name, _)| name.clone())
                     .collect();
                     
-                // 内部をトークン化（正しい関数名を使用）
+                // 内部をトークン化
                 let inner_tokens = crate::tokenizer::tokenize_with_custom_words(inner, &custom_word_names)
                     .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
                 processed_tokens.push(Token::VectorStart(BracketType::Square));
@@ -162,14 +159,8 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
     Ok(lines)
 }
 
-fn parse_single_execution_line(tokens: &[Token]) -> Result<ExecutionLine> {
-    Ok(ExecutionLine {
-        body_tokens: tokens.to_vec(),
-    })
-}
-
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    // 変更：DELは 'NAME' を期待する
+    // DELは 'NAME' を期待する
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
     
     let name = match &val.val_type {
@@ -196,7 +187,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
-    // 変更：LOOKUP (?) は 'NAME' を期待する
+    // LOOKUP (?) は 'NAME' を期待する
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let name_str = if let ValueType::String(s) = name_val.val_type {
