@@ -1,5 +1,5 @@
-use crate::types::{AjisaiError, Result, Token, BracketType, Value, ValueType, ExecutionLine, WordDefinition};
-use crate::interpreter::Interpreter;
+use crate::types::{AjisaiError, Token, BracketType, ValueType, ExecutionLine, WordDefinition};
+use crate::interpreter::{Interpreter, Result};
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
