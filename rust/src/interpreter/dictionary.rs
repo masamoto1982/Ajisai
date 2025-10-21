@@ -12,18 +12,29 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let name_val: Value;
     let body_val: Value;
 
-    // スタックトップを覗き見して、コメントがあるか（String型か）どうかを判断
-    let top_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+    // --- 修正 (E0502対策) ---
+    // 先にスタックトップの値の型をチェックし、
+    // descriptionの可能性のある文字列を先にクロ―ンする。
+    // これにより、この後の .pop() との借用競合を防ぐ。
+    let top_is_string = if let Some(top_val) = interp.stack.last() {
+        if let ValueType::String(s) = &top_val.val_type {
+            description = Some(s.clone()); // 文字列を先にクロ―ン
+            true
+        } else {
+            false
+        }
+    } else {
+        return Err(AjisaiError::StackUnderflow); // stack is empty (if check)
+    };
+    // -----------------------
 
-    if let ValueType::String(s) = &top_val.val_type {
+    if top_is_string {
         // --- シナリオ 1: [ 'body' ] 'name' 'comment' DEF ---
         if interp.stack.len() < 3 {
             return Err(AjisaiError::from("DEF with comment requires [ 'body' ], 'name', and 'comment'"));
         }
         
-        let comment_val = interp.stack.pop().unwrap(); // 'comment' をポップ
-        description = Some(s.clone());
-        
+        let _comment_val = interp.stack.pop().unwrap(); // 'comment' をポップ (警告対応)
         name_val = interp.stack.pop().unwrap(); // 'name' をポップ
         body_val = interp.stack.pop().unwrap(); // [ 'body' ] をポップ
     
@@ -42,13 +53,18 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let name_str = if let ValueType::String(s) = &name_val.val_type {
         s.clone()
     } else {
-        // エラー：スタックを元に戻す
+        // --- 修正 (E0382対策) ---
+        // 1. エラーメッセージ用の型情報を先に取得
+        let got_type = name_val.val_type.to_string();
+        // 2. スタックを元に戻す (ムーブ発生)
         interp.stack.push(body_val);
         interp.stack.push(name_val);
         if let Some(desc_str) = description {
             interp.stack.push(Value { val_type: ValueType::String(desc_str) });
         }
-        return Err(AjisaiError::type_error("string for word name", name_val.val_type.to_string().as_str()));
+        // 3. 取得済みの型情報でエラーを返す
+        return Err(AjisaiError::type_error("string for word name", got_type.as_str()));
+        // -----------------------
     };
     
     // body_val ([ 'body' ]) が [ String ] 型であることを確認
@@ -57,31 +73,42 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             if let ValueType::String(s) = &v[0].val_type {
                 s.clone()
             } else {
-                // エラー：スタックを元に戻す
+                // --- 修正 (E0505対策) ---
+                // 1. エラーメッセージ用の型情報を先に取得
+                let got_type = v[0].val_type.to_string();
+                // 2. スタックを元に戻す (ムーブ発生)
                 interp.stack.push(body_val);
                 interp.stack.push(name_val);
                 if let Some(desc_str) = description {
                     interp.stack.push(Value { val_type: ValueType::String(desc_str) });
                 }
-                return Err(AjisaiError::type_error("string for word body", v[0].val_type.to_string().as_str()));
+                // 3. 取得済みの型情報でエラーを返す
+                return Err(AjisaiError::type_error("string for word body", got_type.as_str()));
+                // -----------------------
             }
         } else {
-            // エラー：スタックを元に戻す
+            // --- 修正 (E0382/E0505同様) ---
             interp.stack.push(body_val);
             interp.stack.push(name_val);
             if let Some(desc_str) = description {
                 interp.stack.push(Value { val_type: ValueType::String(desc_str) });
             }
             return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
+            // -----------------------
         }
     } else {
-        // エラー：スタックを元に戻す
+        // --- 修正 (E0382対策) ---
+        // 1. エラーメッセージ用の型情報を先に取得
+        let got_type = body_val.val_type.to_string();
+        // 2. スタックを元に戻す (ムーブ発生)
         interp.stack.push(body_val);
         interp.stack.push(name_val);
         if let Some(desc_str) = description {
             interp.stack.push(Value { val_type: ValueType::String(desc_str) });
         }
-        return Err(AjisaiError::type_error("vector for word body", body_val.val_type.to_string().as_str()));
+        // 3. 取得済みの型情報でエラーを返す
+        return Err(AjisaiError::type_error("vector for word body", got_type.as_str()));
+        // -----------------------
     };
 
     // 処理内容の文字列をトークン化
