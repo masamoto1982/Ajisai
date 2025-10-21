@@ -267,7 +267,7 @@ impl Interpreter {
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
     match name {
-        // 位置指定操作（0オリジン）
+        // 位置指定操作(0オリジン)
         "GET" => vector_ops::op_get(self),
         "INSERT" => vector_ops::op_insert(self),
         "REPLACE" => vector_ops::op_replace(self),
