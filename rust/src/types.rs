@@ -36,6 +36,20 @@ pub enum ValueType {
     Nil,
 }
 
+// Display トレイトの実装を追加
+impl fmt::Display for ValueType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValueType::Number(_) => write!(f, "number"),
+            ValueType::String(_) => write!(f, "string"),
+            ValueType::Boolean(_) => write!(f, "boolean"),
+            ValueType::Symbol(_) => write!(f, "symbol"),
+            ValueType::Vector(_, _) => write!(f, "vector"),
+            ValueType::Nil => write!(f, "nil"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum BracketType {
     Square, Curly, Round,
