@@ -44,19 +44,6 @@ impl Interpreter {
         interpreter
     }
 
-    fn is_bare_stack(&self) -> bool {
-        self.stack.iter().any(|v| !matches!(v.val_type, ValueType::Vector(_, _)))
-    }
-
-    fn ensure_wrapped_stack(&mut self) {
-        if self.is_bare_stack() {
-            let items = std::mem::take(&mut self.stack);
-            self.stack.push(Value {
-                val_type: ValueType::Vector(items, BracketType::Square)
-            });
-        }
-    }
-
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, BracketType, usize)> {
         let bracket_type = match &tokens[start_index] {
             Token::VectorStart(bt) => bt.clone(),
@@ -204,23 +191,18 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Number(n) => {
-                    self.ensure_wrapped_stack();
                     self.stack.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
                 },
                 Token::String(s) => {
-                    self.ensure_wrapped_stack();
                     self.stack.push(Value { val_type: ValueType::String(s.clone()) });
                 },
                 Token::Boolean(b) => {
-                    self.ensure_wrapped_stack();
                     self.stack.push(Value { val_type: ValueType::Boolean(*b) });
                 },
                 Token::Nil => {
-                    self.ensure_wrapped_stack();
                     self.stack.push(Value { val_type: ValueType::Nil });
                 },
                 Token::VectorStart(_) => {
-                    self.ensure_wrapped_stack();
                     let (values, bracket_type, consumed) = self.collect_vector(tokens, i)?;
                     self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
                     i += consumed - 1;
@@ -231,7 +213,6 @@ impl Interpreter {
                         "STACK" => self.operation_target = OperationTarget::Stack,
                         "STACKTOP" => self.operation_target = OperationTarget::StackTop,
                         _ => {
-                            self.ensure_wrapped_stack();
                             self.execute_word_sync(&upper_name)?;
                             self.operation_target = OperationTarget::StackTop;
                         }
