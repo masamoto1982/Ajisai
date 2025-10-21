@@ -1,44 +1,90 @@
 // rust/src/interpreter/dictionary.rs
 
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::types::{Token, ExecutionLine, ValueType, WordDefinition};
+use crate::types::{Token, ExecutionLine, ValueType, WordDefinition, Value}; // <--- Value を追加
 use std::collections::HashSet;
 use crate::tokenizer; // <--- 追加
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 { return Err(AjisaiError::from("DEF requires a definition string and a name")); }
+    if interp.stack.is_empty() { return Err(AjisaiError::StackUnderflow); }
 
-    let name_val = interp.stack.pop().unwrap();
-    let body_val = interp.stack.pop().unwrap();
+    let mut description: Option<String> = None;
+    let name_val: Value;
+    let body_val: Value;
 
-    let name_str = if let ValueType::Vector(v, _) = name_val.val_type {
-        if v.len() == 1 {
-            if let ValueType::String(s) = &v[0].val_type {
-                s.clone()
-            } else {
-                return Err(AjisaiError::type_error("string for word name", "other type"));
-            }
-        } else {
-            return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
+    // スタックトップを覗き見して、コメントがあるか（String型か）どうかを判断
+    let top_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+
+    if let ValueType::String(s) = &top_val.val_type {
+        // --- シナリオ 1: [ 'body' ] 'name' 'comment' DEF ---
+        if interp.stack.len() < 3 {
+            return Err(AjisaiError::from("DEF with comment requires [ 'body' ], 'name', and 'comment'"));
         }
+        
+        let comment_val = interp.stack.pop().unwrap(); // 'comment' をポップ
+        description = Some(s.clone());
+        
+        name_val = interp.stack.pop().unwrap(); // 'name' をポップ
+        body_val = interp.stack.pop().unwrap(); // [ 'body' ] をポップ
+    
     } else {
-        return Err(AjisaiError::type_error("vector for word name", "other type"));
+        // --- シナリオ 2: [ 'body' ] 'name' DEF ---
+        if interp.stack.len() < 2 {
+            return Err(AjisaiError::from("DEF requires [ 'body' ] and 'name'"));
+        }
+        
+        name_val = interp.stack.pop().unwrap(); // 'name' をポップ
+        body_val = interp.stack.pop().unwrap(); // [ 'body' ] をポップ
+        description = None;
+    }
+
+    // name_val ('name') が String型であることを確認
+    let name_str = if let ValueType::String(s) = &name_val.val_type {
+        s.clone()
+    } else {
+        // エラー：スタックを元に戻す
+        interp.stack.push(body_val);
+        interp.stack.push(name_val);
+        if let Some(desc_str) = description {
+            interp.stack.push(Value { val_type: ValueType::String(desc_str) });
+        }
+        return Err(AjisaiError::type_error("string for word name", name_val.val_type.to_string().as_str()));
     };
     
-    let body_str = if let ValueType::Vector(v, _) = body_val.val_type {
+    // body_val ([ 'body' ]) が [ String ] 型であることを確認
+    let body_str = if let ValueType::Vector(v, _) = &body_val.val_type {
          if v.len() == 1 {
             if let ValueType::String(s) = &v[0].val_type {
                 s.clone()
             } else {
-                return Err(AjisaiError::type_error("string for word body", "other type"));
+                // エラー：スタックを元に戻す
+                interp.stack.push(body_val);
+                interp.stack.push(name_val);
+                if let Some(desc_str) = description {
+                    interp.stack.push(Value { val_type: ValueType::String(desc_str) });
+                }
+                return Err(AjisaiError::type_error("string for word body", v[0].val_type.to_string().as_str()));
             }
         } else {
+            // エラー：スタックを元に戻す
+            interp.stack.push(body_val);
+            interp.stack.push(name_val);
+            if let Some(desc_str) = description {
+                interp.stack.push(Value { val_type: ValueType::String(desc_str) });
+            }
             return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
         }
     } else {
-        return Err(AjisaiError::type_error("vector for word body", "other type"));
+        // エラー：スタックを元に戻す
+        interp.stack.push(body_val);
+        interp.stack.push(name_val);
+        if let Some(desc_str) = description {
+            interp.stack.push(Value { val_type: ValueType::String(desc_str) });
+        }
+        return Err(AjisaiError::type_error("vector for word body", body_val.val_type.to_string().as_str()));
     };
 
+    // 処理内容の文字列をトークン化
     let custom_word_names: HashSet<String> = interp.dictionary.iter()
         .filter(|(_, def)| !def.is_builtin)
         .map(|(name, _)| name.clone())
@@ -47,8 +93,10 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let tokens = tokenizer::tokenize_with_custom_words(&body_str, &custom_word_names)
         .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
 
-    op_def_inner(interp, &name_str, &tokens, None)
+    // 内部定義関数を呼び出し
+    op_def_inner(interp, &name_str, &tokens, description)
 }
+
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token], description: Option<String>) -> Result<()> {
     let upper_name = name.to_uppercase();
@@ -131,16 +179,12 @@ fn parse_single_execution_line(tokens: &[Token]) -> Result<ExecutionLine> {
 }
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
+    // 変更：DELは 'NAME' を期待する
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
     
     let name = match &val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::String(s) => s.clone(),
-                _ => return Err(AjisaiError::type_error("string", "other type")),
-            }
-        },
-        _ => return Err(AjisaiError::type_error("single-element vector with string", "other type")),
+        ValueType::String(s) => s.clone(),
+        _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
     };
 
     let upper_name = name.to_uppercase();
@@ -153,7 +197,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         }
         interp.dependents.remove(&upper_name);
         
-        interp.stack.pop();
+        interp.stack.pop(); // 'NAME' をポップ
         interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
         Ok(())
     } else {
@@ -162,20 +206,13 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
+    // 変更：LOOKUP (?) は 'NAME' を期待する
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let name_str = if let ValueType::Vector(v, _) = name_val.val_type {
-        if v.len() == 1 {
-            if let ValueType::String(s) = &v[0].val_type {
-                s.clone()
-            } else {
-                return Err(AjisaiError::type_error("string for word name", "other type"));
-            }
-        } else {
-            return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
-        }
+    let name_str = if let ValueType::String(s) = name_val.val_type {
+        s.clone()
     } else {
-        return Err(AjisaiError::type_error("vector for word name", "other type"));
+        return Err(AjisaiError::type_error("string 'name'", name_val.val_type.to_string().as_str()));
     };
 
     let upper_name = name_str.to_uppercase();
@@ -192,12 +229,12 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
         } else {
             let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
             let full_definition = if definition.is_empty() {
-                format!("[ '{}' ] [ '{}' ] DEF", "", name_str) // 空の定義
+                format!("[ '' ] '{}' DEF", name_str) // 空の定義
             } else {
                 if let Some(desc) = &def.description {
-                    format!("[ '{}' ] [ '{}' ] '{}' DEF", definition, name_str, desc)
+                    format!("[ '{}' ] '{}' '{}' DEF", definition, name_str, desc)
                 } else {
-                    format!("[ '{}' ] [ '{}' ] DEF", definition, name_str)
+                    format!("[ '{}' ] '{}' DEF", definition, name_str)
                 }
             };
             interp.definition_to_load = Some(full_definition);
