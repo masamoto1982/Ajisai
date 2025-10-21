@@ -93,51 +93,49 @@ impl Interpreter {
         Err(AjisaiError::from(format!("Unclosed vector starting with {}", bracket_type.opening_char())))
     }
 
-    // ガード構造を分割して実行
     fn execute_guard_structure(&mut self, tokens: &[Token]) -> Result<()> {
-        let sections = self.split_by_guard_separator(tokens);
+    let sections = self.split_by_guard_separator(tokens);
+    
+    if sections.is_empty() {
+        return Ok(());
+    }
+    
+    // 条件が1つしかない場合（: のみ）
+    if sections.len() == 2 {
+        // 条件部を評価
+        self.execute_tokens_sync(&sections[0])?;
         
-        // セクションが空の場合
-        if sections.is_empty() {
+        if self.is_condition_true()? {
+            // 真の場合：処理部を評価
+            self.execute_tokens_sync(&sections[1])?;
+        }
+        return Ok(());
+    }
+    
+    // 複数条件の場合 - 各ペアをチェック
+    let mut i = 0;
+    while i + 1 < sections.len() {
+        // 条件部を評価
+        self.execute_tokens_sync(&sections[i])?;
+        
+        // スタックトップを評価
+        if self.is_condition_true()? {
+            // 次のセクション（処理部）を評価
+            if i + 1 < sections.len() {
+                self.execute_tokens_sync(&sections[i + 1])?;
+            }
             return Ok(());
         }
         
-        // セクション数が偶数の場合はエラー（条件:処理のペアが不完全）
-        // 正しい形式: 条件 : 処理 : 条件 : 処理 : デフォルト処理
-        // セクション数は奇数でなければならない（最後がデフォルト処理）
-        if sections.len() % 2 == 0 {
-            return Err(AjisaiError::from(
-                "Guard structure must have default action. Expected odd number of sections separated by ':' or ';'"
-            ));
-        }
-        
-        // 最後のセクション以外を条件:処理のペアとして処理
-        let mut i = 0;
-        while i < sections.len() - 1 {
-            // 条件部を実行
-            let condition_tokens = &sections[i];
-            self.execute_tokens_sync(condition_tokens)?;
-            
-            // スタックトップを評価
-            if self.is_condition_true()? {
-                // 次のセクション（処理部）を実行して終了
-                if i + 1 < sections.len() {
-                    let action_tokens = &sections[i + 1];
-                    self.execute_tokens_sync(action_tokens)?;
-                }
-                return Ok(());
-            }
-            
-            i += 2; // 条件と処理のペアをスキップ
-        }
-        
-        // すべての条件が偽だった場合、最後のセクション（デフォルト処理）を実行
-        let default_tokens = sections.last().unwrap();
-        self.execute_tokens_sync(default_tokens)?;
-        
-        Ok(())
+        i += 2; // 条件と処理のペアをスキップ
     }
-
+    
+    // すべての条件が偽だった場合、最後のセクション（デフォルト処理）を評価
+    let default_tokens = sections.last().unwrap();
+    self.execute_tokens_sync(default_tokens)?;
+    
+    Ok(())
+}
     fn split_by_guard_separator(&self, tokens: &[Token]) -> Vec<Vec<Token>> {
         let mut sections = Vec::new();
         let mut current_section = Vec::new();
