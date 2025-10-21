@@ -32,11 +32,14 @@ export class Dictionary {
     }
 
     private renderBuiltinWordsWithGroups(container: HTMLElement, builtinWords: any[]): void {
-        container.innerHTML = '';
-        
-        const groups: { [key: string]: any[] } = {};
-        
-        builtinWords.forEach((wordData: any[]) => {
+    container.innerHTML = '';
+    
+    const groups: { [key: string]: any[] } = {};
+    
+    // ";"と"\""を除外してグループ化
+    builtinWords
+        .filter((wordData: any[]) => wordData[0] !== ';' && wordData[0] !== '"')
+        .forEach((wordData: any[]) => {
             const category = wordData[2] || 'Other';
             const group = groups[category];
             if (group) {
@@ -46,29 +49,29 @@ export class Dictionary {
             }
         });
 
-        Object.keys(groups).sort().forEach((category) => {
-            const groupContainer = document.createElement('div');
-            
-            const categoryWords = groups[category];
-            if (categoryWords) {
-                categoryWords.forEach((wordData: any[]) => {
-                    const button = document.createElement('button');
-                    button.textContent = wordData[0];
-                    button.className = 'word-button builtin';
-                    button.title = wordData[1] || wordData[0];
-                    
-                    button.addEventListener('click', () => {
-                        if (this.onWordClick) {
-                            this.onWordClick(wordData[0]);
-                        }
-                    });
-                    groupContainer.appendChild(button);
+    Object.keys(groups).sort().forEach((category) => {
+        const groupContainer = document.createElement('div');
+        
+        const categoryWords = groups[category];
+        if (categoryWords) {
+            categoryWords.forEach((wordData: any[]) => {
+                const button = document.createElement('button');
+                button.textContent = wordData[0];
+                button.className = 'word-button builtin';
+                button.title = wordData[1] || wordData[0];
+                
+                button.addEventListener('click', () => {
+                    if (this.onWordClick) {
+                        this.onWordClick(wordData[0]);
+                    }
                 });
-            }
-            
-            container.appendChild(groupContainer);
-        });
-    }
+                groupContainer.appendChild(button);
+            });
+        }
+        
+        container.appendChild(groupContainer);
+    });
+}
 
     updateCustomWords(customWordsInfo: Array<[string, string | null, boolean]>): void {
         const words: WordInfo[] = (customWordsInfo || []).map(wordData => ({
