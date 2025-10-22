@@ -5,21 +5,21 @@
 ![Ajisai Logo](public/images/ajisai-logo.png "Ajisai Programming Language Logo")
 # Ajisai
 
-Ajisaiは、FORTHを参考にしたスタックベースのプログラミング言語です。
-WebAssembly上で動作するインタープリターとWebベースのGUIを提供します。
+Ajisai is a stack-based programming language inspired by FORTH.
+It provides an interpreter running on WebAssembly and a web-based GUI.
 
-## 開発コンセプト
-- FORTHを参考にしたスタックベース、逆ポーランド記法
-- システムは辞書に登録されたワード、Vector、真偽値、数値、文字列、Nilのみを認識する
-- 唯一のデータ構造としてVectorを持つ
-- Vectorは、Vector、真偽値、文字列、Nilを含むことが可能で負のインデックスを指定することにより末尾検索可能
-- Vector操作について、位置を指定する操作は0オリジン、量を指定する際は1オリジン
-- 組み込みワードの削除、意味の上書きは不可
-- 型宣言も型推論も必要としない静的型付け
-- すべての数値を内部的に分数扱いすることにより丸め誤差を生じない
-- 超巨大数の取り扱いが可能
-- メモリーの使用状況や辞書の状態をGUIで表現
-- 一行ごとに反復回数と処理時間の指定が可能
+## Development Concept
+- Stack-based with Reverse Polish Notation (RPN), inspired by FORTH
+- The system recognizes only words registered in the dictionary, Vectors, booleans, numbers, strings, and Nil
+- Vector is the sole data structure
+- Vectors can contain Vectors, booleans, strings, and Nil, and support negative indexing for searching from the end
+- For Vector operations: position-specifying operations are 0-indexed, quantity-specifying operations are 1-indexed
+- Built-in words cannot be deleted or have their meanings overwritten
+- Statically typed without requiring type declarations or type inference
+- All numbers are internally treated as fractions to avoid rounding errors
+- Capable of handling extremely large numbers
+- Memory usage and dictionary state are represented in the GUI
+- Iteration count and processing time can be specified for each line
 
-（Ajisaiという名称は、小さなワードの集まりが機能をなすFORTHの特徴を、紫陽花の花のイメージになぞらえたもの。）※紫陽花の花の部分は実際には花ではない。
+(The name "Ajisai" is a metaphor for hydrangea flowers, representing FORTH's characteristic of small words coming together to form functionality. *Note: The flower-like parts of hydrangeas are not actually flowers.)
 
