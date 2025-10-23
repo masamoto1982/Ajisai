@@ -10,18 +10,40 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
+
+    let mut description: Option<String> = None;
+    let mut name_str: String;
+
+    // トップが文字列かチェック
+    let val1 = interp.stack.pop().unwrap(); // トップをポップ
     
-    // スタックから名前を取得（文字列として）
-    let name_val = interp.stack.pop().unwrap();
-    let name_str = match name_val.val_type {
-        ValueType::String(s) => s,
-        _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
-    };
-    
-    // 説明（オプション）を取得
-    let mut description = None;
-    
-    // [FIX 2] Use pop() instead of last() to avoid immutable borrow conflict.
+    if let ValueType::String(s1) = val1.val_type {
+        // s1 は 'NAME' か 'DESCRIPTION' のどちらか
+        
+        // 2番目も文字列かチェック
+        if let Some(val2) = interp.stack.last() {
+             if let ValueType::String(s2) = &val2.val_type {
+                // スタック: [ ... , [ DEF ], 'NAME', 'DESCRIPTION' ]
+                // val1 = 'DESCRIPTION', val2 = 'NAME'
+                description = Some(s1);
+                name_str = s2.clone();
+                interp.stack.pop(); // 'NAME' をポップ
+             } else {
+                // スタック: [ ... , [ DEF ], 'NAME' ]
+                // val1 = 'NAME', val2 = [ DEF ]
+                name_str = s1;
+             }
+        } else {
+             // スタック: [ [ DEF ], 'NAME' ]
+             name_str = s1;
+        }
+    } else {
+        // トップが文字列でない (構文エラー)
+        interp.stack.push(val1); // ポップした値を戻す
+        return Err(AjisaiError::type_error("string 'name' or 'description'", "other type"));
+    }
+
+    // 3. [ 処理内容 ] をポップ
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     
     // 定義本体を文字列として取得
@@ -29,22 +51,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         ValueType::Vector(vec, _) => {
             if vec.len() == 1 {
                 match &vec[0].val_type {
-                    ValueType::String(s) => {
-                        // 文字列の前に説明がある可能性をチェック
-                        // [FIX 2] def_val was already popped, no need to pop again.
-                        
-                        // さらにスタックに説明があるかチェック
-                        if !interp.stack.is_empty() {
-                            // [FIX 2] Use last() here for the check, *then* pop if it matches.
-                            if let ValueType::String(desc_str) = &interp.stack.last().unwrap().val_type {
-                                // It's a description, so pop it.
-                                description = Some(desc_str.clone());
-                                interp.stack.pop(); // 説明をポップ
-                            }
-                        }
-                        
-                        s.clone()
-                    },
+                    ValueType::String(s) => s.clone(),
                     _ => return Err(AjisaiError::type_error("string in vector", "other type")),
                 }
             } else {
@@ -215,14 +222,14 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
             interp.definition_to_load = Some(original_source.clone());
         } else {
             let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
+            
+            // 説明文を取得。ない場合は空文字列をデフォルトにする
+            let desc = def.description.as_deref().unwrap_or(""); 
+            
             let full_definition = if definition.is_empty() {
-                format!("[ '' ] '{}' DEF", name_str) // 空の定義
+                format!("[ '' ] '{}' '{}' DEF", name_str, desc) // 空の定義
             } else {
-                if let Some(desc) = &def.description {
-                    format!("[ '{}' ] '{}' '{}' DEF", definition, name_str, desc)
-                } else {
-                    format!("[ '{}' ] '{}' DEF", definition, name_str)
-                }
+                format!("[ '{}' ] '{}' '{}' DEF", definition, name_str, desc)
             };
             interp.definition_to_load = Some(full_definition);
         }
