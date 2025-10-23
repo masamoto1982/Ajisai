@@ -431,6 +431,7 @@ export class TestRunner {
         };
     }
     
+    // ★★★ DEF構文のテストケースをすべて [ ... ] 形式に修正 ★★★
     private getTestCases(): TestCase[] {
         return [
             // === 基本データ型 ===
@@ -759,19 +760,19 @@ export class TestRunner {
             },
             {
                 name: "ゲート - 条件分岐の連鎖（正の数）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' 'Returns sign of a number' DEF\n[ 5 ] SIGN",
+                code: "[ [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ] ] 'SIGN' 'Returns sign of a number' DEF\n[ 5 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('1')])],
                 category: "Conditional Branching"
             },
             {
                 name: "ゲート - 条件分岐の連鎖（ゼロ）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' 'Returns sign of a number' DEF\n[ 0 ] SIGN",
+                code: "[ [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ] ] 'SIGN' 'Returns sign of a number' DEF\n[ 0 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('0')])],
                 category: "Conditional Branching"
             },
             {
                 name: "ゲート - 条件分岐の連鎖（負の数）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' 'Returns sign of a number' DEF\n[ -5 ] SIGN",
+                code: "[ [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ] ] 'SIGN' 'Returns sign of a number' DEF\n[ -5 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('-1')])],
                 category: "Conditional Branching"
             },
@@ -785,73 +786,73 @@ export class TestRunner {
             // === カスタムワード定義 ===
             {
                 name: "DEF - 最小の定義",
-                code: "[ '[ 42 ]' ] 'ANSWER' 'The answer' DEF",
+                code: "[ [ 42 ] ] 'ANSWER' 'The answer' DEF",
                 expectedStack: [],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 定義したワードの実行",
-                code: "[ '[ 42 ]' ] 'ANSWER' 'The answer' DEF\nANSWER",
+                code: "[ [ 42 ] ] 'ANSWER' 'The answer' DEF\nANSWER",
                 expectedStack: [this.createVector([this.createNumber('42')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 算術演算の定義と実行",
-                code: "[ '[ 1 ] [ 2 ] +' ] 'ADD12' 'Adds 1 and 2' DEF\nADD12",
+                code: "[ [ 1 ] [ 2 ] + ] 'ADD12' 'Adds 1 and 2' DEF\nADD12",
                 expectedStack: [this.createVector([this.createNumber('3')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 説明付き定義と実行",
-                code: "[ '[ 2 ] [ 2 ] *' ] 'SQUARE2' '2を二乗する' DEF\nSQUARE2",
+                code: "[ [ 2 ] [ 2 ] * ] 'SQUARE2' '2を二乗する' DEF\nSQUARE2",
                 expectedStack: [this.createVector([this.createNumber('4')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 複数行の定義と実行",
-                code: "[ '[ 1 ] [ 2 ] +\n[ 3 ] +' ] 'ADD123' 'Adds 1, 2, 3' DEF\nADD123",
+                code: "[ [ 1 ] [ 2 ] +\n[ 3 ] + ] 'ADD123' 'Adds 1, 2, 3' DEF\nADD123",
                 expectedStack: [this.createVector([this.createNumber('6')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 条件付き定義（真の場合）",
-                code: "[ '[ 0 ] > : [ 100 ]' ] 'POS_TO_100' 'Positive to 100' DEF\n[ 5 ] POS_TO_100",
+                code: "[ [ 0 ] > : [ 100 ] ] 'POS_TO_100' 'Positive to 100' DEF\n[ 5 ] POS_TO_100",
                 expectedStack: [this.createVector([this.createNumber('100')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 条件付き定義（偽の場合）",
-                code: "[ '[ 0 ] > : [ 100 ]' ] 'POS_TO_100' 'Positive to 100' DEF\n[ -5 ] POS_TO_100",
+                code: "[ [ 0 ] > : [ 100 ] ] 'POS_TO_100' 'Positive to 100' DEF\n[ -5 ] POS_TO_100",
                 expectedStack: [this.createVector([this.createNumber('-5')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 複数条件の連鎖定義（正）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' 'Sign function' DEF\n[ 5 ] SIGN",
+                code: "[ [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ] ] 'SIGN' 'Sign function' DEF\n[ 5 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('1')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 複数条件の連鎖定義（ゼロ）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' 'Sign function' DEF\n[ 0 ] SIGN",
+                code: "[ [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ] ] 'SIGN' 'Sign function' DEF\n[ 0 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('0')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 複数条件の連鎖定義（負）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' 'Sign function' DEF\n[ -3 ] SIGN",
+                code: "[ [ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ] ] 'SIGN' 'Sign function' DEF\n[ -3 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('-1')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - デフォルト節のみ",
-                code: "[ ': [ 999 ]' ] 'ALWAYS_999' 'Always 999' DEF\n[ 123 ] ALWAYS_999",
+                code: "[ : [ 999 ] ] 'ALWAYS_999' 'Always 999' DEF\n[ 123 ] ALWAYS_999",
                 expectedStack: [this.createVector([this.createNumber('999')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - ワードの再利用",
-                code: "[ '[ 2 ] *' ] 'DOUBLE' 'Double a number' DEF\n[ 3 ]\nDOUBLE\nDOUBLE",
+                code: "[ [ 2 ] * ] 'DOUBLE' 'Double a number' DEF\n[ 3 ]\nDOUBLE\nDOUBLE",
                 expectedStack: [this.createVector([this.createNumber('12')])],
                 category: "Custom Word Definition"
             },
@@ -859,7 +860,7 @@ export class TestRunner {
             // === TIMES/WAIT制御構造 ===
             {
                 name: "TIMES - 基本的な繰り返し",
-                code: "[ '[ 1 ] [ 2 ] +' ] 'ADD12' 'Adds 1 and 2' DEF\n'ADD12' [ 3 ] TIMES",
+                code: "[ [ 1 ] [ 2 ] + ] 'ADD12' 'Adds 1 and 2' DEF\n'ADD12' [ 3 ] TIMES",
                 expectedStack: [
                     this.createVector([this.createNumber('3')]),
                     this.createVector([this.createNumber('3')]),
@@ -869,13 +870,13 @@ export class TestRunner {
             },
             {
                 name: "TIMES - 1回の実行",
-                code: "[ '[ 5 ] [ 5 ] *' ] 'SQUARE5' 'Squares 5' DEF\n'SQUARE5' [ 1 ] TIMES",
+                code: "[ [ 5 ] [ 5 ] * ] 'SQUARE5' 'Squares 5' DEF\n'SQUARE5' [ 1 ] TIMES",
                 expectedStack: [this.createVector([this.createNumber('25')])],
                 category: "Control Flow - TIMES/WAIT"
             },
             {
                 name: "WAIT - 基本的な遅延実行",
-                code: "[ '[ 100 ]' ] 'HUNDRED' 'Pushes 100' DEF\n'HUNDRED' [ 10 ] WAIT",
+                code: "[ [ 100 ] ] 'HUNDRED' 'Pushes 100' DEF\n'HUNDRED' [ 10 ] WAIT",
                 expectedStack: [this.createVector([this.createNumber('100')])],
                 category: "Control Flow - TIMES/WAIT"
             },
@@ -895,7 +896,7 @@ export class TestRunner {
             // === ワード管理（DEL） ===
             {
                 name: "DEL - ワードの削除",
-                code: "[ '[ 42 ]' ] 'TEMP' 'Temporary word' DEF\n'TEMP' DEL",
+                code: "[ [ 42 ] ] 'TEMP' 'Temporary word' DEF\n'TEMP' DEL",
                 expectedStack: [],
                 category: "Word Management"
             },
@@ -1014,7 +1015,7 @@ export class TestRunner {
             // === 高階関数 - MAP ===
             {
                 name: "MAP - 基本的な使用（2倍）",
-                code: "[ '[ 2 ] *' ] 'DOUBLE' 'Double' DEF\n[ 1 2 3 4 5 ] 'DOUBLE' MAP",
+                code: "[ [ 2 ] * ] 'DOUBLE' 'Double' DEF\n[ 1 2 3 4 5 ] 'DOUBLE' MAP",
                 expectedStack: [this.createVector([
                     this.createNumber('2'),
                     this.createNumber('4'),
@@ -1026,7 +1027,7 @@ export class TestRunner {
             },
             {
                 name: "MAP - 加算処理",
-                code: "[ '[ 10 ] +' ] 'ADD10' 'Add 10' DEF\n[ 1 2 3 ] 'ADD10' MAP",
+                code: "[ [ 10 ] + ] 'ADD10' 'Add 10' DEF\n[ 1 2 3 ] 'ADD10' MAP",
                 expectedStack: [this.createVector([
                     this.createNumber('11'),
                     this.createNumber('12'),
@@ -1036,13 +1037,13 @@ export class TestRunner {
             },
             {
                 name: "MAP - 空のベクトル",
-                code: "[ '[ 2 ] *' ] 'DOUBLE' 'Double' DEF\n[ ] 'DOUBLE' MAP",
+                code: "[ [ 2 ] * ] 'DOUBLE' 'Double' DEF\n[ ] 'DOUBLE' MAP",
                 expectedStack: [this.createVector([])],
                 category: "Higher-Order Functions"
             },
             {
                 name: "MAP - 単一要素",
-                code: "[ '[ 3 ] *' ] 'TRIPLE' 'Triple' DEF\n[ 5 ] 'TRIPLE' MAP",
+                code: "[ [ 3 ] * ] 'TRIPLE' 'Triple' DEF\n[ 5 ] 'TRIPLE' MAP",
                 expectedStack: [this.createVector([this.createNumber('15')])],
                 category: "Higher-Order Functions"
             },
@@ -1050,7 +1051,7 @@ export class TestRunner {
             // === 高階関数 - FILTER ===
             {
                 name: "FILTER - 基本的な使用（5より大きい）",
-                code: "[ '[ 5 ] >' ] 'IS-BIG' 'Greater than 5' DEF\n[ 3 7 2 8 1 9 ] 'IS-BIG' FILTER",
+                code: "[ [ 5 ] > ] 'IS-BIG' 'Greater than 5' DEF\n[ 3 7 2 8 1 9 ] 'IS-BIG' FILTER",
                 expectedStack: [this.createVector([
                     this.createNumber('7'),
                     this.createNumber('8'),
@@ -1060,7 +1061,7 @@ export class TestRunner {
             },
             {
                 name: "FILTER - すべて真",
-                code: "[ '[ 0 ] >' ] 'IS-POSITIVE' 'Greater than 0' DEF\n[ 1 2 3 4 5 ] 'IS-POSITIVE' FILTER",
+                code: "[ [ 0 ] > ] 'IS-POSITIVE' 'Greater than 0' DEF\n[ 1 2 3 4 5 ] 'IS-POSITIVE' FILTER",
                 expectedStack: [this.createVector([
                     this.createNumber('1'),
                     this.createNumber('2'),
@@ -1072,13 +1073,13 @@ export class TestRunner {
             },
             {
                 name: "FILTER - すべて偽",
-                code: "[ '[ 10 ] >' ] 'IS-BIG' 'Greater than 10' DEF\n[ 1 2 3 ] 'IS-BIG' FILTER",
+                code: "[ [ 10 ] > ] 'IS-BIG' 'Greater than 10' DEF\n[ 1 2 3 ] 'IS-BIG' FILTER",
                 expectedStack: [this.createVector([])],
                 category: "Higher-Order Functions"
             },
             {
                 name: "FILTER - 空のベクトル",
-                code: "[ '[ 0 ] >' ] 'IS-POSITIVE' 'Greater than 0' DEF\n[ ] 'IS-POSITIVE' FILTER",
+                code: "[ [ 0 ] > ] 'IS-POSITIVE' 'Greater than 0' DEF\n[ ] 'IS-POSITIVE' FILTER",
                 expectedStack: [this.createVector([])],
                 category: "Higher-Order Functions"
             },
@@ -1086,31 +1087,31 @@ export class TestRunner {
             // === 高階関数 - REDUCE ===
             {
                 name: "REDUCE - 合計計算",
-                code: "[ '+' ] 'ADD' 'Add' DEF\n[ 1 2 3 4 5 ] [ 0 ] 'ADD' REDUCE",
+                code: "[ + ] 'ADD' 'Add' DEF\n[ 1 2 3 4 5 ] [ 0 ] 'ADD' REDUCE",
                 expectedStack: [this.createVector([this.createNumber('15')])],
                 category: "Higher-Order Functions"
             },
             {
                 name: "REDUCE - 積計算",
-                code: "[ '*' ] 'MUL' 'Multiply' DEF\n[ 1 2 3 4 ] [ 1 ] 'MUL' REDUCE",
+                code: "[ * ] 'MUL' 'Multiply' DEF\n[ 1 2 3 4 ] [ 1 ] 'MUL' REDUCE",
                 expectedStack: [this.createVector([this.createNumber('24')])],
                 category: "Higher-Order Functions"
             },
             {
                 name: "REDUCE - 最大値",
-                code: "[ '[ 2 ] GET [ 1 ] GET > : [ 2 ] GET : [ 1 ] GET' ] 'MAX2' 'Max of 2 items' DEF\n[ 3 7 2 9 1 ] [ 0 ] 'MAX2' REDUCE",
+                code: "[ [ 2 ] GET [ 1 ] GET > : [ 2 ] GET : [ 1 ] GET ] 'MAX2' 'Max of 2 items' DEF\n[ 3 7 2 9 1 ] [ 0 ] 'MAX2' REDUCE",
                 expectedStack: [this.createVector([this.createNumber('9')])],
                 category: "Higher-Order Functions"
             },
             {
                 name: "REDUCE - 単一要素",
-                code: "[ '+' ] 'ADD' 'Add' DEF\n[ 5 ] [ 0 ] 'ADD' REDUCE",
+                code: "[ + ] 'ADD' 'Add' DEF\n[ 5 ] [ 0 ] 'ADD' REDUCE",
                 expectedStack: [this.createVector([this.createNumber('5')])],
                 category: "Higher-Order Functions"
             },
             {
                 name: "REDUCE - 空のベクトル",
-                code: "[ '+' ] 'ADD' 'Add' DEF\n[ ] [ 100 ] 'ADD' REDUCE",
+                code: "[ + ] 'ADD' 'Add' DEF\n[ ] [ 100 ] 'ADD' REDUCE",
                 expectedStack: [this.createVector([this.createNumber('100')])],
                 category: "Higher-Order Functions"
             },
@@ -1125,7 +1126,7 @@ export class TestRunner {
             },
             {
                 name: "EACH - カスタムワードで副作用",
-                code: "[ 'PRINT' ] 'SHOW' 'Show item' DEF\n[ 10 20 30 ] 'SHOW' EACH",
+                code: "[ PRINT ] 'SHOW' 'Show item' DEF\n[ 10 20 30 ] 'SHOW' EACH",
                 expectedStack: [],
                 expectedOutput: "[10] [20] [30] ",
                 category: "Higher-Order Functions"
@@ -1140,7 +1141,7 @@ export class TestRunner {
             // === 高階関数 - 組み合わせ ===
             {
                 name: "MAP + FILTER - 2倍してから5より大きいものを選択",
-                code: "[ '[ 2 ] *' ] 'DOUBLE' 'Double' DEF\n[ '[ 5 ] >' ] 'IS-BIG' 'Greater than 5' DEF\n[ 1 2 3 4 5 ] 'DOUBLE' MAP 'IS-BIG' FILTER",
+                code: "[ [ 2 ] * ] 'DOUBLE' 'Double' DEF\n[ [ 5 ] > ] 'IS-BIG' 'Greater than 5' DEF\n[ 1 2 3 4 5 ] 'DOUBLE' MAP 'IS-BIG' FILTER",
                 expectedStack: [this.createVector([
                     this.createNumber('6'),
                     this.createNumber('8'),
@@ -1150,13 +1151,13 @@ export class TestRunner {
             },
             {
                 name: "FILTER + REDUCE - 正の数だけ合計",
-                code: "[ '[ 0 ] >' ] 'IS-POSITIVE' 'Greater than 0' DEF\n[ '+' ] 'ADD' 'Add' DEF\n[ -2 3 -1 4 5 ] 'IS-POSITIVE' FILTER [ 0 ] 'ADD' REDUCE",
+                code: "[ [ 0 ] > ] 'IS-POSITIVE' 'Greater than 0' DEF\n[ + ] 'ADD' 'Add' DEF\n[ -2 3 -1 4 5 ] 'IS-POSITIVE' FILTER [ 0 ] 'ADD' REDUCE",
                 expectedStack: [this.createVector([this.createNumber('12')])],
                 category: "Higher-Order Functions"
             },
             {
                 name: "MAP + REDUCE - 全要素を2倍して合計",
-                code: "[ '[ 2 ] *' ] 'DOUBLE' 'Double' DEF\n[ '+' ] 'ADD' 'Add' DEF\n[ 1 2 3 4 5 ] 'DOUBLE' MAP [ 0 ] 'ADD' REDUCE",
+                code: "[ [ 2 ] * ] 'DOUBLE' 'Double' DEF\n[ + ] 'ADD' 'Add' DEF\n[ 1 2 3 4 5 ] 'DOUBLE' MAP [ 0 ] 'ADD' REDUCE",
                 expectedStack: [this.createVector([this.createNumber('30')])],
                 category: "Higher-Order Functions"
             },
