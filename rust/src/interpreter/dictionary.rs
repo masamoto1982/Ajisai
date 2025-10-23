@@ -6,11 +6,13 @@ use crate::types::{Token, BracketType, ValueType, ExecutionLine, Value}; // Valu
 use std::collections::HashSet;
 
 // === 新しいヘルパー関数 ===
-/// ValueType を Token に変換する
-fn value_to_token(val: &ValueType) -> Result<Token, AjisaiError> {
-    match val {
-        ValueType::Number(f) => {
-            // Value の Display impl が "1/2" や "1" の形式で出力するので、それを Number トークンにする
+
+/// Value を Token に変換する
+/// (シグネチャを &Value に変更し、Result<T> 構文を修正)
+fn value_to_token(val: &Value) -> Result<Token> {
+    match &val.val_type {
+        ValueType::Number(_) => {
+            // Value の Display impl が "1/2" や "1" の形式で出力するので、それを利用
             Ok(Token::Number(val.to_string()))
         },
         ValueType::String(s) => Ok(Token::String(s.clone())),
@@ -22,7 +24,8 @@ fn value_to_token(val: &ValueType) -> Result<Token, AjisaiError> {
 }
 
 /// Vec<Value> を Vec<Token> に再帰的に変換する
-fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>, AjisaiError> {
+/// (Result<T> 構文を修正し、value_to_token に &Value を渡すよう修正)
+fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for val in values {
         match &val.val_type {
@@ -34,7 +37,7 @@ fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>, AjisaiError> {
             },
             _ => {
                 // 他のプリミティブ型
-                tokens.push(value_to_token(&val.val_type)?);
+                tokens.push(value_to_token(val)?);
             }
         }
     }
@@ -49,7 +52,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     }
 
     let mut description: Option<String> = None;
-    let mut name_str: String;
+    let name_str: String; // mut を削除
 
     // トップが文字列かチェック
     let val1 = interp.stack.pop().unwrap(); // トップをポップ
@@ -109,10 +112,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         }
     }
 
-    // ★ 変更点： '...' をトークン化する処理は不要になったため、parse_definition_body を簡素化
-    // (parse_definition_body は LineBreak での分割と、古い '...' 引用符の処理をしていたが、
-    //  新しい構文では '...' 引用符は不要であり、LineBreakもトークンとしてそのまま渡す)
-    
     // トークンを LineBreak で分割する
     let mut lines = Vec::new();
     let mut current_line = Vec::new();
@@ -166,9 +165,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
     Ok(())
 }
-
-// (parse_definition_body は不要になったので削除、または簡素化して op_def_inner に統合)
-// (今回は op_def_inner にロジックを移動しました)
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     // DELは 'NAME' を期待する
