@@ -2,47 +2,10 @@
 
 use crate::interpreter::{Interpreter, WordDefinition};
 use crate::interpreter::error::{AjisaiError, Result};
-use crate::types::{Token, BracketType, ValueType, ExecutionLine, Value}; // Value をインポート
+// [FIX 1] Import ExecutionLine from crate::types
+use crate::types::{Token, BracketType, ValueType, ExecutionLine};
 use std::collections::HashSet;
 
-// === 新しいヘルパー関数 ===
-/// ValueType を Token に変換する
-fn value_to_token(val: &ValueType) -> Result<Token, AjisaiError> {
-    match val {
-        ValueType::Number(f) => {
-            // Value の Display impl が "1/2" や "1" の形式で出力するので、それを Number トークンにする
-            Ok(Token::Number(val.to_string()))
-        },
-        ValueType::String(s) => Ok(Token::String(s.clone())),
-        ValueType::Boolean(b) => Ok(Token::Boolean(*b)),
-        ValueType::Symbol(s) => Ok(Token::Symbol(s.clone())),
-        ValueType::Nil => Ok(Token::Nil),
-        ValueType::Vector(_, _) => Err(AjisaiError::from("Cannot convert nested vector root to single token")),
-    }
-}
-
-/// Vec<Value> を Vec<Token> に再帰的に変換する
-fn values_to_tokens(values: &[Value]) -> Result<Vec<Token>, AjisaiError> {
-    let mut tokens = Vec::new();
-    for val in values {
-        match &val.val_type {
-            ValueType::Vector(v, bt) => {
-                // ネストしたベクタ
-                tokens.push(Token::VectorStart(bt.clone()));
-                tokens.extend(values_to_tokens(v)?); // 再帰呼び出し
-                tokens.push(Token::VectorEnd(bt.clone()));
-            },
-            _ => {
-                // 他のプリミティブ型
-                tokens.push(value_to_token(&val.val_type)?);
-            }
-        }
-    }
-    Ok(tokens)
-}
-
-
-// === op_def のロジックを修正 ===
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
@@ -80,18 +43,33 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::type_error("string 'name' or 'description'", "other type"));
     }
 
-    // 3. [ 処理内容 ] (ベクタ) をポップ
+    // 3. [ 処理内容 ] をポップ
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     
-    // 定義本体 (Vec<Value>) を取得
-    let definition_values = match def_val.val_type {
-        ValueType::Vector(vec, _) => vec,
-        _ => return Err(AjisaiError::type_error("vector (quotation)", "other type")),
+    // 定義本体を文字列として取得
+    let definition_str = match &def_val.val_type {
+        ValueType::Vector(vec, _) => {
+            if vec.len() == 1 {
+                match &vec[0].val_type {
+                    ValueType::String(s) => s.clone(),
+                    _ => return Err(AjisaiError::type_error("string in vector", "other type")),
+                }
+            } else {
+                return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
+            }
+        },
+        _ => return Err(AjisaiError::type_error("vector with string", "other type")),
     };
 
-    // Vec<Value> を Vec<Token> に変換
-    let tokens = values_to_tokens(&definition_values)?;
+    // 定義本体をトークン化
+    let custom_word_names: HashSet<String> = interp.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
     
+    let tokens = crate::tokenizer::tokenize_with_custom_words(&definition_str, &custom_word_names)
+        .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
+
     // 内部定義関数を呼び出し
     op_def_inner(interp, &name_str, &tokens, description)
 }
@@ -109,34 +87,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         }
     }
 
-    // ★ 変更点： '...' をトークン化する処理は不要になったため、parse_definition_body を簡素化
-    // (parse_definition_body は LineBreak での分割と、古い '...' 引用符の処理をしていたが、
-    //  新しい構文では '...' 引用符は不要であり、LineBreakもトークンとしてそのまま渡す)
-    
-    // トークンを LineBreak で分割する
-    let mut lines = Vec::new();
-    let mut current_line = Vec::new();
-    
-    for token in tokens {
-        if let Token::LineBreak = token {
-            if !current_line.is_empty() {
-                lines.push(ExecutionLine { body_tokens: current_line });
-                current_line = Vec::new();
-            }
-        } else {
-            current_line.push(token.clone());
-        }
-    }
-    
-    if !current_line.is_empty() {
-        lines.push(ExecutionLine { body_tokens: current_line });
-    }
-
-    if lines.is_empty() {
-         // [ ] 'EMPTY' DEF のような空の定義を許可する
-         lines.push(ExecutionLine { body_tokens: vec![] });
-    }
-
+    let lines = parse_definition_body(tokens, &interp.dictionary)?;
     
     let mut new_dependencies = HashSet::new();
     for line in &lines {
@@ -167,8 +118,59 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     Ok(())
 }
 
-// (parse_definition_body は不要になったので削除、または簡素化して op_def_inner に統合)
-// (今回は op_def_inner にロジックを移動しました)
+fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMap<String, WordDefinition>) -> Result<Vec<ExecutionLine>> {
+    let mut lines = Vec::new();
+    let mut processed_tokens = Vec::new();
+    
+    // ガード文内の文字列をクォーテーションに変換
+    let mut i = 0;
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::String(s) if s.starts_with('\'') && s.ends_with('\'') => {
+                // シングルクォート文字列をクォーテーションとして扱う
+                let inner = &s[1..s.len()-1];
+                // カスタムワード名のセットを作成
+                let custom_word_names: HashSet<String> = dictionary.iter()
+                    .filter(|(_, def)| !def.is_builtin)
+                    .map(|(name, _)| name.clone())
+                    .collect();
+                    
+                // 内部をトークン化
+                let inner_tokens = crate::tokenizer::tokenize_with_custom_words(inner, &custom_word_names)
+                    .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
+                processed_tokens.push(Token::VectorStart(BracketType::Square));
+                processed_tokens.extend(inner_tokens);
+                processed_tokens.push(Token::VectorEnd(BracketType::Square));
+            },
+            Token::LineBreak => {
+                if !processed_tokens.is_empty() {
+                    let execution_line = ExecutionLine {
+                        body_tokens: processed_tokens.clone(),
+                    };
+                    lines.push(execution_line);
+                    processed_tokens.clear();
+                }
+            },
+            _ => {
+                processed_tokens.push(tokens[i].clone());
+            }
+        }
+        i += 1;
+    }
+    
+    if !processed_tokens.is_empty() {
+        let execution_line = ExecutionLine {
+            body_tokens: processed_tokens,
+        };
+        lines.push(execution_line);
+    }
+    
+    if lines.is_empty() {
+        return Err(AjisaiError::from("Word definition cannot be empty"));
+    }
+    
+    Ok(lines)
+}
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     // DELは 'NAME' を期待する
@@ -219,17 +221,15 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
         if let Some(original_source) = &def.original_source {
             interp.definition_to_load = Some(original_source.clone());
         } else {
-            // get_word_definition_tokens は '1 2 +' のような文字列を返す
             let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
             
             // 説明文を取得。ない場合は空文字列をデフォルトにする
             let desc = def.description.as_deref().unwrap_or(""); 
             
-            // ★ 変更点： [ '{}' ] ではなく [ {} ] に修正
             let full_definition = if definition.is_empty() {
-                format!("[ ] '{}' '{}' DEF", name_str, desc) // 空の定義
+                format!("[ '' ] '{}' '{}' DEF", name_str, desc) // 空の定義
             } else {
-                format!("[ {} ] '{}' '{}' DEF", definition, name_str, desc)
+                format!("[ '{}' ] '{}' '{}' DEF", definition, name_str, desc)
             };
             interp.definition_to_load = Some(full_definition);
         }
