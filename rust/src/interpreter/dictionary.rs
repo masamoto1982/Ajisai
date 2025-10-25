@@ -4,6 +4,7 @@ use crate::interpreter::{Interpreter, WordDefinition};
 use crate::interpreter::error::{AjisaiError, Result};
 use crate::types::{Token, BracketType, ValueType, ExecutionLine, Value}; // Value をインポート
 use std::collections::HashSet;
+use std::fmt::Write; // for write!
 
 // === 新しいヘルパー関数 ===
 
@@ -102,7 +103,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token], description: Option<String>) -> Result<()> {
     let upper_name = name.to_uppercase();
-    interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}'\n", upper_name));
+    
+    // ★ デバッグバッファに書き込む
+    writeln!(interp.debug_buffer, "[DEBUG] Defining word '{}' with tokens: {:?}", upper_name, tokens).unwrap();
 
     if let Some(old_def) = interp.dictionary.get(&upper_name) {
         for dep_name in &old_def.dependencies {
@@ -162,6 +165,8 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     };
     
     interp.dictionary.insert(upper_name.clone(), new_def);
+    
+    // ★ 通常のアウトプットバッファに書き込む
     interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
     Ok(())
 }
@@ -221,7 +226,6 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
             // 説明文を取得。ない場合は空文字列をデフォルトにする
             let desc = def.description.as_deref().unwrap_or(""); 
             
-            // ★ 変更点： [ '{}' ] ではなく [ {} ] に修正
             let full_definition = if definition.is_empty() {
                 format!("[ ] '{}' '{}' DEF", name_str, desc) // 空の定義
             } else {
