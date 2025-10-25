@@ -2,6 +2,8 @@
 
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
+use std::collections::HashSet; // ★ HashSet をインポート
+use std::fmt::Write;           // ★ Write トレイトをインポート
 use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueType, BracketType, Token};
 use crate::types::fraction::Fraction;
@@ -50,7 +52,7 @@ impl AjisaiInterpreter {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 
-                // ★ アウトプットとデバッグアウトプットを両方取得
+                // アウトプットとデバッグアウトプットを両方取得
                 let output = self.interpreter.get_output();
                 let debug_output = self.interpreter.get_debug_output();
                 
@@ -70,7 +72,7 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"message".into(), &error_msg.into()).unwrap();
                 js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
 
-                // ★ エラー時も、そこまでのデバッグログを返す
+                // エラー時も、そこまでのデバッグログを返す
                 let debug_output = self.interpreter.get_debug_output();
                 js_sys::Reflect::set(&obj, &"debugOutput".into(), &debug_output.into()).unwrap();
             }
@@ -87,10 +89,10 @@ impl AjisaiInterpreter {
             self.step_position = 0;
             self.current_step_code = code.to_string();
             
-            // ★ ステップ実行時もバッファをクリア
+            // ステップ実行時もバッファをクリア
             self.interpreter.output_buffer.clear();
             self.interpreter.debug_buffer.clear();
-            self.interpreter.call_stack_depth = 0;
+            self.interpreter.call_stack_depth = 0; // ★ call_stack_depth にアクセス
 
             let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
                 .filter(|(_, def)| !def.is_builtin)
@@ -120,7 +122,7 @@ impl AjisaiInterpreter {
 
         let token = self.step_tokens[self.step_position].clone();
         
-        // ★ ステップ実行では execute_tokens_sync を使う
+        // ステップ実行では execute_tokens_sync を使う
         let result = self.interpreter.execute_tokens_sync(&[token]);
         
         match result {
@@ -167,7 +169,7 @@ impl AjisaiInterpreter {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into()).unwrap();
-                // ★ リセット時もデバッグログを返す
+                // リセット時もデバッグログを返す
                 js_sys::Reflect::set(&obj, &"debugOutput".into(), &self.interpreter.get_debug_output().into()).unwrap();
             }
             Err(e) => {
@@ -216,7 +218,7 @@ impl AjisaiInterpreter {
             .map(|(name, def)| {
                 CustomWordData {
                     name: name.clone(),
-                    // ★ get_word_definition_tokens を使う
+                    // get_word_definition_tokens を使う
                     definition: self.interpreter.get_word_definition_tokens(name).unwrap_or_default(),
                     description: def.description.clone(),
                 }
@@ -256,17 +258,11 @@ impl AjisaiInterpreter {
             
         writeln!(self.interpreter.debug_buffer, "[RESTORE] Restoring {} custom words...", words.len()).unwrap();
 
-        // ★★★ 構文変更に伴う復元ロジックの修正 ★★★
-        // 以前は `definition` (文字列) を `tokenize_with_custom_words` していましたが、
-        // 新しい `op_def_inner` は `[Token]` を期待します。
-        // しかし、`CustomWordData` の `definition` は `get_word_definition_tokens` (
-        // `1 2 +` のような文字列) から作られています。
-        // この文字列を *再度* トークン化し、*それらのトークンを* `op_def_inner` に渡す必要があります。
-
         for word in words {
              writeln!(self.interpreter.debug_buffer, "[RESTORE] Restoring '{}': {}", word.name, word.definition).unwrap();
 
             // `definition` ("1 2 +") をトークン (`[Token::Number("1"), Token::Number("2"), Token::Symbol("+")]`) に変換
+            // ★ HashSet::new() を std::collections::HashSet::new() に修正
             let tokens = tokenizer::tokenize_with_custom_words(&word.definition, &HashSet::new()) // 依存関係は後で再構築
                 .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
 
