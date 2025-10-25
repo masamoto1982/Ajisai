@@ -15,6 +15,7 @@ use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition};
 use crate::types::fraction::Fraction;
 use self::error::{Result, AjisaiError};
 use std::fmt::Write; // for write!
+use num_traits::Zero; // Import Zero trait for is_zero()
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTarget {
@@ -30,7 +31,7 @@ pub struct Interpreter {
     pub(crate) debug_buffer: String, // デバッグログ専用バッファ
     pub(crate) definition_to_load: Option<String>,
     pub(crate) operation_target: OperationTarget,
-    pub(crate) call_stack_depth: usize, // ★ pub(crate) に変更
+    pub(crate) call_stack_depth: usize, // pub(crate) に変更
 }
 
 impl Interpreter {
@@ -116,17 +117,18 @@ impl Interpreter {
 
     fn execute_guard_structure(&mut self, tokens: &[Token]) -> Result<()> {
         let sections = self.split_by_guard_separator(tokens);
-        
+
         if sections.is_empty() {
             return Ok(());
         }
-        
+
         let indent = self.get_indent();
         writeln!(self.debug_buffer, "{}[GUARD] Found {} sections", indent, sections.len()).unwrap();
 
         // 条件が1つしかない場合（デフォルト処理のみ、例：`: [ 999 ]`）
-        if sections.len() == 1 && tokens.starts_with(&[Token::GuardSeparator]) {
-             let default_tokens = &sections[0];
+        // split_by_guard_separator は `:` の前の空セクションと後のセクションを返す
+        if sections.len() == 2 && sections[0].is_empty() && tokens.starts_with(&[Token::GuardSeparator]) {
+             let default_tokens = &sections[1];
              writeln!(self.debug_buffer, "{}[GUARD] Executing default action (no condition): {:?}", indent, default_tokens).unwrap();
              self.execute_tokens_sync(default_tokens)?;
              return Ok(());
@@ -139,7 +141,7 @@ impl Interpreter {
             // 条件部を評価
             writeln!(self.debug_buffer, "{}[GUARD] Evaluating condition {}: {:?}", indent, i/2, sections[i]).unwrap();
             self.execute_tokens_sync(&sections[i])?;
-            
+
             // スタックトップを評価
             let condition = self.is_condition_true()?;
             writeln!(self.debug_buffer, "{}[GUARD] Condition {} result: {}", indent, i/2, condition).unwrap();
@@ -152,12 +154,12 @@ impl Interpreter {
                 }
                 return Ok(());
             }
-            
+
             i += 2; // 条件と処理のペアをスキップ
         }
-    
+
         // すべての条件が偽だった場合、最後のセクション（デフォルト処理）があるかチェック
-        // i がセクション数と同じか、それより大きい場合、デフォルト処理はない
+        // i がセクション数と同じかそれより大きくなく、かつ i が偶数の場合（＝条件/処理ペアの後に続く要素がある場合）
         if i < sections.len() {
             // i が最後のインデックスを指している場合、それがデフォルト処理
             let default_tokens = &sections[i];
@@ -166,14 +168,14 @@ impl Interpreter {
         } else {
              writeln!(self.debug_buffer, "{}[GUARD] No conditions met, no default action", indent).unwrap();
         }
-    
+
         Ok(())
     }
 
     fn split_by_guard_separator(&self, tokens: &[Token]) -> Vec<Vec<Token>> {
         let mut sections = Vec::new();
         let mut current_section = Vec::new();
-        
+
         for token in tokens {
             if matches!(token, Token::GuardSeparator) {
                 sections.push(current_section);
@@ -182,10 +184,10 @@ impl Interpreter {
                 current_section.push(token.clone());
             }
         }
-        
+
         // 最後のセクションを追加（: がない場合や、: の後のセクション）
         sections.push(current_section);
-        
+
         sections
     }
 
@@ -195,9 +197,9 @@ impl Interpreter {
             writeln!(self.debug_buffer, "{}  (Guard check: Stack empty -> FALSE)", self.get_indent()).unwrap();
             return Ok(false);
         }
-        
+
         let top = self.stack.pop().unwrap();
-        
+
         let result = match &top.val_type {
             ValueType::Boolean(b) => *b,
             ValueType::Vector(v, _) => {
@@ -221,7 +223,7 @@ impl Interpreter {
             // シンボルは TRUE
             ValueType::Symbol(_) => true,
         };
-        
+
         writeln!(self.debug_buffer, "{}  (Guard check: Popped '{}' -> {})", self.get_indent(), top, result).unwrap();
         Ok(result)
     }
@@ -231,13 +233,13 @@ impl Interpreter {
         if tokens.iter().any(|t| matches!(t, Token::GuardSeparator)) {
             return self.execute_guard_structure(tokens);
         }
-        
+
         let indent = self.get_indent();
-        
+
         let mut i = 0;
         while i < tokens.len() {
             let token = &tokens[i];
-            
+
             // トークン実行をデバッグログに出力
             writeln!(self.debug_buffer, "{}[EXEC] Token: {:?}", indent, token).unwrap();
 
@@ -312,10 +314,10 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         let indent = self.get_indent();
-        
+
         writeln!(self.debug_buffer, "{}[CALL] --- Entering Word: {} ---", indent, name).unwrap();
         writeln!(self.debug_buffer, "{}  Stack before: {}", indent, self.format_stack_for_debug()).unwrap();
-        
+
         self.call_stack_depth += 1;
         let result = if def.is_builtin {
             self.execute_builtin(name)
@@ -335,7 +337,7 @@ impl Interpreter {
             execution_error.map_or(Ok(()), Err)
         };
         self.call_stack_depth -= 1;
-        
+
         // 実行結果をログに出力
         match &result {
             Ok(_) => {
@@ -347,7 +349,7 @@ impl Interpreter {
                  writeln!(self.debug_buffer, "{}[CALL] --- Exiting Word: {} (ERROR: {}) ---", indent, name, e).unwrap();
             }
         }
-        
+
         // STACK/STACKTOP はワード実行後に必ず STACKTOP にリセット
         self.operation_target = OperationTarget::StackTop;
 
@@ -361,11 +363,11 @@ impl Interpreter {
             "INSERT" => vector_ops::op_insert(self),
             "REPLACE" => vector_ops::op_replace(self),
             "REMOVE" => vector_ops::op_remove(self),
-            
+
             // 量指定操作(1オリジン)
             "LENGTH" => vector_ops::op_length(self),
             "TAKE" => vector_ops::op_take(self),
-            
+
             // Vector構造操作
             "SPLIT" => vector_ops::op_split(self),
             "CONCAT" => vector_ops::op_concat(self),
@@ -377,19 +379,19 @@ impl Interpreter {
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),
             "/" => arithmetic::op_div(self),
-            
+
             // 比較演算
             "=" => comparison::op_eq(self),
             "<" => comparison::op_lt(self),
             "<=" => comparison::op_le(self),
             ">" => comparison::op_gt(self),
             ">=" => comparison::op_ge(self),
-            
+
             // 論理演算
             "AND" => comparison::op_and(self),
             "OR" => comparison::op_or(self),
             "NOT" => comparison::op_not(self),
-            
+
             // 入出力
             "PRINT" => io::op_print(self),
             "CR" => io::op_cr(self),
@@ -401,13 +403,13 @@ impl Interpreter {
             "DEF" => dictionary::op_def(self),
             "DEL" => dictionary::op_del(self),
             "?" => dictionary::op_lookup(self),
-            
+
             "RESET" => self.execute_reset(),
-            
+
             // 高階関数
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
-            
+
             // 制御
             "TIMES" => control::execute_times(self),
             "WAIT" => control::execute_wait(self),
@@ -417,8 +419,8 @@ impl Interpreter {
 
             // 未定義の組み込みワード (get_builtin_definitions にはあるがここに追加し忘れたもの)
             // "'" | "[ ]" | "STACK" | "STACKTOP" | ":" などは execute_tokens_sync で処理される
-            _ => Err(AjisaiError::UnknownBuiltin(name.to_string())) // ★ カンマ削除
-        } // ★ カンマ削除
+            _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
+        }
     }
 
 
@@ -436,14 +438,14 @@ impl Interpreter {
             Token::LineBreak => "\n".to_string(),
         }
     }
-    
+
     pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
         if let Some(def) = self.dictionary.get(name) {
             if !def.is_builtin {
                  let mut result = String::new();
                  for (i, line) in def.lines.iter().enumerate() {
                      if i > 0 { result.push('\n'); }
-                    
+
                      let line_str = line.body_tokens.iter()
                          .map(|token| self.token_to_string(token))
                          .collect::<Vec<String>>()
@@ -456,12 +458,12 @@ impl Interpreter {
         }
         None
     }
-    
+
     pub fn execute_reset(&mut self) -> Result<()> {
-        self.stack.clear(); 
+        self.stack.clear();
         self.dictionary.clear();
         self.dependents.clear();
-        self.output_buffer.clear(); 
+        self.output_buffer.clear();
         self.debug_buffer.clear(); // クリア
         self.definition_to_load = None;
         self.operation_target = OperationTarget::StackTop;
@@ -476,12 +478,111 @@ impl Interpreter {
         self.output_buffer.clear();
         self.debug_buffer.clear();
         self.call_stack_depth = 0;
-        
+
         writeln!(self.debug_buffer, "[START] Executing code: {}", code).unwrap();
-        
+
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
             .collect();
-            
+
         let tokens = match crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
+            Ok(t) => t,
+            Err(e) => {
+                writeln!(self.debug_buffer, "[ERROR] Tokenization failed: {}", e).unwrap();
+                return Err(AjisaiError::from(e));
+            }
+        }; // ★★★ Missing '}' fixed here ★★★
+
+        writeln!(self.debug_buffer, "[TOKENS] {:?}", tokens).unwrap();
+
+        let result = self.execute_tokens_sync(&tokens);
+
+        match &result {
+             Ok(_) => writeln!(self.debug_buffer, "[END] Execution finished OK.").unwrap(),
+             Err(e) => writeln!(self.debug_buffer, "[END] Execution finished with ERROR: {}", e).unwrap(),
+        };
+
+        result
+    }
+
+    pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
+    pub fn get_debug_output(&mut self) -> String { std::mem::take(&mut self.debug_buffer) } // ゲッター
+    pub fn get_stack(&self) -> &Stack { &self.stack }
+    pub fn set_stack(&mut self, stack: Stack) { self.stack = stack; }
+
+    pub fn rebuild_dependencies(&mut self) -> Result<()> {
+        self.dependents.clear();
+        let custom_words: Vec<(String, WordDefinition)> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.clone()))
+            .collect();
+
+        for (word_name, word_def) in custom_words {
+            let mut dependencies = HashSet::new();
+            for line in &word_def.lines {
+                for token in line.body_tokens.iter() {
+                    if let Token::Symbol(s) = token {
+                        let upper_s = s.to_uppercase();
+                        if self.dictionary.contains_key(&upper_s) && !self.dictionary.get(&upper_s).unwrap().is_builtin {
+                            dependencies.insert(upper_s.clone());
+                            self.dependents.entry(upper_s).or_default().insert(word_name.clone());
+                        }
+                    }
+                }
+            }
+            if let Some(def) = self.dictionary.get_mut(&word_name) {
+                def.dependencies = dependencies;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn init_step_execution(&mut self, code: &str) -> Result<()> {
+        let custom_word_names: HashSet<String> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect();
+        let _tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
+        Ok(())
+    }
+
+    pub fn execute_step(&mut self) -> Result<bool> {
+        Ok(false)
+    }
+
+    pub fn get_step_info(&self) -> Option<(usize, usize)> {
+        None
+    }
+
+    pub fn get_register(&self) -> Option<&Value> {
+        None
+    }
+
+    pub fn set_register(&mut self, _value: Option<Value>) {
+    }
+
+    pub fn get_custom_words(&self) -> Vec<String> {
+        self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect()
+    }
+
+    pub fn get_custom_words_with_descriptions(&self) -> Vec<(String, Option<String>)> {
+        self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, def)| (name.clone(), def.description.clone()))
+            .collect()
+    }
+
+    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
+        self.dictionary.iter()
+            .map(|(name, def)| (name.clone(), def.description.clone(), def.is_builtin))
+            .collect()
+    }
+
+    pub fn get_word_definition(&self, name: &str) -> Option<String> {
+        self.get_word_definition_tokens(name)
+    }
+}
