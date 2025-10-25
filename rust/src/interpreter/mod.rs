@@ -14,6 +14,7 @@ use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition};
 use crate::types::fraction::Fraction;
 use self::error::{Result, AjisaiError};
+use std::fmt::Write; // for write!
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTarget {
@@ -26,8 +27,10 @@ pub struct Interpreter {
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
+    pub(crate) debug_buffer: String, // ★ デバッグログ専用バッファ
     pub(crate) definition_to_load: Option<String>,
     pub(crate) operation_target: OperationTarget,
+    call_stack_depth: usize, // ★ デバッグ用の呼び出し深度
 }
 
 impl Interpreter {
@@ -37,14 +40,30 @@ impl Interpreter {
             dictionary: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
+            debug_buffer: String::new(), // ★ 初期化
             definition_to_load: None,
             operation_target: OperationTarget::StackTop,
+            call_stack_depth: 0, // ★ 初期化
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
     }
 
-    // ★★★ is_bare_stack と ensure_wrapped_stack は削除 (前回の修正を維持) ★★★
+    // ★ デバッグログ用のスタック状態フォーマッタ
+    fn format_stack_for_debug(&self) -> String {
+        if self.stack.is_empty() {
+            return "(empty)".to_string();
+        }
+        self.stack.iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>()
+            .join(" ")
+    }
+
+    // ★ デバッグログ用のインデント
+    fn get_indent(&self) -> String {
+        "  ".repeat(self.call_stack_depth)
+    }
 
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, BracketType, usize)> {
         let bracket_type = match &tokens[start_index] {
@@ -94,48 +113,67 @@ impl Interpreter {
     }
 
     fn execute_guard_structure(&mut self, tokens: &[Token]) -> Result<()> {
-    let sections = self.split_by_guard_separator(tokens);
-    
-    if sections.is_empty() {
-        return Ok(());
-    }
-    
-    // 条件が1つしかない場合（: のみ）
-    if sections.len() == 2 {
-        // 条件部を評価
-        self.execute_tokens_sync(&sections[0])?;
+        let sections = self.split_by_guard_separator(tokens);
         
-        if self.is_condition_true()? {
-            // 真の場合：処理部を評価
-            self.execute_tokens_sync(&sections[1])?;
-        }
-        return Ok(());
-    }
-    
-    // 複数条件の場合 - 各ペアをチェック
-    let mut i = 0;
-    while i + 1 < sections.len() {
-        // 条件部を評価
-        self.execute_tokens_sync(&sections[i])?;
-        
-        // スタックトップを評価
-        if self.is_condition_true()? {
-            // 次のセクション（処理部）を評価
-            if i + 1 < sections.len() {
-                self.execute_tokens_sync(&sections[i + 1])?;
-            }
+        if sections.is_empty() {
             return Ok(());
         }
         
-        i += 2; // 条件と処理のペアをスキップ
+        let indent = self.get_indent();
+        writeln!(self.debug_buffer, "{}[GUARD] Found {} sections", indent, sections.len()).unwrap();
+
+        // 条件が1つしかない場合（: のみ）
+        if sections.len() == 2 {
+            // 条件部を評価
+            writeln!(self.debug_buffer, "{}[GUARD] Evaluating condition: {:?}", indent, sections[0]).unwrap();
+            self.execute_tokens_sync(&sections[0])?;
+            
+            let condition = self.is_condition_true()?;
+            writeln!(self.debug_buffer, "{}[GUARD] Condition result: {}", indent, condition).unwrap();
+            
+            if condition {
+                // 真の場合：処理部を評価
+                writeln!(self.debug_buffer, "{}[GUARD] Executing action: {:?}", indent, sections[1]).unwrap();
+                self.execute_tokens_sync(&sections[1])?;
+            }
+            return Ok(());
+        }
+    
+        // 複数条件の場合 - 各ペアをチェック
+        let mut i = 0;
+        while i + 1 < sections.len() {
+            // 条件部を評価
+            writeln!(self.debug_buffer, "{}[GUARD] Evaluating condition {}: {:?}", indent, i/2, sections[i]).unwrap();
+            self.execute_tokens_sync(&sections[i])?;
+            
+            // スタックトップを評価
+            let condition = self.is_condition_true()?;
+            writeln!(self.debug_buffer, "{}[GUARD] Condition {} result: {}", indent, i/2, condition).unwrap();
+
+            if condition {
+                // 次のセクション（処理部）を評価
+                if i + 1 < sections.len() {
+                    writeln!(self.debug_buffer, "{}[GUARD] Executing action {}: {:?}", indent, i/2, sections[i+1]).unwrap();
+                    self.execute_tokens_sync(&sections[i + 1])?;
+                }
+                return Ok(());
+            }
+            
+            i += 2; // 条件と処理のペアをスキップ
+        }
+    
+        // すべての条件が偽だった場合、最後のセクション（デフォルト処理）を評価
+        if i < sections.len() {
+            let default_tokens = sections.last().unwrap();
+            writeln!(self.debug_buffer, "{}[GUARD] Executing default action: {:?}", indent, default_tokens).unwrap();
+            self.execute_tokens_sync(default_tokens)?;
+        } else {
+             writeln!(self.debug_buffer, "{}[GUARD] No conditions met, no default action", indent).unwrap();
+        }
+    
+        Ok(())
     }
-    
-    // すべての条件が偽だった場合、最後のセクション（デフォルト処理）を評価
-    let default_tokens = sections.last().unwrap();
-    self.execute_tokens_sync(default_tokens)?;
-    
-    Ok(())
-}
+
     fn split_by_guard_separator(&self, tokens: &[Token]) -> Vec<Vec<Token>> {
         let mut sections = Vec::new();
         let mut current_section = Vec::new();
@@ -149,92 +187,116 @@ impl Interpreter {
             }
         }
         
-        if !current_section.is_empty() {
-            sections.push(current_section);
-        }
+        // 最後のセクションを追加（: がない場合や、: の後のセクション）
+        sections.push(current_section);
         
         sections
     }
 
+
     fn is_condition_true(&mut self) -> Result<bool> {
         if self.stack.is_empty() {
+            writeln!(self.debug_buffer, "{}  (Guard check: Stack empty -> FALSE)", self.get_indent()).unwrap();
             return Ok(false);
         }
         
         let top = self.stack.pop().unwrap();
         
-        match &top.val_type {
-            ValueType::Boolean(b) => Ok(*b),
+        let result = match &top.val_type {
+            ValueType::Boolean(b) => *b,
             ValueType::Vector(v, _) => {
                 if v.len() == 1 {
                     if let ValueType::Boolean(b) = v[0].val_type {
-                        Ok(b)
+                        b
                     } else {
-                        Ok(true) // ベクタが存在するなら真
+                        true // ベクタが存在するなら真
                     }
                 } else {
-                    Ok(!v.is_empty())
+                    !v.is_empty()
                 }
             },
-            ValueType::Nil => Ok(false),
-            _ => Ok(true),
-        }
+            ValueType::Nil => false,
+            _ => true,
+        };
+        
+        writeln!(self.debug_buffer, "{}  (Guard check: Popped '{}' -> {})", self.get_indent(), top, result).unwrap();
+        Ok(result)
     }
 
-    // ★★★ 変更：リテラルを [ ] でラップしてプッシュする (Stringを除く) ★★★
     pub(crate) fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
         // ガードセパレータが含まれているかチェック
         if tokens.iter().any(|t| matches!(t, Token::GuardSeparator)) {
             return self.execute_guard_structure(tokens);
         }
         
+        let indent = self.get_indent();
+        
         let mut i = 0;
         while i < tokens.len() {
-            match &tokens[i] {
+            let token = &tokens[i];
+            
+            // ★ トークン実行をデバッグログに出力
+            writeln!(self.debug_buffer, "{}[EXEC] Token: {:?}", indent, token).unwrap();
+
+            match token {
                 Token::Number(n) => {
-                    // Numberは [ N ] としてプッシュ
                     let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    let vec_val = Value { val_type: ValueType::Vector(vec![val], BracketType::Square) };
+                    writeln!(self.debug_buffer, "{}  -> Pushing literal: {}", indent, vec_val).unwrap();
+                    self.stack.push(vec_val);
                 },
                 Token::String(s) => {
-                    // Stringは 'S' としてプッシュ (DEF構文のためラップしない)
-                    self.stack.push(Value { val_type: ValueType::String(s.clone()) });
+                    let val = Value { val_type: ValueType::String(s.clone()) };
+                    writeln!(self.debug_buffer, "{}  -> Pushing literal: {}", indent, val).unwrap();
+                    self.stack.push(val);
                 },
                 Token::Boolean(b) => {
-                    // Booleanは [ B ] としてプッシュ
                     let val = Value { val_type: ValueType::Boolean(*b) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    let vec_val = Value { val_type: ValueType::Vector(vec![val], BracketType::Square) };
+                    writeln!(self.debug_buffer, "{}  -> Pushing literal: {}", indent, vec_val).unwrap();
+                    self.stack.push(vec_val);
                 },
                 Token::Nil => {
-                    // Nilは [ NIL ] としてプッシュ
                     let val = Value { val_type: ValueType::Nil };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    let vec_val = Value { val_type: ValueType::Vector(vec![val], BracketType::Square) };
+                    writeln!(self.debug_buffer, "{}  -> Pushing literal: {}", indent, vec_val).unwrap();
+                    self.stack.push(vec_val);
                 },
                 Token::VectorStart(_) => {
-                    // Vectorは [ ... ] としてプッシュ (そのまま)
                     let (values, bracket_type, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
+                    let val = Value { val_type: ValueType::Vector(values, bracket_type) };
+                    writeln!(self.debug_buffer, "{}  -> Pushing literal: {}", indent, val).unwrap();
+                    self.stack.push(val);
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
                     let upper_name = name.to_uppercase();
                     match upper_name.as_str() {
-                        "STACK" => self.operation_target = OperationTarget::Stack,
-                        "STACKTOP" => self.operation_target = OperationTarget::StackTop,
+                        "STACK" => {
+                            writeln!(self.debug_buffer, "{}  -> Setting target: STACK", indent).unwrap();
+                            self.operation_target = OperationTarget::Stack;
+                        }
+                        "STACKTOP" => {
+                             writeln!(self.debug_buffer, "{}  -> Setting target: STACKTOP", indent).unwrap();
+                            self.operation_target = OperationTarget::StackTop;
+                        }
                         _ => {
-                            // ラップ処理は不要。演算(op_addなど)側が [ N ] を期待する。
                             self.execute_word_sync(&upper_name)?;
+                            // リセットは execute_word_sync の *後* で行う
                             self.operation_target = OperationTarget::StackTop;
                         }
                     }
                 },
                 Token::GuardSeparator => {
-                    // 単独の場合は無視（デフォルト処理のみの場合）
+                    // 単独の場合は無視（execute_guard_structure で処理されるため、ここには来ないはず）
                 },
                 Token::LineBreak => {
                     // Top-levelでは無視
                 },
-                _ => {}
+                Token::VectorEnd(_) => {
+                     // collect_vector で処理されるため、ここに来たら構文エラー
+                    return Err(AjisaiError::from(format!("Unexpected vector end: {:?}", token)));
+                }
             }
             i += 1;
         }
@@ -245,15 +307,44 @@ impl Interpreter {
         let def = self.dictionary.get(name).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
-        if def.is_builtin {
-            return self.execute_builtin(name);
+        let indent = self.get_indent();
+        
+        writeln!(self.debug_buffer, "{}[CALL] --- Entering Word: {} ---", indent, name).unwrap();
+        writeln!(self.debug_buffer, "{}  Stack before: {}", indent, self.format_stack_for_debug()).unwrap();
+        
+        self.call_stack_depth += 1;
+        let result = if def.is_builtin {
+            self.execute_builtin(name)
+        } else {
+            // カスタムワードの実行
+            let mut execution_error: Option<AjisaiError> = None;
+            for (i, line) in def.lines.iter().enumerate() {
+                writeln!(self.debug_buffer, "{}[CUSTOM] Executing line {}: {:?}", self.get_indent(), i, line.body_tokens).unwrap();
+                if let Err(e) = self.execute_tokens_sync(&line.body_tokens) {
+                    execution_error = Some(e);
+                    break; // エラーが発生したら即座にワードの実行を停止
+                }
+            }
+            execution_error.map_or(Ok(()), Err)
+        };
+        self.call_stack_depth -= 1;
+        
+        // 実行結果をログに出力
+        match &result {
+            Ok(_) => {
+                writeln!(self.debug_buffer, "{}  Stack after:  {}", indent, self.format_stack_for_debug()).unwrap();
+                writeln!(self.debug_buffer, "{}[CALL] --- Exiting Word: {} (OK) ---", indent, name).unwrap();
+            },
+            Err(e) => {
+                 writeln!(self.debug_buffer, "{}  Stack at error: {}", indent, self.format_stack_for_debug()).unwrap();
+                 writeln!(self.debug_buffer, "{}[CALL] --- Exiting Word: {} (ERROR: {}) ---", indent, name, e).unwrap();
+            }
         }
+        
+        // STACK/STACKTOP はワード実行後に必ず STACKTOP にリセット
+        self.operation_target = OperationTarget::StackTop;
 
-        for line in &def.lines {
-            self.execute_tokens_sync(&line.body_tokens)?;
-        }
-
-        Ok(())
+        result
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
@@ -305,7 +396,12 @@ impl Interpreter {
         "MAP" => higher_order::op_map(self),
         "FILTER" => higher_order::op_filter(self),
         
-        _ => Err(AjisaiError::UnknownWord(name.to_string())),
+        // 制御
+        "TIMES" => control::execute_times(self),
+        "WAIT" => control::execute_wait(self),
+
+        // 未定義の組み込みワード (get_builtin_definitions にはあるがここに追加し忘れたもの)
+        _ => Err(AjisaiError::UnknownBuiltin(name.to_string())),
     }
 }
 
@@ -331,12 +427,15 @@ impl Interpreter {
                 for (i, line) in def.lines.iter().enumerate() {
                     if i > 0 { result.push('\n'); }
                     
-                    for token in &line.body_tokens {
-                        result.push_str(&self.token_to_string(token));
-                        result.push(' ');
-                    }
+                    let line_str = line.body_tokens.iter()
+                        .map(|token| self.token_to_string(token))
+                        .collect::<Vec<String>>()
+                        .join(" ");
+                    result.push_str(&line_str);
                 }
                 return Some(result.trim().to_string());
+            } else if !def.is_builtin {
+                 return Some("".to_string()); // 空の定義 [ ] の場合
             }
         }
         None
@@ -347,22 +446,50 @@ impl Interpreter {
         self.dictionary.clear();
         self.dependents.clear();
         self.output_buffer.clear(); 
+        self.debug_buffer.clear(); // ★ クリア
         self.definition_to_load = None;
         self.operation_target = OperationTarget::StackTop;
+        self.call_stack_depth = 0; // ★ リセット
         crate::builtins::register_builtins(&mut self.dictionary);
+        writeln!(self.debug_buffer, "[RESET] Interpreter reset to initial state.").unwrap();
         Ok(())
     }
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
+        // ★ 実行前にバッファをクリア
+        self.output_buffer.clear();
+        self.debug_buffer.clear();
+        self.call_stack_depth = 0;
+        
+        writeln!(self.debug_buffer, "[START] Executing code: {}", code).unwrap();
+        
         let custom_word_names: HashSet<String> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, _)| name.clone())
             .collect();
-        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
-        self.execute_tokens_sync(&tokens)
+            
+        let tokens = match crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
+            Ok(t) => t,
+            Err(e) => {
+                writeln!(self.debug_buffer, "[ERROR] Tokenization failed: {}", e).unwrap();
+                return Err(AjisaiError::from(e));
+            }
+        };
+        
+        writeln!(self.debug_buffer, "[TOKENS] {:?}", tokens).unwrap();
+        
+        let result = self.execute_tokens_sync(&tokens);
+        
+        match &result {
+             Ok(_) => writeln!(self.debug_buffer, "[END] Execution finished OK.").unwrap(),
+             Err(e) => writeln!(self.debug_buffer, "[END] Execution finished with ERROR: {}", e).unwrap(),
+        },
+        
+        result
     }
 
     pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
+    pub fn get_debug_output(&mut self) -> String { std::mem::take(&mut self.debug_buffer) } // ★ ゲッター
     pub fn get_stack(&self) -> &Stack { &self.stack }
     pub fn set_stack(&mut self, stack: Stack) { self.stack = stack; }
 
