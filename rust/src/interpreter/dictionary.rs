@@ -2,7 +2,7 @@
 
 use crate::interpreter::{Interpreter, WordDefinition};
 use crate::interpreter::error::{AjisaiError, Result};
-use crate::types::{Token, BracketType, ValueType, ExecutionLine, Value}; // Value をインポート
+use crate::types::{Token, ValueType, ExecutionLine, Value}; // ★ BracketType を削除
 use std::collections::HashSet;
 use std::fmt::Write; // for write!
 
@@ -104,7 +104,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token], description: Option<String>) -> Result<()> {
     let upper_name = name.to_uppercase();
     
-    // ★ デバッグバッファに書き込む
+    // デバッグバッファに書き込む
     writeln!(interp.debug_buffer, "[DEBUG] Defining word '{}' with tokens: {:?}", upper_name, tokens).unwrap();
 
     if let Some(old_def) = interp.dictionary.get(&upper_name) {
@@ -121,10 +121,12 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     
     for token in tokens {
         if let Token::LineBreak = token {
+            // ★ 行分割ロジック修正：改行トークンは ExecutionLine に含めない
             if !current_line.is_empty() {
                 lines.push(ExecutionLine { body_tokens: current_line });
                 current_line = Vec::new();
             }
+            // 空行も lines には追加しない
         } else {
             current_line.push(token.clone());
         }
@@ -134,10 +136,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         lines.push(ExecutionLine { body_tokens: current_line });
     }
 
-    if lines.is_empty() {
-         // [ ] 'EMPTY' DEF のような空の定義を許可する
-         lines.push(ExecutionLine { body_tokens: vec![] });
-    }
+    // ★ 空の定義 [ ] DEF の場合は lines が空になるが、それでOK
+    // if lines.is_empty() {
+    //      lines.push(ExecutionLine { body_tokens: vec![] });
+    // }
 
     
     let mut new_dependencies = HashSet::new();
@@ -166,7 +168,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     
     interp.dictionary.insert(upper_name.clone(), new_def);
     
-    // ★ 通常のアウトプットバッファに書き込む
+    // 通常のアウトプットバッファに書き込む
     interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
     Ok(())
 }
@@ -220,17 +222,14 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
         if let Some(original_source) = &def.original_source {
             interp.definition_to_load = Some(original_source.clone());
         } else {
-            // get_word_definition_tokens は '1 2 +' のような文字列を返す
+            // get_word_definition_tokens は '1 2 +\n3 +' のような文字列を返す
             let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
             
             // 説明文を取得。ない場合は空文字列をデフォルトにする
             let desc = def.description.as_deref().unwrap_or(""); 
             
-            let full_definition = if definition.is_empty() {
-                format!("[ ] '{}' '{}' DEF", name_str, desc) // 空の定義
-            } else {
-                format!("[ {} ] '{}' '{}' DEF", definition, name_str, desc)
-            };
+            // [ {body} ] の形式で復元
+            let full_definition = format!("[ {} ] '{}' '{}' DEF", definition, name_str, desc);
             interp.definition_to_load = Some(full_definition);
         }
         Ok(())
