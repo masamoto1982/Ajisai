@@ -87,15 +87,16 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             }
 
             // 9. 通常のシンボル
-            if chars[i].is_alphabetic() || chars[i] == '_' {
-                let mut j = i;
-                while j < chars.len() && is_word_char(chars[j]) {
-                    j += 1;
-                }
-                let word: String = chars[i..j].iter().collect();
-                tokens.push(Token::Symbol(word));
-                i = j;
-            } else {
+            if chars[i].is_alphabetic() || chars[i] == '_' || 
+   (chars[i] == '-' && i + 1 < chars.len() && chars[i+1].is_alphabetic()) {
+    let mut j = i;
+    while j < chars.len() && is_word_char(chars[j]) {
+        j += 1;
+    }
+    let word: String = chars[i..j].iter().collect();
+    tokens.push(Token::Symbol(word));
+    i = j;
+} else {
                 return Err(format!("Unknown token starting with: {}", chars[i]));
             }
         }
@@ -179,7 +180,10 @@ fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-fn is_word_char(c: char) -> bool { c.is_ascii_alphanumeric() || c == '_' || c == '?' || c == '!' }
+// is_word_char にハイフンを追加
+fn is_word_char(c: char) -> bool { 
+    c.is_ascii_alphanumeric() || c == '_' || c == '?' || c == '!' || c == '-'
+}
 
 fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     let mut i = 0;
@@ -246,6 +250,7 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
 }
 
 
+// try_parse_operator を修正（'-' の次が英字ならワードとして扱う）
 fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() { return None; }
 
@@ -259,6 +264,10 @@ fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
 
     let single_char_ops = ['+', '-', '*', '/', '=', '<', '>'];
     if single_char_ops.contains(&chars[0]) {
+        // '-' の場合、次が英字ならワード文字として扱う
+        if chars[0] == '-' && chars.len() > 1 && chars[1].is_alphabetic() {
+            return None;
+        }
         return Some((Token::Symbol(chars[0].to_string()), 1));
     }
 
