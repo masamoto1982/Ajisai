@@ -9,12 +9,15 @@ crate-type = ["cdylib"]
 [dependencies]
 wasm-bindgen = "0.2.87"
 js-sys = "0.3.64"
-console_error_panic_hook = { version = "0.1.7", optional = true }
+# console_error_panic_hook は optional ではなく、通常どおり追加します
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.6.1"
 
-# --- 以下の不足分を追加 ---
+# --- 既存の依存関係 ---
 num = "0.4"
 num-rational = "0.4"
 thiserror = "1.0"
-# --- ここまで ---
+
+# --- 以下の2行を追加 ---
+num-traits = "0.2"
+console_error_panic_hook = "0.1.7"
