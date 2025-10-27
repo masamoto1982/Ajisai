@@ -1,12 +1,9 @@
-// rust/src/lib.rs
+// 新しいモジュールを宣言
+pub mod rational;
+pub mod vstack;
+pub mod operator;
+pub mod trie_store;
+pub mod interpreter;
 
-mod types;
-mod tokenizer;
-mod interpreter;
-mod builtins;
-mod wasm_api;
-
-// `pub use` に `#[wasm_bindgen]` は適用できないため削除。
-// `AjisaiInterpreter` 構造体自体が `wasm_api.rs` の中で `#[wasm_bindgen]` されているため、
-// この `use` を介して正しくエクスポートされます。
-pub use wasm_api::AjisaiInterpreter;
+// 既存のWasm APIモジュール
+pub mod wasm_api;
