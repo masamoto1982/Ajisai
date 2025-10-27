@@ -2,10 +2,22 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 /// トライ木のノード
-#[derive(Debug, Default)]
+// ★ 修正点: `Default` を derive から外す
+#[derive(Debug)]
 struct TrieNode<T> {
     children: HashMap<char, TrieNode<T>>,
     value: Option<T>,
+}
+
+// ★ 修正点: `TrieNode` の `Default` を手動で実装
+// (T への Default 制約がなくなります)
+impl<T> Default for TrieNode<T> {
+    fn default() -> Self {
+        TrieNode {
+            children: HashMap::new(),
+            value: None,
+        }
+    }
 }
 
 /// トライ木ベースのストア（辞書）
@@ -14,11 +26,12 @@ pub struct TrieStore<T> {
     root: TrieNode<T>,
 }
 
+// ★ 修正点: `T: Default` の制約を外す
 impl<T: Clone> TrieStore<T> {
     /// 新しいTrieStoreを作成します
     pub fn new() -> Self {
         TrieStore {
-            root: TrieNode::default(),
+            root: TrieNode::default(), // これでOK
         }
     }
 
@@ -26,6 +39,7 @@ impl<T: Clone> TrieStore<T> {
     pub fn insert(&mut self, key: &str, value: T) {
         let mut node = &mut self.root;
         for c in key.chars() {
+            // ★ `TrieNode<T>: Default` が制約なしになったため、これもOK
             node = node.children.entry(c).or_default();
         }
         node.value = Some(value);
@@ -44,7 +58,6 @@ impl<T: Clone> TrieStore<T> {
     }
 
     /// すべての値を（ソートせずに）取得します (GUI用)
-    /// GUI側でソートすることを推奨
     pub fn get_all_values(&self) -> Vec<T> {
         let mut values = Vec::new();
         self.traverse_collect(&self.root, &mut values);
