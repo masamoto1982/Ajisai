@@ -3,9 +3,8 @@ use crate::rational::Rational;
 use crate::trie_store::{new_shared_store, SharedTrieStore, TrieStore};
 use crate::vstack::VStack;
 use std::collections::VecDeque;
-use std::str::FromStr;
+use std::str::FromStr; // `FromStr` の `from_str` メソッドを使用するために必要
 use std::sync::{Arc, RwLock};
-// tauri::AppHandle は削除
 
 /// Ajisai実行時エラー
 #[derive(Debug, thiserror::Error)]
@@ -38,8 +37,7 @@ pub struct Interpreter {
     operators: OperatorStore,
     operands: OperandStore,
     eval_stack: EvalStack,
-    target: Option<Operand>, // 現在の暗m
-    // app_handle: AppHandle, // GUI通知用 (削除)
+    target: Option<Operand>, // 現在の暗黙の操作対象
     output: Vec<String>, // 実行結果（コンソール出力）を保持するバッファ
 }
 
@@ -54,7 +52,6 @@ impl Interpreter {
             operands,
             eval_stack: VecDeque::new(),
             target: None,
-            // app_handle, (削除)
             output: Vec::new(),
         };
         i.define_builtins(); // 組み込みワードを定義
@@ -84,7 +81,8 @@ impl Interpreter {
     /// 入力された文字列を評価し、コンソール出力を返します
     pub fn eval(&mut self, line: &str) -> Result<Vec<String>, AjisaiError> {
         self.clear_output();
-        let mut tokens = line.fields().collect::<VecDeque<_>>();
+        // ★ 修正点: `fields()` -> `split_whitespace()`
+        let mut tokens = line.split_whitespace().collect::<VecDeque<_>>();
         
         while let Some(token) = tokens.pop_front() {
             match token {
@@ -93,6 +91,7 @@ impl Interpreter {
                     let mut data = Vec::new();
                     while let Some(lit_token) = tokens.pop_front() {
                         if lit_token == "]" { break; }
+                        // `from_str` を Rational のトレイトメソッドとして使用
                         if let Ok(r) = Rational::from_str(lit_token) {
                             data.push(r);
                         } else {
@@ -124,6 +123,7 @@ impl Interpreter {
             }
 
             // 3. 数値リテラルか？
+            // `from_str` を Rational のトレイトメソッドとして使用
             if let Ok(r) = Rational::from_str(token) {
                 let v = Arc::new(RwLock::new(VStack::new()));
                 v.write().unwrap().push(r);
