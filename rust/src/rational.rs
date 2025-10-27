@@ -1,5 +1,5 @@
 use num_rational::BigRational;
-use num_traits::{Num, Zero};
+use num_traits::Zero; // <--- `Num` を削除
 use std::fmt;
 use std::str::FromStr;
 
