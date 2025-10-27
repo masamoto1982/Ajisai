@@ -236,7 +236,7 @@ impl AjisaiInterpreter {
     pub fn get_word_definition(&self, name: &str) -> JsValue {
         let upper_name = name.to_uppercase();
         self.interpreter.get_word_definition_tokens(&upper_name)
-            .map(|def| JsValue::from_str(&def))
+            .map(|(name, op)| JsValue::from_str(&op.signature()))
             .unwrap_or(JsValue::NULL)
     }
 
