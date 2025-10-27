@@ -5,7 +5,7 @@ use crate::vstack::VStack;
 use std::collections::VecDeque;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
-use tauri::AppHandle;
+// tauri::AppHandle は削除
 
 /// Ajisai実行時エラー
 #[derive(Debug, thiserror::Error)]
@@ -38,13 +38,14 @@ pub struct Interpreter {
     operators: OperatorStore,
     operands: OperandStore,
     eval_stack: EvalStack,
-    target: Option<Operand>, // 現在の暗黙の操作対象
-    app_handle: AppHandle, // GUI通知用
+    target: Option<Operand>, // 現在の暗m
+    // app_handle: AppHandle, // GUI通知用 (削除)
+    output: Vec<String>, // 実行結果（コンソール出力）を保持するバッファ
 }
 
 impl Interpreter {
     /// 新しいInterpreterを初期化します
-    pub fn new(app_handle: AppHandle) -> Self {
+    pub fn new() -> Self {
         let operators = new_shared_store::<Arc<Operator>>();
         let operands = new_shared_store::<Operand>();
         
@@ -53,47 +54,52 @@ impl Interpreter {
             operands,
             eval_stack: VecDeque::new(),
             target: None,
-            app_handle,
+            // app_handle, (削除)
+            output: Vec::new(),
         };
         i.define_builtins(); // 組み込みワードを定義
         i
     }
     
-    // (Tauriから呼ばれる) OperatorStore への参照
+    // (Wasm_api.rsから呼ばれる) OperatorStore への参照
     pub fn get_operators_store(&self) -> OperatorStore {
         self.operators.clone()
     }
     
-    // (Tauriから呼ばれる) OperandStore への参照
+    // (Wasm_api.rsから呼ばれる) OperandStore への参照
     pub fn get_operands_store(&self) -> OperandStore {
         self.operands.clone()
     }
 
-    /// 入力された文字列を評価します
-    pub fn eval(&mut self, line: &str) -> Result<(), AjisaiError> {
+    /// 出力バッファをクリアします
+    fn clear_output(&mut self) {
+        self.output.clear();
+    }
+    
+    /// 出力バッファに書き込みます
+    fn write_output(&mut self, s: String) {
+        self.output.push(s);
+    }
+
+    /// 入力された文字列を評価し、コンソール出力を返します
+    pub fn eval(&mut self, line: &str) -> Result<Vec<String>, AjisaiError> {
+        self.clear_output();
         let mut tokens = line.fields().collect::<VecDeque<_>>();
         
-        // TODO: `[` `]` のリテラルパーサー (現状は未実装)
-        // ここでは "1/2" "10" "A" "+" "->" "B" のようなトークンのみ処理
-
         while let Some(token) = tokens.pop_front() {
             match token {
                 // 1. Vectorリテラル (簡易実装)
                 "[" => {
-                    // TODO: `]` までをパースしてVStackを作成し、eval_stackに積む
-                    // `[` `1` `2` `]` -> `[1, 2]`
                     let mut data = Vec::new();
                     while let Some(lit_token) = tokens.pop_front() {
                         if lit_token == "]" { break; }
                         if let Ok(r) = Rational::from_str(lit_token) {
                             data.push(r);
                         } else {
-                            // エラーハンドリング
+                            // TODO: エラーハンドリング
                         }
                     }
-                    let v = Arc::new(RwLock::new(
-                        VStack::new("temp".to_string(), None) // 一時VStackはGUI通知しない
-                    ));
+                    let v = Arc::new(RwLock::new(VStack::new()));
                     v.write().unwrap().set(data);
                     self.eval_stack.push_back(v);
                     continue;
@@ -107,9 +113,7 @@ impl Interpreter {
                     let v_to_assign = self.pop_eval_or_target()?;
                     
                     // 新しいVStackを作成し、内容をコピーする
-                    let new_v = Arc::new(RwLock::new(
-                        VStack::new(name.to_string(), Some(self.app_handle.clone()))
-                    ));
+                    let new_v = Arc::new(RwLock::new(VStack::new()));
                     new_v.write().unwrap().set(v_to_assign.read().unwrap().get_copy());
                     
                     // OperandStoreに登録
@@ -121,9 +125,7 @@ impl Interpreter {
 
             // 3. 数値リテラルか？
             if let Ok(r) = Rational::from_str(token) {
-                let v = Arc::new(RwLock::new(
-                    VStack::new("temp".to_string(), None)
-                ));
+                let v = Arc::new(RwLock::new(VStack::new()));
                 v.write().unwrap().push(r);
                 self.eval_stack.push_back(v);
                 continue;
@@ -138,10 +140,8 @@ impl Interpreter {
             // 5. Operand (既存の名前) か？
             if let Some(v) = self.operands.read().unwrap().find(token) {
                 if self.target.is_some() || !self.eval_stack.is_empty() {
-                    // `A B ...` の B
                     self.eval_stack.push_back(v);
                 } else {
-                    // `A ...` の A (最初のOperand)
                     self.target = Some(v);
                 }
                 continue;
@@ -154,7 +154,7 @@ impl Interpreter {
         // 1行評価完了
         self.target = None;
         self.eval_stack.clear(); // 一時スタックをクリア
-        Ok(())
+        Ok(self.output.clone()) // コンソール出力を返す
     }
 
     /// eval_stack または target から Operand を取得します
@@ -170,13 +170,10 @@ impl Interpreter {
 
     /// Operatorを実行します
     fn execute_operator(&mut self, op: Arc<Operator>) -> Result<(), AjisaiError> {
-        // ターゲットを取得
-        // `A +` の `A` (target) または `[1 2] +` の `[1 2]` (eval_stack)
         if self.target.is_none() {
             self.target = self.eval_stack.pop_back();
         }
         
-        // `push` や `sum` など、ターゲットが必須のワード
         if self.target.is_none() && op.name != "->" { // `->` は特別
              return Err(AjisaiError::TargetRequired(op.name.clone()));
         }
@@ -221,9 +218,7 @@ impl Interpreter {
             ".", OpMode::Stack, StackEffect { input: 1, output: 0 },
             Box::new(|i: &mut Interpreter| {
                 let r = i.target.as_ref().unwrap().write().unwrap().pop().unwrap();
-                // TODO: GUIの出力エリアに送る
-                println!("{}", r); 
-                i.app_handle.emit_all("console-output", r.to_string()).ok();
+                i.write_output(r.to_string());
                 Ok(())
             })
         )));
@@ -246,15 +241,13 @@ impl Interpreter {
 
         // sum ( V: v -- n )
         store.insert("sum", Arc::new(Operator::new_native(
-            "sum", OpMode::Vector, StackEffect { input: 0, output: 0 }, // VModeではeffectは無視
+            "sum", OpMode::Vector, StackEffect { input: 0, output: 0 },
             Box::new(|i: &mut Interpreter| {
                 let data = i.target.as_ref().unwrap().read().unwrap().get_copy();
                 let total = data.iter().fold(Rational::zero(), |acc, r| acc.add(r));
                 
                 // 結果をevalStackにプッシュ
-                let res_v = Arc::new(RwLock::new(
-                    VStack::new("temp".to_string(), None)
-                ));
+                let res_v = Arc::new(RwLock::new(VStack::new()));
                 res_v.write().unwrap().push(total);
                 i.eval_stack.push_back(res_v);
                 i.target = None; // ターゲットを消費
@@ -277,9 +270,7 @@ impl Interpreter {
             "v.", OpMode::Vector, StackEffect { input: 0, output: 0 },
             Box::new(|i: &mut Interpreter| {
                 let s = i.target.as_ref().unwrap().read().unwrap().to_string();
-                // TODO: GUIの出力エリアに送る
-                println!("{}", s);
-                i.app_handle.emit_all("console-output", s).ok();
+                i.write_output(s);
                 i.target = None; // ターゲットを消費
                 Ok(())
             })
