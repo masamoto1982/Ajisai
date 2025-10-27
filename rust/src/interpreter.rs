@@ -1,6 +1,8 @@
-use crate::operator::{NativeAction, OpMode, Operator, StackEffect};
+// ★ 修正点: `NativeAction` を削除
+use crate::operator::{OpMode, Operator, StackEffect};
 use crate::rational::Rational;
-use crate::trie_store::{new_shared_store, SharedTrieStore, TrieStore};
+// ★ 修正点: `TrieStore` を削除
+use crate::trie_store::{new_shared_store, SharedTrieStore};
 use crate::vstack::VStack;
 use std::collections::VecDeque;
 use std::str::FromStr; // `FromStr` の `from_str` メソッドを使用するために必要
@@ -15,12 +17,17 @@ pub enum AjisaiError {
     StackUnderflow { op: String, need: usize, found: usize },
     #[error("Evaluation stack underflow")]
     EvalStackUnderflow,
-    #[error("'{op}' requires a target operand")]
+    
+    // ★ 修正点: `{op}` -> `{0}` (位置引数)
+    #[error("'{0}' requires a target operand")]
     TargetRequired(String),
-    #[error("'{op}' requires a value on eval stack")]
+    // ★ 修正点: `{op}` -> `{0}`
+    #[error("'{0}' requires a value on eval stack")]
     ValueRequired(String),
-    #[error("'{op}' requires a name for assignment")]
+    // ★ 修正点: `{op}` -> `{0}`
+    #[error("'{0}' requires a name for assignment")]
     NameRequired(String),
+
     #[error("Division by zero")]
     DivisionByZero,
 }
@@ -81,7 +88,6 @@ impl Interpreter {
     /// 入力された文字列を評価し、コンソール出力を返します
     pub fn eval(&mut self, line: &str) -> Result<Vec<String>, AjisaiError> {
         self.clear_output();
-        // ★ 修正点: `fields()` -> `split_whitespace()`
         let mut tokens = line.split_whitespace().collect::<VecDeque<_>>();
         
         while let Some(token) = tokens.pop_front() {
