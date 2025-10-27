@@ -1,12 +1,11 @@
-// ★ 修正点: `NativeAction` を削除
 use crate::operator::{OpMode, Operator, StackEffect};
 use crate::rational::Rational;
-// ★ 修正点: `TrieStore` を削除
 use crate::trie_store::{new_shared_store, SharedTrieStore};
 use crate::vstack::VStack;
 use std::collections::VecDeque;
-use std::str::FromStr; // `FromStr` の `from_str` メソッドを使用するために必要
+use std::str::FromStr; 
 use std::sync::{Arc, RwLock};
+use num_traits::Zero; // <-- ★ 1. `Zero` トレイトをインポート (E0599 修正)
 
 /// Ajisai実行時エラー
 #[derive(Debug, thiserror::Error)]
@@ -17,17 +16,12 @@ pub enum AjisaiError {
     StackUnderflow { op: String, need: usize, found: usize },
     #[error("Evaluation stack underflow")]
     EvalStackUnderflow,
-    
-    // ★ 修正点: `{op}` -> `{0}` (位置引数)
     #[error("'{0}' requires a target operand")]
     TargetRequired(String),
-    // ★ 修正点: `{op}` -> `{0}`
     #[error("'{0}' requires a value on eval stack")]
     ValueRequired(String),
-    // ★ 修正点: `{op}` -> `{0}`
     #[error("'{0}' requires a name for assignment")]
     NameRequired(String),
-
     #[error("Division by zero")]
     DivisionByZero,
 }
@@ -97,7 +91,6 @@ impl Interpreter {
                     let mut data = Vec::new();
                     while let Some(lit_token) = tokens.pop_front() {
                         if lit_token == "]" { break; }
-                        // `from_str` を Rational のトレイトメソッドとして使用
                         if let Ok(r) = Rational::from_str(lit_token) {
                             data.push(r);
                         } else {
@@ -117,11 +110,9 @@ impl Interpreter {
                         .ok_or(AjisaiError::NameRequired("->".to_string()))?;
                     let v_to_assign = self.pop_eval_or_target()?;
                     
-                    // 新しいVStackを作成し、内容をコピーする
                     let new_v = Arc::new(RwLock::new(VStack::new()));
                     new_v.write().unwrap().set(v_to_assign.read().unwrap().get_copy());
                     
-                    // OperandStoreに登録
                     self.operands.write().unwrap().insert(name, new_v);
                     continue;
                 }
@@ -129,7 +120,6 @@ impl Interpreter {
             }
 
             // 3. 数値リテラルか？
-            // `from_str` を Rational のトレイトメソッドとして使用
             if let Ok(r) = Rational::from_str(token) {
                 let v = Arc::new(RwLock::new(VStack::new()));
                 v.write().unwrap().push(r);
@@ -137,14 +127,22 @@ impl Interpreter {
                 continue;
             }
 
+            // ★ 2. 修正点 (E0502): Borrow checker
             // 4. Operator (ワード) か？
-            if let Some(op) = self.operators.read().unwrap().find(token) {
-                self.execute_operator(op)?;
+            // 最初にfindして`Arc`をクローンし、ロックを解放する
+            let op_to_execute = self.operators.read().unwrap().find(token);
+            
+            // ロックが解放された後で `if let` と `execute_operator` を呼ぶ
+            if let Some(op) = op_to_execute {
+                self.execute_operator(op)?; // &mut self はここでOK
                 continue;
             }
 
             // 5. Operand (既存の名前) か？
-            if let Some(v) = self.operands.read().unwrap().find(token) {
+            // こちらも同様のパターンに修正 (堅牢性のため)
+            let operand_to_push = self.operands.read().unwrap().find(token);
+
+            if let Some(v) = operand_to_push {
                 if self.target.is_some() || !self.eval_stack.is_empty() {
                     self.eval_stack.push_back(v);
                 } else {
@@ -157,10 +155,9 @@ impl Interpreter {
             return Err(AjisaiError::UnknownToken(token.to_string()));
         }
         
-        // 1行評価完了
         self.target = None;
-        self.eval_stack.clear(); // 一時スタックをクリア
-        Ok(self.output.clone()) // コンソール出力を返す
+        self.eval_stack.clear(); 
+        Ok(self.output.clone()) 
     }
 
     /// eval_stack または target から Operand を取得します
@@ -180,7 +177,7 @@ impl Interpreter {
             self.target = self.eval_stack.pop_back();
         }
         
-        if self.target.is_none() && op.name != "->" { // `->` は特別
+        if self.target.is_none() && op.name != "->" { 
              return Err(AjisaiError::TargetRequired(op.name.clone()));
         }
 
@@ -214,6 +211,7 @@ impl Interpreter {
                 let mut v = i.target.as_ref().unwrap().write().unwrap();
                 let b = v.pop().unwrap();
                 let a = v.pop().unwrap();
+                // Rational::add(&self, &Self) を呼ぶ
                 v.push(a.add(&b));
                 Ok(())
             })
@@ -250,13 +248,15 @@ impl Interpreter {
             "sum", OpMode::Vector, StackEffect { input: 0, output: 0 },
             Box::new(|i: &mut Interpreter| {
                 let data = i.target.as_ref().unwrap().read().unwrap().get_copy();
+                
+                // ★ 3. `Rational::zero()` が `Zero::zero()` を見つける (E0599 修正)
+                // `acc.add(r)` は `Rational::add(&acc, r)` を呼び出す
                 let total = data.iter().fold(Rational::zero(), |acc, r| acc.add(r));
                 
-                // 結果をevalStackにプッシュ
                 let res_v = Arc::new(RwLock::new(VStack::new()));
                 res_v.write().unwrap().push(total);
                 i.eval_stack.push_back(res_v);
-                i.target = None; // ターゲットを消費
+                i.target = None; 
                 Ok(())
             })
         )));
@@ -266,7 +266,7 @@ impl Interpreter {
             "sort", OpMode::Vector, StackEffect { input: 0, output: 0 },
             Box::new(|i: &mut Interpreter| {
                 i.target.as_ref().unwrap().write().unwrap().sort();
-                i.target = None; // ターゲットを消費
+                i.target = None; 
                 Ok(())
             })
         )));
@@ -277,7 +277,7 @@ impl Interpreter {
             Box::new(|i: &mut Interpreter| {
                 let s = i.target.as_ref().unwrap().read().unwrap().to_string();
                 i.write_output(s);
-                i.target = None; // ターゲットを消費
+                i.target = None; 
                 Ok(())
             })
         )));
