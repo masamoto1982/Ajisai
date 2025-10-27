@@ -4,22 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
-js-sys = "0.3"
+wasm-bindgen = "0.2.87"
+js-sys = "0.3.64"
+console_error_panic_hook = { version = "0.1.7", optional = true }
 serde = { version = "1.0", features = ["derive"] }
-serde-wasm-bindgen = "0.6"
-num-bigint = { version = "0.4", features = ["serde"] }
-num-traits = "0.2"
-num-integer = "0.1"
-serde_json = "1.0"
-wasm-bindgen-futures = "0.4"
-gloo-timers = { version = "0.3", features = ["futures"] }
-async-recursion = "1.0"
-daachorse = "1.0"
+serde-wasm-bindgen = "0.6.1"
 
-[dependencies.web-sys]
-version = "0.3"
-features = ["console", "Window", "CustomEvent", "EventTarget", "Event"]
+# --- 以下の不足分を追加 ---
+num = "0.4"
+num-rational = "0.4"
+thiserror = "1.0"
+# --- ここまで ---
