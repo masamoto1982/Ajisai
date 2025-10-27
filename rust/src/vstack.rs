@@ -1,56 +1,38 @@
 use crate::rational::Rational;
 use std::fmt;
-use tauri::AppHandle;
 
 /// VStack は Operand の実体であり、Rationalの動的配列（Vector）です。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct VStack {
     data: Vec<Rational>,
-    // GUI通知用のTauri AppHandle
-    app_handle: Option<AppHandle>,
-    name: String, // 自分がどのOperandかを知っておく
+    // GUI通知用のTauri AppHandle は削除
+    // name: String, (VStack自身が名前を持つ必要がなくなったため削除)
 }
 
 impl VStack {
     /// 新しいVStackを作成します。
-    pub fn new(name: String, app_handle: Option<AppHandle>) -> Self {
-        VStack {
-            data: Vec::new(),
-            app_handle,
-            name,
-        }
+    pub fn new() -> Self {
+        VStack { data: Vec::new() }
     }
 
-    /// GUIに状態変更を通知します
-    fn notify(&self) {
-        if let Some(handle) = &self.app_handle {
-            // "operand-updated" イベントを発行し、更新されたVStackの情報を送る
-            handle.emit_all("operand-updated", 
-                (self.name.clone(), self.to_string())
-            ).unwrap_or_else(|e| {
-                eprintln!("Failed to emit GUI update event: {}", e);
-            });
-        }
-    }
+    // notify() 関数は削除
 
     /// VStackの内容を新しいスライスで上書きします。
     pub fn set(&mut self, new_data: Vec<Rational>) {
         self.data = new_data;
-        self.notify();
+        // notify() 削除
     }
 
     /// 末尾に要素を追加します（スタック・モード用）。
     pub fn push(&mut self, r: Rational) {
         self.data.push(r);
-        self.notify();
+        // notify() 削除
     }
 
     /// 末尾から要素を削除し、返します（スタック・モード用）。
     pub fn pop(&mut self) -> Option<Rational> {
         let result = self.data.pop();
-        if result.is_some() {
-            self.notify();
-        }
+        // notify() 削除
         result
     }
 
@@ -65,7 +47,6 @@ impl VStack {
     }
 
     /// VStackの現在のデータの（シャロー）コピーを返します（ベクター・モード用）。
-    /// Rational自体がCloneなため、実質ディープコピーのように振る舞えます。
     pub fn get_copy(&self) -> Vec<Rational> {
         self.data.clone()
     }
@@ -73,7 +54,7 @@ impl VStack {
     /// VStackのデータをソートします（ベクター・モード用）。
     pub fn sort(&mut self) {
         self.data.sort(); // Rational が Ord を実装しているため
-        self.notify();
+        // notify() 削除
     }
 }
 
