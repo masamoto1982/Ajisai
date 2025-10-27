@@ -1,10 +1,10 @@
 use num_rational::BigRational;
-use num_traits::Zero; // <--- `Num` を削除
+use num_traits::Zero;
 use std::fmt;
+use std::ops::Add; // <-- ★ 1. Addトレイトをインポート
 use std::str::FromStr;
 
 /// Ajisai内部で使用する分数型（`BigRational`のラッパー）
-/// 将来的により詳細なエラーハンドリングやカスタムフォーマットを実装可能
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Rational {
     val: BigRational,
@@ -30,6 +30,7 @@ impl Rational {
     }
 
     // --- ラッパーメソッド ---
+    // (fold で `&self` と `&Self` を加算できるように、このメソッドも残す)
     pub fn add(&self, other: &Self) -> Self {
         Rational {
             val: self.val.clone() + other.val.clone(),
@@ -49,6 +50,18 @@ impl Rational {
         self.val.is_zero()
     }
 }
+
+// ★ 2. `Add` トレイトを実装 ( E0277 Zero の要求)
+impl Add for Rational {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            val: self.val + other.val,
+        }
+    }
+}
+
 
 /// 文字列からのパース ("1/3", "10", "0.5")
 impl FromStr for Rational {
