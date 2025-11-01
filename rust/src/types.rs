@@ -31,9 +31,11 @@ pub enum ValueType {
     Number(Fraction),
     String(String),
     Boolean(bool),
-    Symbol(String),
+    Symbol(String),          // ★ 未評価のワード名
     Vector(Vec<Value>, BracketType),
     Nil,
+    GuardSeparator,          // ★ 追加：ガード区切り
+    LineBreak,               // ★ 追加：改行（マルチライン対応）
 }
 
 // Display トレイトの実装を追加
@@ -46,6 +48,8 @@ impl fmt::Display for ValueType {
             ValueType::Symbol(_) => write!(f, "symbol"),
             ValueType::Vector(_, _) => write!(f, "vector"),
             ValueType::Nil => write!(f, "nil"),
+            ValueType::GuardSeparator => write!(f, "guard-separator"),
+            ValueType::LineBreak => write!(f, "line-break"),
         }
     }
 }
@@ -77,6 +81,19 @@ pub struct ExecutionLine {
     pub body_tokens: Vec<Token>,
 }
 
+// ★ ガード節の構造を追加
+#[derive(Debug, Clone)]
+pub struct GuardClause {
+    pub branches: Vec<GuardBranch>,
+    pub default: Vec<Value>,  // デフォルト行（必須）
+}
+
+#[derive(Debug, Clone)]
+pub struct GuardBranch {
+    pub condition: Vec<Value>,
+    pub action: Vec<Value>,
+}
+
 #[derive(Debug, Clone)]
 pub struct WordDefinition {
     pub lines: Vec<ExecutionLine>,
@@ -102,6 +119,8 @@ impl fmt::Display for Value {
                 write!(f, "{}", bracket_type.closing_char())
             },
             ValueType::Nil => write!(f, "nil"),
+            ValueType::GuardSeparator => write!(f, ":"),
+            ValueType::LineBreak => write!(f, "\\n"),
         }
     }
 }
