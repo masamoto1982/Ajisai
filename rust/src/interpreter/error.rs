@@ -1,3 +1,5 @@
+// rust/src/interpreter/error.rs
+
 use std::fmt;
 
 pub type Result<T> = std::result::Result<T, AjisaiError>;
@@ -11,6 +13,7 @@ pub enum AjisaiError {
     DivisionByZero,
     IndexOutOfBounds { index: i64, length: usize },
     VectorLengthMismatch { len1: usize, len2: usize },
+    ParseError(String),  // ★ 追加
     Custom(String),
     WithContext { error: Box<AjisaiError>, context: Vec<String> },
 }
@@ -51,6 +54,7 @@ impl fmt::Display for AjisaiError {
             AjisaiError::VectorLengthMismatch { len1, len2 } => {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
             },
+            AjisaiError::ParseError(msg) => write!(f, "Parse error: {}", msg),  // ★ 追加
             AjisaiError::Custom(msg) => write!(f, "{}", msg),
             AjisaiError::WithContext { error, context } => {
                 write!(f, "{}\n  in word: {}", error, context.join(" -> "))
