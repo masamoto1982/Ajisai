@@ -1,71 +1,77 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// rust/src/main.rs (オプション：ローカルテスト用)
 
-// ( --- ここに src/rational.rs, vstack.rs, operator.rs, trie_store.rs, interpreter.rs の
-//     mod宣言が必要です --- )
-mod rational;
-mod vstack;
-mod operator;
-mod trie_store;
-mod interpreter;
-
-use interpreter::{AjisaiError, Interpreter};
-use std::sync::{Arc, RwLock};
-use tauri::Manager;
-
-// InterpreterをTauriのStateとして管理するためのラッパー
-struct AppState(Arc<RwLock<Interpreter>>);
-
-// フロントエンド(TS)から呼び出されるTauriコマンド
-#[tauri::command]
-async fn eval_code(code: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    // Interpreterのevalを呼び出す
-    state.0.write().unwrap().eval(&code)
-         .map_err(|e: AjisaiError| e.to_string())
-}
-
-// (Tauriコマンド) Operatorリストを取得
-#[tauri::command]
-async fn get_operators(state: tauri::State<'_, AppState>) -> Result<Vec<(String, String)>, String> {
-    let operators = state.0.read().unwrap().get_operators_store();
-    let pairs = operators.read().unwrap().get_all_pairs();
-    
-    // (Arc<Operator>) を (Name, Signature) のタプルに変換
-    let result = pairs.into_iter()
-        .map(|(name, op)| (name, op.signature()))
-        .collect();
-    Ok(result)
-}
-
-// (Tauriコマンド) Operandリストを取得
-#[tauri::command]
-async fn get_operands(state: tauri::State<'_, AppState>) -> Result<Vec<(String, String)>, String> {
-    let operands = state.0.read().unwrap().get_operands_store();
-    let pairs = operands.read().unwrap().get_all_pairs();
-    
-    // (Arc<RwLock<VStack>>) を (Name, Content) のタプルに変換
-    let result = pairs.into_iter()
-        .map(|(name, v)| (name, v.read().unwrap().to_string()))
-        .collect();
-    Ok(result)
-}
-
+use ajisai_core::interpreter::Interpreter;
 
 fn main() {
-    tauri::Builder::default()
-        .setup(|app| {
-            // Interpreterを初期化し、Stateとして登録
-            let app_handle = app.handle();
-            let interpreter = Interpreter::new(app_handle);
-            let app_state = AppState(Arc::new(RwLock::new(interpreter)));
-            app.manage(app_state);
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
-            eval_code,
-            get_operators,
-            get_operands
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+    let mut interp = Interpreter::new();
+    
+    println!("=== Ajisai BLOOM Test ===\n");
+    
+    // テスト1: 基本的な計算
+    println!("Test 1: 1 2 +");
+    match interp.eval_interactive("1 2 +") {
+        Ok(output) => {
+            println!("Output: {:?}", output);
+            println!("Stack: {:?}\n", interp.stack);
+        }
+        Err(e) => println!("Error: {}\n", e),
+    }
+    
+    // テスト2: Vectorとして保護
+    println!("Test 2: [ 1 2 + ]");
+    match interp.eval_interactive("[ 1 2 + ]") {
+        Ok(output) => {
+            println!("Output: {:?}", output);
+            println!("Stack: {:?}", interp.stack);
+            println!("(Should remain as vector, not executed)\n");
+        }
+        Err(e) => println!("Error: {}\n", e),
+    }
+    
+    // テスト3: 明示的なBLOOM
+    println!("Test 3: BLOOM");
+    match interp.eval_interactive("BLOOM") {
+        Ok(output) => {
+            println!("Output: {:?}", output);
+            println!("Stack: {:?}", interp.stack);
+            println!("(Now should be executed to 3)\n");
+        }
+        Err(e) => println!("Error: {}\n", e),
+    }
+    
+    // スタッククリア
+    interp.stack.clear();
+    
+    // テスト4: ガード節
+    println!("Test 4: [ 5 ] DUP 0 > : [ 'positive' ] : [ 'negative' ]");
+    match interp.eval_interactive("[ 5 ] DUP 0 > : [ 'positive' ] : [ 'negative' ]") {
+        Ok(output) => {
+            println!("Output: {:?}", output);
+            println!("Stack: {:?}\n", interp.stack);
+        }
+        Err(e) => println!("Error: {}\n", e),
+    }
+    
+    // スタッククリア
+    interp.stack.clear();
+    
+    // テスト5: カスタムワード定義
+    println!("Test 5: [ 1 + ] 'INC' DEF");
+    match interp.eval_interactive("[ 1 + ] 'INC' DEF") {
+        Ok(output) => {
+            println!("Output: {:?}", output);
+            println!("Dictionary contains INC: {}\n", interp.dictionary.contains_key("INC"));
+        }
+        Err(e) => println!("Error: {}\n", e),
+    }
+    
+    // テスト6: カスタムワード使用
+    println!("Test 6: [ 5 ] INC");
+    match interp.eval_interactive("[ 5 ] INC") {
+        Ok(output) => {
+            println!("Output: {:?}", output);
+            println!("Stack: {:?}\n", interp.stack);
+        }
+        Err(e) => println!("Error: {}\n", e),
+    }
 }
