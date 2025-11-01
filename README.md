@@ -1,25 +1,162 @@
-![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)
-![WebAssembly](https://img.shields.io/badge/WebAssembly-654FF0?style=flat&logo=webassembly&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
-[![Build and Deploy Ajisai](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml/badge.svg)](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml)
-![Ajisai Logo](public/images/ajisai-logo.png "Ajisai Programming Language Logo")
-# Ajisai
+# Ajisai - Vectorベース言語
 
-Ajisai is a stack-based programming language inspired by FORTH.
-It provides an interpreter running on WebAssembly and a web-based GUI.
+## 核心概念：BLOOM（開花）
 
-## Development Concept
-- Stack-based with Reverse Polish Notation (RPN), inspired by FORTH
-- The system recognizes only words registered in the dictionary, Vectors, booleans, numbers, strings, and Nil
-- Vector is the sole data structure
-- Vectors can contain Vectors, booleans, strings, and Nil, and support negative indexing for searching from the end
-- For Vector operations: position-specifying operations are 0-indexed, quantity-specifying operations are 1-indexed
-- Built-in words cannot be deleted or have their meanings overwritten
-- Statically typed without requiring type declarations or type inference
-- All numbers are internally treated as fractions to avoid rounding errors
-- Capable of handling extremely large numbers
-- Memory usage and dictionary state are represented in the GUI
-- Iteration count and processing time can be specified for each line
+Ajisaiでは、すべてのデータは**Vector**という保護膜に包まれています。
+保護膜の中では何も実行されません（データ）。
+保護膜から解放されると、初めてコードとして実行されます（開花）。
 
-(The name "Ajisai" is a metaphor for hydrangea flowers, representing FORTH's characteristic of small words coming together to form functionality. *Note: The flower-like parts of hydrangeas are not actually flowers.)
+```forth
+# Vectorの中 = データ
+[ 1 2 + ]              # これは "1 2 +" という式のデータ
 
+# BLOOMで開花 = 実行
+[ 1 2 + ] BLOOM        # => 3
+```
+
+## LISPとの類似性
+
+AjisaiはLISPの**同形性（Homoiconicity）** を持ちます。
+コードとデータが同じ構造（Vector）で表現されます。
+
+```forth
+# データとして
+[ 1 2 + ] LENGTH       # => 3（3要素のVector）
+[ 1 2 + ] GET [ 1 ]    # => 2（2番目の要素）
+
+# コードとして
+[ 1 2 + ] BLOOM        # => 3（実行結果）
+```
+
+## ガード節
+
+すべての構文はガード節です。
+ガード節は条件と処理の組み合わせです。
+
+```forth
+# 基本形
+条件1 : 処理1 :
+条件2 : 処理2 :
+デフォルト処理
+
+# 例：符号判定
+[ x ] 
+  DUP 0 > : [ 'positive' PRINT ] :
+  DUP 0 < : [ 'negative' PRINT ] :
+  [ 'zero' PRINT ]
+
+# デフォルト行のみ（通常のコード）
+1 2 +                  # これもガード節
+```
+
+## REPLの挙動
+
+REPLでは自動的に1層BLOOMします（ユーザーフレンドリー）。
+
+```forth
+# 入力
+1 2 +
+
+# 内部処理
+# 1. [1 2 +] としてスタックに積む（保護）
+# 2. 自動的にBLOOM
+# 3. 実行される => 3
+
+# 二重Vector
+[ 1 2 + ]
+
+# 内部処理
+# 1. [[1 2 +]] としてスタックに積む
+# 2. 自動的に1層BLOOM
+# 3. [1 2 +] がスタックに残る（まだ保護されている）
+```
+
+## カスタムワード定義
+
+```forth
+# ワードを定義
+[ 1 + ] 'INC' DEF
+
+# 使用
+[ 5 ] INC              # => 6
+```
+
+## 操作対象の指定
+
+```forth
+# STACKTOPモード（デフォルト）
+STACKTOP [ 1 2 3 ] +   # Vector間の演算
+
+# STACKモード
+STACK 1 2 3 [ 3 ] +    # スタック上の3要素を畳み込み
+```
+
+## メタプログラミング
+
+```forth
+# コードをデータとして操作
+[ 1 2 + ]              # コード
+DUP                    # 複製
+LENGTH                 # => 3（データとして扱う）
+BLOOM                  # => 3（コードとして実行）
+
+# コードを変換
+[ 1 2 + ]
+[ 10 ] CONCAT          # => [10 1 2 +]
+BLOOM                  # => 13
+```
+
+## ファイル構造
+
+```
+rust/src/
+├── lib.rs                    # ライブラリルート
+├── main.rs                   # テスト用エントリーポイント（オプション）
+├── types.rs                  # 基本型定義
+├── types/
+│   └── fraction.rs          # 分数型
+├── tokenizer.rs             # トークナイザー
+├── builtins.rs              # 組み込みワード定義
+├── wasm_api.rs              # Wasm API
+└── interpreter/
+    ├── mod.rs               # インタープリターモジュール
+    ├── error.rs             # エラー型
+    ├── bloom.rs             # BLOOM実装
+    ├── arithmetic.rs        # 算術演算
+    ├── comparison.rs        # 比較・論理演算
+    ├── vector_ops.rs        # Vector操作
+    ├── higher_order.rs      # 高階関数
+    ├── io.rs                # 入出力
+    ├── dictionary.rs        # ワード管理
+    ├── control.rs           # 制御構造
+    └── audio.rs             # 音声生成
+```
+
+## ビルドとテスト
+
+```bash
+# Wasmビルド
+wasm-pack build --target web
+
+# ローカルテスト
+cargo run
+
+# テスト実行
+cargo test
+```
+
+## 設計思想
+
+1. **Vector = 保護膜**: すべてのデータはVectorで保護される
+2. **BLOOM = 開花**: 保護膜から解放されて初めて実行される
+3. **同形性**: コードとデータが同じ構造を持つ
+4. **ガード節**: すべての構文は条件分岐として統一される
+5. **操作対象の明示**: ユーザーが操作の適用先を選択できる
+
+## 今後の拡張
+
+- [ ] マクロシステム
+- [ ] モジュールシステム
+- [ ] 並行処理
+- [ ] 型システム（オプション）
+- [ ] デバッガー
