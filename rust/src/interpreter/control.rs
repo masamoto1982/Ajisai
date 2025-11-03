@@ -7,6 +7,8 @@
 use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
 use crate::interpreter::helpers::{get_integer_from_value, get_word_name_from_value};
 use crate::types::ValueType;
+use num_bigint::BigInt;
+use num_traits::{One, ToPrimitive};
 
 /// TIMES - ワードをN回繰り返し実行する
 ///
@@ -89,7 +91,7 @@ pub(crate) fn execute_wait(interp: &mut Interpreter) -> Result<()> {
     let delay_ms = match &delay_val.val_type {
         ValueType::Vector(v, _) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == num_bigint::BigInt::one() => {
+                ValueType::Number(n) if n.denominator == BigInt::one() => {
                     n.numerator.to_u64().ok_or_else(|| AjisaiError::from("Delay too large"))?
                 },
                 _ => return Err(AjisaiError::type_error("integer", "other type")),

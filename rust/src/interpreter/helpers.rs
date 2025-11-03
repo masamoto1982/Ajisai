@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_wrap_unwrap() {
-        let num = Value { val_type: ValueType::Number(Fraction::from(42)) };
+        let num = Value { val_type: ValueType::Number(Fraction::new(BigInt::from(42), BigInt::one())) };
         let wrapped = wrap_in_square_vector(num.clone());
         let unwrapped = unwrap_single_element(wrapped);
         assert_eq!(unwrapped, num);
