@@ -62,7 +62,6 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                     })?;
 
                 let result_elem = v[actual_index].clone();
-                let result_bracket = bracket_type.clone();
                 interp.stack.push(target_val);
                 interp.stack.push(wrap_in_square_vector(result_elem));
                 Ok(())
