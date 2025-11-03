@@ -1,45 +1,59 @@
 // rust/src/interpreter/higher_order.rs
+//
+// 【責務】
+// 高階関数（MAP、FILTER）を実装する。
+// これらの関数はカスタムワードを引数として受け取り、
+// ベクタまたはスタック上の各要素に適用する。
 
 use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
+use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
 use crate::types::{Value, ValueType, BracketType};
-use num_bigint::BigInt;
-// `BigInt::one()` を使用するために `One` トレイトをスコープに入れる
-use num_traits::{One, ToPrimitive};
 
-// === ヘルパー関数 ===
+// ============================================================================
+// 高階関数の実装
+// ============================================================================
 
-fn get_word_name_from_value(value: &Value) -> Result<String> {
-    match &value.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
-            if let ValueType::String(s) = &v[0].val_type {
-                Ok(s.to_uppercase())
-            } else {
-                Err(AjisaiError::type_error("string for word name", "other type"))
-            }
-        },
-        _ => Err(AjisaiError::type_error("single-element vector with string", "other type")),
-    }
-}
-
-fn get_integer_from_value(value: &Value) -> Result<i64> {
-    match &value.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
-            if let ValueType::Number(n) = &v[0].val_type {
-                if n.denominator == BigInt::one() {
-                    n.numerator.to_i64().ok_or_else(|| AjisaiError::from("Count is too large"))
-                } else {
-                    Err(AjisaiError::type_error("integer", "fraction"))
-                }
-            } else {
-                Err(AjisaiError::type_error("integer", "other type"))
-            }
-        },
-        _ => Err(AjisaiError::type_error("single-element vector with integer", "other type")),
-    }
-}
-
-// === 高階関数の実装 ===
-
+/// MAP - 各要素に関数を適用して変換する
+///
+/// 【責務】
+/// - ベクタまたはスタック上の各要素にカスタムワードを適用
+/// - 各適用結果を集めて新しいベクタまたはスタックを生成
+/// - operation_targetを一時的にStackTopに切り替えてワード実行
+///
+/// 【動作モード】
+/// 1. StackTopモード:
+///    - ベクタの各要素に対してワードを適用
+///    - 結果を集めて同じブラケットタイプのベクタで返す
+///    - 例: `[1 2 3] 'DOUBLE' MAP` → `[2 4 6]` (DOUBLEが2倍する関数の場合)
+///
+/// 2. Stackモード:
+///    - スタックトップからN個の要素を取得
+///    - 各要素に対してワードを適用
+///    - 結果をスタックに戻す
+///    - 例: `a b c [3] 'PROCESS' STACK MAP` → `a' b' c'`
+///
+/// 【使用法】
+/// - StackTopモード: `[value1 value2 ...] 'WORDNAME' MAP`
+/// - Stackモード: `val1 val2 ... [count] 'WORDNAME' STACK MAP`
+///
+/// 【引数スタック】
+/// - ['WORDNAME']: 適用するカスタムワード名（文字列）
+/// - (StackTopモード) target: 対象ベクタ
+/// - (Stackモード) [count]: 処理する要素数
+///
+/// 【戻り値スタック】
+/// - (StackTopモード) 変換後のベクタ
+/// - (Stackモード) 変換後の要素群
+///
+/// 【エラー】
+/// - 指定されたワードが存在しない場合
+/// - ワードが値を返さない場合
+/// - 対象がベクタでない場合（StackTopモード）
+/// - スタック要素数が不足している場合（Stackモード）
+///
+/// 【注意事項】
+/// - 適用するワードは必ず1つの値を返す必要がある
+/// - 各要素は単一要素ベクタとしてワードに渡される
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let word_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let word_name = get_word_name_from_value(&word_val)?;
@@ -53,19 +67,24 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
                 let mut results = Vec::new();
-                
-                // operation_target を保存
+
+                // operation_target を一時的に保存してStackTopに設定
                 let saved_target = interp.operation_target;
                 interp.operation_target = OperationTarget::StackTop;
-                
+
                 for elem in elements {
-                    interp.stack.push(Value { 
-                        val_type: ValueType::Vector(vec![elem], BracketType::Square) 
+                    // 各要素を単一要素ベクタとしてプッシュ
+                    interp.stack.push(Value {
+                        val_type: ValueType::Vector(vec![elem], BracketType::Square)
                     });
+                    // ワードを実行
                     interp.execute_word_sync(&word_name)?;
-                    
-                    let result_vec = interp.stack.pop().ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
-                    
+
+                    // 結果を取得
+                    let result_vec = interp.stack.pop()
+                        .ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
+
+                    // 単一要素ベクタの場合はアンラップ
                     if let ValueType::Vector(mut v, _) = result_vec.val_type {
                         if v.len() == 1 {
                             results.push(v.remove(0));
@@ -76,7 +95,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
                     }
                 }
-                
+
                 // operation_target を復元
                 interp.operation_target = saved_target;
                 interp.stack.push(Value { val_type: ValueType::Vector(results, bracket_type) });
@@ -94,18 +113,20 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let original_stack_below = interp.stack.clone();
-            
+
             // operation_target を一時的に StackTop に設定
             let saved_target = interp.operation_target;
             interp.operation_target = OperationTarget::StackTop;
-            
+
             let mut results = Vec::new();
             for item in targets {
+                // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item);
                 interp.execute_word_sync(&word_name)?;
-                
-                let result = interp.stack.pop().ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
+
+                let result = interp.stack.pop()
+                    .ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
                 results.push(result);
             }
 
@@ -118,10 +139,53 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// FILTER - 条件に合う要素のみを抽出する
+///
+/// 【責務】
+/// - ベクタまたはスタック上の各要素にカスタムワードを適用
+/// - ワードが true を返した要素のみを保持
+/// - 条件に合わない要素は除外される
+///
+/// 【動作モード】
+/// 1. StackTopモード:
+///    - ベクタの各要素に対してワードを適用
+///    - ワードが [true] を返した要素のみを集める
+///    - 結果を同じブラケットタイプのベクタで返す
+///    - 例: `[1 2 3 4 5] 'ISEVEN' FILTER` → `[2 4]` (ISEVENが偶数判定の場合)
+///
+/// 2. Stackモード:
+///    - スタックトップからN個の要素を取得
+///    - 各要素に対してワードを適用
+///    - ワードが [true] を返した要素のみをスタックに戻す
+///    - 例: `a b c d [4] 'CHECK' STACK FILTER` → (trueの要素のみ)
+///
+/// 【使用法】
+/// - StackTopモード: `[value1 value2 ...] 'WORDNAME' FILTER`
+/// - Stackモード: `val1 val2 ... [count] 'WORDNAME' STACK FILTER`
+///
+/// 【引数スタック】
+/// - ['WORDNAME']: 条件判定するカスタムワード名（文字列）
+/// - (StackTopモード) target: 対象ベクタ
+/// - (Stackモード) [count]: 処理する要素数
+///
+/// 【戻り値スタック】
+/// - (StackTopモード) フィルタ後のベクタ
+/// - (Stackモード) フィルタ後の要素群
+///
+/// 【エラー】
+/// - 指定されたワードが存在しない場合
+/// - ワードがBoolean値を返さない場合
+/// - 対象がベクタでない場合（StackTopモード）
+/// - スタック要素数が不足している場合（Stackモード）
+///
+/// 【注意事項】
+/// - 適用するワードは必ず [true] または [false] を返す必要がある
+/// - 各要素は単一要素ベクタとしてワードに渡される
+/// - 条件に合う要素がない場合は空のベクタが返される
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let word_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let word_name = get_word_name_from_value(&word_val)?;
-    
+
     if !interp.dictionary.contains_key(&word_name) {
         return Err(AjisaiError::UnknownWord(word_name));
     }
@@ -131,19 +195,23 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
                 let mut results = Vec::new();
-                
+
                 // operation_target を保存
                 let saved_target = interp.operation_target;
                 interp.operation_target = OperationTarget::StackTop;
-                
+
                 for elem in elements {
-                    interp.stack.push(Value { 
-                        val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square) 
+                    // 各要素を単一要素ベクタとしてプッシュ
+                    interp.stack.push(Value {
+                        val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square)
                     });
+                    // ワードを実行
                     interp.execute_word_sync(&word_name)?;
-                    
-                    let condition_result = interp.stack.pop().ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
-                    
+
+                    // 条件判定結果を取得
+                    let condition_result = interp.stack.pop()
+                        .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
+
                     if let ValueType::Vector(v, _) = condition_result.val_type {
                         if v.len() == 1 {
                             if let ValueType::Boolean(b) = v[0].val_type {
@@ -160,7 +228,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                          return Err(AjisaiError::type_error("vector result from FILTER word", "other type"));
                     }
                 }
-                
+
                 // operation_target を復元
                 interp.operation_target = saved_target;
                 interp.stack.push(Value { val_type: ValueType::Vector(results, bracket_type) });
@@ -175,21 +243,24 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             if interp.stack.len() < count {
                 return Err(AjisaiError::StackUnderflow);
             }
-            
+
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let original_stack_below = interp.stack.clone();
-            
+
             // operation_target を一時的に StackTop に設定
             let saved_target = interp.operation_target;
             interp.operation_target = OperationTarget::StackTop;
-            
+
             let mut results = Vec::new();
             for item in targets {
+                // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item.clone());
                 interp.execute_word_sync(&word_name)?;
-                
-                let condition_result = interp.stack.pop().ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
+
+                // 条件判定結果を取得
+                let condition_result = interp.stack.pop()
+                    .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
                 if let ValueType::Vector(v, _) = condition_result.val_type {
                     if v.len() == 1 {
@@ -201,7 +272,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     }
                 }
             }
-            
+
             // operation_target を復元し、スタックを復元
             interp.operation_target = saved_target;
             interp.stack = original_stack_below;

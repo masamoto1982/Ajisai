@@ -1,5 +1,6 @@
 // rust/src/interpreter/mod.rs
 
+pub mod helpers;        // 共通ヘルパー関数
 pub mod vector_ops;
 pub mod arithmetic;
 pub mod comparison;
