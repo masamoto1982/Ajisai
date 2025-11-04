@@ -11,17 +11,35 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     
-    // スタックから名前を取得（文字列として）
-    let name_val = interp.stack.pop().unwrap();
+    // 説明（オプション）を先にチェック
+    let mut description = None;
+    let has_description = if interp.stack.len() >= 3 {
+        // スタックトップが文字列かチェック
+        if let Some(top_val) = interp.stack.last() {
+            matches!(top_val.val_type, ValueType::String(_))
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+    
+    if has_description {
+        if let Some(desc_val) = interp.stack.pop() {
+            if let ValueType::String(s) = desc_val.val_type {
+                description = Some(s);
+            }
+        }
+    }
+    
+    // 名前を取得（文字列として）
+    let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let name_str = match name_val.val_type {
         ValueType::String(s) => s,
         _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
     };
     
-    // 説明（オプション）を取得
-    let mut description = None;
-    
-    // [FIX 2] Use pop() instead of last() to avoid immutable borrow conflict.
+    // 定義本体を取得
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     
     // 定義本体を文字列として取得
@@ -29,22 +47,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         ValueType::Vector(vec, _) => {
             if vec.len() == 1 {
                 match &vec[0].val_type {
-                    ValueType::String(s) => {
-                        // 文字列の前に説明がある可能性をチェック
-                        // [FIX 2] def_val was already popped, no need to pop again.
-                        
-                        // さらにスタックに説明があるかチェック
-                        if !interp.stack.is_empty() {
-                            // [FIX 2] Use last() here for the check, *then* pop if it matches.
-                            if let ValueType::String(desc_str) = &interp.stack.last().unwrap().val_type {
-                                // It's a description, so pop it.
-                                description = Some(desc_str.clone());
-                                interp.stack.pop(); // 説明をポップ
-                            }
-                        }
-                        
-                        s.clone()
-                    },
+                    ValueType::String(s) => s.clone(),
                     _ => return Err(AjisaiError::type_error("string in vector", "other type")),
                 }
             } else {
@@ -53,8 +56,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         },
         _ => return Err(AjisaiError::type_error("vector with string", "other type")),
     };
-
-    // 定義本体をトークン化
+    
+    // トークン化して登録
     let custom_word_names: HashSet<String> = interp.dictionary.iter()
         .filter(|(_, def)| !def.is_builtin)
         .map(|(name, _)| name.clone())
@@ -62,8 +65,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     
     let tokens = crate::tokenizer::tokenize_with_custom_words(&definition_str, &custom_word_names)
         .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
-
-    // 内部定義関数を呼び出し
+    
     op_def_inner(interp, &name_str, &tokens, description)
 }
 
