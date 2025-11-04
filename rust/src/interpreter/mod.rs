@@ -93,7 +93,7 @@ impl Interpreter {
     }
 
     // 行ベースのガード構造実行
-    fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
+    pub(crate) fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         if lines.is_empty() {
             return Ok(());
         }
