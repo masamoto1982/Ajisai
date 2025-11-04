@@ -2,7 +2,6 @@
 
 use crate::interpreter::{Interpreter, WordDefinition};
 use crate::interpreter::error::{AjisaiError, Result};
-// [FIX 1] Import ExecutionLine from crate::types
 use crate::types::{Token, BracketType, ValueType, ExecutionLine};
 use std::collections::HashSet;
 
@@ -14,7 +13,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // 説明（オプション）を先にチェック
     let mut description = None;
     let has_description = if interp.stack.len() >= 3 {
-        // スタックトップが文字列かチェック
         if let Some(top_val) = interp.stack.last() {
             matches!(top_val.val_type, ValueType::String(_))
         } else {
@@ -32,7 +30,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         }
     }
     
-    // 名前を取得（文字列として）
+    // スタックから名前を取得（文字列として）
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let name_str = match name_val.val_type {
         ValueType::String(s) => s,
@@ -56,8 +54,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         },
         _ => return Err(AjisaiError::type_error("vector with string", "other type")),
     };
-    
-    // トークン化して登録
+
+    // 定義本体をトークン化
     let custom_word_names: HashSet<String> = interp.dictionary.iter()
         .filter(|(_, def)| !def.is_builtin)
         .map(|(name, _)| name.clone())
@@ -65,10 +63,10 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     
     let tokens = crate::tokenizer::tokenize_with_custom_words(&definition_str, &custom_word_names)
         .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
-    
+
+    // 内部定義関数を呼び出し
     op_def_inner(interp, &name_str, &tokens, description)
 }
-
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token], description: Option<String>) -> Result<()> {
     let upper_name = name.to_uppercase();
@@ -117,7 +115,6 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
     let mut lines = Vec::new();
     let mut processed_tokens = Vec::new();
     
-    // ガード文内の文字列をクォーテーションに変換
     let mut i = 0;
     while i < tokens.len() {
         match &tokens[i] {
@@ -218,7 +215,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
         } else {
             let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
             let full_definition = if definition.is_empty() {
-                format!("[ '' ] '{}' DEF", name_str) // 空の定義
+                format!("[ '' ] '{}' DEF", name_str)
             } else {
                 if let Some(desc) = &def.description {
                     format!("[ '{}' ] '{}' '{}' DEF", definition, name_str, desc)
