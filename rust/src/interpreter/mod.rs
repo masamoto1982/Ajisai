@@ -12,7 +12,7 @@ pub mod audio;
 pub mod higher_order;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition};
+use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition, ExecutionLine};
 use crate::types::fraction::Fraction;
 use self::error::{Result, AjisaiError};
 
@@ -44,8 +44,6 @@ impl Interpreter {
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
     }
-
-    // ★★★ is_bare_stack と ensure_wrapped_stack は削除 (前回の修正を維持) ★★★
 
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, BracketType, usize)> {
         let bracket_type = match &tokens[start_index] {
@@ -94,67 +92,96 @@ impl Interpreter {
         Err(AjisaiError::from(format!("Unclosed vector starting with {}", bracket_type.opening_char())))
     }
 
-    fn execute_guard_structure(&mut self, tokens: &[Token]) -> Result<()> {
-    let sections = self.split_by_guard_separator(tokens);
-    
-    if sections.is_empty() {
-        return Ok(());
-    }
-    
-    // 条件が1つしかない場合（: のみ）
-    if sections.len() == 2 {
-        // 条件部を評価
-        self.execute_tokens_sync(&sections[0])?;
-        
-        if self.is_condition_true()? {
-            // 真の場合：処理部を評価
-            self.execute_tokens_sync(&sections[1])?;
-        }
-        return Ok(());
-    }
-    
-    // 複数条件の場合 - 各ペアをチェック
-    let mut i = 0;
-    while i + 1 < sections.len() {
-        // 条件部を評価
-        self.execute_tokens_sync(&sections[i])?;
-        
-        // スタックトップを評価
-        if self.is_condition_true()? {
-            // 次のセクション（処理部）を評価
-            if i + 1 < sections.len() {
-                self.execute_tokens_sync(&sections[i + 1])?;
-            }
+    // 行ベースのガード構造実行
+    fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
+        if lines.is_empty() {
             return Ok(());
         }
         
-        i += 2; // 条件と処理のペアをスキップ
-    }
-    
-    // すべての条件が偽だった場合、最後のセクション（デフォルト処理）を評価
-    let default_tokens = sections.last().unwrap();
-    self.execute_tokens_sync(default_tokens)?;
-    
-    Ok(())
-}
-    fn split_by_guard_separator(&self, tokens: &[Token]) -> Vec<Vec<Token>> {
-        let mut sections = Vec::new();
-        let mut current_section = Vec::new();
-        
-        for token in tokens {
-            if matches!(token, Token::GuardSeparator) {
-                sections.push(current_section);
-                current_section = Vec::new();
+        let mut i = 0;
+        while i < lines.len() {
+            let line = &lines[i];
+            
+            // 行が:で始まることを確認
+            if line.body_tokens.first() != Some(&Token::GuardSeparator) {
+                return Err(AjisaiError::from("All lines in guard structure must start with :"));
+            }
+            
+            let content_tokens = &line.body_tokens[1..]; // :を除く
+            
+            // 次の行が存在するかチェック
+            if i + 1 < lines.len() {
+                // 条件行の可能性
+                self.execute_section(content_tokens)?;
+                
+                // 条件を評価
+                if self.is_condition_true()? {
+                    // 真の場合：次の行（処理行）を実行
+                    i += 1;
+                    let action_line = &lines[i];
+                    if action_line.body_tokens.first() != Some(&Token::GuardSeparator) {
+                        return Err(AjisaiError::from("Action line must start with :"));
+                    }
+                    let action_tokens = &action_line.body_tokens[1..];
+                    self.execute_section(action_tokens)?;
+                    return Ok(()); // ガード節終了
+                }
+                // 偽の場合：次の条件へ
+                i += 2; // 条件行と処理行をスキップ
             } else {
-                current_section.push(token.clone());
+                // 最後の行 → デフォルト処理
+                self.execute_section(content_tokens)?;
+                return Ok(());
             }
         }
         
-        if !current_section.is_empty() {
-            sections.push(current_section);
+        Ok(())
+    }
+
+    // セクション内のトークンを実行
+    fn execute_section(&mut self, tokens: &[Token]) -> Result<()> {
+        let mut i = 0;
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::Number(n) => {
+                    let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                },
+                Token::String(s) => {
+                    self.stack.push(Value { val_type: ValueType::String(s.clone()) });
+                },
+                Token::Boolean(b) => {
+                    let val = Value { val_type: ValueType::Boolean(*b) };
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                },
+                Token::Nil => {
+                    let val = Value { val_type: ValueType::Nil };
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                },
+                Token::VectorStart(_) => {
+                    let (values, bracket_type, consumed) = self.collect_vector(tokens, i)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
+                    i += consumed - 1;
+                },
+                Token::Symbol(name) => {
+                    let upper_name = name.to_uppercase();
+                    match upper_name.as_str() {
+                        "STACK" => self.operation_target = OperationTarget::Stack,
+                        "STACKTOP" => self.operation_target = OperationTarget::StackTop,
+                        _ => {
+                            self.execute_word_sync(&upper_name)?;
+                            self.operation_target = OperationTarget::StackTop;
+                        }
+                    }
+                },
+                Token::GuardSeparator | Token::LineBreak => {
+                    // セクション内では無視
+                },
+                _ => {}
+            }
+            i += 1;
         }
-        
-        sections
+        Ok(())
     }
 
     fn is_condition_true(&mut self) -> Result<bool> {
@@ -171,7 +198,7 @@ impl Interpreter {
                     if let ValueType::Boolean(b) = v[0].val_type {
                         Ok(b)
                     } else {
-                        Ok(true) // ベクタが存在するなら真
+                        Ok(true)
                     }
                 } else {
                     Ok(!v.is_empty())
@@ -182,64 +209,34 @@ impl Interpreter {
         }
     }
 
-    // ★★★ 変更：リテラルを [ ] でラップしてプッシュする (Stringを除く) ★★★
-    pub(crate) fn execute_tokens_sync(&mut self, tokens: &[Token]) -> Result<()> {
-        // ガードセパレータが含まれているかチェック
-        if tokens.iter().any(|t| matches!(t, Token::GuardSeparator)) {
-            return self.execute_guard_structure(tokens);
-        }
+    // トークンを行に分割
+    fn tokens_to_lines(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
+        let mut lines = Vec::new();
+        let mut current_line = Vec::new();
         
-        let mut i = 0;
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::Number(n) => {
-                    // Numberは [ N ] としてプッシュ
-                    let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
-                },
-                Token::String(s) => {
-                    // Stringは 'S' としてプッシュ (DEF構文のためラップしない)
-                    self.stack.push(Value { val_type: ValueType::String(s.clone()) });
-                },
-                Token::Boolean(b) => {
-                    // Booleanは [ B ] としてプッシュ
-                    let val = Value { val_type: ValueType::Boolean(*b) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
-                },
-                Token::Nil => {
-                    // Nilは [ NIL ] としてプッシュ
-                    let val = Value { val_type: ValueType::Nil };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
-                },
-                Token::VectorStart(_) => {
-                    // Vectorは [ ... ] としてプッシュ (そのまま)
-                    let (values, bracket_type, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
-                    i += consumed - 1;
-                },
-                Token::Symbol(name) => {
-                    let upper_name = name.to_uppercase();
-                    match upper_name.as_str() {
-                        "STACK" => self.operation_target = OperationTarget::Stack,
-                        "STACKTOP" => self.operation_target = OperationTarget::StackTop,
-                        _ => {
-                            // ラップ処理は不要。演算(op_addなど)側が [ N ] を期待する。
-                            self.execute_word_sync(&upper_name)?;
-                            self.operation_target = OperationTarget::StackTop;
-                        }
+        for token in tokens {
+            match token {
+                Token::LineBreak => {
+                    if !current_line.is_empty() {
+                        lines.push(ExecutionLine {
+                            body_tokens: current_line.clone(),
+                        });
+                        current_line.clear();
                     }
                 },
-                Token::GuardSeparator => {
-                    // 単独の場合は無視（デフォルト処理のみの場合）
-                },
-                Token::LineBreak => {
-                    // Top-levelでは無視
-                },
-                _ => {}
+                _ => {
+                    current_line.push(token.clone());
+                }
             }
-            i += 1;
         }
-        Ok(())
+        
+        if !current_line.is_empty() {
+            lines.push(ExecutionLine {
+                body_tokens: current_line,
+            });
+        }
+        
+        Ok(lines)
     }
 
     pub(crate) fn execute_word_sync(&mut self, name: &str) -> Result<()> {
@@ -250,65 +247,46 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
-        for line in &def.lines {
-            self.execute_tokens_sync(&line.body_tokens)?;
-        }
-
+        // 行の配列としてガード構造を処理
+        self.execute_guard_structure(&def.lines)?;
+        
         Ok(())
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-    match name {
-        // 位置指定操作(0オリジン)
-        "GET" => vector_ops::op_get(self),
-        "INSERT" => vector_ops::op_insert(self),
-        "REPLACE" => vector_ops::op_replace(self),
-        "REMOVE" => vector_ops::op_remove(self),
-        
-        // 量指定操作(1オリジン)
-        "LENGTH" => vector_ops::op_length(self),
-        "TAKE" => vector_ops::op_take(self),
-        
-        // Vector構造操作
-        "SPLIT" => vector_ops::op_split(self),
-        "CONCAT" => vector_ops::op_concat(self),
-        "REVERSE" => vector_ops::op_reverse(self),
-        "LEVEL" => vector_ops::op_level(self),
-
-        // 算術演算
-        "+" => arithmetic::op_add(self),
-        "-" => arithmetic::op_sub(self),
-        "*" => arithmetic::op_mul(self),
-        "/" => arithmetic::op_div(self),
-        
-        // 比較演算
-        "=" => comparison::op_eq(self),
-        "<" => comparison::op_lt(self),
-        "<=" => comparison::op_le(self),
-        ">" => comparison::op_gt(self),
-        ">=" => comparison::op_ge(self),
-        
-        // 論理演算
-        "AND" => comparison::op_and(self),
-        "OR" => comparison::op_or(self),
-        "NOT" => comparison::op_not(self),
-        
-        // 入出力
-        "PRINT" => io::op_print(self),
-        
-        // カスタムワード管理
-        "DEF" => dictionary::op_def(self),
-        "DEL" => dictionary::op_del(self),
-        "?" => dictionary::op_lookup(self),
-        
-        "RESET" => self.execute_reset(),
-        
-        "MAP" => higher_order::op_map(self),
-        "FILTER" => higher_order::op_filter(self),
-        
-        _ => Err(AjisaiError::UnknownWord(name.to_string())),
+        match name {
+            "GET" => vector_ops::op_get(self),
+            "INSERT" => vector_ops::op_insert(self),
+            "REPLACE" => vector_ops::op_replace(self),
+            "REMOVE" => vector_ops::op_remove(self),
+            "LENGTH" => vector_ops::op_length(self),
+            "TAKE" => vector_ops::op_take(self),
+            "SPLIT" => vector_ops::op_split(self),
+            "CONCAT" => vector_ops::op_concat(self),
+            "REVERSE" => vector_ops::op_reverse(self),
+            "LEVEL" => vector_ops::op_level(self),
+            "+" => arithmetic::op_add(self),
+            "-" => arithmetic::op_sub(self),
+            "*" => arithmetic::op_mul(self),
+            "/" => arithmetic::op_div(self),
+            "=" => comparison::op_eq(self),
+            "<" => comparison::op_lt(self),
+            "<=" => comparison::op_le(self),
+            ">" => comparison::op_gt(self),
+            ">=" => comparison::op_ge(self),
+            "AND" => comparison::op_and(self),
+            "OR" => comparison::op_or(self),
+            "NOT" => comparison::op_not(self),
+            "PRINT" => io::op_print(self),
+            "DEF" => dictionary::op_def(self),
+            "DEL" => dictionary::op_del(self),
+            "?" => dictionary::op_lookup(self),
+            "RESET" => self.execute_reset(),
+            "MAP" => higher_order::op_map(self),
+            "FILTER" => higher_order::op_filter(self),
+            _ => Err(AjisaiError::UnknownWord(name.to_string())),
+        }
     }
-}
 
     pub fn token_to_string(&self, token: &Token) -> String {
         match token {
@@ -360,12 +338,27 @@ impl Interpreter {
             .map(|(name, _)| name.clone())
             .collect();
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
-        self.execute_tokens_sync(&tokens)
+        
+        // トークンを行に分割
+        let lines = self.tokens_to_lines(&tokens)?;
+        
+        // 行の配列としてガード構造を処理
+        self.execute_guard_structure(&lines)?;
+        
+        Ok(())
     }
 
-    pub fn get_output(&mut self) -> String { std::mem::take(&mut self.output_buffer) }
-    pub fn get_stack(&self) -> &Stack { &self.stack }
-    pub fn set_stack(&mut self, stack: Stack) { self.stack = stack; }
+    pub fn get_output(&mut self) -> String { 
+        std::mem::take(&mut self.output_buffer) 
+    }
+    
+    pub fn get_stack(&self) -> &Stack { 
+        &self.stack 
+    }
+    
+    pub fn set_stack(&mut self, stack: Stack) { 
+        self.stack = stack; 
+    }
 
     pub fn rebuild_dependencies(&mut self) -> Result<()> {
         self.dependents.clear();
