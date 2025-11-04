@@ -3,7 +3,7 @@
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
-use crate::types::{Value, ValueType, BracketType, Token};
+use crate::types::{Value, ValueType, BracketType, Token, ExecutionLine};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::str::FromStr;
@@ -103,7 +103,12 @@ impl AjisaiInterpreter {
         }
 
         let token = self.step_tokens[self.step_position].clone();
-        let result = self.interpreter.execute_tokens_sync(&[token]);
+        
+        // トークンを1つの行として実行
+        let line = ExecutionLine {
+            body_tokens: vec![token],
+        };
+        let result = self.interpreter.execute_guard_structure(&[line]);
         
         match result {
             Ok(()) => {
@@ -142,6 +147,8 @@ impl AjisaiInterpreter {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -278,40 +285,52 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             ValueType::Vector(vec, bracket_type)
         },
         "nil" => ValueType::Nil,
+        "quotation" => {
+            return Err("Quotation restoration not yet supported".to_string());
+        },
         _ => return Err(format!("Unknown type: {}", type_str)),
     };
+
     Ok(Value { val_type })
 }
 
 fn value_to_js_value(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
+    
+    let type_str = match &value.val_type {
+        ValueType::Number(_) => "number",
+        ValueType::String(_) => "string",
+        ValueType::Boolean(_) => "boolean",
+        ValueType::Symbol(_) => "symbol",
+        ValueType::Vector(_, _) => "vector",
+        ValueType::Quotation(_) => "quotation",
+        ValueType::Nil => "nil",
+    };
+    
+    js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
+    
     match &value.val_type {
-        ValueType::Number(frac) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"number".into()).unwrap();
-            let frac_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&frac_obj, &"numerator".into(), &frac.numerator.to_string().into()).unwrap();
-            js_sys::Reflect::set(&frac_obj, &"denominator".into(), &frac.denominator.to_string().into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &frac_obj.into()).unwrap();
+        ValueType::Number(n) => {
+            let num_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&num_obj, &"numerator".into(), &n.numerator.to_string().into()).unwrap();
+            js_sys::Reflect::set(&num_obj, &"denominator".into(), &n.denominator.to_string().into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
         },
         ValueType::String(s) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
         },
         ValueType::Boolean(b) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"boolean".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &(*b).into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &b.clone().into()).unwrap();
         },
         ValueType::Symbol(s) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"symbol".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
         },
         ValueType::Vector(vec, bracket_type) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
             let js_array = js_sys::Array::new();
-            for elem in vec {
-                js_array.push(&value_to_js_value(elem));
+            for item in vec {
+                js_array.push(&value_to_js_value(item));
             }
-            js_sys::Reflect::set(&obj, &"value".into(), &js_array.into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
             let bracket_str = match bracket_type {
                 BracketType::Square => "square",
                 BracketType::Curly => "curly",
@@ -319,10 +338,13 @@ fn value_to_js_value(value: &Value) -> JsValue {
             };
             js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
         },
+        ValueType::Quotation(_) => {
+            js_sys::Reflect::set(&obj, &"value".into(), &"<quotation>".into()).unwrap();
+        },
         ValueType::Nil => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
         },
-    }
+    };
+    
     obj.into()
 }
