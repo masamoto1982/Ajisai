@@ -285,9 +285,6 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             ValueType::Vector(vec, bracket_type)
         },
         "nil" => ValueType::Nil,
-        "quotation" => {
-            return Err("Quotation restoration not yet supported".to_string());
-        },
         _ => return Err(format!("Unknown type: {}", type_str)),
     };
 
@@ -303,7 +300,6 @@ fn value_to_js_value(value: &Value) -> JsValue {
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
         ValueType::Vector(_, _) => "vector",
-        ValueType::Quotation(_) => "quotation",
         ValueType::Nil => "nil",
     };
     
@@ -337,9 +333,6 @@ fn value_to_js_value(value: &Value) -> JsValue {
                 BracketType::Round => "round",
             };
             js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
-        },
-        ValueType::Quotation(_) => {
-            js_sys::Reflect::set(&obj, &"value".into(), &"<quotation>".into()).unwrap();
         },
         ValueType::Nil => {
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
