@@ -29,6 +29,7 @@ pub struct Interpreter {
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
     pub(crate) operation_target: OperationTarget,
+    pub(crate) call_stack: Vec<String>,  // 末尾再帰最適化のための呼び出しスタック
 }
 
 impl Interpreter {
@@ -40,6 +41,7 @@ impl Interpreter {
             output_buffer: String::new(),
             definition_to_load: None,
             operation_target: OperationTarget::StackTop,
+            call_stack: Vec::new(),
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -138,6 +140,19 @@ impl Interpreter {
         Ok(())
     }
 
+    // トークン位置が末尾位置かどうかを判定
+    fn is_tail_position(&self, tokens: &[Token], current_index: usize) -> bool {
+        // 現在位置より後に意味のあるトークンがあるかチェック
+        for j in (current_index + 1)..tokens.len() {
+            match &tokens[j] {
+                Token::GuardSeparator | Token::LineBreak => continue,
+                Token::Symbol(s) if s.to_uppercase() == "STACK" || s.to_uppercase() == "STACKTOP" => continue,
+                _ => return false, // 他のトークンがあれば末尾位置ではない
+            }
+        }
+        true
+    }
+
     // セクション内のトークンを実行
     fn execute_section(&mut self, tokens: &[Token]) -> Result<()> {
         let mut i = 0;
@@ -169,7 +184,18 @@ impl Interpreter {
                         "STACK" => self.operation_target = OperationTarget::Stack,
                         "STACKTOP" => self.operation_target = OperationTarget::StackTop,
                         _ => {
-                            self.execute_word_sync(&upper_name)?;
+                            // 末尾位置かつ現在実行中の関数と同じ場合は末尾再帰フラグを立てる
+                            let is_tail = self.is_tail_position(tokens, i);
+                            let is_recursive = self.call_stack.last().map_or(false, |current_fn| current_fn == &upper_name);
+
+                            if is_tail && is_recursive {
+                                // 末尾再帰の場合は、特別なマーカーをスタックに積む
+                                self.stack.push(Value {
+                                    val_type: ValueType::Symbol("__TAIL_CALL__".to_string())
+                                });
+                            } else {
+                                self.execute_word_sync(&upper_name)?;
+                            }
                             self.operation_target = OperationTarget::StackTop;
                         }
                     }
@@ -247,9 +273,31 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
-        // 行の配列としてガード構造を処理
-        self.execute_guard_structure(&def.lines)?;
-        
+        // 末尾再帰最適化：ループで実装
+        self.call_stack.push(name.to_string());
+
+        loop {
+            // 行の配列としてガード構造を処理
+            self.execute_guard_structure(&def.lines)?;
+
+            // 末尾再帰のマーカーがあるかチェック
+            let has_tail_call = if let Some(top) = self.stack.last() {
+                matches!(&top.val_type, ValueType::Symbol(s) if s == "__TAIL_CALL__")
+            } else {
+                false
+            };
+
+            if has_tail_call {
+                // マーカーを除去して再度実行
+                self.stack.pop();
+                continue;
+            } else {
+                // 末尾再帰ではない場合は終了
+                break;
+            }
+        }
+
+        self.call_stack.pop();
         Ok(())
     }
 
@@ -322,12 +370,13 @@ impl Interpreter {
     }
     
     pub fn execute_reset(&mut self) -> Result<()> {
-        self.stack.clear(); 
+        self.stack.clear();
         self.dictionary.clear();
         self.dependents.clear();
-        self.output_buffer.clear(); 
+        self.output_buffer.clear();
         self.definition_to_load = None;
         self.operation_target = OperationTarget::StackTop;
+        self.call_stack.clear();
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
@@ -433,5 +482,80 @@ impl Interpreter {
 
     pub fn get_word_definition(&self, name: &str) -> Option<String> {
         self.get_word_definition_tokens(name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_tail_recursion_simple() {
+        let mut interp = Interpreter::new();
+
+        // Define a recursive countdown function
+        // Format: [ 'definition body' ] 'NAME' DEF
+        let code = r#"
+: [ ': [0] [0] GET [0] >
+: [0] [0] GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
+: [5] COUNTDOWN
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Tail recursion should succeed: {:?}", result);
+
+        // Verify call stack is empty after execution
+        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty after execution");
+    }
+
+    #[tokio::test]
+    async fn test_tail_recursion_large_number() {
+        let mut interp = Interpreter::new();
+
+        // Test with a larger number to ensure tail recursion optimization works
+        let code = r#"
+: [ ': [0] [0] GET [0] >
+: [0] [0] GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
+: [100] COUNTDOWN
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Tail recursion with large number should succeed: {:?}", result);
+
+        // Verify call stack is empty
+        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty after execution");
+    }
+
+    #[tokio::test]
+    async fn test_simple_addition() {
+        let mut interp = Interpreter::new();
+
+        // Simple test: add two numbers
+        let code = r#"
+: [2] [3] +
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Simple addition should succeed: {:?}", result);
+
+        // Verify result
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+    }
+
+    #[tokio::test]
+    async fn test_definition_and_call() {
+        let mut interp = Interpreter::new();
+
+        // Test defining a word and calling it
+        let code = r#"
+: [ ': [2] [3] +' ] 'ADDTEST' DEF
+: ADDTEST
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Definition and call should succeed: {:?}", result);
+
+        // Verify call stack is empty
+        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
     }
 }

@@ -1,0 +1,10 @@
+: Simple countdown test to verify tail recursion
+: This should not cause a stack overflow even with large numbers
+
+[
+: DUP [0] >
+: [1] - COUNTDOWN
+] 'COUNTDOWN' DEF
+
+[100] COUNTDOWN
+'Countdown complete!' PRINT
