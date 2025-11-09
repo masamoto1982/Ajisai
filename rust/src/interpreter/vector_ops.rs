@@ -27,7 +27,7 @@ use std::collections::VecDeque;
 ///
 /// 【使用法】
 /// - StackTopモード: `[a b c] [1] GET` → `[a b c] [b]`
-/// - Stackモード: `a b c [1] STACK GET` → `a b c b`
+/// - Stackモード: `a b c [1] STACK GET` → `a b c [b]`
 ///
 /// 【引数スタック】
 /// - [index]: 取得するインデックス（単一要素ベクタの整数）
@@ -80,7 +80,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 .ok_or(AjisaiError::IndexOutOfBounds { index, length: stack_len })?;
 
             let result_elem = interp.stack[actual_index].clone();
-            interp.stack.push(result_elem);
+            interp.stack.push(wrap_in_square_vector(result_elem));
             Ok(())
         }
     }
