@@ -90,11 +90,12 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【責務】
 /// - スタックトップのベクタまたはスタック全体の指定位置に要素を挿入
-/// - 負数インデックスをサポート
+/// - 負数インデックスをサポート（-1 = 末尾の要素の位置）
 /// - 単一要素ベクタは自動的にアンラップして挿入
 ///
 /// 【使用法】
-/// - StackTopモード: `[a c] [1] [b] INSERT` → `[a b c]`
+/// - StackTopモード: `[a c] [1] [b] INSERT` → `[a b c]`（インデックス1の位置に挿入）
+/// - StackTopモード: `[a b c] [-1] [X] INSERT` → `[a b X c]`（末尾の要素の前に挿入）
 /// - Stackモード: `a c [1] x STACK INSERT` → `a x c`
 ///
 /// 【引数スタック】
@@ -123,8 +124,11 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
                 ValueType::Vector(mut v, bracket_type) => {
                     let len = v.len() as i64;
                     let insert_index = if index < 0 {
-                        (len + index + 1).max(0) as usize
+                        // 負数インデックス: -1は末尾、-2は末尾の1つ前
+                        // これは他の位置指定操作（GET/REPLACE/REMOVE）と一貫
+                        (len + index).max(0) as usize
                     } else {
+                        // 正数インデックス: lengthまで許容（末尾への追加を可能にする）
                         (index as usize).min(v.len())
                     };
 
@@ -142,8 +146,11 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::Stack => {
             let len = interp.stack.len() as i64;
             let insert_index = if index < 0 {
-                (len + index + 1).max(0) as usize
+                // 負数インデックス: -1は末尾、-2は末尾の1つ前
+                // これは他の位置指定操作（GET/REPLACE/REMOVE）と一貫
+                (len + index).max(0) as usize
             } else {
+                // 正数インデックス: lengthまで許容（末尾への追加を可能にする）
                 (index as usize).min(interp.stack.len())
             };
             interp.stack.insert(insert_index, element);
