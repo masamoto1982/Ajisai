@@ -695,6 +695,34 @@ export class TestRunner {
                 ])],
                 category: "Vector Operations"
             },
+            {
+                name: "REMOVE - 負のインデックス（末尾）",
+                code: "[ 1 2 3 ] [ -1 ] REMOVE",
+                expectedStack: [this.createVector([
+                    this.createNumber('1'),
+                    this.createNumber('2')
+                ])],
+                category: "Vector Operations"
+            },
+            {
+                name: "REMOVE - 負のインデックス（末尾の1つ前）",
+                code: "[ 1 2 3 4 ] [ -2 ] REMOVE",
+                expectedStack: [this.createVector([
+                    this.createNumber('1'),
+                    this.createNumber('2'),
+                    this.createNumber('4')
+                ])],
+                category: "Vector Operations"
+            },
+            {
+                name: "REMOVE - 先頭要素の削除",
+                code: "[ 1 2 3 ] [ 0 ] REMOVE",
+                expectedStack: [this.createVector([
+                    this.createNumber('2'),
+                    this.createNumber('3')
+                ])],
+                category: "Vector Operations"
+            },
 
             // === ベクトル操作 - 量指定（1オリジン） ===
             {
