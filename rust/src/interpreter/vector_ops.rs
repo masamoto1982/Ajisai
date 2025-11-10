@@ -207,11 +207,13 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             }
         }
         OperationTarget::Stack => {
+            let replace_element = unwrap_single_element(new_element);
+
             let len = interp.stack.len();
             let actual_index = normalize_index(index, len)
                 .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
 
-            interp.stack[actual_index] = new_element;
+            interp.stack[actual_index] = replace_element;
             Ok(())
         }
     }
