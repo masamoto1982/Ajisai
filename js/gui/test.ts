@@ -655,6 +655,28 @@ export class TestRunner {
                 category: "Vector Operations"
             },
             {
+                name: "INSERT - 負のインデックス（末尾の前）",
+                code: "[ 1 2 3 ] [ -1 ] [ 9 ] INSERT",
+                expectedStack: [this.createVector([
+                    this.createNumber('1'),
+                    this.createNumber('2'),
+                    this.createNumber('9'),
+                    this.createNumber('3')
+                ])],
+                category: "Vector Operations"
+            },
+            {
+                name: "INSERT - 負のインデックス（先頭）",
+                code: "[ 1 2 3 ] [ -3 ] [ 0 ] INSERT",
+                expectedStack: [this.createVector([
+                    this.createNumber('0'),
+                    this.createNumber('1'),
+                    this.createNumber('2'),
+                    this.createNumber('3')
+                ])],
+                category: "Vector Operations"
+            },
+            {
                 name: "REPLACE - 要素置換",
                 code: "[ 1 2 3 ] [ 1 ] [ 5 ] REPLACE",
                 expectedStack: [this.createVector([
