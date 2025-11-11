@@ -499,17 +499,22 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 /// CONCAT - 複数のベクタを連結する
 ///
 /// 【責務】
-/// - スタックトップからN個の値を取得して連結
+/// - StackTopモード: スタックから指定数の値を取得して連結
+/// - Stackモード: スタック全体を連結してベクタ化
 /// - 正数: 順方向連結、負数: 逆方向連結
 /// - ベクタでない要素も単独要素として含める
+/// - デフォルトのカウント値: 2
 ///
 /// 【使用法】
-/// - `[a] [b] [c] [3] CONCAT` → `[a b c]`
-/// - `[a] [b] [c] [-3] CONCAT` → `[c b a]`
+/// - StackTopモード: `[a] [b] [c] [3] CONCAT` → `[a b c]`
+/// - StackTopモード: `[a] [b] [c] [-3] CONCAT` → `[c b a]`
+/// - StackTopモード: `[a] [b] CONCAT` → `[a b]` (デフォルト2)
+/// - Stackモード: `[a] [b] [c] STACK CONCAT` → `[a b c]`
+/// - Stackモード: `[a] [b] [c] [2] STACK CONCAT` → `[a] [b c]`
 ///
 /// 【引数スタック】
-/// - vec_n ... vec_1: 連結する値（複数）
-/// - [count]: 連結する値の数（負数で逆順）
+/// - (オプション) [count]: 連結する値の数（負数で逆順、デフォルト2）
+/// - (StackTopモード) vec_n ... vec_1: 連結する値（複数）
 ///
 /// 【戻り値スタック】
 /// - 連結されたベクタ
@@ -517,45 +522,110 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 /// 【エラー】
 /// - カウントがスタック長を超える場合
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
-    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            // スタックトップからcountを取得（オプション、デフォルトは2）
+            let count_i64 = if let Some(top) = interp.stack.last() {
+                if let Ok(count_bigint) = get_bigint_from_value(top) {
+                    if let Some(c) = count_bigint.to_i64() {
+                        interp.stack.pop();
+                        c
+                    } else {
+                        return Err(AjisaiError::from("Count is too large"));
+                    }
+                } else {
+                    // countが指定されていない場合、デフォルトは2
+                    2
+                }
+            } else {
+                return Err(AjisaiError::StackUnderflow);
+            };
 
-    let count_bigint = get_bigint_from_value(&count_val)?;
-    let count_i64 = count_bigint.to_i64()
-        .ok_or_else(|| AjisaiError::from("Count is too large"))?;
+            let abs_count = count_i64.unsigned_abs() as usize;
+            let is_reversed = count_i64 < 0;
 
-    let abs_count = count_i64.unsigned_abs() as usize;
-    let is_reversed = count_i64 < 0;
+            if interp.stack.len() < abs_count {
+                return Err(AjisaiError::StackUnderflow);
+            }
 
-    if interp.stack.len() < abs_count {
-        return Err(AjisaiError::StackUnderflow);
-    }
+            let mut vecs_to_concat: Vec<Value> = interp.stack.split_off(interp.stack.len() - abs_count);
 
-    let mut vecs_to_concat: Vec<Value> = interp.stack.split_off(interp.stack.len() - abs_count);
+            if is_reversed {
+                vecs_to_concat.reverse();
+            }
 
-    if is_reversed {
-        vecs_to_concat.reverse();
-    }
+            let mut result_vec = Vec::new();
+            let mut final_bracket_type = BracketType::Square;
 
-    let mut result_vec = Vec::new();
-    let mut final_bracket_type = BracketType::Square;
+            if !vecs_to_concat.is_empty() {
+                if let ValueType::Vector(_, bracket_type) = &vecs_to_concat[0].val_type {
+                    final_bracket_type = bracket_type.clone();
+                }
+            }
 
-    if !vecs_to_concat.is_empty() {
-        if let ValueType::Vector(_, bracket_type) = &vecs_to_concat[0].val_type {
-            final_bracket_type = bracket_type.clone();
+            for val in vecs_to_concat {
+                if let ValueType::Vector(v, _) = val.val_type {
+                    result_vec.extend(v);
+                } else {
+                    result_vec.push(val);
+                }
+            }
+
+            interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
+            Ok(())
+        }
+        OperationTarget::Stack => {
+            // Stackモード: スタックトップがcountかチェック、なければスタック全体
+            let count_i64 = if let Some(top) = interp.stack.last() {
+                if let Ok(count_bigint) = get_bigint_from_value(top) {
+                    if let Some(c) = count_bigint.to_i64() {
+                        interp.stack.pop();
+                        c
+                    } else {
+                        return Err(AjisaiError::from("Count is too large"));
+                    }
+                } else {
+                    // countが指定されていない場合、スタック全体を使用
+                    interp.stack.len() as i64
+                }
+            } else {
+                return Err(AjisaiError::StackUnderflow);
+            };
+
+            let abs_count = count_i64.unsigned_abs() as usize;
+            let is_reversed = count_i64 < 0;
+
+            if interp.stack.len() < abs_count {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let mut vecs_to_concat: Vec<Value> = interp.stack.split_off(interp.stack.len() - abs_count);
+
+            if is_reversed {
+                vecs_to_concat.reverse();
+            }
+
+            let mut result_vec = Vec::new();
+            let mut final_bracket_type = BracketType::Square;
+
+            if !vecs_to_concat.is_empty() {
+                if let ValueType::Vector(_, bracket_type) = &vecs_to_concat[0].val_type {
+                    final_bracket_type = bracket_type.clone();
+                }
+            }
+
+            for val in vecs_to_concat {
+                if let ValueType::Vector(v, _) = val.val_type {
+                    result_vec.extend(v);
+                } else {
+                    result_vec.push(val);
+                }
+            }
+
+            interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
+            Ok(())
         }
     }
-
-    for val in vecs_to_concat {
-        if let ValueType::Vector(v, _) = val.val_type {
-            result_vec.extend(v);
-        } else {
-            result_vec.push(val);
-        }
-    }
-
-    interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
-
-    Ok(())
 }
 
 /// REVERSE - 要素の順序を反転する
