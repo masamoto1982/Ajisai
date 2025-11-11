@@ -732,6 +732,37 @@ export class TestRunner {
                 category: "Vector Operations"
             },
             {
+                name: "LENGTH - 空のベクトル",
+                code: "[ ] LENGTH",
+                expectedStack: [this.createVector([]), this.createVector([this.createNumber('0')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "LENGTH - 単一要素のベクトル",
+                code: "[ 42 ] LENGTH",
+                expectedStack: [this.createVector([this.createNumber('42')]), this.createVector([this.createNumber('1')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "LENGTH - 型エラー（数値）",
+                code: "42 LENGTH",
+                expectError: true,
+                category: "Vector Operations"
+            },
+            {
+                name: "LENGTH - Stackモード",
+                code: "1 2 3 4 5 STACK LENGTH",
+                expectedStack: [
+                    this.createVector([this.createNumber('1')]),
+                    this.createVector([this.createNumber('2')]),
+                    this.createVector([this.createNumber('3')]),
+                    this.createVector([this.createNumber('4')]),
+                    this.createVector([this.createNumber('5')]),
+                    this.createVector([this.createNumber('5')])
+                ],
+                category: "Vector Operations"
+            },
+            {
                 name: "TAKE - 先頭から取得",
                 code: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
                 expectedStack: [this.createVector([

@@ -297,10 +297,17 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let len = match interp.operation_target {
         OperationTarget::StackTop => {
-            let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match &target_val.val_type {
-                ValueType::Vector(v, _) => v.len(),
-                _ => return Err(AjisaiError::type_error("vector", "other type")),
+                ValueType::Vector(v, _) => {
+                    let len = v.len();
+                    interp.stack.push(target_val);
+                    len
+                }
+                _ => {
+                    interp.stack.push(target_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
             }
         }
         OperationTarget::Stack => interp.stack.len(),
