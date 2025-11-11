@@ -431,20 +431,43 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("SPLIT requires at least one size"));
     }
 
-    let sizes: Vec<usize> = sizes_values.into_iter()
-        .map(|v| get_bigint_from_value(&v).and_then(|bi| {
+    // サイズをusizeに変換（エラー時はsizes_valuesをスタックに戻す）
+    let mut sizes = Vec::new();
+    for v in &sizes_values {
+        match get_bigint_from_value(v).and_then(|bi| {
             bi.to_usize().ok_or_else(|| AjisaiError::from("Split size is too large"))
-        }))
-        .collect::<Result<Vec<_>>>()?;
+        }) {
+            Ok(size) => sizes.push(size),
+            Err(e) => {
+                // エラー時: sizes_valuesをスタックに戻す
+                for val in sizes_values {
+                    interp.stack.push(val);
+                }
+                return Err(e);
+            }
+        }
+    }
 
     match interp.operation_target {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop()
-                .ok_or_else(|| AjisaiError::from("SPLIT requires a vector to split"))?;
+                .ok_or_else(|| {
+                    // エラー時: sizes_valuesをスタックに戻す
+                    for val in sizes_values.clone() {
+                        interp.stack.push(val);
+                    }
+                    AjisaiError::from("SPLIT requires a vector to split")
+                })?;
+
             match vector_val.val_type {
                 ValueType::Vector(v, bracket_type) => {
                     let total_size: usize = sizes.iter().sum();
                     if total_size > v.len() {
+                        // エラー時: ベクタとsizesをスタックに戻す
+                        interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                        for val in sizes_values {
+                            interp.stack.push(val);
+                        }
                         return Err(AjisaiError::from("Split sizes sum exceeds vector length"));
                     }
 
@@ -467,12 +490,23 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.extend(result_vectors);
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    // エラー時: 元の値とsizesをスタックに戻す
+                    interp.stack.push(vector_val);
+                    for val in sizes_values {
+                        interp.stack.push(val);
+                    }
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
             let total_size: usize = sizes.iter().sum();
             if total_size > interp.stack.len() {
+                // エラー時: sizesをスタックに戻す
+                for val in sizes_values {
+                    interp.stack.push(val);
+                }
                 return Err(AjisaiError::from("Split sizes sum exceeds stack length"));
             }
 
