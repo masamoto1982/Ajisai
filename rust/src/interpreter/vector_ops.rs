@@ -355,12 +355,14 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                     let result = if count < 0 {
                         let abs_count = (-count) as usize;
                         if abs_count > len {
+                            interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                             return Err(AjisaiError::from("Take count exceeds vector length"));
                         }
                         v[len - abs_count..].to_vec()
                     } else {
                         let take_count = count as usize;
                         if take_count > len {
+                            interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
                             return Err(AjisaiError::from("Take count exceeds vector length"));
                         }
                         v[..take_count].to_vec()
@@ -368,7 +370,10 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(Value { val_type: ValueType::Vector(result, bracket_type) });
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(vector_val);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
