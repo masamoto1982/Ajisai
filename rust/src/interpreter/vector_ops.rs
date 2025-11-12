@@ -752,7 +752,10 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
                     });
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
