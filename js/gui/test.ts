@@ -828,37 +828,37 @@ export class TestRunner {
             // === 条件分岐（ゲート） ===
             {
                 name: "ゲート - 単純な条件分岐（真）",
-                code: "[ 5 ] [ 5 ] = : [ 10 ] [ 5 ] +",
+                code: ": [ 5 ] [ 5 ] =\n: [ 10 ] [ 5 ] +",
                 expectedStack: [this.createVector([this.createNumber('15')])],
                 category: "Conditional Branching"
             },
             {
                 name: "ゲート - 単純な条件分岐（偽）",
-                code: "[ 5 ] [ 3 ] = : [ 10 ] [ 5 ] +",
+                code: ": [ 5 ] [ 3 ] =\n: [ 10 ] [ 5 ] +\n: [ 5 ] [ 3 ] =",
                 expectedStack: [this.createVector([this.createBoolean(false)])],
                 category: "Conditional Branching"
             },
             {
                 name: "ゲート - 条件分岐の連鎖（正の数）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' DEF\n[ 5 ] SIGN",
+                code: "[ ': [ 0 ] =\n: [ 0 ]\n: [ 0 ] >\n: [ 1 ]\n: [ -1 ]' ] 'SIGN' DEF\n[ 5 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('1')])],
                 category: "Conditional Branching"
             },
             {
                 name: "ゲート - 条件分岐の連鎖（ゼロ）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' DEF\n[ 0 ] SIGN",
+                code: "[ ': [ 0 ] =\n: [ 0 ]\n: [ 0 ] >\n: [ 1 ]\n: [ -1 ]' ] 'SIGN' DEF\n[ 0 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('0')])],
                 category: "Conditional Branching"
             },
             {
                 name: "ゲート - 条件分岐の連鎖（負の数）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' DEF\n[ -5 ] SIGN",
+                code: "[ ': [ 0 ] =\n: [ 0 ]\n: [ 0 ] >\n: [ 1 ]\n: [ -1 ]' ] 'SIGN' DEF\n[ -5 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('-1')])],
                 category: "Conditional Branching"
             },
             {
                 name: "セミコロン - 条件分岐",
-                code: "[ 5 ] [ 5 ] = ; [ 100 ]",
+                code: ": [ 5 ] [ 5 ] =\n: [ 100 ]",
                 expectedStack: [this.createVector([this.createNumber('100')])],
                 category: "Conditional Branching"
             },
@@ -896,31 +896,31 @@ export class TestRunner {
             },
             {
                 name: "DEF - 条件付き定義（真の場合）",
-                code: "[ '[ 0 ] > : [ 100 ]' ] 'POS_TO_100' DEF\n[ 5 ] POS_TO_100",
+                code: "[ ': [ 0 ] >\n: [ 100 ]\n: DUP' ] 'POS_TO_100' DEF\n[ 5 ] POS_TO_100",
                 expectedStack: [this.createVector([this.createNumber('100')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 条件付き定義（偽の場合）",
-                code: "[ '[ 0 ] > : [ 100 ]' ] 'POS_TO_100' DEF\n[ -5 ] POS_TO_100",
+                code: "[ ': [ 0 ] >\n: [ 100 ]\n: DUP' ] 'POS_TO_100' DEF\n[ -5 ] POS_TO_100",
                 expectedStack: [this.createVector([this.createNumber('-5')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 複数条件の連鎖定義（正）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' DEF\n[ 5 ] SIGN",
+                code: "[ ': [ 0 ] =\n: [ 0 ]\n: [ 0 ] >\n: [ 1 ]\n: [ -1 ]' ] 'SIGN' DEF\n[ 5 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('1')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 複数条件の連鎖定義（ゼロ）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' DEF\n[ 0 ] SIGN",
+                code: "[ ': [ 0 ] =\n: [ 0 ]\n: [ 0 ] >\n: [ 1 ]\n: [ -1 ]' ] 'SIGN' DEF\n[ 0 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('0')])],
                 category: "Custom Word Definition"
             },
             {
                 name: "DEF - 複数条件の連鎖定義（負）",
-                code: "[ '[ 0 ] = : [ 0 ] : [ 0 ] > : [ 1 ] : [ -1 ]' ] 'SIGN' DEF\n[ -3 ] SIGN",
+                code: "[ ': [ 0 ] =\n: [ 0 ]\n: [ 0 ] >\n: [ 1 ]\n: [ -1 ]' ] 'SIGN' DEF\n[ -3 ] SIGN",
                 expectedStack: [this.createVector([this.createNumber('-1')])],
                 category: "Custom Word Definition"
             },
@@ -1179,7 +1179,7 @@ export class TestRunner {
             },
             {
                 name: "REDUCE - 最大値",
-                code: "[ '[ 2 ] GET [ 1 ] GET > : [ 2 ] GET : [ 1 ] GET' ] 'MAX2' DEF\n[ 3 7 2 9 1 ] [ 0 ] 'MAX2' REDUCE",
+                code: "[ ': [ 2 ] GET [ 1 ] GET >\n: [ 2 ] GET\n: [ 1 ] GET' ] 'MAX2' DEF\n[ 3 7 2 9 1 ] [ 0 ] 'MAX2' REDUCE",
                 expectedStack: [this.createVector([this.createNumber('9')])],
                 category: "Higher-Order Functions"
             },
