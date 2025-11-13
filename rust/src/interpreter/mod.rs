@@ -743,4 +743,121 @@ mod tests {
         // Verify call stack is empty
         assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
     }
+
+    #[tokio::test]
+    async fn test_guard_with_def_true_case() {
+        let mut interp = Interpreter::new();
+
+        // Test: Define a custom word inside guard clause (true case)
+        // 5 > 3 is true, so ANSWER should be defined
+        let code = r#"
+: [5] [3] >
+: [ ': [ 42 ]' ] 'ANSWER' DEF
+: [ ': [ 0 ]' ] 'ZERO' DEF
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Guard with DEF should succeed: {:?}", result);
+
+        // Verify ANSWER is defined
+        assert!(interp.dictionary.contains_key("ANSWER"), "ANSWER should be defined");
+        assert!(!interp.dictionary.contains_key("ZERO"), "ZERO should not be defined");
+
+        // Debug: Print ANSWER definition
+        if let Some(def) = interp.dictionary.get("ANSWER") {
+            println!("ANSWER definition has {} lines", def.lines.len());
+            for (i, line) in def.lines.iter().enumerate() {
+                println!("Line {}: {} tokens", i, line.body_tokens.len());
+                for token in &line.body_tokens {
+                    println!("  Token: {}", interp.token_to_string(token));
+                }
+            }
+        }
+
+        // Call ANSWER and verify result
+        let call_code = ": ANSWER";
+        let call_result = interp.execute(call_code).await;
+        if let Err(ref e) = call_result {
+            println!("Error calling ANSWER: {:?}", e);
+        }
+        assert!(call_result.is_ok(), "Calling ANSWER should succeed");
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+    }
+
+    #[tokio::test]
+    async fn test_guard_with_def_false_case() {
+        let mut interp = Interpreter::new();
+
+        // Test: Define a custom word inside guard clause (false case)
+        // 3 > 5 is false, so SMALL should be defined
+        let code = r#"
+: [3] [5] >
+: [ ': [ 100 ]' ] 'BIG' DEF
+: [ ': [ -1 ]' ] 'SMALL' DEF
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Guard with DEF (false case) should succeed: {:?}", result);
+
+        // Verify SMALL is defined
+        assert!(!interp.dictionary.contains_key("BIG"), "BIG should not be defined");
+        assert!(interp.dictionary.contains_key("SMALL"), "SMALL should be defined");
+
+        // Call SMALL and verify result
+        let call_code = ": SMALL";
+        let call_result = interp.execute(call_code).await;
+        assert!(call_result.is_ok(), "Calling SMALL should succeed: {:?}", call_result.err());
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+    }
+
+    #[tokio::test]
+    async fn test_guard_default_clause_with_def() {
+        let mut interp = Interpreter::new();
+
+        // Test: Default clause in guard structure defines a word
+        let code = r#"
+: [FALSE]
+: [ ': [ 100 ]' ] 'HUNDRED' DEF
+: [ ': [ 999 ]' ] 'DEFAULT' DEF
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Guard default clause with DEF should succeed: {:?}", result);
+
+        // Verify DEFAULT is defined
+        assert!(!interp.dictionary.contains_key("HUNDRED"), "HUNDRED should not be defined");
+        assert!(interp.dictionary.contains_key("DEFAULT"), "DEFAULT should be defined");
+
+        // Call DEFAULT and verify result
+        let call_code = ": DEFAULT";
+        let call_result = interp.execute(call_code).await;
+        assert!(call_result.is_ok(), "Calling DEFAULT should succeed: {:?}", call_result.err());
+    }
+
+    #[tokio::test]
+    async fn test_def_with_guard_using_existing_custom_word() {
+        let mut interp = Interpreter::new();
+
+        // Test: Define a word inside guard that uses an existing custom word
+        let def_code = ": [ ': [ 2 ] *' ] 'DOUBLE' DEF";
+        let result = interp.execute(def_code).await;
+        assert!(result.is_ok(), "DOUBLE definition should succeed: {:?}", result);
+
+        let guard_code = r#"
+: [10] [5] >
+: [ ': [ 3 ] DOUBLE' ] 'PROCESS' DEF
+: [ ': [ 0 ]' ] 'NOPROCESS' DEF
+"#;
+        let result = interp.execute(guard_code).await;
+        assert!(result.is_ok(), "DEF with guard using existing word should succeed: {:?}", result);
+
+        // Verify PROCESS is defined
+        assert!(interp.dictionary.contains_key("PROCESS"), "PROCESS should be defined");
+        assert!(interp.dictionary.contains_key("DOUBLE"), "DOUBLE should exist");
+
+        // Call PROCESS and verify result
+        let call_code = ": PROCESS";
+        let call_result = interp.execute(call_code).await;
+        assert!(call_result.is_ok(), "Calling PROCESS should succeed: {:?}", call_result.err());
+    }
 }

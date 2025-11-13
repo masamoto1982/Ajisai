@@ -1,0 +1,54 @@
+# ガード節とカスタムワード定義の組み合わせ検証テスト
+
+# テスト1: ガード節の中でカスタムワードを定義（条件が真の場合）
+# 5 > 3 なので、ANSWER を定義する
+[ 5 ] [ 3 ] > : [ '[ 42 ]' ] 'ANSWER' DEF : [ '[ 0 ]' ] 'ZERO' DEF
+# ANSWER が定義されているはず
+ANSWER
+# 期待値: スタックに [42]
+
+# テスト2: ガード節の中でカスタムワードを定義（条件が偽の場合）
+RESET
+[ 3 ] [ 5 ] > : [ '[ 100 ]' ] 'BIG' DEF : [ '[ -1 ]' ] 'SMALL' DEF
+# 3 > 5 は偽なので、SMALL を定義する
+SMALL
+# 期待値: スタックに [-1]
+
+# テスト3: ガード節をカスタムワードとして定義し、その中でさらに別のワードを定義
+RESET
+[ '[ 0 ] > : [ '+ [10] [20] +'' ] ''ADDTEST'' DEF : [ 0 ]' ] 'DEFINE_IF_POSITIVE' DEF
+[ 5 ] DEFINE_IF_POSITIVE
+# 5 > 0 なので、ADDTEST が定義されるはず
+ADDTEST
+# 期待値: スタックに [30]
+
+# テスト4: ネストしたガード節とカスタムワード定義
+RESET
+[ '[ 0 ] = : [ '+ [ 10 ]'' ] ''ADD10'' DEF : [ 0 ] > : [ '+ [ 2 ] *'' ] ''DOUBLE'' DEF : [ '+ [ -1 ] *'' ] ''NEGATE'' DEF' ] 'CONDITIONAL_DEF' DEF
+# 正の数の場合は DOUBLE を定義
+[ 5 ] CONDITIONAL_DEF
+[ 3 ] DOUBLE
+# 期待値: スタックに [6]
+
+# テスト5: ガード節の複数条件連鎖の中でカスタムワード定義
+RESET
+[ '[ 0 ] = : [ '+ [ 0 ]'' ] ''ZERO'' DEF [ 0 ] : [ 0 ] > : [ '+ [ 1 ]'' ] ''ONE'' DEF [ 1 ] : [ '+ [ -1 ]'' ] ''NEGONE'' DEF [ -1 ]' ] 'SIGN_DEF' DEF
+# ゼロの場合
+[ 0 ] SIGN_DEF
+ZERO
+# 期待値: スタックに [0]
+
+# テスト6: ガード節内で既存のカスタムワードを使用して新しいワードを定義
+RESET
+[ '[ 2 ] *' ] 'DOUBLE' DEF
+[ '[ 5 ] > : [ '+ DOUBLE'' ] ''PROCESS'' DEF : [ '+ [ 0 ]'' ] ''NOPROCESS'' DEF' ] 'CONDITIONAL_PROCESS_DEF' DEF
+[ 10 ] CONDITIONAL_PROCESS_DEF
+[ 3 ] PROCESS
+# 期待値: スタックに [6]
+
+# テスト7: デフォルト節でカスタムワードを定義
+RESET
+[ FALSE ] : [ '[ 100 ]' ] 'HUNDRED' DEF : [ '[ 999 ]' ] 'DEFAULT' DEF
+# FALSE なので、DEFAULT を定義
+DEFAULT
+# 期待値: スタックに [999]
