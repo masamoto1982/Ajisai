@@ -332,6 +332,8 @@ impl Interpreter {
             "RESET" => self.execute_reset(),
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
+            "TIMES" => control::execute_times(self),
+            "WAIT" => control::execute_wait(self),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
