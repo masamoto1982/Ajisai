@@ -71,6 +71,10 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("DEF", "Define a custom word. Usage: (definition block) 'NAME' DEF", "Word Management"),
         ("DEL", "Delete a custom word. Usage: 'NAME' DEL", "Word Management"),
         ("?", "Look up word definition. Usage: 'NAME' ?", "Word Management"),
+
+        // 制御フロー（TIMES/WAIT）
+        ("TIMES", "Execute word N times. Usage: 'WORD' [ N ] TIMES", "Control Flow"),
+        ("WAIT", "Execute word after delay. Usage: 'WORD' [ ms ] WAIT", "Control Flow"),
     ]
 }
 

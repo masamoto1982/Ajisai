@@ -9,6 +9,8 @@ use crate::interpreter::helpers::{get_integer_from_value, get_word_name_from_val
 use crate::types::ValueType;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
+use gloo_timers::future::sleep;
+use std::time::Duration;
 
 /// TIMES - ワードをN回繰り返し実行する
 ///
@@ -56,14 +58,14 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// WAIT - 遅延後にワードを実行する（現在は遅延なしで実行）
+/// WAIT - 遅延後にワードを実行する
 ///
 /// 【責務】
-/// - 指定ミリ秒後にカスタムワードを実行（現在はログ出力のみ）
+/// - 指定ミリ秒後にカスタムワードを実行
 /// - ビルトインワードには使用不可（カスタムワードのみ）
 ///
 /// 【使用法】
-/// - `'MYWORD' [1000] WAIT` → 1000ms後にMYWORDを実行（予定）
+/// - `'MYWORD' [1000] WAIT` → 1000ms後にMYWORDを実行
 ///
 /// 【引数スタック】
 /// - [delay_ms]: 遅延時間（ミリ秒、単一要素ベクタの整数）
@@ -78,9 +80,8 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
 /// - 遅延時間が整数でない場合
 ///
 /// 【注意事項】
-/// - 現在は実際の遅延は実装されておらず、即座に実行される
-/// - デバッグメッセージで遅延時間が出力される
-pub(crate) fn execute_wait(interp: &mut Interpreter) -> Result<()> {
+/// - async関数として実装されており、指定時間だけ実行を遅延させる
+pub(crate) async fn execute_wait(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::from("WAIT requires word name and delay. Usage: 'WORD' [ ms ] WAIT"));
     }
@@ -110,8 +111,10 @@ pub(crate) fn execute_wait(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
-    interp.output_buffer.push_str(&format!("[DEBUG] Would wait {}ms before executing '{}'\n", delay_ms, word_name));
+    // 指定時間だけ遅延
+    sleep(Duration::from_millis(delay_ms)).await;
 
+    // ワードを実行
     interp.execute_word_sync(&word_name)?;
 
     Ok(())
