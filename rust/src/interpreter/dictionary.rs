@@ -9,12 +9,24 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
-    
+
     // 説明（オプション）を先にチェック
+    // 説明ありの場合: [ベクタ] 'NAME' '説明'
+    // 説明なしの場合: [ベクタ] 'NAME'
     let mut description = None;
     let has_description = if interp.stack.len() >= 3 {
+        // トップ2つが文字列の場合のみ、説明ありと判定
         if let Some(top_val) = interp.stack.last() {
-            matches!(top_val.val_type, ValueType::String(_))
+            if matches!(top_val.val_type, ValueType::String(_)) {
+                // 次（2番目）も文字列かチェック
+                if let Some(second_val) = interp.stack.get(interp.stack.len() - 2) {
+                    matches!(second_val.val_type, ValueType::String(_))
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
         } else {
             false
         }
