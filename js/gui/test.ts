@@ -433,7 +433,31 @@ export class TestRunner {
     
     private getTestCases(): TestCase[] {
         return [
-            // Test cases will be rewritten
+            // Placeholder tests to avoid TypeScript unused warnings during rewrite
+            {
+                name: "Placeholder - Number",
+                code: "[ 1 ]",
+                expectedStack: [this.createVector([this.createNumber('1')])],
+                category: "Placeholder"
+            },
+            {
+                name: "Placeholder - String",
+                code: "[ 'test' ]",
+                expectedStack: [this.createVector([this.createString('test')])],
+                category: "Placeholder"
+            },
+            {
+                name: "Placeholder - Boolean",
+                code: "[ TRUE ]",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Placeholder"
+            },
+            {
+                name: "Placeholder - Nil",
+                code: "[ NIL ]",
+                expectedStack: [this.createVector([this.createNil()])],
+                category: "Placeholder"
+            }
         ];
     }
 }
