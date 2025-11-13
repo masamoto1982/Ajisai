@@ -108,8 +108,8 @@ impl AjisaiInterpreter {
         let line = ExecutionLine {
             body_tokens: vec![token],
         };
-        let result = self.interpreter.execute_guard_structure(&[line]);
-        
+        let result = self.interpreter.execute_guard_structure_sync(&[line]);
+
         match result {
             Ok(()) => {
                 let output = self.interpreter.get_output();
