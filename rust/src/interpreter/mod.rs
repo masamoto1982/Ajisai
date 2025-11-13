@@ -100,18 +100,31 @@ impl Interpreter {
         if lines.is_empty() {
             return Ok(());
         }
-        
+
+        // すべての行が:で始まっているかチェック
+        let all_lines_have_colon = lines.iter().all(|line| {
+            line.body_tokens.first() == Some(&Token::GuardSeparator)
+        });
+
+        // :で始まらない行がある場合、すべてをデフォルト行として順次実行
+        if !all_lines_have_colon {
+            for line in lines {
+                let tokens = if line.body_tokens.first() == Some(&Token::GuardSeparator) {
+                    &line.body_tokens[1..]
+                } else {
+                    &line.body_tokens[..]
+                };
+                self.execute_section_sync(tokens)?;
+            }
+            return Ok(());
+        }
+
+        // すべての行が:で始まる場合、ガード節として処理
         let mut i = 0;
         while i < lines.len() {
             let line = &lines[i];
-            
-            // 行が:で始まることを確認
-            if line.body_tokens.first() != Some(&Token::GuardSeparator) {
-                return Err(AjisaiError::from("All lines in guard structure must start with :"));
-            }
-            
             let content_tokens = &line.body_tokens[1..]; // :を除く
-            
+
             // 次の行が存在するかチェック
             if i + 1 < lines.len() {
                 // 条件行の可能性
@@ -122,9 +135,6 @@ impl Interpreter {
                     // 真の場合：次の行（処理行）を実行
                     i += 1;
                     let action_line = &lines[i];
-                    if action_line.body_tokens.first() != Some(&Token::GuardSeparator) {
-                        return Err(AjisaiError::from("Action line must start with :"));
-                    }
                     let action_tokens = &action_line.body_tokens[1..];
                     self.execute_section_sync(action_tokens)?;
                     return Ok(()); // ガード節終了
@@ -137,7 +147,7 @@ impl Interpreter {
                 return Ok(());
             }
         }
-        
+
         Ok(())
     }
 
@@ -148,15 +158,28 @@ impl Interpreter {
             return Ok(());
         }
 
+        // すべての行が:で始まっているかチェック
+        let all_lines_have_colon = lines.iter().all(|line| {
+            line.body_tokens.first() == Some(&Token::GuardSeparator)
+        });
+
+        // :で始まらない行がある場合、すべてをデフォルト行として順次実行
+        if !all_lines_have_colon {
+            for line in lines {
+                let tokens = if line.body_tokens.first() == Some(&Token::GuardSeparator) {
+                    &line.body_tokens[1..]
+                } else {
+                    &line.body_tokens[..]
+                };
+                self.execute_section(tokens).await?;
+            }
+            return Ok(());
+        }
+
+        // すべての行が:で始まる場合、ガード節として処理
         let mut i = 0;
         while i < lines.len() {
             let line = &lines[i];
-
-            // 行が:で始まることを確認
-            if line.body_tokens.first() != Some(&Token::GuardSeparator) {
-                return Err(AjisaiError::from("All lines in guard structure must start with :"));
-            }
-
             let content_tokens = &line.body_tokens[1..]; // :を除く
 
             // 次の行が存在するかチェック
@@ -169,9 +192,6 @@ impl Interpreter {
                     // 真の場合：次の行（処理行）を実行
                     i += 1;
                     let action_line = &lines[i];
-                    if action_line.body_tokens.first() != Some(&Token::GuardSeparator) {
-                        return Err(AjisaiError::from("Action line must start with :"));
-                    }
                     let action_tokens = &action_line.body_tokens[1..];
                     self.execute_section(action_tokens).await?;
                     return Ok(()); // ガード節終了
@@ -859,5 +879,138 @@ mod tests {
         let call_code = ": PROCESS";
         let call_result = interp.execute(call_code).await;
         assert!(call_result.is_ok(), "Calling PROCESS should succeed: {:?}", call_result.err());
+    }
+
+    #[tokio::test]
+    async fn test_default_line_without_colon() {
+        let mut interp = Interpreter::new();
+
+        // Test: Simple expression without colon (default line)
+        let code = "[5] [3] +";
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Default line without colon should succeed: {:?}", result);
+
+        // Verify result
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                assert_eq!(v.len(), 1, "Result vector should have one element");
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "8", "Result should be 8");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_def_without_colon() {
+        let mut interp = Interpreter::new();
+
+        // Test: Define a word without colon prefix
+        let code = "[ ': [ 42 ]' ] 'ANSWER' DEF";
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "DEF without colon should succeed: {:?}", result);
+
+        // Verify ANSWER is defined
+        assert!(interp.dictionary.contains_key("ANSWER"), "ANSWER should be defined");
+
+        // Call ANSWER
+        let call_result = interp.execute("ANSWER").await;
+        assert!(call_result.is_ok(), "Calling ANSWER should succeed");
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_lines_without_colon() {
+        let mut interp = Interpreter::new();
+
+        // Test: Multiple lines without colons (all treated as default lines)
+        let code = r#"
+[1] [2] +
+[3] *
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Multiple lines without colon should succeed: {:?}", result);
+
+        // Verify result: (1 + 2) * 3 = 9
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                assert_eq!(v.len(), 1, "Result vector should have one element");
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "9", "Result should be 9");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_mixed_colon_and_no_colon() {
+        let mut interp = Interpreter::new();
+
+        // Test: Mix of lines with and without colons (treated as default lines)
+        let code = r#"
+[10] [20] +
+: [5] *
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Mixed colon lines should succeed: {:?}", result);
+
+        // Verify result: (10 + 20) * 5 = 150
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                assert_eq!(v.len(), 1, "Result vector should have one element");
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "150", "Result should be 150");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_with_colon_vs_default_without_colon() {
+        let mut interp = Interpreter::new();
+
+        // Test: Guard clause with colons (conditional execution)
+        let guard_code = r#"
+: [5] [3] >
+: [100]
+: [0]
+"#;
+
+        let result = interp.execute(guard_code).await;
+        assert!(result.is_ok(), "Guard clause should succeed: {:?}", result);
+
+        // Result should be [100] because 5 > 3 is true
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                assert_eq!(v.len(), 1, "Result vector should have one element");
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "100", "Result should be 100");
+                }
+            }
+        }
+
+        // Clear stack
+        interp.stack.clear();
+
+        // Test: Same logic but without colons (all lines executed)
+        let default_code = r#"
+[5] [3] >
+[100]
+[0]
+"#;
+
+        let result = interp.execute(default_code).await;
+        assert!(result.is_ok(), "Default lines should succeed: {:?}", result);
+
+        // All lines executed, so we should have 3 items on stack
+        assert_eq!(interp.stack.len(), 3, "Stack should have three elements");
     }
 }
