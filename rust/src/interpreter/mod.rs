@@ -4,6 +4,7 @@ pub mod helpers;        // 共通ヘルパー関数
 pub mod vector_ops;
 pub mod arithmetic;
 pub mod comparison;
+pub mod logic;
 pub mod control;
 pub mod dictionary;
 pub mod io;
@@ -396,11 +397,7 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         if def.is_builtin {
-            // WAIT is the only async builtin, so we can't call it from sync context
-            if name == "WAIT" {
-                return Err(AjisaiError::from("WAIT cannot be used in this context (requires async execution)"));
-            }
-            return self.execute_builtin_sync(name);
+            return self.execute_builtin(name);
         }
 
         // 末尾再帰最適化：ループで実装
@@ -437,7 +434,11 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         if def.is_builtin {
-            return self.execute_builtin(name).await;
+            // WAIT is the only async builtin
+            if name == "WAIT" {
+                return control::execute_wait(self).await;
+            }
+            return self.execute_builtin(name);
         }
 
         // 末尾再帰最適化：ループで実装
@@ -468,7 +469,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_builtin_sync(&mut self, name: &str) -> Result<()> {
+    fn execute_builtin(&mut self, name: &str) -> Result<()> {
         match name {
             "GET" => vector_ops::op_get(self),
             "INSERT" => vector_ops::op_insert(self),
@@ -489,9 +490,9 @@ impl Interpreter {
             "<=" => comparison::op_le(self),
             ">" => comparison::op_gt(self),
             ">=" => comparison::op_ge(self),
-            "AND" => comparison::op_and(self),
-            "OR" => comparison::op_or(self),
-            "NOT" => comparison::op_not(self),
+            "AND" => logic::op_and(self),
+            "OR" => logic::op_or(self),
+            "NOT" => logic::op_not(self),
             "PRINT" => io::op_print(self),
             "DEF" => dictionary::op_def(self),
             "DEL" => dictionary::op_del(self),
@@ -500,43 +501,7 @@ impl Interpreter {
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
             "TIMES" => control::execute_times(self),
-            _ => Err(AjisaiError::UnknownWord(name.to_string())),
-        }
-    }
-
-    async fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        match name {
-            "GET" => vector_ops::op_get(self),
-            "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self),
-            "REMOVE" => vector_ops::op_remove(self),
-            "LENGTH" => vector_ops::op_length(self),
-            "TAKE" => vector_ops::op_take(self),
-            "SPLIT" => vector_ops::op_split(self),
-            "CONCAT" => vector_ops::op_concat(self),
-            "REVERSE" => vector_ops::op_reverse(self),
-            "LEVEL" => vector_ops::op_level(self),
-            "+" => arithmetic::op_add(self),
-            "-" => arithmetic::op_sub(self),
-            "*" => arithmetic::op_mul(self),
-            "/" => arithmetic::op_div(self),
-            "=" => comparison::op_eq(self),
-            "<" => comparison::op_lt(self),
-            "<=" => comparison::op_le(self),
-            ">" => comparison::op_gt(self),
-            ">=" => comparison::op_ge(self),
-            "AND" => comparison::op_and(self),
-            "OR" => comparison::op_or(self),
-            "NOT" => comparison::op_not(self),
-            "PRINT" => io::op_print(self),
-            "DEF" => dictionary::op_def(self),
-            "DEL" => dictionary::op_del(self),
-            "?" => dictionary::op_lookup(self),
-            "RESET" => self.execute_reset(),
-            "MAP" => higher_order::op_map(self),
-            "FILTER" => higher_order::op_filter(self),
-            "TIMES" => control::execute_times(self),
-            "WAIT" => control::execute_wait(self).await,
+            "WAIT" => Err(AjisaiError::from("WAIT requires async execution context")),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
@@ -620,7 +585,7 @@ impl Interpreter {
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| (name.clone(), def.clone()))
             .collect();
-            
+
         for (word_name, word_def) in custom_words {
             let mut dependencies = HashSet::new();
             for line in &word_def.lines {
@@ -639,30 +604,6 @@ impl Interpreter {
             }
         }
         Ok(())
-    }
-
-    pub fn init_step_execution(&mut self, code: &str) -> Result<()> {
-        let custom_word_names: HashSet<String> = self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-        let _tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
-        Ok(())
-    }
-
-    pub fn execute_step(&mut self) -> Result<bool> {
-        Ok(false)
-    }
-
-    pub fn get_step_info(&self) -> Option<(usize, usize)> {
-        None
-    }
-
-    pub fn get_register(&self) -> Option<&Value> {
-        None
-    }
-
-    pub fn set_register(&mut self, _value: Option<Value>) {
     }
 
     pub fn get_custom_words(&self) -> Vec<String> {
