@@ -14,6 +14,7 @@ It provides an interpreter running on WebAssembly and a web-based GUI.
 - Vector is the sole data structure
 - Vectors can contain Vectors, booleans, strings, and Nil, and support negative indexing for searching from the end
 - For Vector operations: position-specifying operations are 0-indexed, quantity-specifying operations are 1-indexed
+- Vector display uses depth-based bracket styles for visual clarity: `[ ]` at depth 0, `{ }` at depth 1, `( )` at depth 2, cycling every 3 levels
 - Built-in words cannot be deleted or have their meanings overwritten
 - Statically typed without requiring type declarations or type inference
 - All numbers are internally treated as fractions to avoid rounding errors
