@@ -4,8 +4,8 @@
 // 比較演算子（=、<、<=、>、>=）と論理演算子（AND、OR、NOT）を実装する。
 // すべての演算は単一要素ベクタを想定し、結果を単一要素ベクタとして返す。
 
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
-use crate::interpreter::helpers::{extract_single_element, wrap_result_value};
+use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
+use crate::interpreter::helpers::{extract_single_element, get_integer_from_value, wrap_result_value};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
@@ -16,9 +16,20 @@ use crate::types::fraction::Fraction;
 /// 二項比較演算の汎用ハンドラ
 ///
 /// 【責務】
-/// - 2つの単一要素ベクタから数値を取り出して比較
+/// - StackTopモード: 2つの単一要素ベクタから数値を取り出して比較
+/// - Stackモード: N個の要素を順に比較し、全ての隣接ペアが条件を満たすかチェック
 /// - 比較結果をBoolean値として返す
 /// - すべての比較演算（<、<=、>、>=）で共通使用
+///
+/// 【StackTopモードの動作】
+/// - スタックから2つのベクタをポップ
+/// - 各ベクタから単一要素を抽出して比較
+/// - 例: `[3] [5] <` → `[true]`
+///
+/// 【Stackモードの動作】
+/// - スタックからカウント値をポップ
+/// - 指定個数の要素を取得し、全ての隣接ペアが条件を満たすかチェック
+/// - 例: `[1] [2] [3] [3] STACK <` → `(1<2) AND (2<3)` → `[false]`
 ///
 /// 【引数】
 /// - op: Fraction同士の比較関数
@@ -26,25 +37,78 @@ fn binary_comparison_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
-    }
+    match interp.operation_target {
+        // StackTopモード: 2つの単一要素ベクタを比較
+        OperationTarget::StackTop => {
+            if interp.stack.len() < 2 {
+                return Err(AjisaiError::StackUnderflow);
+            }
 
-    let b_vec = interp.stack.pop().unwrap();
-    let a_vec = interp.stack.pop().unwrap();
+            let b_vec = interp.stack.pop().unwrap();
+            let a_vec = interp.stack.pop().unwrap();
 
-    let a_val = extract_single_element(&a_vec)?;
-    let b_val = extract_single_element(&b_vec)?;
+            let a_val = extract_single_element(&a_vec)?;
+            let b_val = extract_single_element(&b_vec)?;
 
-    let result = match (&a_val.val_type, &b_val.val_type) {
-        (ValueType::Number(n1), ValueType::Number(n2)) => {
-            Value { val_type: ValueType::Boolean(op(n1, n2)) }
+            let result = match (&a_val.val_type, &b_val.val_type) {
+                (ValueType::Number(n1), ValueType::Number(n2)) => {
+                    Value { val_type: ValueType::Boolean(op(n1, n2)) }
+                },
+                _ => {
+                    interp.stack.push(a_vec);
+                    interp.stack.push(b_vec);
+                    return Err(AjisaiError::type_error("number", "other type"));
+                }
+            };
+
+            interp.stack.push(wrap_result_value(result));
+            Ok(())
         },
-        _ => return Err(AjisaiError::type_error("number", "other type")),
-    };
 
-    interp.stack.push(wrap_result_value(result));
-    Ok(())
+        // Stackモード: N個の要素を順に比較
+        OperationTarget::Stack => {
+            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count = get_integer_from_value(&count_val)? as usize;
+
+            // カウント0, 1はエラー（"No change is an error"原則）
+            if count == 0 || count == 1 {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK comparison with count 0 or 1 results in no change"));
+            }
+
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+
+            // 全ての隣接ペアをチェック
+            let mut all_true = true;
+            for i in 0..items.len() - 1 {
+                let a_val = extract_single_element(&items[i])?;
+                let b_val = extract_single_element(&items[i + 1])?;
+
+                match (&a_val.val_type, &b_val.val_type) {
+                    (ValueType::Number(n1), ValueType::Number(n2)) => {
+                        if !op(n1, n2) {
+                            all_true = false;
+                            break;
+                        }
+                    },
+                    _ => {
+                        interp.stack.extend(items);
+                        interp.stack.push(count_val);
+                        return Err(AjisaiError::type_error("number", "other type"));
+                    }
+                }
+            }
+
+            let result = Value { val_type: ValueType::Boolean(all_true) };
+            interp.stack.push(wrap_result_value(result));
+            Ok(())
+        }
+    }
 }
 
 // ============================================================================
@@ -150,18 +214,23 @@ pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
 /// = 演算子 - 等価比較
 ///
 /// 【責務】
-/// - 2つの値を比較し、完全に等しいか判定
+/// - StackTopモード: 2つの値を比較し、完全に等しいか判定
+/// - Stackモード: N個の要素を順に比較し、全て等しいか判定
 /// - あらゆる型の値を比較可能（Number、String、Boolean、Vector、Nil）
 ///
-/// 【使用法】
+/// 【StackTopモードの使用法】
 /// - `[3] [3] =` → `[true]`
 /// - `[3] [5] =` → `[false]`
 /// - `['hello'] ['hello'] =` → `[true]`
 /// - `[a b] [a b] =` → `[true]`
 ///
+/// 【Stackモードの使用法】
+/// - `[3] [3] [3] [3] STACK =` → `[true]` (全て等しい)
+/// - `[1] [2] [1] [3] STACK =` → `[false]` (1≠2)
+///
 /// 【引数スタック】
-/// - b: 右オペランド（任意の値）
-/// - a: 左オペランド（任意の値）
+/// - StackTopモード: b, a (2つの値)
+/// - Stackモード: count (要素数)
 ///
 /// 【戻り値スタック】
 /// - [result]: 比較結果（Boolean）
@@ -169,16 +238,53 @@ pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
 /// 【エラー】
 /// - なし（すべての型で比較可能）
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+    match interp.operation_target {
+        // StackTopモード: 2つの値を比較
+        OperationTarget::StackTop => {
+            if interp.stack.len() < 2 {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let b_vec = interp.stack.pop().unwrap();
+            let a_vec = interp.stack.pop().unwrap();
+
+            let result = Value { val_type: ValueType::Boolean(a_vec == b_vec) };
+            interp.stack.push(wrap_result_value(result));
+            Ok(())
+        },
+
+        // Stackモード: N個の要素を順に比較
+        OperationTarget::Stack => {
+            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count = get_integer_from_value(&count_val)? as usize;
+
+            // カウント0, 1はエラー（"No change is an error"原則）
+            if count == 0 || count == 1 {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK comparison with count 0 or 1 results in no change"));
+            }
+
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+
+            // 全ての隣接ペアをチェック
+            let mut all_equal = true;
+            for i in 0..items.len() - 1 {
+                if items[i] != items[i + 1] {
+                    all_equal = false;
+                    break;
+                }
+            }
+
+            let result = Value { val_type: ValueType::Boolean(all_equal) };
+            interp.stack.push(wrap_result_value(result));
+            Ok(())
+        }
     }
-
-    let b_vec = interp.stack.pop().unwrap();
-    let a_vec = interp.stack.pop().unwrap();
-
-    let result = Value { val_type: ValueType::Boolean(a_vec == b_vec) };
-    interp.stack.push(wrap_result_value(result));
-    Ok(())
 }
 
 // ============================================================================
@@ -230,7 +336,6 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 /// - Boolean と Nil の組み合わせをサポート
 ///
 /// 【真理値表】
-/// ```
 /// | A     | B     | Result |
 /// |-------|-------|--------|
 /// | true  | true  | true   |
@@ -242,7 +347,6 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 /// | nil   | true  | nil    |
 /// | nil   | false | false  |
 /// | nil   | nil   | nil    |
-/// ```
 ///
 /// 【使用法】
 /// - `[true] [true] AND` → `[true]`
@@ -290,7 +394,6 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 /// - Boolean と Nil の組み合わせをサポート
 ///
 /// 【真理値表】
-/// ```
 /// | A     | B     | Result |
 /// |-------|-------|--------|
 /// | true  | true  | true   |
@@ -302,7 +405,6 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 /// | nil   | true  | true   |
 /// | nil   | false | nil    |
 /// | nil   | nil   | nil    |
-/// ```
 ///
 /// 【使用法】
 /// - `[true] [false] OR` → `[true]`
