@@ -179,13 +179,20 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     // DELは 'NAME' を期待する
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
-    
+
     let name = match &val.val_type {
         ValueType::String(s) => s.clone(),
         _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
     };
 
     let upper_name = name.to_uppercase();
+
+    // 組み込みワードは削除できない
+    if let Some(def) = interp.dictionary.get(&upper_name) {
+        if def.is_builtin {
+            return Err(AjisaiError::from(format!("Cannot delete builtin word: {}", upper_name)));
+        }
+    }
 
     if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
         for dep_name in &removed_def.dependencies {
@@ -194,7 +201,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             }
         }
         interp.dependents.remove(&upper_name);
-        
+
         interp.stack.pop(); // 'NAME' をポップ
         interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
         Ok(())
