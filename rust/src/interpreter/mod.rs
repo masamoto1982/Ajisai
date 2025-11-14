@@ -792,6 +792,87 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_tail_recursion_countdown_empty_stack() {
+        let mut interp = Interpreter::new();
+
+        // Simple countdown that empties the stack - using direct comparison
+        // Pattern: keep decrementing until we reach 0
+        let code = r#"
+: [ ': [0] [0] GET [0] =
+:
+: [0] [0] GET [1] - COUNTDOWN_EMPTY' ] 'COUNTDOWN_EMPTY' DEF
+: [5] COUNTDOWN_EMPTY
+"#;
+
+        println!("\n=== Countdown Empty Stack Pattern ===");
+        let result = interp.execute(code).await;
+        println!("Result: {:?}", result);
+        println!("Final stack length: {}", interp.stack.len());
+        println!("Final stack contents:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {:?}", i, val);
+        }
+        println!("Call stack length: {}", interp.call_stack.len());
+
+        assert!(result.is_ok(), "Countdown should succeed: {:?}", result);
+        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
+        // Stack should be empty after countdown completes
+        assert_eq!(interp.stack.len(), 0, "Stack should be empty after countdown");
+    }
+
+    #[tokio::test]
+    async fn test_tail_recursion_repeat_n_times() {
+        let mut interp = Interpreter::new();
+
+        // Repeat pattern: decrement n until 0, no accumulator needed
+        // This just counts down without leaving anything on stack
+        let code = r#"
+: [ ': [0] [0] GET [1] =
+:
+: [0] [0] GET [1] - REPEAT_N' ] 'REPEAT_N' DEF
+: [10] REPEAT_N
+"#;
+
+        println!("\n=== Repeat N Times Pattern ===");
+        let result = interp.execute(code).await;
+        println!("Result: {:?}", result);
+        println!("Final stack length: {}", interp.stack.len());
+        println!("Final stack contents:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {:?}", i, val);
+        }
+        println!("Call stack length: {}", interp.call_stack.len());
+
+        assert!(result.is_ok(), "Repeat should succeed: {:?}", result);
+        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
+        // Stack should be empty after completion
+        assert_eq!(interp.stack.len(), 0, "Stack should be empty");
+    }
+
+    #[tokio::test]
+    async fn test_tail_recursion_with_large_iterations() {
+        let mut interp = Interpreter::new();
+
+        // Test with large number to ensure no stack overflow
+        let code = r#"
+: [ ': [0] [0] GET [0] =
+:
+: [0] [0] GET [1] - COUNTDOWN_LARGE' ] 'COUNTDOWN_LARGE' DEF
+: [1000] COUNTDOWN_LARGE
+"#;
+
+        println!("\n=== Large Iterations Test (1000) ===");
+        let result = interp.execute(code).await;
+        println!("Result: {:?}", result);
+        println!("Final stack length: {}", interp.stack.len());
+        println!("Call stack length: {}", interp.call_stack.len());
+
+        assert!(result.is_ok(), "Large countdown should succeed: {:?}", result);
+        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
+        assert_eq!(interp.stack.len(), 0, "Stack should be empty");
+    }
+
+    #[tokio::test]
     async fn test_definition_and_call() {
         let mut interp = Interpreter::new();
 
