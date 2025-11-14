@@ -6,7 +6,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
 use crate::interpreter::helpers::{extract_single_element, get_integer_from_value, wrap_result_value};
-use crate::types::{Value, ValueType};
+use crate::types::{Value, ValueType, BracketType};
 use crate::types::fraction::Fraction;
 
 // ============================================================================
@@ -294,48 +294,66 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
 /// NOT 演算子 - 論理否定
 ///
 /// 【責務】
-/// - Boolean値を反転する
-/// - Nilに対してはエラー（"No change is an error" 原則）
+/// - StackTopモード: ベクタの各要素のBoolean値を反転
+/// - Stackモード: 現在未対応（StackTopモードのみ）
 ///
 /// 【使用法】
 /// - `[true] NOT` → `[false]`
 /// - `[false] NOT` → `[true]`
-/// - `[nil] NOT` → エラー（変化なし）
+/// - `[true false true] NOT` → `[false true false]`
 ///
 /// 【引数スタック】
-/// - [value]: 論理値（Boolean or Nil）
+/// - [value]: Boolean値のベクタ
 ///
 /// 【戻り値スタック】
-/// - [result]: 反転後の論理値
+/// - [result]: 反転後の論理値のベクタ
 ///
 /// 【エラー】
-/// - Nilの場合（変化がないため）
-/// - Boolean/Nil以外の型の場合
+/// - Boolean以外の型の場合
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
-    let val_vec = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let val = extract_single_element(&val_vec)?;
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let result = match &val.val_type {
-        ValueType::Boolean(b) => Value { val_type: ValueType::Boolean(!b) },
-        ValueType::Nil => {
-            // "No change is an error" principle
-            interp.stack.push(val_vec);
-            return Err(AjisaiError::from("NOT on NIL resulted in no change"));
+            let (vec, bracket_type) = match val.val_type {
+                ValueType::Vector(v, b) => (v, b),
+                _ => {
+                    interp.stack.push(val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+
+            let mut result_vec = Vec::new();
+            for elem in &vec {
+                match &elem.val_type {
+                    ValueType::Boolean(b) => {
+                        result_vec.push(Value { val_type: ValueType::Boolean(!b) });
+                    },
+                    _ => {
+                        interp.stack.push(Value { val_type: ValueType::Vector(vec, bracket_type) });
+                        return Err(AjisaiError::type_error("boolean", "other type"));
+                    }
+                }
+            }
+
+            let result = Value { val_type: ValueType::Vector(result_vec, bracket_type) };
+            interp.stack.push(result);
+            Ok(())
         },
-        _ => return Err(AjisaiError::type_error("boolean or nil", "other type")),
-    };
-
-    interp.stack.push(wrap_result_value(result));
-    Ok(())
+        OperationTarget::Stack => {
+            // Stackモードは単項演算子では意味が不明確なため未対応
+            Err(AjisaiError::from("NOT does not support STACK mode"))
+        }
+    }
 }
 
 /// AND 演算子 - 論理積
 ///
 /// 【責務】
-/// - 2つの論理値の AND を計算
-/// - Boolean と Nil の組み合わせをサポート
+/// - StackTopモード: ベクタ間の要素ごとAND演算、ブロードキャスト対応
+/// - Stackモード: N個の要素を左から右へAND畳み込み
 ///
-/// 【真理値表】
+/// 【真理値表（Boolean同士）】
 /// | A     | B     | Result |
 /// |-------|-------|--------|
 /// | true  | true  | true   |
@@ -348,52 +366,145 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 /// | nil   | false | false  |
 /// | nil   | nil   | nil    |
 ///
-/// 【使用法】
+/// 【StackTopモードの使用法】
 /// - `[true] [true] AND` → `[true]`
-/// - `[true] [false] AND` → `[false]`
-/// - `[true] [nil] AND` → `[nil]`
+/// - `[true false] [false true] AND` → `[false false]`
+/// - `[true false true] [true] AND` → `[true false true]` (ブロードキャスト)
+///
+/// 【Stackモードの使用法】
+/// - `[true] [true] [false] [3] STACK AND` → `[false]` (true AND true AND false)
 ///
 /// 【引数スタック】
-/// - [b]: 右オペランド（Boolean or Nil）
-/// - [a]: 左オペランド（Boolean or Nil）
+/// - StackTopモード: b, a (2つのベクタ)
+/// - Stackモード: count (要素数)
 ///
 /// 【戻り値スタック】
-/// - [result]: AND の結果（Boolean or Nil）
+/// - [result]: ANDの結果
 ///
 /// 【エラー】
 /// - オペランドがBoolean/Nilでない場合
+/// - ベクタの長さが不一致（ブロードキャスト以外）
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+    /// 2つの論理値のANDを計算（Nil対応）
+    fn and_logic(a: &ValueType, b: &ValueType) -> Result<ValueType> {
+        match (a, b) {
+            (ValueType::Boolean(a), ValueType::Boolean(b)) => {
+                Ok(ValueType::Boolean(*a && *b))
+            },
+            (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) => {
+                Ok(ValueType::Boolean(false))
+            },
+            (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) | (ValueType::Nil, ValueType::Nil) => {
+                Ok(ValueType::Nil)
+            },
+            _ => Err(AjisaiError::type_error("boolean or nil", "other types")),
+        }
     }
-    let b_vec = interp.stack.pop().unwrap();
-    let a_vec = interp.stack.pop().unwrap();
-    let a_val = extract_single_element(&a_vec)?;
-    let b_val = extract_single_element(&b_vec)?;
 
-    let result = match (&a_val.val_type, &b_val.val_type) {
-        (ValueType::Boolean(a), ValueType::Boolean(b)) => {
-            Value { val_type: ValueType::Boolean(*a && *b) }
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+            let (a_vec, a_bracket) = match a_val.val_type {
+                ValueType::Vector(v, b) => (v, b),
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+            let (b_vec, _) = match b_val.val_type {
+                ValueType::Vector(v, b) => (v, b),
+                _ => {
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+
+            let a_len = a_vec.len();
+            let b_len = b_vec.len();
+
+            let mut result_vec = Vec::new();
+
+            // ブロードキャスト判定と要素ごと演算
+            if a_len > 1 && b_len == 1 {
+                // aがベクタ、bがスカラー: bを各要素にブロードキャスト
+                let scalar = &b_vec[0];
+                for elem in &a_vec {
+                    let res_type = and_logic(&elem.val_type, &scalar.val_type)?;
+                    result_vec.push(Value { val_type: res_type });
+                }
+            } else if a_len == 1 && b_len > 1 {
+                // aがスカラー、bがベクタ: aを各要素にブロードキャスト
+                let scalar = &a_vec[0];
+                for elem in &b_vec {
+                    let res_type = and_logic(&scalar.val_type, &elem.val_type)?;
+                    result_vec.push(Value { val_type: res_type });
+                }
+            } else {
+                // 要素数が等しい、または両方とも単一要素
+                if a_len != b_len {
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec, BracketType::Square) });
+                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
+                }
+                for (a, b) in a_vec.iter().zip(b_vec.iter()) {
+                    let res_type = and_logic(&a.val_type, &b.val_type)?;
+                    result_vec.push(Value { val_type: res_type });
+                }
+            }
+
+            let result = Value { val_type: ValueType::Vector(result_vec, a_bracket) };
+            interp.stack.push(result);
+            Ok(())
         },
-        (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) => {
-            Value { val_type: ValueType::Boolean(false) }
-        },
-        (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) | (ValueType::Nil, ValueType::Nil) => {
-            Value { val_type: ValueType::Nil }
-        },
-        _ => return Err(AjisaiError::type_error("boolean or nil", "other types")),
-    };
-    interp.stack.push(wrap_result_value(result));
-    Ok(())
+
+        OperationTarget::Stack => {
+            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count = get_integer_from_value(&count_val)? as usize;
+
+            if count == 0 {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK operation with count 0 results in no change"));
+            }
+
+            if count == 1 {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK operation with count 1 results in no change"));
+            }
+
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+
+            // 最初の要素から開始
+            let first = extract_single_element(&items[0])?;
+            let mut acc_type = first.val_type.clone();
+
+            // 残りの要素を順にAND
+            for item in items.iter().skip(1) {
+                let elem = extract_single_element(item)?;
+                acc_type = and_logic(&acc_type, &elem.val_type)?;
+            }
+
+            interp.stack.push(wrap_result_value(Value { val_type: acc_type }));
+            Ok(())
+        }
+    }
 }
 
 /// OR 演算子 - 論理和
 ///
 /// 【責務】
-/// - 2つの論理値の OR を計算
-/// - Boolean と Nil の組み合わせをサポート
+/// - StackTopモード: ベクタ間の要素ごとOR演算、ブロードキャスト対応
+/// - Stackモード: N個の要素を左から右へOR畳み込み
 ///
-/// 【真理値表】
+/// 【真理値表（Boolean同士）】
 /// | A     | B     | Result |
 /// |-------|-------|--------|
 /// | true  | true  | true   |
@@ -406,41 +517,134 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 /// | nil   | false | nil    |
 /// | nil   | nil   | nil    |
 ///
-/// 【使用法】
+/// 【StackTopモードの使用法】
 /// - `[true] [false] OR` → `[true]`
-/// - `[false] [false] OR` → `[false]`
-/// - `[false] [nil] OR` → `[nil]`
+/// - `[true false] [false true] OR` → `[true true]`
+/// - `[true false true] [false] OR` → `[true false true]` (ブロードキャスト)
+///
+/// 【Stackモードの使用法】
+/// - `[false] [false] [true] [3] STACK OR` → `[true]` (false OR false OR true)
 ///
 /// 【引数スタック】
-/// - [b]: 右オペランド（Boolean or Nil）
-/// - [a]: 左オペランド（Boolean or Nil）
+/// - StackTopモード: b, a (2つのベクタ)
+/// - Stackモード: count (要素数)
 ///
 /// 【戻り値スタック】
-/// - [result]: OR の結果（Boolean or Nil）
+/// - [result]: ORの結果
 ///
 /// 【エラー】
 /// - オペランドがBoolean/Nilでない場合
+/// - ベクタの長さが不一致（ブロードキャスト以外）
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
+    /// 2つの論理値のORを計算（Nil対応）
+    fn or_logic(a: &ValueType, b: &ValueType) -> Result<ValueType> {
+        match (a, b) {
+            (ValueType::Boolean(a), ValueType::Boolean(b)) => {
+                Ok(ValueType::Boolean(*a || *b))
+            },
+            (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) => {
+                Ok(ValueType::Boolean(true))
+            },
+            (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) | (ValueType::Nil, ValueType::Nil) => {
+                Ok(ValueType::Nil)
+            },
+            _ => Err(AjisaiError::type_error("boolean or nil", "other types")),
+        }
     }
-    let b_vec = interp.stack.pop().unwrap();
-    let a_vec = interp.stack.pop().unwrap();
-    let a_val = extract_single_element(&a_vec)?;
-    let b_val = extract_single_element(&b_vec)?;
 
-    let result = match (&a_val.val_type, &b_val.val_type) {
-        (ValueType::Boolean(a), ValueType::Boolean(b)) => {
-            Value { val_type: ValueType::Boolean(*a || *b) }
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+            let (a_vec, a_bracket) = match a_val.val_type {
+                ValueType::Vector(v, b) => (v, b),
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+            let (b_vec, _) = match b_val.val_type {
+                ValueType::Vector(v, b) => (v, b),
+                _ => {
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+
+            let a_len = a_vec.len();
+            let b_len = b_vec.len();
+
+            let mut result_vec = Vec::new();
+
+            // ブロードキャスト判定と要素ごと演算
+            if a_len > 1 && b_len == 1 {
+                // aがベクタ、bがスカラー: bを各要素にブロードキャスト
+                let scalar = &b_vec[0];
+                for elem in &a_vec {
+                    let res_type = or_logic(&elem.val_type, &scalar.val_type)?;
+                    result_vec.push(Value { val_type: res_type });
+                }
+            } else if a_len == 1 && b_len > 1 {
+                // aがスカラー、bがベクタ: aを各要素にブロードキャスト
+                let scalar = &a_vec[0];
+                for elem in &b_vec {
+                    let res_type = or_logic(&scalar.val_type, &elem.val_type)?;
+                    result_vec.push(Value { val_type: res_type });
+                }
+            } else {
+                // 要素数が等しい、または両方とも単一要素
+                if a_len != b_len {
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec, BracketType::Square) });
+                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
+                }
+                for (a, b) in a_vec.iter().zip(b_vec.iter()) {
+                    let res_type = or_logic(&a.val_type, &b.val_type)?;
+                    result_vec.push(Value { val_type: res_type });
+                }
+            }
+
+            let result = Value { val_type: ValueType::Vector(result_vec, a_bracket) };
+            interp.stack.push(result);
+            Ok(())
         },
-        (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) => {
-            Value { val_type: ValueType::Boolean(true) }
-        },
-        (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) | (ValueType::Nil, ValueType::Nil) => {
-            Value { val_type: ValueType::Nil }
-        },
-        _ => return Err(AjisaiError::type_error("boolean or nil", "other types")),
-    };
-    interp.stack.push(wrap_result_value(result));
-    Ok(())
+
+        OperationTarget::Stack => {
+            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count = get_integer_from_value(&count_val)? as usize;
+
+            if count == 0 {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK operation with count 0 results in no change"));
+            }
+
+            if count == 1 {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("STACK operation with count 1 results in no change"));
+            }
+
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+
+            // 最初の要素から開始
+            let first = extract_single_element(&items[0])?;
+            let mut acc_type = first.val_type.clone();
+
+            // 残りの要素を順にOR
+            for item in items.iter().skip(1) {
+                let elem = extract_single_element(item)?;
+                acc_type = or_logic(&acc_type, &elem.val_type)?;
+            }
+
+            interp.stack.push(wrap_result_value(Value { val_type: acc_type }));
+            Ok(())
+        }
+    }
 }
