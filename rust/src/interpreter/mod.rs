@@ -61,12 +61,12 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart(_) => {
-                    let (nested_values, nested_bracket_type, consumed) = self.collect_vector(tokens, i)?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values, nested_bracket_type) });
+                    let (nested_values, _, consumed) = self.collect_vector(tokens, i)?;
+                    values.push(Value { val_type: ValueType::Vector(nested_values, BracketType::Square) });
                     i += consumed;
                 },
                 Token::VectorEnd(bt) if *bt == bracket_type => {
-                    return Ok((values, bracket_type.clone(), i - start_index + 1));
+                    return Ok((values, BracketType::Square, i - start_index + 1));
                 },
                 Token::Number(n) => {
                     values.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
@@ -243,8 +243,8 @@ impl Interpreter {
                     self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::VectorStart(_) => {
-                    let (values, bracket_type, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
+                    let (values, _, consumed) = self.collect_vector(tokens, i)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
@@ -301,8 +301,8 @@ impl Interpreter {
                     self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::VectorStart(_) => {
-                    let (values, bracket_type, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values, bracket_type) });
+                    let (values, _, consumed) = self.collect_vector(tokens, i)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
