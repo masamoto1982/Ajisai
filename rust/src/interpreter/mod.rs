@@ -673,6 +673,109 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_stack_get_basic() {
+        let mut interp = Interpreter::new();
+
+        // Test basic STACK GET behavior
+        let code = r#"
+: [5] [0] STACK GET
+"#;
+
+        println!("\n=== Basic STACK GET Test ===");
+        let result = interp.execute(code).await;
+        println!("Result: {:?}", result);
+        println!("Final stack length: {}", interp.stack.len());
+        println!("Final stack contents:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {:?}", i, val);
+        }
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_tail_recursion_with_stack_mode() {
+        let mut interp = Interpreter::new();
+
+        // Proper countdown using STACK mode to access the argument
+        let code = r#"
+: [ ': [0] STACK GET [0] >
+: [0] STACK GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
+: [3] COUNTDOWN
+"#;
+
+        println!("\n=== Proper Tail Recursion Test (STACK mode) ===");
+        let result = interp.execute(code).await;
+        println!("Result: {:?}", result);
+        println!("Final stack length: {}", interp.stack.len());
+        println!("Final stack contents:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {:?}", i, val);
+        }
+        println!("Call stack length: {}", interp.call_stack.len());
+
+        if result.is_ok() {
+            // Stack should not grow linearly
+            assert!(interp.stack.len() < 10,
+                "Stack grew too much: {} elements. This indicates stack pollution.",
+                interp.stack.len());
+            assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tail_recursion_detailed_trace() {
+        let mut interp = Interpreter::new();
+
+        // Simple test with just 3 iterations to understand the flow
+        let code = r#"
+: [ ': [0] [0] GET [0] >
+: [0] [0] GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
+: [3] COUNTDOWN
+"#;
+
+        let result = interp.execute(code).await;
+        println!("\n=== Detailed Trace Test (Original - Broken) ===");
+        println!("Result: {:?}", result);
+        println!("Final stack length: {}", interp.stack.len());
+        println!("Final stack contents:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {:?}", i, val);
+        }
+        println!("Call stack length: {}", interp.call_stack.len());
+        assert!(result.is_ok(), "Should succeed: {:?}", result);
+        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
+    }
+
+    #[tokio::test]
+    async fn test_tail_recursion_stack_growth() {
+        let mut interp = Interpreter::new();
+
+        // Test with a medium-sized recursion to check for stack growth
+        let code = r#"
+: [ ': [0] [0] GET [0] >
+: [0] [0] GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
+: [10] COUNTDOWN
+"#;
+
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "Should succeed: {:?}", result);
+
+        println!("\n=== Stack Growth Test ===");
+        println!("Stack length after 10 iterations: {}", interp.stack.len());
+        println!("Stack contents:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {:?}", i, val);
+        }
+
+        // The stack should not grow linearly with the number of iterations
+        // If tail recursion is working correctly, stack size should be constant or minimal
+        assert!(interp.stack.len() < 10,
+            "Stack grew too much! Length: {}. This suggests tail recursion is not working correctly.",
+            interp.stack.len());
+    }
+
+    #[tokio::test]
     async fn test_simple_addition() {
         let mut interp = Interpreter::new();
 
