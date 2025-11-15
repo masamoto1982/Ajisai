@@ -232,7 +232,8 @@ impl Interpreter {
                     self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::String(s) => {
-                    self.stack.push(Value { val_type: ValueType::String(s.clone()) });
+                    let val = Value { val_type: ValueType::String(s.clone()) };
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::Boolean(b) => {
                     let val = Value { val_type: ValueType::Boolean(*b) };
@@ -290,7 +291,8 @@ impl Interpreter {
                     self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::String(s) => {
-                    self.stack.push(Value { val_type: ValueType::String(s.clone()) });
+                    let val = Value { val_type: ValueType::String(s.clone()) };
+                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
                 },
                 Token::Boolean(b) => {
                     let val = Value { val_type: ValueType::Boolean(*b) };
