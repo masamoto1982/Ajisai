@@ -14,6 +14,66 @@ export class Display {
     private scientificThreshold = 10; // 10桁以上で科学的記数法
     private mantissaPrecision = 6;    // 仮数部の精度
 
+    // 組み込みワードの構文ヒント（簡単な例）
+    private readonly syntaxHints: Record<string, string> = {
+        // 位置指定操作
+        'GET': '[ 10 20 30 ] [ 0 ] GET → [ 10 20 30 ] [ 10 ]',
+        'INSERT': '[ 1 3 ] [ 1 ] [ 2 ] INSERT → [ 1 2 3 ]',
+        'REPLACE': '[ 1 2 3 ] [ 0 ] [ 9 ] REPLACE → [ 9 2 3 ]',
+        'REMOVE': '[ 1 2 3 ] [ 0 ] REMOVE → [ 2 3 ]',
+
+        // 量指定操作
+        'LENGTH': '[ 1 2 3 4 5 ] LENGTH → [ 1 2 3 4 5 ] [ 5 ]',
+        'TAKE': '[ 1 2 3 4 5 ] [ 3 ] TAKE → [ 1 2 3 ]',
+
+        // Vector構造操作
+        'SPLIT': '[ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] SPLIT → [ 1 2 ] [ 3 4 5 ] [ 6 ]',
+        'CONCAT': '[ a ] [ b ] CONCAT → [ a b ]',
+        'REVERSE': '[ a b c ] REVERSE → [ c b a ]',
+        'LEVEL': '[ [ a b ] [ c ] ] LEVEL → [ a b c ]',
+
+        // 算術演算
+        '+': '[ 1 2 3 ] [ 4 5 6 ] + → [ 5 7 9 ]',
+        '-': '[ 5 7 9 ] [ 1 2 3 ] - → [ 4 5 6 ]',
+        '*': '[ 1 2 3 ] [ 4 5 6 ] * → [ 4 10 18 ]',
+        '/': '[ 10 20 30 ] [ 2 4 5 ] / → [ 5 5 6 ]',
+
+        // 比較演算
+        '=': '[ 3 ] [ 3 ] = → [ true ]',
+        '<': '[ 1 2 3 ] [ 2 2 2 ] < → [ true false false ]',
+        '<=': '[ 1 2 3 ] [ 2 2 2 ] <= → [ true true false ]',
+        '>': '[ 3 2 1 ] [ 2 2 2 ] > → [ true false false ]',
+        '>=': '[ 3 2 1 ] [ 2 2 2 ] >= → [ true true false ]',
+
+        // 論理演算
+        'AND': '[ true true false ] [ true false true ] AND → [ true false false ]',
+        'OR': '[ true true false ] [ true false true ] OR → [ true true true ]',
+        'NOT': '[ true false true ] NOT → [ false true false ]',
+
+        // 制御構造
+        ':': '[ 5 ] [ 0 ] > : \'positive\' : \'negative or zero\'',
+
+        // 高階関数
+        'MAP': '[ 1 2 3 ] \'[ 2 ] *\' MAP → [ 2 4 6 ]',
+        'FILTER': '[ 1 2 3 4 5 ] \'[ 3 ] >\' FILTER → [ 4 5 ]',
+
+        // 入出力
+        'PRINT': '[ 42 ] PRINT → 出力: 42',
+
+        // ワード管理
+        'DEF': '[ \'[ 2 ] *\' ] \'DOUBLE\' DEF',
+        'DEL': '\'DOUBLE\' DEL',
+        '?': '\'GET\' ? → 詳細説明を表示',
+
+        // 制御フロー
+        'TIMES': '\'[ 1 ] +\' [ 5 ] TIMES → 5回実行',
+        'WAIT': '\'PRINT\' [ 1000 ] WAIT → 1秒後に実行',
+
+        // モード指定
+        'STACK': 'a b c [ 1 ] STACK GET → スタック全体から取得',
+        'STACKTOP': '[ 1 2 3 ] [ 0 ] GET → スタックトップのベクタから取得'
+    }
+
     init(elements: DisplayElements): void {
         this.elements = elements;
         this.elements.outputDisplay.style.whiteSpace = 'pre-wrap';
@@ -113,18 +173,64 @@ export class Display {
     }
 
     showError(error: Error | { message?: string } | string): void {
-        const errorMessage = typeof error === 'string' 
+        const errorMessage = typeof error === 'string'
             ? `Error: ${error}`
             : `Error: ${error.message || error}`;
-        
+
         this.mainOutput = errorMessage;
         this.elements.outputDisplay.innerHTML = '';
-        
+
         const errorSpan = document.createElement('span');
         errorSpan.style.color = '#dc3545';
         errorSpan.style.fontWeight = 'bold';
         errorSpan.textContent = errorMessage.replace(/\\n/g, '\n');
         this.elements.outputDisplay.appendChild(errorSpan);
+
+        // エラーメッセージから関連する組み込みワードを検出してヒントを表示
+        const hint = this.detectSyntaxHint(errorMessage);
+        if (hint) {
+            this.elements.outputDisplay.appendChild(document.createElement('br'));
+            this.elements.outputDisplay.appendChild(document.createElement('br'));
+
+            const hintLabel = document.createElement('span');
+            hintLabel.style.color = '#28a745';
+            hintLabel.style.fontWeight = 'bold';
+            hintLabel.textContent = 'ヒント:';
+            this.elements.outputDisplay.appendChild(hintLabel);
+
+            this.elements.outputDisplay.appendChild(document.createElement('br'));
+
+            const hintSpan = document.createElement('span');
+            hintSpan.style.color = '#28a745';
+            hintSpan.textContent = hint;
+            hintSpan.style.fontFamily = "'Consolas', 'Monaco', monospace";
+            this.elements.outputDisplay.appendChild(hintSpan);
+        }
+    }
+
+    /**
+     * エラーメッセージから関連する組み込みワードを検出し、構文ヒントを返す
+     */
+    private detectSyntaxHint(errorMessage: string): string | null {
+        // エラーメッセージ中のすべての大文字ワードを抽出
+        const words = errorMessage.match(/\b[A-Z][A-Z0-9]*\b/g) || [];
+
+        // 最初に見つかった組み込みワードのヒントを返す
+        for (const word of words) {
+            if (word in this.syntaxHints) {
+                return this.syntaxHints[word]!;
+            }
+        }
+
+        // 演算子を検出（+, -, *, /, =, <, <=, >, >=, :）
+        const operators = ['+', '-', '*', '/', '=', '<=', '>=', '<', '>', ':'];
+        for (const op of operators) {
+            if (errorMessage.includes(op) && op in this.syntaxHints) {
+                return this.syntaxHints[op]!;
+            }
+        }
+
+        return null;
     }
 
     showInfo(text: string, append = false): void {
