@@ -11,16 +11,30 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 説明（オプション）を先にチェック
-    // 説明ありの場合: [ベクタ] 'NAME' '説明'
-    // 説明なしの場合: [ベクタ] 'NAME'
+    // 説明ありの場合: [ベクタ] ['NAME'] ['説明']
+    // 説明なしの場合: [ベクタ] ['NAME']
     let mut description = None;
+
+    // ヘルパー関数: ベクトルラップされた文字列かチェック
+    let is_wrapped_string = |val: &crate::types::Value| -> bool {
+        if let ValueType::Vector(v, _) = &val.val_type {
+            if v.len() == 1 {
+                matches!(v[0].val_type, ValueType::String(_))
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    };
+
     let has_description = if interp.stack.len() >= 3 {
-        // トップ2つが文字列の場合のみ、説明ありと判定
+        // トップ2つがベクトルラップされた文字列の場合のみ、説明ありと判定
         if let Some(top_val) = interp.stack.last() {
-            if matches!(top_val.val_type, ValueType::String(_)) {
-                // 次（2番目）も文字列かチェック
+            if is_wrapped_string(top_val) {
+                // 次（2番目）もベクトルラップされた文字列かチェック
                 if let Some(second_val) = interp.stack.get(interp.stack.len() - 2) {
-                    matches!(second_val.val_type, ValueType::String(_))
+                    is_wrapped_string(second_val)
                 } else {
                     false
                 }
@@ -33,21 +47,23 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     } else {
         false
     };
-    
+
     if has_description {
         if let Some(desc_val) = interp.stack.pop() {
-            if let ValueType::String(s) = desc_val.val_type {
-                description = Some(s);
+            // ベクトルラップされた文字列から取得
+            if let ValueType::Vector(v, _) = desc_val.val_type {
+                if v.len() == 1 {
+                    if let ValueType::String(s) = &v[0].val_type {
+                        description = Some(s.clone());
+                    }
+                }
             }
         }
     }
     
-    // スタックから名前を取得（文字列として）
+    // スタックから名前を取得（ベクトルラップされた文字列として）
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let name_str = match name_val.val_type {
-        ValueType::String(s) => s,
-        _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
-    };
+    let name_str = crate::interpreter::helpers::get_word_name_from_value(&name_val)?;
     
     // 定義本体を取得
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
