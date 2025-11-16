@@ -6,7 +6,8 @@
 // Stackモードでは複数要素の畳み込み演算を実行する。
 // ブロードキャスト機能（スカラーとベクタの演算）も提供する。
 
-use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter, OperationTarget};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_integer_from_value, extract_number, wrap_in_square_vector};
 use crate::types::{Value, ValueType, BracketType};
 use crate::types::fraction::Fraction;

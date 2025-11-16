@@ -1,5 +1,6 @@
 // rust/src/lib.rs
 
+mod error;
 mod types;
 mod tokenizer;
 mod interpreter;

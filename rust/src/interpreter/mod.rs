@@ -8,14 +8,13 @@ pub mod logic;
 pub mod control;
 pub mod dictionary;
 pub mod io;
-pub mod error;
 pub mod audio;
 pub mod higher_order;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition, ExecutionLine};
 use crate::types::fraction::Fraction;
-use self::error::{Result, AjisaiError};
+use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

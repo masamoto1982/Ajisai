@@ -1,6 +1,7 @@
 // rust/src/interpreter/audio.rs (修正版)
 
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter};
+use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueType};
 use num_bigint::BigInt;
 // `BigInt::one()` を使用するために `One` トレイトをスコープに入れる
