@@ -5,7 +5,8 @@
 // これらの関数はカスタムワードを引数として受け取り、
 // ベクタまたはスタック上の各要素に適用する。
 
-use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter, OperationTarget};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
 use crate::types::{Value, ValueType, BracketType};
 

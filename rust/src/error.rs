@@ -1,3 +1,8 @@
+// rust/src/error.rs
+//
+// Ajisai言語のエラー型定義
+// インタプリタ実行時およびパース時のエラーを統一的に管理
+
 use std::fmt;
 
 pub type Result<T> = std::result::Result<T, AjisaiError>;
@@ -26,7 +31,7 @@ impl AjisaiError {
             }
         }
     }
-    
+
     pub fn type_error(expected: &str, got: &str) -> Self {
         AjisaiError::TypeError {
             expected: expected.to_string(),
@@ -58,6 +63,8 @@ impl fmt::Display for AjisaiError {
         }
     }
 }
+
+impl std::error::Error for AjisaiError {}
 
 impl From<String> for AjisaiError {
     fn from(s: String) -> Self {

@@ -4,7 +4,8 @@
 // 比較演算子（=、<、<=、>、>=）を実装する。
 // すべての演算は単一要素ベクタを想定し、結果を単一要素ベクタとして返す。
 
-use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter, OperationTarget};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{extract_single_element, get_integer_from_value, wrap_result_value};
 use crate::types::{Value, ValueType, BracketType};
 use crate::types::fraction::Fraction;

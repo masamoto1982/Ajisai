@@ -5,11 +5,50 @@
 // 型変換、値の抽出、エラーハンドリングなどの定型処理を一元化し、
 // コードの重複を排除して保守性を向上させる。
 
-use crate::interpreter::error::{AjisaiError, Result};
-use crate::types::{Value, ValueType, BracketType};
+use crate::error::{AjisaiError, Result};
+use crate::types::{Value, ValueType, BracketType, Token};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
+
+// ============================================================================
+// トークン処理関数（execute_section の共通化）
+// ============================================================================
+
+/// トークンから値を作成し、単一要素ベクタでラップする
+///
+/// 【責務】
+/// - Token から Value への変換ロジックを一元化
+/// - execute_section_sync と execute_section の重複を削減
+///
+/// 【引数】
+/// - token: 変換元のトークン
+///
+/// 【戻り値】
+/// - Ok(Some(Value)): 値が作成された場合
+/// - Ok(None): 値を作成しないトークン（Symbol, GuardSeparator など）
+/// - Err: パースエラー
+pub fn token_to_wrapped_value(token: &Token) -> Result<Option<Value>> {
+    match token {
+        Token::Number(n) => {
+            let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
+            Ok(Some(wrap_in_square_vector(val)))
+        },
+        Token::String(s) => {
+            let val = Value { val_type: ValueType::String(s.clone()) };
+            Ok(Some(wrap_in_square_vector(val)))
+        },
+        Token::Boolean(b) => {
+            let val = Value { val_type: ValueType::Boolean(*b) };
+            Ok(Some(wrap_in_square_vector(val)))
+        },
+        Token::Nil => {
+            let val = Value { val_type: ValueType::Nil };
+            Ok(Some(wrap_in_square_vector(val)))
+        },
+        _ => Ok(None), // Symbol, VectorStart, GuardSeparator, LineBreak は呼び出し側で処理
+    }
+}
 
 // ============================================================================
 // 整数・インデックス抽出関数

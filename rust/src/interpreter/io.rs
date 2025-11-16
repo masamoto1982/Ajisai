@@ -4,7 +4,8 @@
 // 入出力操作（PRINT、CR、SPACE、SPACES、EMIT）を実装する。
 // スタックの値を出力バッファに書き込む機能を提供する。
 
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter};
+use crate::error::{AjisaiError, Result};
 use crate::types::ValueType;
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive};

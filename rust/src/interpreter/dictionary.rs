@@ -1,7 +1,7 @@
 // rust/src/interpreter/dictionary.rs
 
 use crate::interpreter::{Interpreter, WordDefinition};
-use crate::interpreter::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, Result};
 use crate::types::{Token, BracketType, ValueType, ExecutionLine};
 use std::collections::HashSet;
 

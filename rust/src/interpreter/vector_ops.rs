@@ -6,7 +6,8 @@
 // 1オリジンの量指定操作（LENGTH/TAKE/SPLIT）、
 // およびベクタ構造操作（CONCAT/REVERSE/LEVEL）を提供する。
 
-use crate::interpreter::{Interpreter, OperationTarget, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter, OperationTarget};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_bigint_from_value, normalize_index, unwrap_single_element, wrap_in_square_vector};
 use crate::types::{Value, ValueType, BracketType};
 use crate::types::fraction::Fraction;

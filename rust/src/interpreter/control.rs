@@ -4,7 +4,8 @@
 // 制御フロー操作（TIMES、WAIT）を実装する。
 // カスタムワードの繰り返し実行や遅延実行をサポートする。
 
-use crate::interpreter::{Interpreter, error::{AjisaiError, Result}};
+use crate::interpreter::{Interpreter};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_integer_from_value, get_word_name_from_value};
 use crate::types::ValueType;
 use num_bigint::BigInt;
