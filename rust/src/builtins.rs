@@ -18,63 +18,63 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
     vec![
         // 入力支援
-        ("'", "シングルクォートを入力。使用例: ' → '", "Input Helper"),
-        ("[ ]", "空のベクタ括弧を入力。使用例: [ ] → [ ]", "Input Helper"),
-        ("STACKTOP", "STACKTOPキーワードを入力。使用例: STACKTOP → STACKTOP", "Input Helper"),
-        ("STACK", "STACKキーワードを入力。使用例: STACK → STACK", "Input Helper"),
+        ("'", "シングルクォートを入力｜' → '", "Input Helper"),
+        ("[ ]", "空のベクタ括弧を入力｜[ ] → [ ]", "Input Helper"),
+        ("STACKTOP", "STACKTOPキーワードを入力｜STACKTOP → STACKTOP", "Input Helper"),
+        ("STACK", "STACKキーワードを入力｜STACK → STACK", "Input Helper"),
 
         // 位置指定操作(0オリジン)
-        ("GET", "指定位置の要素を取得（0オリジン）。使用例: [ 10 20 30 ] [ 0 ] GET → [ 10 20 30 ] [ 10 ]", "Position"),
-        ("INSERT", "指定位置に要素を挿入。使用例: [ 1 3 ] [ 1 ] [ 2 ] INSERT → [ 1 2 3 ]", "Position"),
-        ("REPLACE", "指定位置の要素を置換。使用例: [ 1 2 3 ] [ 0 ] [ 9 ] REPLACE → [ 9 2 3 ]", "Position"),
-        ("REMOVE", "指定位置の要素を削除。使用例: [ 1 2 3 ] [ 0 ] REMOVE → [ 2 3 ]", "Position"),
+        ("GET", "指定位置の要素を取得（0オリジン）｜[ 10 20 30 ] [ 0 ] GET → [ 10 20 30 ] [ 10 ]", "Position"),
+        ("INSERT", "指定位置に要素を挿入｜[ 1 3 ] [ 1 ] [ 2 ] INSERT → [ 1 2 3 ]", "Position"),
+        ("REPLACE", "指定位置の要素を置換｜[ 1 2 3 ] [ 0 ] [ 9 ] REPLACE → [ 9 2 3 ]", "Position"),
+        ("REMOVE", "指定位置の要素を削除｜[ 1 2 3 ] [ 0 ] REMOVE → [ 2 3 ]", "Position"),
 
         // 量指定操作(1オリジン)
-        ("LENGTH", "ベクタの長さを取得。使用例: [ 1 2 3 4 5 ] LENGTH → [ 1 2 3 4 5 ] [ 5 ]", "Quantity"),
-        ("TAKE", "先頭または末尾からN個の要素を取得。使用例: [ 1 2 3 4 5 ] [ 3 ] TAKE → [ 1 2 3 ]", "Quantity"),
+        ("LENGTH", "ベクタの長さを取得｜[ 1 2 3 4 5 ] LENGTH → [ 1 2 3 4 5 ] [ 5 ]", "Quantity"),
+        ("TAKE", "先頭または末尾からN個の要素を取得｜[ 1 2 3 4 5 ] [ 3 ] TAKE → [ 1 2 3 ]", "Quantity"),
 
         // Vector構造操作
-        ("SPLIT", "ベクタを指定サイズで分割。使用例: [ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] SPLIT → [ 1 2 ] [ 3 4 5 ] [ 6 ]", "Vector"),
-        ("CONCAT", "ベクタを連結。使用例: [ 1 2 ] [ 3 4 ] CONCAT → [ 1 2 3 4 ]", "Vector"),
-        ("REVERSE", "ベクタの要素を反転。使用例: [ 1 2 3 ] REVERSE → [ 3 2 1 ]", "Vector"),
-        ("LEVEL", "ネストされたベクタを平坦化。使用例: [ 1 [ 2 3 ] 4 ] LEVEL → [ 1 2 3 4 ]", "Vector"),
+        ("SPLIT", "ベクタを指定サイズで分割｜[ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] SPLIT → [ 1 2 ] [ 3 4 5 ] [ 6 ]", "Vector"),
+        ("CONCAT", "ベクタを連結｜[ 1 2 ] [ 3 4 ] CONCAT → [ 1 2 3 4 ]", "Vector"),
+        ("REVERSE", "ベクタの要素を反転｜[ 1 2 3 ] REVERSE → [ 3 2 1 ]", "Vector"),
+        ("LEVEL", "ネストされたベクタを平坦化｜[ 1 [ 2 3 ] 4 ] LEVEL → [ 1 2 3 4 ]", "Vector"),
 
         // 算術演算
-        ("+", "要素ごとの加算または集約。使用例: [ 1 2 ] [ 3 4 ] + → [ 4 6 ]", "Arithmetic"),
-        ("-", "要素ごとの減算または集約。使用例: [ 5 3 ] [ 2 1 ] - → [ 3 2 ]", "Arithmetic"),
-        ("*", "要素ごとの乗算または集約。使用例: [ 2 3 ] [ 4 5 ] * → [ 8 15 ]", "Arithmetic"),
-        ("/", "要素ごとの除算または集約。使用例: [ 10 20 ] [ 2 4 ] / → [ 5 5 ]", "Arithmetic"),
+        ("+", "要素ごとの加算または集約｜[ 1 2 ] [ 3 4 ] + → [ 4 6 ]", "Arithmetic"),
+        ("-", "要素ごとの減算または集約｜[ 5 3 ] [ 2 1 ] - → [ 3 2 ]", "Arithmetic"),
+        ("*", "要素ごとの乗算または集約｜[ 2 3 ] [ 4 5 ] * → [ 8 15 ]", "Arithmetic"),
+        ("/", "要素ごとの除算または集約｜[ 10 20 ] [ 2 4 ] / → [ 5 5 ]", "Arithmetic"),
 
         // 比較演算
-        ("=", "ベクタが等しいか判定。使用例: [ 1 2 ] [ 1 2 ] = → [ 1 ]", "Comparison"),
-        ("<", "ベクタが小さいか判定。使用例: [ 1 2 ] [ 2 3 ] < → [ 1 ]", "Comparison"),
-        ("<=", "ベクタが小さいまたは等しいか判定。使用例: [ 1 2 ] [ 1 2 ] <= → [ 1 ]", "Comparison"),
-        (">", "ベクタが大きいか判定。使用例: [ 3 4 ] [ 2 3 ] > → [ 1 ]", "Comparison"),
-        (">=", "ベクタが大きいまたは等しいか判定。使用例: [ 2 3 ] [ 2 3 ] >= → [ 1 ]", "Comparison"),
+        ("=", "ベクタが等しいか判定｜[ 1 2 ] [ 1 2 ] = → [ 1 ]", "Comparison"),
+        ("<", "ベクタが小さいか判定｜[ 1 2 ] [ 2 3 ] < → [ 1 ]", "Comparison"),
+        ("<=", "ベクタが小さいまたは等しいか判定｜[ 1 2 ] [ 1 2 ] <= → [ 1 ]", "Comparison"),
+        (">", "ベクタが大きいか判定｜[ 3 4 ] [ 2 3 ] > → [ 1 ]", "Comparison"),
+        (">=", "ベクタが大きいまたは等しいか判定｜[ 2 3 ] [ 2 3 ] >= → [ 1 ]", "Comparison"),
 
         // 論理演算
-        ("AND", "ベクタの論理積。使用例: [ 1 0 ] [ 1 1 ] AND → [ 1 0 ]", "Logic"),
-        ("OR", "ベクタの論理和。使用例: [ 1 0 ] [ 0 0 ] OR → [ 1 0 ]", "Logic"),
-        ("NOT", "ベクタの論理否定。使用例: [ 1 0 ] NOT → [ 0 1 ]", "Logic"),
+        ("AND", "ベクタの論理積｜[ 1 0 ] [ 1 1 ] AND → [ 1 0 ]", "Logic"),
+        ("OR", "ベクタの論理和｜[ 1 0 ] [ 0 0 ] OR → [ 1 0 ]", "Logic"),
+        ("NOT", "ベクタの論理否定｜[ 1 0 ] NOT → [ 0 1 ]", "Logic"),
 
         // 制御構造(ガード)
-        (":", "条件分岐のガード区切り。使用例: 条件 : 処理 : 条件 : 処理 : デフォルト処理", "Control"),
+        (":", "条件分岐のガード区切り｜条件 : 処理 : 条件 : 処理 : デフォルト処理", "Control"),
 
         // 高階関数
-        ("MAP", "各要素にワードを適用。使用例: [ 1 2 3 ] '2倍' MAP → [ 2 4 6 ]", "Higher-Order"),
-        ("FILTER", "条件に合う要素を抽出。使用例: [ 1 2 3 4 ] '偶数?' FILTER → [ 2 4 ]", "Higher-Order"),
+        ("MAP", "各要素にワードを適用｜[ 1 2 3 ] '2倍' MAP → [ 2 4 6 ]", "Higher-Order"),
+        ("FILTER", "条件に合う要素を抽出｜[ 1 2 3 4 ] '偶数?' FILTER → [ 2 4 ]", "Higher-Order"),
 
         // 入出力
-        ("PRINT", "スタックトップを出力。使用例: [ 42 ] PRINT → [ 42 ]（42を出力）", "I/O"),
+        ("PRINT", "スタックトップを出力｜[ 42 ] PRINT → [ 42 ]（42を出力）", "I/O"),
 
         // カスタムワード管理
-        ("DEF", "カスタムワードを定義。使用例: ( [ 2 ] * ) '2倍' DEF", "Word Management"),
-        ("DEL", "カスタムワードを削除。使用例: '不要なワード' DEL", "Word Management"),
-        ("?", "ワード定義を表示。使用例: '2倍' ?", "Word Management"),
+        ("DEF", "カスタムワードを定義｜( [ 2 ] * ) '2倍' DEF", "Word Management"),
+        ("DEL", "カスタムワードを削除｜'不要なワード' DEL", "Word Management"),
+        ("?", "ワード定義を表示｜'2倍' ?", "Word Management"),
 
         // 制御フロー（TIMES/WAIT）
-        ("TIMES", "ワードをN回繰り返し実行。使用例: '処理' [ 5 ] TIMES", "Control Flow"),
-        ("WAIT", "指定ミリ秒後にワードを実行。使用例: '処理' [ 1000 ] WAIT", "Control Flow"),
+        ("TIMES", "ワードをN回繰り返し実行｜'処理' [ 5 ] TIMES", "Control Flow"),
+        ("WAIT", "指定ミリ秒後にワードを実行｜'処理' [ 1000 ] WAIT", "Control Flow"),
     ]
 }
 
