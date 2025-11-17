@@ -6,6 +6,15 @@ import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-types
 export class ExecutionController {
     private gui: any;
     private interpreter: AjisaiInterpreter;
+    private stepMode: {
+        active: boolean;
+        tokens: string[];
+        currentIndex: number;
+    } = {
+        active: false,
+        tokens: [],
+        currentIndex: 0
+    };
 
     constructor(gui: any, interpreter: AjisaiInterpreter) {
         this.gui = gui;
@@ -112,5 +121,98 @@ export class ExecutionController {
             console.error('[ExecController] Failed to sync state from result:', error);
             this.gui.display.showError(error as Error);
         }
+    }
+
+    // ステップ実行モード用メソッド
+    async executeStep(): Promise<void> {
+        if (!this.stepMode.active) {
+            // ステップ実行モード開始
+            const code = this.gui.editor.getValue();
+            if (!code) return;
+
+            // トークンに分割（空白、改行、タブで分割）
+            this.stepMode.tokens = code.split(/\s+/).filter(token => token.length > 0);
+            this.stepMode.currentIndex = 0;
+            this.stepMode.active = true;
+
+            if (this.stepMode.tokens.length === 0) {
+                this.gui.display.showInfo('No code to execute.', true);
+                this.resetStepMode();
+                return;
+            }
+
+            this.gui.display.showInfo(
+                `🔍 Step mode started. ${this.stepMode.tokens.length} tokens to execute. (Ctrl+Enter to continue)`,
+                true
+            );
+
+            // 最初のトークンを実行
+            await this.executeNextToken();
+        } else {
+            // 次のトークンを実行
+            await this.executeNextToken();
+        }
+    }
+
+    private async executeNextToken(): Promise<void> {
+        if (this.stepMode.currentIndex >= this.stepMode.tokens.length) {
+            this.gui.display.showInfo('✅ Step mode completed.', true);
+            this.resetStepMode();
+            return;
+        }
+
+        const token = this.stepMode.tokens[this.stepMode.currentIndex];
+        const remaining = this.stepMode.tokens.length - this.stepMode.currentIndex - 1;
+
+        try {
+            this.gui.display.showInfo(
+                `▶️ Step ${this.stepMode.currentIndex + 1}/${this.stepMode.tokens.length}: "${token}" (${remaining} remaining)`,
+                false
+            );
+
+            const currentState = {
+                stack: this.interpreter.get_stack(),
+                customWords: this.getCustomWords(),
+            };
+
+            const result = await WORKER_MANAGER.execute(token, currentState);
+            this.updateInterpreterStateFromResult(result);
+
+            if (result.status === 'OK' && !result.error) {
+                this.gui.display.showExecutionResult(result);
+            } else {
+                this.gui.display.showError(result.message || 'Unknown error');
+                this.resetStepMode();
+            }
+
+            this.stepMode.currentIndex++;
+
+            if (this.stepMode.currentIndex >= this.stepMode.tokens.length) {
+                this.gui.display.showInfo('✅ Step mode completed.', true);
+                this.resetStepMode();
+            }
+
+        } catch (error) {
+            console.error('[ExecController] Step execution failed:', error);
+            if (error instanceof Error && error.message.includes('aborted')) {
+                this.gui.display.showInfo('Step execution aborted by user.', true);
+            } else {
+                this.gui.display.showError(error as Error);
+            }
+            this.resetStepMode();
+        }
+
+        this.gui.updateAllDisplays();
+        await this.gui.persistence.saveCurrentState();
+    }
+
+    private resetStepMode(): void {
+        this.stepMode.active = false;
+        this.stepMode.tokens = [];
+        this.stepMode.currentIndex = 0;
+    }
+
+    isStepModeActive(): boolean {
+        return this.stepMode.active;
     }
 }

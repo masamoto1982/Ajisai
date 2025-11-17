@@ -140,8 +140,13 @@ export class GUI {
                 e.preventDefault();
                 this.executionController.runCode(this.editor.getValue());
             }
+            // Ctrl+Enterでステップ実行（AltやShiftは押されていない）
+            if (e.key === 'Enter' && e.ctrlKey && !e.altKey && !e.shiftKey) {
+                e.preventDefault();
+                this.executionController.executeStep();
+            }
         });
-        
+
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 WORKER_MANAGER.abortAll();
