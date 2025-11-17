@@ -65,7 +65,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("FILTER", "条件に合う要素を抽出｜[ 1 2 3 4 ] '偶数?' FILTER → [ 2 4 ]", "Higher-Order"),
 
         // 入出力
-        ("PRINT", "スタックトップを出力｜[ 42 ] PRINT → [ 42 ]（42を出力）", "I/O"),
+        ("PRINT", "スタックトップを出力して削除｜[ 42 ] PRINT → （42を出力）", "I/O"),
 
         // カスタムワード管理
         ("DEF", "カスタムワードを定義｜( [ 2 ] * ) '2倍' DEF", "Word Management"),
