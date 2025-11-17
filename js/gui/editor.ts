@@ -8,26 +8,19 @@ export class Editor {
         this.element = element;
         this.gui = gui;
         this.setupEventListeners();
-        
+
         if (this.element.value.trim() === '') {
             this.element.value = '';
         }
     }
 
     private setupEventListeners(): void {
-        this.element.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        
         // フォーカス時は入力モードに切り替え（モバイル用）
         this.element.addEventListener('focus', () => {
             if (this.gui && this.gui.mobile) {
                 this.gui.mobile.updateView('input');
             }
         });
-    }
-
-    handleKeyDown(_event: KeyboardEvent): void {
-        // 特別な処理なし - 普通のテキストエディタとして動作
-        // パラメータに _ を付けて未使用であることを明示
     }
 
     getValue(): string {
