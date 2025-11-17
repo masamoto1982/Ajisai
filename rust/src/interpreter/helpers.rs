@@ -132,6 +132,7 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
 /// - 複数要素のベクタの場合
 pub fn extract_single_element(vector_val: &Value) -> Result<&Value> {
     match &vector_val.val_type {
+        ValueType::SingletonVector(boxed_val, _) => Ok(boxed_val),
         ValueType::Vector(v, _) if v.len() == 1 => Ok(&v[0]),
         ValueType::Vector(_, _) => Err(AjisaiError::from("Multi-element vector not supported in this context")),
         _ => Err(AjisaiError::type_error("single-element vector", "other type")),
@@ -154,6 +155,13 @@ pub fn extract_single_element(vector_val: &Value) -> Result<&Value> {
 pub fn extract_number(val: &Value) -> Result<&Fraction> {
     match &val.val_type {
         ValueType::Number(n) => Ok(n),
+        ValueType::SingletonVector(boxed_val, _) => {
+            if let ValueType::Number(n) = &boxed_val.val_type {
+                Ok(n)
+            } else {
+                Err(AjisaiError::type_error("number", "other type in inner vector"))
+            }
+        },
         ValueType::Vector(v, _) if v.len() == 1 => {
             if let ValueType::Number(n) = &v[0].val_type {
                 Ok(n)
@@ -181,6 +189,13 @@ pub fn extract_number(val: &Value) -> Result<&Fraction> {
 /// - 内部が文字列でない場合
 pub fn get_word_name_from_value(value: &Value) -> Result<String> {
     match &value.val_type {
+        ValueType::SingletonVector(boxed_val, _) => {
+            if let ValueType::String(s) = &boxed_val.val_type {
+                Ok(s.to_uppercase())
+            } else {
+                Err(AjisaiError::type_error("string for word name", "other type"))
+            }
+        },
         ValueType::Vector(v, _) if v.len() == 1 => {
             if let ValueType::String(s) = &v[0].val_type {
                 Ok(s.to_uppercase())
@@ -250,9 +265,9 @@ pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
 /// - value: ラップする値
 ///
 /// 【戻り値】
-/// - [value]形式のベクタ
+/// - [value]形式のベクタ（SingletonVector最適化版）
 pub fn wrap_in_square_vector(value: Value) -> Value {
-    Value { val_type: ValueType::Vector(vec![value], BracketType::Square) }
+    Value { val_type: ValueType::SingletonVector(Box::new(value), BracketType::Square) }
 }
 
 /// 単一要素ベクタの場合は内部要素を取り出す
@@ -273,6 +288,7 @@ pub fn wrap_in_square_vector(value: Value) -> Value {
 /// - それ以外: 元の値
 pub fn unwrap_single_element(value: Value) -> Value {
     match value.val_type {
+        ValueType::SingletonVector(boxed_val, _) => *boxed_val,
         ValueType::Vector(mut v, _) if v.len() == 1 => v.remove(0),
         _ => value,
     }

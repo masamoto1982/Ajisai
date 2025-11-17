@@ -299,6 +299,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
         ValueType::String(_) => "string",
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
+        ValueType::SingletonVector(_, _) => "vector",
         ValueType::Vector(_, _) => "vector",
         ValueType::Nil => "nil",
     };
@@ -320,6 +321,17 @@ fn value_to_js_value(value: &Value) -> JsValue {
         },
         ValueType::Symbol(s) => {
             js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
+        },
+        ValueType::SingletonVector(boxed_val, bracket_type) => {
+            let js_array = js_sys::Array::new();
+            js_array.push(&value_to_js_value(boxed_val));
+            js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
+            let bracket_str = match bracket_type {
+                BracketType::Square => "square",
+                BracketType::Curly => "curly",
+                BracketType::Round => "round",
+            };
+            js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
         },
         ValueType::Vector(vec, bracket_type) => {
             let js_array = js_sys::Array::new();

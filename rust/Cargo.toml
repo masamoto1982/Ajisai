@@ -25,7 +25,7 @@ version = "0.3"
 features = ["console", "Window", "CustomEvent", "EventTarget", "Event"]
 
 [dev-dependencies]
-tokio = { version = "1.0", features = ["macros", "rt"] }
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false

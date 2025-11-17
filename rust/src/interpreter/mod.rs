@@ -16,6 +16,7 @@ use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition, 
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
+use self::helpers::wrap_in_square_vector;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTarget {
@@ -228,19 +229,19 @@ impl Interpreter {
             match &tokens[i] {
                 Token::Number(n) => {
                     let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::String(s) => {
                     let val = Value { val_type: ValueType::String(s.clone()) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::Boolean(b) => {
                     let val = Value { val_type: ValueType::Boolean(*b) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::Nil => {
                     let val = Value { val_type: ValueType::Nil };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::VectorStart(_) => {
                     let (values, _, consumed) = self.collect_vector(tokens, i)?;
@@ -287,19 +288,19 @@ impl Interpreter {
             match &tokens[i] {
                 Token::Number(n) => {
                     let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::String(s) => {
                     let val = Value { val_type: ValueType::String(s.clone()) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::Boolean(b) => {
                     let val = Value { val_type: ValueType::Boolean(*b) };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::Nil => {
                     let val = Value { val_type: ValueType::Nil };
-                    self.stack.push(Value { val_type: ValueType::Vector(vec![val], BracketType::Square) });
+                    self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::VectorStart(_) => {
                     let (values, _, consumed) = self.collect_vector(tokens, i)?;
@@ -342,11 +343,18 @@ impl Interpreter {
         if self.stack.is_empty() {
             return Ok(false);
         }
-        
+
         let top = self.stack.pop().unwrap();
-        
+
         match &top.val_type {
             ValueType::Boolean(b) => Ok(*b),
+            ValueType::SingletonVector(boxed_val, _) => {
+                if let ValueType::Boolean(b) = boxed_val.val_type {
+                    Ok(b)
+                } else {
+                    Ok(true)
+                }
+            },
             ValueType::Vector(v, _) => {
                 if v.len() == 1 {
                     if let ValueType::Boolean(b) = v[0].val_type {
