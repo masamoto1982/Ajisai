@@ -18,63 +18,63 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
     vec![
         // 入力支援
-        ("'", "Insert single quote", "Input Helper"),
-        ("[ ]", "Insert empty vector brackets", "Input Helper"),
-        ("STACKTOP", "Insert STACKTOP keyword", "Input Helper"),
-        ("STACK", "Insert STACK keyword", "Input Helper"),
-        
+        ("'", "シングルクォートを入力", "Input Helper"),
+        ("[ ]", "空のベクタ括弧を入力", "Input Helper"),
+        ("STACKTOP", "STACKTOPキーワードを入力", "Input Helper"),
+        ("STACK", "STACKキーワードを入力", "Input Helper"),
+
         // 位置指定操作(0オリジン)
-        ("GET", "Get element at position (0-indexed)", "Position"),
-        ("INSERT", "Insert element at position", "Position"),
-        ("REPLACE", "Replace element at position", "Position"),
-        ("REMOVE", "Remove element at position", "Position"),
-        
+        ("GET", "指定位置の要素を取得（0オリジン）", "Position"),
+        ("INSERT", "指定位置に要素を挿入", "Position"),
+        ("REPLACE", "指定位置の要素を置換", "Position"),
+        ("REMOVE", "指定位置の要素を削除", "Position"),
+
         // 量指定操作(1オリジン)
-        ("LENGTH", "Get vector length", "Quantity"),
-        ("TAKE", "Take first N elements", "Quantity"),
-        
+        ("LENGTH", "ベクタの長さを取得", "Quantity"),
+        ("TAKE", "先頭からN個の要素を取得", "Quantity"),
+
         // Vector構造操作
-        ("SPLIT", "Splits a vector. With arguments, it splits into specified sizes. Without arguments, it slices into single-element vectors.", "Vector"),
-        ("CONCAT", "Concatenate vectors. Default is 2. Specify count with an argument. Negative count reverses order.", "Vector"),
-        ("REVERSE", "Reverse vector elements", "Vector"),
-        ("LEVEL", "Flatten a nested vector", "Vector"),
+        ("SPLIT", "ベクタを分割。引数ありで指定サイズに分割、引数なしで単一要素ベクタに分割", "Vector"),
+        ("CONCAT", "ベクタを連結。デフォルトは2個。引数で連結数を指定。負の数で逆順に連結", "Vector"),
+        ("REVERSE", "ベクタの要素を反転", "Vector"),
+        ("LEVEL", "ネストされたベクタを平坦化", "Vector"),
 
         // 算術演算
-        ("+", "Element-wise vector addition or Reduce N stack items.", "Arithmetic"),
-        ("-", "Element-wise vector subtraction or Reduce N stack items.", "Arithmetic"),
-        ("*", "Element-wise vector multiplication or Reduce N stack items.", "Arithmetic"),
-        ("/", "Element-wise vector division or Reduce N stack items.", "Arithmetic"),
-        
+        ("+", "ベクタの要素ごとの加算、またはスタックのN個の項目を集約", "Arithmetic"),
+        ("-", "ベクタの要素ごとの減算、またはスタックのN個の項目を集約", "Arithmetic"),
+        ("*", "ベクタの要素ごとの乗算、またはスタックのN個の項目を集約", "Arithmetic"),
+        ("/", "ベクタの要素ごとの除算、またはスタックのN個の項目を集約", "Arithmetic"),
+
         // 比較演算
-        ("=", "Vector equality test", "Comparison"),
-        ("<", "Vector less than test", "Comparison"),
-        ("<=", "Vector less than or equal test", "Comparison"),
-        (">", "Vector greater than test", "Comparison"),
-        (">=", "Vector greater than or equal test", "Comparison"),
-        
+        ("=", "ベクタの等価性テスト", "Comparison"),
+        ("<", "ベクタの小なりテスト", "Comparison"),
+        ("<=", "ベクタの小なりイコールテスト", "Comparison"),
+        (">", "ベクタの大なりテスト", "Comparison"),
+        (">=", "ベクタの大なりイコールテスト", "Comparison"),
+
         // 論理演算
-        ("AND", "Vector logical AND", "Logic"),
-        ("OR", "Vector logical OR", "Logic"),
-        ("NOT", "Vector logical NOT", "Logic"),
-        
+        ("AND", "ベクタの論理積", "Logic"),
+        ("OR", "ベクタの論理和", "Logic"),
+        ("NOT", "ベクタの論理否定", "Logic"),
+
         // 制御構造(ガード)
-        (":", "Guard separator for conditional execution. Usage: condition : action : condition : action : default", "Control"),
-        
+        (":", "条件分岐のガード区切り。使用例: 条件 : 処理 : 条件 : 処理 : デフォルト処理", "Control"),
+
         // 高階関数
-        ("MAP", "Apply word to each element. Usage: [ data ] 'WORD' MAP or ... [ N ] 'WORD' STACK MAP", "Higher-Order"),
-        ("FILTER", "Filter elements using word. Usage: [ data ] 'WORD' FILTER", "Higher-Order"),
-        
+        ("MAP", "各要素にワードを適用。使用例: [ データ ] 'ワード' MAP または ... [ N ] 'ワード' STACK MAP", "Higher-Order"),
+        ("FILTER", "ワードを使って要素をフィルタ。使用例: [ データ ] 'ワード' FILTER", "Higher-Order"),
+
         // 入出力
-        ("PRINT", "Print top element", "I/O"),
-        
+        ("PRINT", "スタックトップの要素を出力", "I/O"),
+
         // カスタムワード管理
-        ("DEF", "Define a custom word. Usage: (definition block) 'NAME' DEF", "Word Management"),
-        ("DEL", "Delete a custom word. Usage: 'NAME' DEL", "Word Management"),
-        ("?", "Look up word definition. Usage: 'NAME' ?", "Word Management"),
+        ("DEF", "カスタムワードを定義。使用例: (定義ブロック) '名前' DEF", "Word Management"),
+        ("DEL", "カスタムワードを削除。使用例: '名前' DEL", "Word Management"),
+        ("?", "ワード定義を検索。使用例: '名前' ?", "Word Management"),
 
         // 制御フロー（TIMES/WAIT）
-        ("TIMES", "Execute word N times. Usage: 'WORD' [ N ] TIMES", "Control Flow"),
-        ("WAIT", "Execute word after delay. Usage: 'WORD' [ ms ] WAIT", "Control Flow"),
+        ("TIMES", "ワードをN回実行。使用例: 'ワード' [ N ] TIMES", "Control Flow"),
+        ("WAIT", "指定時間後にワードを実行。使用例: 'ワード' [ ミリ秒 ] WAIT", "Control Flow"),
     ]
 }
 
