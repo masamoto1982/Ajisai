@@ -63,13 +63,9 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
         else if let Some((token, consumed)) = try_parse_number(&chars[i..]) {
             tokens.push(token);
             i += consumed;
-        } 
-        // 7. 演算子（2文字演算子を含む）
-        else if let Some((token, consumed)) = try_parse_operator(&chars[i..]) {
-            tokens.push(token);
-            i += consumed;
         }
-        // 8. カスタムワード・組み込みワード（PMA検索）
+        // 7. カスタムワード・組み込みワード（PMA検索）
+        // 演算子も組み込みワードとしてここで処理される
         else {
             let remaining_slice: String = chars[i..].iter().collect();
             if let Some(mat) = pma.find_iter(&remaining_slice).next() {
@@ -86,14 +82,14 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                 }
             }
 
-            // 9. 通常のシンボル
+            // 8. 辞書にないシンボルは無視（自然言語的な表現を可能にするため）
             if chars[i].is_alphabetic() || chars[i] == '_' {
+                // 辞書に登録されていない単語は、トークンとして認識せずにスキップ
                 let mut j = i;
                 while j < chars.len() && is_word_char(chars[j]) {
                     j += 1;
                 }
-                let word: String = chars[i..j].iter().collect();
-                tokens.push(Token::Symbol(word));
+                // トークンは追加せず、位置だけ進める
                 i = j;
             } else {
                 return Err(format!("Unknown token starting with: {}", chars[i]));
@@ -246,21 +242,3 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
 }
 
 
-fn try_parse_operator(chars: &[char]) -> Option<(Token, usize)> {
-    if chars.is_empty() { return None; }
-
-    let two_char_ops = ["<=", ">="];
-    if chars.len() >= 2 {
-        let two_char: String = chars[0..2].iter().collect();
-        if two_char_ops.contains(&two_char.as_str()) {
-            return Some((Token::Symbol(two_char), 2));
-        }
-    }
-
-    let single_char_ops = ['+', '-', '*', '/', '=', '<', '>'];
-    if single_char_ops.contains(&chars[0]) {
-        return Some((Token::Symbol(chars[0].to_string()), 1));
-    }
-
-    None
-}
