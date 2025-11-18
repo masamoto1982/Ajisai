@@ -24,6 +24,9 @@ export class ExecutionController {
     async runCode(code: string): Promise<void> {
         if (!code) return;
 
+        // 通常実行が開始されたらステップモードをリセット
+        this.resetStepMode();
+
         if (code.trim().toUpperCase() === 'RESET') {
             await this.executeReset();
             return;
@@ -73,11 +76,14 @@ export class ExecutionController {
     async executeReset(): Promise<void> {
         try {
             console.log('[ExecController] Executing reset');
-            
+
+            // ステップモードをリセット
+            this.resetStepMode();
+
             await WORKER_MANAGER.resetAllWorkers();
-            
+
             const result = this.interpreter.reset();
-            
+
             if (result.status === 'OK' && !result.error) {
                 this.gui.display.showOutput(result.output || 'RESET executed');
                 this.gui.editor.clear();
@@ -214,5 +220,13 @@ export class ExecutionController {
 
     isStepModeActive(): boolean {
         return this.stepMode.active;
+    }
+
+    abortExecution(): void {
+        // ステップモードをリセット
+        if (this.stepMode.active) {
+            this.resetStepMode();
+            this.gui.display.showInfo('Step mode aborted.', true);
+        }
     }
 }

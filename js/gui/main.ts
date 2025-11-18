@@ -150,6 +150,7 @@ export class GUI {
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 WORKER_MANAGER.abortAll();
+                this.executionController.abortExecution();
                 e.preventDefault();
                 e.stopImmediatePropagation();
             }
