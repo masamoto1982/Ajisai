@@ -137,7 +137,7 @@ export class ExecutionController {
             if (!code) return;
 
             // トークンに分割（空白、改行、タブで分割）
-            this.stepMode.tokens = code.split(/\s+/).filter(token => token.length > 0);
+            this.stepMode.tokens = code.split(/\s+/).filter((token: string) => token.length > 0);
             this.stepMode.currentIndex = 0;
             this.stepMode.active = true;
 
@@ -167,7 +167,7 @@ export class ExecutionController {
             return;
         }
 
-        const token = this.stepMode.tokens[this.stepMode.currentIndex];
+        const token = this.stepMode.tokens[this.stepMode.currentIndex]!;
         const remaining = this.stepMode.tokens.length - this.stepMode.currentIndex - 1;
 
         try {
