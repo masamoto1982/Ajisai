@@ -26,10 +26,6 @@ export class WorkerManager {
     private maxWorkers = navigator.hardwareConcurrency || 4;
     private taskIdCounter = 0;
 
-    constructor() {
-        this.setupGlobalAbortHandler();
-    }
-
     async init(): Promise<void> {
         console.log('[WorkerManager] Initializing worker pool...');
         this.workers = [];
@@ -137,14 +133,6 @@ export class WorkerManager {
         // ワーカーをすべて終了させて再作成
         this.workers.forEach(w => w.worker.terminate());
         await this.init();
-    }
-
-    private setupGlobalAbortHandler(): void {
-        window.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                this.abortAll();
-            }
-        });
     }
 }
 
