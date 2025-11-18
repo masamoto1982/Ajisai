@@ -11,3 +11,6 @@ mod wasm_api;
 // `AjisaiInterpreter` 構造体自体が `wasm_api.rs` の中で `#[wasm_bindgen]` されているため、
 // この `use` を介して正しくエクスポートされます。
 pub use wasm_api::AjisaiInterpreter;
+
+#[cfg(test)]
+mod test_tokenizer;

@@ -26,10 +26,18 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
     while i < chars.len() {
         // 1. コメント (行末までスキップ)
         if chars[i] == '#' {
+            // コメントの前にトークンがあったかチェック
+            // （行末コメントか行頭コメントかを判定）
+            let had_token_before = !tokens.is_empty() && tokens.last() != Some(&Token::LineBreak);
+
             while i < chars.len() && chars[i] != '\n' {
                 i += 1;
             }
-            continue; // \n は次のイテレーションで処理
+            // 行頭コメントの場合のみ、改行もスキップ
+            if !had_token_before && i < chars.len() && chars[i] == '\n' {
+                i += 1;
+            }
+            continue;
         }
 
         // 2. 空白と改行
