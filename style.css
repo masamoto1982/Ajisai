@@ -373,12 +373,14 @@ section h3 {
     font-weight: bold;
     background-color: #FFF100;
     color: #000;
+    border: 1px solid #FFF100;
 }
 
 /* STACKワードが入力されたとき、全スタック要素を着色（黄色） */
 #stack-display.highlight-all .stack-item {
     background-color: #FFF100;
     color: #000;
+    border: 1px solid #FFF100;
     font-weight: bold;
 }
 
