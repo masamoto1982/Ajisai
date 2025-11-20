@@ -512,7 +512,11 @@ impl Interpreter {
             "FILTER" => higher_order::op_filter(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => Err(AjisaiError::from("WAIT requires async execution context")),
-            "CAST" => cast::op_cast(self),
+            "STR" => cast::op_str(self),
+            "NUM" => cast::op_num(self),
+            "BOOL" => cast::op_bool(self),
+            "NIL" => cast::op_nil(self),
+            "VEC" => cast::op_vec(self),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }

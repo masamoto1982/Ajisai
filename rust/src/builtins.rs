@@ -40,7 +40,11 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("LEVEL", "ネストされたベクタを平坦化｜[ 1 [ 2 3 ] 4 ] LEVEL → [ 1 2 3 4 ]", "Vector"),
 
         // 型変換
-        ("CAST", "型を変換（String ⇔ Vector）｜[ 1 2 3 ] CAST → [ '1 2 3' ], [ '1 2 3' ] CAST → [ 1 2 3 ]", "Type Conversion"),
+        ("STR", "任意の型を文字列に変換｜[ 42 ] STR → [ '42' ], [ TRUE ] STR → [ 'TRUE' ]", "Type Conversion"),
+        ("NUM", "文字列を数値に変換｜[ '42' ] NUM → [ 42 ], [ '1/3' ] NUM → [ 1/3 ]", "Type Conversion"),
+        ("BOOL", "文字列を真偽値に変換｜[ 'TRUE' ] BOOL → [ TRUE ], [ 'false' ] BOOL → [ FALSE ]", "Type Conversion"),
+        ("NIL", "文字列をNilに変換｜[ 'nil' ] NIL → [ nil ]", "Type Conversion"),
+        ("VEC", "文字列をベクトルに変換（スペース分割）｜[ '1 2 3' ] VEC → [ '1' '2' '3' ]", "Type Conversion"),
 
         // 算術演算
         ("+", "要素ごとの加算または集約｜[ 1 2 ] [ 3 4 ] + → [ 4 6 ]", "Arithmetic"),
@@ -360,73 +364,128 @@ a b c STACK LEVEL              # エラー：ベクタがない（変化なし�
         // 型変換
         // ============================================================================
 
-        "CAST" => r#"# CAST - 型を変換
+        "STR" => r#"# STR - 文字列に変換
 
 ## 機能
-値の型を双方向変換します。最小主義の設計により、1つのワードで：
-- Vector → String: ベクトルを文字列表現に変換
-- String → Vector: 文字列を解析してベクトルに変換（型推論付き）
-- Number/Boolean/Nil/Symbol → String: 各型を文字列化
-
-同型変換（例: String → String）はエラーとなります。
+任意の型を文字列表現に変換します。
+同型変換（String → String）はエラーとなります。
 
 ## 使用法
-[ value ] CAST
-→ 型が変換された新しい値
+[ value ] STR
+→ 文字列に変換された値
 
 ## 使用例
-
-### Vector → String
-[ 1 2 3 ] CAST                   # → [ '1 2 3' ]
-[ TRUE FALSE ] CAST              # → [ 'TRUE FALSE' ]
-[ 1 nil 3 ] CAST                 # → [ '1 nil 3' ]
-
-### String → Vector（型推論）
-[ '1 2 3' ] CAST                 # → [ 1 2 3 ]  (数値として解釈)
-[ 'TRUE FALSE' ] CAST            # → [ TRUE FALSE ]  (真偽値)
-[ 'hello world' ] CAST           # → [ 'hello' 'world' ]  (文字列)
-[ '42 TRUE nil 3.5' ] CAST       # → [ 42 TRUE nil 7/2 ]  (混在OK)
-
-### Number → String
-[ 42 ] CAST                      # → [ '42' ]
-[ 1/3 ] CAST                     # → [ '1/3' ]
-
-### Boolean → String
-[ TRUE ] CAST                    # → [ 'TRUE' ]
-[ FALSE ] CAST                   # → [ 'FALSE' ]
-
-### Nil → String
-[ nil ] CAST                     # → [ 'nil' ]
-
-## 型推論のルール（String → Vector）
-文字列をスペースで分割し、各要素を以下の優先順位で解析：
-1. 数値として解釈可能 → Number型
-2. "TRUE"または"FALSE"（大小文字無視） → Boolean型
-3. "nil"（大小文字無視） → Nil型
-4. それ以外 → String型
-
-## 活用例
-
-### データのシリアライズ・デシリアライズ
-[ 1 2 3 ] CAST                   # → [ '1 2 3' ]  (保存用)
-[ '1 2 3' ] CAST                 # → [ 1 2 3 ]  (復元)
-
-### 文字列連結との組み合わせ
-[ 10 ] [ 20 ] + CAST [ ' is the sum' ] CONCAT
-# → [ '30 is the sum' ]
-
-### 往復変換（可逆性）
-[ 1 2 3 ] CAST CAST              # → [ 1 2 3 ]  (元に戻る)
+[ 42 ] STR                       # → [ '42' ]
+[ 1/3 ] STR                      # → [ '1/3' ]
+[ TRUE ] STR                     # → [ 'TRUE' ]
+[ FALSE ] STR                    # → [ 'FALSE' ]
+[ nil ] STR                      # → [ 'nil' ]
+[ [ 1 2 3 ] ] STR                # → [ '1 2 3' ]
 
 ## エラーケース
-[ 'text' ] CAST CAST             # エラー：同型変換（String → String）
-[ 1 2 3 ] CAST CAST CAST         # エラー：同型変換（Vector → Vector）
+[ 'text' ] STR                   # エラー：同型変換（String → String）
 
 ## 注意
-- StackTopモードのみサポート（Stackモードは未対応）
-- 同型変換は型安全性のため禁止されています
-- ネストしたベクトルは文字列化時に括弧で表現されます
-- 空文字列は空ベクトルに変換されます"#.to_string(),
+- StackTopモードのみサポート
+- ベクトルはスペース区切りで平坦化されます"#.to_string(),
+
+        "NUM" => r#"# NUM - 数値に変換
+
+## 機能
+文字列を数値にパースします。
+パース失敗時はエラーとなります。
+
+## 使用法
+[ 'string' ] NUM
+→ 数値に変換された値
+
+## 使用例
+[ '42' ] NUM                     # → [ 42 ]
+[ '1/3' ] NUM                    # → [ 1/3 ]
+[ '3.14' ] NUM                   # → [ 157/50 ]（分数として正確に）
+[ '1.5e2' ] NUM                  # → [ 150 ]
+
+## エラーケース
+[ 'hello' ] NUM                  # エラー：数値にパース不可
+[ 42 ] NUM                       # エラー：String型が必要
+
+## 注意
+- String型のみ受け付けます
+- 小数は分数に変換されます（丸め誤差なし）"#.to_string(),
+
+        "BOOL" => r#"# BOOL - 真偽値に変換
+
+## 機能
+文字列を真偽値にパースします。
+"TRUE"または"FALSE"のみ受け付けます（大小文字無視）。
+
+## 使用法
+[ 'string' ] BOOL
+→ 真偽値に変換された値
+
+## 使用例
+[ 'TRUE' ] BOOL                  # → [ TRUE ]
+[ 'FALSE' ] BOOL                 # → [ FALSE ]
+[ 'true' ] BOOL                  # → [ TRUE ]（大小文字無視）
+[ 'false' ] BOOL                 # → [ FALSE ]
+
+## エラーケース
+[ 'hello' ] BOOL                 # エラー：TRUE/FALSEでない
+[ '1' ] BOOL                     # エラー：TRUE/FALSEでない
+[ TRUE ] BOOL                    # エラー：String型が必要
+
+## 注意
+- String型のみ受け付けます
+- 大文字小文字は区別しません"#.to_string(),
+
+        "NIL" => r#"# NIL - Nilに変換
+
+## 機能
+文字列をNilにパースします。
+"nil"のみ受け付けます（大小文字無視）。
+
+## 使用法
+[ 'string' ] NIL
+→ Nilに変換された値
+
+## 使用例
+[ 'nil' ] NIL                    # → [ nil ]
+[ 'NIL' ] NIL                    # → [ nil ]（大小文字無視）
+[ 'Nil' ] NIL                    # → [ nil ]
+
+## エラーケース
+[ 'hello' ] NIL                  # エラー：nilでない
+[ '0' ] NIL                      # エラー：nilでない
+[ nil ] NIL                      # エラー：String型が必要
+
+## 注意
+- String型のみ受け付けます
+- 大文字小文字は区別しません"#.to_string(),
+
+        "VEC" => r#"# VEC - ベクトルに変換
+
+## 機能
+文字列をスペースで分割してベクトルに変換します。
+すべての要素は文字列型になります。
+
+## 使用法
+[ 'string' ] VEC
+→ ベクトルに変換された値（要素は全て文字列）
+
+## 使用例
+[ '1 2 3' ] VEC                  # → [ '1' '2' '3' ]
+[ 'hello world' ] VEC            # → [ 'hello' 'world' ]
+[ 'a  b  c' ] VEC                # → [ 'a' 'b' 'c' ]（連続空白は無視）
+[ '' ] VEC                       # → [ ]（空ベクトル）
+[ '   ' ] VEC                    # → [ ]（空白のみは空ベクトル）
+
+## エラーケース
+[ [ 1 2 3 ] ] VEC                # エラー：String型が必要
+
+## 注意
+- String型のみ受け付けます
+- 要素は全て文字列型になります（型推論なし）
+- 数値に変換したい場合は NUM を使用してください"#.to_string(),
 
         // ============================================================================
         // 算術演算
