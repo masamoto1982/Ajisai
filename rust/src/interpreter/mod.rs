@@ -10,6 +10,7 @@ pub mod dictionary;
 pub mod io;
 pub mod audio;
 pub mod higher_order;
+pub mod cast;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition, ExecutionLine};
@@ -511,6 +512,7 @@ impl Interpreter {
             "FILTER" => higher_order::op_filter(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => Err(AjisaiError::from("WAIT requires async execution context")),
+            "CAST" => cast::op_cast(self),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }

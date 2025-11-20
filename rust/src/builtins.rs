@@ -39,6 +39,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("REVERSE", "ベクタの要素を反転｜[ 1 2 3 ] REVERSE → [ 3 2 1 ]", "Vector"),
         ("LEVEL", "ネストされたベクタを平坦化｜[ 1 [ 2 3 ] 4 ] LEVEL → [ 1 2 3 4 ]", "Vector"),
 
+        // 型変換
+        ("CAST", "型を変換（String ⇔ Vector）｜[ 1 2 3 ] CAST → [ '1 2 3' ], [ '1 2 3' ] CAST → [ 1 2 3 ]", "Type Conversion"),
+
         // 算術演算
         ("+", "要素ごとの加算または集約｜[ 1 2 ] [ 3 4 ] + → [ 4 6 ]", "Arithmetic"),
         ("-", "要素ごとの減算または集約｜[ 5 3 ] [ 2 1 ] - → [ 3 2 ]", "Arithmetic"),
@@ -352,6 +355,78 @@ a b c STACK LEVEL              # エラー：ベクタがない（変化なし�
 
 ## 注意
 - すべてのネストレベルが再帰的に展開されます"#.to_string(),
+
+        // ============================================================================
+        // 型変換
+        // ============================================================================
+
+        "CAST" => r#"# CAST - 型を変換
+
+## 機能
+値の型を双方向変換します。最小主義の設計により、1つのワードで：
+- Vector → String: ベクトルを文字列表現に変換
+- String → Vector: 文字列を解析してベクトルに変換（型推論付き）
+- Number/Boolean/Nil/Symbol → String: 各型を文字列化
+
+同型変換（例: String → String）はエラーとなります。
+
+## 使用法
+[ value ] CAST
+→ 型が変換された新しい値
+
+## 使用例
+
+### Vector → String
+[ 1 2 3 ] CAST                   # → [ '1 2 3' ]
+[ TRUE FALSE ] CAST              # → [ 'TRUE FALSE' ]
+[ 1 nil 3 ] CAST                 # → [ '1 nil 3' ]
+
+### String → Vector（型推論）
+[ '1 2 3' ] CAST                 # → [ 1 2 3 ]  (数値として解釈)
+[ 'TRUE FALSE' ] CAST            # → [ TRUE FALSE ]  (真偽値)
+[ 'hello world' ] CAST           # → [ 'hello' 'world' ]  (文字列)
+[ '42 TRUE nil 3.5' ] CAST       # → [ 42 TRUE nil 7/2 ]  (混在OK)
+
+### Number → String
+[ 42 ] CAST                      # → [ '42' ]
+[ 1/3 ] CAST                     # → [ '1/3' ]
+
+### Boolean → String
+[ TRUE ] CAST                    # → [ 'TRUE' ]
+[ FALSE ] CAST                   # → [ 'FALSE' ]
+
+### Nil → String
+[ nil ] CAST                     # → [ 'nil' ]
+
+## 型推論のルール（String → Vector）
+文字列をスペースで分割し、各要素を以下の優先順位で解析：
+1. 数値として解釈可能 → Number型
+2. "TRUE"または"FALSE"（大小文字無視） → Boolean型
+3. "nil"（大小文字無視） → Nil型
+4. それ以外 → String型
+
+## 活用例
+
+### データのシリアライズ・デシリアライズ
+[ 1 2 3 ] CAST                   # → [ '1 2 3' ]  (保存用)
+[ '1 2 3' ] CAST                 # → [ 1 2 3 ]  (復元)
+
+### 文字列連結との組み合わせ
+[ 10 ] [ 20 ] + CAST [ ' is the sum' ] CONCAT
+# → [ '30 is the sum' ]
+
+### 往復変換（可逆性）
+[ 1 2 3 ] CAST CAST              # → [ 1 2 3 ]  (元に戻る)
+
+## エラーケース
+[ 'text' ] CAST CAST             # エラー：同型変換（String → String）
+[ 1 2 3 ] CAST CAST CAST         # エラー：同型変換（Vector → Vector）
+
+## 注意
+- StackTopモードのみサポート（Stackモードは未対応）
+- 同型変換は型安全性のため禁止されています
+- ネストしたベクトルは文字列化時に括弧で表現されます
+- 空文字列は空ベクトルに変換されます"#.to_string(),
 
         // ============================================================================
         // 算術演算
