@@ -308,75 +308,76 @@ section h3 {
 /* ワードボタン */
 .word-button {
     margin: 2px;
-    padding: 0.25rem 0.5rem;
+    padding: 0.2rem 0.4rem;
     background-color: #fff;
     color: #000;
     border: 1px solid #ddd;
     font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 400;
     cursor: pointer;
+    border-radius: 4px;
 }
 
 .word-button:hover {
     background: #f5f5f5;
 }
 
-/* 組み込みワード - 鮮やかな黄みの赤 */
+/* 組み込みワード - 鮮やかな黄みの赤（彩度調整） */
 .word-button.builtin {
-    border-color: #FF4B00;
-    background: #FF4B00;
+    border-color: #E65100;
+    background: #E65100;
     color: #fff;
 }
 
 .word-button.builtin:hover {
-    background: #CC3C00;
+    background: #BF4100;
 }
 
-/* 依存されているカスタムワード - 鮮やかな黄みの橙 */
+/* 依存されているカスタムワード - 鮮やかな黄みの橙（彩度調整） */
 .word-button.dependency {
-    border-color: #F6AA00;
-    background: #F6AA00;
+    border-color: #E69500;
+    background: #E69500;
     color: #fff;
 }
 
 .word-button.dependency:hover {
-    background: #C58800;
+    background: #C57E00;
 }
 
-/* 依存されていないカスタムワード - 重厚な青みの緑 */
+/* 依存されていないカスタムワード - 重厚な青みの緑（彩度調整） */
 .word-button.non-dependency {
-    border-color: #03AF7A;
-    background: #03AF7A;
+    border-color: #009B68;
+    background: #009B68;
     color: #fff;
 }
 
 .word-button.non-dependency:hover {
-    background: #028C62;
+    background: #007B52;
 }
 
-/* スタック項目 - シアン色 */
+/* スタック項目 - シアン色（彩度調整） */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     display: inline-block;
-    margin: 2px 4px;
-    padding: 2px 6px;
-    background-color: #4DC4FF;
+    margin: 2px;
+    padding: 2px 4px;
+    background-color: #4AB8E6;
     color: #fff;
-    border: 1px solid #4DC4FF;
+    border: 1px solid #4AB8E6;
 }
 
-/* スタックトップ（最新の要素）を強調 - デフォルトフォーカス（鮮やかな青） */
+/* スタックトップ（最新の要素）を強調 - デフォルトフォーカス（鮮やかな青、彩度調整） */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #005AFF;
+    background-color: #0052CC;
     color: #fff;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を着色（鮮やかな青） */
+/* STACKワードが入力されたとき、全スタック要素を着色（鮮やかな青、彩度調整） */
 #stack-display.highlight-all .stack-item {
-    background-color: #005AFF;
+    background-color: #0052CC;
     color: #fff;
     font-weight: bold;
 }
