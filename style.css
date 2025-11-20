@@ -356,29 +356,29 @@ section h3 {
     background: #007B52;
 }
 
-/* スタック項目 - シアン色（彩度調整） */
+/* スタック項目 - 灰色 */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.75rem;
     display: inline-block;
     margin: 2px;
     padding: 2px 4px;
-    background-color: #4AB8E6;
-    color: #fff;
-    border: 1px solid #4AB8E6;
+    background-color: #ddd;
+    color: #000;
+    border: 1px solid #ddd;
 }
 
-/* スタックトップ（最新の要素）を強調 - デフォルトフォーカス（鮮やかな青、彩度調整） */
+/* スタックトップ（最新の要素）を強調 - デフォルトフォーカス（黄色） */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #0052CC;
-    color: #fff;
+    background-color: #FFF100;
+    color: #000;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を着色（鮮やかな青、彩度調整） */
+/* STACKワードが入力されたとき、全スタック要素を着色（黄色） */
 #stack-display.highlight-all .stack-item {
-    background-color: #0052CC;
-    color: #fff;
+    background-color: #FFF100;
+    color: #000;
     font-weight: bold;
 }
 
