@@ -186,6 +186,8 @@ export class GUI {
         try {
             this.display.updateStack(window.ajisaiInterpreter.get_stack());
             this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
+            // スタック更新後、エディタの内容に基づいてハイライトを再適用
+            this.updateHighlights(this.elements.codeInput.value);
         } catch (error) {
             console.error('Failed to update display:', error);
             this.display.showError(new Error('Failed to update display.'));
