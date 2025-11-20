@@ -322,37 +322,37 @@ section h3 {
     background: #f5f5f5;
 }
 
-/* 組み込みワード */
+/* 組み込みワード - 赤背景 */
 .word-button.builtin {
-    border-color: #999;
-    background: #fff;
-    color: #000;
+    border-color: #D9534F;
+    background: #D9534F;
+    color: #fff;
 }
 
 .word-button.builtin:hover {
-    background: #f5f5f5;
+    background: #C9302C;
 }
 
-/* 依存されているカスタムワード */
+/* 依存されているカスタムワード - 黄背景 */
 .word-button.dependency {
-    border-color: #999;
-    background: #fff;
-    color: #000;
+    border-color: #F0AD4E;
+    background: #F0AD4E;
+    color: #fff;
 }
 
 .word-button.dependency:hover {
-    background: #f5f5f5;
+    background: #EC971F;
 }
 
-/* 依存されていないカスタムワード */
+/* 依存されていないカスタムワード - 緑背景 */
 .word-button.non-dependency {
-    border-color: #999;
-    background: #fff;
-    color: #000;
+    border-color: #5CB85C;
+    background: #5CB85C;
+    color: #fff;
 }
 
 .word-button.non-dependency:hover {
-    background: #f5f5f5;
+    background: #449D44;
 }
 
 /* スタック項目 */
