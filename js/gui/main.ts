@@ -194,8 +194,9 @@ export class GUI {
 
     // エディタのコンテンツに基づいてハイライトを更新
     private updateHighlights(content: string): void {
-        // STACKワードが含まれているかチェック（ワード境界を考慮）
-        const stackRegex = /(\s|^)STACK(\s|$)/i;
+        // STACKワードが含まれているかチェック（STACKTOPは除外）
+        // 負の先読み (?!TOP) を使って、STACKの後にTOPが続かない場合のみマッチ
+        const stackRegex = /(\s|^)STACK(?!TOP)(\s|$)/i;
         const hasStackWord = stackRegex.test(content);
 
         // STACKワードが含まれている場合、スタック表示エリア内の全要素を着色

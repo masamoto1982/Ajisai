@@ -367,16 +367,16 @@ section h3 {
     border: 1px solid #ddd;
 }
 
-/* スタックトップ（最新の要素）を強調 */
+/* スタックトップ（最新の要素）を強調 - デフォルトフォーカス（青系） */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #bbb;
-    color: #000;
+    background-color: #6B8EB8;
+    color: #fff;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を着色 */
+/* STACKワードが入力されたとき、全スタック要素を着色（緑系） */
 #stack-display.highlight-all .stack-item {
-    background-color: #999;
+    background-color: #5FA576;
     color: #fff;
     font-weight: bold;
 }
