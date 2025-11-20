@@ -163,29 +163,14 @@ export class Display {
         stack.forEach((item, index) => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
-            
+
             try {
-                elem.textContent = this.formatValue(item, 0); // <--- 修正点: depth 0で呼び出し
+                elem.textContent = this.formatValue(item, 0);
             } catch (error) {
                 console.error(`Error formatting item ${index}:`, error);
                 elem.textContent = 'ERROR';
             }
-            
-            if (index === stack.length - 1) {
-                elem.style.fontWeight = 'bold';
-                elem.style.backgroundColor = '#4CAF50';
-                elem.style.color = 'white';
-            } else {
-                elem.style.backgroundColor = '#e0e0e0';
-                elem.style.color = '#333';
-            }
-            
-            elem.style.margin = '2px 4px';
-            elem.style.padding = '2px 6px';
-            elem.style.borderRadius = '3px';
-            elem.style.fontSize = '0.875rem';
-            elem.style.fontFamily = "'Consolas', 'Monaco', monospace";
-            
+
             container.appendChild(elem);
         });
         

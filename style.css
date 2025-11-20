@@ -370,14 +370,14 @@ section h3 {
 /* スタックトップ（最新の要素）を強調 */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #ddd;
+    background-color: #bbb;
     color: #000;
 }
 
 /* STACKワードが入力されたとき、全スタック要素を着色 */
 #stack-display.highlight-all .stack-item {
-    background-color: #ddd;
-    color: #000;
+    background-color: #999;
+    color: #fff;
     font-weight: bold;
 }
 
