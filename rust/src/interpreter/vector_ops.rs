@@ -768,3 +768,192 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
         }
     }
 }
+
+/// RANGE - 数値範囲を生成する
+///
+/// 【責務】
+/// - startからendまでの数値シーケンスを生成
+/// - オプションでstep（増分）を指定可能
+/// - 等差数列の生成に対応
+///
+/// 【使用法】
+/// - StackTopモード（2引数）: `[0] [5] RANGE` → `[0] [5] [0 1 2 3 4 5]`
+/// - StackTopモード（3引数）: `[0] [10] [2] RANGE` → `[0] [10] [2] [0 2 4 6 8 10]`
+/// - Stackモード（2引数）: `0 5 STACK RANGE` → `[0 1 2 3 4 5]`
+/// - Stackモード（3引数）: `0 10 2 STACK RANGE` → `[0 2 4 6 8 10]`
+///
+/// 【引数スタック】
+/// - [start]: 開始値（整数）
+/// - [end]: 終了値（整数、この値を含む）
+/// - (オプション) [step]: 増分（整数、デフォルトは自動判定: start <= end なら 1、そうでなければ -1）
+///
+/// 【戻り値スタック】
+/// - (StackTopモード) 元の引数 + 生成されたベクタ
+/// - (Stackモード) 生成されたベクタ
+///
+/// 【エラー】
+/// - stepが0の場合
+/// - start, end, stepが整数でない場合
+/// - 範囲が無限になる場合（start < endだがstep < 0、またはstart > endだがstep > 0）
+///
+/// 【注意事項】
+/// - endの値は範囲に含まれる（inclusive）
+/// - 負のstepで降順の範囲を生成可能
+/// - start == endの場合は単一要素のベクタを返す
+pub fn op_range(interp: &mut Interpreter) -> Result<()> {
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            // スタックから引数を取得（2個または3個）
+            if interp.stack.len() < 2 {
+                return Err(AjisaiError::from("RANGE requires at least 2 arguments: [start] [end] or [start] [end] [step]"));
+            }
+
+            // 最後の引数を確認（endまたはstep）
+            let last_val = interp.stack.pop().unwrap();
+            let last_bigint = get_bigint_from_value(&last_val)?;
+            let last_i64 = last_bigint.to_i64()
+                .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+
+            // 2番目の引数を確認（startまたはend）
+            let second_val = interp.stack.pop().unwrap();
+            let second_bigint = get_bigint_from_value(&second_val)?;
+            let second_i64 = second_bigint.to_i64()
+                .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+
+            let (start, end, step, start_val, end_val, step_val) = if interp.stack.is_empty() {
+                // 2引数モード: start, end
+                let step = if second_i64 <= last_i64 { 1 } else { -1 };
+                (second_i64, last_i64, step, second_val, last_val, None)
+            } else {
+                // 3引数モード: start, end, step
+                let first_val = interp.stack.pop().unwrap();
+                let first_bigint = get_bigint_from_value(&first_val)?;
+                let first_i64 = first_bigint.to_i64()
+                    .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+                (first_i64, second_i64, last_i64, first_val, second_val, Some(last_val))
+            };
+
+            // stepが0の場合はエラー
+            if step == 0 {
+                return Err(AjisaiError::from("RANGE step cannot be 0"));
+            }
+
+            // 無限範囲チェック
+            if (start < end && step < 0) || (start > end && step > 0) {
+                return Err(AjisaiError::from("RANGE would create an infinite sequence (check start, end, and step values)"));
+            }
+
+            // 範囲を生成
+            let mut range_vec = Vec::new();
+            let mut current = start;
+
+            if step > 0 {
+                while current <= end {
+                    range_vec.push(Value {
+                        val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
+                    });
+                    current += step;
+                }
+            } else {
+                while current >= end {
+                    range_vec.push(Value {
+                        val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
+                    });
+                    current += step;
+                }
+            }
+
+            // 元の引数をスタックに戻す
+            interp.stack.push(start_val);
+            interp.stack.push(end_val);
+            if let Some(sv) = step_val {
+                interp.stack.push(sv);
+            }
+
+            // 結果をプッシュ
+            interp.stack.push(Value {
+                val_type: ValueType::Vector(range_vec, BracketType::Square),
+            });
+
+            Ok(())
+        }
+        OperationTarget::Stack => {
+            // スタックから引数を取得（2個または3個）
+            if interp.stack.len() < 2 {
+                return Err(AjisaiError::from("RANGE requires at least 2 arguments"));
+            }
+
+            // 最後の引数を確認
+            let last_val = interp.stack.pop().unwrap();
+            let last_bigint = get_bigint_from_value(&last_val)?;
+            let last_i64 = last_bigint.to_i64()
+                .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+
+            // 2番目の引数を確認
+            let second_val = interp.stack.pop().unwrap();
+            let second_bigint = get_bigint_from_value(&second_val)?;
+            let second_i64 = second_bigint.to_i64()
+                .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+
+            let (start, end, step) = if let Some(top) = interp.stack.last() {
+                // 3番目の引数があるかチェック
+                if let Ok(third_bigint) = get_bigint_from_value(top) {
+                    if let Some(third_i64) = third_bigint.to_i64() {
+                        // 3引数モード
+                        interp.stack.pop();
+                        (third_i64, second_i64, last_i64)
+                    } else {
+                        // 2引数モード（3番目が整数でない）
+                        let step = if second_i64 <= last_i64 { 1 } else { -1 };
+                        (second_i64, last_i64, step)
+                    }
+                } else {
+                    // 2引数モード
+                    let step = if second_i64 <= last_i64 { 1 } else { -1 };
+                    (second_i64, last_i64, step)
+                }
+            } else {
+                // スタックが空なので2引数モード
+                let step = if second_i64 <= last_i64 { 1 } else { -1 };
+                (second_i64, last_i64, step)
+            };
+
+            // stepが0の場合はエラー
+            if step == 0 {
+                return Err(AjisaiError::from("RANGE step cannot be 0"));
+            }
+
+            // 無限範囲チェック
+            if (start < end && step < 0) || (start > end && step > 0) {
+                return Err(AjisaiError::from("RANGE would create an infinite sequence (check start, end, and step values)"));
+            }
+
+            // 範囲を生成
+            let mut range_vec = Vec::new();
+            let mut current = start;
+
+            if step > 0 {
+                while current <= end {
+                    range_vec.push(Value {
+                        val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
+                    });
+                    current += step;
+                }
+            } else {
+                while current >= end {
+                    range_vec.push(Value {
+                        val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
+                    });
+                    current += step;
+                }
+            }
+
+            // 結果をプッシュ
+            interp.stack.push(Value {
+                val_type: ValueType::Vector(range_vec, BracketType::Square),
+            });
+
+            Ok(())
+        }
+    }
+}
