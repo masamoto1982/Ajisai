@@ -1,8 +1,9 @@
-// js/gui/editor.ts (ラベル機能完全削除版 + モバイル対応)
+// js/gui/editor.ts (ラベル機能完全削除版 + モバイル対応 + ハイライト機能)
 
 export class Editor {
     private element!: HTMLTextAreaElement;
     private gui: any; // GUIインスタンスへの参照
+    private onContentChangeCallback?: (content: string) => void;
 
     init(element: HTMLTextAreaElement, gui?: any): void {
         this.element = element;
@@ -21,6 +22,18 @@ export class Editor {
                 this.gui.mobile.updateView('input');
             }
         });
+
+        // 入力内容の変更を監視
+        this.element.addEventListener('input', () => {
+            if (this.onContentChangeCallback) {
+                this.onContentChangeCallback(this.element.value);
+            }
+        });
+    }
+
+    // コンテンツ変更時のコールバックを設定
+    setOnContentChange(callback: (content: string) => void): void {
+        this.onContentChangeCallback = callback;
     }
 
     getValue(): string {

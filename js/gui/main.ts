@@ -71,7 +71,10 @@ export class GUI {
         
         // エディタにGUIインスタンスを渡す
         this.editor.init(this.elements.codeInput, this);
-        
+
+        // エディタのコンテンツ変更時にハイライトを更新
+        this.editor.setOnContentChange((content) => this.updateHighlights(content));
+
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
@@ -186,6 +189,49 @@ export class GUI {
         } catch (error) {
             console.error('Failed to update display:', error);
             this.display.showError(new Error('Failed to update display.'));
+        }
+    }
+
+    // エディタのコンテンツに基づいてハイライトを更新
+    private updateHighlights(content: string): void {
+        const upperContent = content.toUpperCase();
+
+        // スタック操作に関連するワード
+        const stackWords = [
+            'DUP', 'DROP', 'SWAP', 'OVER', 'ROT', '.S', 'DEPTH',
+            'PICK', 'ROLL', '2DUP', '2DROP', '2SWAP', 'NIP', 'TUCK',
+            'STACK', 'CLEAR'
+        ];
+
+        // 辞書操作に関連するワード
+        const dictionaryWords = [
+            'WORDS', ':', 'FORGET', 'SEE', 'DICT'
+        ];
+
+        // スタックエリアのハイライト判定
+        const hasStackWord = stackWords.some(word => {
+            // ワード境界を考慮した検索（前後が空白または記号）
+            const regex = new RegExp(`(^|\\s|\\n)${word}($|\\s|\\n)`, 'i');
+            return regex.test(content);
+        });
+
+        // 辞書エリアのハイライト判定
+        const hasDictionaryWord = dictionaryWords.some(word => {
+            const regex = new RegExp(`(^|\\s|\\n)${word}($|\\s|\\n)`, 'i');
+            return regex.test(content);
+        });
+
+        // ハイライトクラスの適用
+        if (hasStackWord) {
+            this.elements.stackArea.classList.add('highlighted');
+        } else {
+            this.elements.stackArea.classList.remove('highlighted');
+        }
+
+        if (hasDictionaryWord) {
+            this.elements.dictionaryArea.classList.add('highlighted');
+        } else {
+            this.elements.dictionaryArea.classList.remove('highlighted');
         }
     }
 }
