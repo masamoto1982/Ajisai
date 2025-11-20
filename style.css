@@ -322,61 +322,61 @@ section h3 {
     background: #f5f5f5;
 }
 
-/* 組み込みワード - 赤背景 */
+/* 組み込みワード - 鮮やかな黄みの赤 */
 .word-button.builtin {
-    border-color: #D9534F;
-    background: #D9534F;
+    border-color: #FF4B00;
+    background: #FF4B00;
     color: #fff;
 }
 
 .word-button.builtin:hover {
-    background: #C9302C;
+    background: #CC3C00;
 }
 
-/* 依存されているカスタムワード - 黄背景 */
+/* 依存されているカスタムワード - 鮮やかな黄みの橙 */
 .word-button.dependency {
-    border-color: #F0AD4E;
-    background: #F0AD4E;
+    border-color: #F6AA00;
+    background: #F6AA00;
     color: #fff;
 }
 
 .word-button.dependency:hover {
-    background: #EC971F;
+    background: #C58800;
 }
 
-/* 依存されていないカスタムワード - 緑背景 */
+/* 依存されていないカスタムワード - 重厚な青みの緑 */
 .word-button.non-dependency {
-    border-color: #5CB85C;
-    background: #5CB85C;
+    border-color: #03AF7A;
+    background: #03AF7A;
     color: #fff;
 }
 
 .word-button.non-dependency:hover {
-    background: #449D44;
+    background: #028C62;
 }
 
-/* スタック項目 */
+/* スタック項目 - シアン色 */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
     display: inline-block;
     margin: 2px 4px;
     padding: 2px 6px;
-    background-color: #eee;
-    color: #000;
-    border: 1px solid #ddd;
+    background-color: #4DC4FF;
+    color: #fff;
+    border: 1px solid #4DC4FF;
 }
 
-/* スタックトップ（最新の要素）を強調 - デフォルトフォーカス（淡い緑） */
+/* スタックトップ（最新の要素）を強調 - デフォルトフォーカス（鮮やかな青） */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #5CB85C;
+    background-color: #005AFF;
     color: #fff;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を着色（淡い緑） */
+/* STACKワードが入力されたとき、全スタック要素を着色（鮮やかな青） */
 #stack-display.highlight-all .stack-item {
-    background-color: #5CB85C;
+    background-color: #005AFF;
     color: #fff;
     font-weight: bold;
 }
