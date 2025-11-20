@@ -1,4 +1,4 @@
-/* style.css (完全版) */
+/* style.css - シンプル・無機質デザイン */
 * {
     margin: 0;
     padding: 0;
@@ -13,8 +13,8 @@ body {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(to bottom, #f0f4f8 0%, #e6eef5 100%);
-    color: #2c3e50;
+    background: #f5f5f5;
+    color: #000;
     line-height: 1.6;
 }
 
@@ -27,17 +27,15 @@ body {
     margin: 0 auto;
 }
 
-/* ヘッダー - 鮮やかな紫陽花グラデーション */
+/* ヘッダー */
 header {
-    background: linear-gradient(135deg, #4a90e2 0%, #8e44ad 100%);
+    background: #fff;
     padding: 1rem 2rem;
-    border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid #ddd;
     display: flex;
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
-    position: relative;
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.25);
 }
 
 /* ロゴ */
@@ -45,36 +43,26 @@ header {
     width: 40px;
     height: 40px;
     object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 header h1 {
     font-size: 1.5rem;
-    color: #ffffff;
-    font-weight: 600;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    color: #000;
+    font-weight: 400;
 }
 
 .version {
     font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.85);
+    color: #666;
 }
 
 /* オフライン表示 */
 .offline-indicator {
     font-size: 0.875rem;
-    color: #e74c3c;
-    font-weight: bold;
+    color: #000;
     padding: 0.25rem 0.5rem;
-    background-color: #fff;
-    border-radius: 4px;
-    animation: pulse 2s infinite;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    background-color: #eee;
+    border: 1px solid #ddd;
 }
 
 /* ヘッダーアクション */
@@ -92,24 +80,19 @@ header h1 {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background-color: rgba(255, 255, 255, 0.95);
-    color: #4a90e2;
+    background-color: #fff;
+    color: #000;
     text-decoration: none;
-    border-radius: 6px;
+    border: 1px solid #ddd;
     font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 400;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .reference-btn:hover,
 .test-btn:hover,
 .header-btn:hover {
-    background-color: #ffffff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background-color: #f5f5f5;
 }
 
 .reference-btn svg,
@@ -129,12 +112,10 @@ header h1 {
 
 /* パネル共通 */
 .panel {
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background-color: #fff;
+    border: 1px solid #ddd;
     padding: 1rem;
     overflow-y: auto;
-    border: 1px solid #e1e8ed;
 }
 
 /* 作業領域パネル */
@@ -157,36 +138,23 @@ header h1 {
 
 /* 各セクション */
 section {
-    border: 1px solid #e1e8ed;
-    border-radius: 8px;
+    border: 1px solid #ddd;
     padding: 1rem;
-    background-color: #f8fafb;
+    background-color: #fafafa;
 }
 
 section h2 {
     font-size: 1.125rem;
     margin-bottom: 0.75rem;
-    color: #2c3e50;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-section h2::before {
-    content: '';
-    display: inline-block;
-    width: 4px;
-    height: 1.125rem;
-    background: linear-gradient(135deg, #4a90e2, #8e44ad);
-    border-radius: 2px;
+    color: #000;
+    font-weight: 400;
 }
 
 section h3 {
     font-size: 1rem;
     margin-bottom: 0.5rem;
-    color: #34495e;
-    font-weight: 600;
+    color: #000;
+    font-weight: 400;
 }
 
 /* 入力・出力エリア */
@@ -202,22 +170,19 @@ section h3 {
     width: 100%;
     min-height: 200px;
     padding: 0.75rem;
-    border: 2px solid #e1e8ed;
-    border-radius: 8px;
+    border: 1px solid #ddd;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.95rem;
     resize: vertical;
     flex: 1;
     line-height: 1.5;
-    background-color: #ffffff;
-    color: #2c3e50;
-    transition: border-color 0.2s ease;
+    background-color: #fff;
+    color: #000;
 }
 
 #code-input:focus {
     outline: none;
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    border-color: #999;
 }
 
 .controls {
@@ -226,61 +191,42 @@ section h3 {
     gap: 0.75rem;
 }
 
-/* Runボタン - 鮮やかな青 */
+/* Runボタン */
 #run-btn {
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #3498db, #2980b9);
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
+    background: #fff;
+    color: #000;
+    border: 1px solid #ddd;
     cursor: pointer;
     font-size: 0.875rem;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    font-weight: 400;
 }
 
 #run-btn:hover {
-    background: linear-gradient(135deg, #2980b9, #21618c);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(52, 152, 219, 0.4);
+    background: #f5f5f5;
 }
 
-#run-btn:active {
-    transform: translateY(0);
-}
-
-/* Clearボタン - 鮮やかな紫 */
+/* Clearボタン */
 #clear-btn {
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #9b59b6, #8e44ad);
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
+    background: #fff;
+    color: #000;
+    border: 1px solid #ddd;
     cursor: pointer;
     font-size: 0.875rem;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 8px rgba(155, 89, 182, 0.3);
+    font-weight: 400;
 }
 
 #clear-btn:hover {
-    background: linear-gradient(135deg, #8e44ad, #71368a);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(155, 89, 182, 0.4);
-}
-
-#clear-btn:active {
-    transform: translateY(0);
+    background: #f5f5f5;
 }
 
 /* 表示エリア */
 .display-area,
 .state-display,
 .words-display {
-    background-color: #ffffff;
-    border: 1px solid #e1e8ed;
-    border-radius: 8px;
+    background-color: #fff;
+    border: 1px solid #ddd;
     padding: 0.75rem;
     min-height: 100px;
     max-height: 400px;
@@ -308,33 +254,31 @@ section h3 {
 .state-display::-webkit-scrollbar-track,
 .words-display::-webkit-scrollbar-track,
 #output-display::-webkit-scrollbar-track {
-    background: #f8fafb;
-    border-radius: 5px;
+    background: #f5f5f5;
 }
 
 .display-area::-webkit-scrollbar-thumb,
 .state-display::-webkit-scrollbar-thumb,
 .words-display::-webkit-scrollbar-thumb,
 #output-display::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #4a90e2, #8e44ad);
-    border-radius: 5px;
+    background: #999;
 }
 
 .display-area::-webkit-scrollbar-thumb:hover,
 .state-display::-webkit-scrollbar-thumb:hover,
 .words-display::-webkit-scrollbar-thumb:hover,
 #output-display::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #3498db, #9b59b6);
+    background: #666;
 }
 
-/* empty表示を薄く */
+/* empty表示 */
 .state-display {
-    color: #333;
+    color: #000;
 }
 
 .state-display:empty::before,
 .state-display:has(> :only-child:contains("(empty)")) {
-    color: #ccc !important;
+    color: #999;
 }
 
 /* スタックエリア */
@@ -361,79 +305,73 @@ section h3 {
     margin-bottom: 0;
 }
 
-/* ワードボタン - 小ぶりに */
+/* ワードボタン */
 .word-button {
     margin: 2px;
     padding: 0.25rem 0.5rem;
-    background-color: #ffffff;
-    color: #2c3e50;
-    border: 1.5px solid #bdc3c7;
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #ddd;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.8rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border-radius: 4px;
+    font-weight: 400;
     cursor: pointer;
 }
 
 .word-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #f5f5f5;
 }
 
 /* 組み込みワード */
 .word-button.builtin {
-    border-color: #e74c3c;
-    background: linear-gradient(135deg, #fff5f5, #ffe5e5);
-    color: #c0392b;
+    border-color: #999;
+    background: #fff;
+    color: #000;
 }
 
 .word-button.builtin:hover {
-    background: linear-gradient(135deg, #ffe5e5, #ffd5d5);
-    border-color: #c0392b;
+    background: #f5f5f5;
 }
 
 /* 依存されているカスタムワード */
 .word-button.dependency {
-    border-color: #f39c12;
-    background: linear-gradient(135deg, #fff8e5, #ffedd5);
-    color: #d68910;
+    border-color: #999;
+    background: #fff;
+    color: #000;
 }
 
 .word-button.dependency:hover {
-    background: linear-gradient(135deg, #ffedd5, #ffe2c5);
-    border-color: #d68910;
+    background: #f5f5f5;
 }
 
 /* 依存されていないカスタムワード */
 .word-button.non-dependency {
-    border-color: #27ae60;
-    background: linear-gradient(135deg, #f0fff4, #e5f9ec);
-    color: #229954;
+    border-color: #999;
+    background: #fff;
+    color: #000;
 }
 
 .word-button.non-dependency:hover {
-    background: linear-gradient(135deg, #e5f9ec, #d5f4e2);
-    border-color: #229954;
+    background: #f5f5f5;
 }
 
-/* スタック項目 - 元の視認性の良いデザインに戻す */
+/* スタック項目 */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
     display: inline-block;
     margin: 2px 4px;
     padding: 2px 6px;
-    background-color: #e0e0e0;
-    color: #333;
-    border-radius: 3px;
+    background-color: #eee;
+    color: #000;
+    border: 1px solid #ddd;
 }
 
 /* スタックトップ（最新の要素）を強調 */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #4CAF50;
-    color: white;
+    background-color: #ddd;
+    color: #000;
 }
 
 #stack-display > div {
@@ -470,22 +408,22 @@ section h3 {
     header h1 {
         font-size: 1.25rem;
     }
-    
+
     .version {
         font-size: 0.75rem;
     }
-    
+
     .offline-indicator {
         font-size: 0.75rem;
         padding: 0.2rem 0.4rem;
     }
-    
+
     .header-actions {
         width: 100%;
         margin-top: 0.5rem;
         justify-content: flex-end;
     }
-    
+
     .reference-btn,
     .test-btn,
     .header-btn {
@@ -508,7 +446,7 @@ section h3 {
         overflow-y: visible;
         margin-bottom: 0.25rem;
     }
-    
+
     #state-panel {
         margin-bottom: 0;
     }
@@ -541,13 +479,13 @@ section h3 {
     .stack-area {
         cursor: pointer;
     }
-    
+
     .output-area,
     .stack-area {
         cursor: pointer;
         position: relative;
     }
-    
+
     .output-area::after,
     .stack-area::after {
         content: 'タップして入力に戻る';
@@ -555,10 +493,10 @@ section h3 {
         bottom: 0.5rem;
         right: 0.5rem;
         font-size: 0.75rem;
-        color: #95a5a6;
+        color: #999;
         pointer-events: none;
     }
-    
+
     .input-area,
     .dictionary-area {
         cursor: default;
