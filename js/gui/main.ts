@@ -71,7 +71,10 @@ export class GUI {
         
         // エディタにGUIインスタンスを渡す
         this.editor.init(this.elements.codeInput, this);
-        
+
+        // エディタのコンテンツ変更時にハイライトを更新
+        this.editor.setOnContentChange((content) => this.updateHighlights(content));
+
         this.mobile.init({
             inputArea: this.elements.inputArea,
             outputArea: this.elements.outputArea,
@@ -186,6 +189,20 @@ export class GUI {
         } catch (error) {
             console.error('Failed to update display:', error);
             this.display.showError(new Error('Failed to update display.'));
+        }
+    }
+
+    // エディタのコンテンツに基づいてハイライトを更新
+    private updateHighlights(content: string): void {
+        // STACKワードが含まれているかチェック（ワード境界を考慮）
+        const stackRegex = /(\s|^)STACK(\s|$)/i;
+        const hasStackWord = stackRegex.test(content);
+
+        // STACKワードが含まれている場合、スタック表示エリア内の全要素を着色
+        if (hasStackWord) {
+            this.elements.stackDisplay.classList.add('highlight-all');
+        } else {
+            this.elements.stackDisplay.classList.remove('highlight-all');
         }
     }
 }

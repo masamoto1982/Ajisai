@@ -374,6 +374,13 @@ section h3 {
     color: #000;
 }
 
+/* STACKワードが入力されたとき、全スタック要素を着色 */
+#stack-display.highlight-all .stack-item {
+    background-color: #ddd;
+    color: #000;
+    font-weight: bold;
+}
+
 #stack-display > div {
     justify-content: flex-start !important;
 }
