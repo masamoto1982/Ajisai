@@ -326,34 +326,43 @@ section h3 {
 /* 組み込みワード - 鮮やかな黄みの赤（彩度調整） */
 .word-button.builtin {
     border-color: #E65100;
-    background: #E65100;
-    color: #fff;
+    background: #fff;
+    color: #E65100;
+    box-shadow: 0 2px 0 #ddd;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .word-button.builtin:hover {
-    background: #BF4100;
+    transform: translateY(2px);
+    box-shadow: 0 0 0 #ddd;
 }
 
 /* 依存されているカスタムワード - 鮮やかな黄みの橙（彩度調整） */
 .word-button.dependency {
     border-color: #E69500;
-    background: #E69500;
-    color: #fff;
+    background: #fff;
+    color: #E69500;
+    box-shadow: 0 2px 0 #ddd;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .word-button.dependency:hover {
-    background: #C57E00;
+    transform: translateY(2px);
+    box-shadow: 0 0 0 #ddd;
 }
 
 /* 依存されていないカスタムワード - 重厚な青みの緑（彩度調整） */
 .word-button.non-dependency {
     border-color: #009B68;
-    background: #009B68;
-    color: #fff;
+    background: #fff;
+    color: #009B68;
+    box-shadow: 0 2px 0 #ddd;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .word-button.non-dependency:hover {
-    background: #007B52;
+    transform: translateY(2px);
+    box-shadow: 0 0 0 #ddd;
 }
 
 /* スタック項目 - 灰色 */
