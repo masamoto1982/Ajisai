@@ -89,7 +89,8 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let inner_val = extract_single_element(&val)?;
+    let val_clone = val.clone();
+    let inner_val = extract_single_element(&val_clone)?;
 
     match &inner_val.val_type {
         ValueType::String(s) => {
@@ -160,7 +161,8 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let inner_val = extract_single_element(&val)?;
+    let val_clone = val.clone();
+    let inner_val = extract_single_element(&val_clone)?;
 
     match &inner_val.val_type {
         ValueType::String(s) => {
@@ -254,7 +256,8 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let inner_val = extract_single_element(&val)?;
+    let val_clone = val.clone();
+    let inner_val = extract_single_element(&val_clone)?;
 
     match &inner_val.val_type {
         ValueType::String(s) => {
@@ -349,7 +352,7 @@ mod tests {
 
         // Nil
         let nil = Value { val_type: ValueType::Nil };
-        assert_eq!(value_to_string_repr(&nil), "nil");
+        assert_eq!(value_to_string_repr(&nil), "NIL");
 
         // Vector
         let vec = Value {
