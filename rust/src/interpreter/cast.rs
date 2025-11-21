@@ -316,7 +316,7 @@ fn value_to_string_repr(value: &Value) -> String {
             if *b { "TRUE".to_string() } else { "FALSE".to_string() }
         }
         ValueType::Symbol(s) => s.clone(),
-        ValueType::Nil => "nil".to_string(),
+        ValueType::Nil => "NIL".to_string(),
         ValueType::SingletonVector(boxed_val, _) => {
             value_to_string_repr(boxed_val)
         }
