@@ -372,9 +372,9 @@ section h3 {
     display: inline-block;
     margin: 2px;
     padding: 2px 4px;
-    background-color: #84919E;
+    background-color: transparent;
     color: #990099;
-    border: 1px solid #84919E;
+    border: 1px solid transparent;
 }
 
 /* スタックトップ（最新の要素）を強調 - フォーカスされた要素 */
