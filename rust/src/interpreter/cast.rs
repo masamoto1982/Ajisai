@@ -227,6 +227,9 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【責務】
 /// - String → Nil（"nil" のみ、大小文字無視）
+/// - Boolean → エラー
+/// - Number → エラー
+/// - Nil → エラー（同型変換）
 /// - 他の型はエラー
 ///
 /// 【使用法】
@@ -234,11 +237,17 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 /// [ 'nil' ] NIL → [ nil ]
 /// [ 'NIL' ] NIL → [ nil ]
 /// [ 'hello' ] NIL → ERROR
+/// [ TRUE ] NIL → ERROR
+/// [ 42 ] NIL → ERROR
+/// [ nil ] NIL → ERROR（同型変換）
 /// ```
 ///
 /// 【エラー】
-/// - String以外の型
 /// - "nil"以外の文字列
+/// - Boolean型
+/// - Number型
+/// - Nil型（同型変換）
+/// - その他の型
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("NIL only supports StackTop mode"));
@@ -256,10 +265,23 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
                 ));
                 Ok(())
             } else {
+                interp.stack.push(val);
                 Err(AjisaiError::from(format!(
                     "NIL: cannot parse '{}' as nil (expected 'nil')", s
                 )))
             }
+        }
+        ValueType::Boolean(_) => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"))
+        }
+        ValueType::Number(_) => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("NIL: cannot convert Number to Nil"))
+        }
+        ValueType::Nil => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"))
         }
         _ => {
             interp.stack.push(val);
