@@ -372,24 +372,24 @@ section h3 {
     display: inline-block;
     margin: 2px;
     padding: 2px 4px;
-    background-color: transparent;
-    color: #84919E;
-    border: 1px solid transparent;
+    background-color: #84919E;
+    color: #990099;
+    border: 1px solid #84919E;
 }
 
 /* スタックトップ（最新の要素）を強調 - フォーカスされた要素 */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: transparent;
-    color: #990099;
-    border: 1px solid transparent;
+    background-color: #990099;
+    color: #fff;
+    border: 1px solid #990099;
 }
 
 /* STACKワードが入力されたとき、全スタック要素を強調 */
 #stack-display.highlight-all .stack-item {
-    background-color: transparent;
-    color: #990099;
-    border: 1px solid transparent;
+    background-color: #990099;
+    color: #fff;
+    border: 1px solid #990099;
     font-weight: bold;
 }
 
