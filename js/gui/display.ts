@@ -48,7 +48,7 @@ export class Display {
 
         if (filteredOutput) {
             const outputSpan = document.createElement('span');
-            outputSpan.style.color = '#007bff';
+            outputSpan.style.color = '#4DC4FF';
             outputSpan.textContent = filteredOutput.replace(/\\n/g, '\n');
             this.elements.outputDisplay.appendChild(outputSpan);
         }
@@ -72,7 +72,7 @@ export class Display {
         
         if (filteredOutput) {
             const outputSpan = document.createElement('span');
-            outputSpan.style.color = '#007bff';
+            outputSpan.style.color = '#4DC4FF';
             outputSpan.textContent = filteredOutput.replace(/\\n/g, '\n');
             this.elements.outputDisplay.appendChild(outputSpan);
         }
@@ -107,7 +107,7 @@ export class Display {
         this.mainOutput = filteredText;
         this.elements.outputDisplay.innerHTML = '';
         const span = document.createElement('span');
-        span.style.color = '#007bff';
+        span.style.color = '#4DC4FF';
         span.textContent = filteredText.replace(/\\n/g, '\n');
         this.elements.outputDisplay.appendChild(span);
     }
