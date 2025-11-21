@@ -518,7 +518,6 @@ impl Interpreter {
             "NUM" => cast::op_num(self),
             "BOOL" => cast::op_bool(self),
             "NIL" => cast::op_nil(self),
-            "VEC" => cast::op_vec(self),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }

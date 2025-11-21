@@ -45,7 +45,6 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("NUM", "文字列を数値に変換｜[ '42' ] NUM → [ 42 ], [ '1/3' ] NUM → [ 1/3 ]", "Type Conversion"),
         ("BOOL", "文字列を真偽値に変換｜[ 'TRUE' ] BOOL → [ TRUE ], [ 'false' ] BOOL → [ FALSE ]", "Type Conversion"),
         ("NIL", "文字列をNilに変換｜[ 'nil' ] NIL → [ nil ]", "Type Conversion"),
-        ("VEC", "文字列をベクトルに変換（スペース分割）｜[ '1 2 3' ] VEC → [ '1' '2' '3' ]", "Type Conversion"),
 
         // 算術演算
         ("+", "要素ごとの加算または集約｜[ 1 2 ] [ 3 4 ] + → [ 4 6 ]", "Arithmetic"),
@@ -510,31 +509,6 @@ start end step STACK RANGE
 ## 注意
 - String型のみ受け付けます
 - 大文字小文字は区別しません"#.to_string(),
-
-        "VEC" => r#"# VEC - ベクトルに変換
-
-## 機能
-文字列をスペースで分割してベクトルに変換します。
-すべての要素は文字列型になります。
-
-## 使用法
-[ 'string' ] VEC
-→ ベクトルに変換された値（要素は全て文字列）
-
-## 使用例
-[ '1 2 3' ] VEC                  # → [ '1' '2' '3' ]
-[ 'hello world' ] VEC            # → [ 'hello' 'world' ]
-[ 'a  b  c' ] VEC                # → [ 'a' 'b' 'c' ]（連続空白は無視）
-[ '' ] VEC                       # → [ ]（空ベクトル）
-[ '   ' ] VEC                    # → [ ]（空白のみは空ベクトル）
-
-## エラーケース
-[ [ 1 2 3 ] ] VEC                # エラー：String型が必要
-
-## 注意
-- String型のみ受け付けます
-- 要素は全て文字列型になります（型推論なし）
-- 数値に変換したい場合は NUM を使用してください"#.to_string(),
 
         // ============================================================================
         // 算術演算
