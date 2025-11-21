@@ -6,7 +6,6 @@
 // NUM: String → Number
 // BOOL: String → Boolean
 // NIL: String → Nil
-// VEC: String → Vector
 //
 // 【設計原則】
 // - 同型変換はエラー（型安全性の維持）
@@ -192,48 +191,6 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// VEC - 文字列をベクトルに変換
-///
-/// 【責務】
-/// - String → Vector（スペースで分割、要素は全て文字列）
-/// - 他の型はエラー
-///
-/// 【使用法】
-/// ```ajisai
-/// [ '1 2 3' ] VEC → [ '1' '2' '3' ]
-/// [ 'hello world' ] VEC → [ 'hello' 'world' ]
-/// [ '' ] VEC → [ ]（空ベクトル）
-/// ```
-///
-/// 【エラー】
-/// - String以外の型
-pub fn op_vec(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target != OperationTarget::StackTop {
-        return Err(AjisaiError::from("VEC only supports StackTop mode"));
-    }
-
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let inner_val = extract_single_element(&val)?;
-
-    match &inner_val.val_type {
-        ValueType::String(s) => {
-            let parts: Vec<&str> = s.split_whitespace().collect();
-            let elements: Vec<Value> = parts.iter()
-                .map(|part| Value { val_type: ValueType::String(part.to_string()) })
-                .collect();
-
-            interp.stack.push(Value {
-                val_type: ValueType::Vector(elements, BracketType::Square)
-            });
-            Ok(())
-        }
-        _ => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("VEC: requires String type"))
-        }
-    }
-}
-
 /// 値を文字列表現に変換する（内部ヘルパー）
 ///
 /// 【責務】
@@ -366,26 +323,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_vec_conversion() {
-        let mut interp = Interpreter::new();
-
-        // String → Vector
-        interp.stack.push(wrap_in_square_vector(
-            Value { val_type: ValueType::String("hello world".to_string()) }
-        ));
-        op_vec(&mut interp).unwrap();
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
-                assert_eq!(v.len(), 2);
-                if let ValueType::String(s1) = &v[0].val_type {
-                    assert_eq!(s1, "hello");
-                }
-                if let ValueType::String(s2) = &v[1].val_type {
-                    assert_eq!(s2, "world");
-                }
-            }
-        }
-    }
 }
