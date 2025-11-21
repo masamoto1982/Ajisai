@@ -43,7 +43,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         // 型変換
         ("STR", "任意の型を文字列に変換｜[ 42 ] STR → [ '42' ], [ TRUE ] STR → [ 'TRUE' ]", "Type Conversion"),
         ("NUM", "文字列または真偽値を数値に変換｜[ '42' ] NUM → [ 42 ], [ TRUE ] NUM → [ 1 ]", "Type Conversion"),
-        ("BOOL", "文字列を真偽値に変換｜[ 'TRUE' ] BOOL → [ TRUE ], [ 'false' ] BOOL → [ FALSE ]", "Type Conversion"),
+        ("BOOL", "文字列または数値を真偽値に変換｜[ 'TRUE' ] BOOL → [ TRUE ], [ '1' ] BOOL → [ TRUE ], [ 1 ] BOOL → [ TRUE ]", "Type Conversion"),
         ("NIL", "文字列をNilに変換｜[ 'nil' ] NIL → [ nil ]", "Type Conversion"),
 
         // 算術演算
@@ -471,27 +471,39 @@ start end step STACK RANGE
         "BOOL" => r#"# BOOL - 真偽値に変換
 
 ## 機能
-文字列を真偽値にパースします。
-"TRUE"または"FALSE"のみ受け付けます（大小文字無視）。
+文字列または数値を真偽値に変換します。
+文字列の場合、"TRUE"/"FALSE"、"1"/"0"、"真"/"偽"を受け付けます。
+数値の場合、1または0のみを受け付けます。
 
 ## 使用法
 [ 'string' ] BOOL
 → 真偽値に変換された値
+
+[ number ] BOOL
+→ 真偽値に変換された値（1 → TRUE、0 → FALSE）
 
 ## 使用例
 [ 'TRUE' ] BOOL                  # → [ TRUE ]
 [ 'FALSE' ] BOOL                 # → [ FALSE ]
 [ 'true' ] BOOL                  # → [ TRUE ]（大小文字無視）
 [ 'false' ] BOOL                 # → [ FALSE ]
+[ '1' ] BOOL                     # → [ TRUE ]
+[ '0' ] BOOL                     # → [ FALSE ]
+[ '真' ] BOOL                    # → [ TRUE ]
+[ '偽' ] BOOL                    # → [ FALSE ]
+[ 1 ] BOOL                       # → [ TRUE ]
+[ 0 ] BOOL                       # → [ FALSE ]
 
 ## エラーケース
-[ 'hello' ] BOOL                 # エラー：TRUE/FALSEでない
-[ '1' ] BOOL                     # エラー：TRUE/FALSEでない
-[ TRUE ] BOOL                    # エラー：String型が必要
+[ 'hello' ] BOOL                 # エラー：真偽値として認識不可
+[ 2 ] BOOL                       # エラー：1または0以外の数値
+[ TRUE ] BOOL                    # エラー：同型変換（Boolean → Boolean）
+[ nil ] BOOL                     # エラー：Nilは真偽値に変換不可
 
 ## 注意
-- String型のみ受け付けます
-- 大文字小文字は区別しません"#.to_string(),
+- String型またはNumber型を受け付けます
+- 文字列の'TRUE'/'FALSE'は大文字小文字を区別しません
+- 数値は1（1/1）または0（0/1）のみ有効です"#.to_string(),
 
         "NIL" => r#"# NIL - Nilに変換
 
