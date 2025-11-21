@@ -42,7 +42,7 @@
 [ FALSE ] NUM
 
 # ============================================================================
-# BOOL - String → Boolean
+# BOOL - String/Number → Boolean
 # ============================================================================
 
 # TRUE/FALSE（大文字）
@@ -56,6 +56,18 @@
 # 混在（大文字小文字無視）
 [ 'True' ] BOOL
 [ 'False' ] BOOL
+
+# '1'/'0'（文字列）
+[ '1' ] BOOL
+[ '0' ] BOOL
+
+# '真'/'偽'（日本語）
+[ '真' ] BOOL
+[ '偽' ] BOOL
+
+# 数値 → Boolean
+[ 1 ] BOOL
+[ 0 ] BOOL
 
 # ============================================================================
 # NIL - String → Nil
@@ -86,6 +98,14 @@
 # Boolean → 数値 → 文字列
 [ TRUE ] NUM STR
 [ FALSE ] NUM STR
+
+# 数値 → Boolean → 数値
+[ 1 ] BOOL NUM
+[ 0 ] BOOL NUM
+
+# 文字列 → Boolean → 数値
+[ '真' ] BOOL NUM
+[ '偽' ] BOOL NUM
 
 # 文字列連結の例
 [ 10 ] [ 20 ] + STR [ ' is the sum' ] CONCAT

@@ -4,7 +4,7 @@
 // 型変換ワード群を実装する。
 // STR: 任意の型 → String
 // NUM: String/Boolean → Number
-// BOOL: String → Boolean
+// BOOL: String/Number → Boolean
 // NIL: String → Nil
 //
 // 【設計原則】
@@ -124,22 +124,36 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// BOOL - 文字列を真偽値に変換
+/// BOOL - 文字列または数値を真偽値に変換
 ///
 /// 【責務】
-/// - String → Boolean（"TRUE" または "FALSE" のみ、大小文字無視）
+/// - String → Boolean（"TRUE"/"FALSE", "1"/"0", "真"/"偽"、大小文字無視）
+/// - Number → Boolean（1 → TRUE、0 → FALSE）
+/// - Boolean → エラー（同型変換）
+/// - Nil → エラー
 /// - 他の型はエラー
 ///
 /// 【使用法】
 /// ```ajisai
 /// [ 'TRUE' ] BOOL → [ TRUE ]
 /// [ 'false' ] BOOL → [ FALSE ]
+/// [ '1' ] BOOL → [ TRUE ]
+/// [ '0' ] BOOL → [ FALSE ]
+/// [ '真' ] BOOL → [ TRUE ]
+/// [ '偽' ] BOOL → [ FALSE ]
+/// [ 1 ] BOOL → [ TRUE ]
+/// [ 0 ] BOOL → [ FALSE ]
 /// [ 'hello' ] BOOL → ERROR
+/// [ TRUE ] BOOL → ERROR（同型変換）
+/// [ nil ] BOOL → ERROR
 /// ```
 ///
 /// 【エラー】
-/// - String以外の型
-/// - "TRUE"/"FALSE"以外の文字列
+/// - 真偽値として認識できない文字列
+/// - 1または0以外の数値
+/// - Boolean型（同型変換）
+/// - Nil型
+/// - その他の型
 pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("BOOL only supports StackTop mode"));
@@ -151,13 +165,13 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     match &inner_val.val_type {
         ValueType::String(s) => {
             let upper = s.to_uppercase();
-            let bool_val = if upper == "TRUE" {
+            let bool_val = if upper == "TRUE" || upper == "1" || s == "真" {
                 true
-            } else if upper == "FALSE" {
+            } else if upper == "FALSE" || upper == "0" || s == "偽" {
                 false
             } else {
                 return Err(AjisaiError::from(format!(
-                    "BOOL: cannot parse '{}' as boolean (expected 'TRUE' or 'FALSE')", s
+                    "BOOL: cannot parse '{}' as boolean (expected 'TRUE'/'FALSE', '1'/'0', '真'/'偽')", s
                 )));
             };
             interp.stack.push(wrap_in_square_vector(
@@ -165,9 +179,46 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
             ));
             Ok(())
         }
+        ValueType::Number(n) => {
+            use num_bigint::BigInt;
+            use num_traits::One;
+
+            let one = Fraction::new(BigInt::one(), BigInt::one());
+            let zero = Fraction::new(BigInt::from(0), BigInt::one());
+
+            if n == &one {
+                interp.stack.push(wrap_in_square_vector(
+                    Value { val_type: ValueType::Boolean(true) }
+                ));
+                Ok(())
+            } else if n == &zero {
+                interp.stack.push(wrap_in_square_vector(
+                    Value { val_type: ValueType::Boolean(false) }
+                ));
+                Ok(())
+            } else {
+                interp.stack.push(val);
+                Err(AjisaiError::from(format!(
+                    "BOOL: cannot convert number {} to boolean (only 1 and 0 are allowed)",
+                    if n.denominator == BigInt::one() {
+                        format!("{}", n.numerator)
+                    } else {
+                        format!("{}/{}", n.numerator, n.denominator)
+                    }
+                )))
+            }
+        }
+        ValueType::Boolean(_) => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("BOOL: same-type conversion (Boolean → Boolean) is not allowed"))
+        }
+        ValueType::Nil => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("BOOL: cannot convert Nil to Boolean"))
+        }
         _ => {
             interp.stack.push(val);
-            Err(AjisaiError::from("BOOL: requires String type"))
+            Err(AjisaiError::from("BOOL: requires String or Number type"))
         }
     }
 }
@@ -366,7 +417,7 @@ mod tests {
     fn test_bool_conversion() {
         let mut interp = Interpreter::new();
 
-        // String → Boolean
+        // String → Boolean (TRUE/FALSE)
         interp.stack.push(wrap_in_square_vector(
             Value { val_type: ValueType::String("TRUE".to_string()) }
         ));
@@ -376,6 +427,94 @@ mod tests {
             if let ValueType::Vector(v, _) = &val.val_type {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, true);
+                }
+            }
+        }
+
+        // String → Boolean ('1'/'0')
+        interp.stack.clear();
+        interp.stack.push(wrap_in_square_vector(
+            Value { val_type: ValueType::String("1".to_string()) }
+        ));
+        op_bool(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                if let ValueType::Boolean(b) = &v[0].val_type {
+                    assert_eq!(*b, true);
+                }
+            }
+        }
+
+        interp.stack.clear();
+        interp.stack.push(wrap_in_square_vector(
+            Value { val_type: ValueType::String("0".to_string()) }
+        ));
+        op_bool(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                if let ValueType::Boolean(b) = &v[0].val_type {
+                    assert_eq!(*b, false);
+                }
+            }
+        }
+
+        // String → Boolean ('真'/'偽')
+        interp.stack.clear();
+        interp.stack.push(wrap_in_square_vector(
+            Value { val_type: ValueType::String("真".to_string()) }
+        ));
+        op_bool(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                if let ValueType::Boolean(b) = &v[0].val_type {
+                    assert_eq!(*b, true);
+                }
+            }
+        }
+
+        interp.stack.clear();
+        interp.stack.push(wrap_in_square_vector(
+            Value { val_type: ValueType::String("偽".to_string()) }
+        ));
+        op_bool(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                if let ValueType::Boolean(b) = &v[0].val_type {
+                    assert_eq!(*b, false);
+                }
+            }
+        }
+
+        // Number → Boolean (1 → TRUE)
+        interp.stack.clear();
+        interp.stack.push(wrap_in_square_vector(
+            Value { val_type: ValueType::Number(Fraction::new(BigInt::from(1), BigInt::from(1))) }
+        ));
+        op_bool(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                if let ValueType::Boolean(b) = &v[0].val_type {
+                    assert_eq!(*b, true);
+                }
+            }
+        }
+
+        // Number → Boolean (0 → FALSE)
+        interp.stack.clear();
+        interp.stack.push(wrap_in_square_vector(
+            Value { val_type: ValueType::Number(Fraction::new(BigInt::from(0), BigInt::from(1))) }
+        ));
+        op_bool(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                if let ValueType::Boolean(b) = &v[0].val_type {
+                    assert_eq!(*b, false);
                 }
             }
         }
