@@ -521,13 +521,16 @@ start end step STACK RANGE
 [ 'Nil' ] NIL                    # → [ nil ]
 
 ## エラーケース
-[ 'hello' ] NIL                  # エラー：nilでない
-[ '0' ] NIL                      # エラー：nilでない
-[ nil ] NIL                      # エラー：String型が必要
+[ 'hello' ] NIL                  # エラー：'nil'でない文字列
+[ '0' ] NIL                      # エラー：'nil'でない文字列
+[ TRUE ] NIL                     # エラー：Booleanは変換不可
+[ 42 ] NIL                       # エラー：Numberは変換不可
+[ nil ] NIL                      # エラー：同型変換（Nil → Nil）
 
 ## 注意
 - String型のみ受け付けます
-- 大文字小文字は区別しません"#.to_string(),
+- 大文字小文字は区別しません
+- Boolean型、Number型、Nil型への適用はエラーになります"#.to_string(),
 
         // ============================================================================
         // 算術演算

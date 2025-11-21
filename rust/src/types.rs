@@ -123,7 +123,7 @@ impl fmt::Display for Value {
         match &self.val_type {
             ValueType::Number(n) => if n.denominator == BigInt::one() { write!(f, "{}", n.numerator) } else { write!(f, "{}/{}", n.numerator, n.denominator) },
             ValueType::String(s) => write!(f, "'{}'", s),
-            ValueType::Boolean(b) => write!(f, "{}", b),
+            ValueType::Boolean(b) => write!(f, "{}", if *b { "TRUE" } else { "FALSE" }),
             ValueType::Symbol(s) => write!(f, "{}", s),
             ValueType::SingletonVector(val, bracket_type) => {
                 write!(f, "{}{}{}", bracket_type.opening_char(), val, bracket_type.closing_char())
@@ -136,7 +136,7 @@ impl fmt::Display for Value {
                 }
                 write!(f, "{}", bracket_type.closing_char())
             },
-            ValueType::Nil => write!(f, "nil"),
+            ValueType::Nil => write!(f, "NIL"),
         }
     }
 }

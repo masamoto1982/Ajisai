@@ -89,7 +89,8 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let inner_val = extract_single_element(&val)?;
+    let val_clone = val.clone();
+    let inner_val = extract_single_element(&val_clone)?;
 
     match &inner_val.val_type {
         ValueType::String(s) => {
@@ -160,7 +161,8 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let inner_val = extract_single_element(&val)?;
+    let val_clone = val.clone();
+    let inner_val = extract_single_element(&val_clone)?;
 
     match &inner_val.val_type {
         ValueType::String(s) => {
@@ -227,6 +229,9 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【責務】
 /// - String → Nil（"nil" のみ、大小文字無視）
+/// - Boolean → エラー
+/// - Number → エラー
+/// - Nil → エラー（同型変換）
 /// - 他の型はエラー
 ///
 /// 【使用法】
@@ -234,18 +239,25 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 /// [ 'nil' ] NIL → [ nil ]
 /// [ 'NIL' ] NIL → [ nil ]
 /// [ 'hello' ] NIL → ERROR
+/// [ TRUE ] NIL → ERROR
+/// [ 42 ] NIL → ERROR
+/// [ nil ] NIL → ERROR（同型変換）
 /// ```
 ///
 /// 【エラー】
-/// - String以外の型
 /// - "nil"以外の文字列
+/// - Boolean型
+/// - Number型
+/// - Nil型（同型変換）
+/// - その他の型
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("NIL only supports StackTop mode"));
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let inner_val = extract_single_element(&val)?;
+    let val_clone = val.clone();
+    let inner_val = extract_single_element(&val_clone)?;
 
     match &inner_val.val_type {
         ValueType::String(s) => {
@@ -256,10 +268,23 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
                 ));
                 Ok(())
             } else {
+                interp.stack.push(val);
                 Err(AjisaiError::from(format!(
                     "NIL: cannot parse '{}' as nil (expected 'nil')", s
                 )))
             }
+        }
+        ValueType::Boolean(_) => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"))
+        }
+        ValueType::Number(_) => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("NIL: cannot convert Number to Nil"))
+        }
+        ValueType::Nil => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"))
         }
         _ => {
             interp.stack.push(val);
@@ -294,7 +319,7 @@ fn value_to_string_repr(value: &Value) -> String {
             if *b { "TRUE".to_string() } else { "FALSE".to_string() }
         }
         ValueType::Symbol(s) => s.clone(),
-        ValueType::Nil => "nil".to_string(),
+        ValueType::Nil => "NIL".to_string(),
         ValueType::SingletonVector(boxed_val, _) => {
             value_to_string_repr(boxed_val)
         }
@@ -327,7 +352,7 @@ mod tests {
 
         // Nil
         let nil = Value { val_type: ValueType::Nil };
-        assert_eq!(value_to_string_repr(&nil), "nil");
+        assert_eq!(value_to_string_repr(&nil), "NIL");
 
         // Vector
         let vec = Value {
