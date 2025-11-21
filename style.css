@@ -365,31 +365,31 @@ section h3 {
     box-shadow: 0 0 0 #ddd;
 }
 
-/* スタック項目 - 灰色 */
+/* スタック項目 - フォーカスされていない要素 */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.75rem;
     display: inline-block;
     margin: 2px;
     padding: 2px 4px;
-    background-color: #ddd;
-    color: #000;
-    border: 1px solid #ddd;
+    background-color: transparent;
+    color: #84919E;
+    border: 1px solid transparent;
 }
 
-/* スタックトップ（最新の要素）を強調 - デフォルトフォーカス（黄色） */
+/* スタックトップ（最新の要素）を強調 - フォーカスされた要素 */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #FFF100;
-    color: #000;
-    border: 1px solid #FFF100;
+    background-color: transparent;
+    color: #990099;
+    border: 1px solid transparent;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を着色（黄色） */
+/* STACKワードが入力されたとき、全スタック要素を強調 */
 #stack-display.highlight-all .stack-item {
-    background-color: #FFF100;
-    color: #000;
-    border: 1px solid #FFF100;
+    background-color: transparent;
+    color: #990099;
+    border: 1px solid transparent;
     font-weight: bold;
 }
 
