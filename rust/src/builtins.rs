@@ -42,7 +42,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
 
         // 型変換
         ("STR", "任意の型を文字列に変換｜[ 42 ] STR → [ '42' ], [ TRUE ] STR → [ 'TRUE' ]", "Type Conversion"),
-        ("NUM", "文字列を数値に変換｜[ '42' ] NUM → [ 42 ], [ '1/3' ] NUM → [ 1/3 ]", "Type Conversion"),
+        ("NUM", "文字列または真偽値を数値に変換｜[ '42' ] NUM → [ 42 ], [ TRUE ] NUM → [ 1 ]", "Type Conversion"),
         ("BOOL", "文字列を真偽値に変換｜[ 'TRUE' ] BOOL → [ TRUE ], [ 'false' ] BOOL → [ FALSE ]", "Type Conversion"),
         ("NIL", "文字列をNilに変換｜[ 'nil' ] NIL → [ nil ]", "Type Conversion"),
 
@@ -440,26 +440,33 @@ start end step STACK RANGE
         "NUM" => r#"# NUM - 数値に変換
 
 ## 機能
-文字列を数値にパースします。
-パース失敗時はエラーとなります。
+文字列または真偽値を数値に変換します。
+文字列の場合、パース失敗時はエラーとなります。
 
 ## 使用法
 [ 'string' ] NUM
 → 数値に変換された値
+
+[ boolean ] NUM
+→ 数値に変換された値（TRUE → 1、FALSE → 0）
 
 ## 使用例
 [ '42' ] NUM                     # → [ 42 ]
 [ '1/3' ] NUM                    # → [ 1/3 ]
 [ '3.14' ] NUM                   # → [ 157/50 ]（分数として正確に）
 [ '1.5e2' ] NUM                  # → [ 150 ]
+[ TRUE ] NUM                     # → [ 1 ]
+[ FALSE ] NUM                    # → [ 0 ]
 
 ## エラーケース
 [ 'hello' ] NUM                  # エラー：数値にパース不可
-[ 42 ] NUM                       # エラー：String型が必要
+[ 42 ] NUM                       # エラー：同型変換（Number → Number）
+[ nil ] NUM                      # エラー：Nilは数値に変換不可
 
 ## 注意
-- String型のみ受け付けます
-- 小数は分数に変換されます（丸め誤差なし）"#.to_string(),
+- String型またはBoolean型を受け付けます
+- 小数は分数に変換されます（丸め誤差なし）
+- 真偽値はTRUE → 1、FALSE → 0に変換されます（分数として1/1、0/1）"#.to_string(),
 
         "BOOL" => r#"# BOOL - 真偽値に変換
 

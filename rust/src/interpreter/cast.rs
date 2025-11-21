@@ -3,7 +3,7 @@
 // 【責務】
 // 型変換ワード群を実装する。
 // STR: 任意の型 → String
-// NUM: String → Number
+// NUM: String/Boolean → Number
 // BOOL: String → Boolean
 // NIL: String → Nil
 //
@@ -57,10 +57,13 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// NUM - 文字列を数値に変換
+/// NUM - 文字列または真偽値を数値に変換
 ///
 /// 【責務】
 /// - String → Number（パース失敗でエラー）
+/// - Boolean → Number（TRUE → 1、FALSE → 0）
+/// - Number → エラー（同型変換）
+/// - Nil → エラー
 /// - 他の型はエラー
 ///
 /// 【使用法】
@@ -68,12 +71,18 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
 /// [ '42' ] NUM → [ 42 ]
 /// [ '1/3' ] NUM → [ 1/3 ]
 /// [ '3.14' ] NUM → [ 157/50 ]
+/// [ TRUE ] NUM → [ 1 ]
+/// [ FALSE ] NUM → [ 0 ]
 /// [ 'hello' ] NUM → ERROR
+/// [ 42 ] NUM → ERROR（同型変換）
+/// [ nil ] NUM → ERROR
 /// ```
 ///
 /// 【エラー】
-/// - String以外の型
 /// - 数値としてパース不可能な文字列
+/// - Number型（同型変換）
+/// - Nil型
+/// - その他の型
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("NUM only supports StackTop mode"));
@@ -91,9 +100,26 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
             ));
             Ok(())
         }
+        ValueType::Boolean(b) => {
+            use num_bigint::BigInt;
+            use num_traits::One;
+            let num = if *b { BigInt::one() } else { BigInt::from(0) };
+            interp.stack.push(wrap_in_square_vector(
+                Value { val_type: ValueType::Number(Fraction::new(num, BigInt::one())) }
+            ));
+            Ok(())
+        }
+        ValueType::Number(_) => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("NUM: same-type conversion (Number → Number) is not allowed"))
+        }
+        ValueType::Nil => {
+            interp.stack.push(val);
+            Err(AjisaiError::from("NUM: cannot convert Nil to Number"))
+        }
         _ => {
             interp.stack.push(val);
-            Err(AjisaiError::from("NUM: requires String type"))
+            Err(AjisaiError::from("NUM: requires String or Boolean type"))
         }
     }
 }
@@ -299,6 +325,38 @@ mod tests {
             if let ValueType::Vector(v, _) = &val.val_type {
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator, BigInt::from(42));
+                }
+            }
+        }
+
+        // Boolean → Number (TRUE → 1)
+        interp.stack.clear();
+        interp.stack.push(wrap_in_square_vector(
+            Value { val_type: ValueType::Boolean(true) }
+        ));
+        op_num(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator, BigInt::from(1));
+                    assert_eq!(n.denominator, BigInt::from(1));
+                }
+            }
+        }
+
+        // Boolean → Number (FALSE → 0)
+        interp.stack.clear();
+        interp.stack.push(wrap_in_square_vector(
+            Value { val_type: ValueType::Boolean(false) }
+        ));
+        op_num(&mut interp).unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v, _) = &val.val_type {
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator, BigInt::from(0));
+                    assert_eq!(n.denominator, BigInt::from(1));
                 }
             }
         }
