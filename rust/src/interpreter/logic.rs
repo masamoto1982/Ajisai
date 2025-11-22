@@ -23,15 +23,16 @@ use crate::types::{Value, ValueType, BracketType};
 /// - `[true] NOT` → `[false]`
 /// - `[false] NOT` → `[true]`
 /// - `[true false true] NOT` → `[false true false]`
+/// - `[nil] NOT` → `[nil]` (Kleene論理: NOT unknown = unknown)
 ///
 /// 【引数スタック】
-/// - [value]: Boolean値のベクタ
+/// - [value]: Boolean値またはNilのベクタ
 ///
 /// 【戻り値スタック】
 /// - [result]: 反転後の論理値のベクタ
 ///
 /// 【エラー】
-/// - Boolean以外の型の場合
+/// - Boolean/Nil以外の型の場合
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
@@ -51,9 +52,13 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                     ValueType::Boolean(b) => {
                         result_vec.push(Value { val_type: ValueType::Boolean(!b) });
                     },
+                    ValueType::Nil => {
+                        // NOT nil = nil (Kleene論理: NOT unknown = unknown)
+                        result_vec.push(Value { val_type: ValueType::Nil });
+                    },
                     _ => {
                         interp.stack.push(Value { val_type: ValueType::Vector(vec, bracket_type) });
-                        return Err(AjisaiError::type_error("boolean", "other type"));
+                        return Err(AjisaiError::type_error("boolean or nil", "other type"));
                     }
                 }
             }
