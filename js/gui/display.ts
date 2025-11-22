@@ -196,7 +196,7 @@ export class Display {
             case 'symbol':
                 return String(item.value);
             case 'boolean':
-                return item.value ? 'true' : 'false';
+                return item.value ? 'TRUE' : 'FALSE';
             case 'vector': {
                 // ★ ここからが修正箇所
                 const bracketIndex = depth % 3; // ネストレベルを3で割った剰余
@@ -222,7 +222,7 @@ export class Display {
                 // ★ 修正ここまで
             }
             case 'nil':
-                return 'nil';
+                return 'NIL';
             default:
                 return JSON.stringify(item.value);
         }
