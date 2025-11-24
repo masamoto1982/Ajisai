@@ -166,19 +166,6 @@ export class GUI {
                 e.stopImmediatePropagation();
             }
         }, true);
-        
-        // モバイルでOutputエリアやStackエリアをタップしたら入力モードに戻す
-        if (this.mobile.isMobile()) {
-            this.elements.outputArea.addEventListener('click', () => {
-                this.mobile.updateView('input');
-                this.editor.focus();
-            });
-            
-            this.elements.stackArea.addEventListener('click', () => {
-                this.mobile.updateView('input');
-                this.editor.focus();
-            });
-        }
     }
 
     updateAllDisplays(): void {

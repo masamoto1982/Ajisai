@@ -505,17 +505,6 @@ section h3 {
         position: relative;
     }
 
-    .output-area::after,
-    .stack-area::after {
-        content: 'タップして入力に戻る';
-        position: absolute;
-        bottom: 0.5rem;
-        right: 0.5rem;
-        font-size: 0.75rem;
-        color: #999;
-        pointer-events: none;
-    }
-
     .input-area,
     .dictionary-area {
         cursor: default;
