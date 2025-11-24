@@ -84,13 +84,9 @@ export class MobileHandler {
 
         // 横方向のスワイプが縦方向より大きい場合のみ処理
         if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > this.SWIPE_THRESHOLD) {
-            if (deltaX > 0) {
-                // 右スワイプ → 入力モードへ
-                this.updateView('input');
-            } else {
-                // 左スワイプ → 実行モードへ
-                this.updateView('execution');
-            }
+            // 左右どちらのスワイプでも、現在のモードと反対のモードに切り替え
+            const newMode = this.currentMode === 'input' ? 'execution' : 'input';
+            this.updateView(newMode);
         }
     }
 }
