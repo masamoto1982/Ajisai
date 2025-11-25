@@ -9,7 +9,7 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_integer_from_value, extract_number, wrap_in_square_vector};
-use crate::types::{Value, ValueType, BracketType};
+use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_traits::Zero;
 
@@ -48,18 +48,18 @@ where
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let (a_vec, a_bracket) = match a_val.val_type {
-                ValueType::Vector(v, b) => (v, b),
+            let (a_vec) = match a_val.val_type {
+                ValueType::Vector(v) => v,
                 _ => {
                     interp.stack.push(a_val);
                     interp.stack.push(b_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
             };
-            let (b_vec, _) = match b_val.val_type {
-                ValueType::Vector(v, b) => (v, b),
+            let b_vec = match b_val.val_type {
+                ValueType::Vector(v) => v,
                 _ => {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
                     interp.stack.push(b_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
@@ -88,8 +88,8 @@ where
             } else {
                 // 要素数が等しい、または両方とも単一要素
                 if a_len != b_len {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
-                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec, BracketType::Square) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec) });
                     return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
                 }
                 for (a, b) in a_vec.iter().zip(b_vec.iter()) {
@@ -99,9 +99,9 @@ where
             }
 
             // "No change is an error" 原則のチェック
-            let result_value = Value { val_type: ValueType::Vector(result_vec.clone(), a_bracket.clone()) };
-            let original_a = Value { val_type: ValueType::Vector(a_vec, a_bracket.clone()) };
-            let original_b = Value { val_type: ValueType::Vector(b_vec, BracketType::Square) };
+            let result_value = Value { val_type: ValueType::Vector(result_vec.clone()) };
+            let original_a = Value { val_type: ValueType::Vector(a_vec) };
+            let original_b = Value { val_type: ValueType::Vector(b_vec) };
 
             if result_value == original_a || result_value == original_b {
                 interp.stack.push(original_a);

@@ -7,7 +7,7 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{extract_single_element, get_integer_from_value, wrap_result_value};
-use crate::types::{Value, ValueType, BracketType};
+use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
 // ============================================================================

@@ -2,7 +2,7 @@
 
 use crate::interpreter::{Interpreter, WordDefinition};
 use crate::error::{AjisaiError, Result};
-use crate::types::{Token, BracketType, ValueType, ExecutionLine};
+use crate::types::{Token, ValueType, ExecutionLine, BracketType};
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
@@ -17,7 +17,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     // ヘルパー関数: ベクトルラップされた文字列かチェック
     let is_wrapped_string = |val: &crate::types::Value| -> bool {
-        if let ValueType::Vector(v, _) = &val.val_type {
+        if let ValueType::Vector(v) = &val.val_type {
             if v.len() == 1 {
                 matches!(v[0].val_type, ValueType::String(_))
             } else {
@@ -51,7 +51,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if has_description {
         if let Some(desc_val) = interp.stack.pop() {
             // ベクトルラップされた文字列から取得
-            if let ValueType::Vector(v, _) = desc_val.val_type {
+            if let ValueType::Vector(v) = desc_val.val_type {
                 if v.len() == 1 {
                     if let ValueType::String(s) = &v[0].val_type {
                         description = Some(s.clone());
@@ -70,7 +70,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     
     // 定義本体を文字列として取得
     let definition_str = match &def_val.val_type {
-        ValueType::Vector(vec, _) => {
+        ValueType::Vector(vec) => {
             if vec.len() == 1 {
                 match &vec[0].val_type {
                     ValueType::String(s) => s.clone(),

@@ -7,7 +7,7 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, ValueType, BracketType};
+use crate::types::{Value, ValueType};
 
 // ============================================================================
 // 論理演算子
@@ -38,8 +38,8 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let (vec, bracket_type) = match val.val_type {
-                ValueType::Vector(v, b) => (v, b),
+            let vec = match val.val_type {
+                ValueType::Vector(v) => v,
                 _ => {
                     interp.stack.push(val);
                     return Err(AjisaiError::type_error("vector", "other type"));
@@ -57,13 +57,13 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                         result_vec.push(Value { val_type: ValueType::Nil });
                     },
                     _ => {
-                        interp.stack.push(Value { val_type: ValueType::Vector(vec, bracket_type) });
+                        interp.stack.push(Value { val_type: ValueType::Vector(vec) });
                         return Err(AjisaiError::type_error("boolean or nil", "other type"));
                     }
                 }
             }
 
-            let result = Value { val_type: ValueType::Vector(result_vec, bracket_type) };
+            let result = Value { val_type: ValueType::Vector(result_vec) };
             interp.stack.push(result);
             Ok(())
         },
@@ -133,18 +133,18 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let (a_vec, a_bracket) = match a_val.val_type {
-                ValueType::Vector(v, b) => (v, b),
+            let a_vec = match a_val.val_type {
+                ValueType::Vector(v) => v,
                 _ => {
                     interp.stack.push(a_val);
                     interp.stack.push(b_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
             };
-            let (b_vec, _) = match b_val.val_type {
-                ValueType::Vector(v, b) => (v, b),
+            let b_vec = match b_val.val_type {
+                ValueType::Vector(v) => v,
                 _ => {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
                     interp.stack.push(b_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
@@ -173,8 +173,8 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             } else {
                 // 要素数が等しい、または両方とも単一要素
                 if a_len != b_len {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
-                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec, BracketType::Square) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec) });
                     return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
                 }
                 for (a, b) in a_vec.iter().zip(b_vec.iter()) {
@@ -183,7 +183,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            let result = Value { val_type: ValueType::Vector(result_vec, a_bracket) };
+            let result = Value { val_type: ValueType::Vector(result_vec) };
             interp.stack.push(result);
             Ok(())
         },
@@ -285,18 +285,18 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let (a_vec, a_bracket) = match a_val.val_type {
-                ValueType::Vector(v, b) => (v, b),
+            let a_vec = match a_val.val_type {
+                ValueType::Vector(v) => v,
                 _ => {
                     interp.stack.push(a_val);
                     interp.stack.push(b_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
             };
-            let (b_vec, _) = match b_val.val_type {
-                ValueType::Vector(v, b) => (v, b),
+            let b_vec = match b_val.val_type {
+                ValueType::Vector(v) => v,
                 _ => {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
                     interp.stack.push(b_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
@@ -325,8 +325,8 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             } else {
                 // 要素数が等しい、または両方とも単一要素
                 if a_len != b_len {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec, a_bracket) });
-                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec, BracketType::Square) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec) });
                     return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
                 }
                 for (a, b) in a_vec.iter().zip(b_vec.iter()) {
@@ -335,7 +335,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            let result = Value { val_type: ValueType::Vector(result_vec, a_bracket) };
+            let result = Value { val_type: ValueType::Vector(result_vec) };
             interp.stack.push(result);
             Ok(())
         },

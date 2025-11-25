@@ -14,15 +14,26 @@ pub mod cast;
 pub mod datetime;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition, ExecutionLine};
+use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine};
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
 use self::helpers::wrap_in_square_vector;
 
+/// 操作対象を指定する列挙型
+///
+/// Ajisaiでは、操作を「スタック全体」または「スタックトップの要素」に
+/// 対して実行できる。この列挙型は現在の操作スコープを表す。
+///
+/// - `Stack`: スタック全体を操作対象とする（例: STACK GET）
+/// - `StackTop`: スタックトップの要素を操作対象とする（デフォルト）
+///
+/// 各単語の実行後、自動的に StackTop にリセットされる。
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTarget {
+    /// スタック全体を操作対象とする
     Stack,
+    /// スタックトップの要素を操作対象とする（デフォルト）
     StackTop,
 }
 
@@ -51,7 +62,7 @@ impl Interpreter {
         interpreter
     }
 
-    fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, BracketType, usize)> {
+    fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
         let bracket_type = match &tokens[start_index] {
             Token::VectorStart(bt) => bt.clone(),
             _ => return Err(AjisaiError::from("Expected vector start")),
@@ -63,12 +74,12 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart(_) => {
-                    let (nested_values, _, consumed) = self.collect_vector(tokens, i)?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values, BracketType::Square) });
+                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                    values.push(Value { val_type: ValueType::Vector(nested_values) });
                     i += consumed;
                 },
                 Token::VectorEnd(bt) if *bt == bracket_type => {
-                    return Ok((values, BracketType::Square, i - start_index + 1));
+                    return Ok((values, i - start_index + 1));
                 },
                 Token::Number(n) => {
                     values.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
@@ -246,15 +257,20 @@ impl Interpreter {
                     self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::VectorStart(_) => {
-                    let (values, _, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
+                    let (values, consumed) = self.collect_vector(tokens, i)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(values) });
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
                     let upper_name = name.to_uppercase();
                     match upper_name.as_str() {
-                        "STACK" => self.operation_target = OperationTarget::Stack,
-                        "STACKTOP" => self.operation_target = OperationTarget::StackTop,
+                        // 操作スコープを変更するキーワード
+                        "STACK" => {
+                            self.operation_target = OperationTarget::Stack;
+                        },
+                        "STACKTOP" => {
+                            self.operation_target = OperationTarget::StackTop;
+                        },
                         _ => {
                             // 末尾位置かつ現在実行中の関数と同じ場合は末尾再帰フラグを立てる
                             let is_tail = self.is_tail_position(tokens, i);
@@ -268,6 +284,8 @@ impl Interpreter {
                             } else {
                                 self.execute_word_sync(&upper_name)?;
                             }
+                            // 単語実行後、操作スコープをデフォルトにリセット
+                            // これにより、STACK/STACKTOP の効果は次の操作にのみ適用される
                             self.operation_target = OperationTarget::StackTop;
                         }
                     }
@@ -305,15 +323,20 @@ impl Interpreter {
                     self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::VectorStart(_) => {
-                    let (values, _, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values, BracketType::Square) });
+                    let (values, consumed) = self.collect_vector(tokens, i)?;
+                    self.stack.push(Value { val_type: ValueType::Vector(values) });
                     i += consumed - 1;
                 },
                 Token::Symbol(name) => {
                     let upper_name = name.to_uppercase();
                     match upper_name.as_str() {
-                        "STACK" => self.operation_target = OperationTarget::Stack,
-                        "STACKTOP" => self.operation_target = OperationTarget::StackTop,
+                        // 操作スコープを変更するキーワード
+                        "STACK" => {
+                            self.operation_target = OperationTarget::Stack;
+                        },
+                        "STACKTOP" => {
+                            self.operation_target = OperationTarget::StackTop;
+                        },
                         _ => {
                             // 末尾位置かつ現在実行中の関数と同じ場合は末尾再帰フラグを立てる
                             let is_tail = self.is_tail_position(tokens, i);
@@ -327,6 +350,8 @@ impl Interpreter {
                             } else {
                                 self.execute_word_async(&upper_name).await?;
                             }
+                            // 単語実行後、操作スコープをデフォルトにリセット
+                            // これにより、STACK/STACKTOP の効果は次の操作にのみ適用される
                             self.operation_target = OperationTarget::StackTop;
                         }
                     }
@@ -350,14 +375,7 @@ impl Interpreter {
 
         match &top.val_type {
             ValueType::Boolean(b) => Ok(*b),
-            ValueType::SingletonVector(boxed_val, _) => {
-                if let ValueType::Boolean(b) = boxed_val.val_type {
-                    Ok(b)
-                } else {
-                    Ok(true)
-                }
-            },
-            ValueType::Vector(v, _) => {
+            ValueType::Vector(v) => {
                 if v.len() == 1 {
                     if let ValueType::Boolean(b) = v[0].val_type {
                         Ok(b)
@@ -1039,7 +1057,7 @@ mod tests {
         // Verify result
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 1, "Result vector should have one element");
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator.to_string(), "8", "Result should be 8");
@@ -1083,7 +1101,7 @@ mod tests {
         // Verify result: (1 + 2) * 3 = 9
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 1, "Result vector should have one element");
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator.to_string(), "9", "Result should be 9");
@@ -1108,7 +1126,7 @@ mod tests {
         // Verify result: (10 + 20) * 5 = 150
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 1, "Result vector should have one element");
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator.to_string(), "150", "Result should be 150");
@@ -1134,7 +1152,7 @@ mod tests {
         // Result should be [100] because 5 > 3 is true
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 1, "Result vector should have one element");
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator.to_string(), "100", "Result should be 100");

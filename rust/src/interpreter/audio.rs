@@ -12,7 +12,7 @@ pub fn op_sound(interp: &mut Interpreter) -> Result<()> {
     let music_data = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     
     match &music_data.val_type {
-        ValueType::Vector(tracks, _) => {
+        ValueType::Vector(tracks) => {
             let mut audio_commands = Vec::new();
             
             for (track_index, track) in tracks.iter().enumerate() {
@@ -21,7 +21,7 @@ pub fn op_sound(interp: &mut Interpreter) -> Result<()> {
                         // 文字列は出力に表示
                         interp.output_buffer.push_str(&format!("{}\n", s));
                     },
-                    ValueType::Vector(notes, _) => {
+                    ValueType::Vector(notes) => {
                         // トラックデータを処理
                         let track_data = process_track(notes)?;
                         if !track_data.is_empty() {
@@ -110,7 +110,7 @@ fn process_single_note(note: &Value) -> Result<Option<serde_json::Value>> {
                 "long": is_long
             })))
         },
-        ValueType::Vector(elements, _) if elements.len() == 2 => {
+        ValueType::Vector(elements) if elements.len() == 2 => {
             // [音程 長さ] のペア
             let note_part = &elements[0];
             let duration_part = &elements[1];

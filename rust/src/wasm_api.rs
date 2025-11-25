@@ -271,18 +271,13 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
         "boolean" => ValueType::Boolean(value_js.as_bool().ok_or("Value not boolean")?),
         "symbol" => ValueType::Symbol(value_js.as_string().ok_or("Value not string")?),
         "vector" => {
-            let bracket_type_str = js_sys::Reflect::get(&obj, &"bracketType".into()).map_err(|_| "No bracketType".to_string())?.as_string();
-            let bracket_type = match bracket_type_str.as_deref() {
-                Some("curly") => BracketType::Curly,
-                Some("round") => BracketType::Round,
-                _ => BracketType::Square,
-            };
+            // bracketType は表示層で深さから計算されるため、ここでは無視
             let js_array = js_sys::Array::from(&value_js);
             let mut vec = Vec::new();
             for i in 0..js_array.length() {
                 vec.push(js_value_to_value(js_array.get(i))?);
             }
-            ValueType::Vector(vec, bracket_type)
+            ValueType::Vector(vec)
         },
         "nil" => ValueType::Nil,
         _ => return Err(format!("Unknown type: {}", type_str)),
@@ -299,8 +294,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
         ValueType::String(_) => "string",
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
-        ValueType::SingletonVector(_, _) => "vector",
-        ValueType::Vector(_, _) => "vector",
+        ValueType::Vector(_) => "vector",
         ValueType::Nil => "nil",
     };
     
@@ -322,29 +316,13 @@ fn value_to_js_value(value: &Value) -> JsValue {
         ValueType::Symbol(s) => {
             js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
         },
-        ValueType::SingletonVector(boxed_val, bracket_type) => {
-            let js_array = js_sys::Array::new();
-            js_array.push(&value_to_js_value(boxed_val));
-            js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
-            let bracket_str = match bracket_type {
-                BracketType::Square => "square",
-                BracketType::Curly => "curly",
-                BracketType::Round => "round",
-            };
-            js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
-        },
-        ValueType::Vector(vec, bracket_type) => {
+        ValueType::Vector(vec) => {
             let js_array = js_sys::Array::new();
             for item in vec {
                 js_array.push(&value_to_js_value(item));
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
-            let bracket_str = match bracket_type {
-                BracketType::Square => "square",
-                BracketType::Curly => "curly",
-                BracketType::Round => "round",
-            };
-            js_sys::Reflect::set(&obj, &"bracketType".into(), &bracket_str.into()).unwrap();
+            // bracketType は表示層で深さから計算されるため、送信しない
         },
         ValueType::Nil => {
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();

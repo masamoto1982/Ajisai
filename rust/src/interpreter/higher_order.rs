@@ -8,7 +8,7 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
-use crate::types::{Value, ValueType, BracketType};
+use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -69,7 +69,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
+            if let ValueType::Vector(elements) = target_val.val_type {
                 let mut results = Vec::new();
 
                 // operation_target を一時的に保存してStackTopに設定
@@ -79,7 +79,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 for elem in elements {
                     // 各要素を単一要素ベクタとしてプッシュ
                     interp.stack.push(Value {
-                        val_type: ValueType::Vector(vec![elem], BracketType::Square)
+                        val_type: ValueType::Vector(vec![elem])
                     });
                     // ワードを実行
                     interp.execute_word_sync(&word_name)?;
@@ -89,11 +89,11 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         .ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
 
                     // 単一要素ベクタの場合はアンラップ
-                    if let ValueType::Vector(mut v, _) = result_vec.val_type {
+                    if let ValueType::Vector(mut v) = result_vec.val_type {
                         if v.len() == 1 {
                             results.push(v.remove(0));
                         } else {
-                            results.push(Value { val_type: ValueType::Vector(v, BracketType::Square) });
+                            results.push(Value { val_type: ValueType::Vector(v) });
                         }
                     } else {
                         return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
@@ -102,7 +102,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
                 // operation_target を復元
                 interp.operation_target = saved_target;
-                interp.stack.push(Value { val_type: ValueType::Vector(results, bracket_type) });
+                interp.stack.push(Value { val_type: ValueType::Vector(results) });
             } else {
                 return Err(AjisaiError::type_error("vector", "other type"));
             }
@@ -197,7 +197,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
+            if let ValueType::Vector(elements) = target_val.val_type {
                 let mut results = Vec::new();
 
                 // operation_target を保存
@@ -207,7 +207,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 for elem in elements {
                     // 各要素を単一要素ベクタとしてプッシュ
                     interp.stack.push(Value {
-                        val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square)
+                        val_type: ValueType::Vector(vec![elem.clone()])
                     });
                     // ワードを実行
                     interp.execute_word_sync(&word_name)?;
@@ -216,7 +216,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     let condition_result = interp.stack.pop()
                         .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
-                    if let ValueType::Vector(v, _) = condition_result.val_type {
+                    if let ValueType::Vector(v) = condition_result.val_type {
                         if v.len() == 1 {
                             if let ValueType::Boolean(b) = v[0].val_type {
                                 if b {
@@ -235,7 +235,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
                 // operation_target を復元
                 interp.operation_target = saved_target;
-                interp.stack.push(Value { val_type: ValueType::Vector(results, bracket_type) });
+                interp.stack.push(Value { val_type: ValueType::Vector(results) });
             } else {
                 return Err(AjisaiError::type_error("vector", "other type"));
             }
@@ -266,7 +266,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 let condition_result = interp.stack.pop()
                     .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
-                if let ValueType::Vector(v, _) = condition_result.val_type {
+                if let ValueType::Vector(v) = condition_result.val_type {
                     if v.len() == 1 {
                         if let ValueType::Boolean(b) = v[0].val_type {
                             if b {
@@ -339,7 +339,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            if let ValueType::Vector(elements, bracket_type) = target_val.val_type {
+            if let ValueType::Vector(elements) = target_val.val_type {
                 let mut count = 0i64;
 
                 // operation_target を保存
@@ -349,7 +349,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 for elem in &elements {
                     // 各要素を単一要素ベクタとしてプッシュ
                     interp.stack.push(Value {
-                        val_type: ValueType::Vector(vec![elem.clone()], BracketType::Square)
+                        val_type: ValueType::Vector(vec![elem.clone()])
                     });
                     // ワードを実行
                     interp.execute_word_sync(&word_name)?;
@@ -358,7 +358,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                     let condition_result = interp.stack.pop()
                         .ok_or_else(|| AjisaiError::from("COUNT word must return a boolean value"))?;
 
-                    if let ValueType::Vector(v, _) = condition_result.val_type {
+                    if let ValueType::Vector(v) = condition_result.val_type {
                         if v.len() == 1 {
                             if let ValueType::Boolean(b) = v[0].val_type {
                                 if b {
@@ -379,15 +379,14 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 interp.operation_target = saved_target;
 
                 // 元のベクタをスタックに戻す
-                interp.stack.push(Value { val_type: ValueType::Vector(elements, bracket_type) });
+                interp.stack.push(Value { val_type: ValueType::Vector(elements) });
 
                 // カウント結果をプッシュ
                 interp.stack.push(Value {
                     val_type: ValueType::Vector(
                         vec![Value {
                             val_type: ValueType::Number(Fraction::new(BigInt::from(count), BigInt::one())),
-                        }],
-                        BracketType::Square,
+                        }]
                     )
                 });
             } else {
@@ -420,7 +419,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 let condition_result = interp.stack.pop()
                     .ok_or_else(|| AjisaiError::from("COUNT word must return a boolean value"))?;
 
-                if let ValueType::Vector(v, _) = condition_result.val_type {
+                if let ValueType::Vector(v) = condition_result.val_type {
                     if v.len() == 1 {
                         if let ValueType::Boolean(b) = v[0].val_type {
                             if b {
@@ -441,8 +440,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 val_type: ValueType::Vector(
                     vec![Value {
                         val_type: ValueType::Number(Fraction::new(BigInt::from(count_result), BigInt::one())),
-                    }],
-                    BracketType::Square,
+                    }]
                 )
             });
         }
