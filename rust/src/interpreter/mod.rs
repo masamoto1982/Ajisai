@@ -11,6 +11,7 @@ pub mod io;
 pub mod audio;
 pub mod higher_order;
 pub mod cast;
+pub mod datetime;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, BracketType, WordDefinition, ExecutionLine};
@@ -518,6 +519,9 @@ impl Interpreter {
             "NUM" => cast::op_num(self),
             "BOOL" => cast::op_bool(self),
             "NIL" => cast::op_nil(self),
+            "NOW" => datetime::op_now(self),
+            "DATETIME" => datetime::op_datetime(self),
+            "TIMESTAMP" => datetime::op_timestamp(self),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
