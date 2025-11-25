@@ -15,7 +15,7 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{wrap_in_square_vector, extract_single_element};
-use crate::types::{Value, ValueType, BracketType};
+use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
 /// STR - 任意の型を文字列に変換
@@ -320,10 +320,7 @@ fn value_to_string_repr(value: &Value) -> String {
         }
         ValueType::Symbol(s) => s.clone(),
         ValueType::Nil => "NIL".to_string(),
-        ValueType::SingletonVector(boxed_val, _) => {
-            value_to_string_repr(boxed_val)
-        }
-        ValueType::Vector(vec, _) => {
+        ValueType::Vector(vec) => {
             vec.iter()
                 .map(|v| value_to_string_repr(v))
                 .collect::<Vec<_>>()
@@ -361,8 +358,7 @@ mod tests {
                     Value { val_type: ValueType::Number(Fraction::new(BigInt::from(1), BigInt::one())) },
                     Value { val_type: ValueType::Number(Fraction::new(BigInt::from(2), BigInt::one())) },
                     Value { val_type: ValueType::Number(Fraction::new(BigInt::from(3), BigInt::one())) },
-                ],
-                BracketType::Square
+                ]
             )
         };
         assert_eq!(value_to_string_repr(&vec), "1 2 3");
@@ -379,7 +375,7 @@ mod tests {
         op_str(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::String(s) = &v[0].val_type {
                     assert_eq!(s, "42");
                 }
@@ -398,7 +394,7 @@ mod tests {
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator, BigInt::from(42));
                 }
@@ -413,7 +409,7 @@ mod tests {
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator, BigInt::from(1));
                     assert_eq!(n.denominator, BigInt::from(1));
@@ -429,7 +425,7 @@ mod tests {
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator, BigInt::from(0));
                     assert_eq!(n.denominator, BigInt::from(1));
@@ -449,7 +445,7 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, true);
                 }
@@ -464,7 +460,7 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, true);
                 }
@@ -478,7 +474,7 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, false);
                 }
@@ -493,7 +489,7 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, true);
                 }
@@ -507,7 +503,7 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, false);
                 }
@@ -522,7 +518,7 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, true);
                 }
@@ -537,7 +533,7 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v, _) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, false);
                 }

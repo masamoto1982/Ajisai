@@ -91,7 +91,7 @@ pub(crate) async fn execute_wait(interp: &mut Interpreter) -> Result<()> {
     let name_val = interp.stack.pop().unwrap();
 
     let delay_ms = match &delay_val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
+        ValueType::Vector(v) if v.len() == 1 => {
             match &v[0].val_type {
                 ValueType::Number(n) if n.denominator == BigInt::one() => {
                     n.numerator.to_u64().ok_or_else(|| AjisaiError::from("Delay too large"))?

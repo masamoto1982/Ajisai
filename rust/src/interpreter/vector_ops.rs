@@ -9,7 +9,7 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_bigint_from_value, normalize_index, unwrap_single_element, wrap_in_square_vector};
-use crate::types::{Value, ValueType, BracketType};
+use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
@@ -49,7 +49,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            if let ValueType::Vector(v, bracket_type) = &target_val.val_type {
+            if let ValueType::Vector(v) = &target_val.val_type {
                 let len = v.len();
                 if len == 0 {
                     interp.stack.push(target_val);
@@ -122,7 +122,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             let element_to_insert = unwrap_single_element(element);
 
             match vector_val.val_type {
-                ValueType::Vector(mut v, bracket_type) => {
+                ValueType::Vector(mut v) => {
                     let len = v.len() as i64;
                     let insert_index = if index < 0 {
                         // 負数インデックス: -1は末尾、-2は末尾の1つ前
@@ -133,12 +133,12 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
                         (index as usize).min(v.len())
                     };
 
-                    if let ValueType::Vector(elems, _) = element_to_insert.val_type {
+                    if let ValueType::Vector(elems) = element_to_insert.val_type {
                         v.splice(insert_index..insert_index, elems);
                     } else {
                         v.insert(insert_index, element_to_insert);
                     }
-                    interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
                 _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -195,13 +195,13 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             let replace_element = unwrap_single_element(new_element);
 
             match vector_val.val_type {
-                ValueType::Vector(mut v, bracket_type) => {
+                ValueType::Vector(mut v) => {
                     let len = v.len();
                     let actual_index = normalize_index(index, len)
                         .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
 
                     v[actual_index] = replace_element;
-                    interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
                 _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -249,13 +249,13 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match vector_val.val_type {
-                ValueType::Vector(mut v, bracket_type) => {
+                ValueType::Vector(mut v) => {
                     let len = v.len();
                     let actual_index = normalize_index(index, len)
                         .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
 
                     v.remove(actual_index);
-                    interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
                 _ => Err(AjisaiError::type_error("vector", "other type")),
@@ -300,7 +300,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match &target_val.val_type {
-                ValueType::Vector(v, _) => {
+                ValueType::Vector(v) => {
                     let len = v.len();
                     interp.stack.push(target_val);
                     len
@@ -351,24 +351,24 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match vector_val.val_type {
-                ValueType::Vector(v, bracket_type) => {
+                ValueType::Vector(v) => {
                     let len = v.len();
                     let result = if count < 0 {
                         let abs_count = (-count) as usize;
                         if abs_count > len {
-                            interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                            interp.stack.push(Value { val_type: ValueType::Vector(v) });
                             return Err(AjisaiError::from("Take count exceeds vector length"));
                         }
                         v[len - abs_count..].to_vec()
                     } else {
                         let take_count = count as usize;
                         if take_count > len {
-                            interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                            interp.stack.push(Value { val_type: ValueType::Vector(v) });
                             return Err(AjisaiError::from("Take count exceeds vector length"));
                         }
                         v[..take_count].to_vec()
                     };
-                    interp.stack.push(Value { val_type: ValueType::Vector(result, bracket_type) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(result) });
                     Ok(())
                 },
                 _ => {
@@ -443,7 +443,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
             let vector_val = interp.stack.pop()
                 .ok_or_else(|| AjisaiError::from("SPLIT requires a vector to split"))?;
             match vector_val.val_type {
-                ValueType::Vector(v, bracket_type) => {
+                ValueType::Vector(v) => {
                     let total_size: usize = sizes.iter().sum();
                     if total_size > v.len() {
                         return Err(AjisaiError::from("Split sizes sum exceeds vector length"));
@@ -454,15 +454,14 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                     for &size in &sizes {
                         result_vectors.push(Value {
                             val_type: ValueType::Vector(
-                                v[current_pos..current_pos + size].to_vec(),
-                                bracket_type.clone()
+                                v[current_pos..current_pos + size].to_vec()
                             )
                         });
                         current_pos += size;
                     }
                     if current_pos < v.len() {
                         result_vectors.push(Value {
-                            val_type: ValueType::Vector(v[current_pos..].to_vec(), bracket_type)
+                            val_type: ValueType::Vector(v[current_pos..].to_vec())
                         });
                     }
                     interp.stack.extend(result_vectors);
@@ -482,10 +481,10 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 
             for &size in &sizes {
                 let chunk = remaining_stack.drain(..size).collect();
-                result_stack.push(Value { val_type: ValueType::Vector(chunk, BracketType::Square) });
+                result_stack.push(Value { val_type: ValueType::Vector(chunk) });
             }
             if !remaining_stack.is_empty() {
-                result_stack.push(Value { val_type: ValueType::Vector(remaining_stack, BracketType::Square) });
+                result_stack.push(Value { val_type: ValueType::Vector(remaining_stack) });
             }
             interp.stack = result_stack;
             Ok(())
@@ -556,23 +555,16 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             }
 
             let mut result_vec = Vec::new();
-            let mut final_bracket_type = BracketType::Square;
-
-            if !vecs_to_concat.is_empty() {
-                if let ValueType::Vector(_, bracket_type) = &vecs_to_concat[0].val_type {
-                    final_bracket_type = bracket_type.clone();
-                }
-            }
 
             for val in vecs_to_concat {
-                if let ValueType::Vector(v, _) = val.val_type {
+                if let ValueType::Vector(v) = val.val_type {
                     result_vec.extend(v);
                 } else {
                     result_vec.push(val);
                 }
             }
 
-            interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
+            interp.stack.push(Value { val_type: ValueType::Vector(result_vec) });
             Ok(())
         }
         OperationTarget::Stack => {
@@ -607,23 +599,16 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             }
 
             let mut result_vec = Vec::new();
-            let mut final_bracket_type = BracketType::Square;
-
-            if !vecs_to_concat.is_empty() {
-                if let ValueType::Vector(_, bracket_type) = &vecs_to_concat[0].val_type {
-                    final_bracket_type = bracket_type.clone();
-                }
-            }
 
             for val in vecs_to_concat {
-                if let ValueType::Vector(v, _) = val.val_type {
+                if let ValueType::Vector(v) = val.val_type {
                     result_vec.extend(v);
                 } else {
                     result_vec.push(val);
                 }
             }
 
-            interp.stack.push(Value { val_type: ValueType::Vector(result_vec, final_bracket_type) });
+            interp.stack.push(Value { val_type: ValueType::Vector(result_vec) });
             Ok(())
         }
     }
@@ -654,18 +639,18 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match val.val_type {
-                ValueType::Vector(mut v, bracket_type) => {
+                ValueType::Vector(mut v) => {
                     if v.len() < 2 {
-                        interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                        interp.stack.push(Value { val_type: ValueType::Vector(v) });
                         return Err(AjisaiError::from("REVERSE resulted in no change on a vector with less than 2 elements"));
                     }
                     let original_v = v.clone();
                     v.reverse();
                     if v == original_v {
-                        interp.stack.push(Value { val_type: ValueType::Vector(original_v, bracket_type) });
+                        interp.stack.push(Value { val_type: ValueType::Vector(original_v) });
                         return Err(AjisaiError::from("REVERSE resulted in no change (vector is a palindrome)"));
                     }
-                    interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                    interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
                 _ => {
@@ -697,7 +682,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
 /// 【用途】
 /// - LEVEL操作での平坦化判定
 fn is_nested(values: &[Value]) -> bool {
-    values.iter().any(|v| matches!(v.val_type, ValueType::Vector(_, _)))
+    values.iter().any(|v| matches!(v.val_type, ValueType::Vector(_)))
 }
 
 /// ベクタを再帰的に平坦化する（内部ヘルパー）
@@ -709,7 +694,7 @@ fn is_nested(values: &[Value]) -> bool {
 /// - LEVEL操作での平坦化処理
 fn flatten_vector_recursive(vec: Vec<Value>, result: &mut Vec<Value>) {
     for val in vec {
-        if let ValueType::Vector(inner_vec, _) = val.val_type {
+        if let ValueType::Vector(inner_vec) = val.val_type {
             flatten_vector_recursive(inner_vec, result);
         } else {
             result.push(val);
@@ -741,15 +726,15 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match val.val_type {
-                ValueType::Vector(v, bracket_type) => {
+                ValueType::Vector(v) => {
                     if !is_nested(&v) {
-                        interp.stack.push(Value { val_type: ValueType::Vector(v, bracket_type) });
+                        interp.stack.push(Value { val_type: ValueType::Vector(v) });
                         return Err(AjisaiError::from("Target vector is already flat"));
                     }
                     let mut flattened = Vec::new();
                     flatten_vector_recursive(v, &mut flattened);
                     interp.stack.push(Value {
-                        val_type: ValueType::Vector(flattened, bracket_type),
+                        val_type: ValueType::Vector(flattened),
                     });
                     Ok(())
                 },
@@ -872,7 +857,7 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
             // 結果をプッシュ
             interp.stack.push(Value {
-                val_type: ValueType::Vector(range_vec, BracketType::Square),
+                val_type: ValueType::Vector(range_vec),
             });
 
             Ok(())
@@ -950,7 +935,7 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
             // 結果をプッシュ
             interp.stack.push(Value {
-                val_type: ValueType::Vector(range_vec, BracketType::Square),
+                val_type: ValueType::Vector(range_vec),
             });
 
             Ok(())

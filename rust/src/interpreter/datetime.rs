@@ -255,17 +255,8 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let timezone = match &tz_val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
+        ValueType::Vector(v) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::String(s) => s.clone(),
-                _ => {
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("DATETIME: timezone must be a String (e.g., 'LOCAL')"));
-                }
-            }
-        }
-        ValueType::SingletonVector(boxed, _) => {
-            match &boxed.val_type {
                 ValueType::String(s) => s.clone(),
                 _ => {
                     interp.stack.push(tz_val);
@@ -292,18 +283,8 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
 
     // Vectorから数値を抽出
     let timestamp = match &val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
+        ValueType::Vector(v) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::Number(n) => n.clone(),
-                _ => {
-                    interp.stack.push(val);
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("DATETIME: requires Number type for timestamp"));
-                }
-            }
-        }
-        ValueType::SingletonVector(boxed, _) => {
-            match &boxed.val_type {
                 ValueType::Number(n) => n.clone(),
                 _ => {
                     interp.stack.push(val);
@@ -358,7 +339,7 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     }
 
     let datetime_vec = Value {
-        val_type: ValueType::Vector(components, crate::types::BracketType::Square)
+        val_type: ValueType::Vector(components)
     };
 
     interp.stack.push(wrap_in_square_vector(datetime_vec));
@@ -419,17 +400,8 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let timezone = match &tz_val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
+        ValueType::Vector(v) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::String(s) => s.clone(),
-                _ => {
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("TIMESTAMP: timezone must be a String (e.g., 'LOCAL')"));
-                }
-            }
-        }
-        ValueType::SingletonVector(boxed, _) => {
-            match &boxed.val_type {
                 ValueType::String(s) => s.clone(),
                 _ => {
                     interp.stack.push(tz_val);
@@ -456,29 +428,9 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     // Vectorから日付時刻成分を抽出
     let components = match &val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => {
+        ValueType::Vector(v) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::Vector(inner, _) => inner.clone(),
-                ValueType::SingletonVector(boxed, _) => {
-                    match &boxed.val_type {
-                        ValueType::Vector(inner, _) => inner.clone(),
-                        _ => {
-                            interp.stack.push(val);
-                            interp.stack.push(tz_val);
-                            return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
-                        }
-                    }
-                }
-                _ => {
-                    interp.stack.push(val);
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
-                }
-            }
-        }
-        ValueType::SingletonVector(boxed, _) => {
-            match &boxed.val_type {
-                ValueType::Vector(inner, _) => inner.clone(),
+                ValueType::Vector(inner) => inner.clone(),
                 _ => {
                     interp.stack.push(val);
                     interp.stack.push(tz_val);

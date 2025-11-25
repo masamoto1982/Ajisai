@@ -98,7 +98,7 @@ pub fn op_space(interp: &mut Interpreter) -> Result<()> {
 pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     match val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
+        ValueType::Vector(v) if v.len() == 1 => match &v[0].val_type {
             ValueType::Number(n) => {
                 if n.denominator == BigInt::one() && n.numerator >= BigInt::zero() {
                     if let Some(count) = n.numerator.to_usize() {
@@ -137,7 +137,7 @@ pub fn op_spaces(interp: &mut Interpreter) -> Result<()> {
 pub fn op_emit(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     match val.val_type {
-        ValueType::Vector(v, _) if v.len() == 1 => match &v[0].val_type {
+        ValueType::Vector(v) if v.len() == 1 => match &v[0].val_type {
             ValueType::Number(n) => {
                 if n.denominator == BigInt::one() && n.numerator >= BigInt::zero() && n.numerator <= BigInt::from(255) {
                     if let Some(byte) = n.numerator.to_u8() {
