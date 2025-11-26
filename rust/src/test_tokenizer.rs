@@ -80,9 +80,9 @@ fn test_flexible_quotes_single_with_double_inside() {
     let custom_words = HashSet::new();
 
     // シングルクォートで囲み、内部にダブルクォート
-    let result = tokenize_with_custom_words("'私の名前は\"昌幹\"です。'", &custom_words).unwrap();
+    let result = tokenize_with_custom_words("'彼は\"天才\"と呼ばれている。'", &custom_words).unwrap();
     assert_eq!(result, vec![
-        Token::String("私の名前は\"昌幹\"です。".to_string()),
+        Token::String("彼は\"天才\"と呼ばれている。".to_string()),
     ]);
 }
 
@@ -91,9 +91,9 @@ fn test_flexible_quotes_double_with_single_inside() {
     let custom_words = HashSet::new();
 
     // ダブルクォートで囲み、内部にシングルクォート
-    let result = tokenize_with_custom_words("\"私の名前は'昌幹'です。\"", &custom_words).unwrap();
+    let result = tokenize_with_custom_words("\"これは'重要'な情報です。\"", &custom_words).unwrap();
     assert_eq!(result, vec![
-        Token::String("私の名前は'昌幹'です。".to_string()),
+        Token::String("これは'重要'な情報です。".to_string()),
     ]);
 }
 
@@ -102,9 +102,9 @@ fn test_flexible_quotes_single_with_single_inside() {
     let custom_words = HashSet::new();
 
     // シングルクォートで囲み、内部にもシングルクォート
-    let result = tokenize_with_custom_words("'私の名前は'昌幹'です。'", &custom_words).unwrap();
+    let result = tokenize_with_custom_words("'今日は'晴れ'です。'", &custom_words).unwrap();
     assert_eq!(result, vec![
-        Token::String("私の名前は'昌幹'です。".to_string()),
+        Token::String("今日は'晴れ'です。".to_string()),
     ]);
 }
 
@@ -113,9 +113,9 @@ fn test_flexible_quotes_double_with_double_inside() {
     let custom_words = HashSet::new();
 
     // ダブルクォートで囲み、内部にもダブルクォート
-    let result = tokenize_with_custom_words("\"私の名前は\"昌幹\"です。\"", &custom_words).unwrap();
+    let result = tokenize_with_custom_words("\"彼女は\"素晴らしい\"演技をした。\"", &custom_words).unwrap();
     assert_eq!(result, vec![
-        Token::String("私の名前は\"昌幹\"です。".to_string()),
+        Token::String("彼女は\"素晴らしい\"演技をした。".to_string()),
     ]);
 }
 
@@ -124,9 +124,9 @@ fn test_flexible_quotes_complex_nested() {
     let custom_words = HashSet::new();
 
     // 複雑な入れ子構造
-    let result = tokenize_with_custom_words("'私の名前は\"山城'やましろ'昌幹'まさもと'\"です。'", &custom_words).unwrap();
+    let result = tokenize_with_custom_words("'彼の言葉は\"人生'じんせい'哲学'てつがく'\"である。'", &custom_words).unwrap();
     assert_eq!(result, vec![
-        Token::String("私の名前は\"山城'やましろ'昌幹'まさもと'\"です。".to_string()),
+        Token::String("彼の言葉は\"人生'じんせい'哲学'てつがく'\"である。".to_string()),
     ]);
 }
 
