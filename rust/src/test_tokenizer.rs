@@ -73,3 +73,84 @@ fn test_comment_with_sharp_in_string() {
         Token::String("text#comment".to_string()),
     ]);
 }
+
+// 柔軟な文字列クォートのテスト
+#[test]
+fn test_flexible_quotes_single_with_double_inside() {
+    let custom_words = HashSet::new();
+
+    // シングルクォートで囲み、内部にダブルクォート
+    let result = tokenize_with_custom_words("'彼は\"天才\"と呼ばれている。'", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::String("彼は\"天才\"と呼ばれている。".to_string()),
+    ]);
+}
+
+#[test]
+fn test_flexible_quotes_double_with_single_inside() {
+    let custom_words = HashSet::new();
+
+    // ダブルクォートで囲み、内部にシングルクォート
+    let result = tokenize_with_custom_words("\"これは'重要'な情報です。\"", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::String("これは'重要'な情報です。".to_string()),
+    ]);
+}
+
+#[test]
+fn test_flexible_quotes_single_with_single_inside() {
+    let custom_words = HashSet::new();
+
+    // シングルクォートで囲み、内部にもシングルクォート
+    let result = tokenize_with_custom_words("'今日は'晴れ'です。'", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::String("今日は'晴れ'です。".to_string()),
+    ]);
+}
+
+#[test]
+fn test_flexible_quotes_double_with_double_inside() {
+    let custom_words = HashSet::new();
+
+    // ダブルクォートで囲み、内部にもダブルクォート
+    let result = tokenize_with_custom_words("\"彼女は\"素晴らしい\"演技をした。\"", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::String("彼女は\"素晴らしい\"演技をした。".to_string()),
+    ]);
+}
+
+#[test]
+fn test_flexible_quotes_complex_nested() {
+    let custom_words = HashSet::new();
+
+    // 複雑な入れ子構造
+    let result = tokenize_with_custom_words("'彼の言葉は\"人生'じんせい'哲学'てつがく'\"である。'", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::String("彼の言葉は\"人生'じんせい'哲学'てつがく'\"である。".to_string()),
+    ]);
+}
+
+#[test]
+fn test_flexible_quotes_with_space_delimiter() {
+    let custom_words = HashSet::new();
+
+    // スペース区切りでの複数文字列
+    let result = tokenize_with_custom_words("'Hello' 'World'", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::String("Hello".to_string()),
+        Token::String("World".to_string()),
+    ]);
+}
+
+#[test]
+fn test_flexible_quotes_with_bracket_delimiter() {
+    let custom_words = HashSet::new();
+
+    // 括弧区切りでの文字列
+    let result = tokenize_with_custom_words("['test']", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::VectorStart(crate::types::BracketType::Square),
+        Token::String("test".to_string()),
+        Token::VectorEnd(crate::types::BracketType::Square),
+    ]);
+}

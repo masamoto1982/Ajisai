@@ -129,36 +129,48 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
 
 fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
     if chars.is_empty() { return None; }
-    
+
     let quote_char = chars[0];
     if quote_char != '\'' && quote_char != '"' { return None; }
-    
+
     let mut string = String::new();
     let mut i = 1;
-    
-    // ★ 変更：エスケープ ('' or "") に対応
+
+    // ★ 新しい仕様：開始と同じクォート文字の後に区切り文字がある場合に終了
     while i < chars.len() {
         if chars[i] == quote_char {
-            // 次の文字も同じクォート文字か？ (e.g., '')
-            if i + 1 < chars.len() && chars[i+1] == quote_char {
-                // エスケープされたクォート文字
-                string.push(quote_char);
-                i += 2; // 2文字スキップ
-            } else {
+            // 次の文字が区切り文字（または EOF）かチェック
+            if i + 1 >= chars.len() || is_delimiter(chars[i + 1]) {
                 // 文字列の終端
                 return Some((Token::String(string), i + 1));
+            } else {
+                // 区切り文字ではないので、クォート文字を文字列に含める
+                string.push(chars[i]);
+                i += 1;
             }
-        }
-        // TODO: \n, \t などの他のエスケープシーケンスの対応
-        else {
+        } else {
             // 通常の文字（リテラルの改行も許可）
             string.push(chars[i]);
             i += 1;
         }
     }
-    
+
     // 閉じ引用符が見つからなかった
     None
+}
+
+// クォート文字の後の文字が区切り文字かどうかを判定
+fn is_delimiter(c: char) -> bool {
+    c.is_whitespace()         // スペース、タブ、改行など
+        || c == '['           // 角括弧開始
+        || c == ']'           // 角括弧終了
+        || c == '{'           // 波括弧開始
+        || c == '}'           // 波括弧終了
+        || c == '('           // 丸括弧開始
+        || c == ')'           // 丸括弧終了
+        || c == ':'           // ガード区切り
+        || c == ';'           // ガード区切り
+        || c == '#'           // コメント開始
 }
 
 fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
