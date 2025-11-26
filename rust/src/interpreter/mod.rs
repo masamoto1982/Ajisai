@@ -12,6 +12,7 @@ pub mod audio;
 pub mod higher_order;
 pub mod cast;
 pub mod datetime;
+pub mod sort;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine};
@@ -540,6 +541,12 @@ impl Interpreter {
             "NOW" => datetime::op_now(self),
             "DATETIME" => datetime::op_datetime(self),
             "TIMESTAMP" => datetime::op_timestamp(self),
+            "BUBBLESORT" => sort::op_bubblesort(self),
+            "SELECTIONSORT" => sort::op_selectionsort(self),
+            "QUICKSORT" => sort::op_quicksort(self),
+            "MERGESORT" => sort::op_mergesort(self),
+            "HEAPSORT" => sort::op_heapsort(self),
+            "STALINSORT" => sort::op_stalinsort(self),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
