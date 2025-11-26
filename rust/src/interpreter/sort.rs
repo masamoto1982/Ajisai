@@ -8,8 +8,7 @@ use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
-use num_bigint::BigInt;
-use num_traits::{ToPrimitive, One};
+use num_traits::ToPrimitive;
 
 /// 数値ベクタを取得し、ソート可能な値に変換する
 fn extract_sortable_numbers(vec: &[Value]) -> Result<Vec<(f64, Value)>> {

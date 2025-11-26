@@ -5,7 +5,7 @@ use num_traits::{Zero, One, ToPrimitive, Signed};
 use num_integer::Integer;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Fraction {
     pub numerator: BigInt,
     pub denominator: BigInt,
@@ -61,10 +61,6 @@ impl Fraction {
         }
     }
 
-    pub fn to_i64(&self) -> Option<i64> {
-        if self.denominator == BigInt::one() { self.numerator.to_i64() } else { None }
-    }
-    
     pub fn add(&self, other: &Fraction) -> Fraction { Fraction::new(&self.numerator * &other.denominator + &other.numerator * &self.denominator, &self.denominator * &other.denominator) }
     pub fn sub(&self, other: &Fraction) -> Fraction { Fraction::new(&self.numerator * &other.denominator - &other.numerator * &self.denominator, &self.denominator * &other.denominator) }
     pub fn mul(&self, other: &Fraction) -> Fraction { Fraction::new(&self.numerator * &other.numerator, &self.denominator * &other.denominator) }
@@ -74,4 +70,45 @@ impl Fraction {
     pub fn gt(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator > &other.numerator * &self.denominator }
     pub fn ge(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator >= &other.numerator * &self.denominator }
     pub fn eq(&self, other: &Fraction) -> bool { self == other }
+}
+
+impl PartialOrd for Fraction {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Fraction {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // Compare a/b with c/d using a*d vs b*c (integer comparison)
+        let lhs = &self.numerator * &other.denominator;
+        let rhs = &other.numerator * &self.denominator;
+        lhs.cmp(&rhs)
+    }
+}
+
+impl ToPrimitive for Fraction {
+    fn to_i64(&self) -> Option<i64> {
+        // Division result as i64
+        (&self.numerator / &self.denominator).to_i64()
+    }
+
+    fn to_u64(&self) -> Option<u64> {
+        if self.numerator < BigInt::zero() {
+            None
+        } else {
+            (&self.numerator / &self.denominator).to_u64()
+        }
+    }
+
+    fn to_f64(&self) -> Option<f64> {
+        // Convert numerator and denominator to f64, then divide
+        let num_f64 = self.numerator.to_f64()?;
+        let den_f64 = self.denominator.to_f64()?;
+        if den_f64 == 0.0 {
+            None
+        } else {
+            Some(num_f64 / den_f64)
+        }
+    }
 }
