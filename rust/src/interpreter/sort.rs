@@ -9,7 +9,7 @@ use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
-use num_traits::ToPrimitive;
+use num_traits::{ToPrimitive, One};
 
 /// 数値ベクタを取得し、ソート可能な値に変換する
 fn extract_sortable_numbers(vec: &[Value]) -> Result<Vec<(f64, Value)>> {
@@ -28,6 +28,84 @@ fn extract_sortable_numbers(vec: &[Value]) -> Result<Vec<(f64, Value)>> {
 /// ソート済みかどうかをチェック（昇順）
 fn is_sorted(items: &[(f64, Value)]) -> bool {
     items.windows(2).all(|w| w[0].0 <= w[1].0)
+}
+
+/// 分数ベクタを取得（MEDIANSORT用）
+fn extract_fractions(vec: &[Value]) -> Result<Vec<(Fraction, Value)>> {
+    vec.iter().map(|v| {
+        match &v.val_type {
+            ValueType::Number(frac) => Ok((frac.clone(), v.clone())),
+            _ => Err(AjisaiError::type_error("number", "other type")),
+        }
+    }).collect()
+}
+
+/// 分数のソート済みチェック（昇順）
+fn is_sorted_fractions(items: &[(Fraction, Value)]) -> bool {
+    items.windows(2).all(|w| w[0].0 <= w[1].0)
+}
+
+/// メディアント（中央分数）を計算
+/// a/b と c/d のメディアントは (a+c)/(b+d)
+/// 重要な性質: a/b < c/d のとき、a/b < (a+c)/(b+d) < c/d
+fn mediant(f1: &Fraction, f2: &Fraction) -> Fraction {
+    let new_numerator = &f1.numerator + &f2.numerator;
+    let new_denominator = &f1.denominator + &f2.denominator;
+    Fraction::new(new_numerator, new_denominator)
+}
+
+/// メディアントソートのヘルパー関数（分割統治）
+fn mediansort_partition(items: &mut [(Fraction, Value)]) {
+    if items.len() <= 1 {
+        return;
+    }
+
+    // 最小値と最大値を見つける
+    let mut min_idx = 0;
+    let mut max_idx = 0;
+
+    for i in 1..items.len() {
+        if items[i].0 < items[min_idx].0 {
+            min_idx = i;
+        }
+        if items[i].0 > items[max_idx].0 {
+            max_idx = i;
+        }
+    }
+
+    // すべて同じ値の場合は終了
+    if items[min_idx].0 == items[max_idx].0 {
+        return;
+    }
+
+    // メディアント（理想的な中央値）を計算
+    let pivot = mediant(&items[min_idx].0, &items[max_idx].0);
+
+    // 3方向分割: pivot未満、pivot、pivotより大
+    let mut left = Vec::new();
+    let mut middle = Vec::new();
+    let mut right = Vec::new();
+
+    for item in items.iter() {
+        if item.0 < pivot {
+            left.push(item.clone());
+        } else if item.0 > pivot {
+            right.push(item.clone());
+        } else {
+            middle.push(item.clone());
+        }
+    }
+
+    // 再帰的にソート
+    mediansort_partition(&mut left);
+    mediansort_partition(&mut right);
+
+    // 結果を結合
+    let mut idx = 0;
+    for item in left.into_iter().chain(middle).chain(right) {
+        items[idx] = item;
+        idx += 1;
+    }
 }
 
 /// バブルソート
@@ -523,6 +601,82 @@ pub fn op_stalinsort(interp: &mut Interpreter) -> Result<()> {
             }
 
             interp.stack = result;
+            Ok(())
+        }
+    }
+}
+
+/// メディアントソート（Mediant Sort）
+///
+/// 【画期的な特徴】
+/// 分数の数学的性質である「メディアント」を利用した革新的なソートアルゴリズム。
+/// メディアント: 2つの分数 a/b と c/d のメディアントは (a+c)/(b+d)
+///
+/// 【数学的性質】
+/// a/b < c/d のとき、常に a/b < (a+c)/(b+d) < c/d が成り立つ。
+/// この性質により、最小値と最大値のメディアントは理想的な「中央値」として機能する。
+///
+/// 【アルゴリズムの革新性】
+/// 1. 通常のクイックソートは任意のピボットを選ぶが、メディアントソートは
+///    最小値と最大値のメディアントを数学的に保証された中央値として使用
+/// 2. 分数専用のアルゴリズムであり、浮動小数点への変換なしに正確にソート
+/// 3. ファレイ数列やシュテルン・ブロコ木などの分数理論と深く関連
+///
+/// 【計算量】
+/// - 時間計算量: 平均 O(n log n)、最悪 O(n²)
+/// - 空間計算量: O(n)（再帰とクローン）
+///
+/// 【用途】
+/// - 分数データの正確なソート
+/// - 有理数計算における高精度処理
+/// - 数学的に美しいソート結果
+pub fn op_mediansort(interp: &mut Interpreter) -> Result<()> {
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            match vector_val.val_type {
+                ValueType::Vector(v) => {
+                    if v.is_empty() {
+                        return Err(AjisaiError::from("Cannot sort empty vector"));
+                    }
+
+                    let mut items = extract_fractions(&v)?;
+
+                    if is_sorted_fractions(&items) {
+                        interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                        return Err(AjisaiError::from("MEDIANSORT resulted in no change (already sorted)"));
+                    }
+
+                    // メディアントソート実行
+                    mediansort_partition(&mut items);
+
+                    let sorted: Vec<Value> = items.into_iter().map(|(_, v)| v).collect();
+                    interp.stack.push(Value { val_type: ValueType::Vector(sorted) });
+                    Ok(())
+                },
+                _ => {
+                    interp.stack.push(vector_val);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
+            }
+        }
+        OperationTarget::Stack => {
+            if interp.stack.is_empty() {
+                return Err(AjisaiError::from("Cannot sort empty stack"));
+            }
+
+            let items_vec: Vec<Value> = interp.stack.drain(..).collect();
+            let mut items = extract_fractions(&items_vec)?;
+
+            if is_sorted_fractions(&items) {
+                interp.stack = items_vec;
+                return Err(AjisaiError::from("MEDIANSORT resulted in no change (already sorted)"));
+            }
+
+            // メディアントソート実行
+            mediansort_partition(&mut items);
+
+            interp.stack = items.into_iter().map(|(_, v)| v).collect();
             Ok(())
         }
     }

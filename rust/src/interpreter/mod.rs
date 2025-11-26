@@ -547,6 +547,7 @@ impl Interpreter {
             "MERGESORT" => sort::op_mergesort(self),
             "HEAPSORT" => sort::op_heapsort(self),
             "STALINSORT" => sort::op_stalinsort(self),
+            "MEDIANSORT" => sort::op_mediansort(self),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
