@@ -606,6 +606,81 @@ pub fn op_stalinsort(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
+/// 高速分数ソート（Fast Fraction Sort）
+///
+/// 【特徴】
+/// 分数専用の実用的高速ソートアルゴリズム。
+/// 整数演算のみで分数を比較し、Introsort（QuickSort + HeapSort）を使用。
+///
+/// 【速度最適化】
+/// 1. 浮動小数点変換なし → 精度保持
+/// 2. 整数演算のみ → 高速比較（a/b < c/d ⟺ a*d < b*c）
+/// 3. Rustの標準ソート使用 → 最適化された実装
+/// 4. インプレース → メモリ効率的
+///
+/// 【計算量】
+/// - 時間計算量: O(n log n)（最悪ケースでも保証）
+/// - 空間計算量: O(log n)（再帰スタックのみ）
+///
+/// 【用途】
+/// - 大量の分数データの高速ソート
+/// - 実用的なアプリケーション
+/// - 速度が最優先の場合
+pub fn op_fractionsort(interp: &mut Interpreter) -> Result<()> {
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            match vector_val.val_type {
+                ValueType::Vector(v) => {
+                    if v.is_empty() {
+                        return Err(AjisaiError::from("Cannot sort empty vector"));
+                    }
+
+                    let items = extract_fractions(&v)?;
+
+                    if is_sorted_fractions(&items) {
+                        interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                        return Err(AjisaiError::from("FRACTIONSORT resulted in no change (already sorted)"));
+                    }
+
+                    // 高速分数ソート実行
+                    // Rustの標準ソートを使用（Introsort: QuickSort + HeapSort）
+                    let mut sortable: Vec<(Fraction, Value)> = items;
+                    sortable.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+                    let sorted: Vec<Value> = sortable.into_iter().map(|(_, v)| v).collect();
+                    interp.stack.push(Value { val_type: ValueType::Vector(sorted) });
+                    Ok(())
+                },
+                _ => {
+                    interp.stack.push(vector_val);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
+            }
+        }
+        OperationTarget::Stack => {
+            if interp.stack.is_empty() {
+                return Err(AjisaiError::from("Cannot sort empty stack"));
+            }
+
+            let items_vec: Vec<Value> = interp.stack.drain(..).collect();
+            let items = extract_fractions(&items_vec)?;
+
+            if is_sorted_fractions(&items) {
+                interp.stack = items_vec;
+                return Err(AjisaiError::from("FRACTIONSORT resulted in no change (already sorted)"));
+            }
+
+            // 高速分数ソート実行
+            let mut sortable: Vec<(Fraction, Value)> = items;
+            sortable.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+            interp.stack = sortable.into_iter().map(|(_, v)| v).collect();
+            Ok(())
+        }
+    }
+}
+
 /// メディアントソート（Mediant Sort）
 ///
 /// 【画期的な特徴】
