@@ -109,9 +109,16 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         },
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count = match get_integer_from_value(&count_val) {
+                Ok(v) => v as usize,
+                Err(e) => {
+                    interp.stack.push(count_val);
+                    return Err(e);
+                }
+            };
 
             if interp.stack.len() < count {
+                interp.stack.push(count_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
@@ -123,15 +130,33 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = OperationTarget::StackTop;
 
             let mut results = Vec::new();
-            for item in targets {
+            for item in &targets {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
-                interp.stack.push(item);
-                interp.execute_word_sync(&word_name)?;
-
-                let result = interp.stack.pop()
-                    .ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
-                results.push(result);
+                interp.stack.push(item.clone());
+                match interp.execute_word_sync(&word_name) {
+                    Ok(_) => {
+                        match interp.stack.pop() {
+                            Some(result) => results.push(result),
+                            None => {
+                                // エラー時にスタックを復元
+                                interp.operation_target = saved_target;
+                                interp.stack = original_stack_below;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                return Err(AjisaiError::from("MAP word must return a value"));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        // エラー時にスタックを復元
+                        interp.operation_target = saved_target;
+                        interp.stack = original_stack_below;
+                        interp.stack.extend(targets);
+                        interp.stack.push(count_val);
+                        return Err(e);
+                    }
+                }
             }
 
             // operation_target を復元し、スタックを復元
@@ -242,9 +267,16 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         },
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count = match get_integer_from_value(&count_val) {
+                Ok(v) => v as usize,
+                Err(e) => {
+                    interp.stack.push(count_val);
+                    return Err(e);
+                }
+            };
 
             if interp.stack.len() < count {
+                interp.stack.push(count_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
@@ -256,23 +288,42 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = OperationTarget::StackTop;
 
             let mut results = Vec::new();
-            for item in targets {
+            for item in &targets {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item.clone());
-                interp.execute_word_sync(&word_name)?;
+                match interp.execute_word_sync(&word_name) {
+                    Ok(_) => {
+                        // 条件判定結果を取得
+                        let condition_result = match interp.stack.pop() {
+                            Some(result) => result,
+                            None => {
+                                // エラー時にスタックを復元
+                                interp.operation_target = saved_target;
+                                interp.stack = original_stack_below;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                return Err(AjisaiError::from("FILTER word must return a boolean value"));
+                            }
+                        };
 
-                // 条件判定結果を取得
-                let condition_result = interp.stack.pop()
-                    .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
-
-                if let ValueType::Vector(v) = condition_result.val_type {
-                    if v.len() == 1 {
-                        if let ValueType::Boolean(b) = v[0].val_type {
-                            if b {
-                                results.push(item);
+                        if let ValueType::Vector(v) = condition_result.val_type {
+                            if v.len() == 1 {
+                                if let ValueType::Boolean(b) = v[0].val_type {
+                                    if b {
+                                        results.push(item.clone());
+                                    }
+                                }
                             }
                         }
+                    }
+                    Err(e) => {
+                        // エラー時にスタックを復元
+                        interp.operation_target = saved_target;
+                        interp.stack = original_stack_below;
+                        interp.stack.extend(targets);
+                        interp.stack.push(count_val);
+                        return Err(e);
                     }
                 }
             }
@@ -395,9 +446,16 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
         },
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count_arg = get_integer_from_value(&count_val)? as usize;
+            let count_arg = match get_integer_from_value(&count_val) {
+                Ok(v) => v as usize,
+                Err(e) => {
+                    interp.stack.push(count_val);
+                    return Err(e);
+                }
+            };
 
             if interp.stack.len() < count_arg {
+                interp.stack.push(count_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
@@ -413,19 +471,38 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item.clone());
-                interp.execute_word_sync(&word_name)?;
+                match interp.execute_word_sync(&word_name) {
+                    Ok(_) => {
+                        // 条件判定結果を取得
+                        let condition_result = match interp.stack.pop() {
+                            Some(result) => result,
+                            None => {
+                                // エラー時にスタックを復元
+                                interp.operation_target = saved_target;
+                                interp.stack = original_stack_below;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                return Err(AjisaiError::from("COUNT word must return a boolean value"));
+                            }
+                        };
 
-                // 条件判定結果を取得
-                let condition_result = interp.stack.pop()
-                    .ok_or_else(|| AjisaiError::from("COUNT word must return a boolean value"))?;
-
-                if let ValueType::Vector(v) = condition_result.val_type {
-                    if v.len() == 1 {
-                        if let ValueType::Boolean(b) = v[0].val_type {
-                            if b {
-                                count_result += 1;
+                        if let ValueType::Vector(v) = condition_result.val_type {
+                            if v.len() == 1 {
+                                if let ValueType::Boolean(b) = v[0].val_type {
+                                    if b {
+                                        count_result += 1;
+                                    }
+                                }
                             }
                         }
+                    }
+                    Err(e) => {
+                        // エラー時にスタックを復元
+                        interp.operation_target = saved_target;
+                        interp.stack = original_stack_below;
+                        interp.stack.extend(targets);
+                        interp.stack.push(count_val);
+                        return Err(e);
                     }
                 }
             }
