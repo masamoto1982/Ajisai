@@ -296,6 +296,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
         ValueType::Symbol(_) => "symbol",
         ValueType::Vector(_) => "vector",
         ValueType::Nil => "nil",
+        ValueType::TailCallMarker => "tail_call_marker",
     };
     
     js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
@@ -326,6 +327,9 @@ fn value_to_js_value(value: &Value) -> JsValue {
         },
         ValueType::Nil => {
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        },
+        ValueType::TailCallMarker => {
+            js_sys::Reflect::set(&obj, &"value".into(), &"<TAIL_CALL>".into()).unwrap();
         },
     };
     
