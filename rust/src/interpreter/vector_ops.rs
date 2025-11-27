@@ -43,24 +43,43 @@ use std::collections::VecDeque;
 /// - 対象がベクタでない場合
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index_bigint = get_bigint_from_value(&index_val)?;
-    let index = index_bigint.to_i64().ok_or_else(|| AjisaiError::from("Index is too large"))?;
+    let index_bigint = match get_bigint_from_value(&index_val) {
+        Ok(v) => v,
+        Err(e) => {
+            interp.stack.push(index_val);
+            return Err(e);
+        }
+    };
+    let index = match index_bigint.to_i64() {
+        Some(v) => v,
+        None => {
+            interp.stack.push(index_val);
+            return Err(AjisaiError::from("Index is too large"));
+        }
+    };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let target_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(index_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
             if let ValueType::Vector(v) = &target_val.val_type {
                 let len = v.len();
                 if len == 0 {
                     interp.stack.push(target_val);
+                    interp.stack.push(index_val);
                     return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
                 }
 
-                let actual_index = normalize_index(index, len)
-                    .ok_or_else(|| {
-                        interp.stack.push(target_val.clone());
-                        AjisaiError::IndexOutOfBounds { index, length: len }
-                    })?;
+                let actual_index = match normalize_index(index, len) {
+                    Some(idx) => idx,
+                    None => {
+                        interp.stack.push(target_val);
+                        interp.stack.push(index_val);
+                        return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                    }
+                };
 
                 let result_elem = v[actual_index].clone();
                 interp.stack.push(target_val);
@@ -68,17 +87,24 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 Ok(())
             } else {
                 interp.stack.push(target_val);
+                interp.stack.push(index_val);
                 Err(AjisaiError::type_error("vector", "other type"))
             }
         }
         OperationTarget::Stack => {
             let stack_len = interp.stack.len();
             if stack_len == 0 {
+                interp.stack.push(index_val);
                 return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
             }
 
-            let actual_index = normalize_index(index, stack_len)
-                .ok_or(AjisaiError::IndexOutOfBounds { index, length: stack_len })?;
+            let actual_index = match normalize_index(index, stack_len) {
+                Some(idx) => idx,
+                None => {
+                    interp.stack.push(index_val);
+                    return Err(AjisaiError::IndexOutOfBounds { index, length: stack_len });
+                }
+            };
 
             let result_elem = interp.stack[actual_index].clone();
             interp.stack.push(wrap_in_square_vector(result_elem));
@@ -111,15 +137,36 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     let element = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index = get_bigint_from_value(&index_val)?.to_i64()
-        .ok_or_else(|| AjisaiError::from("Index is too large"))?;
+    let index_val = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(element.clone());
+        AjisaiError::StackUnderflow
+    })?;
+    let index_bigint = match get_bigint_from_value(&index_val) {
+        Ok(v) => v,
+        Err(e) => {
+            interp.stack.push(index_val);
+            interp.stack.push(element);
+            return Err(e);
+        }
+    };
+    let index = match index_bigint.to_i64() {
+        Some(v) => v,
+        None => {
+            interp.stack.push(index_val);
+            interp.stack.push(element);
+            return Err(AjisaiError::from("Index is too large"));
+        }
+    };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let vector_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(index_val.clone());
+                interp.stack.push(element.clone());
+                AjisaiError::StackUnderflow
+            })?;
 
-            let element_to_insert = unwrap_single_element(element);
+            let element_to_insert = unwrap_single_element(element.clone());
 
             match vector_val.val_type {
                 ValueType::Vector(mut v) => {
@@ -141,7 +188,12 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(vector_val);
+                    interp.stack.push(index_val);
+                    interp.stack.push(element);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
@@ -184,27 +236,60 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     let new_element = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index = get_bigint_from_value(&index_val)?.to_i64()
-        .ok_or_else(|| AjisaiError::from("Index too large"))?;
+    let index_val = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(new_element.clone());
+        AjisaiError::StackUnderflow
+    })?;
+    let index_bigint = match get_bigint_from_value(&index_val) {
+        Ok(v) => v,
+        Err(e) => {
+            interp.stack.push(index_val);
+            interp.stack.push(new_element);
+            return Err(e);
+        }
+    };
+    let index = match index_bigint.to_i64() {
+        Some(v) => v,
+        None => {
+            interp.stack.push(index_val);
+            interp.stack.push(new_element);
+            return Err(AjisaiError::from("Index too large"));
+        }
+    };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let vector_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(index_val.clone());
+                interp.stack.push(new_element.clone());
+                AjisaiError::StackUnderflow
+            })?;
 
-            let replace_element = unwrap_single_element(new_element);
+            let replace_element = unwrap_single_element(new_element.clone());
 
             match vector_val.val_type {
                 ValueType::Vector(mut v) => {
                     let len = v.len();
-                    let actual_index = normalize_index(index, len)
-                        .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
+                    let actual_index = match normalize_index(index, len) {
+                        Some(idx) => idx,
+                        None => {
+                            interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                            interp.stack.push(index_val);
+                            interp.stack.push(new_element);
+                            return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                        }
+                    };
 
                     v[actual_index] = replace_element;
                     interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(vector_val);
+                    interp.stack.push(index_val);
+                    interp.stack.push(new_element);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
@@ -242,23 +327,48 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index = get_bigint_from_value(&index_val)?.to_i64()
-        .ok_or_else(|| AjisaiError::from("Index too large"))?;
+    let index_bigint = match get_bigint_from_value(&index_val) {
+        Ok(v) => v,
+        Err(e) => {
+            interp.stack.push(index_val);
+            return Err(e);
+        }
+    };
+    let index = match index_bigint.to_i64() {
+        Some(v) => v,
+        None => {
+            interp.stack.push(index_val);
+            return Err(AjisaiError::from("Index too large"));
+        }
+    };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let vector_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(index_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
             match vector_val.val_type {
                 ValueType::Vector(mut v) => {
                     let len = v.len();
-                    let actual_index = normalize_index(index, len)
-                        .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
+                    let actual_index = match normalize_index(index, len) {
+                        Some(idx) => idx,
+                        None => {
+                            interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                            interp.stack.push(index_val);
+                            return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                        }
+                    };
 
                     v.remove(actual_index);
                     interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(vector_val);
+                    interp.stack.push(index_val);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
@@ -344,12 +454,27 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let count = get_bigint_from_value(&count_val)?.to_i64()
-        .ok_or_else(|| AjisaiError::from("Count is too large"))?;
+    let count_bigint = match get_bigint_from_value(&count_val) {
+        Ok(v) => v,
+        Err(e) => {
+            interp.stack.push(count_val);
+            return Err(e);
+        }
+    };
+    let count = match count_bigint.to_i64() {
+        Some(v) => v,
+        None => {
+            interp.stack.push(count_val);
+            return Err(AjisaiError::from("Count is too large"));
+        }
+    };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let vector_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let vector_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(count_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
             match vector_val.val_type {
                 ValueType::Vector(v) => {
                     let len = v.len();
@@ -357,6 +482,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                         let abs_count = (-count) as usize;
                         if abs_count > len {
                             interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                            interp.stack.push(count_val);
                             return Err(AjisaiError::from("Take count exceeds vector length"));
                         }
                         v[len - abs_count..].to_vec()
@@ -364,6 +490,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                         let take_count = count as usize;
                         if take_count > len {
                             interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                            interp.stack.push(count_val);
                             return Err(AjisaiError::from("Take count exceeds vector length"));
                         }
                         v[..take_count].to_vec()
@@ -373,6 +500,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                 },
                 _ => {
                     interp.stack.push(vector_val);
+                    interp.stack.push(count_val);
                     Err(AjisaiError::type_error("vector", "other type"))
                 }
             }
@@ -432,20 +560,38 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("SPLIT requires at least one size"));
     }
 
-    let sizes: Vec<usize> = sizes_values.into_iter()
-        .map(|v| get_bigint_from_value(&v).and_then(|bi| {
+    let sizes: Vec<usize> = match sizes_values.iter()
+        .map(|v| get_bigint_from_value(v).and_then(|bi| {
             bi.to_usize().ok_or_else(|| AjisaiError::from("Split size is too large"))
         }))
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<Result<Vec<_>>>() {
+        Ok(v) => v,
+        Err(e) => {
+            // Restore all size values to the stack
+            for val in sizes_values {
+                interp.stack.push(val);
+            }
+            return Err(e);
+        }
+    };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let vector_val = interp.stack.pop()
-                .ok_or_else(|| AjisaiError::from("SPLIT requires a vector to split"))?;
+            let vector_val = interp.stack.pop().ok_or_else(|| {
+                // Restore all size values to the stack
+                for val in &sizes_values {
+                    interp.stack.push(val.clone());
+                }
+                AjisaiError::from("SPLIT requires a vector to split")
+            })?;
             match vector_val.val_type {
                 ValueType::Vector(v) => {
                     let total_size: usize = sizes.iter().sum();
                     if total_size > v.len() {
+                        interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                        for val in &sizes_values {
+                            interp.stack.push(val.clone());
+                        }
                         return Err(AjisaiError::from("Split sizes sum exceeds vector length"));
                     }
 
@@ -467,7 +613,13 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.extend(result_vectors);
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                _ => {
+                    interp.stack.push(vector_val);
+                    for val in &sizes_values {
+                        interp.stack.push(val.clone());
+                    }
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
