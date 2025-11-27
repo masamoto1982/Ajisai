@@ -280,7 +280,7 @@ impl Interpreter {
                             if is_tail && is_recursive {
                                 // 末尾再帰の場合は、特別なマーカーをスタックに積む
                                 self.stack.push(Value {
-                                    val_type: ValueType::Symbol("__TAIL_CALL__".to_string())
+                                    val_type: ValueType::TailCallMarker
                                 });
                             } else {
                                 self.execute_word_sync(&upper_name)?;
@@ -346,7 +346,7 @@ impl Interpreter {
                             if is_tail && is_recursive {
                                 // 末尾再帰の場合は、特別なマーカーをスタックに積む
                                 self.stack.push(Value {
-                                    val_type: ValueType::Symbol("__TAIL_CALL__".to_string())
+                                    val_type: ValueType::TailCallMarker
                                 });
                             } else {
                                 self.execute_word_async(&upper_name).await?;
@@ -439,7 +439,7 @@ impl Interpreter {
 
             // 末尾再帰のマーカーがあるかチェック
             let has_tail_call = if let Some(top) = self.stack.last() {
-                matches!(&top.val_type, ValueType::Symbol(s) if s == "__TAIL_CALL__")
+                matches!(&top.val_type, ValueType::TailCallMarker)
             } else {
                 false
             };
@@ -480,7 +480,7 @@ impl Interpreter {
 
             // 末尾再帰のマーカーがあるかチェック
             let has_tail_call = if let Some(top) = self.stack.last() {
-                matches!(&top.val_type, ValueType::Symbol(s) if s == "__TAIL_CALL__")
+                matches!(&top.val_type, ValueType::TailCallMarker)
             } else {
                 false
             };
@@ -681,8 +681,12 @@ mod tests {
 
         // Define a recursive countdown function
         // Format: [ 'definition body' ] 'NAME' DEF
+        // Guard condition: [0] [0] GET [0] = checks if top of input vector equals 0
+        // If true: do nothing (empty line)
+        // If false: decrement and call COUNTDOWN recursively
         let code = r#"
-: [ ': [0] [0] GET [0] >
+: [ ': [0] [0] GET [0] =
+:
 : [0] [0] GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
 : [5] COUNTDOWN
 "#;
@@ -692,6 +696,8 @@ mod tests {
 
         // Verify call stack is empty after execution
         assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty after execution");
+        // Stack should be empty after countdown completes
+        assert_eq!(interp.stack.len(), 0, "Stack should be empty after countdown");
     }
 
     #[tokio::test]
@@ -699,8 +705,12 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Test with a larger number to ensure tail recursion optimization works
+        // Guard condition: [0] [0] GET [0] = checks if top of input vector equals 0
+        // If true: do nothing (empty line)
+        // If false: decrement and call COUNTDOWN recursively
         let code = r#"
-: [ ': [0] [0] GET [0] >
+: [ ': [0] [0] GET [0] =
+:
 : [0] [0] GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
 : [100] COUNTDOWN
 "#;
@@ -710,6 +720,8 @@ mod tests {
 
         // Verify call stack is empty
         assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty after execution");
+        // Stack should be empty after countdown completes
+        assert_eq!(interp.stack.len(), 0, "Stack should be empty after countdown");
     }
 
     #[tokio::test]
