@@ -541,14 +541,7 @@ impl Interpreter {
             "NOW" => datetime::op_now(self),
             "DATETIME" => datetime::op_datetime(self),
             "TIMESTAMP" => datetime::op_timestamp(self),
-            "BUBBLESORT" => sort::op_bubblesort(self),
-            "SELECTIONSORT" => sort::op_selectionsort(self),
-            "QUICKSORT" => sort::op_quicksort(self),
-            "MERGESORT" => sort::op_mergesort(self),
-            "HEAPSORT" => sort::op_heapsort(self),
-            "STALINSORT" => sort::op_stalinsort(self),
             "FRACTIONSORT" => sort::op_fractionsort(self),
-            "MEDIANSORT" => sort::op_mediansort(self),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
