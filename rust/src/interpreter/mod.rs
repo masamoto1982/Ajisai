@@ -46,6 +46,7 @@ pub struct Interpreter {
     pub(crate) definition_to_load: Option<String>,
     pub(crate) operation_target: OperationTarget,
     pub(crate) call_stack: Vec<String>,  // 末尾再帰最適化のための呼び出しスタック
+    pub(crate) force_flag: bool,  // 強制実行フラグ（DEL/DEFで依存関係がある場合に使用）
 }
 
 impl Interpreter {
@@ -58,6 +59,7 @@ impl Interpreter {
             definition_to_load: None,
             operation_target: OperationTarget::StackTop,
             call_stack: Vec::new(),
+            force_flag: false,
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -518,6 +520,11 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
+        // DEL, DEF, ! 以外はフラグをリセット
+        if name != "DEL" && name != "DEF" && name != "!" {
+            self.force_flag = false;
+        }
+
         match name {
             "GET" => vector_ops::op_get(self),
             "INSERT" => vector_ops::op_insert(self),
@@ -560,6 +567,10 @@ impl Interpreter {
             "DATETIME" => datetime::op_datetime(self),
             "TIMESTAMP" => datetime::op_timestamp(self),
             "FRACTIONSORT" => sort::op_fractionsort(self),
+            "!" => {
+                self.force_flag = true;
+                Ok(())
+            },
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
@@ -605,6 +616,7 @@ impl Interpreter {
         self.definition_to_load = None;
         self.operation_target = OperationTarget::StackTop;
         self.call_stack.clear();
+        self.force_flag = false;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
@@ -686,6 +698,17 @@ impl Interpreter {
 
     pub fn get_word_definition(&self, name: &str) -> Option<String> {
         self.get_word_definition_tokens(name)
+    }
+
+    /// 指定されたワードを参照している他のワードの集合を取得
+    pub fn get_dependents(&self, word_name: &str) -> HashSet<String> {
+        let mut result = HashSet::new();
+        for (name, def) in &self.dictionary {
+            if !def.is_builtin && def.dependencies.contains(word_name) {
+                result.insert(name.clone());
+            }
+        }
+        result
     }
 }
 
@@ -962,6 +985,87 @@ ADDTEST
 
         // Verify call stack is empty
         assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
+    }
+
+    #[tokio::test]
+    async fn test_force_flag_del_without_dependents() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+
+        // 依存なしなら ! 不要で削除可能
+        let result = interp.execute("'DOUBLE' DEL").await;
+        assert!(result.is_ok());
+        assert!(!interp.dictionary.contains_key("DOUBLE"));
+    }
+
+    #[tokio::test]
+    async fn test_force_flag_del_with_dependents_error() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+
+        // 依存ありで ! なしはエラー
+        let result = interp.execute("'DOUBLE' DEL").await;
+        assert!(result.is_err());
+        assert!(interp.dictionary.contains_key("DOUBLE"));
+    }
+
+    #[tokio::test]
+    async fn test_force_flag_del_with_dependents_forced() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+
+        // ! 付きなら削除可能
+        let result = interp.execute("! 'DOUBLE' DEL").await;
+        assert!(result.is_ok());
+        assert!(!interp.dictionary.contains_key("DOUBLE"));
+        assert!(interp.output_buffer.contains("Warning"));
+    }
+
+    #[tokio::test]
+    async fn test_force_flag_def_with_dependents_error() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+
+        // 依存ありで ! なしの再定義はエラー
+        let result = interp.execute("[ ': [ 3 ] *' ] 'DOUBLE' DEF").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_force_flag_def_with_dependents_forced() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+
+        // ! 付きなら再定義可能
+        let result = interp.execute("! [ ': [ 3 ] *' ] 'DOUBLE' DEF").await;
+        assert!(result.is_ok());
+        assert!(interp.output_buffer.contains("Warning"));
+    }
+
+    #[tokio::test]
+    async fn test_force_flag_builtin_always_error() {
+        let mut interp = Interpreter::new();
+
+        // 組み込みは ! があっても削除不可
+        let result = interp.execute("! '+' DEL").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_force_flag_reset_after_other_word() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+
+        // ! の後に別のワードを実行するとフラグがリセットされる
+        interp.execute("!").await.unwrap();
+        interp.execute("[ 1 2 ] LENGTH").await.unwrap();  // 何か別のワード操作
+        let result = interp.execute("'DOUBLE' DEL").await;
+        assert!(result.is_err());  // フラグがリセットされているのでエラー
     }
 
     #[tokio::test]

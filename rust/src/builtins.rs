@@ -86,6 +86,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         // 制御フロー（TIMES/WAIT）
         ("TIMES", "ワードをN回繰り返し実行｜'処理' [ 5 ] TIMES", "Control Flow"),
         ("WAIT", "指定ミリ秒後にワードを実行｜'処理' [ 1000 ] WAIT", "Control Flow"),
+        ("!", "強制実行フラグ｜依存のあるワードのDEL/DEFを許可｜! 'WORD' DEL", "Control Flow"),
 
         // ソートアルゴリズム
         ("FRACTIONSORT", "分数専用高速ソート｜[ 1/2 1/3 2/3 ] FRACTIONSORT → [ 1/3 1/2 2/3 ]", "Sort"),
@@ -1459,6 +1460,32 @@ CONCAT, REVERSE, LEVEL, +, -, *, /, MAP など
 
 ## 注意
 - これは入力支援ボタンですが、実行時には動作モードを切り替えます"#.to_string(),
+
+        "!" => r#"# ! - 強制実行演算子
+
+## 機能
+依存関係のあるカスタムワードの削除（DEL）や再定義（DEF）を許可します。
+他のカスタムワードから参照されているワードを操作する際に使用します。
+
+## 使用法
+! 'WORDNAME' DEL     # 強制削除
+! [ ': ...' ] 'WORDNAME' DEF  # 強制再定義
+
+## 使用例
+[ ': [ 2 ] *' ] 'DOUBLE' DEF
+[ ': DOUBLE DOUBLE' ] 'QUAD' DEF
+
+'DOUBLE' DEL           # Error: referenced by QUAD
+! 'DOUBLE' DEL         # OK（警告付きで削除）
+
+[ ': [ 3 ] *' ] 'DOUBLE' DEF     # Error: referenced by QUAD
+! [ ': [ 3 ] *' ] 'DOUBLE' DEF   # OK（警告付きで再定義）
+
+## 注意
+- 組み込みワードには効果がありません（常にエラー）
+- フラグは次のDEL/DEF実行後に自動リセットされます
+- 依存関係のないワードには ! は不要です
+- !はDEL/DEFの前に置く必要があります（後置記法のため）"#.to_string(),
 
         _ => {
             // 既存の定義情報にフォールバック

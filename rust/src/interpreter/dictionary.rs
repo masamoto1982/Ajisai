@@ -100,13 +100,38 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     let upper_name = name.to_uppercase();
     interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}'\n", upper_name));
 
-    // 組み込みワードは上書きできない
-    if let Some(existing_def) = interp.dictionary.get(&upper_name) {
-        if existing_def.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot override builtin word: {}", upper_name)));
+    // 組み込みワードは再定義不可（! があっても不可）
+    if let Some(existing) = interp.dictionary.get(&upper_name) {
+        if existing.is_builtin {
+            interp.force_flag = false;
+            return Err(AjisaiError::from(format!(
+                "Cannot redefine built-in word: {}", upper_name
+            )));
         }
+
+        // カスタムワードの再定義: 依存関係チェック
+        let dependents = interp.get_dependents(&upper_name);
+
+        if !dependents.is_empty() && !interp.force_flag {
+            let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
+            interp.force_flag = false;
+            return Err(AjisaiError::from(format!(
+                "Cannot redefine '{}': referenced by {}. Use ! [ ... ] '{}' DEF to force.",
+                upper_name, dep_list, upper_name
+            )));
+        }
+
+        // 警告メッセージを準備（依存関係があった場合）
+        if !dependents.is_empty() {
+            let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
+            interp.output_buffer.push_str(&format!(
+                "Warning: '{}' was redefined. Affected words: {}\n",
+                upper_name, dep_list
+            ));
+        }
+
         // 既存のカスタムワードの依存関係をクリーンアップ
-        for dep_name in &existing_def.dependencies {
+        for dep_name in &existing.dependencies {
             if let Some(dependents) = interp.dependents.get_mut(dep_name) {
                 dependents.remove(&upper_name);
             }
@@ -138,9 +163,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         dependencies: new_dependencies,
         original_source: None,
     };
-    
+
     interp.dictionary.insert(upper_name.clone(), new_def);
     interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
+    interp.force_flag = false;  // フラグをリセット
     Ok(())
 }
 
@@ -198,37 +224,76 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
 }
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    // DELは 'NAME' を期待する
-    let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let name = match &val.val_type {
+        ValueType::Vector(v) if v.len() == 1 => {
+            match &v[0].val_type {
+                ValueType::String(s) => s.clone(),
+                _ => return Err(AjisaiError::type_error("string", "other type")),
+            }
+        }
         ValueType::String(s) => s.clone(),
         _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
     };
 
     let upper_name = name.to_uppercase();
 
-    // 組み込みワードは削除できない
+    // 組み込みワードは削除不可（! があっても不可）
     if let Some(def) = interp.dictionary.get(&upper_name) {
         if def.is_builtin {
-            return Err(AjisaiError::from(format!("Cannot delete builtin word: {}", upper_name)));
+            interp.force_flag = false;  // フラグをリセット
+            return Err(AjisaiError::from(format!(
+                "Cannot delete built-in word: {}", upper_name
+            )));
         }
+    } else {
+        interp.force_flag = false;  // フラグをリセット
+        return Err(AjisaiError::from(format!(
+            "Word '{}' is not defined", upper_name
+        )));
     }
 
+    // 依存関係のチェック
+    let dependents = interp.get_dependents(&upper_name);
+
+    if !dependents.is_empty() && !interp.force_flag {
+        // 依存関係があり、強制フラグがない場合はエラー
+        let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
+        return Err(AjisaiError::from(format!(
+            "Cannot delete '{}': referenced by {}. Use ! '{}' DEL to force.",
+            upper_name, dep_list, upper_name
+        )));
+    }
+
+    // 削除実行
     if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
         for dep_name in &removed_def.dependencies {
-            if let Some(dependents) = interp.dependents.get_mut(dep_name) {
-                dependents.remove(&upper_name);
+            if let Some(deps) = interp.dependents.get_mut(dep_name) {
+                deps.remove(&upper_name);
             }
         }
         interp.dependents.remove(&upper_name);
 
-        interp.stack.pop(); // 'NAME' をポップ
+        // 他のワードの依存関係リストからも削除
+        for deps in interp.dependents.values_mut() {
+            deps.remove(&upper_name);
+        }
+
+        // 警告メッセージ（依存関係があった場合）
+        if !dependents.is_empty() {
+            let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
+            interp.output_buffer.push_str(&format!(
+                "Warning: '{}' was deleted. Affected words: {}\n",
+                upper_name, dep_list
+            ));
+        }
+
         interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
-        Ok(())
-    } else {
-        Err(AjisaiError::UnknownWord(upper_name))
     }
+
+    interp.force_flag = false;  // フラグをリセット
+    Ok(())
 }
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
@@ -282,8 +347,8 @@ mod tests {
         let result = interp.execute("[ '[ 1 ] +' ] 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Cannot override builtin"),
-                "Expected error message to contain 'Cannot override builtin', got: {}", err_msg);
+        assert!(err_msg.contains("Cannot redefine built-in word"),
+                "Expected error message to contain 'Cannot redefine built-in word', got: {}", err_msg);
     }
 
     #[tokio::test]
@@ -329,7 +394,7 @@ mod tests {
             let result = interp.execute(&code).await;
             assert!(result.is_err(), "Should not be able to override builtin word: {}", word);
             let err_msg = result.unwrap_err().to_string();
-            assert!(err_msg.contains("Cannot override builtin"),
+            assert!(err_msg.contains("Cannot redefine built-in word"),
                     "Expected error for {}, got: {}", word, err_msg);
         }
     }

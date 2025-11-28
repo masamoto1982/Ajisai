@@ -123,6 +123,7 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
         '(' => Some((Token::VectorStart(BracketType::Round), 1)),
         ')' => Some((Token::VectorEnd(BracketType::Round), 1)),
         ':' | ';' => Some((Token::GuardSeparator, 1)),
+        '!' => Some((Token::Symbol("!".to_string()), 1)),
         _ => None,
     }
 }
