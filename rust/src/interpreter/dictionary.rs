@@ -100,8 +100,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     let upper_name = name.to_uppercase();
     interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}'\n", upper_name));
 
-    if let Some(old_def) = interp.dictionary.get(&upper_name) {
-        for dep_name in &old_def.dependencies {
+    // 組み込みワードは上書きできない
+    if let Some(existing_def) = interp.dictionary.get(&upper_name) {
+        if existing_def.is_builtin {
+            return Err(AjisaiError::from(format!("Cannot override builtin word: {}", upper_name)));
+        }
+        // 既存のカスタムワードの依存関係をクリーンアップ
+        for dep_name in &existing_def.dependencies {
             if let Some(dependents) = interp.dependents.get_mut(dep_name) {
                 dependents.remove(&upper_name);
             }
@@ -263,5 +268,69 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
         Ok(())
     } else {
         Err(AjisaiError::UnknownWord(name_str))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::interpreter::Interpreter;
+
+    #[tokio::test]
+    async fn test_cannot_override_builtin_word() {
+        let mut interp = Interpreter::new();
+        // 組み込みワードGETを上書きしようとする
+        let result = interp.execute("[ '[ 1 ] +' ] 'GET' DEF").await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Cannot override builtin"),
+                "Expected error message to contain 'Cannot override builtin', got: {}", err_msg);
+    }
+
+    #[tokio::test]
+    async fn test_can_override_custom_word() {
+        let mut interp = Interpreter::new();
+        // カスタムワードは上書き可能
+        let result1 = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await;
+        assert!(result1.is_ok(), "First definition should succeed");
+
+        let result2 = interp.execute("[ '[ 3 ] *' ] 'DOUBLE' DEF").await;
+        assert!(result2.is_ok(), "Overriding custom word should succeed");
+
+        let result3 = interp.execute("[ 5 ] DOUBLE").await;
+        assert!(result3.is_ok(), "Executing redefined word should succeed");
+
+        // スタックトップが [ 15 ] であることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack.last() {
+            if let crate::types::ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1, "Vector should have one element");
+                if let crate::types::ValueType::Number(n) = &v[0].val_type {
+                    // 15 は分数として 15/1 で表現される
+                    assert_eq!(n.numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", n.numerator);
+                    assert_eq!(n.denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
+                } else {
+                    panic!("Expected Number type in vector");
+                }
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cannot_override_other_builtin_words() {
+        let mut interp = Interpreter::new();
+
+        // 複数の組み込みワードを上書きしようとする
+        let builtin_words = vec!["INSERT", "REPLACE", "MAP", "FILTER", "PRINT"];
+
+        for word in builtin_words {
+            let code = format!("[ '[ 1 ] +' ] '{}' DEF", word);
+            let result = interp.execute(&code).await;
+            assert!(result.is_err(), "Should not be able to override builtin word: {}", word);
+            let err_msg = result.unwrap_err().to_string();
+            assert!(err_msg.contains("Cannot override builtin"),
+                    "Expected error for {}, got: {}", word, err_msg);
+        }
     }
 }
