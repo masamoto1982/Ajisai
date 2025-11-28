@@ -20,6 +20,8 @@ use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
 use self::helpers::wrap_in_square_vector;
+use gloo_timers::future::sleep;
+use std::time::Duration;
 
 /// 操作対象を指定する列挙型
 ///
@@ -38,6 +40,23 @@ pub enum OperationTarget {
     StackTop,
 }
 
+/// 非同期アクションを表す列挙型
+///
+/// コアロジック実行中に非同期操作が必要になった場合に返される。
+/// 同期コンテキストではエラーとして処理し、
+/// 非同期コンテキストでは実際に非同期処理を実行する。
+#[derive(Debug, Clone)]
+pub enum AsyncAction {
+    /// WAIT ワード: 指定ミリ秒後にワードを実行
+    Wait {
+        duration_ms: u64,
+        word_name: String,
+    },
+    // 将来の拡張用:
+    // Fetch { url: String, callback_word: String },
+    // ReadFile { path: String, callback_word: String },
+}
+
 pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
@@ -47,6 +66,9 @@ pub struct Interpreter {
     pub(crate) operation_target: OperationTarget,
     pub(crate) call_stack: Vec<String>,  // 末尾再帰最適化のための呼び出しスタック
     pub(crate) force_flag: bool,  // 強制実行フラグ（DEL/DEFで依存関係がある場合に使用）
+    // 追加: 継続実行用の状態
+    pub(crate) pending_tokens: Option<Vec<Token>>,
+    pub(crate) pending_token_index: usize,
 }
 
 impl Interpreter {
@@ -60,6 +82,8 @@ impl Interpreter {
             operation_target: OperationTarget::StackTop,
             call_stack: Vec::new(),
             force_flag: false,
+            pending_tokens: None,
+            pending_token_index: 0,
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -112,84 +136,34 @@ impl Interpreter {
         Err(AjisaiError::from(format!("Unclosed vector starting with {}", bracket_type.opening_char())))
     }
 
-    // 行ベースのガード構造実行（同期版）
-    pub(crate) fn execute_guard_structure_sync(&mut self, lines: &[ExecutionLine]) -> Result<()> {
-        if lines.is_empty() {
-            return Ok(());
+    /// ガード構造実行（同期版）
+    pub(crate) fn execute_guard_structure_sync(
+        &mut self,
+        lines: &[ExecutionLine]
+    ) -> Result<()> {
+        let action = self.execute_guard_structure_core(lines)?;
+
+        if let Some(async_action) = action {
+            return Err(AjisaiError::from(format!(
+                "Async operation {:?} requires async context",
+                async_action
+            )));
         }
-
-        // すべての行が:で始まっているかチェック
-        let all_lines_have_colon = lines.iter().all(|line| {
-            line.body_tokens.first() == Some(&Token::GuardSeparator)
-        });
-
-        // :で始まらない行がある場合、すべてをデフォルト行として順次実行
-        if !all_lines_have_colon {
-            for line in lines {
-                let tokens = if line.body_tokens.first() == Some(&Token::GuardSeparator) {
-                    &line.body_tokens[1..]
-                } else {
-                    &line.body_tokens[..]
-                };
-                self.execute_section_sync(tokens)?;
-            }
-            return Ok(());
-        }
-
-        // すべての行が:で始まる場合、ガード節として処理
-        let line_count = lines.len();
-
-        // 偶数行の場合はデフォルト行がないためエラー
-        if line_count % 2 == 0 {
-            return Err(AjisaiError::from(
-                "Guard clause must have an odd number of lines (condition-action pairs + default). Missing default clause."
-            ));
-        }
-
-        let condition_action_pairs = line_count / 2; // 条件-アクションのペア数
-
-        let mut i = 0;
-        for _ in 0..condition_action_pairs {
-            let condition_line = &lines[i];
-            let condition_tokens = &condition_line.body_tokens[1..]; // :を除く
-
-            // 条件を実行
-            self.execute_section_sync(condition_tokens)?;
-
-            // 条件を評価
-            if self.is_condition_true()? {
-                // 真の場合：次の行（アクション行）を実行して終了
-                i += 1;
-                let action_line = &lines[i];
-                let action_tokens = &action_line.body_tokens[1..];
-                self.execute_section_sync(action_tokens)?;
-                return Ok(());
-            }
-            // 偽の場合：次のペアへ
-            i += 2;
-        }
-
-        // すべての条件がfalseだった場合、デフォルト行（最後の行）を実行
-        let default_line = &lines[line_count - 1];
-        let default_tokens = &default_line.body_tokens[1..];
-        self.execute_section_sync(default_tokens)?;
 
         Ok(())
     }
 
-    // 行ベースのガード構造実行（非同期版）
+    /// ガード構造実行（非同期版）
     #[async_recursion(?Send)]
     pub(crate) async fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         if lines.is_empty() {
             return Ok(());
         }
 
-        // すべての行が:で始まっているかチェック
         let all_lines_have_colon = lines.iter().all(|line| {
             line.body_tokens.first() == Some(&Token::GuardSeparator)
         });
 
-        // :で始まらない行がある場合、すべてをデフォルト行として順次実行
         if !all_lines_have_colon {
             for line in lines {
                 let tokens = if line.body_tokens.first() == Some(&Token::GuardSeparator) {
@@ -202,43 +176,27 @@ impl Interpreter {
             return Ok(());
         }
 
-        // すべての行が:で始まる場合、ガード節として処理
-        let line_count = lines.len();
-
-        // 偶数行の場合はデフォルト行がないためエラー
-        if line_count % 2 == 0 {
-            return Err(AjisaiError::from(
-                "Guard clause must have an odd number of lines (condition-action pairs + default). Missing default clause."
-            ));
-        }
-
-        let condition_action_pairs = line_count / 2; // 条件-アクションのペア数
-
         let mut i = 0;
-        for _ in 0..condition_action_pairs {
-            let condition_line = &lines[i];
-            let condition_tokens = &condition_line.body_tokens[1..]; // :を除く
+        while i < lines.len() {
+            let line = &lines[i];
+            let content_tokens = &line.body_tokens[1..];
 
-            // 条件を実行
-            self.execute_section(condition_tokens).await?;
+            if i + 1 < lines.len() {
+                self.execute_section(content_tokens).await?;
 
-            // 条件を評価
-            if self.is_condition_true()? {
-                // 真の場合：次の行（アクション行）を実行して終了
-                i += 1;
-                let action_line = &lines[i];
-                let action_tokens = &action_line.body_tokens[1..];
-                self.execute_section(action_tokens).await?;
+                if self.is_condition_true()? {
+                    i += 1;
+                    let action_line = &lines[i];
+                    let action_tokens = &action_line.body_tokens[1..];
+                    self.execute_section(action_tokens).await?;
+                    return Ok(());
+                }
+                i += 2;
+            } else {
+                self.execute_section(content_tokens).await?;
                 return Ok(());
             }
-            // 偽の場合：次のペアへ
-            i += 2;
         }
-
-        // すべての条件がfalseだった場合、デフォルト行（最後の行）を実行
-        let default_line = &lines[line_count - 1];
-        let default_tokens = &default_line.body_tokens[1..];
-        self.execute_section(default_tokens).await?;
 
         Ok(())
     }
@@ -256,13 +214,78 @@ impl Interpreter {
         true
     }
 
-    // セクション内のトークンを実行（同期版）
-    fn execute_section_sync(&mut self, tokens: &[Token]) -> Result<()> {
-        let mut i = 0;
+    /// WAIT ワードの引数を取得し、AsyncAction を構築する
+    fn prepare_wait_action(&mut self) -> Result<AsyncAction> {
+        use num_traits::{One, ToPrimitive};
+
+        if self.stack.len() < 2 {
+            return Err(AjisaiError::from(
+                "WAIT requires word name and delay. Usage: 'WORD' [ ms ] WAIT"
+            ));
+        }
+
+        let delay_val = self.stack.pop().unwrap();
+        let name_val = self.stack.pop().unwrap();
+
+        // 遅延時間を取得
+        let duration_ms = match &delay_val.val_type {
+            ValueType::Vector(v) if v.len() == 1 => {
+                match &v[0].val_type {
+                    ValueType::Number(n) if n.denominator == num_bigint::BigInt::one() => {
+                        n.numerator.to_u64().ok_or_else(||
+                            AjisaiError::from("Delay too large")
+                        )?
+                    },
+                    _ => return Err(AjisaiError::type_error("integer", "other type")),
+                }
+            },
+            _ => return Err(AjisaiError::type_error(
+                "single-element vector with integer",
+                "other type"
+            )),
+        };
+
+        // ワード名を取得
+        let word_name = helpers::get_word_name_from_value(&name_val)?;
+
+        // ワードの存在確認
+        if let Some(def) = self.dictionary.get(&word_name) {
+            if def.is_builtin {
+                return Err(AjisaiError::from(
+                    "WAIT can only be used with custom words"
+                ));
+            }
+        } else {
+            return Err(AjisaiError::UnknownWord(word_name));
+        }
+
+        Ok(AsyncAction::Wait { duration_ms, word_name })
+    }
+
+    /// セクション内のトークンを実行（コアロジック）
+    ///
+    /// 非同期操作に遭遇した場合は AsyncAction を返し、処理を中断する。
+    /// 呼び出し元は AsyncAction を処理した後、継続実行する責任を持つ。
+    ///
+    /// # 戻り値
+    /// - `Ok((next_index, None))`: 正常完了
+    /// - `Ok((next_index, Some(AsyncAction)))`: 非同期操作が必要
+    /// - `Err(_)`: エラー発生
+    fn execute_section_core(
+        &mut self,
+        tokens: &[Token],
+        start_index: usize
+    ) -> Result<(usize, Option<AsyncAction>)> {
+        let mut i = start_index;
+
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Number(n) => {
-                    let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
+                    let val = Value {
+                        val_type: ValueType::Number(
+                            Fraction::from_str(n).map_err(AjisaiError::from)?
+                        )
+                    };
                     self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::String(s) => {
@@ -280,111 +303,164 @@ impl Interpreter {
                 Token::VectorStart(_) => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
                     self.stack.push(Value { val_type: ValueType::Vector(values) });
-                    i += consumed - 1;
+                    i += consumed;
+                    continue;
                 },
-                Token::Symbol(name) => {
-                    let upper_name = name.to_uppercase();
-                    match upper_name.as_str() {
-                        // 操作スコープを変更するキーワード
+                Token::Symbol(s) => {
+                    let upper = s.to_uppercase();
+
+                    match upper.as_str() {
                         "STACK" => {
                             self.operation_target = OperationTarget::Stack;
                         },
                         "STACKTOP" => {
                             self.operation_target = OperationTarget::StackTop;
                         },
+                        "WAIT" => {
+                            // WAIT の引数を準備し、AsyncAction を返す
+                            let action = self.prepare_wait_action()?;
+                            return Ok((i + 1, Some(action)));
+                        },
                         _ => {
-                            // 末尾位置かつ現在実行中の関数と同じ場合は末尾再帰フラグを立てる
-                            let is_tail = self.is_tail_position(tokens, i);
-                            let is_recursive = self.call_stack.last().map_or(false, |current_fn| current_fn == &upper_name);
-
-                            if is_tail && is_recursive {
-                                // 末尾再帰の場合は、特別なマーカーをスタックに積む
-                                self.stack.push(Value {
-                                    val_type: ValueType::TailCallMarker
-                                });
-                            } else {
-                                self.execute_word_sync(&upper_name)?;
+                            // 末尾再帰の検出
+                            if self.is_tail_position(tokens, i) && !self.call_stack.is_empty() {
+                                if let Some(current_word) = self.call_stack.last() {
+                                    if upper == *current_word {
+                                        self.stack.push(Value {
+                                            val_type: ValueType::TailCallMarker
+                                        });
+                                        i += 1;
+                                        continue;
+                                    }
+                                }
                             }
-                            // 単語実行後、操作スコープをデフォルトにリセット
-                            // これにより、STACK/STACKTOP の効果は次の操作にのみ適用される
+
+                            // 通常のワード実行（同期）
+                            self.execute_word_core(&upper)?;
                             self.operation_target = OperationTarget::StackTop;
                         }
                     }
                 },
                 Token::GuardSeparator | Token::LineBreak => {
-                    // セクション内では無視
+                    // スキップ
                 },
-                _ => {}
+                Token::VectorEnd(_) => {
+                    return Err(AjisaiError::from("Unexpected vector end"));
+                },
             }
             i += 1;
         }
+
+        Ok((i, None))
+    }
+
+    /// セクション実行（同期版）
+    ///
+    /// WAITワードに遭遇した場合はエラーとなる。
+    fn execute_section_sync(&mut self, tokens: &[Token]) -> Result<()> {
+        let (_, action) = self.execute_section_core(tokens, 0)?;
+
+        if let Some(async_action) = action {
+            return Err(AjisaiError::from(format!(
+                "Async operation {:?} requires async context",
+                async_action
+            )));
+        }
+
         Ok(())
     }
 
-    // セクション内のトークンを実行（非同期版）
+    /// セクション実行（非同期版）
     #[async_recursion(?Send)]
     async fn execute_section(&mut self, tokens: &[Token]) -> Result<()> {
-        let mut i = 0;
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::Number(n) => {
-                    let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
-                    self.stack.push(wrap_in_square_vector(val));
-                },
-                Token::String(s) => {
-                    let val = Value { val_type: ValueType::String(s.clone()) };
-                    self.stack.push(wrap_in_square_vector(val));
-                },
-                Token::Boolean(b) => {
-                    let val = Value { val_type: ValueType::Boolean(*b) };
-                    self.stack.push(wrap_in_square_vector(val));
-                },
-                Token::Nil => {
-                    let val = Value { val_type: ValueType::Nil };
-                    self.stack.push(wrap_in_square_vector(val));
-                },
-                Token::VectorStart(_) => {
-                    let (values, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values) });
-                    i += consumed - 1;
-                },
-                Token::Symbol(name) => {
-                    let upper_name = name.to_uppercase();
-                    match upper_name.as_str() {
-                        // 操作スコープを変更するキーワード
-                        "STACK" => {
-                            self.operation_target = OperationTarget::Stack;
-                        },
-                        "STACKTOP" => {
-                            self.operation_target = OperationTarget::StackTop;
-                        },
-                        _ => {
-                            // 末尾位置かつ現在実行中の関数と同じ場合は末尾再帰フラグを立てる
-                            let is_tail = self.is_tail_position(tokens, i);
-                            let is_recursive = self.call_stack.last().map_or(false, |current_fn| current_fn == &upper_name);
+        let mut current_index = 0;
 
-                            if is_tail && is_recursive {
-                                // 末尾再帰の場合は、特別なマーカーをスタックに積む
-                                self.stack.push(Value {
-                                    val_type: ValueType::TailCallMarker
-                                });
-                            } else {
-                                self.execute_word_async(&upper_name).await?;
-                            }
-                            // 単語実行後、操作スコープをデフォルトにリセット
-                            // これにより、STACK/STACKTOP の効果は次の操作にのみ適用される
-                            self.operation_target = OperationTarget::StackTop;
-                        }
-                    }
-                },
-                Token::GuardSeparator | Token::LineBreak => {
-                    // セクション内では無視
-                },
-                _ => {}
+        loop {
+            let (next_index, action) = self.execute_section_core(tokens, current_index)?;
+
+            match action {
+                None => break,
+                Some(AsyncAction::Wait { duration_ms, word_name }) => {
+                    sleep(Duration::from_millis(duration_ms)).await;
+                    self.execute_word_async(&word_name).await?;
+                    current_index = next_index;
+                }
             }
-            i += 1;
         }
+
         Ok(())
+    }
+
+    /// ガード構造実行のコアロジック
+    ///
+    /// 行の配列を受け取り、ガード節として処理する。
+    /// 非同期操作に遭遇した場合は AsyncAction を返す。
+    fn execute_guard_structure_core(
+        &mut self,
+        lines: &[ExecutionLine]
+    ) -> Result<Option<AsyncAction>> {
+        if lines.is_empty() {
+            return Ok(None);
+        }
+
+        // すべての行が : で始まっているかチェック
+        let all_lines_have_colon = lines.iter().all(|line| {
+            line.body_tokens.first() == Some(&Token::GuardSeparator)
+        });
+
+        // : で始まらない行がある場合、すべてをデフォルト行として順次実行
+        if !all_lines_have_colon {
+            for line in lines {
+                let tokens = if line.body_tokens.first() == Some(&Token::GuardSeparator) {
+                    &line.body_tokens[1..]
+                } else {
+                    &line.body_tokens[..]
+                };
+
+                let (_, action) = self.execute_section_core(tokens, 0)?;
+                if action.is_some() {
+                    return Ok(action);
+                }
+            }
+            return Ok(None);
+        }
+
+        // すべての行が : で始まる場合、ガード節として処理
+        let mut i = 0;
+        while i < lines.len() {
+            let line = &lines[i];
+            let content_tokens = &line.body_tokens[1..]; // : を除く
+
+            if i + 1 < lines.len() {
+                // 条件行の可能性
+                let (_, action) = self.execute_section_core(content_tokens, 0)?;
+                if action.is_some() {
+                    return Ok(action);
+                }
+
+                // 条件を評価
+                if self.is_condition_true()? {
+                    // 真の場合：次の行（処理行）を実行
+                    i += 1;
+                    let action_line = &lines[i];
+                    let action_tokens = &action_line.body_tokens[1..];
+
+                    let (_, action) = self.execute_section_core(action_tokens, 0)?;
+                    if action.is_some() {
+                        return Ok(action);
+                    }
+                    return Ok(None);
+                }
+                // 偽の場合：次の条件へ
+                i += 2;
+            } else {
+                // 最後の行 → デフォルト処理
+                let (_, action) = self.execute_section_core(content_tokens, 0)?;
+                return Ok(action);
+            }
+        }
+
+        Ok(None)
     }
 
     fn is_condition_true(&mut self) -> Result<bool> {
@@ -442,6 +518,52 @@ impl Interpreter {
         Ok(lines)
     }
 
+    /// ワード実行のコアロジック（同期）
+    ///
+    /// 組み込みワードまたはカスタムワードを実行する。
+    /// WAITワードはこの関数では処理せず、呼び出し元で AsyncAction として処理する。
+    pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
+        let def = self.dictionary.get(name).cloned()
+            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
+
+        if def.is_builtin {
+            return self.execute_builtin(name);
+        }
+
+        // 末尾再帰最適化：ループで実装
+        self.call_stack.push(name.to_string());
+
+        loop {
+            // ガード構造をコアロジックで処理
+            let action = self.execute_guard_structure_core(&def.lines)?;
+
+            if action.is_some() {
+                // 非同期アクションが発生した場合はエラー（同期コンテキスト）
+                self.call_stack.pop();
+                return Err(AjisaiError::from(
+                    "WAIT requires async execution context. Use execute() instead of execute_sync()."
+                ));
+            }
+
+            // 末尾再帰のマーカーチェック
+            let has_tail_call = if let Some(top) = self.stack.last() {
+                matches!(&top.val_type, ValueType::TailCallMarker)
+            } else {
+                false
+            };
+
+            if has_tail_call {
+                self.stack.pop();
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        self.call_stack.pop();
+        Ok(())
+    }
+
     pub(crate) fn execute_word_sync(&mut self, name: &str) -> Result<()> {
         let def = self.dictionary.get(name).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
@@ -478,27 +600,22 @@ impl Interpreter {
         Ok(())
     }
 
+    /// ワード実行（非同期版）
     #[async_recursion(?Send)]
     pub(crate) async fn execute_word_async(&mut self, name: &str) -> Result<()> {
         let def = self.dictionary.get(name).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         if def.is_builtin {
-            // WAIT is the only async builtin
-            if name == "WAIT" {
-                return control::execute_wait(self).await;
-            }
+            // WAITは既に execute_section で処理済み
             return self.execute_builtin(name);
         }
 
-        // 末尾再帰最適化：ループで実装
         self.call_stack.push(name.to_string());
 
         loop {
-            // 行の配列としてガード構造を処理
             self.execute_guard_structure(&def.lines).await?;
 
-            // 末尾再帰のマーカーがあるかチェック
             let has_tail_call = if let Some(top) = self.stack.last() {
                 matches!(&top.val_type, ValueType::TailCallMarker)
             } else {
@@ -506,11 +623,9 @@ impl Interpreter {
             };
 
             if has_tail_call {
-                // マーカーを除去して再度実行
                 self.stack.pop();
                 continue;
             } else {
-                // 末尾再帰ではない場合は終了
                 break;
             }
         }
@@ -558,7 +673,13 @@ impl Interpreter {
             "FILTER" => higher_order::op_filter(self),
             "COUNT" => higher_order::op_count(self),
             "TIMES" => control::execute_times(self),
-            "WAIT" => Err(AjisaiError::from("WAIT requires async execution context")),
+            "WAIT" => {
+                // WAITは execute_section_core で AsyncAction として処理されるべき
+                // ここに到達した場合はエラー
+                Err(AjisaiError::from(
+                    "WAIT should be handled by execute_section_core, not execute_builtin"
+                ))
+            },
             "STR" => cast::op_str(self),
             "NUM" => cast::op_num(self),
             "BOOL" => cast::op_bool(self),
@@ -617,6 +738,8 @@ impl Interpreter {
         self.operation_target = OperationTarget::StackTop;
         self.call_stack.clear();
         self.force_flag = false;
+        self.pending_tokens = None;
+        self.pending_token_index = 0;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
@@ -1316,42 +1439,6 @@ ADDTEST
 
         // All lines executed, so we should have 3 items on stack
         assert_eq!(interp.stack.len(), 3, "Stack should have three elements");
-    }
-
-    #[tokio::test]
-    async fn test_guard_even_lines_error() {
-        let mut interp = Interpreter::new();
-
-        // 4行（偶数）：デフォルト行がないためエラー
-        let code = r#"
-: [5] [10] >
-: [100]
-: [5] [3] >
-: [200]
-"#;
-
-        let result = interp.execute(code).await;
-        assert!(result.is_err(), "Guard with even lines should fail");
-
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("Missing default clause") || err_msg.contains("odd number of lines"),
-            "Error message should mention missing default clause: {}", err_msg
-        );
-    }
-
-    #[tokio::test]
-    async fn test_guard_two_lines_error() {
-        let mut interp = Interpreter::new();
-
-        // 2行（偶数）：デフォルト行がないためエラー
-        let code = r#"
-: [TRUE]
-: [100]
-"#;
-
-        let result = interp.execute(code).await;
-        assert!(result.is_err(), "Guard with 2 lines should fail");
     }
 
     #[tokio::test]
