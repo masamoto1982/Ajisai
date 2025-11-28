@@ -82,7 +82,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         val_type: ValueType::Vector(vec![elem])
                     });
                     // ワードを実行
-                    interp.execute_word_sync(&word_name)?;
+                    interp.execute_word_core(&word_name)?;
 
                     // 結果を取得
                     let result_vec = interp.stack.pop()
@@ -134,7 +134,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item.clone());
-                match interp.execute_word_sync(&word_name) {
+                match interp.execute_word_core(&word_name) {
                     Ok(_) => {
                         match interp.stack.pop() {
                             Some(result) => results.push(result),
@@ -235,7 +235,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                         val_type: ValueType::Vector(vec![elem.clone()])
                     });
                     // ワードを実行
-                    interp.execute_word_sync(&word_name)?;
+                    interp.execute_word_core(&word_name)?;
 
                     // 条件判定結果を取得
                     let condition_result = interp.stack.pop()
@@ -292,7 +292,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item.clone());
-                match interp.execute_word_sync(&word_name) {
+                match interp.execute_word_core(&word_name) {
                     Ok(_) => {
                         // 条件判定結果を取得
                         let condition_result = match interp.stack.pop() {
@@ -403,7 +403,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                         val_type: ValueType::Vector(vec![elem.clone()])
                     });
                     // ワードを実行
-                    interp.execute_word_sync(&word_name)?;
+                    interp.execute_word_core(&word_name)?;
 
                     // 条件判定結果を取得
                     let condition_result = interp.stack.pop()
@@ -471,7 +471,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item.clone());
-                match interp.execute_word_sync(&word_name) {
+                match interp.execute_word_core(&word_name) {
                     Ok(_) => {
                         // 条件判定結果を取得
                         let condition_result = match interp.stack.pop() {
