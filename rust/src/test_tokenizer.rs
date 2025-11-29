@@ -154,3 +154,81 @@ fn test_flexible_quotes_with_bracket_delimiter() {
         Token::VectorEnd(crate::types::BracketType::Square),
     ]);
 }
+
+// 日本語ワードサポートのテスト
+#[test]
+fn test_japanese_word_recognition() {
+    let mut custom_words = HashSet::new();
+    custom_words.insert("足す".to_string());
+
+    // 日本語ワードの認識
+    let result = tokenize_with_custom_words("2 3 足す", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::Number("2".to_string()),
+        Token::Number("3".to_string()),
+        Token::Symbol("足す".to_string()),
+    ]);
+}
+
+#[test]
+fn test_natural_language_style_japanese() {
+    let mut custom_words = HashSet::new();
+    custom_words.insert("足す".to_string());
+
+    // 自然言語風の入力（「と」「を」はスキップされる）
+    let result = tokenize_with_custom_words("2と3を足す", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::Number("2".to_string()),
+        Token::Number("3".to_string()),
+        Token::Symbol("足す".to_string()),
+    ]);
+}
+
+#[test]
+fn test_japanese_word_boundary() {
+    let mut custom_words = HashSet::new();
+    custom_words.insert("足す".to_string());
+    custom_words.insert("掛ける".to_string());
+
+    // 日本語ワードだけの入力
+    let result = tokenize_with_custom_words("足す", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::Symbol("足す".to_string()),
+    ]);
+
+    // 複数の日本語ワード
+    let result2 = tokenize_with_custom_words("2 足す 3 掛ける 4", &custom_words).unwrap();
+    assert_eq!(result2, vec![
+        Token::Number("2".to_string()),
+        Token::Symbol("足す".to_string()),
+        Token::Number("3".to_string()),
+        Token::Symbol("掛ける".to_string()),
+        Token::Number("4".to_string()),
+    ]);
+}
+
+#[test]
+fn test_mixed_japanese_english() {
+    let mut custom_words = HashSet::new();
+    custom_words.insert("出力する".to_string());
+
+    let result = tokenize_with_custom_words("'Hello' 出力する", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::String("Hello".to_string()),
+        Token::Symbol("出力する".to_string()),
+    ]);
+}
+
+#[test]
+fn test_skip_unregistered_japanese() {
+    let mut custom_words = HashSet::new();
+    custom_words.insert("合計".to_string());
+
+    // 「と」「を」は辞書にないのでスキップ
+    let result = tokenize_with_custom_words("2と3を合計", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::Number("2".to_string()),
+        Token::Number("3".to_string()),
+        Token::Symbol("合計".to_string()),
+    ]);
+}
