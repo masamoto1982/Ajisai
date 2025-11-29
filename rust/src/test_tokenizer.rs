@@ -232,3 +232,16 @@ fn test_skip_unregistered_japanese() {
         Token::Symbol("合計".to_string()),
     ]);
 }
+
+#[test]
+fn test_operator_with_japanese() {
+    let custom_words = HashSet::new();
+
+    // 演算子の後に日本語が続く場合のテスト
+    let result = tokenize_with_custom_words("1と2を+しなさい", &custom_words).unwrap();
+    assert_eq!(result, vec![
+        Token::Number("1".to_string()),
+        Token::Number("2".to_string()),
+        Token::Symbol("+".to_string()),
+    ]);
+}

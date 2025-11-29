@@ -84,14 +84,24 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
                     let word_len_bytes = mat.end();
                     // バイト数を文字数に変換
                     let word_len_chars = remaining_slice[..word_len_bytes].chars().count();
-                    // ワード境界チェック：マッチの直後がワード文字でないことを確認
-                    let is_at_boundary = word_len_chars >= remaining_slice.chars().count()
-                        || !is_word_char(remaining_slice.chars().nth(word_len_chars).unwrap());
+                    let matched_word = &remaining_slice[..word_len_bytes];
+
+                    // ワード境界チェック：
+                    // マッチした文字列の最後がワード文字の場合のみ、次の文字がワード文字でないことを確認
+                    // 演算子など（ワード文字でない）の場合は、次の文字に関係なくマッチ
+                    let last_char_of_match = matched_word.chars().last().unwrap();
+                    let is_at_boundary = if is_word_char(last_char_of_match) {
+                        // マッチの最後がワード文字の場合、次もワード文字ならワード境界ではない
+                        word_len_chars >= remaining_slice.chars().count()
+                            || !is_word_char(remaining_slice.chars().nth(word_len_chars).unwrap())
+                    } else {
+                        // マッチの最後がワード文字でない場合（演算子など）、常にワード境界
+                        true
+                    };
 
                     if is_at_boundary {
                         // 最長マッチを更新
                         if best_match.as_ref().map_or(true, |(len, _)| word_len_chars > *len) {
-                            let matched_word = &remaining_slice[..word_len_bytes];
                             best_match = Some((word_len_chars, matched_word.to_string()));
                         }
                     }
