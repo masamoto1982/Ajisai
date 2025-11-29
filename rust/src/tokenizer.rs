@@ -78,29 +78,41 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             let remaining_slice: String = chars[i..].iter().collect();
 
             // 位置0から始まる最長マッチを検索
-            let mut best_match: Option<(usize, String)> = None;
+            // 注意: mat.end() はバイト位置を返す
+            let mut best_match: Option<(usize, usize)> = None;  // (バイト長, 文字数)
+
             for mat in pma.find_iter(&remaining_slice) {
                 if mat.start() == 0 {
-                    let word_len_bytes = mat.end();
-                    // バイト数を文字数に変換
-                    let word_len_chars = remaining_slice[..word_len_bytes].chars().count();
-                    // ワード境界チェック：マッチの直後がワード文字でないことを確認
-                    let is_at_boundary = word_len_chars >= remaining_slice.chars().count()
-                        || !is_word_char(remaining_slice.chars().nth(word_len_chars).unwrap());
+                    let byte_len = mat.end();
+                    // バイト位置から文字数を計算
+                    let matched_str = &remaining_slice[..byte_len];
+                    let char_count = matched_str.chars().count();
+
+                    // ワード境界チェック
+                    let remaining_chars: Vec<char> = remaining_slice.chars().collect();
+                    let last_char_of_match = matched_str.chars().last().unwrap();
+                    let is_at_boundary = if is_word_char(last_char_of_match) {
+                        // マッチの最後がワード文字の場合、次もワード文字ならワード境界ではない
+                        char_count >= remaining_chars.len()
+                            || !is_word_char(remaining_chars[char_count])
+                    } else {
+                        // マッチの最後がワード文字でない場合（演算子など）、常にワード境界
+                        true
+                    };
 
                     if is_at_boundary {
-                        // 最長マッチを更新
-                        if best_match.as_ref().map_or(true, |(len, _)| word_len_chars > *len) {
-                            let matched_word = &remaining_slice[..word_len_bytes];
-                            best_match = Some((word_len_chars, matched_word.to_string()));
+                        // 最長マッチを更新（バイト長で比較）
+                        if best_match.as_ref().map_or(true, |(len, _)| byte_len > *len) {
+                            best_match = Some((byte_len, char_count));
                         }
                     }
                 }
             }
 
-            if let Some((word_len_chars, matched_word)) = best_match {
-                tokens.push(Token::Symbol(matched_word));
-                i += word_len_chars;
+            if let Some((byte_len, char_count)) = best_match {
+                let matched_word = &remaining_slice[..byte_len];
+                tokens.push(Token::Symbol(matched_word.to_string()));
+                i += char_count;  // 文字数で進める
                 continue;
             }
 
