@@ -73,32 +73,41 @@ pub fn tokenize_with_custom_words(input: &str, custom_words: &HashSet<String>) -
             i += consumed;
         }
         // 7. カスタムワード・組み込みワード（PMA検索）
-        // 演算子も組み込みワードとしてここで処理される
+        // 8. 辞書にないシンボルはスキップ
         else {
             let remaining_slice: String = chars[i..].iter().collect();
-            if let Some(mat) = pma.find_iter(&remaining_slice).next() {
+
+            // 位置0から始まる最長マッチを検索
+            let mut best_match: Option<(usize, String)> = None;
+            for mat in pma.find_iter(&remaining_slice) {
                 if mat.start() == 0 {
-                    let word_len = mat.end();
-                    if word_len < remaining_slice.len() && is_word_char(remaining_slice.chars().nth(word_len).unwrap()) {
-                        // ワード境界でない場合はスキップ
-                    } else {
-                        let matched_word = &remaining_slice[..word_len];
-                        tokens.push(Token::Symbol(matched_word.to_string()));
-                        i += word_len;
-                        continue;
+                    let word_len_bytes = mat.end();
+                    // バイト数を文字数に変換
+                    let word_len_chars = remaining_slice[..word_len_bytes].chars().count();
+                    // ワード境界チェック：マッチの直後がワード文字でないことを確認
+                    let is_at_boundary = word_len_chars >= remaining_slice.chars().count()
+                        || !is_word_char(remaining_slice.chars().nth(word_len_chars).unwrap());
+
+                    if is_at_boundary {
+                        // 最長マッチを更新
+                        if best_match.as_ref().map_or(true, |(len, _)| word_len_chars > *len) {
+                            let matched_word = &remaining_slice[..word_len_bytes];
+                            best_match = Some((word_len_chars, matched_word.to_string()));
+                        }
                     }
                 }
             }
 
-            // 8. 辞書にないシンボルは無視（自然言語的な表現を可能にするため）
-            if chars[i].is_alphabetic() || chars[i] == '_' {
-                // 辞書に登録されていない単語は、トークンとして認識せずにスキップ
-                let mut j = i;
-                while j < chars.len() && is_word_char(chars[j]) {
-                    j += 1;
-                }
-                // トークンは追加せず、位置だけ進める
-                i = j;
+            if let Some((word_len_chars, matched_word)) = best_match {
+                tokens.push(Token::Symbol(matched_word));
+                i += word_len_chars;
+                continue;
+            }
+
+            // 辞書にないワード文字列はスキップ（自然言語的な表現を可能にするため）
+            // 1文字ずつスキップして、次のイテレーションで辞書のワードがマッチする機会を与える
+            if chars[i].is_alphabetic() {
+                i += 1;
             } else {
                 return Err(format!("Unknown token starting with: {}", chars[i]));
             }
@@ -196,7 +205,7 @@ fn try_parse_keyword(chars: &[char]) -> Option<(Token, usize)> {
     None
 }
 
-fn is_word_char(c: char) -> bool { c.is_ascii_alphanumeric() || c == '_' || c == '?' || c == '!' }
+fn is_word_char(c: char) -> bool { c.is_alphanumeric() || c == '_' || c == '?' || c == '!' }
 
 fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     let mut i = 0;
@@ -252,8 +261,9 @@ fn try_parse_number(chars: &[char]) -> Option<(Token, usize)> {
     // (i > start) は "+1" のような符号あり数値
     // has_dot は "1." のような小数をカバー
     if i > start || (i > 0 && start > 0) || has_dot {
-        // 次がワード文字でなければ数値として確定
-        if i == chars.len() || !is_word_char(chars[i]) {
+        // 次がASCII英数字やアンダースコアでなければ数値として確定
+        // 日本語文字が続く場合は数値として認識する
+        if i == chars.len() || !(chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
             let number_str: String = chars[0..i].iter().collect();
             return Some((Token::Number(number_str), i));
         }
