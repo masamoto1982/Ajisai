@@ -98,12 +98,12 @@ where
                 }
             }
 
-            // "No change is an error" 原則のチェック
+            // "No change is an error" 原則のチェック（REDUCE等では無効化）
             let result_value = Value { val_type: ValueType::Vector(result_vec.clone()) };
             let original_a = Value { val_type: ValueType::Vector(a_vec) };
             let original_b = Value { val_type: ValueType::Vector(b_vec) };
 
-            if result_value == original_a || result_value == original_b {
+            if !interp.disable_no_change_check && (result_value == original_a || result_value == original_b) {
                 interp.stack.push(original_a);
                 interp.stack.push(original_b);
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
@@ -143,8 +143,8 @@ where
                 acc_num = op(&acc_num, extract_number(item)?)?;
             }
 
-            // "No change is an error" 原則のチェック
-            if acc_num == original_first {
+            // "No change is an error" 原則のチェック（REDUCE等では無効化）
+            if !interp.disable_no_change_check && acc_num == original_first {
                 interp.stack.extend(items);
                 interp.stack.push(count_val);
                 return Err(AjisaiError::from("STACK operation resulted in no change"));

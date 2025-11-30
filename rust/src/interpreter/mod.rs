@@ -66,6 +66,7 @@ pub struct Interpreter {
     pub(crate) operation_target: OperationTarget,
     pub(crate) call_stack: Vec<String>,  // 末尾再帰最適化のための呼び出しスタック
     pub(crate) force_flag: bool,  // 強制実行フラグ（DEL/DEFで依存関係がある場合に使用）
+    pub(crate) disable_no_change_check: bool,  // "No change is an error"チェックを無効化（REDUCE等で使用）
     // 追加: 継続実行用の状態
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
@@ -82,6 +83,7 @@ impl Interpreter {
             operation_target: OperationTarget::StackTop,
             call_stack: Vec::new(),
             force_flag: false,
+            disable_no_change_check: false,
             pending_tokens: None,
             pending_token_index: 0,
         };
@@ -672,6 +674,7 @@ impl Interpreter {
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
             "COUNT" => higher_order::op_count(self),
+            "REDUCE" => higher_order::op_reduce(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => {
                 // WAITは execute_section_core で AsyncAction として処理されるべき
@@ -1463,6 +1466,136 @@ ADDTEST
             if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator.to_string(), "999");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reduce_addition() {
+        let mut interp = Interpreter::new();
+        let code = ": [ 1 2 3 4 5 ] '+' REDUCE";
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "REDUCE addition should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+        // 結果が15であることを確認
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "15");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reduce_multiplication() {
+        let mut interp = Interpreter::new();
+        let code = ": [ 1 2 3 4 5 ] '*' REDUCE";
+        let result = interp.execute(code).await;
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+        }
+        assert!(result.is_ok(), "REDUCE multiplication should succeed: {:?}", result);
+        // 結果が120であることを確認（5! = 120）
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "120");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reduce_subtraction() {
+        let mut interp = Interpreter::new();
+        let code = ": [ 10 3 1 ] '-' REDUCE";
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "REDUCE subtraction should succeed: {:?}", result);
+        // 結果が6であることを確認（10-3-1=6）
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "6");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reduce_single_element_error() {
+        let mut interp = Interpreter::new();
+        let code = ": [ 42 ] '+' REDUCE";
+        let result = interp.execute(code).await;
+        assert!(result.is_err(), "REDUCE with single element should fail");
+    }
+
+    #[tokio::test]
+    async fn test_reduce_empty_vector_error() {
+        let mut interp = Interpreter::new();
+        let code = ": [ ] '+' REDUCE";
+        let result = interp.execute(code).await;
+        assert!(result.is_err(), "REDUCE with empty vector should fail");
+    }
+
+    #[tokio::test]
+    async fn test_reduce_stack_mode() {
+        let mut interp = Interpreter::new();
+        let code = ": [1] [2] [3] [4] [5] [5] '+' STACK REDUCE";
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "REDUCE STACK mode should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+        // 結果が15であることを確認
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "15");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reduce_with_custom_word() {
+        let mut interp = Interpreter::new();
+
+        // より簡単なカスタムワード: DOUBLE (2倍にする)
+        let def_code = ": [ '[0] [2] *' ] 'DOUBLE' DEF";
+        let def_result = interp.execute(def_code).await;
+        assert!(def_result.is_ok(), "Failed to define DOUBLE: {:?}", def_result);
+
+        // DOUBLEを使ってREDUCE（乗算の代わり）
+        let code = ": [ 1 2 3 ] '+' REDUCE";  // まず加算で動作確認
+        let result = interp.execute(code).await;
+        if let Err(ref e) = result {
+            eprintln!("Error: {:?}", e);
+            eprintln!("Stack: {:?}", interp.stack);
+        }
+        assert!(result.is_ok(), "REDUCE with simple add should succeed: {:?}", result);
+
+        // 結果が6であることを確認 (1+2+3=6)
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "6");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reduce_fractions() {
+        let mut interp = Interpreter::new();
+        let code = ": [ 1/2 1/3 1/6 ] '+' REDUCE";
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "REDUCE with fractions should succeed: {:?}", result);
+        // 結果が1であることを確認（1/2 + 1/3 + 1/6 = 1）
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "1");
+                    assert_eq!(n.denominator.to_string(), "1");
                 }
             }
         }
