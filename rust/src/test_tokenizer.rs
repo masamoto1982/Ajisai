@@ -385,4 +385,95 @@ mod test_tokenizer {
             Token::Symbol("SET!".to_string()),
         ]);
     }
+
+    // === 分数リテラルのテスト ===
+
+    #[test]
+    fn test_fraction_literal() {
+        let custom_words = HashSet::new();
+
+        // 基本的な分数
+        let result = tokenize_with_custom_words("1/3", &custom_words).unwrap();
+        assert_eq!(result, vec![Token::Number("1/3".to_string())]);
+
+        // 負の分数
+        let result2 = tokenize_with_custom_words("-1/3", &custom_words).unwrap();
+        assert_eq!(result2, vec![Token::Number("-1/3".to_string())]);
+
+        // 分数と他のトークン
+        let result3 = tokenize_with_custom_words("1/3 + 2/5", &custom_words).unwrap();
+        assert_eq!(result3, vec![
+            Token::Number("1/3".to_string()),
+            Token::Symbol("+".to_string()),
+            Token::Number("2/5".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn test_fraction_in_vector() {
+        let custom_words = HashSet::new();
+
+        let result = tokenize_with_custom_words("[ 1/2 3/4 ]", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::VectorStart(crate::types::BracketType::Square),
+            Token::Number("1/2".to_string()),
+            Token::Number("3/4".to_string()),
+            Token::VectorEnd(crate::types::BracketType::Square),
+        ]);
+    }
+
+    #[test]
+    fn test_invalid_fraction() {
+        let custom_words = HashSet::new();
+
+        // "1/" は不完全なのでシンボルとして扱われる
+        let result = tokenize_with_custom_words("1/", &custom_words).unwrap();
+        assert_eq!(result, vec![Token::Symbol("1/".to_string())]);
+
+        // "1/a" もシンボル
+        let result2 = tokenize_with_custom_words("1/a", &custom_words).unwrap();
+        assert_eq!(result2, vec![Token::Symbol("1/a".to_string())]);
+    }
+
+    // === 閉じられていない文字列のテスト ===
+
+    #[test]
+    fn test_unclosed_string_error() {
+        let custom_words = HashSet::new();
+
+        let result = tokenize_with_custom_words("'unclosed string", &custom_words);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unclosed string"));
+    }
+
+    #[test]
+    fn test_unclosed_double_quote_error() {
+        let custom_words = HashSet::new();
+
+        let result = tokenize_with_custom_words("\"unclosed", &custom_words);
+        assert!(result.is_err());
+    }
+
+    // === .5形式の数値のテスト ===
+
+    #[test]
+    fn test_dot_prefix_number() {
+        let custom_words = HashSet::new();
+
+        // .5 形式の数値
+        let result = tokenize_with_custom_words(".5", &custom_words).unwrap();
+        assert_eq!(result, vec![Token::Number(".5".to_string())]);
+
+        // -.5 形式の数値
+        let result2 = tokenize_with_custom_words("-.5", &custom_words).unwrap();
+        assert_eq!(result2, vec![Token::Number("-.5".to_string())]);
+
+        // .5と他のトークン
+        let result3 = tokenize_with_custom_words("1 + .5", &custom_words).unwrap();
+        assert_eq!(result3, vec![
+            Token::Number("1".to_string()),
+            Token::Symbol("+".to_string()),
+            Token::Number(".5".to_string()),
+        ]);
+    }
 }

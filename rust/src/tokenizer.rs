@@ -47,10 +47,19 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
         }
 
         // 4. 引用文字列
-        if let Some((token, consumed)) = parse_quote_string(&chars[i..]) {
-            tokens.push(token);
-            i += consumed;
-            continue;
+        match parse_quote_string(&chars[i..]) {
+            QuoteParseResult::Success(token, consumed) => {
+                tokens.push(token);
+                i += consumed;
+                continue;
+            }
+            QuoteParseResult::Unclosed(_) => {
+                let quote_char = chars[i];
+                return Err(format!("Unclosed string literal starting with {}", quote_char));
+            }
+            QuoteParseResult::NotQuote => {
+                // 引用文字列ではない、次の処理へ
+            }
         }
 
         // 5. トークンの読み取り（空白または特殊文字まで）
@@ -110,11 +119,21 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
     }
 }
 
-fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
-    if chars.is_empty() { return None; }
+/// 引用文字列のパース結果
+enum QuoteParseResult {
+    /// 正常にパースできた (トークン, 消費文字数)
+    Success(Token, usize),
+    /// 閉じ引用符がない
+    Unclosed(usize),  // 開始位置からの文字数
+    /// 引用文字列ではない
+    NotQuote,
+}
+
+fn parse_quote_string(chars: &[char]) -> QuoteParseResult {
+    if chars.is_empty() { return QuoteParseResult::NotQuote; }
 
     let quote_char = chars[0];
-    if quote_char != '\'' && quote_char != '"' { return None; }
+    if quote_char != '\'' && quote_char != '"' { return QuoteParseResult::NotQuote; }
 
     let mut string = String::new();
     let mut i = 1;
@@ -124,7 +143,7 @@ fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
         if chars[i] == quote_char {
             // 次の文字が区切り文字（または EOF）かチェック
             if i + 1 >= chars.len() || is_delimiter(chars[i + 1]) {
-                return Some((Token::String(string), i + 1));
+                return QuoteParseResult::Success(Token::String(string), i + 1);
             } else {
                 // 区切り文字ではないので、クォート文字を文字列に含める
                 string.push(chars[i]);
@@ -137,7 +156,7 @@ fn parse_quote_string(chars: &[char]) -> Option<(Token, usize)> {
     }
 
     // 閉じ引用符が見つからなかった
-    None
+    QuoteParseResult::Unclosed(i)
 }
 
 /// クォート文字の後の文字が区切り文字かどうかを判定
@@ -180,11 +199,41 @@ fn try_parse_number_from_string(s: &str) -> Option<Token> {
         i += 1;
     }
 
+    // 最初の文字が数字または '.' でなければ数値ではない
+    if i >= chars.len() || (!chars[i].is_ascii_digit() && chars[i] != '.') {
+        return None;
+    }
+
     let start = i;
 
     // 整数部分
     while i < chars.len() && chars[i].is_ascii_digit() {
         i += 1;
+    }
+
+    // 分数形式のチェック (例: 1/3, -1/3)
+    if i < chars.len() && chars[i] == '/' {
+        let _slash_pos = i;
+        i += 1;
+
+        // スラッシュ後の符号（負の分母は許可しない設計だが、パースは許可）
+        // 分母部分
+        if i >= chars.len() || !chars[i].is_ascii_digit() {
+            // "1/" のような不完全な分数は数値ではない
+            // シンボルとして扱う
+            return None;
+        }
+        while i < chars.len() && chars[i].is_ascii_digit() {
+            i += 1;
+        }
+
+        // 全体を読み切ったかチェック
+        if i == chars.len() {
+            return Some(Token::Number(s.to_string()));
+        } else {
+            // 余分な文字があるので数値ではない (例: "1/3abc")
+            return None;
+        }
     }
 
     // 小数部分
