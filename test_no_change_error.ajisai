@@ -1,0 +1,154 @@
+# "No change is an error" 原則のテストケース
+
+# ============================================
+# 比較演算のSTACKモードテスト
+# ============================================
+
+# count=0 でエラー（コメントアウト）
+# [ 1 ] [ 2 ] [ 0 ] STACK <
+# 期待: エラー "STACK comparison with count 0 or 1 results in no change"
+
+# count=1 でエラー（コメントアウト）
+# [ 1 ] [ 1 ] STACK <
+# 期待: エラー "STACK comparison with count 0 or 1 results in no change"
+
+# count=2 以上は正常
+[ 1 ] [ 2 ] [ 2 ] STACK < PRINT
+# 期待: [ TRUE ]
+
+[ 1 ] [ 2 ] [ 3 ] [ 3 ] STACK < PRINT
+# 期待: [ TRUE ] (1<2 かつ 2<3)
+
+[ 3 ] [ 2 ] [ 1 ] [ 3 ] STACK < PRINT
+# 期待: [ FALSE ] (3>2 なので FALSE)
+
+# <=, >, >= のテスト
+[ 1 ] [ 2 ] [ 3 ] [ 3 ] STACK <= PRINT
+# 期待: [ TRUE ]
+
+[ 3 ] [ 2 ] [ 1 ] [ 3 ] STACK > PRINT
+# 期待: [ TRUE ]
+
+[ 3 ] [ 2 ] [ 1 ] [ 3 ] STACK >= PRINT
+# 期待: [ TRUE ]
+
+# = のSTACKモードテスト
+[ 5 ] [ 5 ] [ 5 ] [ 3 ] STACK = PRINT
+# 期待: [ TRUE ]
+
+[ 1 ] [ 2 ] [ 1 ] [ 3 ] STACK = PRINT
+# 期待: [ FALSE ]
+
+# ============================================
+# 算術演算のSTACKモードテスト
+# ============================================
+
+# count=0 でエラー（コメントアウト）
+# [ 1 ] [ 0 ] STACK +
+# 期待: エラー "STACK arithmetic with count 0 or 1 results in no change"
+
+# count=1 でエラー（コメントアウト）
+# [ 1 ] [ 1 ] STACK +
+# 期待: エラー "STACK arithmetic with count 0 or 1 results in no change"
+
+# count=2 以上は正常
+[ 1 ] [ 2 ] [ 3 ] [ 3 ] STACK + PRINT
+# 期待: [ 6 ] (1+2+3)
+
+# ============================================
+# REVERSE テスト
+# ============================================
+
+# 1要素でエラー（コメントアウト）
+# [ 1 ] REVERSE
+# 期待: エラー "Cannot reverse single-element vector"
+
+# 回文でエラー（コメントアウト）
+# [ 1 2 1 ] REVERSE
+# 期待: エラー "REVERSE resulted in no change (palindrome)"
+
+# 正常ケース
+[ 1 2 3 ] REVERSE PRINT
+# 期待: [ 3 2 1 ]
+
+[ a b c ] REVERSE PRINT
+# 期待: [ c b a ]
+
+# ============================================
+# LEVEL テスト
+# ============================================
+
+# すでに平坦でエラー（コメントアウト）
+# [ 1 2 3 ] LEVEL
+# 期待: エラー "LEVEL resulted in no change (already flat)"
+
+# 正常ケース
+[ [ 1 2 ] [ 3 4 ] ] LEVEL PRINT
+# 期待: [ 1 2 3 4 ]
+
+[ [ a ] [ b c ] [ d ] ] LEVEL PRINT
+# 期待: [ a b c d ]
+
+# ============================================
+# FRACTIONSORT テスト
+# ============================================
+
+# すでにソート済みでエラー（コメントアウト）
+# [ 1 2 3 ] FRACTIONSORT
+# 期待: エラー "FRACTIONSORT resulted in no change (already sorted)"
+
+# 空でエラー（コメントアウト）
+# [ ] FRACTIONSORT
+# 期待: エラー "Cannot sort empty vector"
+
+# 正常ケース
+[ 3 1 2 ] FRACTIONSORT PRINT
+# 期待: [ 1 2 3 ]
+
+[ 5/2 1/2 3/2 ] FRACTIONSORT PRINT
+# 期待: [ 1/2 3/2 5/2 ]
+
+# ============================================
+# 型変換の同型変換テスト
+# ============================================
+
+# String → String でエラー（コメントアウト）
+# [ 'hello' ] STR
+# 期待: エラー "STR: value is already a String"
+
+# Number → Number でエラー（コメントアウト）
+# [ 42 ] NUM
+# 期待: エラー "NUM: value is already a Number"
+
+# Boolean → Boolean でエラー（コメントアウト）
+# [ TRUE ] BOOL
+# 期待: エラー "BOOL: value is already a Boolean"
+
+# Nil → Nil でエラー（コメントアウト）
+# [ nil ] NIL
+# 期待: エラー "NIL: value is already Nil"
+
+# 正常な型変換
+[ 123 ] STR PRINT
+# 期待: [ '123' ]
+
+[ '456' ] NUM PRINT
+# 期待: [ 456 ]
+
+[ 0 ] BOOL PRINT
+# 期待: [ FALSE ]
+
+[ 1 ] BOOL PRINT
+# 期待: [ TRUE ]
+
+# ============================================
+# FILTER と MAP のテスト（修正不要）
+# ============================================
+
+# FILTER は空結果でもエラーにならない（正常な動作）
+[ 1 2 3 4 5 ] : [ [ 10 ] > ] FILTER PRINT
+# 期待: [ ] (すべてフィルタアウトされる)
+
+# MAP は同一結果でもエラーにならない（正常な動作）
+[ 1 2 3 ] : [ ] MAP PRINT
+# 期待: [ 1 2 3 ] (identity関数)
