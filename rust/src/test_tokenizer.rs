@@ -453,27 +453,4 @@ mod test_tokenizer {
         let result = tokenize_with_custom_words("\"unclosed", &custom_words);
         assert!(result.is_err());
     }
-
-    // === .5形式の数値のテスト ===
-
-    #[test]
-    fn test_dot_prefix_number() {
-        let custom_words = HashSet::new();
-
-        // .5 形式の数値
-        let result = tokenize_with_custom_words(".5", &custom_words).unwrap();
-        assert_eq!(result, vec![Token::Number(".5".to_string())]);
-
-        // -.5 形式の数値
-        let result2 = tokenize_with_custom_words("-.5", &custom_words).unwrap();
-        assert_eq!(result2, vec![Token::Number("-.5".to_string())]);
-
-        // .5と他のトークン
-        let result3 = tokenize_with_custom_words("1 + .5", &custom_words).unwrap();
-        assert_eq!(result3, vec![
-            Token::Number("1".to_string()),
-            Token::Symbol("+".to_string()),
-            Token::Number(".5".to_string()),
-        ]);
-    }
 }

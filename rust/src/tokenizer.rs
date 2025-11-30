@@ -192,15 +192,15 @@ fn try_parse_number_from_string(s: &str) -> Option<Token> {
             // "+" や "-" だけの場合は演算子
             return None;
         }
-        if !chars[i + 1].is_ascii_digit() && chars[i + 1] != '.' {
+        if !chars[i + 1].is_ascii_digit() {
             // "+a" や "-foo" のような場合は数値ではない
             return None;
         }
         i += 1;
     }
 
-    // 最初の文字が数字または '.' でなければ数値ではない
-    if i >= chars.len() || (!chars[i].is_ascii_digit() && chars[i] != '.') {
+    // 最初の文字が数字でなければ数値ではない
+    if i >= chars.len() || !chars[i].is_ascii_digit() {
         return None;
     }
 
