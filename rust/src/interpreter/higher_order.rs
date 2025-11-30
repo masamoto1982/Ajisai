@@ -7,7 +7,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
+use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, wrap_in_square_vector, unwrap_single_element};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
@@ -523,4 +523,189 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// REDUCE - ベクタまたはスタックを二項演算で畳み込む
+///
+/// 【責務】
+/// - ベクタの要素を左から右へ順に二項演算で集約
+/// - カスタムワードおよび組み込みワードの両方をサポート
+///
+/// 【動作モード】
+/// 1. StackTopモード:
+///    - ベクタの要素を順に畳み込む
+///    - 例: `[1 2 3 4] '+' REDUCE` → `[10]`
+///
+/// 2. Stackモード:
+///    - スタックトップからN個の要素を取得して畳み込む
+///    - 例: `a b c [3] '+' STACK REDUCE` → `[a+b+c]`
+///
+/// 【使用法】
+/// - StackTopモード: `[要素...] 'ワード名' REDUCE`
+/// - Stackモード: `要素... [個数] 'ワード名' STACK REDUCE`
+///
+/// 【エラー】
+/// - 空のベクタ/スタック
+/// - 単一要素のベクタ（変化がないため）
+/// - 指定されたワードが存在しない
+/// - ワードが値を返さない
+pub fn op_reduce(interp: &mut Interpreter) -> Result<()> {
+    let word_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let word_name = get_word_name_from_value(&word_val)?;
+
+    if !interp.dictionary.contains_key(&word_name) {
+        interp.stack.push(word_val);
+        return Err(AjisaiError::UnknownWord(word_name));
+    }
+
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            if let ValueType::Vector(elements) = target_val.val_type {
+                // 空チェック
+                if elements.is_empty() {
+                    interp.stack.push(Value { val_type: ValueType::Vector(elements) });
+                    interp.stack.push(word_val);
+                    return Err(AjisaiError::from("REDUCE: cannot reduce empty vector"));
+                }
+
+                // 単一要素の場合はエラー（変化がないため）
+                if elements.len() == 1 {
+                    interp.stack.push(Value { val_type: ValueType::Vector(elements) });
+                    interp.stack.push(word_val);
+                    return Err(AjisaiError::from("REDUCE: cannot reduce single-element vector (no change)"));
+                }
+
+                // 畳み込み実行
+                let saved_target = interp.operation_target;
+                let saved_no_change_check = interp.disable_no_change_check;
+                interp.operation_target = OperationTarget::StackTop;
+                interp.disable_no_change_check = true;
+
+                let mut iter = elements.into_iter();
+                let mut accumulator = iter.next().unwrap();
+
+                for elem in iter {
+                    // アキュムレータと次の要素をプッシュ
+                    interp.stack.push(wrap_in_square_vector(accumulator));
+                    interp.stack.push(wrap_in_square_vector(elem));
+
+                    // ワード実行
+                    if let Err(e) = interp.execute_word_core(&word_name) {
+                        interp.operation_target = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
+                        return Err(e);
+                    }
+
+                    // 結果を取得
+                    let result = interp.stack.pop()
+                        .ok_or_else(|| {
+                            interp.operation_target = saved_target;
+                            interp.disable_no_change_check = saved_no_change_check;
+                            AjisaiError::from(format!("REDUCE: word '{}' must return a value", word_name))
+                        })?;
+
+                    // 結果をアンラップしてアキュムレータに
+                    accumulator = unwrap_single_element(result);
+                }
+
+                interp.operation_target = saved_target;
+                interp.disable_no_change_check = saved_no_change_check;
+
+                // 最終結果をプッシュ
+                interp.stack.push(wrap_in_square_vector(accumulator));
+                Ok(())
+            } else {
+                interp.stack.push(target_val);
+                interp.stack.push(word_val);
+                Err(AjisaiError::type_error("vector", "other type"))
+            }
+        },
+        OperationTarget::Stack => {
+            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count = match get_integer_from_value(&count_val) {
+                Ok(v) => v as usize,
+                Err(e) => {
+                    interp.stack.push(count_val);
+                    interp.stack.push(word_val);
+                    return Err(e);
+                }
+            };
+
+            // スタック要素数チェック
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                interp.stack.push(word_val);
+                return Err(AjisaiError::from(format!(
+                    "REDUCE: stack has {} elements, but {} required",
+                    interp.stack.len(), count
+                )));
+            }
+
+            // 要素数が0または1の場合
+            if count == 0 {
+                interp.stack.push(count_val);
+                interp.stack.push(word_val);
+                return Err(AjisaiError::from("REDUCE: cannot reduce zero elements"));
+            }
+            if count == 1 {
+                // 単一要素の場合はエラー（変化がないため）
+                interp.stack.push(count_val);
+                interp.stack.push(word_val);
+                return Err(AjisaiError::from("REDUCE: cannot reduce single element (no change)"));
+            }
+
+            // スタックから要素を取得（順序を保持）
+            let start_idx = interp.stack.len() - count;
+            let elements: Vec<Value> = interp.stack.drain(start_idx..).collect();
+            let original_stack_below = interp.stack.clone();
+
+            // 畳み込み実行
+            let saved_target = interp.operation_target;
+            let saved_no_change_check = interp.disable_no_change_check;
+            interp.operation_target = OperationTarget::StackTop;
+            interp.disable_no_change_check = true;
+
+            let mut iter = elements.into_iter();
+            let mut accumulator = unwrap_single_element(iter.next().unwrap());
+
+            for elem in iter {
+                interp.stack.clear();
+                interp.stack.push(wrap_in_square_vector(accumulator));
+                interp.stack.push(elem);  // 既にラップされている
+
+                match interp.execute_word_core(&word_name) {
+                    Ok(_) => {
+                        match interp.stack.pop() {
+                            Some(result) => {
+                                accumulator = unwrap_single_element(result);
+                            }
+                            None => {
+                                // エラー時にスタックを復元
+                                interp.operation_target = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = original_stack_below;
+                                return Err(AjisaiError::from(format!("REDUCE: word '{}' must return a value", word_name)));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        // エラー時にスタックを復元
+                        interp.operation_target = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
+                        interp.stack = original_stack_below;
+                        return Err(e);
+                    }
+                }
+            }
+
+            interp.operation_target = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = original_stack_below;
+
+            // 最終結果をプッシュ
+            interp.stack.push(wrap_in_square_vector(accumulator));
+            Ok(())
+        }
+    }
 }
