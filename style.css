@@ -160,20 +160,21 @@ section h3 {
 /* 入力・出力エリア */
 .output-area,
 .input-area {
-    flex: 1;
+    flex: 1 1 0;
     min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 #code-input {
     width: 100%;
-    min-height: 200px;
+    min-height: 0;
     padding: 0.75rem;
     border: 1px solid #ddd;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.95rem;
-    resize: vertical;
+    resize: none;
     flex: 1;
     line-height: 1.5;
     background-color: #fff;
@@ -228,15 +229,15 @@ section h3 {
     background-color: #fff;
     border: 1px solid #ddd;
     padding: 0.75rem;
-    min-height: 100px;
-    max-height: 400px;
+    min-height: 0;
     overflow-y: auto;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.9rem;
 }
 
 #output-display {
-    max-height: 500px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     word-wrap: break-word;
     white-space: pre-wrap;
