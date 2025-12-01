@@ -28,7 +28,7 @@ use std::time::Duration;
 /// Ajisaiでは、操作を「スタック全体」または「スタックトップの要素」に
 /// 対して実行できる。この列挙型は現在の操作スコープを表す。
 ///
-/// - `Stack`: スタック全体を操作対象とする（例: STACK GET）
+/// - `Stack`: スタック全体を操作対象とする（例: .. GET）
 /// - `StackTop`: スタックトップの要素を操作対象とする（デフォルト）
 ///
 /// 各単語の実行後、自動的に StackTop にリセットされる。
@@ -209,7 +209,7 @@ impl Interpreter {
         for j in (current_index + 1)..tokens.len() {
             match &tokens[j] {
                 Token::GuardSeparator | Token::LineBreak => continue,
-                Token::Symbol(s) if s.to_uppercase() == "STACK" || s.to_uppercase() == "STACKTOP" => continue,
+                Token::Symbol(s) if s == ".." || s == "." => continue,
                 _ => return false, // 他のトークンがあれば末尾位置ではない
             }
         }
@@ -309,37 +309,42 @@ impl Interpreter {
                     continue;
                 },
                 Token::Symbol(s) => {
-                    let upper = s.to_uppercase();
-
-                    match upper.as_str() {
-                        "STACK" => {
+                    // . と .. は大文字変換せずにチェック
+                    match s.as_str() {
+                        ".." => {
                             self.operation_target = OperationTarget::Stack;
                         },
-                        "STACKTOP" => {
+                        "." => {
                             self.operation_target = OperationTarget::StackTop;
-                        },
-                        "WAIT" => {
-                            // WAIT の引数を準備し、AsyncAction を返す
-                            let action = self.prepare_wait_action()?;
-                            return Ok((i + 1, Some(action)));
                         },
                         _ => {
-                            // 末尾再帰の検出
-                            if self.is_tail_position(tokens, i) && !self.call_stack.is_empty() {
-                                if let Some(current_word) = self.call_stack.last() {
-                                    if upper == *current_word {
-                                        self.stack.push(Value {
-                                            val_type: ValueType::TailCallMarker
-                                        });
-                                        i += 1;
-                                        continue;
+                            // その他のシンボルは大文字変換してチェック
+                            let upper = s.to_uppercase();
+                            match upper.as_str() {
+                                        "WAIT" => {
+                                    // WAIT の引数を準備し、AsyncAction を返す
+                                    let action = self.prepare_wait_action()?;
+                                    return Ok((i + 1, Some(action)));
+                                },
+                                _ => {
+                                    // 末尾再帰の検出
+                                    if self.is_tail_position(tokens, i) && !self.call_stack.is_empty() {
+                                        if let Some(current_word) = self.call_stack.last() {
+                                            if upper == *current_word {
+                                                self.stack.push(Value {
+                                                    val_type: ValueType::TailCallMarker
+                                                });
+                                                i += 1;
+                                                continue;
+                                            }
+                                        }
                                     }
+
+                                    // 通常のワード実行（同期）
+                                    self.execute_word_core(&upper)?;
+                                    self.operation_target = OperationTarget::StackTop;
                                 }
                             }
-
-                            // 通常のワード実行（同期）
-                            self.execute_word_core(&upper)?;
-                            self.operation_target = OperationTarget::StackTop;
                         }
                     }
                 },
@@ -897,12 +902,12 @@ mod tests {
     async fn test_stack_get_basic() {
         let mut interp = Interpreter::new();
 
-        // Test basic STACK GET behavior
+        // Test basic .. GET behavior
         let code = r#"
-: [5] [0] STACK GET
+: [5] [0] .. GET
 "#;
 
-        println!("\n=== Basic STACK GET Test ===");
+        println!("\n=== Basic .. GET Test ===");
         let result = interp.execute(code).await;
         println!("Result: {:?}", result);
         println!("Final stack length: {}", interp.stack.len());
@@ -920,8 +925,8 @@ mod tests {
 
         // Proper countdown using STACK mode to access the argument
         let code = r#"
-: [ ': [0] STACK GET [0] >
-: [0] STACK GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
+: [ ': [0] .. GET [0] >
+: [0] .. GET [1] - COUNTDOWN' ] 'COUNTDOWN' DEF
 : [3] COUNTDOWN
 "#;
 
@@ -1542,7 +1547,7 @@ ADDTEST
     #[tokio::test]
     async fn test_reduce_stack_mode() {
         let mut interp = Interpreter::new();
-        let code = ": [1] [2] [3] [4] [5] [5] '+' STACK REDUCE";
+        let code = ": [1] [2] [3] [4] [5] [5] '+' .. REDUCE";
         let result = interp.execute(code).await;
         assert!(result.is_ok(), "REDUCE STACK mode should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);

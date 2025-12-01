@@ -166,13 +166,15 @@ fn is_delimiter(c: char) -> bool {
 
 /// 文字列からキーワードを解析
 fn try_parse_keyword_from_string(s: &str) -> Option<Token> {
-    match s.to_uppercase().as_str() {
-        "TRUE" => Some(Token::Boolean(true)),
-        "FALSE" => Some(Token::Boolean(false)),
-        "NIL" => Some(Token::Nil),
-        "STACK" => Some(Token::Symbol("STACK".to_string())),
-        "STACKTOP" => Some(Token::Symbol("STACKTOP".to_string())),
-        _ => None,
+    match s {
+        "." => Some(Token::Symbol(".".to_string())),
+        ".." => Some(Token::Symbol("..".to_string())),
+        _ => match s.to_uppercase().as_str() {
+            "TRUE" => Some(Token::Boolean(true)),
+            "FALSE" => Some(Token::Boolean(false)),
+            "NIL" => Some(Token::Nil),
+            _ => None,
+        }
     }
 }
 
