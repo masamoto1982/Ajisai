@@ -453,4 +453,53 @@ mod test_tokenizer {
         let result = tokenize_with_custom_words("\"unclosed", &custom_words);
         assert!(result.is_err());
     }
+
+    // === Dot operator テスト ===
+
+    #[test]
+    fn test_dot_operator() {
+        let custom_words = HashSet::new();
+
+        let result = tokenize_with_custom_words(". + 3", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::Symbol(".".to_string()),
+            Token::Symbol("+".to_string()),
+            Token::Number("3".to_string()),
+        ]);
+
+        let result2 = tokenize_with_custom_words(".. + 3", &custom_words).unwrap();
+        assert_eq!(result2, vec![
+            Token::Symbol("..".to_string()),
+            Token::Symbol("+".to_string()),
+            Token::Number("3".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn test_dot_operator_with_vector() {
+        let custom_words = HashSet::new();
+
+        let result = tokenize_with_custom_words("[ 1 2 3 ] . LENGTH", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::VectorStart(crate::types::BracketType::Square),
+            Token::Number("1".to_string()),
+            Token::Number("2".to_string()),
+            Token::Number("3".to_string()),
+            Token::VectorEnd(crate::types::BracketType::Square),
+            Token::Symbol(".".to_string()),
+            Token::Symbol("LENGTH".to_string()),
+        ]);
+
+        let result2 = tokenize_with_custom_words("a b c [ 1 ] .. GET", &custom_words).unwrap();
+        assert_eq!(result2, vec![
+            Token::Symbol("a".to_string()),
+            Token::Symbol("b".to_string()),
+            Token::Symbol("c".to_string()),
+            Token::VectorStart(crate::types::BracketType::Square),
+            Token::Number("1".to_string()),
+            Token::VectorEnd(crate::types::BracketType::Square),
+            Token::Symbol("..".to_string()),
+            Token::Symbol("GET".to_string()),
+        ]);
+    }
 }

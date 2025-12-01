@@ -34,11 +34,11 @@ use num_traits::One;
 ///    - スタックトップからN個の要素を取得
 ///    - 各要素に対してワードを適用
 ///    - 結果をスタックに戻す
-///    - 例: `a b c [3] 'PROCESS' STACK MAP` → `a' b' c'`
+///    - 例: `a b c [3] 'PROCESS' .. MAP` → `a' b' c'`
 ///
 /// 【使用法】
 /// - StackTopモード: `[value1 value2 ...] 'WORDNAME' MAP`
-/// - Stackモード: `val1 val2 ... [count] 'WORDNAME' STACK MAP`
+/// - Stackモード: `val1 val2 ... [count] 'WORDNAME' .. MAP`
 ///
 /// 【引数スタック】
 /// - ['WORDNAME']: 適用するカスタムワード名（文字列）
@@ -186,11 +186,11 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 ///    - スタックトップからN個の要素を取得
 ///    - 各要素に対してワードを適用
 ///    - ワードが [true] を返した要素のみをスタックに戻す
-///    - 例: `a b c d [4] 'CHECK' STACK FILTER` → (trueの要素のみ)
+///    - 例: `a b c d [4] 'CHECK' .. FILTER` → (trueの要素のみ)
 ///
 /// 【使用法】
 /// - StackTopモード: `[value1 value2 ...] 'WORDNAME' FILTER`
-/// - Stackモード: `val1 val2 ... [count] 'WORDNAME' STACK FILTER`
+/// - Stackモード: `val1 val2 ... [count] 'WORDNAME' .. FILTER`
 ///
 /// 【引数スタック】
 /// - ['WORDNAME']: 条件判定するカスタムワード名（文字列）
@@ -354,11 +354,11 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 ///    - スタックトップからN個の要素を取得
 ///    - 各要素に対してワードを適用
 ///    - ワードが [true] を返した要素の数を数える
-///    - 例: `a b c d [4] 'CHECK' STACK COUNT` → `a b c d [count]`
+///    - 例: `a b c d [4] 'CHECK' .. COUNT` → `a b c d [count]`
 ///
 /// 【使用法】
 /// - StackTopモード: `[value1 value2 ...] 'WORDNAME' COUNT`
-/// - Stackモード: `val1 val2 ... [count] 'WORDNAME' STACK COUNT`
+/// - Stackモード: `val1 val2 ... [count] 'WORDNAME' .. COUNT`
 ///
 /// 【引数スタック】
 /// - ['WORDNAME']: 条件判定するカスタムワード名（文字列）
@@ -538,11 +538,11 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 2. Stackモード:
 ///    - スタックトップからN個の要素を取得して畳み込む
-///    - 例: `a b c [3] '+' STACK REDUCE` → `[a+b+c]`
+///    - 例: `a b c [3] '+' .. REDUCE` → `[a+b+c]`
 ///
 /// 【使用法】
 /// - StackTopモード: `[要素...] 'ワード名' REDUCE`
-/// - Stackモード: `要素... [個数] 'ワード名' STACK REDUCE`
+/// - Stackモード: `要素... [個数] 'ワード名' .. REDUCE`
 ///
 /// 【エラー】
 /// - 空のベクタ/スタック

@@ -28,7 +28,7 @@ use std::collections::VecDeque;
 ///
 /// 【使用法】
 /// - StackTopモード: `[a b c] [1] GET` → `[a b c] [b]`
-/// - Stackモード: `a b c [1] STACK GET` → `a b c [b]`
+/// - Stackモード: `a b c [1] .. GET` → `a b c [b]`
 ///
 /// 【引数スタック】
 /// - [index]: 取得するインデックス（単一要素ベクタの整数）
@@ -123,7 +123,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 /// 【使用法】
 /// - StackTopモード: `[a c] [1] [b] INSERT` → `[a b c]`（インデックス1の位置に挿入）
 /// - StackTopモード: `[a b c] [-1] [X] INSERT` → `[a b X c]`（末尾の要素の前に挿入）
-/// - Stackモード: `a c [1] x STACK INSERT` → `a x c`
+/// - Stackモード: `a c [1] x .. INSERT` → `a x c`
 ///
 /// 【引数スタック】
 /// - element: 挿入する要素
@@ -221,7 +221,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【使用法】
 /// - StackTopモード: `[a b c] [1] [X] REPLACE` → `[a X c]`
-/// - Stackモード: `a b c [1] X STACK REPLACE` → `a X c`
+/// - Stackモード: `a b c [1] X .. REPLACE` → `a X c`
 ///
 /// 【引数スタック】
 /// - new_element: 新しい要素
@@ -313,7 +313,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【使用法】
 /// - StackTopモード: `[a b c] [1] REMOVE` → `[a c]`
-/// - Stackモード: `a b c [1] STACK REMOVE` → `a c`
+/// - Stackモード: `a b c [1] .. REMOVE` → `a c`
 ///
 /// 【引数スタック】
 /// - [index]: 削除位置（単一要素ベクタの整数）
@@ -394,7 +394,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【使用法】
 /// - StackTopモード: `[a b c] LENGTH` → `[a b c] [3]`
-/// - Stackモード: `a b c STACK LENGTH` → `a b c [3]`
+/// - Stackモード: `a b c .. LENGTH` → `a b c [3]`
 ///
 /// 【引数スタック】
 /// - (StackTopモード) target: 対象ベクタ
@@ -440,7 +440,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
 /// 【使用法】
 /// - StackTopモード: `[a b c d] [2] TAKE` → `[a b]`
 /// - StackTopモード: `[a b c d] [-2] TAKE` → `[c d]`
-/// - Stackモード: `a b c d [2] STACK TAKE` → `a b`
+/// - Stackモード: `a b c d [2] .. TAKE` → `a b`
 ///
 /// 【引数スタック】
 /// - [count]: 取得数（正=先頭、負=末尾）
@@ -533,7 +533,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【使用法】
 /// - StackTopモード: `[a b c d e] [2] [2] SPLIT` → `[a b] [c d] [e]`
-/// - Stackモード: `a b c d e [2] [1] STACK SPLIT` → `[a b] [c] [d e]`
+/// - Stackモード: `a b c d e [2] [1] .. SPLIT` → `[a b] [c] [d e]`
 ///
 /// 【引数スタック】
 /// - [size_n] ... [size_1]: 分割サイズ（複数指定可能）
@@ -661,8 +661,8 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 /// - StackTopモード: `[a] [b] [c] [3] CONCAT` → `[a b c]`
 /// - StackTopモード: `[a] [b] [c] [-3] CONCAT` → `[c b a]`
 /// - StackTopモード: `[a] [b] CONCAT` → `[a b]` (デフォルト2)
-/// - Stackモード: `[a] [b] [c] STACK CONCAT` → `[a b c]`
-/// - Stackモード: `[a] [b] [c] [2] STACK CONCAT` → `[a] [b c]`
+/// - Stackモード: `[a] [b] [c] .. CONCAT` → `[a b c]`
+/// - Stackモード: `[a] [b] [c] [2] .. CONCAT` → `[a] [b c]`
 ///
 /// 【引数スタック】
 /// - (オプション) [count]: 連結する値の数（負数で逆順、デフォルト2）
@@ -774,7 +774,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【使用法】
 /// - StackTopモード: `[a b c] REVERSE` → `[c b a]`
-/// - Stackモード: `a b c STACK REVERSE` → `c b a`
+/// - Stackモード: `a b c .. REVERSE` → `c b a`
 ///
 /// 【引数スタック】
 /// - (StackTopモード) target: 対象ベクタ
@@ -862,7 +862,7 @@ fn flatten_vector_recursive(vec: Vec<Value>, result: &mut Vec<Value>) {
 ///
 /// 【使用法】
 /// - StackTopモード: `[[a b] [c [d]]] LEVEL` → `[a b c d]`
-/// - Stackモード: `[a] [b] [[c]] STACK LEVEL` → `a b c`
+/// - Stackモード: `[a] [b] [[c]] .. LEVEL` → `a b c`
 ///
 /// 【引数スタック】
 /// - (StackTopモード) target: 対象ベクタ
@@ -916,8 +916,8 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
 /// 【使用法】
 /// - StackTopモード（2引数）: `[0] [5] RANGE` → `[0] [5] [0 1 2 3 4 5]`
 /// - StackTopモード（3引数）: `[0] [10] [2] RANGE` → `[0] [10] [2] [0 2 4 6 8 10]`
-/// - Stackモード（2引数）: `0 5 STACK RANGE` → `[0 1 2 3 4 5]`
-/// - Stackモード（3引数）: `0 10 2 STACK RANGE` → `[0 2 4 6 8 10]`
+/// - Stackモード（2引数）: `0 5 .. RANGE` → `[0 1 2 3 4 5]`
+/// - Stackモード（3引数）: `0 10 2 .. RANGE` → `[0 2 4 6 8 10]`
 ///
 /// 【引数スタック】
 /// - [start]: 開始値（整数）

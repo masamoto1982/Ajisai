@@ -50,7 +50,7 @@ fn is_sorted_fractions(items: &[(Fraction, Value)]) -> bool {
 ///
 /// # スタック全体をソート
 /// 10 5 20 15
-/// STACK FRACTIONSORT
+/// .. FRACTIONSORT
 /// ```
 pub fn op_fractionsort(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
