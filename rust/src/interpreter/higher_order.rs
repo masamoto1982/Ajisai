@@ -63,6 +63,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let word_name = get_word_name_from_value(&word_val)?;
 
     if !interp.dictionary.contains_key(&word_name) {
+        interp.stack.push(word_val);
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
@@ -226,6 +227,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let word_name = get_word_name_from_value(&word_val)?;
 
     if !interp.dictionary.contains_key(&word_name) {
+        interp.stack.push(word_val);
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
@@ -235,9 +237,11 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             if let ValueType::Vector(elements) = target_val.val_type {
                 let mut results = Vec::new();
 
-                // operation_target を保存
+                // operation_target と no_change_check を保存
                 let saved_target = interp.operation_target;
+                let saved_no_change_check = interp.disable_no_change_check;
                 interp.operation_target = OperationTarget::StackTop;
+                interp.disable_no_change_check = true;
 
                 for elem in elements {
                     // 各要素を単一要素ベクタとしてプッシュ
@@ -268,8 +272,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     }
                 }
 
-                // operation_target を復元
+                // operation_target と no_change_check を復元
                 interp.operation_target = saved_target;
+                interp.disable_no_change_check = saved_no_change_check;
                 interp.stack.push(Value { val_type: ValueType::Vector(results) });
             } else {
                 return Err(AjisaiError::type_error("vector", "other type"));
@@ -293,9 +298,11 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let original_stack_below = interp.stack.clone();
 
-            // operation_target を一時的に StackTop に設定
+            // operation_target と no_change_check を一時的に設定
             let saved_target = interp.operation_target;
+            let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target = OperationTarget::StackTop;
+            interp.disable_no_change_check = true;
 
             let mut results = Vec::new();
             for item in &targets {
@@ -310,6 +317,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             None => {
                                 // エラー時にスタックを復元
                                 interp.operation_target = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
                                 interp.stack.extend(targets);
                                 interp.stack.push(count_val);
@@ -330,6 +338,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     Err(e) => {
                         // エラー時にスタックを復元
                         interp.operation_target = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
                         interp.stack.extend(targets);
                         interp.stack.push(count_val);
@@ -338,8 +347,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            // operation_target を復元し、スタックを復元
+            // operation_target と no_change_check を復元し、スタックを復元
             interp.operation_target = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
             interp.stack.extend(results);
         }
@@ -394,6 +404,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     let word_name = get_word_name_from_value(&word_val)?;
 
     if !interp.dictionary.contains_key(&word_name) {
+        interp.stack.push(word_val);
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
@@ -403,9 +414,11 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
             if let ValueType::Vector(elements) = target_val.val_type {
                 let mut count = 0i64;
 
-                // operation_target を保存
+                // operation_target と no_change_check を保存
                 let saved_target = interp.operation_target;
+                let saved_no_change_check = interp.disable_no_change_check;
                 interp.operation_target = OperationTarget::StackTop;
+                interp.disable_no_change_check = true;
 
                 for elem in &elements {
                     // 各要素を単一要素ベクタとしてプッシュ
@@ -436,8 +449,9 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                     }
                 }
 
-                // operation_target を復元
+                // operation_target と no_change_check を復元
                 interp.operation_target = saved_target;
+                interp.disable_no_change_check = saved_no_change_check;
 
                 // 元のベクタをスタックに戻す
                 interp.stack.push(Value { val_type: ValueType::Vector(elements) });
@@ -472,9 +486,11 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count_arg..).collect();
             let original_stack_below = interp.stack.clone();
 
-            // operation_target を一時的に StackTop に設定
+            // operation_target と no_change_check を一時的に設定
             let saved_target = interp.operation_target;
+            let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target = OperationTarget::StackTop;
+            interp.disable_no_change_check = true;
 
             let mut count_result = 0i64;
             for item in &targets {
@@ -489,6 +505,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                             None => {
                                 // エラー時にスタックを復元
                                 interp.operation_target = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
                                 interp.stack.extend(targets);
                                 interp.stack.push(count_val);
@@ -509,6 +526,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                     Err(e) => {
                         // エラー時にスタックを復元
                         interp.operation_target = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
                         interp.stack.extend(targets);
                         interp.stack.push(count_val);
@@ -517,8 +535,9 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            // operation_target を復元し、スタックを復元
+            // operation_target と no_change_check を復元し、スタックを復元
             interp.operation_target = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
             interp.stack.extend(targets);
 
