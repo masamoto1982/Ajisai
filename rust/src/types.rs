@@ -35,7 +35,6 @@ pub enum ValueType {
     // ブラケットタイプは表示層で深さから計算される
     Vector(Vec<Value>),
     Nil,
-    TailCallMarker,  // 内部専用：末尾再帰最適化のマーカー
 }
 
 // Display トレイトの実装を追加
@@ -48,7 +47,6 @@ impl fmt::Display for ValueType {
             ValueType::Symbol(_) => write!(f, "symbol"),
             ValueType::Vector(_) => write!(f, "vector"),
             ValueType::Nil => write!(f, "nil"),
-            ValueType::TailCallMarker => write!(f, "<tail-call-marker>"),
         }
     }
 }
@@ -119,7 +117,6 @@ impl Value {
                 write!(f, "{}", close)
             }
             ValueType::Nil => write!(f, "NIL"),
-            ValueType::TailCallMarker => write!(f, "<TAIL_CALL>"),
         }
     }
 }

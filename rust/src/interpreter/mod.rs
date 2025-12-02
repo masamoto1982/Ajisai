@@ -64,7 +64,6 @@ pub struct Interpreter {
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
     pub(crate) operation_target: OperationTarget,
-    pub(crate) call_stack: Vec<String>,  // 末尾再帰最適化のための呼び出しスタック
     pub(crate) force_flag: bool,  // 強制実行フラグ（DEL/DEFで依存関係がある場合に使用）
     pub(crate) disable_no_change_check: bool,  // "No change is an error"チェックを無効化（REDUCE等で使用）
     // 追加: 継続実行用の状態
@@ -81,7 +80,6 @@ impl Interpreter {
             output_buffer: String::new(),
             definition_to_load: None,
             operation_target: OperationTarget::StackTop,
-            call_stack: Vec::new(),
             force_flag: false,
             disable_no_change_check: false,
             pending_tokens: None,
@@ -203,19 +201,6 @@ impl Interpreter {
         Ok(())
     }
 
-    // トークン位置が末尾位置かどうかを判定
-    fn is_tail_position(&self, tokens: &[Token], current_index: usize) -> bool {
-        // 現在位置より後に意味のあるトークンがあるかチェック
-        for j in (current_index + 1)..tokens.len() {
-            match &tokens[j] {
-                Token::GuardSeparator | Token::LineBreak => continue,
-                Token::Symbol(s) if s == ".." || s == "." => continue,
-                _ => return false, // 他のトークンがあれば末尾位置ではない
-            }
-        }
-        true
-    }
-
     /// WAIT ワードの引数を取得し、AsyncAction を構築する
     fn prepare_wait_action(&mut self) -> Result<AsyncAction> {
         use num_traits::{One, ToPrimitive};
@@ -327,19 +312,6 @@ impl Interpreter {
                                     return Ok((i + 1, Some(action)));
                                 },
                                 _ => {
-                                    // 末尾再帰の検出
-                                    if self.is_tail_position(tokens, i) && !self.call_stack.is_empty() {
-                                        if let Some(current_word) = self.call_stack.last() {
-                                            if upper == *current_word {
-                                                self.stack.push(Value {
-                                                    val_type: ValueType::TailCallMarker
-                                                });
-                                                i += 1;
-                                                continue;
-                                            }
-                                        }
-                                    }
-
                                     // 通常のワード実行（同期）
                                     self.execute_word_core(&upper)?;
                                     self.operation_target = OperationTarget::StackTop;
@@ -537,37 +509,16 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
-        // 末尾再帰最適化：ループで実装
-        self.call_stack.push(name.to_string());
+        // ガード構造をコアロジックで処理
+        let action = self.execute_guard_structure_core(&def.lines)?;
 
-        loop {
-            // ガード構造をコアロジックで処理
-            let action = self.execute_guard_structure_core(&def.lines)?;
-
-            if action.is_some() {
-                // 非同期アクションが発生した場合はエラー（同期コンテキスト）
-                self.call_stack.pop();
-                return Err(AjisaiError::from(
-                    "WAIT requires async execution context. Use execute() instead of execute_sync()."
-                ));
-            }
-
-            // 末尾再帰のマーカーチェック
-            let has_tail_call = if let Some(top) = self.stack.last() {
-                matches!(&top.val_type, ValueType::TailCallMarker)
-            } else {
-                false
-            };
-
-            if has_tail_call {
-                self.stack.pop();
-                continue;
-            } else {
-                break;
-            }
+        if action.is_some() {
+            // 非同期アクションが発生した場合はエラー（同期コンテキスト）
+            return Err(AjisaiError::from(
+                "WAIT requires async execution context. Use execute() instead of execute_sync()."
+            ));
         }
 
-        self.call_stack.pop();
         Ok(())
     }
 
@@ -579,32 +530,8 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
-        // 末尾再帰最適化：ループで実装
-        self.call_stack.push(name.to_string());
-
-        loop {
-            // 行の配列としてガード構造を処理
-            self.execute_guard_structure_sync(&def.lines)?;
-
-            // 末尾再帰のマーカーがあるかチェック
-            let has_tail_call = if let Some(top) = self.stack.last() {
-                matches!(&top.val_type, ValueType::TailCallMarker)
-            } else {
-                false
-            };
-
-            if has_tail_call {
-                // マーカーを除去して再度実行
-                self.stack.pop();
-                continue;
-            } else {
-                // 末尾再帰ではない場合は終了
-                break;
-            }
-        }
-
-        self.call_stack.pop();
-        Ok(())
+        // 行の配列としてガード構造を処理
+        self.execute_guard_structure_sync(&def.lines)
     }
 
     /// ワード実行（非同期版）
@@ -618,27 +545,7 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
-        self.call_stack.push(name.to_string());
-
-        loop {
-            self.execute_guard_structure(&def.lines).await?;
-
-            let has_tail_call = if let Some(top) = self.stack.last() {
-                matches!(&top.val_type, ValueType::TailCallMarker)
-            } else {
-                false
-            };
-
-            if has_tail_call {
-                self.stack.pop();
-                continue;
-            } else {
-                break;
-            }
-        }
-
-        self.call_stack.pop();
-        Ok(())
+        self.execute_guard_structure(&def.lines).await
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
@@ -680,6 +587,9 @@ impl Interpreter {
             "FILTER" => higher_order::op_filter(self),
             "COUNT" => higher_order::op_count(self),
             "REDUCE" => higher_order::op_reduce(self),
+            "FOLD" => higher_order::op_fold(self),
+            "SCAN" => higher_order::op_scan(self),
+            "UNFOLD" => higher_order::op_unfold(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => {
                 // WAITは execute_section_core で AsyncAction として処理されるべき
@@ -746,7 +656,6 @@ impl Interpreter {
         self.output_buffer.clear();
         self.definition_to_load = None;
         self.operation_target = OperationTarget::StackTop;
-        self.call_stack.clear();
         self.force_flag = false;
         self.pending_tokens = None;
         self.pending_token_index = 0;
@@ -870,7 +779,6 @@ mod tests {
         assert!(result.is_ok(), "Tail recursion should succeed: {:?}", result);
 
         // Verify call stack is empty after execution
-        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty after execution");
         // Stack should be empty after countdown completes
         assert_eq!(interp.stack.len(), 0, "Stack should be empty after countdown");
     }
@@ -895,7 +803,6 @@ mod tests {
         assert!(result.is_ok(), "Tail recursion with large number should succeed: {:?}", result);
 
         // Verify call stack is empty
-        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty after execution");
         // Stack should be empty after countdown completes
         assert_eq!(interp.stack.len(), 0, "Stack should be empty after countdown");
     }
@@ -940,14 +847,12 @@ mod tests {
         for (i, val) in interp.stack.iter().enumerate() {
             println!("  [{}]: {:?}", i, val);
         }
-        println!("Call stack length: {}", interp.call_stack.len());
 
         if result.is_ok() {
             // Stack should not grow linearly
             assert!(interp.stack.len() < 10,
                 "Stack grew too much: {} elements. This indicates stack pollution.",
                 interp.stack.len());
-            assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
         }
     }
 
@@ -970,9 +875,7 @@ mod tests {
         for (i, val) in interp.stack.iter().enumerate() {
             println!("  [{}]: {:?}", i, val);
         }
-        println!("Call stack length: {}", interp.call_stack.len());
         assert!(result.is_ok(), "Should succeed: {:?}", result);
-        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
     }
 
     #[tokio::test]
@@ -1041,10 +944,8 @@ mod tests {
         for (i, val) in interp.stack.iter().enumerate() {
             println!("  [{}]: {:?}", i, val);
         }
-        println!("Call stack length: {}", interp.call_stack.len());
 
         assert!(result.is_ok(), "Countdown should succeed: {:?}", result);
-        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
         // Stack should be empty after countdown completes
         assert_eq!(interp.stack.len(), 0, "Stack should be empty after countdown");
     }
@@ -1071,10 +972,8 @@ mod tests {
         for (i, val) in interp.stack.iter().enumerate() {
             println!("  [{}]: {:?}", i, val);
         }
-        println!("Call stack length: {}", interp.call_stack.len());
 
         assert!(result.is_ok(), "Repeat should succeed: {:?}", result);
-        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
         // Stack should be empty after completion
         assert_eq!(interp.stack.len(), 0, "Stack should be empty");
     }
@@ -1096,10 +995,8 @@ mod tests {
         let result = interp.execute(code).await;
         println!("Result: {:?}", result);
         println!("Final stack length: {}", interp.stack.len());
-        println!("Call stack length: {}", interp.call_stack.len());
 
         assert!(result.is_ok(), "Large countdown should succeed: {:?}", result);
-        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
         assert_eq!(interp.stack.len(), 0, "Stack should be empty");
     }
 
@@ -1117,7 +1014,6 @@ ADDTEST
         assert!(result.is_ok(), "Definition and call should succeed: {:?}", result);
 
         // Verify call stack is empty
-        assert_eq!(interp.call_stack.len(), 0, "Call stack should be empty");
     }
 
     #[tokio::test]

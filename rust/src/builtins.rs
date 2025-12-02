@@ -79,6 +79,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("FILTER", "条件に合う要素を抽出｜[ 1 2 3 4 ] '偶数?' FILTER → [ 2 4 ]", "Higher-Order"),
         ("COUNT", "条件に合う要素を数える｜[ 1 2 3 4 5 ] '[ 2 ] >' COUNT → [ 1 2 3 4 5 ] [ 3 ]", "Higher-Order"),
         ("REDUCE", "二項演算で畳み込み｜[ 1 2 3 4 ] '+' REDUCE → [ 10 ]", "Higher-Order"),
+        ("FOLD", "初期値付き畳み込み｜[ 1 2 3 4 ] [ 0 ] '+' FOLD → [ 10 ]", "Higher-Order"),
+        ("SCAN", "中間結果を保持する畳み込み｜[ 1 2 3 4 ] [ 0 ] '+' SCAN → [ 1 3 6 10 ]", "Higher-Order"),
+        ("UNFOLD", "状態からベクタ生成｜[ 1 ] 'GEN' UNFOLD → [ ... ]", "Higher-Order"),
 
         // 入出力
         ("PRINT", "スタックトップを出力して削除｜[ 42 ] PRINT → （42を出力）", "I/O"),
