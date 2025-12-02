@@ -522,7 +522,6 @@ fn value_to_string_repr(value: &Value) -> String {
                 .collect::<Vec<_>>()
                 .join(" ")
         }
-        ValueType::TailCallMarker => "<TAIL_CALL>".to_string(),
     }
 }
 
