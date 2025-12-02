@@ -73,8 +73,11 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 let mut results = Vec::new();
 
                 // operation_target を一時的に保存してStackTopに設定
+                // MAP内部では「変化なし」チェックを無効化
                 let saved_target = interp.operation_target;
+                let saved_no_change_check = interp.disable_no_change_check;
                 interp.operation_target = OperationTarget::StackTop;
+                interp.disable_no_change_check = true;
 
                 for elem in elements {
                     // 各要素を単一要素ベクタとしてプッシュ
@@ -100,8 +103,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     }
                 }
 
-                // operation_target を復元
+                // operation_target とno_change_checkを復元
                 interp.operation_target = saved_target;
+                interp.disable_no_change_check = saved_no_change_check;
                 interp.stack.push(Value { val_type: ValueType::Vector(results) });
             } else {
                 return Err(AjisaiError::type_error("vector", "other type"));
@@ -126,8 +130,11 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             let original_stack_below = interp.stack.clone();
 
             // operation_target を一時的に StackTop に設定
+            // MAP内部では「変化なし」チェックを無効化
             let saved_target = interp.operation_target;
+            let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target = OperationTarget::StackTop;
+            interp.disable_no_change_check = true;
 
             let mut results = Vec::new();
             for item in &targets {
@@ -141,6 +148,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                             None => {
                                 // エラー時にスタックを復元
                                 interp.operation_target = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
                                 interp.stack.extend(targets);
                                 interp.stack.push(count_val);
@@ -151,6 +159,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     Err(e) => {
                         // エラー時にスタックを復元
                         interp.operation_target = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
                         interp.stack.extend(targets);
                         interp.stack.push(count_val);
@@ -159,8 +168,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            // operation_target を復元し、スタックを復元
+            // operation_target とno_change_checkを復元し、スタックを復元
             interp.operation_target = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
             interp.stack.extend(results);
         }
