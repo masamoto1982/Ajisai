@@ -293,6 +293,202 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
+/// CHARS - 文字列を文字ベクタに分解
+///
+/// 【責務】
+/// - String → Vector[String]（各要素は1文字）
+/// - UTF-8マルチバイト文字を正しく処理
+///
+/// 【エラー】
+/// - 空文字列（"No change is an error"原則）
+/// - String以外の型
+pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let inner_val = extract_single_element(&val)?;
+
+            match &inner_val.val_type {
+                ValueType::String(s) => {
+                    if s.is_empty() {
+                        interp.stack.push(val);
+                        return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                    }
+
+                    let chars: Vec<Value> = s.chars()
+                        .map(|c| Value { val_type: ValueType::String(c.to_string()) })
+                        .collect();
+
+                    interp.stack.push(Value {
+                        val_type: ValueType::Vector(chars)
+                    });
+                    Ok(())
+                }
+                _ => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::type_error("string", "other type"))
+                }
+            }
+        }
+        OperationTarget::Stack => {
+            // スタック上の各要素に対してCHARSを適用
+            let stack_len = interp.stack.len();
+            if stack_len == 0 {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let mut results = Vec::with_capacity(stack_len);
+            let elements: Vec<Value> = interp.stack.drain(..).collect();
+
+            for elem in elements {
+                let inner = extract_single_element(&elem)?;
+                match &inner.val_type {
+                    ValueType::String(s) => {
+                        if s.is_empty() {
+                            // エラー時はスタックを復元
+                            interp.stack = results;
+                            interp.stack.push(elem);
+                            return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                        }
+                        let chars: Vec<Value> = s.chars()
+                            .map(|c| Value { val_type: ValueType::String(c.to_string()) })
+                            .collect();
+                        results.push(Value {
+                            val_type: ValueType::Vector(chars)
+                        });
+                    }
+                    _ => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::type_error("string", "other type"));
+                    }
+                }
+            }
+
+            interp.stack = results;
+            Ok(())
+        }
+    }
+}
+
+/// JOIN - 文字列ベクタを連結して単一文字列に
+///
+/// 【責務】
+/// - Vector[String] → String
+/// - 全要素がString型であることを検証
+///
+/// 【エラー】
+/// - 空ベクタ
+/// - String以外の要素を含む場合
+pub fn op_join(interp: &mut Interpreter) -> Result<()> {
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+            match &val.val_type {
+                ValueType::Vector(vec) => {
+                    if vec.is_empty() {
+                        interp.stack.push(val);
+                        return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
+                    }
+
+                    let mut result = String::new();
+                    for (i, elem) in vec.iter().enumerate() {
+                        match &elem.val_type {
+                            ValueType::String(s) => {
+                                result.push_str(s);
+                            }
+                            other => {
+                                let type_name = match other {
+                                    ValueType::Number(_) => "number",
+                                    ValueType::Boolean(_) => "boolean",
+                                    ValueType::Nil => "nil",
+                                    ValueType::Vector(_) => "vector",
+                                    ValueType::Symbol(_) => "symbol",
+                                    _ => "other type",
+                                };
+                                interp.stack.push(val);
+                                return Err(AjisaiError::from(format!(
+                                    "JOIN: all elements must be strings, found {} at index {}",
+                                    type_name, i
+                                )));
+                            }
+                        }
+                    }
+
+                    interp.stack.push(wrap_in_square_vector(
+                        Value { val_type: ValueType::String(result) }
+                    ));
+                    Ok(())
+                }
+                _ => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::type_error("vector", "other type"))
+                }
+            }
+        }
+        OperationTarget::Stack => {
+            // スタック上の各ベクタに対してJOINを適用
+            let stack_len = interp.stack.len();
+            if stack_len == 0 {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let mut results = Vec::with_capacity(stack_len);
+            let elements: Vec<Value> = interp.stack.drain(..).collect();
+
+            for elem in elements {
+                match &elem.val_type {
+                    ValueType::Vector(vec) => {
+                        if vec.is_empty() {
+                            interp.stack = results;
+                            interp.stack.push(elem);
+                            return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
+                        }
+
+                        let mut result = String::new();
+                        for (i, v) in vec.iter().enumerate() {
+                            match &v.val_type {
+                                ValueType::String(s) => {
+                                    result.push_str(s);
+                                }
+                                other => {
+                                    let type_name = match other {
+                                        ValueType::Number(_) => "number",
+                                        ValueType::Boolean(_) => "boolean",
+                                        ValueType::Nil => "nil",
+                                        ValueType::Vector(_) => "vector",
+                                        ValueType::Symbol(_) => "symbol",
+                                        _ => "other type",
+                                    };
+                                    interp.stack = results;
+                                    interp.stack.push(elem);
+                                    return Err(AjisaiError::from(format!(
+                                        "JOIN: all elements must be strings, found {} at index {}",
+                                        type_name, i
+                                    )));
+                                }
+                            }
+                        }
+
+                        results.push(wrap_in_square_vector(
+                            Value { val_type: ValueType::String(result) }
+                        ));
+                    }
+                    _ => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::type_error("vector", "other type"));
+                    }
+                }
+            }
+
+            interp.stack = results;
+            Ok(())
+        }
+    }
+}
+
 /// 値を文字列表現に変換する（内部ヘルパー）
 ///
 /// 【責務】
@@ -538,6 +734,130 @@ mod tests {
                 if let ValueType::Boolean(b) = &v[0].val_type {
                     assert_eq!(*b, false);
                 }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_basic() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 'hello' ] CHARS").await.unwrap();
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 5);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "h"));
+                assert!(matches!(&v[1].val_type, ValueType::String(s) if s == "e"));
+                assert!(matches!(&v[2].val_type, ValueType::String(s) if s == "l"));
+                assert!(matches!(&v[3].val_type, ValueType::String(s) if s == "l"));
+                assert!(matches!(&v[4].val_type, ValueType::String(s) if s == "o"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_unicode() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ '日本語' ] CHARS").await.unwrap();
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 3);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "日"));
+                assert!(matches!(&v[1].val_type, ValueType::String(s) if s == "本"));
+                assert!(matches!(&v[2].val_type, ValueType::String(s) if s == "語"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_empty_error() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ '' ] CHARS").await;
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(e.to_string().contains("empty string"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_type_error() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 42 ] CHARS").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_join_basic() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 'h' 'e' 'l' 'l' 'o' ] JOIN").await.unwrap();
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_join_multichar() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 'hel' 'lo' ] JOIN").await.unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_join_empty_error() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ ] JOIN").await;
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(e.to_string().contains("empty vector"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_join_type_error() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 'a' 1 'b' ] JOIN").await;
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(e.to_string().contains("must be strings"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_join_roundtrip() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 'hello' ] CHARS JOIN").await.unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_reverse_join() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 'hello' ] CHARS REVERSE JOIN").await.unwrap();
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "olleh"));
             }
         }
     }

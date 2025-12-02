@@ -47,6 +47,8 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("NUM", "文字列または真偽値を数値に変換｜[ '42' ] NUM → [ 42 ], [ TRUE ] NUM → [ 1 ]", "Type Conversion"),
         ("BOOL", "文字列または数値を真偽値に変換｜[ 'TRUE' ] BOOL → [ TRUE ], [ '1' ] BOOL → [ TRUE ], [ 1 ] BOOL → [ TRUE ]", "Type Conversion"),
         ("NIL", "文字列をNilに変換｜[ 'nil' ] NIL → [ nil ]", "Type Conversion"),
+        ("CHARS", "文字列を文字ベクタに分解｜[ 'hello' ] CHARS → [ 'h' 'e' 'l' 'l' 'o' ]", "Type Conversion"),
+        ("JOIN", "文字列ベクタを連結｜[ 'h' 'e' 'l' 'l' 'o' ] JOIN → [ 'hello' ]", "Type Conversion"),
         ("NOW", "現在のUnixタイムスタンプを取得｜NOW → [ 1732531200500/1000 ]（ミリ秒精度）", "DateTime"),
         ("DATETIME", "タイムスタンプを日付時刻Vectorに変換｜[ 1732531200 ] 'LOCAL' DATETIME → [ [ 2024 11 25 14 0 0 ] ]", "DateTime"),
         ("TIMESTAMP", "日付時刻Vectorをタイムスタンプに変換｜[ [ 2024 11 25 14 0 0 ] ] 'LOCAL' TIMESTAMP → [ 1732531200 ]", "DateTime"),
@@ -590,6 +592,94 @@ start end step .. RANGE
 - String型のみ受け付けます
 - 大文字小文字は区別しません
 - Boolean型、Number型、Nil型への適用はエラーになります"#.to_string(),
+
+        "CHARS" => r#"# CHARS - 文字列を文字ベクタに分解
+
+## 機能
+文字列を1文字ずつの文字列ベクタに分解します。
+UTF-8マルチバイト文字（日本語など）も正しく処理されます。
+
+## 使用法（StackTopモード）
+[ 'string' ] CHARS
+→ 文字ベクタ
+
+## 使用法（Stackモード）
+str1 str2 ... .. CHARS
+→ 各文字列を文字ベクタに変換
+
+## 使用例
+[ 'hello' ] CHARS                # → [ 'h' 'e' 'l' 'l' 'o' ]
+[ '日本語' ] CHARS               # → [ '日' '本' '語' ]
+[ 'a' ] CHARS                    # → [ 'a' ]
+
+'abc' 'xyz' .. CHARS             # → [ 'a' 'b' 'c' ] [ 'x' 'y' 'z' ]
+
+## 活用例（既存ワードとの組み合わせ）
+# 文字列を反転
+[ 'hello' ] CHARS REVERSE JOIN   # → [ 'olleh' ]
+
+# 文字列の長さ
+[ 'hello' ] CHARS LENGTH         # → [ 'h' 'e' 'l' 'l' 'o' ] [ 5 ]
+
+# 特定位置の文字を取得
+[ 'hello' ] CHARS [ 1 ] GET      # → [ ... ] [ 'e' ]
+
+# 部分文字列
+[ 'hello' ] CHARS [ 3 ] TAKE JOIN  # → [ 'hel' ]
+
+## エラーケース
+[ '' ] CHARS                     # エラー: 空文字列
+[ 42 ] CHARS                     # エラー: 数値型
+[ [ 'a' ] ] CHARS                # エラー: ベクタ型
+
+## 注意
+- String型のみ受け付けます
+- 空文字列はエラー（"No change is an error"原則）
+- JOINワードで元の文字列に戻せます"#.to_string(),
+
+        "JOIN" => r#"# JOIN - 文字列ベクタを連結
+
+## 機能
+文字列のベクタを連結して単一の文字列にします。
+CHARSワードの逆操作として使用できます。
+
+## 使用法（StackTopモード）
+[ str1 str2 ... ] JOIN
+→ 連結された文字列
+
+## 使用法（Stackモード）
+vec1 vec2 ... .. JOIN
+→ 各ベクタを連結した文字列に変換
+
+## 使用例
+[ 'h' 'e' 'l' 'l' 'o' ] JOIN     # → [ 'hello' ]
+[ 'hel' 'lo' ] JOIN              # → [ 'hello' ]
+[ '日' '本' '語' ] JOIN          # → [ '日本語' ]
+[ 'a' ] JOIN                     # → [ 'a' ]
+
+[ 'a' 'b' ] [ 'x' 'y' ] .. JOIN  # → [ 'ab' ] [ 'xy' ]
+
+## 活用例（CHARSとの組み合わせ）
+# 文字列を反転
+[ 'hello' ] CHARS REVERSE JOIN   # → [ 'olleh' ]
+
+# 特定文字を除去（フィルタ）
+# IS_NOTSPACEを定義済みとして
+[ 'a b c' ] CHARS 'IS_NOTSPACE' FILTER JOIN  # → [ 'abc' ]
+
+# 文字を変換（MAP）
+# UPPER_CHARを定義済みとして
+[ 'hello' ] CHARS 'UPPER_CHAR' MAP JOIN  # → [ 'HELLO' ]
+
+## エラーケース
+[ ] JOIN                         # エラー: 空ベクタ
+[ 1 2 3 ] JOIN                   # エラー: 数値を含む
+[ 'a' 1 'b' ] JOIN               # エラー: 混在型
+
+## 注意
+- 全要素がString型である必要があります
+- 空ベクタはエラー
+- 数値や他の型を含むとエラー"#.to_string(),
 
         // ============================================================================
         // 日付時刻操作
