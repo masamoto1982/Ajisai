@@ -1503,4 +1503,31 @@ ADDTEST
             }
         }
     }
+
+    #[tokio::test]
+    async fn test_map_no_change_allowed() {
+        let mut interp = Interpreter::new();
+        // identity関数をMAPで使用しても、エラーにならないことを確認
+        let result = interp.execute("[ ':' ] 'IDENTITY' DEF [ 1 2 3 ] 'IDENTITY' MAP").await;
+        assert!(result.is_ok(), "MAP with identity function should not error: {:?}", result);
+
+        // 結果が [ 1 2 3 ] であることを確認
+        assert_eq!(interp.stack.len(), 1);
+        if let Some(val) = interp.stack.last() {
+            if let crate::types::ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 3);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_map_stack_mode() {
+        let mut interp = Interpreter::new();
+        // Stackモードでの動作確認
+        let result = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP").await;
+        assert!(result.is_ok(), "MAP in Stack mode should work: {:?}", result);
+
+        // スタックに3つの要素があること
+        assert_eq!(interp.stack.len(), 3);
+    }
 }
