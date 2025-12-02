@@ -692,6 +692,8 @@ impl Interpreter {
             "NUM" => cast::op_num(self),
             "BOOL" => cast::op_bool(self),
             "NIL" => cast::op_nil(self),
+            "CHARS" => cast::op_chars(self),
+            "JOIN" => cast::op_join(self),
             "NOW" => datetime::op_now(self),
             "DATETIME" => datetime::op_datetime(self),
             "TIMESTAMP" => datetime::op_timestamp(self),
