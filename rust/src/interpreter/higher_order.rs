@@ -469,17 +469,22 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
             }
         },
         OperationTarget::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(word_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
             let count_arg = match get_integer_from_value(&count_val) {
                 Ok(v) => v as usize,
                 Err(e) => {
                     interp.stack.push(count_val);
+                    interp.stack.push(word_val);
                     return Err(e);
                 }
             };
 
             if interp.stack.len() < count_arg {
                 interp.stack.push(count_val);
+                interp.stack.push(word_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
@@ -1278,6 +1283,42 @@ mod tests {
         if let Some(val) = interp.stack.last() {
             if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 0);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_count_stack_mode_error_recovery() {
+        let mut interp = Interpreter::new();
+        // カスタムワードを定義
+        interp.execute("[ '[ 2 ] >' ] 'GT2' DEF").await.unwrap();
+
+        // 不正なカウント値（文字列）でエラーになることを確認
+        let result = interp.execute("[1] [2] [3] 'not_a_number' 'GT2' .. COUNT").await;
+        assert!(result.is_err(), "COUNT with invalid count should fail");
+
+        // スタックが適切に復元されていることを確認
+        // （word_valとcount_valが復元されている）
+        // スタックには [1] [2] [3] 'not_a_number' 'GT2' が残っているはず
+        assert_eq!(interp.stack.len(), 5, "Stack should be restored with all values");
+    }
+
+    #[tokio::test]
+    async fn test_count_stacktop_mode_basic() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ '[ 2 ] >' ] 'GT2' DEF").await.unwrap();
+        interp.execute("[ 1 2 3 4 5 ] 'GT2' COUNT").await.unwrap();
+
+        // スタックに元のベクタとカウント結果があることを確認
+        assert_eq!(interp.stack.len(), 2, "Stack should have original vector and count result");
+
+        // カウント結果が [3] であることを確認（2より大きい要素は3, 4, 5の3個）
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "3");
+                }
             }
         }
     }
