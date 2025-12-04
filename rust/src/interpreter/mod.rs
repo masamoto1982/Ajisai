@@ -89,6 +89,20 @@ impl Interpreter {
         interpreter
     }
 
+    /// ベクタをTensorに変換すべきかどうかを判定
+    ///
+    /// 次元モデル: すべて数値またはネストされたベクタの場合にTensorに変換
+    fn should_convert_to_tensor(values: &[Value]) -> bool {
+        if values.is_empty() {
+            return true;
+        }
+
+        values.iter().all(|v| {
+            matches!(v.val_type, ValueType::Number(_)) ||
+            matches!(v.val_type, ValueType::Vector(_))
+        })
+    }
+
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
         let bracket_type = match &tokens[start_index] {
             Token::VectorStart(bt) => bt.clone(),
@@ -289,7 +303,24 @@ impl Interpreter {
                 },
                 Token::VectorStart(_) => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
-                    self.stack.push(Value { val_type: ValueType::Vector(values) });
+
+                    // 次元モデル: 矩形かつ数値のみの場合はTensorに変換を試みる
+                    let value_to_push = if Self::should_convert_to_tensor(&values) {
+                        match crate::types::validate_rectangular(&values) {
+                            Ok(_shape) => {
+                                // Tensorへの変換を試みる
+                                match Value::vector_to_tensor(&values) {
+                                    Ok(tensor) => Value::from_tensor(tensor),
+                                    Err(_) => Value { val_type: ValueType::Vector(values) },
+                                }
+                            }
+                            Err(_) => Value { val_type: ValueType::Vector(values) },
+                        }
+                    } else {
+                        Value { val_type: ValueType::Vector(values) }
+                    };
+
+                    self.stack.push(value_to_push);
                     i += consumed;
                     continue;
                 },
