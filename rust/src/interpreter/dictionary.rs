@@ -364,20 +364,28 @@ mod tests {
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
         assert!(result3.is_ok(), "Executing redefined word should succeed");
 
-        // スタックトップが [ 15 ] であることを確認
+        // スタックトップが [ 15 ] であることを確認（Vector または Tensor）
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let crate::types::ValueType::Vector(v) = &val.val_type {
-                assert_eq!(v.len(), 1, "Vector should have one element");
-                if let crate::types::ValueType::Number(n) = &v[0].val_type {
-                    // 15 は分数として 15/1 で表現される
-                    assert_eq!(n.numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", n.numerator);
-                    assert_eq!(n.denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
-                } else {
-                    panic!("Expected Number type in vector");
+            match &val.val_type {
+                crate::types::ValueType::Vector(v) => {
+                    assert_eq!(v.len(), 1, "Vector should have one element");
+                    if let crate::types::ValueType::Number(n) = &v[0].val_type {
+                        // 15 は分数として 15/1 で表現される
+                        assert_eq!(n.numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", n.numerator);
+                        assert_eq!(n.denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
+                    } else {
+                        panic!("Expected Number type in vector");
+                    }
                 }
-            } else {
-                panic!("Expected Vector type");
+                crate::types::ValueType::Tensor(t) => {
+                    // Tensor の場合、shape が [1] でデータに 15 があることを確認
+                    assert_eq!(t.shape(), vec![1], "Tensor shape should be [1]");
+                    assert_eq!(t.data().len(), 1, "Tensor should have one element");
+                    assert_eq!(t.data()[0].numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", t.data()[0].numerator);
+                    assert_eq!(t.data()[0].denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
+                }
+                _ => panic!("Expected Vector or Tensor type, got: {:?}", val.val_type),
             }
         }
     }
