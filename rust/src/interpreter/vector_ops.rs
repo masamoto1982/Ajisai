@@ -441,9 +441,19 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(target_val);
                     len
                 }
+                ValueType::Tensor(t) => {
+                    // Tensor の場合、最初の次元のサイズを返す（1次元テンソルの長さ）
+                    let len = if t.shape().is_empty() {
+                        1  // スカラーの場合は長さ1
+                    } else {
+                        t.shape()[0]  // 最初の次元のサイズ
+                    };
+                    interp.stack.push(target_val);
+                    len
+                }
                 _ => {
                     interp.stack.push(target_val);
-                    return Err(AjisaiError::type_error("vector", "other type"));
+                    return Err(AjisaiError::type_error("vector or tensor", "other type"));
                 }
             }
         }

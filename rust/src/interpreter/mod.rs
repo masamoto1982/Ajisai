@@ -95,7 +95,7 @@ impl Interpreter {
     /// 次元モデル: すべて数値またはネストされたベクタの場合にTensorに変換
     fn should_convert_to_tensor(values: &[Value]) -> bool {
         if values.is_empty() {
-            return true;
+            return false;  // Empty vectors should remain as vectors, not tensors
         }
 
         values.iter().all(|v| {
