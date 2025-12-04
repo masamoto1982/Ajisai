@@ -93,14 +93,16 @@ impl Interpreter {
     /// ベクタをTensorに変換すべきかどうかを判定
     ///
     /// 次元モデル: すべて数値またはネストされたベクタの場合にTensorに変換
+    /// 空配列も数値配列として扱う（空Tensorを許可）
     fn should_convert_to_tensor(values: &[Value]) -> bool {
-        if values.is_empty() {
-            return false;  // Empty vectors should remain as vectors, not tensors
-        }
-
-        values.iter().all(|v| {
-            matches!(v.val_type, ValueType::Number(_)) ||
-            matches!(v.val_type, ValueType::Vector(_))
+        // 空配列も数値配列として扱う（空Tensorを許可）
+        values.is_empty() || values.iter().all(|v| {
+            match &v.val_type {
+                ValueType::Number(_) => true,
+                ValueType::Tensor(_) => true,
+                ValueType::Vector(inner) => Self::should_convert_to_tensor(inner),
+                _ => false,
+            }
         })
     }
 
@@ -315,7 +317,11 @@ impl Interpreter {
                 Token::VectorStart(_) => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
 
-                    // 次元モデル: 矩形かつ数値のみの場合はTensorに変換を試みる
+                    // Phase 2.1: 入力パース時のTensor変換
+                    // 次元モデル: すべて数値のVectorは自動的にTensorに変換
+                    // - 空配列 [] もTensorに変換（空Tensorを許可）
+                    // - 数値のみの配列 [1 2 3] はTensorに変換
+                    // - 混合型配列 [1 'hello'] はVectorのまま保持
                     let value_to_push = if Self::should_convert_to_tensor(&values) {
                         match crate::types::validate_rectangular(&values) {
                             Ok(_shape) => {

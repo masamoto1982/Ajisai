@@ -386,6 +386,11 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             match &val.val_type {
+                ValueType::Tensor(_) => {
+                    // Tensorは数値の配列なので、JOINできない
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("JOIN: cannot join numeric tensor (expected string vector)"))
+                }
                 ValueType::Vector(vec) => {
                     if vec.is_empty() {
                         interp.stack.push(val);
@@ -405,6 +410,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                                     ValueType::Nil => "nil",
                                     ValueType::Vector(_) => "vector",
                                     ValueType::Symbol(_) => "symbol",
+                                    ValueType::Tensor(_) => "tensor",
                                     _ => "other type",
                                 };
                                 interp.stack.push(val);
@@ -822,10 +828,12 @@ mod tests {
     #[tokio::test]
     async fn test_join_empty_error() {
         let mut interp = Interpreter::new();
+        // 空配列は空Tensorに変換されるため、Tensorとして扱われる
         let result = interp.execute("[ ] JOIN").await;
         assert!(result.is_err());
         if let Err(e) = result {
-            assert!(e.to_string().contains("empty vector"));
+            // 空Tensorの場合はTensorエラーメッセージを期待
+            assert!(e.to_string().contains("tensor") || e.to_string().contains("empty"));
         }
     }
 

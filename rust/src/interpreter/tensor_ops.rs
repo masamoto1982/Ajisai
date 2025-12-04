@@ -120,7 +120,7 @@ where
 // テンソル形状操作ワード
 // ============================================================================
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueType};
 use num_bigint::BigInt;
 
@@ -270,9 +270,103 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
 mod tests {
     use super::*;
     use num_bigint::BigInt;
+    use crate::interpreter::Interpreter;
 
     fn frac(n: i64) -> Fraction {
         Fraction::new(BigInt::from(n), BigInt::from(1))
+    }
+
+    #[tokio::test]
+    async fn test_tensor_consistency_after_arithmetic_operations() {
+        let mut interp = Interpreter::new();
+
+        // 算術演算の結果がTensorであることを確認
+        interp.execute("[ 1 2 3 ] [ 4 5 6 ] +").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Tensor(_)
+        ), "Addition result should be Tensor");
+
+        interp.stack.clear();
+
+        // 減算もTensorを返す
+        interp.execute("[ 10 20 30 ] [ 1 2 3 ] -").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Tensor(_)
+        ), "Subtraction result should be Tensor");
+
+        interp.stack.clear();
+
+        // 乗算もTensorを返す
+        interp.execute("[ 2 3 4 ] [ 5 6 7 ] *").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Tensor(_)
+        ), "Multiplication result should be Tensor");
+    }
+
+    #[tokio::test]
+    async fn test_tensor_consistency_after_shape_operations() {
+        let mut interp = Interpreter::new();
+
+        // SHAPE結果がTensorであることを確認
+        interp.execute("[ [ 1 2 ] [ 3 4 ] ] SHAPE").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Tensor(_)
+        ), "SHAPE result should be Tensor");
+
+        interp.stack.clear();
+
+        // RANK結果がTensorであることを確認
+        interp.execute("[ [ 1 2 ] [ 3 4 ] ] RANK").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Tensor(_)
+        ), "RANK result should be Tensor");
+    }
+
+    #[tokio::test]
+    async fn test_numeric_array_auto_converted_to_tensor() {
+        let mut interp = Interpreter::new();
+
+        // 数値のみの配列は自動的にTensorに変換される
+        interp.execute("[ 1 2 3 ]").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Tensor(_)
+        ), "Numeric array should be auto-converted to Tensor");
+
+        interp.stack.clear();
+
+        // ネストされた数値配列もTensorに変換される
+        interp.execute("[ [ 1 2 ] [ 3 4 ] ]").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Tensor(_)
+        ), "Nested numeric array should be auto-converted to Tensor");
+    }
+
+    #[tokio::test]
+    async fn test_mixed_type_array_stays_vector() {
+        let mut interp = Interpreter::new();
+
+        // 混合型（数値と文字列）はVectorのまま
+        interp.execute("[ 1 'hello' 3 ]").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Vector(_)
+        ), "Mixed type array should remain as Vector");
+
+        interp.stack.clear();
+
+        // Boolean配列はVectorのまま
+        interp.execute("[ TRUE FALSE TRUE ]").await.unwrap();
+        assert!(matches!(
+            interp.stack.last().unwrap().val_type,
+            ValueType::Vector(_)
+        ), "Boolean array should remain as Vector");
     }
 
     #[test]
