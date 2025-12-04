@@ -42,6 +42,12 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("LEVEL", "ネストされたベクタを平坦化｜[ 1 [ 2 3 ] 4 ] LEVEL → [ 1 2 3 4 ]", "Vector"),
         ("RANGE", "数値範囲を生成｜[ 0 ] [ 5 ] RANGE → [ 0 ] [ 5 ] [ 0 1 2 3 4 5 ]", "Vector"),
 
+        // テンソル形状操作
+        ("SHAPE", "テンソルの形状を取得｜[ [ 1 2 ] [ 3 4 ] ] SHAPE → [ [ 1 2 ] [ 3 4 ] ] [ 2 2 ]", "Tensor"),
+        ("RANK", "テンソルの次元数を取得｜[ [ 1 2 ] [ 3 4 ] ] RANK → [ [ 1 2 ] [ 3 4 ] ] [ 2 ]", "Tensor"),
+        ("RESHAPE", "テンソルの形状を変更｜[ 1 2 3 4 ] [ 2 2 ] RESHAPE → [ [ 1 2 ] [ 3 4 ] ]", "Tensor"),
+        ("TRANSPOSE", "2次元テンソルの転置｜[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE → [ [ 1 3 ] [ 2 4 ] ]", "Tensor"),
+
         // 型変換
         ("STR", "任意の型を文字列に変換｜[ 42 ] STR → [ '42' ], [ TRUE ] STR → [ 'TRUE' ]", "Type Conversion"),
         ("NUM", "文字列または真偽値を数値に変換｜[ '42' ] NUM → [ 42 ], [ TRUE ] NUM → [ 1 ]", "Type Conversion"),

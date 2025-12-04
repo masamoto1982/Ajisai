@@ -116,6 +116,156 @@ where
         .map_err(|e| AjisaiError::from(format!("{} result construction failed: {}", op_name, e)))
 }
 
+// ============================================================================
+// テンソル形状操作ワード
+// ============================================================================
+
+use crate::interpreter::{Interpreter, OperationTarget};
+use crate::types::{Value, ValueType};
+use num_bigint::BigInt;
+
+/// SHAPE - テンソルの形状を取得
+///
+/// 使用法:
+///   [ 1 2 3 ] SHAPE           → [ 1 2 3 ] [ 3 ]
+///   [ [ 1 2 ] [ 3 4 ] ] SHAPE → [ [ 1 2 ] [ 3 4 ] ] [ 2 2 ]
+///
+/// 形状は1次元テンソルとして返される
+pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+
+    let shape_vec = match &val.val_type {
+        ValueType::Tensor(t) => t.shape().to_vec(),
+        ValueType::Vector(v) => {
+            // Vectorの場合は変換してから形状を取得
+            let tensor = Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to get shape: {}", e)))?;
+            tensor.shape().to_vec()
+        }
+        _ => {
+            return Err(AjisaiError::from(format!(
+                "SHAPE requires tensor or vector, got {}",
+                val.val_type
+            )));
+        }
+    };
+
+    let shape_data: Vec<Fraction> = shape_vec
+        .iter()
+        .map(|&n| Fraction::new(BigInt::from(n as i64), BigInt::from(1)))
+        .collect();
+
+    let shape_tensor = Tensor::vector(shape_data);
+    interp.stack.push(Value::from_tensor(shape_tensor));
+    Ok(())
+}
+
+/// RANK - テンソルの次元数を取得
+///
+/// 使用法:
+///   [ 1 2 3 ] RANK           → [ 1 2 3 ] [ 1 ]
+///   [ [ 1 2 ] [ 3 4 ] ] RANK → [ [ 1 2 ] [ 3 4 ] ] [ 2 ]
+pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+
+    let rank = match &val.val_type {
+        ValueType::Tensor(t) => t.rank(),
+        ValueType::Vector(v) => {
+            let tensor = Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to get rank: {}", e)))?;
+            tensor.rank()
+        }
+        _ => {
+            return Err(AjisaiError::from(format!(
+                "RANK requires tensor or vector, got {}",
+                val.val_type
+            )));
+        }
+    };
+
+    let rank_frac = Fraction::new(BigInt::from(rank as i64), BigInt::from(1));
+    let rank_tensor = Tensor::vector(vec![rank_frac]);
+    interp.stack.push(Value::from_tensor(rank_tensor));
+    Ok(())
+}
+
+/// RESHAPE - テンソルの形状を変更
+///
+/// 使用法:
+///   [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → [ [ 1 2 3 ] [ 4 5 6 ] ]
+///   [ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE → [ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]
+pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
+    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let data_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // 形状をテンソルとして取得
+    let shape_tensor = match &shape_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert shape: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(data_val);
+            interp.stack.push(shape_val);
+            return Err(AjisaiError::from("RESHAPE requires shape as tensor or vector"));
+        }
+    };
+
+    // データをテンソルとして取得
+    let data_tensor = match &data_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert data: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(data_val);
+            interp.stack.push(shape_val);
+            return Err(AjisaiError::from("RESHAPE requires data as tensor or vector"));
+        }
+    };
+
+    // 形状を整数ベクタとして取得
+    let new_shape: Result<Vec<usize>> = shape_tensor
+        .data()
+        .iter()
+        .map(|f| {
+            f.to_usize()
+                .ok_or_else(|| AjisaiError::from("Shape dimensions must be positive integers"))
+        })
+        .collect();
+    let new_shape = new_shape?;
+
+    let result = data_tensor.reshape(new_shape)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// TRANSPOSE - 2次元テンソルの転置
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
+pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert to tensor: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("TRANSPOSE requires tensor or vector"));
+        }
+    };
+
+    let result = tensor.transpose()?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
