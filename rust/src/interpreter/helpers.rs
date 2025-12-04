@@ -82,7 +82,15 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
                 Err(AjisaiError::type_error("integer", "other type"))
             }
         },
-        _ => Err(AjisaiError::type_error("single-element vector with integer", "other type")),
+        ValueType::Tensor(t) if t.data().len() == 1 => {
+            let n = &t.data()[0];
+            if n.denominator == BigInt::one() {
+                n.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
+            } else {
+                Err(AjisaiError::type_error("integer", "fraction"))
+            }
+        },
+        _ => Err(AjisaiError::type_error("single-element vector or tensor with integer", "other type")),
     }
 }
 
@@ -109,7 +117,15 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
                 _ => Err(AjisaiError::type_error("integer", "other type")),
             }
         },
-        _ => Err(AjisaiError::type_error("single-element vector with integer", "other type")),
+        ValueType::Tensor(t) if t.data().len() == 1 => {
+            let n = &t.data()[0];
+            if n.denominator == BigInt::one() {
+                Ok(n.numerator.clone())
+            } else {
+                Err(AjisaiError::type_error("integer", "fraction"))
+            }
+        },
+        _ => Err(AjisaiError::type_error("single-element vector or tensor with integer", "other type")),
     }
 }
 
@@ -161,7 +177,8 @@ pub fn extract_number(val: &Value) -> Result<&Fraction> {
                 Err(AjisaiError::type_error("number", "other type in inner vector"))
             }
         },
-        _ => Err(AjisaiError::type_error("number or single-element number vector", "other type")),
+        ValueType::Tensor(t) if t.data().len() == 1 => Ok(&t.data()[0]),
+        _ => Err(AjisaiError::type_error("number or single-element number vector/tensor", "other type")),
     }
 }
 
@@ -273,6 +290,9 @@ pub fn wrap_in_square_vector(value: Value) -> Value {
 pub fn unwrap_single_element(value: Value) -> Value {
     match value.val_type {
         ValueType::Vector(mut v) if v.len() == 1 => v.remove(0),
+        ValueType::Tensor(t) if t.data().len() == 1 => {
+            Value { val_type: ValueType::Number(t.data()[0].clone()) }
+        },
         _ => value,
     }
 }
