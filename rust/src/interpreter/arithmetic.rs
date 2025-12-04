@@ -276,3 +276,100 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         }
     })
 }
+
+// ============================================================================
+// Tensor対応の二項演算（次元モデル）
+// ============================================================================
+
+/// Tensor対応の二項算術演算の汎用ハンドラ
+///
+/// NumPy/APL準拠のブロードキャスト規則を適用してテンソル間の演算を実行
+///
+/// 【責務】
+/// - StackTopモード: テンソル間のブロードキャスト演算
+/// - Stackモード: 未実装（今後のPhaseで実装）
+///
+/// 【引数】
+/// - op: Fraction同士の演算関数
+/// - op_name: 演算名（エラーメッセージ用）
+fn tensor_binary_op<F>(
+    interp: &mut Interpreter,
+    op: F,
+    op_name: &str,
+) -> Result<()>
+where
+    F: Fn(&Fraction, &Fraction) -> Result<Fraction>,
+{
+    use crate::interpreter::tensor_ops::broadcast_binary_op;
+    use crate::types::tensor::Tensor;
+
+    match interp.operation_target {
+        OperationTarget::StackTop => {
+            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+            // TensorまたはVectorからTensorに変換
+            let tensor_a = match &a_val.val_type {
+                ValueType::Tensor(t) => t.clone(),
+                ValueType::Vector(v) => {
+                    Value::vector_to_tensor(v)
+                        .map_err(|e| AjisaiError::from(format!("Failed to convert vector to tensor: {}", e)))?
+                }
+                _ => {
+                    let type_name = format!("{}", a_val.val_type);
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::from(format!("Expected tensor or vector, got {}", type_name)));
+                }
+            };
+
+            let tensor_b = match &b_val.val_type {
+                ValueType::Tensor(t) => t.clone(),
+                ValueType::Vector(v) => {
+                    Value::vector_to_tensor(v)
+                        .map_err(|e| AjisaiError::from(format!("Failed to convert vector to tensor: {}", e)))?
+                }
+                _ => {
+                    let type_name = format!("{}", b_val.val_type);
+                    interp.stack.push(Value::from_tensor(tensor_a));
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::from(format!("Expected tensor or vector, got {}", type_name)));
+                }
+            };
+
+            let result_tensor = broadcast_binary_op(&tensor_a, &tensor_b, op, op_name)?;
+            interp.stack.push(Value::from_tensor(result_tensor));
+            Ok(())
+        }
+        OperationTarget::Stack => {
+            // Stackモードは将来のPhaseで実装
+            Err(AjisaiError::from("Tensor STACK mode not yet implemented"))
+        }
+    }
+}
+
+/// Tensor対応の加算
+pub fn op_add_tensor(interp: &mut Interpreter) -> Result<()> {
+    tensor_binary_op(interp, |a, b| Ok(a.add(b)), "ADD")
+}
+
+/// Tensor対応の減算
+pub fn op_sub_tensor(interp: &mut Interpreter) -> Result<()> {
+    tensor_binary_op(interp, |a, b| Ok(a.sub(b)), "SUB")
+}
+
+/// Tensor対応の乗算
+pub fn op_mul_tensor(interp: &mut Interpreter) -> Result<()> {
+    tensor_binary_op(interp, |a, b| Ok(a.mul(b)), "MUL")
+}
+
+/// Tensor対応の除算
+pub fn op_div_tensor(interp: &mut Interpreter) -> Result<()> {
+    tensor_binary_op(interp, |a, b| {
+        if b.numerator.is_zero() {
+            Err(AjisaiError::DivisionByZero)
+        } else {
+            Ok(a.div(b))
+        }
+    }, "DIV")
+}

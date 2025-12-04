@@ -213,7 +213,8 @@ mod tests {
     fn test_scalar_creation() {
         let s = Tensor::scalar(frac(5));
         assert_eq!(s.rank(), 0);
-        assert_eq!(s.shape(), &[]);
+        let empty: &[usize] = &[];
+        assert_eq!(s.shape(), empty);
         assert_eq!(s.size(), 1);
         assert!(s.is_scalar());
     }

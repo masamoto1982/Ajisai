@@ -2,6 +2,7 @@
 
 pub mod helpers;        // 共通ヘルパー関数
 pub mod vector_ops;
+pub mod tensor_ops;     // テンソル演算とブロードキャスト
 pub mod arithmetic;
 pub mod comparison;
 pub mod logic;
