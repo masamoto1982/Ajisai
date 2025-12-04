@@ -938,8 +938,20 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::Stack => {
             // Stackモード: 結果をスタックに展開
             let init_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(init_val.clone());
+                interp.stack.push(word_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
+            let count = match get_integer_from_value(&count_val) {
+                Ok(v) => v as usize,
+                Err(e) => {
+                    interp.stack.push(count_val);
+                    interp.stack.push(init_val);
+                    interp.stack.push(word_val);
+                    return Err(e);
+                }
+            };
 
             if interp.stack.len() < count {
                 interp.stack.push(count_val);
@@ -951,7 +963,7 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let original_stack_below = interp.stack.clone();
 
-            let mut accumulator = unwrap_single_element(init_val);
+            let mut accumulator = unwrap_single_element(init_val.clone());
 
             let saved_target = interp.operation_target;
             let saved_no_change_check = interp.disable_no_change_check;
@@ -960,10 +972,10 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
 
             let mut results = Vec::new();
 
-            for item in targets {
+            for item in &targets {
                 interp.stack.clear();
                 interp.stack.push(wrap_in_square_vector(accumulator));
-                interp.stack.push(item);
+                interp.stack.push(item.clone());
 
                 match interp.execute_word_core(&word_name) {
                     Ok(_) => {
@@ -976,6 +988,10 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
+                        interp.stack.extend(targets);
+                        interp.stack.push(count_val);
+                        interp.stack.push(init_val);
+                        interp.stack.push(word_val);
                         return Err(e);
                     }
                 }
@@ -1321,5 +1337,29 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_scan_stack_mode() {
+        let mut interp = Interpreter::new();
+        let code = r#"[ 1 ] [ 2 ] [ 3 ] [ 4 ] [ 4 ] [ 0 ] '+' .. SCAN"#;
+        let result = interp.execute(code).await;
+        assert!(result.is_ok(), "SCAN stack mode should succeed: {:?}", result);
+
+        // 結果が [1] [3] [6] [10] であることを確認
+        assert_eq!(interp.stack.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn test_scan_error_recovery() {
+        let mut interp = Interpreter::new();
+        // 存在しないワードでエラーを発生させる
+        let code = r#"[ 1 2 3 ] [ 0 ] 'NONEXISTENT' SCAN"#;
+        let result = interp.execute(code).await;
+        assert!(result.is_err());
+
+        // スタックが復元されていることを確認
+        // 元の引数が復元されているべき
+        assert_eq!(interp.stack.len(), 3, "Stack should be restored with all original arguments");
     }
 }
