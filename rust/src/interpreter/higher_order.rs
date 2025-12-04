@@ -122,7 +122,20 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             // operation_target とno_change_checkを復元
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
-            interp.stack.push(Value { val_type: ValueType::Vector(results) });
+
+            // Phase 1.2: 結果の返却形式を統一
+            // 全て数値の場合はTensorに変換、混合型はVectorのまま
+            let result = if results.iter().all(|v| matches!(v.val_type, ValueType::Number(_))) {
+                // すべて数値ならTensorに変換
+                let fracs: Vec<Fraction> = results.iter()
+                    .filter_map(|v| if let ValueType::Number(f) = &v.val_type { Some(f.clone()) } else { None })
+                    .collect();
+                Value::from_tensor(crate::types::tensor::Tensor::vector(fracs))
+            } else {
+                // 混合型はVectorのまま
+                Value { val_type: ValueType::Vector(results) }
+            };
+            interp.stack.push(result);
         },
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -302,7 +315,20 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             // operation_target と no_change_check を復元
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
-            interp.stack.push(Value { val_type: ValueType::Vector(results) });
+
+            // Phase 1.2: 結果の返却形式を統一
+            // 全て数値の場合はTensorに変換、混合型はVectorのまま
+            let result = if results.iter().all(|v| matches!(v.val_type, ValueType::Number(_))) {
+                // すべて数値ならTensorに変換
+                let fracs: Vec<Fraction> = results.iter()
+                    .filter_map(|v| if let ValueType::Number(f) = &v.val_type { Some(f.clone()) } else { None })
+                    .collect();
+                Value::from_tensor(crate::types::tensor::Tensor::vector(fracs))
+            } else {
+                // 混合型はVectorのまま
+                Value { val_type: ValueType::Vector(results) }
+            };
+            interp.stack.push(result);
         },
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;

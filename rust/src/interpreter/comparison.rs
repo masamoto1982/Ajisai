@@ -3,6 +3,15 @@
 // 【責務】
 // 比較演算子（=、<、<=、>、>=）を実装する。
 // すべての演算は単一要素ベクタを想定し、結果を単一要素ベクタとして返す。
+//
+// 【重要: 結果の型について】
+// Phase 1.1: 比較演算の結果は常に Vector[Boolean] として返されます。
+// Boolean値は数値ではないため、Tensorには変換されません。
+// これは意図的な設計であり、算術演算（Tensorを返す）とは異なります。
+//
+// 例:
+//   [3] [5] <     → [TRUE]  (Vector[Boolean])
+//   [1 2] [3 4] + → [4 6]   (Tensor[Number])
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};

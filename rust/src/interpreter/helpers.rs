@@ -271,6 +271,31 @@ pub fn wrap_in_square_vector(value: Value) -> Value {
     Value { val_type: ValueType::Vector(vec![value]) }
 }
 
+/// 単一値をラップ（数値ならTensor、それ以外ならVector）
+///
+/// 【責務】
+/// - 数値の場合はTensorとしてラップ
+/// - それ以外の場合はVectorとしてラップ
+/// - Tensor移行の統一的なラッピング戦略を提供
+///
+/// 【用途】
+/// - 演算結果の返却
+/// - MAP/FILTERなどの高階関数の結果処理
+///
+/// 【引数】
+/// - value: ラップする値
+///
+/// 【戻り値】
+/// - 数値: 1要素のTensor
+/// - それ以外: [value]形式のVector
+pub fn wrap_single_value(value: Value) -> Value {
+    use crate::types::tensor::Tensor;
+    match &value.val_type {
+        ValueType::Number(f) => Value::from_tensor(Tensor::vector(vec![f.clone()])),
+        _ => Value { val_type: ValueType::Vector(vec![value]) }
+    }
+}
+
 /// 単一要素ベクタの場合は内部要素を取り出す
 ///
 /// 【責務】

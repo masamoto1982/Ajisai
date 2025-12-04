@@ -48,7 +48,7 @@ where
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let (a_vec) = match a_val.val_type {
+            let a_vec = match a_val.val_type {
                 ValueType::Vector(v) => v,
                 _ => {
                     interp.stack.push(a_val);
@@ -318,6 +318,55 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
 }
 
 // ============================================================================
+// Phase 3: 算術演算での型統一
+// ============================================================================
+
+/// ValueからTensorへの統一的な変換
+///
+/// Vector、Tensor、Numberのいずれもこの関数でTensorに変換される
+fn value_to_tensor(val: &Value) -> Result<crate::types::tensor::Tensor> {
+    use crate::types::tensor::Tensor;
+    match &val.val_type {
+        ValueType::Tensor(t) => Ok(t.clone()),
+        ValueType::Vector(v) => Value::vector_to_tensor(v)
+            .map_err(|e| AjisaiError::from(format!("Failed to convert vector to tensor: {}", e))),
+        ValueType::Number(f) => Ok(Tensor::scalar(f.clone())),
+        _ => {
+            let type_name = format!("{}", val.val_type);
+            Err(AjisaiError::from(format!("Expected numeric value (tensor, vector, or number), got {}", type_name)))
+        }
+    }
+}
+
+/// 二項演算の共通入力処理
+///
+/// スタックから2つの値を取得し、両方をTensorに変換して返す
+fn get_tensor_operands(interp: &mut Interpreter) -> Result<(crate::types::tensor::Tensor, crate::types::tensor::Tensor)> {
+    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor_a = match value_to_tensor(&a_val) {
+        Ok(t) => t,
+        Err(e) => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(e);
+        }
+    };
+
+    let tensor_b = match value_to_tensor(&b_val) {
+        Ok(t) => t,
+        Err(e) => {
+            interp.stack.push(Value::from_tensor(tensor_a));
+            interp.stack.push(b_val);
+            return Err(e);
+        }
+    };
+
+    Ok((tensor_a, tensor_b))
+}
+
+// ============================================================================
 // Tensor対応の二項演算（次元モデル）
 // ============================================================================
 
@@ -341,42 +390,11 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction>,
 {
     use crate::interpreter::tensor_ops::broadcast_binary_op;
-    use crate::types::tensor::Tensor;
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-            // TensorまたはVectorからTensorに変換
-            let tensor_a = match &a_val.val_type {
-                ValueType::Tensor(t) => t.clone(),
-                ValueType::Vector(v) => {
-                    Value::vector_to_tensor(v)
-                        .map_err(|e| AjisaiError::from(format!("Failed to convert vector to tensor: {}", e)))?
-                }
-                _ => {
-                    let type_name = format!("{}", a_val.val_type);
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
-                    return Err(AjisaiError::from(format!("Expected tensor or vector, got {}", type_name)));
-                }
-            };
-
-            let tensor_b = match &b_val.val_type {
-                ValueType::Tensor(t) => t.clone(),
-                ValueType::Vector(v) => {
-                    Value::vector_to_tensor(v)
-                        .map_err(|e| AjisaiError::from(format!("Failed to convert vector to tensor: {}", e)))?
-                }
-                _ => {
-                    let type_name = format!("{}", b_val.val_type);
-                    interp.stack.push(Value::from_tensor(tensor_a));
-                    interp.stack.push(b_val);
-                    return Err(AjisaiError::from(format!("Expected tensor or vector, got {}", type_name)));
-                }
-            };
-
+            // Phase 3: 統一的な入力処理を使用
+            let (tensor_a, tensor_b) = get_tensor_operands(interp)?;
             let result_tensor = broadcast_binary_op(&tensor_a, &tensor_b, op, op_name)?;
             interp.stack.push(Value::from_tensor(result_tensor));
             Ok(())
