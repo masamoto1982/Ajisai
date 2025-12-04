@@ -64,31 +64,57 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(index_val.clone());
                 AjisaiError::StackUnderflow
             })?;
-            if let ValueType::Vector(v) = &target_val.val_type {
-                let len = v.len();
-                if len == 0 {
-                    interp.stack.push(target_val);
-                    interp.stack.push(index_val);
-                    return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
-                }
 
-                let actual_index = match normalize_index(index, len) {
-                    Some(idx) => idx,
-                    None => {
+            match &target_val.val_type {
+                ValueType::Vector(v) => {
+                    let len = v.len();
+                    if len == 0 {
                         interp.stack.push(target_val);
                         interp.stack.push(index_val);
-                        return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                        return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
                     }
-                };
 
-                let result_elem = v[actual_index].clone();
-                interp.stack.push(target_val);
-                interp.stack.push(wrap_in_square_vector(result_elem));
-                Ok(())
-            } else {
-                interp.stack.push(target_val);
-                interp.stack.push(index_val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                    let actual_index = match normalize_index(index, len) {
+                        Some(idx) => idx,
+                        None => {
+                            interp.stack.push(target_val);
+                            interp.stack.push(index_val);
+                            return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                        }
+                    };
+
+                    let result_elem = v[actual_index].clone();
+                    interp.stack.push(target_val);
+                    interp.stack.push(wrap_in_square_vector(result_elem));
+                    Ok(())
+                },
+                ValueType::Tensor(t) => {
+                    let len = t.data().len();
+                    if len == 0 {
+                        interp.stack.push(target_val);
+                        interp.stack.push(index_val);
+                        return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
+                    }
+
+                    let actual_index = match normalize_index(index, len) {
+                        Some(idx) => idx,
+                        None => {
+                            interp.stack.push(target_val);
+                            interp.stack.push(index_val);
+                            return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                        }
+                    };
+
+                    let result_num = t.data()[actual_index].clone();
+                    interp.stack.push(target_val);
+                    interp.stack.push(wrap_in_square_vector(Value { val_type: ValueType::Number(result_num) }));
+                    Ok(())
+                },
+                _ => {
+                    interp.stack.push(target_val);
+                    interp.stack.push(index_val);
+                    Err(AjisaiError::type_error("vector or tensor", "other type"))
+                }
             }
         }
         OperationTarget::Stack => {
