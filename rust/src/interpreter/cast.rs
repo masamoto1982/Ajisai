@@ -510,6 +510,10 @@ fn value_to_string_repr(value: &Value) -> String {
                 format!("{}/{}", n.numerator, n.denominator)
             }
         }
+        ValueType::Tensor(_) => {
+            // Tensorの場合は、Displayトレイトを使用して文字列化
+            format!("{}", value)
+        }
         ValueType::String(s) => s.clone(),
         ValueType::Boolean(b) => {
             if *b { "TRUE".to_string() } else { "FALSE".to_string() }

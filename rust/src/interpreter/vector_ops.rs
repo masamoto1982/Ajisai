@@ -878,19 +878,40 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match val.val_type {
-                ValueType::Vector(v) => {
-                    if !is_nested(&v) {
-                        interp.stack.push(Value { val_type: ValueType::Vector(v) });
-                        return Err(AjisaiError::from("Target vector is already flat"));
-                    }
-                    let mut flattened = Vec::new();
-                    flatten_vector_recursive(v, &mut flattened);
-                    interp.stack.push(Value {
-                        val_type: ValueType::Vector(flattened),
-                    });
+                ValueType::Tensor(t) => {
+                    // テンソルを1次元に平坦化
+                    let flattened = t.flatten();
+                    interp.stack.push(Value::from_tensor(flattened));
                     Ok(())
                 },
-                _ => Err(AjisaiError::type_error("vector", "other type")),
+                ValueType::Vector(v) => {
+                    // Vectorは後方互換性のために残されている
+                    // テンソルに変換してから平坦化を試みる
+                    match Value::vector_to_tensor(&v) {
+                        Ok(tensor) => {
+                            let flattened = tensor.flatten();
+                            interp.stack.push(Value::from_tensor(flattened));
+                            Ok(())
+                        }
+                        Err(_) => {
+                            // テンソル変換できない場合は従来の動作
+                            if !is_nested(&v) {
+                                interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                                return Err(AjisaiError::from("Target vector is already flat"));
+                            }
+                            let mut flattened = Vec::new();
+                            flatten_vector_recursive(v, &mut flattened);
+                            interp.stack.push(Value {
+                                val_type: ValueType::Vector(flattened),
+                            });
+                            Ok(())
+                        }
+                    }
+                },
+                _ => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("LEVEL requires tensor or vector"))
+                }
             }
         }
         OperationTarget::Stack => {

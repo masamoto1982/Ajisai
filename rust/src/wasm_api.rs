@@ -291,6 +291,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
     
     let type_str = match &value.val_type {
         ValueType::Number(_) => "number",
+        ValueType::Tensor(_) => "tensor",
         ValueType::String(_) => "string",
         ValueType::Boolean(_) => "boolean",
         ValueType::Symbol(_) => "symbol",
@@ -306,6 +307,28 @@ fn value_to_js_value(value: &Value) -> JsValue {
             js_sys::Reflect::set(&num_obj, &"numerator".into(), &n.numerator.to_string().into()).unwrap();
             js_sys::Reflect::set(&num_obj, &"denominator".into(), &n.denominator.to_string().into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
+        },
+        ValueType::Tensor(t) => {
+            let tensor_obj = js_sys::Object::new();
+
+            // 形状を配列として送信
+            let shape_array = js_sys::Array::new();
+            for &dim in t.shape() {
+                shape_array.push(&JsValue::from_f64(dim as f64));
+            }
+            js_sys::Reflect::set(&tensor_obj, &"shape".into(), &shape_array).unwrap();
+
+            // データを配列として送信
+            let data_array = js_sys::Array::new();
+            for frac in t.data() {
+                let frac_obj = js_sys::Object::new();
+                js_sys::Reflect::set(&frac_obj, &"numerator".into(), &frac.numerator.to_string().into()).unwrap();
+                js_sys::Reflect::set(&frac_obj, &"denominator".into(), &frac.denominator.to_string().into()).unwrap();
+                data_array.push(&frac_obj);
+            }
+            js_sys::Reflect::set(&tensor_obj, &"data".into(), &data_array).unwrap();
+
+            js_sys::Reflect::set(&obj, &"value".into(), &tensor_obj).unwrap();
         },
         ValueType::String(s) => {
             js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
