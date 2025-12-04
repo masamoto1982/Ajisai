@@ -241,8 +241,18 @@ impl Interpreter {
                     _ => return Err(AjisaiError::type_error("integer", "other type")),
                 }
             },
+            ValueType::Tensor(t) if t.data().len() == 1 => {
+                let n = &t.data()[0];
+                if n.denominator == num_bigint::BigInt::one() {
+                    n.numerator.to_u64().ok_or_else(||
+                        AjisaiError::from("Delay too large")
+                    )?
+                } else {
+                    return Err(AjisaiError::type_error("integer", "fraction"));
+                }
+            },
             _ => return Err(AjisaiError::type_error(
-                "single-element vector with integer",
+                "single-element vector or tensor with integer",
                 "other type"
             )),
         };
