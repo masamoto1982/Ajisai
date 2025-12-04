@@ -39,7 +39,7 @@ where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
     match interp.operation_target {
-        // StackTopモード: 2つの単一要素ベクタを比較
+        // StackTopモード: 2つの単一要素ベクタまたはTensorを比較
         OperationTarget::StackTop => {
             if interp.stack.len() < 2 {
                 return Err(AjisaiError::StackUnderflow);
@@ -48,20 +48,44 @@ where
             let b_vec = interp.stack.pop().unwrap();
             let a_vec = interp.stack.pop().unwrap();
 
-            let a_val = extract_single_element(&a_vec)?;
-            let b_val = extract_single_element(&b_vec)?;
-
-            let result = match (&a_val.val_type, &b_val.val_type) {
-                (ValueType::Number(n1), ValueType::Number(n2)) => {
-                    Value { val_type: ValueType::Boolean(op(n1, n2)) }
+            // TensorまたはVectorから数値を抽出
+            let a_num = match &a_vec.val_type {
+                ValueType::Vector(v) if v.len() == 1 => {
+                    if let ValueType::Number(n) = &v[0].val_type {
+                        n
+                    } else {
+                        interp.stack.push(a_vec);
+                        interp.stack.push(b_vec);
+                        return Err(AjisaiError::type_error("number", "other type"));
+                    }
                 },
+                ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                 _ => {
                     interp.stack.push(a_vec);
                     interp.stack.push(b_vec);
-                    return Err(AjisaiError::type_error("number", "other type"));
+                    return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
                 }
             };
 
+            let b_num = match &b_vec.val_type {
+                ValueType::Vector(v) if v.len() == 1 => {
+                    if let ValueType::Number(n) = &v[0].val_type {
+                        n
+                    } else {
+                        interp.stack.push(a_vec);
+                        interp.stack.push(b_vec);
+                        return Err(AjisaiError::type_error("number", "other type"));
+                    }
+                },
+                ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
+                _ => {
+                    interp.stack.push(a_vec);
+                    interp.stack.push(b_vec);
+                    return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+                }
+            };
+
+            let result = Value { val_type: ValueType::Boolean(op(a_num, b_num)) };
             interp.stack.push(wrap_result_value(result));
             Ok(())
         },
@@ -87,21 +111,46 @@ where
             // 全ての隣接ペアをチェック
             let mut all_true = true;
             for i in 0..items.len() - 1 {
-                let a_val = extract_single_element(&items[i])?;
-                let b_val = extract_single_element(&items[i + 1])?;
-
-                match (&a_val.val_type, &b_val.val_type) {
-                    (ValueType::Number(n1), ValueType::Number(n2)) => {
-                        if !op(n1, n2) {
-                            all_true = false;
-                            break;
+                // TensorまたはVectorから数値を抽出
+                let a_num = match &items[i].val_type {
+                    ValueType::Vector(v) if v.len() == 1 => {
+                        if let ValueType::Number(n) = &v[0].val_type {
+                            n
+                        } else {
+                            interp.stack.extend(items);
+                            interp.stack.push(count_val);
+                            return Err(AjisaiError::type_error("number", "other type"));
                         }
                     },
+                    ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                     _ => {
                         interp.stack.extend(items);
                         interp.stack.push(count_val);
-                        return Err(AjisaiError::type_error("number", "other type"));
+                        return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
                     }
+                };
+
+                let b_num = match &items[i + 1].val_type {
+                    ValueType::Vector(v) if v.len() == 1 => {
+                        if let ValueType::Number(n) = &v[0].val_type {
+                            n
+                        } else {
+                            interp.stack.extend(items);
+                            interp.stack.push(count_val);
+                            return Err(AjisaiError::type_error("number", "other type"));
+                        }
+                    },
+                    ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
+                    _ => {
+                        interp.stack.extend(items);
+                        interp.stack.push(count_val);
+                        return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+                    }
+                };
+
+                if !op(a_num, b_num) {
+                    all_true = false;
+                    break;
                 }
             }
 
