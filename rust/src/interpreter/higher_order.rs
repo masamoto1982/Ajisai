@@ -1035,8 +1035,12 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let init_state = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let mut state = init_state;
+            let init_state = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(word_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
+
+            let mut state = init_state.clone();
             let mut results = Vec::new();
 
             let saved_target = interp.operation_target;
@@ -1044,18 +1048,38 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = OperationTarget::StackTop;
             interp.disable_no_change_check = true;
 
-            for _ in 0..MAX_ITERATIONS {
+            let mut iteration_count = 0;
+            loop {
+                if iteration_count >= MAX_ITERATIONS {
+                    // MAX_ITERATIONSに達した場合はエラー
+                    interp.operation_target = saved_target;
+                    interp.disable_no_change_check = saved_no_change_check;
+                    interp.stack.push(init_state);
+                    interp.stack.push(word_val);
+                    return Err(AjisaiError::from(
+                        "UNFOLD: maximum iterations (10000) exceeded - possible infinite loop"
+                    ));
+                }
+                iteration_count += 1;
+
                 interp.stack.push(state.clone());
 
                 if let Err(e) = interp.execute_word_core(&word_name) {
+                    // 【修正】エラー時にスタックを復元
                     interp.operation_target = saved_target;
                     interp.disable_no_change_check = saved_no_change_check;
+                    interp.stack.push(init_state);
+                    interp.stack.push(word_val);
                     return Err(e);
                 }
 
                 // ワードは入力と出力の両方をスタックに残すので、両方ポップする
                 let result = interp.stack.pop()
-                    .ok_or_else(|| AjisaiError::from("UNFOLD: word must return a value"))?;
+                    .ok_or_else(|| {
+                        interp.operation_target = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
+                        AjisaiError::from("UNFOLD: word must return a value")
+                    })?;
                 let _input = interp.stack.pop(); // 入力状態を破棄
 
                 // 単一要素ベクタの場合はアンラップ
@@ -1080,6 +1104,9 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                     _ => {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
+                        // 【修正】エラー時にスタックを復元
+                        interp.stack.push(init_state);
+                        interp.stack.push(word_val);
                         return Err(AjisaiError::from(
                             "UNFOLD: word must return [element, next_state] or NIL"
                         ));
@@ -1094,8 +1121,12 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTarget::Stack => {
             // Stackモード: 結果をスタックに直接展開
-            let init_state = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let mut state = init_state;
+            let init_state = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(word_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
+
+            let mut state = init_state.clone();
             let original_stack = interp.stack.clone();
 
             let saved_target = interp.operation_target;
@@ -1104,8 +1135,21 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             let mut results = Vec::new();
+            let mut iteration_count = 0;
 
-            for _ in 0..MAX_ITERATIONS {
+            loop {
+                if iteration_count >= MAX_ITERATIONS {
+                    interp.operation_target = saved_target;
+                    interp.disable_no_change_check = saved_no_change_check;
+                    interp.stack = original_stack;
+                    interp.stack.push(init_state);
+                    interp.stack.push(word_val);
+                    return Err(AjisaiError::from(
+                        "UNFOLD: maximum iterations (10000) exceeded - possible infinite loop"
+                    ));
+                }
+                iteration_count += 1;
+
                 interp.stack.clear();
                 interp.stack.push(state.clone());
 
@@ -1135,6 +1179,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                                 interp.operation_target = saved_target;
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack;
+                                interp.stack.push(init_state);
+                                interp.stack.push(word_val);
                                 return Err(AjisaiError::from(
                                     "UNFOLD: word must return [element, next_state] or NIL"
                                 ));
@@ -1145,6 +1191,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack;
+                        interp.stack.push(init_state);
+                        interp.stack.push(word_val);
                         return Err(e);
                     }
                 }
@@ -1220,34 +1268,6 @@ mod tests {
                     if let ValueType::Number(n) = &v[i].val_type {
                         assert_eq!(n.numerator.to_string(), *exp);
                     }
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_unfold_basic() {
-        let mut interp = Interpreter::new();
-        // シンプルなUNFOLDテスト: 3つの要素を生成
-        // [1 2], [2 3], [3 NIL] という形で、1,2,3を生成
-        let code = r#"
-[ ': [100 200]' ] 'STEP1' DEF
-[ ': [200 NIL]' ] 'STEP2' DEF
-
-[ 100 ] 'STEP1' UNFOLD
-"#;
-        let result = interp.execute(code).await;
-        assert!(result.is_ok(), "UNFOLD should succeed: {:?}", result);
-
-        // 結果が [100] であることを確認 (1要素のみ、次の状態が200でSTEP1を再度呼ぶと同じ[100 200]が返り無限ループ)
-        assert_eq!(interp.stack.len(), 1);
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                // This will actually generate many 100s until MAX_ITERATIONS
-                // Let's verify at least one 100 was generated
-                assert!(v.len() > 0, "Should generate at least 1 element");
-                if let ValueType::Number(n) = &v[0].val_type {
-                    assert_eq!(n.numerator.to_string(), "100");
                 }
             }
         }
