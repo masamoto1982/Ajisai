@@ -120,7 +120,7 @@ where
 // テンソル形状操作ワード
 // ============================================================================
 
-use crate::interpreter::Interpreter;
+use crate::interpreter::{Interpreter, OperationTarget};
 use crate::types::{Value, ValueType};
 use num_bigint::BigInt;
 
@@ -132,6 +132,10 @@ use num_bigint::BigInt;
 ///
 /// 形状は1次元テンソルとして返される
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("SHAPE does not support Stack (..) mode"));
+    }
+
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
     let shape_vec = match &val.val_type {
@@ -166,6 +170,10 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
 ///   [ 1 2 3 ] RANK           → [ 1 2 3 ] [ 1 ]
 ///   [ [ 1 2 ] [ 3 4 ] ] RANK → [ [ 1 2 ] [ 3 4 ] ] [ 2 ]
 pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("RANK does not support Stack (..) mode"));
+    }
+
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
     let rank = match &val.val_type {
@@ -195,6 +203,10 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
 ///   [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → [ [ 1 2 3 ] [ 4 5 6 ] ]
 ///   [ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE → [ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("RESHAPE does not support Stack (..) mode"));
+    }
+
     let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let data_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
@@ -247,6 +259,10 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
 /// 使用法:
 ///   [ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
 pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("TRANSPOSE does not support Stack (..) mode"));
+    }
+
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let tensor = match &val.val_type {

@@ -36,7 +36,7 @@ use crate::types::fraction::Fraction;
 /// - String → String（同型変換）
 pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
-        return Err(AjisaiError::from("STR only supports StackTop mode"));
+        return Err(AjisaiError::from("STR does not support Stack (..) mode"));
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -85,7 +85,7 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
 /// - その他の型
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
-        return Err(AjisaiError::from("NUM only supports StackTop mode"));
+        return Err(AjisaiError::from("NUM does not support Stack (..) mode"));
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -157,7 +157,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 /// - その他の型
 pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
-        return Err(AjisaiError::from("BOOL only supports StackTop mode"));
+        return Err(AjisaiError::from("BOOL does not support Stack (..) mode"));
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -252,7 +252,7 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 /// - その他の型
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
-        return Err(AjisaiError::from("NIL only supports StackTop mode"));
+        return Err(AjisaiError::from("NIL does not support Stack (..) mode"));
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;

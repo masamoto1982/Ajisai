@@ -913,8 +913,13 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            match val.val_type {
+            match &val.val_type {
                 ValueType::Tensor(t) => {
+                    // すでに1次元の場合はNo change error
+                    if t.rank() == 1 {
+                        interp.stack.push(val);
+                        return Err(AjisaiError::from("LEVEL resulted in no change (already 1D tensor)"));
+                    }
                     // テンソルを1次元に平坦化
                     let flattened = t.flatten();
                     interp.stack.push(Value::from_tensor(flattened));
@@ -923,7 +928,7 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
                 ValueType::Vector(v) => {
                     // Vectorは後方互換性のために残されている
                     // テンソルに変換してから平坦化を試みる
-                    match Value::vector_to_tensor(&v) {
+                    match Value::vector_to_tensor(v) {
                         Ok(tensor) => {
                             let flattened = tensor.flatten();
                             interp.stack.push(Value::from_tensor(flattened));
@@ -931,12 +936,12 @@ pub fn op_level(interp: &mut Interpreter) -> Result<()> {
                         }
                         Err(_) => {
                             // テンソル変換できない場合は従来の動作
-                            if !is_nested(&v) {
-                                interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                            if !is_nested(v) {
+                                interp.stack.push(val);
                                 return Err(AjisaiError::from("Target vector is already flat"));
                             }
                             let mut flattened = Vec::new();
-                            flatten_vector_recursive(v, &mut flattened);
+                            flatten_vector_recursive(v.clone(), &mut flattened);
                             interp.stack.push(Value {
                                 val_type: ValueType::Vector(flattened),
                             });

@@ -69,7 +69,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
         },
         OperationTarget::Stack => {
             // Stackモードは単項演算子では意味が不明確なため未対応
-            Err(AjisaiError::from("NOT does not support STACK mode"))
+            Err(AjisaiError::from("NOT does not support Stack (..) mode"))
         }
     }
 }
