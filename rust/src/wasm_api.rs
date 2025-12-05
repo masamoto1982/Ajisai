@@ -3,7 +3,7 @@
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
-use crate::types::{Value, ValueType, BracketType, Token, ExecutionLine};
+use crate::types::{Value, ValueType, Token, ExecutionLine};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::str::FromStr;

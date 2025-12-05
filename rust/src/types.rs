@@ -16,7 +16,13 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(String),
+    // 新しいTensor指向のトークン（[]のみ）
+    TensorStart,
+    TensorEnd,
+    // 以下は後方互換性のため残存（Phase 2で完全削除予定）
+    #[deprecated(since = "0.5.0", note = "Use TensorStart/TensorEnd instead")]
     VectorStart(BracketType),
+    #[deprecated(since = "0.5.0", note = "Use TensorStart/TensorEnd instead")]
     VectorEnd(BracketType),
     GuardSeparator,  // : または ;
     Nil,
@@ -36,8 +42,9 @@ pub enum ValueType {
     String(String),
     Boolean(bool),
     Symbol(String),
-    // ブラケットタイプは表示層で深さから計算される
-    // 注: Vectorは後方互換性のために残されています。段階的にTensorに移行します。
+    /// 非推奨: Tensorを使用してください
+    /// Vectorは後方互換性のために残されています。バージョン1.0で削除予定。
+    #[deprecated(since = "0.5.0", note = "Use Tensor instead. Vector will be removed in 1.0")]
     Vector(Vec<Value>),
     Nil,
 }

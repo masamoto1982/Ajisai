@@ -113,9 +113,9 @@ mod test_tokenizer {
         let custom_words = HashSet::new();
         let result = tokenize_with_custom_words("['test']", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::VectorStart(crate::types::BracketType::Square),
+            Token::TensorStart,
             Token::String("test".to_string()),
-            Token::VectorEnd(crate::types::BracketType::Square),
+            Token::TensorEnd,
         ]);
     }
 
@@ -282,23 +282,19 @@ mod test_tokenizer {
     fn test_brackets() {
         let custom_words = HashSet::new();
 
+        // Phase 2: [] のみサポート
         let result = tokenize_with_custom_words("[ 1 2 3 ]", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::VectorStart(crate::types::BracketType::Square),
+            Token::TensorStart,
             Token::Number("1".to_string()),
             Token::Number("2".to_string()),
             Token::Number("3".to_string()),
-            Token::VectorEnd(crate::types::BracketType::Square),
+            Token::TensorEnd,
         ]);
 
-        let result2 = tokenize_with_custom_words("{ a b c }", &custom_words).unwrap();
-        assert_eq!(result2, vec![
-            Token::VectorStart(crate::types::BracketType::Curly),
-            Token::Symbol("a".to_string()),
-            Token::Symbol("b".to_string()),
-            Token::Symbol("c".to_string()),
-            Token::VectorEnd(crate::types::BracketType::Curly),
-        ]);
+        // {} と () は削除されたため、エラーとして扱われる
+        let result2 = tokenize_with_custom_words("{ a b c }", &custom_words);
+        assert!(result2.is_err(), "Curly brackets should cause an error");
     }
 
     // === 複雑なパターンのテスト ===
@@ -312,11 +308,11 @@ mod test_tokenizer {
             &custom_words
         ).unwrap();
         assert_eq!(result, vec![
-            Token::VectorStart(crate::types::BracketType::Square),
+            Token::TensorStart,
             Token::Number("1".to_string()),
             Token::Number("2".to_string()),
             Token::Number("3".to_string()),
-            Token::VectorEnd(crate::types::BracketType::Square),
+            Token::TensorEnd,
             Token::Symbol("LENGTH".to_string()),
             Token::String("結果".to_string()),
             Token::Symbol("PRINT".to_string()),
@@ -415,10 +411,10 @@ mod test_tokenizer {
 
         let result = tokenize_with_custom_words("[ 1/2 3/4 ]", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::VectorStart(crate::types::BracketType::Square),
+            Token::TensorStart,
             Token::Number("1/2".to_string()),
             Token::Number("3/4".to_string()),
-            Token::VectorEnd(crate::types::BracketType::Square),
+            Token::TensorEnd,
         ]);
     }
 
@@ -481,11 +477,11 @@ mod test_tokenizer {
 
         let result = tokenize_with_custom_words("[ 1 2 3 ] . LENGTH", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::VectorStart(crate::types::BracketType::Square),
+            Token::TensorStart,
             Token::Number("1".to_string()),
             Token::Number("2".to_string()),
             Token::Number("3".to_string()),
-            Token::VectorEnd(crate::types::BracketType::Square),
+            Token::TensorEnd,
             Token::Symbol(".".to_string()),
             Token::Symbol("LENGTH".to_string()),
         ]);
@@ -495,9 +491,9 @@ mod test_tokenizer {
             Token::Symbol("a".to_string()),
             Token::Symbol("b".to_string()),
             Token::Symbol("c".to_string()),
-            Token::VectorStart(crate::types::BracketType::Square),
+            Token::TensorStart,
             Token::Number("1".to_string()),
-            Token::VectorEnd(crate::types::BracketType::Square),
+            Token::TensorEnd,
             Token::Symbol("..".to_string()),
             Token::Symbol("GET".to_string()),
         ]);

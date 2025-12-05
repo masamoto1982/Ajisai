@@ -90,22 +90,60 @@ impl Interpreter {
         interpreter
     }
 
-    /// ベクタをTensorに変換すべきかどうかを判定
+    /// Tensor収集メソッド（新しいToken::TensorStart/TensorEnd用）
     ///
-    /// 次元モデル: すべて数値またはネストされたベクタの場合にTensorに変換
-    /// 空配列も数値配列として扱う（空Tensorを許可）
-    fn should_convert_to_tensor(values: &[Value]) -> bool {
-        // 空配列も数値配列として扱う（空Tensorを許可）
-        values.is_empty() || values.iter().all(|v| {
-            match &v.val_type {
-                ValueType::Number(_) => true,
-                ValueType::Tensor(_) => true,
-                ValueType::Vector(inner) => Self::should_convert_to_tensor(inner),
-                _ => false,
+    /// Phase 3: すべての配列リテラルをTensorとして扱う
+    /// - 数値のみの配列はTensorに変換
+    /// - 混合型の配列は一時的にVectorとして扱う（後方互換性）
+    fn collect_tensor(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
+        if !matches!(&tokens[start_index], Token::TensorStart) {
+            return Err(AjisaiError::from("Expected tensor start ([)"));
+        }
+
+        let mut values = Vec::new();
+        let mut i = start_index + 1;
+
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::TensorStart => {
+                    let (nested_values, consumed) = self.collect_tensor(tokens, i)?;
+                    // ネストされたテンソルはVectorとして一時的に保持（後でTensorに変換）
+                    values.push(Value { val_type: ValueType::Vector(nested_values) });
+                    i += consumed;
+                },
+                Token::TensorEnd => {
+                    return Ok((values, i - start_index + 1));
+                },
+                Token::Number(n) => {
+                    values.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
+                    i += 1;
+                },
+                Token::String(s) => {
+                    values.push(Value { val_type: ValueType::String(s.clone()) });
+                    i += 1;
+                },
+                Token::Boolean(b) => {
+                    values.push(Value { val_type: ValueType::Boolean(*b) });
+                    i += 1;
+                },
+                Token::Nil => {
+                    values.push(Value { val_type: ValueType::Nil });
+                    i += 1;
+                },
+                Token::Symbol(s) => {
+                    values.push(Value { val_type: ValueType::Symbol(s.clone()) });
+                    i += 1;
+                },
+                _ => {
+                    i += 1;
+                }
             }
-        })
+        }
+        Err(AjisaiError::from("Unclosed tensor starting with ["))
     }
 
+    /// 後方互換性のため残存（非推奨）
+    #[allow(deprecated)]
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
         let bracket_type = match &tokens[start_index] {
             Token::VectorStart(bt) => bt.clone(),
@@ -314,28 +352,42 @@ impl Interpreter {
                     let val = Value { val_type: ValueType::Nil };
                     self.stack.push(wrap_in_square_vector(val));
                 },
-                Token::VectorStart(_) => {
-                    let (values, consumed) = self.collect_vector(tokens, i)?;
+                Token::TensorStart => {
+                    // Phase 3: 新しいTensor指向のパース処理
+                    let (values, consumed) = self.collect_tensor(tokens, i)?;
 
-                    // Phase 2.1: 入力パース時のTensor変換
-                    // 次元モデル: すべて数値のVectorは自動的にTensorに変換
-                    // - 空配列 [] もTensorに変換（空Tensorを許可）
-                    // - 数値のみの配列 [1 2 3] はTensorに変換
-                    // - 混合型配列 [1 'hello'] はVectorのまま保持
-                    let value_to_push = if Self::should_convert_to_tensor(&values) {
-                        match crate::types::validate_rectangular(&values) {
-                            Ok(_shape) => {
-                                // Tensorへの変換を試みる
-                                match Value::vector_to_tensor(&values) {
-                                    Ok(tensor) => Value::from_tensor(tensor),
-                                    Err(_) => Value { val_type: ValueType::Vector(values) },
+                    // すべての配列リテラルをTensorに変換を試みる
+                    let value_to_push = match crate::types::validate_rectangular(&values) {
+                        Ok(_shape) => {
+                            // Tensorへの変換を試みる
+                            match Value::vector_to_tensor(&values) {
+                                Ok(tensor) => Value::from_tensor(tensor),
+                                Err(_) => {
+                                    // 変換失敗時は混合型としてVectorで保持（後方互換性）
+                                    #[allow(deprecated)]
+                                    { Value { val_type: ValueType::Vector(values) } }
                                 }
                             }
-                            Err(_) => Value { val_type: ValueType::Vector(values) },
                         }
-                    } else {
-                        Value { val_type: ValueType::Vector(values) }
+                        Err(_) => {
+                            // 矩形でない場合も混合型としてVectorで保持
+                            #[allow(deprecated)]
+                            { Value { val_type: ValueType::Vector(values) } }
+                        }
                     };
+
+                    self.stack.push(value_to_push);
+                    i += consumed;
+                    continue;
+                },
+                #[allow(deprecated)]
+                Token::VectorStart(_) => {
+                    // 後方互換性のため残存（非推奨）
+                    let (values, consumed) = self.collect_vector(tokens, i)?;
+
+                    // 旧形式のVectorStart処理
+                    #[allow(deprecated)]
+                    let value_to_push = { Value { val_type: ValueType::Vector(values) } };
 
                     self.stack.push(value_to_push);
                     i += consumed;
@@ -371,6 +423,10 @@ impl Interpreter {
                 Token::GuardSeparator | Token::LineBreak => {
                     // スキップ
                 },
+                Token::TensorEnd => {
+                    return Err(AjisaiError::from("Unexpected tensor end (])"));
+                },
+                #[allow(deprecated)]
                 Token::VectorEnd(_) => {
                     return Err(AjisaiError::from("Unexpected vector end"));
                 },
@@ -676,7 +732,11 @@ impl Interpreter {
             Token::Boolean(false) => "FALSE".to_string(),
             Token::Symbol(s) => s.clone(),
             Token::Nil => "NIL".to_string(),
+            Token::TensorStart => "[".to_string(),
+            Token::TensorEnd => "]".to_string(),
+            #[allow(deprecated)]
             Token::VectorStart(bt) => bt.opening_char().to_string(),
+            #[allow(deprecated)]
             Token::VectorEnd(bt) => bt.closing_char().to_string(),
             Token::GuardSeparator => ":".to_string(),
             Token::LineBreak => "\n".to_string(),

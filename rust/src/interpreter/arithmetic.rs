@@ -185,17 +185,8 @@ where
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
-    // Tensorが含まれている場合はTensor演算を使用
-    if interp.stack.len() >= 2 {
-        let has_tensor = interp.stack.iter().rev().take(2).any(|v| {
-            matches!(v.val_type, ValueType::Tensor(_))
-        });
-        if has_tensor {
-            return op_add_tensor(interp);
-        }
-    }
-    // Vectorのみの場合は従来の演算
-    binary_arithmetic_op(interp, |a, b| Ok(a.add(b)))
+    // Phase 4: すべての入力をTensorとして扱う
+    tensor_binary_op(interp, |a, b| Ok(a.add(b)), "ADD")
 }
 
 /// - 演算子 - 減算
@@ -222,17 +213,8 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
-    // Tensorが含まれている場合はTensor演算を使用
-    if interp.stack.len() >= 2 {
-        let has_tensor = interp.stack.iter().rev().take(2).any(|v| {
-            matches!(v.val_type, ValueType::Tensor(_))
-        });
-        if has_tensor {
-            return op_sub_tensor(interp);
-        }
-    }
-    // Vectorのみの場合は従来の演算
-    binary_arithmetic_op(interp, |a, b| Ok(a.sub(b)))
+    // Phase 4: すべての入力をTensorとして扱う
+    tensor_binary_op(interp, |a, b| Ok(a.sub(b)), "SUB")
 }
 
 /// * 演算子 - 乗算
@@ -259,17 +241,8 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
-    // Tensorが含まれている場合はTensor演算を使用
-    if interp.stack.len() >= 2 {
-        let has_tensor = interp.stack.iter().rev().take(2).any(|v| {
-            matches!(v.val_type, ValueType::Tensor(_))
-        });
-        if has_tensor {
-            return op_mul_tensor(interp);
-        }
-    }
-    // Vectorのみの場合は従来の演算
-    binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)))
+    // Phase 4: すべての入力をTensorとして扱う
+    tensor_binary_op(interp, |a, b| Ok(a.mul(b)), "MUL")
 }
 
 /// / 演算子 - 除算
@@ -298,23 +271,14 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    // Tensorが含まれている場合はTensor演算を使用
-    if interp.stack.len() >= 2 {
-        let has_tensor = interp.stack.iter().rev().take(2).any(|v| {
-            matches!(v.val_type, ValueType::Tensor(_))
-        });
-        if has_tensor {
-            return op_div_tensor(interp);
-        }
-    }
-    // Vectorのみの場合は従来の演算
-    binary_arithmetic_op(interp, |a, b| {
+    // Phase 4: すべての入力をTensorとして扱う
+    tensor_binary_op(interp, |a, b| {
         if b.numerator.is_zero() {
             Err(AjisaiError::DivisionByZero)
         } else {
             Ok(a.div(b))
         }
-    })
+    }, "DIV")
 }
 
 // ============================================================================
