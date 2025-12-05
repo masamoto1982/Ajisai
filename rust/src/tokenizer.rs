@@ -1,6 +1,6 @@
 // rust/src/tokenizer.rs (空白区切りベース - 伝統的なFORTHスタイル)
 
-use crate::types::{Token, BracketType};
+use crate::types::Token;
 use std::collections::HashSet;
 
 #[allow(unused_variables)]
@@ -108,12 +108,10 @@ fn is_special_char(c: char) -> bool {
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
     match c {
-        '[' => Some((Token::VectorStart(BracketType::Square), 1)),
-        ']' => Some((Token::VectorEnd(BracketType::Square), 1)),
-        '{' => Some((Token::VectorStart(BracketType::Curly), 1)),
-        '}' => Some((Token::VectorEnd(BracketType::Curly), 1)),
-        '(' => Some((Token::VectorStart(BracketType::Round), 1)),
-        ')' => Some((Token::VectorEnd(BracketType::Round), 1)),
+        '[' => Some((Token::TensorStart, 1)),
+        ']' => Some((Token::TensorEnd, 1)),
+        // {} と () は将来の拡張用に予約（現在は未サポート）
+        // '{' | '}' | '(' | ')' は構文エラーとして扱われる
         ':' | ';' => Some((Token::GuardSeparator, 1)),
         _ => None,
     }
