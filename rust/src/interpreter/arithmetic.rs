@@ -401,7 +401,7 @@ where
         }
         OperationTarget::Stack => {
             // Stackモードは将来のPhaseで実装
-            Err(AjisaiError::from("Tensor STACK mode not yet implemented"))
+            Err(AjisaiError::from("Tensor arithmetic does not support Stack (..) mode. Use StackTop mode for tensor operations."))
         }
     }
 }
