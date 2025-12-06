@@ -255,18 +255,22 @@ pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
 
 /// 値を単一要素の角括弧ベクタ []でラップする
 ///
+/// **非推奨**: 数値には `wrap_single_value` または `Value::from_tensor(Tensor::vector(...))` を使用してください。
+/// この関数は非数値型（String、Boolean、Nil等）のラップにのみ使用すべきです。
+///
 /// 【責務】
 /// - 任意の値を [value] の形式にラップ
 ///
 /// 【用途】
-/// - リテラル値のスタックへのプッシュ
-/// - 演算結果の統一形式での返却
+/// - 非数値型のリテラル値のスタックへのプッシュ
+/// - 非数値型の演算結果の統一形式での返却
 ///
 /// 【引数】
 /// - value: ラップする値
 ///
 /// 【戻り値】
 /// - [value]形式のベクタ
+#[deprecated(note = "数値には wrap_single_value または Value::from_tensor を使用してください")]
 pub fn wrap_in_square_vector(value: Value) -> Value {
     Value { val_type: ValueType::Vector(vec![value]) }
 }

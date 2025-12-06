@@ -96,10 +96,15 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             for elem in elements {
-                // 各要素を単一要素ベクタとしてプッシュ
-                interp.stack.push(Value {
-                    val_type: ValueType::Vector(vec![elem])
-                });
+                // 各要素をラップしてプッシュ（数値はTensor、その他はVector）
+                let wrapped = match &elem.val_type {
+                    ValueType::Number(f) => {
+                        use crate::types::tensor::Tensor;
+                        Value::from_tensor(Tensor::vector(vec![f.clone()]))
+                    },
+                    _ => Value { val_type: ValueType::Vector(vec![elem]) }
+                };
+                interp.stack.push(wrapped);
                 // ワードを実行
                 interp.execute_word_core(&word_name)?;
 
@@ -284,10 +289,15 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             for elem in elements {
-                    // 各要素を単一要素ベクタとしてプッシュ
-                    interp.stack.push(Value {
-                        val_type: ValueType::Vector(vec![elem.clone()])
-                    });
+                    // 各要素をラップしてプッシュ（数値はTensor、その他はVector）
+                    let wrapped = match &elem.val_type {
+                        ValueType::Number(f) => {
+                            use crate::types::tensor::Tensor;
+                            Value::from_tensor(Tensor::vector(vec![f.clone()]))
+                        },
+                        _ => Value { val_type: ValueType::Vector(vec![elem.clone()]) }
+                    };
+                    interp.stack.push(wrapped);
                     // ワードを実行
                     interp.execute_word_core(&word_name)?;
 
@@ -486,10 +496,15 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             for elem in &elements {
-                    // 各要素を単一要素ベクタとしてプッシュ
-                    interp.stack.push(Value {
-                        val_type: ValueType::Vector(vec![elem.clone()])
-                    });
+                    // 各要素をラップしてプッシュ（数値はTensor、その他はVector）
+                    let wrapped = match &elem.val_type {
+                        ValueType::Number(f) => {
+                            use crate::types::tensor::Tensor;
+                            Value::from_tensor(Tensor::vector(vec![f.clone()]))
+                        },
+                        _ => Value { val_type: ValueType::Vector(vec![elem.clone()]) }
+                    };
+                    interp.stack.push(wrapped);
                     // ワードを実行
                     interp.execute_word_core(&word_name)?;
 
