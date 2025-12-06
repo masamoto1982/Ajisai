@@ -57,8 +57,9 @@ where
             let b_vec = interp.stack.pop().unwrap();
             let a_vec = interp.stack.pop().unwrap();
 
-            // TensorまたはVectorから数値を抽出
+            // TensorまたはVectorから数値を抽出（Tensor優先）
             let a_num = match &a_vec.val_type {
+                ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                 ValueType::Vector(v) if v.len() == 1 => {
                     if let ValueType::Number(n) = &v[0].val_type {
                         n
@@ -68,7 +69,6 @@ where
                         return Err(AjisaiError::type_error("number", "other type"));
                     }
                 },
-                ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                 _ => {
                     interp.stack.push(a_vec);
                     interp.stack.push(b_vec);
@@ -77,6 +77,7 @@ where
             };
 
             let b_num = match &b_vec.val_type {
+                ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                 ValueType::Vector(v) if v.len() == 1 => {
                     if let ValueType::Number(n) = &v[0].val_type {
                         n
@@ -86,7 +87,6 @@ where
                         return Err(AjisaiError::type_error("number", "other type"));
                     }
                 },
-                ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                 _ => {
                     interp.stack.push(a_vec);
                     interp.stack.push(b_vec);
@@ -120,8 +120,9 @@ where
             // 全ての隣接ペアをチェック
             let mut all_true = true;
             for i in 0..items.len() - 1 {
-                // TensorまたはVectorから数値を抽出
+                // TensorまたはVectorから数値を抽出（Tensor優先）
                 let a_num = match &items[i].val_type {
+                    ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                     ValueType::Vector(v) if v.len() == 1 => {
                         if let ValueType::Number(n) = &v[0].val_type {
                             n
@@ -131,7 +132,6 @@ where
                             return Err(AjisaiError::type_error("number", "other type"));
                         }
                     },
-                    ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                     _ => {
                         interp.stack.extend(items);
                         interp.stack.push(count_val);
@@ -140,6 +140,7 @@ where
                 };
 
                 let b_num = match &items[i + 1].val_type {
+                    ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                     ValueType::Vector(v) if v.len() == 1 => {
                         if let ValueType::Number(n) = &v[0].val_type {
                             n
@@ -149,7 +150,6 @@ where
                             return Err(AjisaiError::type_error("number", "other type"));
                         }
                     },
-                    ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                     _ => {
                         interp.stack.extend(items);
                         interp.stack.push(count_val);

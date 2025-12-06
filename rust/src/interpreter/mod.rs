@@ -333,22 +333,23 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Number(n) => {
-                    let val = Value {
-                        val_type: ValueType::Number(
-                            Fraction::from_str(n).map_err(AjisaiError::from)?
-                        )
-                    };
-                    self.stack.push(wrap_in_square_vector(val));
+                    use crate::types::tensor::Tensor;
+                    let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
+                    let tensor = Tensor::vector(vec![frac]);
+                    self.stack.push(Value::from_tensor(tensor));
                 },
                 Token::String(s) => {
+                    // 非数値型のため、Vectorでラップ
                     let val = Value { val_type: ValueType::String(s.clone()) };
                     self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::Boolean(b) => {
+                    // 非数値型のため、Vectorでラップ
                     let val = Value { val_type: ValueType::Boolean(*b) };
                     self.stack.push(wrap_in_square_vector(val));
                 },
                 Token::Nil => {
+                    // 非数値型のため、Vectorでラップ
                     let val = Value { val_type: ValueType::Nil };
                     self.stack.push(wrap_in_square_vector(val));
                 },

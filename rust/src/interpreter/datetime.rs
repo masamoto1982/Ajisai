@@ -172,6 +172,8 @@ extern "C" {
 }
 
 pub fn op_now(interp: &mut Interpreter) -> Result<()> {
+    use crate::types::tensor::Tensor;
+
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("NOW only supports StackTop mode"));
     }
@@ -186,9 +188,9 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
 
     let timestamp = Fraction::new(ms_bigint, thousand);
 
-    interp.stack.push(wrap_in_square_vector(
-        Value { val_type: ValueType::Number(timestamp) }
-    ));
+    // 数値結果はTensorとして返す
+    let tensor = Tensor::vector(vec![timestamp]);
+    interp.stack.push(Value::from_tensor(tensor));
 
     Ok(())
 }
@@ -323,26 +325,25 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     let minute = date.get_minutes();
     let second = date.get_seconds();
 
-    // Vectorを構築
-    let mut components = vec![
-        Value { val_type: ValueType::Number(Fraction::new(BigInt::from(year), BigInt::one())) },
-        Value { val_type: ValueType::Number(Fraction::new(BigInt::from(month), BigInt::one())) },
-        Value { val_type: ValueType::Number(Fraction::new(BigInt::from(day), BigInt::one())) },
-        Value { val_type: ValueType::Number(Fraction::new(BigInt::from(hour), BigInt::one())) },
-        Value { val_type: ValueType::Number(Fraction::new(BigInt::from(minute), BigInt::one())) },
-        Value { val_type: ValueType::Number(Fraction::new(BigInt::from(second), BigInt::one())) },
+    // Tensorを構築（全て数値なので）
+    use crate::types::tensor::Tensor;
+    let mut fractions = vec![
+        Fraction::new(BigInt::from(year), BigInt::one()),
+        Fraction::new(BigInt::from(month), BigInt::one()),
+        Fraction::new(BigInt::from(day), BigInt::one()),
+        Fraction::new(BigInt::from(hour), BigInt::one()),
+        Fraction::new(BigInt::from(minute), BigInt::one()),
+        Fraction::new(BigInt::from(second), BigInt::one()),
     ];
 
     // サブ秒精度がある場合は追加
     if let Some(subsec) = subsec_fraction {
-        components.push(Value { val_type: ValueType::Number(subsec) });
+        fractions.push(subsec);
     }
 
-    let datetime_vec = Value {
-        val_type: ValueType::Vector(components)
-    };
-
-    interp.stack.push(wrap_in_square_vector(datetime_vec));
+    // 日付時刻成分は全て数値なのでTensorとして返す
+    let tensor = Tensor::vector(fractions);
+    interp.stack.push(Value::from_tensor(tensor));
 
     Ok(())
 }
@@ -537,9 +538,10 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
         timestamp = timestamp.add(&subsec_frac);
     }
 
-    interp.stack.push(wrap_in_square_vector(
-        Value { val_type: ValueType::Number(timestamp) }
-    ));
+    // 数値結果はTensorとして返す
+    use crate::types::tensor::Tensor;
+    let tensor = Tensor::vector(vec![timestamp]);
+    interp.stack.push(Value::from_tensor(tensor));
 
     Ok(())
 }
