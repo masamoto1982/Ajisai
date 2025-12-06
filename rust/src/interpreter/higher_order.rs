@@ -112,15 +112,25 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 let result_vec = interp.stack.pop()
                     .ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
 
-                // 単一要素ベクタの場合はアンラップ
-                if let ValueType::Vector(mut v) = result_vec.val_type {
-                    if v.len() == 1 {
+                // 単一要素ベクタまたはテンソルの場合はアンラップ
+                match result_vec.val_type {
+                    ValueType::Vector(mut v) if v.len() == 1 => {
                         results.push(v.remove(0));
-                    } else {
+                    },
+                    ValueType::Vector(v) => {
                         results.push(Value { val_type: ValueType::Vector(v) });
+                    },
+                    ValueType::Tensor(t) if t.data().len() == 1 => {
+                        // 単一要素Tensorは数値としてアンラップ
+                        results.push(Value { val_type: ValueType::Number(t.data()[0].clone()) });
+                    },
+                    ValueType::Tensor(t) => {
+                        // 複数要素Tensorはそのまま保持
+                        results.push(Value { val_type: ValueType::Tensor(t) });
+                    },
+                    _ => {
+                        return Err(AjisaiError::type_error("vector or tensor result from MAP word", "other type"));
                     }
-                } else {
-                    return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
                 }
             }
 
@@ -305,20 +315,26 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     let condition_result = interp.stack.pop()
                         .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
-                    if let ValueType::Vector(v) = condition_result.val_type {
-                        if v.len() == 1 {
+                    // VectorまたはTensorからBoolean値を抽出
+                    let is_true = match condition_result.val_type {
+                        ValueType::Vector(v) if v.len() == 1 => {
                             if let ValueType::Boolean(b) = v[0].val_type {
-                                if b {
-                                    results.push(elem);
-                                }
+                                b
                             } else {
                                 return Err(AjisaiError::type_error("boolean result from FILTER word", "other type"));
                             }
-                        } else {
-                            return Err(AjisaiError::type_error("single-element vector result from FILTER word", "multi-element vector"));
+                        },
+                        ValueType::Tensor(_) => {
+                            // Tensorから直接Booleanは取得できないのでエラー
+                            return Err(AjisaiError::type_error("boolean result from FILTER word", "tensor type"));
+                        },
+                        _ => {
+                            return Err(AjisaiError::type_error("boolean vector result from FILTER word", "other type"));
                         }
-                    } else {
-                         return Err(AjisaiError::type_error("vector result from FILTER word", "other type"));
+                    };
+
+                    if is_true {
+                        results.push(elem);
                     }
                 }
 
@@ -512,20 +528,26 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                     let condition_result = interp.stack.pop()
                         .ok_or_else(|| AjisaiError::from("COUNT word must return a boolean value"))?;
 
-                    if let ValueType::Vector(v) = condition_result.val_type {
-                        if v.len() == 1 {
+                    // VectorまたはTensorからBoolean値を抽出
+                    let is_true = match condition_result.val_type {
+                        ValueType::Vector(v) if v.len() == 1 => {
                             if let ValueType::Boolean(b) = v[0].val_type {
-                                if b {
-                                    count += 1;
-                                }
+                                b
                             } else {
                                 return Err(AjisaiError::type_error("boolean result from COUNT word", "other type"));
                             }
-                        } else {
-                            return Err(AjisaiError::type_error("single-element vector result from COUNT word", "multi-element vector"));
+                        },
+                        ValueType::Tensor(_) => {
+                            // Tensorから直接Booleanは取得できないのでエラー
+                            return Err(AjisaiError::type_error("boolean result from COUNT word", "tensor type"));
+                        },
+                        _ => {
+                            return Err(AjisaiError::type_error("boolean vector result from COUNT word", "other type"));
                         }
-                    } else {
-                         return Err(AjisaiError::type_error("vector result from COUNT word", "other type"));
+                    };
+
+                    if is_true {
+                        count += 1;
                     }
                 }
 
