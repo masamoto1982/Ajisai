@@ -14,6 +14,7 @@ pub mod higher_order;
 pub mod cast;
 pub mod datetime;
 pub mod sort;
+pub mod category;       // 圏論的操作
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine};
@@ -721,6 +722,15 @@ impl Interpreter {
                 self.force_flag = true;
                 Ok(())
             },
+            // 圏論的操作
+            "COMPOSE" | "∘" => self.builtin_compose(),
+            "THEN" => self.builtin_then(),
+            "ID" => self.builtin_id(),
+            "KRON" | "⊗" => self.builtin_kron(),
+            "OUTER" => self.builtin_outer(),
+            "CONTRACT" => self.builtin_contract(),
+            "DOM" => self.builtin_dom(),
+            "COD" => self.builtin_cod(),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }

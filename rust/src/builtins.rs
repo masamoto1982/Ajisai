@@ -104,6 +104,20 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
 
         // ソートアルゴリズム
         ("FRACTIONSORT", "分数専用高速ソート｜[ 1/2 1/3 2/3 ] FRACTIONSORT → [ 1/3 1/2 2/3 ]", "Sort"),
+
+        // 圏論的操作
+        ("COMPOSE", "射の合成（g∘f）｜f g COMPOSE → g∘f", "Category Theory"),
+        ("THEN", "射の順次合成（図式的順序）｜f g THEN → f;g", "Category Theory"),
+        ("ID", "恒等射（単位行列）｜[ 3 ] ID → I₃", "Category Theory"),
+        ("KRON", "クロネッカー積（テンソル積）｜A B KRON → A⊗B", "Category Theory"),
+        ("OUTER", "ベクトルの外積｜v w OUTER → v⊗w", "Category Theory"),
+        ("CONTRACT", "テンソル縮約（トレース）｜[ [ 1 2 ] [ 3 4 ] ] [ [ 0 1 ] ] CONTRACT → [ 5 ]", "Category Theory"),
+        ("DOM", "射の定義域の次元｜f DOM → m", "Category Theory"),
+        ("COD", "射の値域の次元｜f COD → n", "Category Theory"),
+
+        // Unicode別名
+        ("∘", "射の合成（Unicodeシンボル）｜f g ∘ → g∘f", "Category Theory"),
+        ("⊗", "テンソル積（Unicodeシンボル）｜A B ⊗ → A⊗B", "Category Theory"),
     ]
 }
 
