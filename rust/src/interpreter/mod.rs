@@ -675,6 +675,28 @@ impl Interpreter {
             "RANK" => tensor_ops::op_rank(self),
             "RESHAPE" => tensor_ops::op_reshape(self),
             "TRANSPOSE" => tensor_ops::op_transpose(self),
+            // 集約関数
+            "SUM" => tensor_ops::op_sum(self),
+            "MEAN" => tensor_ops::op_mean(self),
+            "MAX" => tensor_ops::op_max(self),
+            "MIN" => tensor_ops::op_min(self),
+            "PRODUCT" => tensor_ops::op_product(self),
+            // 軸指定集約関数
+            "SUM-ROWS" => tensor_ops::op_sum_rows(self),
+            "SUM-COLS" => tensor_ops::op_sum_cols(self),
+            "MEAN-ROWS" => tensor_ops::op_mean_rows(self),
+            "MEAN-COLS" => tensor_ops::op_mean_cols(self),
+            "MAX-ROWS" => tensor_ops::op_max_rows(self),
+            "MAX-COLS" => tensor_ops::op_max_cols(self),
+            "MIN-ROWS" => tensor_ops::op_min_rows(self),
+            "MIN-COLS" => tensor_ops::op_min_cols(self),
+            // 行列演算
+            "DOT" => tensor_ops::op_dot(self),
+            "MATMUL" => tensor_ops::op_matmul(self),
+            // テンソルアクセス
+            "ROW" => tensor_ops::op_row(self),
+            "COL" => tensor_ops::op_col(self),
+            "DIAG" => tensor_ops::op_diag(self),
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),

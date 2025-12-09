@@ -282,6 +282,935 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
+// 集約関数（Aggregate Functions）
+// ============================================================================
+
+/// SUM - テンソルの全要素の総和
+///
+/// 使用法:
+///   [ 1 2 3 4 5 ] SUM → [ 15 ]
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] SUM → [ 21 ]
+pub fn op_sum(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("SUM does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("SUM requires tensor or vector"));
+        }
+    };
+
+    if tensor.data().is_empty() {
+        // 空テンソルの総和は0
+        let zero = Fraction::new(BigInt::from(0), BigInt::from(1));
+        interp.stack.push(Value::from_tensor(Tensor::scalar(zero)));
+        return Ok(());
+    }
+
+    let sum = tensor.data().iter().fold(
+        Fraction::new(BigInt::from(0), BigInt::from(1)),
+        |acc, x| acc.add(x)
+    );
+
+    interp.stack.push(Value::from_tensor(Tensor::scalar(sum)));
+    Ok(())
+}
+
+/// MAX - テンソルの最大値
+///
+/// 使用法:
+///   [ 3 1 4 1 5 9 2 6 ] MAX → [ 9 ]
+pub fn op_max(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MAX does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MAX requires tensor or vector"));
+        }
+    };
+
+    if tensor.data().is_empty() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MAX requires non-empty tensor"));
+    }
+
+    let max_val = tensor.data().iter().max().unwrap().clone();
+    interp.stack.push(Value::from_tensor(Tensor::scalar(max_val)));
+    Ok(())
+}
+
+/// MIN - テンソルの最小値
+///
+/// 使用法:
+///   [ 3 1 4 1 5 9 2 6 ] MIN → [ 1 ]
+pub fn op_min(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MIN does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MIN requires tensor or vector"));
+        }
+    };
+
+    if tensor.data().is_empty() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MIN requires non-empty tensor"));
+    }
+
+    let min_val = tensor.data().iter().min().unwrap().clone();
+    interp.stack.push(Value::from_tensor(Tensor::scalar(min_val)));
+    Ok(())
+}
+
+/// MEAN - テンソルの平均値
+///
+/// 使用法:
+///   [ 1 2 3 4 5 ] MEAN → [ 3 ]
+///   [ [ 10 20 ] [ 30 40 ] ] MEAN → [ 25 ]
+pub fn op_mean(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MEAN does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MEAN requires tensor or vector"));
+        }
+    };
+
+    if tensor.data().is_empty() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MEAN requires non-empty tensor"));
+    }
+
+    let sum = tensor.data().iter().fold(
+        Fraction::new(BigInt::from(0), BigInt::from(1)),
+        |acc, x| acc.add(x)
+    );
+    let count = Fraction::new(BigInt::from(tensor.size() as i64), BigInt::from(1));
+    let mean = sum.div(&count);
+
+    interp.stack.push(Value::from_tensor(Tensor::scalar(mean)));
+    Ok(())
+}
+
+/// PRODUCT - テンソルの全要素の積
+///
+/// 使用法:
+///   [ 1 2 3 4 5 ] PRODUCT → [ 120 ]
+pub fn op_product(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("PRODUCT does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("PRODUCT requires tensor or vector"));
+        }
+    };
+
+    if tensor.data().is_empty() {
+        // 空テンソルの総積は1（乗法単位元）
+        let one = Fraction::new(BigInt::from(1), BigInt::from(1));
+        interp.stack.push(Value::from_tensor(Tensor::scalar(one)));
+        return Ok(());
+    }
+
+    let product = tensor.data().iter().fold(
+        Fraction::new(BigInt::from(1), BigInt::from(1)),
+        |acc, x| acc.mul(x)
+    );
+
+    interp.stack.push(Value::from_tensor(Tensor::scalar(product)));
+    Ok(())
+}
+
+// ============================================================================
+// 軸指定集約関数（Axis-wise Aggregate Functions）
+// ============================================================================
+
+/// SUM-ROWS - 各行の総和（axis=1で集約）
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] SUM-ROWS → [ 6 15 ]
+pub fn op_sum_rows(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("SUM-ROWS does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("SUM-ROWS requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("SUM-ROWS requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let mut result_data = Vec::with_capacity(rows);
+
+    for i in 0..rows {
+        let mut row_sum = Fraction::new(BigInt::from(0), BigInt::from(1));
+        for j in 0..cols {
+            row_sum = row_sum.add(&tensor.data()[i * cols + j]);
+        }
+        result_data.push(row_sum);
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+    Ok(())
+}
+
+/// SUM-COLS - 各列の総和（axis=0で集約）
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] SUM-COLS → [ 5 7 9 ]
+pub fn op_sum_cols(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("SUM-COLS does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("SUM-COLS requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("SUM-COLS requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let mut result_data = Vec::with_capacity(cols);
+
+    for j in 0..cols {
+        let mut col_sum = Fraction::new(BigInt::from(0), BigInt::from(1));
+        for i in 0..rows {
+            col_sum = col_sum.add(&tensor.data()[i * cols + j]);
+        }
+        result_data.push(col_sum);
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+    Ok(())
+}
+
+/// MEAN-ROWS - 各行の平均
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] MEAN-ROWS → [ 2 5 ]
+pub fn op_mean_rows(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MEAN-ROWS does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MEAN-ROWS requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MEAN-ROWS requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let count = Fraction::new(BigInt::from(cols as i64), BigInt::from(1));
+    let mut result_data = Vec::with_capacity(rows);
+
+    for i in 0..rows {
+        let mut row_sum = Fraction::new(BigInt::from(0), BigInt::from(1));
+        for j in 0..cols {
+            row_sum = row_sum.add(&tensor.data()[i * cols + j]);
+        }
+        result_data.push(row_sum.div(&count));
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+    Ok(())
+}
+
+/// MEAN-COLS - 各列の平均
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] MEAN-COLS → [ 5/2 7/2 9/2 ]
+pub fn op_mean_cols(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MEAN-COLS does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MEAN-COLS requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MEAN-COLS requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let count = Fraction::new(BigInt::from(rows as i64), BigInt::from(1));
+    let mut result_data = Vec::with_capacity(cols);
+
+    for j in 0..cols {
+        let mut col_sum = Fraction::new(BigInt::from(0), BigInt::from(1));
+        for i in 0..rows {
+            col_sum = col_sum.add(&tensor.data()[i * cols + j]);
+        }
+        result_data.push(col_sum.div(&count));
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+    Ok(())
+}
+
+/// MAX-ROWS - 各行の最大値
+///
+/// 使用法:
+///   [ [ 1 5 3 ] [ 4 2 6 ] ] MAX-ROWS → [ 5 6 ]
+pub fn op_max_rows(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MAX-ROWS does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MAX-ROWS requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MAX-ROWS requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let mut result_data = Vec::with_capacity(rows);
+
+    for i in 0..rows {
+        let row_start = i * cols;
+        let row_max = tensor.data()[row_start..row_start + cols]
+            .iter()
+            .max()
+            .unwrap()
+            .clone();
+        result_data.push(row_max);
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+    Ok(())
+}
+
+/// MAX-COLS - 各列の最大値
+///
+/// 使用法:
+///   [ [ 1 5 3 ] [ 4 2 6 ] ] MAX-COLS → [ 4 5 6 ]
+pub fn op_max_cols(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MAX-COLS does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MAX-COLS requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MAX-COLS requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let mut result_data = Vec::with_capacity(cols);
+
+    for j in 0..cols {
+        let mut col_max = tensor.data()[j].clone();
+        for i in 1..rows {
+            if tensor.data()[i * cols + j].gt(&col_max) {
+                col_max = tensor.data()[i * cols + j].clone();
+            }
+        }
+        result_data.push(col_max);
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+    Ok(())
+}
+
+/// MIN-ROWS - 各行の最小値
+///
+/// 使用法:
+///   [ [ 1 5 3 ] [ 4 2 6 ] ] MIN-ROWS → [ 1 2 ]
+pub fn op_min_rows(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MIN-ROWS does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MIN-ROWS requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MIN-ROWS requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let mut result_data = Vec::with_capacity(rows);
+
+    for i in 0..rows {
+        let row_start = i * cols;
+        let row_min = tensor.data()[row_start..row_start + cols]
+            .iter()
+            .min()
+            .unwrap()
+            .clone();
+        result_data.push(row_min);
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+    Ok(())
+}
+
+/// MIN-COLS - 各列の最小値
+///
+/// 使用法:
+///   [ [ 1 5 3 ] [ 4 2 6 ] ] MIN-COLS → [ 1 2 3 ]
+pub fn op_min_cols(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MIN-COLS does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MIN-COLS requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MIN-COLS requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let mut result_data = Vec::with_capacity(cols);
+
+    for j in 0..cols {
+        let mut col_min = tensor.data()[j].clone();
+        for i in 1..rows {
+            if tensor.data()[i * cols + j].lt(&col_min) {
+                col_min = tensor.data()[i * cols + j].clone();
+            }
+        }
+        result_data.push(col_min);
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+    Ok(())
+}
+
+// ============================================================================
+// 行列演算（Matrix Operations）
+// ============================================================================
+
+/// DOT - 内積
+///
+/// 使用法:
+///   [ 1 2 3 ] [ 4 5 6 ] DOT → [ 32 ]  (1*4 + 2*5 + 3*6)
+pub fn op_dot(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("DOT does not support Stack (..) mode yet"));
+    }
+
+    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let a = match &a_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from("DOT requires tensor or vector"));
+        }
+    };
+
+    let b = match &b_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from("DOT requires tensor or vector"));
+        }
+    };
+
+    if a.rank() != 1 || b.rank() != 1 {
+        interp.stack.push(a_val);
+        interp.stack.push(b_val);
+        return Err(AjisaiError::from("DOT requires two 1-dimensional tensors (vectors)"));
+    }
+
+    if a.shape()[0] != b.shape()[0] {
+        interp.stack.push(a_val);
+        interp.stack.push(b_val);
+        return Err(AjisaiError::from(format!(
+            "DOT requires vectors of same length, got {} and {}",
+            a.shape()[0], b.shape()[0]
+        )));
+    }
+
+    let dot_product = a.data().iter()
+        .zip(b.data().iter())
+        .fold(
+            Fraction::new(BigInt::from(0), BigInt::from(1)),
+            |acc, (x, y)| acc.add(&x.mul(y))
+        );
+
+    interp.stack.push(Value::from_tensor(Tensor::scalar(dot_product)));
+    Ok(())
+}
+
+/// MATMUL - 行列積
+///
+/// 使用法:
+///   [ [ 1 2 ] [ 3 4 ] ] [ [ 5 6 ] [ 7 8 ] ] MATMUL → [ [ 19 22 ] [ 43 50 ] ]
+///   [ [ 1 2 ] [ 3 4 ] ] [ 5 6 ] MATMUL → [ 17 39 ]  (行列×ベクタ)
+pub fn op_matmul(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MATMUL does not support Stack (..) mode yet"));
+    }
+
+    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let a = match &a_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from("MATMUL requires tensor or vector"));
+        }
+    };
+
+    let b = match &b_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from("MATMUL requires tensor or vector"));
+        }
+    };
+
+    // Case 1: 行列×行列 (2D × 2D)
+    if a.rank() == 2 && b.rank() == 2 {
+        let m = a.shape()[0];
+        let n = a.shape()[1];
+        let p = b.shape()[1];
+
+        if n != b.shape()[0] {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from(format!(
+                "MATMUL: incompatible shapes [{}, {}] and [{}, {}]",
+                m, n, b.shape()[0], p
+            )));
+        }
+
+        let mut result_data = Vec::with_capacity(m * p);
+        for i in 0..m {
+            for k in 0..p {
+                let mut sum = Fraction::new(BigInt::from(0), BigInt::from(1));
+                for j in 0..n {
+                    sum = sum.add(&a.data()[i * n + j].mul(&b.data()[j * p + k]));
+                }
+                result_data.push(sum);
+            }
+        }
+
+        let result = Tensor::new(vec![m, p], result_data)?;
+        interp.stack.push(Value::from_tensor(result));
+        return Ok(());
+    }
+
+    // Case 2: 行列×ベクタ (2D × 1D)
+    if a.rank() == 2 && b.rank() == 1 {
+        let m = a.shape()[0];
+        let n = a.shape()[1];
+
+        if n != b.shape()[0] {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from(format!(
+                "MATMUL: incompatible shapes [{}, {}] and [{}]",
+                m, n, b.shape()[0]
+            )));
+        }
+
+        let mut result_data = Vec::with_capacity(m);
+        for i in 0..m {
+            let mut sum = Fraction::new(BigInt::from(0), BigInt::from(1));
+            for j in 0..n {
+                sum = sum.add(&a.data()[i * n + j].mul(&b.data()[j]));
+            }
+            result_data.push(sum);
+        }
+
+        interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+        return Ok(());
+    }
+
+    // Case 3: ベクタ×行列 (1D × 2D)
+    if a.rank() == 1 && b.rank() == 2 {
+        let n = a.shape()[0];
+        let p = b.shape()[1];
+
+        if n != b.shape()[0] {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from(format!(
+                "MATMUL: incompatible shapes [{}] and [{}, {}]",
+                n, b.shape()[0], p
+            )));
+        }
+
+        let mut result_data = Vec::with_capacity(p);
+        for k in 0..p {
+            let mut sum = Fraction::new(BigInt::from(0), BigInt::from(1));
+            for j in 0..n {
+                sum = sum.add(&a.data()[j].mul(&b.data()[j * p + k]));
+            }
+            result_data.push(sum);
+        }
+
+        interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+        return Ok(());
+    }
+
+    interp.stack.push(a_val);
+    interp.stack.push(b_val);
+    Err(AjisaiError::from("MATMUL requires matrices (2D) or matrix and vector (2D and 1D)"))
+}
+
+// ============================================================================
+// テンソルアクセス関数（Tensor Access Functions）
+// ============================================================================
+
+/// ROW - 行の抽出
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] [ 1 ] ROW → [ 4 5 6 ]
+pub fn op_row(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("ROW does not support Stack (..) mode yet"));
+    }
+
+    let idx_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let tensor_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let idx = match &idx_val.val_type {
+        ValueType::Tensor(t) if t.is_scalar() => {
+            t.as_scalar().unwrap().to_usize()
+                .ok_or_else(|| AjisaiError::from("ROW index must be non-negative integer"))?
+        }
+        ValueType::Tensor(t) if t.rank() == 1 && t.size() == 1 => {
+            t.data()[0].to_usize()
+                .ok_or_else(|| AjisaiError::from("ROW index must be non-negative integer"))?
+        }
+        _ => {
+            interp.stack.push(tensor_val);
+            interp.stack.push(idx_val);
+            return Err(AjisaiError::from("ROW requires scalar index"));
+        }
+    };
+
+    let tensor = match &tensor_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(tensor_val);
+            interp.stack.push(idx_val);
+            return Err(AjisaiError::from("ROW requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(tensor_val);
+        interp.stack.push(idx_val);
+        return Err(AjisaiError::from("ROW requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+
+    if idx >= rows {
+        interp.stack.push(tensor_val);
+        interp.stack.push(idx_val);
+        return Err(AjisaiError::from(format!(
+            "ROW index {} out of bounds for matrix with {} rows",
+            idx, rows
+        )));
+    }
+
+    let row_start = idx * cols;
+    let row_data: Vec<Fraction> = tensor.data()[row_start..row_start + cols].to_vec();
+    interp.stack.push(Value::from_tensor(Tensor::vector(row_data)));
+    Ok(())
+}
+
+/// COL - 列の抽出
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] [ 2 ] COL → [ 3 6 9 ]
+pub fn op_col(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("COL does not support Stack (..) mode yet"));
+    }
+
+    let idx_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let tensor_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let idx = match &idx_val.val_type {
+        ValueType::Tensor(t) if t.is_scalar() => {
+            t.as_scalar().unwrap().to_usize()
+                .ok_or_else(|| AjisaiError::from("COL index must be non-negative integer"))?
+        }
+        ValueType::Tensor(t) if t.rank() == 1 && t.size() == 1 => {
+            t.data()[0].to_usize()
+                .ok_or_else(|| AjisaiError::from("COL index must be non-negative integer"))?
+        }
+        _ => {
+            interp.stack.push(tensor_val);
+            interp.stack.push(idx_val);
+            return Err(AjisaiError::from("COL requires scalar index"));
+        }
+    };
+
+    let tensor = match &tensor_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(tensor_val);
+            interp.stack.push(idx_val);
+            return Err(AjisaiError::from("COL requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(tensor_val);
+        interp.stack.push(idx_val);
+        return Err(AjisaiError::from("COL requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+
+    if idx >= cols {
+        interp.stack.push(tensor_val);
+        interp.stack.push(idx_val);
+        return Err(AjisaiError::from(format!(
+            "COL index {} out of bounds for matrix with {} columns",
+            idx, cols
+        )));
+    }
+
+    let mut col_data = Vec::with_capacity(rows);
+    for i in 0..rows {
+        col_data.push(tensor.data()[i * cols + idx].clone());
+    }
+    interp.stack.push(Value::from_tensor(Tensor::vector(col_data)));
+    Ok(())
+}
+
+/// DIAG - 対角成分の抽出
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] DIAG → [ 1 5 9 ]
+pub fn op_diag(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("DIAG does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("DIAG requires tensor or vector"));
+        }
+    };
+
+    if tensor.rank() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("DIAG requires 2-dimensional tensor (matrix)"));
+    }
+
+    let rows = tensor.shape()[0];
+    let cols = tensor.shape()[1];
+    let diag_len = rows.min(cols);
+    let mut diag_data = Vec::with_capacity(diag_len);
+
+    for i in 0..diag_len {
+        diag_data.push(tensor.data()[i * cols + i].clone());
+    }
+
+    interp.stack.push(Value::from_tensor(Tensor::vector(diag_data)));
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -461,5 +1390,393 @@ mod tests {
         assert_eq!(result.get(&[1, 0]).unwrap(), &frac(14));
         assert_eq!(result.get(&[1, 1]).unwrap(), &frac(25));
         assert_eq!(result.get(&[1, 2]).unwrap(), &frac(36));
+    }
+
+    // ============================================================================
+    // 集約関数のテスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_sum_vector() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 4 5 ] SUM").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(15));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_sum_matrix() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] ] SUM").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(21));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_max_vector() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 3 1 4 1 5 9 2 6 ] MAX").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(9));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_min_vector() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 3 1 4 1 5 9 2 6 ] MIN").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(1));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_mean_vector() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 4 5 ] MEAN").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(3));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_mean_matrix() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 10 20 ] [ 30 40 ] ] MEAN").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(25));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_product_vector() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 4 5 ] PRODUCT").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(120));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    // ============================================================================
+    // 軸指定集約関数のテスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_sum_rows() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] ] SUM-ROWS").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[2]);
+            assert_eq!(t.data()[0], frac(6));
+            assert_eq!(t.data()[1], frac(15));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_sum_cols() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] ] SUM-COLS").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[3]);
+            assert_eq!(t.data()[0], frac(5));
+            assert_eq!(t.data()[1], frac(7));
+            assert_eq!(t.data()[2], frac(9));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_mean_rows() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] ] MEAN-ROWS").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[2]);
+            assert_eq!(t.data()[0], frac(2));
+            assert_eq!(t.data()[1], frac(5));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_max_rows() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 5 3 ] [ 4 2 6 ] ] MAX-ROWS").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[2]);
+            assert_eq!(t.data()[0], frac(5));
+            assert_eq!(t.data()[1], frac(6));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_max_cols() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 5 3 ] [ 4 2 6 ] ] MAX-COLS").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[3]);
+            assert_eq!(t.data()[0], frac(4));
+            assert_eq!(t.data()[1], frac(5));
+            assert_eq!(t.data()[2], frac(6));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_min_rows() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 5 3 ] [ 4 2 6 ] ] MIN-ROWS").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[2]);
+            assert_eq!(t.data()[0], frac(1));
+            assert_eq!(t.data()[1], frac(2));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_min_cols() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 5 3 ] [ 4 2 6 ] ] MIN-COLS").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[3]);
+            assert_eq!(t.data()[0], frac(1));
+            assert_eq!(t.data()[1], frac(2));
+            assert_eq!(t.data()[2], frac(3));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    // ============================================================================
+    // 行列演算のテスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_dot() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 ] [ 4 5 6 ] DOT").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            // 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
+            assert_eq!(t.as_scalar().unwrap(), &frac(32));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_matmul_matrix_matrix() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 ] [ 3 4 ] ] [ [ 5 6 ] [ 7 8 ] ] MATMUL").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[2, 2]);
+            // [[1*5+2*7, 1*6+2*8], [3*5+4*7, 3*6+4*8]]
+            // [[5+14, 6+16], [15+28, 18+32]]
+            // [[19, 22], [43, 50]]
+            assert_eq!(t.get(&[0, 0]).unwrap(), &frac(19));
+            assert_eq!(t.get(&[0, 1]).unwrap(), &frac(22));
+            assert_eq!(t.get(&[1, 0]).unwrap(), &frac(43));
+            assert_eq!(t.get(&[1, 1]).unwrap(), &frac(50));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_matmul_matrix_vector() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 ] [ 3 4 ] ] [ 5 6 ] MATMUL").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[2]);
+            // [1*5+2*6, 3*5+4*6] = [5+12, 15+24] = [17, 39]
+            assert_eq!(t.data()[0], frac(17));
+            assert_eq!(t.data()[1], frac(39));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    // ============================================================================
+    // テンソルアクセス関数のテスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_row() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] [ 1 ] ROW").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[3]);
+            assert_eq!(t.data()[0], frac(4));
+            assert_eq!(t.data()[1], frac(5));
+            assert_eq!(t.data()[2], frac(6));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_col() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] [ 2 ] COL").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[3]);
+            assert_eq!(t.data()[0], frac(3));
+            assert_eq!(t.data()[1], frac(6));
+            assert_eq!(t.data()[2], frac(9));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_diag() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] DIAG").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert_eq!(t.shape(), &[3]);
+            assert_eq!(t.data()[0], frac(1));
+            assert_eq!(t.data()[1], frac(5));
+            assert_eq!(t.data()[2], frac(9));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    // ============================================================================
+    // エッジケースのテスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_sum_empty_tensor() {
+        let mut interp = Interpreter::new();
+        // 空テンソルの場合、sumは0を返す
+        interp.execute("[ ] SUM").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(0));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_product_empty_tensor() {
+        let mut interp = Interpreter::new();
+        // 空テンソルの場合、productは1を返す（乗法単位元）
+        interp.execute("[ ] PRODUCT").await.unwrap();
+
+        let result = interp.stack.last().unwrap();
+        if let ValueType::Tensor(t) = &result.val_type {
+            assert!(t.is_scalar());
+            assert_eq!(t.as_scalar().unwrap(), &frac(1));
+        } else {
+            panic!("Expected Tensor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_sum_with_reduce_equivalence() {
+        // [ 1 2 3 4 5 ] '+' REDUCE と [ 1 2 3 4 5 ] SUM は同じ結果
+        let mut interp1 = Interpreter::new();
+        let mut interp2 = Interpreter::new();
+
+        interp1.execute("[ 1 2 3 4 5 ] '+' REDUCE").await.unwrap();
+        interp2.execute("[ 1 2 3 4 5 ] SUM").await.unwrap();
+
+        let result1 = &interp1.stack.last().unwrap().val_type;
+        let result2 = &interp2.stack.last().unwrap().val_type;
+
+        // REDUCEは1要素のベクタ [15] を返し、SUMはスカラー 15 を返す
+        // どちらも同じ値を持っていることを確認
+        if let (ValueType::Tensor(t1), ValueType::Tensor(t2)) = (result1, result2) {
+            // REDUCE結果: 1要素のベクタ [15] またはスカラー
+            // SUM結果: スカラー
+            let val1 = if t1.is_scalar() {
+                t1.as_scalar().unwrap()
+            } else {
+                &t1.data()[0]
+            };
+            let val2 = if t2.is_scalar() {
+                t2.as_scalar().unwrap()
+            } else {
+                &t2.data()[0]
+            };
+            assert_eq!(val1, val2);
+        } else {
+            panic!("Expected Tensors");
+        }
     }
 }
