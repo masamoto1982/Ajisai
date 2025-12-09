@@ -14,7 +14,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{wrap_in_square_vector, extract_single_element};
+use crate::interpreter::helpers::{wrap_in_square_vector, extract_single_element, wrap_as_tensor};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
@@ -96,18 +96,16 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
         ValueType::String(s) => {
             let fraction = Fraction::from_str(s)
                 .map_err(|_| AjisaiError::from(format!("NUM: cannot parse '{}' as a number", s)))?;
-            interp.stack.push(wrap_in_square_vector(
-                Value { val_type: ValueType::Number(fraction) }
-            ));
+            // 修正: 数値変換結果はTensorとして返す
+            interp.stack.push(wrap_as_tensor(fraction));
             Ok(())
         }
         ValueType::Boolean(b) => {
             use num_bigint::BigInt;
             use num_traits::One;
             let num = if *b { BigInt::one() } else { BigInt::from(0) };
-            interp.stack.push(wrap_in_square_vector(
-                Value { val_type: ValueType::Number(Fraction::new(num, BigInt::one())) }
-            ));
+            // 修正: 数値変換結果はTensorとして返す
+            interp.stack.push(wrap_as_tensor(Fraction::new(num, BigInt::one())));
             Ok(())
         }
         ValueType::Number(_) => {
@@ -575,8 +573,8 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Number → String
-        interp.stack.push(wrap_in_square_vector(
-            Value { val_type: ValueType::Number(Fraction::new(BigInt::from(42), BigInt::one())) }
+        interp.stack.push(wrap_as_tensor(
+            Fraction::new(BigInt::from(42), BigInt::one())
         ));
         op_str(&mut interp).unwrap();
 
@@ -718,8 +716,8 @@ mod tests {
 
         // Number → Boolean (1 → TRUE)
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
-            Value { val_type: ValueType::Number(Fraction::new(BigInt::from(1), BigInt::from(1))) }
+        interp.stack.push(wrap_as_tensor(
+            Fraction::new(BigInt::from(1), BigInt::from(1))
         ));
         op_bool(&mut interp).unwrap();
 
@@ -733,8 +731,8 @@ mod tests {
 
         // Number → Boolean (0 → FALSE)
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
-            Value { val_type: ValueType::Number(Fraction::new(BigInt::from(0), BigInt::from(1))) }
+        interp.stack.push(wrap_as_tensor(
+            Fraction::new(BigInt::from(0), BigInt::from(1))
         ));
         op_bool(&mut interp).unwrap();
 

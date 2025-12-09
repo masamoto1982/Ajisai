@@ -8,9 +8,10 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_bigint_from_value, normalize_index, unwrap_single_element, wrap_in_square_vector};
+use crate::interpreter::helpers::{get_bigint_from_value, normalize_index, unwrap_single_element, wrap_in_square_vector, wrap_as_tensor, wrap_single_value};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
+use crate::types::tensor::Tensor;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 use std::collections::VecDeque;
@@ -85,7 +86,8 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 
                     let result_elem = v[actual_index].clone();
                     interp.stack.push(target_val);
-                    interp.stack.push(wrap_in_square_vector(result_elem));
+                    // 修正: 数値ならTensor、非数値ならVectorでラップ
+                    interp.stack.push(wrap_single_value(result_elem));
                     Ok(())
                 },
                 ValueType::Tensor(t) => {
@@ -107,7 +109,8 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 
                     let result_num = t.data()[actual_index].clone();
                     interp.stack.push(target_val);
-                    interp.stack.push(wrap_in_square_vector(Value { val_type: ValueType::Number(result_num) }));
+                    // 修正: Tensorから取得した数値はTensorとしてラップ
+                    interp.stack.push(wrap_as_tensor(result_num));
                     Ok(())
                 },
                 _ => {
@@ -133,7 +136,8 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             };
 
             let result_elem = interp.stack[actual_index].clone();
-            interp.stack.push(wrap_in_square_vector(result_elem));
+            // 修正: 数値ならTensor、非数値ならVectorでラップ
+            interp.stack.push(wrap_single_value(result_elem));
             Ok(())
         }
     }
@@ -460,8 +464,8 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::Stack => interp.stack.len(),
     };
     let len_frac = Fraction::new(BigInt::from(len), BigInt::one());
-    let val = wrap_in_square_vector(Value { val_type: ValueType::Number(len_frac) });
-    interp.stack.push(val);
+    // 修正: LENGTHの結果はTensorとして返す
+    interp.stack.push(wrap_as_tensor(len_frac));
     Ok(())
 }
 
@@ -531,7 +535,40 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                         }
                         v[..take_count].to_vec()
                     };
-                    interp.stack.push(Value { val_type: ValueType::Vector(result) });
+
+                    // 修正: 結果が数値のみの場合はTensorとして返す
+                    let all_numbers = result.iter().all(|v| matches!(v.val_type, ValueType::Number(_)));
+                    if all_numbers {
+                        let nums: Vec<Fraction> = result.iter()
+                            .filter_map(|v| if let ValueType::Number(n) = &v.val_type { Some(n.clone()) } else { None })
+                            .collect();
+                        interp.stack.push(Value::from_tensor(Tensor::vector(nums)));
+                    } else {
+                        interp.stack.push(Value { val_type: ValueType::Vector(result) });
+                    }
+                    Ok(())
+                },
+                ValueType::Tensor(t) => {
+                    let len = t.data().len();
+                    if count < 0 {
+                        let abs_count = (-count) as usize;
+                        if abs_count > len {
+                            interp.stack.push(Value::from_tensor(t));
+                            interp.stack.push(count_val);
+                            return Err(AjisaiError::from("Take count exceeds tensor length"));
+                        }
+                        let result_data = t.data()[len - abs_count..].to_vec();
+                        interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+                    } else {
+                        let take_count = count as usize;
+                        if take_count > len {
+                            interp.stack.push(Value::from_tensor(t));
+                            interp.stack.push(count_val);
+                            return Err(AjisaiError::from("Take count exceeds tensor length"));
+                        }
+                        let result_data = t.data()[..take_count].to_vec();
+                        interp.stack.push(Value::from_tensor(Tensor::vector(result_data)));
+                    }
                     Ok(())
                 },
                 _ => {
@@ -633,18 +670,34 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 
                     let mut current_pos = 0;
                     let mut result_vectors = Vec::new();
+                    use crate::types::tensor::Tensor;
+
                     for &size in &sizes {
-                        result_vectors.push(Value {
-                            val_type: ValueType::Vector(
-                                v[current_pos..current_pos + size].to_vec()
-                            )
-                        });
+                        let chunk = v[current_pos..current_pos + size].to_vec();
+                        // 修正: 数値のみの場合はTensorとして返す
+                        let all_numbers = chunk.iter().all(|v| matches!(v.val_type, ValueType::Number(_)));
+                        if all_numbers {
+                            let nums: Vec<Fraction> = chunk.iter()
+                                .filter_map(|v| if let ValueType::Number(n) = &v.val_type { Some(n.clone()) } else { None })
+                                .collect();
+                            result_vectors.push(Value::from_tensor(Tensor::vector(nums)));
+                        } else {
+                            result_vectors.push(Value { val_type: ValueType::Vector(chunk) });
+                        }
                         current_pos += size;
                     }
                     if current_pos < v.len() {
-                        result_vectors.push(Value {
-                            val_type: ValueType::Vector(v[current_pos..].to_vec())
-                        });
+                        let chunk = v[current_pos..].to_vec();
+                        // 修正: 数値のみの場合はTensorとして返す
+                        let all_numbers = chunk.iter().all(|v| matches!(v.val_type, ValueType::Number(_)));
+                        if all_numbers {
+                            let nums: Vec<Fraction> = chunk.iter()
+                                .filter_map(|v| if let ValueType::Number(n) = &v.val_type { Some(n.clone()) } else { None })
+                                .collect();
+                            result_vectors.push(Value::from_tensor(Tensor::vector(nums)));
+                        } else {
+                            result_vectors.push(Value { val_type: ValueType::Vector(chunk) });
+                        }
                     }
                     interp.stack.extend(result_vectors);
                     Ok(())
@@ -666,13 +719,32 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 
             let mut remaining_stack = interp.stack.split_off(0);
             let mut result_stack = Vec::new();
+            use crate::types::tensor::Tensor;
 
             for &size in &sizes {
-                let chunk = remaining_stack.drain(..size).collect();
-                result_stack.push(Value { val_type: ValueType::Vector(chunk) });
+                let chunk: Vec<Value> = remaining_stack.drain(..size).collect();
+                // 修正: 数値のみの場合はTensorとして返す
+                        let all_numbers = chunk.iter().all(|v| matches!(v.val_type, ValueType::Number(_)));
+                        if all_numbers {
+                            let nums: Vec<Fraction> = chunk.iter()
+                                .filter_map(|v| if let ValueType::Number(n) = &v.val_type { Some(n.clone()) } else { None })
+                                .collect();
+                    result_stack.push(Value::from_tensor(Tensor::vector(nums)));
+                } else {
+                    result_stack.push(Value { val_type: ValueType::Vector(chunk) });
+                }
             }
             if !remaining_stack.is_empty() {
-                result_stack.push(Value { val_type: ValueType::Vector(remaining_stack) });
+                // 修正: 数値のみの場合はTensorとして返す
+                let all_numbers = remaining_stack.iter().all(|v| matches!(v.val_type, ValueType::Number(_)));
+                if all_numbers {
+                    let nums: Vec<Fraction> = remaining_stack.iter()
+                        .filter_map(|v| if let ValueType::Number(n) = &v.val_type { Some(n.clone()) } else { None })
+                        .collect();
+                    result_stack.push(Value::from_tensor(Tensor::vector(nums)));
+                } else {
+                    result_stack.push(Value { val_type: ValueType::Vector(remaining_stack) });
+                }
             }
             interp.stack = result_stack;
             Ok(())

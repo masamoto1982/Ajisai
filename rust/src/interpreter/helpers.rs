@@ -29,10 +29,11 @@ use num_traits::{One, ToPrimitive};
 /// - Ok(None): 値を作成しないトークン（Symbol, GuardSeparator など）
 /// - Err: パースエラー
 pub fn token_to_wrapped_value(token: &Token) -> Result<Option<Value>> {
+    use crate::types::tensor::Tensor;
     match token {
         Token::Number(n) => {
-            let val = Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) };
-            Ok(Some(wrap_in_square_vector(val)))
+            let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
+            Ok(Some(wrap_as_tensor(frac)))
         },
         Token::String(s) => {
             let val = Value { val_type: ValueType::String(s.clone()) };
@@ -253,32 +254,55 @@ pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
 // ベクタラッピング関数
 // ============================================================================
 
-/// 値を単一要素の角括弧ベクタ []でラップする
+/// 非数値型を単一要素Vectorでラップする
 ///
-/// **非推奨**: 数値には `wrap_single_value` または `Value::from_tensor(Tensor::vector(...))` を使用してください。
-/// この関数は非数値型（String、Boolean、Nil等）のラップにのみ使用すべきです。
+/// 【注意】数値型には使用禁止。数値には wrap_as_tensor を使用すること。
 ///
 /// 【責務】
-/// - 任意の値を [value] の形式にラップ
+/// - 非数値型の値を [value] の形式にラップ
 ///
 /// 【用途】
-/// - 非数値型のリテラル値のスタックへのプッシュ
+/// - 非数値型のリテラル値のスタックへのプッシュ（String、Boolean、Symbol、Nil）
 /// - 非数値型の演算結果の統一形式での返却
 ///
 /// 【引数】
-/// - value: ラップする値
+/// - value: ラップする値（非数値型のみ）
 ///
 /// 【戻り値】
 /// - [value]形式のベクタ
-#[deprecated(note = "数値には wrap_single_value または Value::from_tensor を使用してください")]
+#[deprecated(note = "数値には wrap_as_tensor または Value::from_tensor を使用してください")]
 pub fn wrap_in_square_vector(value: Value) -> Value {
+    debug_assert!(
+        !matches!(value.val_type, ValueType::Number(_)),
+        "wrap_in_square_vector called with Number - use wrap_as_tensor instead"
+    );
     Value { val_type: ValueType::Vector(vec![value]) }
+}
+
+/// 数値を単一要素Tensorでラップする
+///
+/// 【責務】
+/// - 数値（Fraction）を1要素のTensorとしてラップ
+///
+/// 【用途】
+/// - 数値リテラルのスタックへのプッシュ
+/// - 数値演算結果の統一形式での返却
+///
+/// 【引数】
+/// - fraction: ラップする数値
+///
+/// 【戻り値】
+/// - 1要素のTensor
+pub fn wrap_as_tensor(fraction: Fraction) -> Value {
+    use crate::types::tensor::Tensor;
+    Value::from_tensor(Tensor::vector(vec![fraction]))
 }
 
 /// 単一値をラップ（数値ならTensor、それ以外ならVector）
 ///
 /// 【責務】
-/// - 数値の場合はTensorとしてラップ
+/// - 数値の場合はTensorとしてラップ（wrap_as_tensor使用）
+/// - Tensorの場合はそのまま返す
 /// - それ以外の場合はVectorとしてラップ
 /// - Tensor移行の統一的なラッピング戦略を提供
 ///
@@ -291,12 +315,13 @@ pub fn wrap_in_square_vector(value: Value) -> Value {
 ///
 /// 【戻り値】
 /// - 数値: 1要素のTensor
+/// - Tensor: そのまま
 /// - それ以外: [value]形式のVector
 pub fn wrap_single_value(value: Value) -> Value {
-    use crate::types::tensor::Tensor;
-    match &value.val_type {
-        ValueType::Number(f) => Value::from_tensor(Tensor::vector(vec![f.clone()])),
-        _ => Value { val_type: ValueType::Vector(vec![value]) }
+    match value.val_type {
+        ValueType::Number(f) => wrap_as_tensor(f),
+        ValueType::Tensor(_) => value,
+        _ => wrap_in_square_vector(value)
     }
 }
 
@@ -326,18 +351,21 @@ pub fn unwrap_single_element(value: Value) -> Value {
     }
 }
 
-/// 値をラップして結果形式として返す
+/// 非数値型の結果値をラップして返す
+///
+/// 【注意】この関数は非数値型（Boolean、Nilなど）専用です。
+/// 数値の結果には wrap_single_value を使用してください。
 ///
 /// 【責務】
-/// - 比較演算・論理演算の結果を単一要素ベクタにラップ
+/// - 比較演算・論理演算の結果（Boolean）を単一要素ベクタにラップ
 /// - 統一的な結果形式の提供
 ///
 /// 【用途】
-/// - 比較演算子の結果返却
-/// - 論理演算子の結果返却
+/// - 比較演算子の結果返却（Boolean）
+/// - 論理演算子の結果返却（Boolean）
 ///
 /// 【引数】
-/// - value: ラップする結果値
+/// - value: ラップする結果値（非数値型のみ）
 ///
 /// 【戻り値】
 /// - [value]形式のベクタ
@@ -369,9 +397,9 @@ mod tests {
 
     #[test]
     fn test_wrap_unwrap() {
-        let num = Value { val_type: ValueType::Number(Fraction::new(BigInt::from(42), BigInt::one())) };
-        let wrapped = wrap_in_square_vector(num.clone());
+        let frac = Fraction::new(BigInt::from(42), BigInt::one());
+        let wrapped = wrap_as_tensor(frac.clone());
         let unwrapped = unwrap_single_element(wrapped);
-        assert_eq!(unwrapped, num);
+        assert_eq!(unwrapped, Value { val_type: ValueType::Number(frac) });
     }
 }

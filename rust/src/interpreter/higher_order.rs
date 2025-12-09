@@ -7,7 +7,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, wrap_in_square_vector, unwrap_single_element};
+use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, wrap_in_square_vector, unwrap_single_element, wrap_single_value};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
@@ -736,8 +736,9 @@ pub fn op_reduce(interp: &mut Interpreter) -> Result<()> {
 
                 for elem in iter {
                     // アキュムレータと次の要素をプッシュ
-                    interp.stack.push(wrap_in_square_vector(accumulator));
-                    interp.stack.push(wrap_in_square_vector(elem));
+                    // 修正: 数値ならTensor、非数値ならVectorでラップ
+                    interp.stack.push(wrap_single_value(accumulator));
+                    interp.stack.push(wrap_single_value(elem));
 
                     // ワード実行
                     if let Err(e) = interp.execute_word_core(&word_name) {
@@ -762,7 +763,8 @@ pub fn op_reduce(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = saved_no_change_check;
 
             // 最終結果をプッシュ
-            interp.stack.push(wrap_in_square_vector(accumulator));
+            // 修正: 数値ならTensor、非数値ならVectorでラップ
+            interp.stack.push(wrap_single_value(accumulator));
             Ok(())
         },
         OperationTarget::Stack => {
@@ -815,7 +817,8 @@ pub fn op_reduce(interp: &mut Interpreter) -> Result<()> {
 
             for elem in iter {
                 interp.stack.clear();
-                interp.stack.push(wrap_in_square_vector(accumulator));
+                // 修正: 数値ならTensor、非数値ならVectorでラップ
+                interp.stack.push(wrap_single_value(accumulator));
                 interp.stack.push(elem);  // 既にラップされている
 
                 match interp.execute_word_core(&word_name) {
@@ -848,7 +851,8 @@ pub fn op_reduce(interp: &mut Interpreter) -> Result<()> {
             interp.stack = original_stack_below;
 
             // 最終結果をプッシュ
-            interp.stack.push(wrap_in_square_vector(accumulator));
+            // 修正: 数値ならTensor、非数値ならVectorでラップ
+            interp.stack.push(wrap_single_value(accumulator));
             Ok(())
         }
     }
@@ -907,7 +911,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             if elements.is_empty() {
                 // 空ベクタ: 初期値をそのまま返す
-                interp.stack.push(wrap_in_square_vector(accumulator));
+                interp.stack.push(wrap_single_value(accumulator));
                 return Ok(());
             }
 
@@ -917,8 +921,8 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 interp.disable_no_change_check = true;
 
                 for elem in elements {
-                    interp.stack.push(wrap_in_square_vector(accumulator));
-                    interp.stack.push(wrap_in_square_vector(elem));
+                    interp.stack.push(wrap_single_value(accumulator));
+                    interp.stack.push(wrap_single_value(elem));
 
                     if let Err(e) = interp.execute_word_core(&word_name) {
                         interp.operation_target = saved_target;
@@ -933,7 +937,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
-            interp.stack.push(wrap_in_square_vector(accumulator));
+            interp.stack.push(wrap_single_value(accumulator));
             Ok(())
         }
         OperationTarget::Stack => {
@@ -962,7 +966,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             for item in targets {
                 interp.stack.clear();
-                interp.stack.push(wrap_in_square_vector(accumulator));
+                interp.stack.push(wrap_single_value(accumulator));
                 interp.stack.push(item);
 
                 match interp.execute_word_core(&word_name) {
@@ -983,7 +987,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.push(wrap_in_square_vector(accumulator));
+            interp.stack.push(wrap_single_value(accumulator));
             Ok(())
         }
     }
@@ -1045,8 +1049,8 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
                 interp.disable_no_change_check = true;
 
                 for elem in elements {
-                    interp.stack.push(wrap_in_square_vector(accumulator));
-                    interp.stack.push(wrap_in_square_vector(elem));
+                    interp.stack.push(wrap_single_value(accumulator));
+                    interp.stack.push(wrap_single_value(elem));
 
                     if let Err(e) = interp.execute_word_core(&word_name) {
                         interp.operation_target = saved_target;
@@ -1104,7 +1108,7 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
 
             for item in &targets {
                 interp.stack.clear();
-                interp.stack.push(wrap_in_square_vector(accumulator));
+                interp.stack.push(wrap_single_value(accumulator));
                 interp.stack.push(item.clone());
 
                 match interp.execute_word_core(&word_name) {
@@ -1112,7 +1116,8 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
                         let result = interp.stack.pop()
                             .ok_or_else(|| AjisaiError::from("SCAN: word must return a value"))?;
                         accumulator = unwrap_single_element(result);
-                        results.push(wrap_in_square_vector(accumulator.clone()));
+                        // 修正: 数値ならTensor、非数値ならVectorでラップ
+                        results.push(wrap_single_value(accumulator.clone()));
                     }
                     Err(e) => {
                         interp.operation_target = saved_target;
@@ -1296,7 +1301,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         match &unwrapped.val_type {
                             ValueType::Nil => break,
                             ValueType::Vector(v) if v.len() == 2 => {
-                                results.push(wrap_in_square_vector(v[0].clone()));
+                                // 修正: 数値ならTensor、非数値ならVectorでラップ
+                                results.push(wrap_single_value(v[0].clone()));
 
                                 // 次の状態がNILの場合は終了
                                 if matches!(&v[1].val_type, ValueType::Nil) {
