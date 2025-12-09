@@ -181,7 +181,7 @@ export class Display {
         if (!item || !item.type) {
             return 'unknown';
         }
-        
+
         switch (item.type) {
             case 'number': {
                 if (!item.value || typeof item.value !== 'object') return '?';
@@ -190,6 +190,21 @@ export class Display {
                 const denomStr = String(frac.denominator);
                 const numerStr = String(frac.numerator);
                 return this.formatFractionScientific(numerStr, denomStr);
+            }
+            case 'tensor': {
+                if (!item.value || typeof item.value !== 'object') return '?';
+                const tensor = item.value as any;
+                if (!('data' in tensor) || !Array.isArray(tensor.data)) return '?';
+
+                // データ配列をフォーマット
+                const formattedData = tensor.data.map((frac: any) => {
+                    if (!('numerator' in frac) || !('denominator' in frac)) return '?';
+                    const denomStr = String(frac.denominator);
+                    const numerStr = String(frac.numerator);
+                    return this.formatFractionScientific(numerStr, denomStr);
+                }).join(' ');
+
+                return `[ ${formattedData} ]`;
             }
             case 'string':
                 return `'${item.value}'`;

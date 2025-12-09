@@ -263,9 +263,36 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|_| "No numerator".to_string())?.as_string().ok_or("Numerator not string")?;
             let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|_| "No denominator".to_string())?.as_string().ok_or("Denominator not string")?;
             ValueType::Number(Fraction::new(
-                BigInt::from_str(&num_str).map_err(|e| e.to_string())?, 
+                BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
                 BigInt::from_str(&den_str).map_err(|e| e.to_string())?
             ))
+        },
+        "tensor" => {
+            use crate::types::tensor::Tensor;
+            let tensor_obj = js_sys::Object::from(value_js);
+
+            // shape配列を取得
+            let shape_js = js_sys::Reflect::get(&tensor_obj, &"shape".into()).map_err(|_| "No shape".to_string())?;
+            let shape_array = js_sys::Array::from(&shape_js);
+            let shape: Vec<usize> = (0..shape_array.length())
+                .map(|i| shape_array.get(i).as_f64().ok_or("Invalid shape value".to_string()).map(|v| v as usize))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            // data配列を取得
+            let data_js = js_sys::Reflect::get(&tensor_obj, &"data".into()).map_err(|_| "No data".to_string())?;
+            let data_array = js_sys::Array::from(&data_js);
+            let mut data = Vec::new();
+            for i in 0..data_array.length() {
+                let frac_obj = js_sys::Object::from(data_array.get(i));
+                let num_str = js_sys::Reflect::get(&frac_obj, &"numerator".into()).map_err(|_| "No numerator in tensor data".to_string())?.as_string().ok_or("Numerator not string")?;
+                let den_str = js_sys::Reflect::get(&frac_obj, &"denominator".into()).map_err(|_| "No denominator in tensor data".to_string())?.as_string().ok_or("Denominator not string")?;
+                data.push(Fraction::new(
+                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?
+                ));
+            }
+
+            ValueType::Tensor(Tensor::new(shape, data).map_err(|e| e.to_string())?)
         },
         "string" => ValueType::String(value_js.as_string().ok_or("Value not string")?),
         "boolean" => ValueType::Boolean(value_js.as_bool().ok_or("Value not boolean")?),
