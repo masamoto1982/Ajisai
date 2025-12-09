@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+
 export class AjisaiInterpreter {
   free(): void;
   [Symbol.dispose](): void;
@@ -30,11 +31,11 @@ export interface InitOutput {
   readonly ajisaiinterpreter_reset: (a: number) => any;
   readonly ajisaiinterpreter_restore_custom_words: (a: number, b: any) => [number, number];
   readonly ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
-  readonly wasm_bindgen__convert__closures_____invoke__h614150e3c5c56dda: (a: number, b: number) => void;
-  readonly wasm_bindgen__closure__destroy__h1bd8411eb889fe8e: (a: number, b: number) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__hf8f59d6a6e6bb1e6: (a: number, b: number, c: any) => void;
-  readonly wasm_bindgen__closure__destroy__hc728a65328861fe3: (a: number, b: number) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__h09f42510ce37db68: (a: number, b: number, c: any, d: any) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h3d5ab9b5db5c01d3: (a: number, b: number) => void;
+  readonly wasm_bindgen__closure__destroy__h24832564c91a3850: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h898a0f791e66b255: (a: number, b: number, c: any) => void;
+  readonly wasm_bindgen__closure__destroy__hdc4390a356fc0a6a: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h28ea0c2eba360ce2: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_exn_store: (a: number) => void;
@@ -45,6 +46,7 @@ export interface InitOutput {
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
+
 /**
 * Instantiates the given `module`, which can either be bytes or
 * a precompiled `WebAssembly.Module`.
