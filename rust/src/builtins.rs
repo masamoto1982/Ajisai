@@ -48,6 +48,32 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("RESHAPE", "テンソルの形状を変更｜[ 1 2 3 4 ] [ 2 2 ] RESHAPE → [ [ 1 2 ] [ 3 4 ] ]", "Tensor"),
         ("TRANSPOSE", "2次元テンソルの転置｜[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE → [ [ 1 3 ] [ 2 4 ] ]", "Tensor"),
 
+        // 集約関数（表計算風）
+        ("SUM", "全要素の総和｜[ 1 2 3 4 5 ] SUM → [ 15 ]", "Aggregate"),
+        ("MEAN", "全要素の平均｜[ 1 2 3 4 5 ] MEAN → [ 3 ]", "Aggregate"),
+        ("MAX", "全要素の最大値｜[ 3 1 4 1 5 ] MAX → [ 5 ]", "Aggregate"),
+        ("MIN", "全要素の最小値｜[ 3 1 4 1 5 ] MIN → [ 1 ]", "Aggregate"),
+        ("PRODUCT", "全要素の積｜[ 1 2 3 4 5 ] PRODUCT → [ 120 ]", "Aggregate"),
+
+        // 軸指定集約関数
+        ("SUM-ROWS", "各行の総和｜[ [ 1 2 3 ] [ 4 5 6 ] ] SUM-ROWS → [ 6 15 ]", "Aggregate"),
+        ("SUM-COLS", "各列の総和｜[ [ 1 2 3 ] [ 4 5 6 ] ] SUM-COLS → [ 5 7 9 ]", "Aggregate"),
+        ("MEAN-ROWS", "各行の平均｜[ [ 1 2 3 ] [ 4 5 6 ] ] MEAN-ROWS → [ 2 5 ]", "Aggregate"),
+        ("MEAN-COLS", "各列の平均｜[ [ 1 2 3 ] [ 4 5 6 ] ] MEAN-COLS → [ 5/2 7/2 9/2 ]", "Aggregate"),
+        ("MAX-ROWS", "各行の最大値｜[ [ 1 5 3 ] [ 4 2 6 ] ] MAX-ROWS → [ 5 6 ]", "Aggregate"),
+        ("MAX-COLS", "各列の最大値｜[ [ 1 5 3 ] [ 4 2 6 ] ] MAX-COLS → [ 4 5 6 ]", "Aggregate"),
+        ("MIN-ROWS", "各行の最小値｜[ [ 1 5 3 ] [ 4 2 6 ] ] MIN-ROWS → [ 1 2 ]", "Aggregate"),
+        ("MIN-COLS", "各列の最小値｜[ [ 1 5 3 ] [ 4 2 6 ] ] MIN-COLS → [ 1 2 3 ]", "Aggregate"),
+
+        // 行列演算
+        ("DOT", "内積（ベクタ同士）｜[ 1 2 3 ] [ 4 5 6 ] DOT → [ 32 ]", "Matrix"),
+        ("MATMUL", "行列積｜[ [ 1 2 ] [ 3 4 ] ] [ [ 5 6 ] [ 7 8 ] ] MATMUL → [ [ 19 22 ] [ 43 50 ] ]", "Matrix"),
+
+        // テンソルアクセス
+        ("ROW", "行の抽出｜[ [ 1 2 3 ] [ 4 5 6 ] ] [ 1 ] ROW → [ 4 5 6 ]", "Tensor"),
+        ("COL", "列の抽出｜[ [ 1 2 3 ] [ 4 5 6 ] ] [ 2 ] COL → [ 3 6 ]", "Tensor"),
+        ("DIAG", "対角成分の抽出｜[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] DIAG → [ 1 5 9 ]", "Tensor"),
+
         // 型変換
         ("STR", "任意の型を文字列に変換｜[ 42 ] STR → [ '42' ], [ TRUE ] STR → [ 'TRUE' ]", "Type Conversion"),
         ("NUM", "文字列または真偽値を数値に変換｜[ '42' ] NUM → [ 42 ], [ TRUE ] NUM → [ 1 ]", "Type Conversion"),
