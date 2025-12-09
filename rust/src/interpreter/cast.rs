@@ -14,7 +14,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{wrap_in_square_vector, extract_single_element};
+use crate::interpreter::helpers::{wrap_in_square_vector, extract_single_element, wrap_as_tensor};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
@@ -40,7 +40,32 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let inner_val = extract_single_element(&val)?;
+
+    // TensorまたはVectorから内部値を取得
+    let inner_val = match &val.val_type {
+        ValueType::Vector(v) if v.len() == 1 => &v[0],
+        ValueType::Tensor(t) if t.data().len() == 1 => {
+            // Tensorの場合は一時的にNumberに変換
+            let num_val = Value { val_type: ValueType::Number(t.data()[0].clone()) };
+            let string_repr = value_to_string_repr(&num_val);
+            interp.stack.push(wrap_in_square_vector(
+                Value { val_type: ValueType::String(string_repr) }
+            ));
+            return Ok(());
+        }
+        ValueType::Vector(_) => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("Multi-element vector not supported in this context"));
+        }
+        ValueType::Tensor(_) => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("Multi-element tensor not supported in this context"));
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+        }
+    };
 
     match &inner_val.val_type {
         ValueType::String(_) => {
@@ -96,18 +121,16 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
         ValueType::String(s) => {
             let fraction = Fraction::from_str(s)
                 .map_err(|_| AjisaiError::from(format!("NUM: cannot parse '{}' as a number", s)))?;
-            interp.stack.push(wrap_in_square_vector(
-                Value { val_type: ValueType::Number(fraction) }
-            ));
+            // 修正: 数値変換結果はTensorとして返す
+            interp.stack.push(wrap_as_tensor(fraction));
             Ok(())
         }
         ValueType::Boolean(b) => {
             use num_bigint::BigInt;
             use num_traits::One;
             let num = if *b { BigInt::one() } else { BigInt::from(0) };
-            interp.stack.push(wrap_in_square_vector(
-                Value { val_type: ValueType::Number(Fraction::new(num, BigInt::one())) }
-            ));
+            // 修正: 数値変換結果はTensorとして返す
+            interp.stack.push(wrap_as_tensor(Fraction::new(num, BigInt::one())));
             Ok(())
         }
         ValueType::Number(_) => {
@@ -161,8 +184,56 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let val_clone = val.clone();
-    let inner_val = extract_single_element(&val_clone)?;
+
+    // TensorまたはVectorから内部値を取得
+    let (inner_val, is_tensor) = match &val.val_type {
+        ValueType::Vector(v) if v.len() == 1 => (&v[0], false),
+        ValueType::Tensor(t) if t.data().len() == 1 => {
+            // Tensorの場合は一時的にNumberに変換して処理
+            let num_val = Value { val_type: ValueType::Number(t.data()[0].clone()) };
+            use num_bigint::BigInt;
+            use num_traits::One;
+
+            let one = Fraction::new(BigInt::one(), BigInt::one());
+            let zero = Fraction::new(BigInt::from(0), BigInt::one());
+            let n = &t.data()[0];
+
+            if n == &one {
+                interp.stack.push(wrap_in_square_vector(
+                    Value { val_type: ValueType::Boolean(true) }
+                ));
+                return Ok(());
+            } else if n == &zero {
+                interp.stack.push(wrap_in_square_vector(
+                    Value { val_type: ValueType::Boolean(false) }
+                ));
+                return Ok(());
+            } else {
+                let error_msg = format!(
+                    "BOOL: cannot convert number {} to boolean (only 1 and 0 are allowed)",
+                    if n.denominator == BigInt::one() {
+                        format!("{}", n.numerator)
+                    } else {
+                        format!("{}/{}", n.numerator, n.denominator)
+                    }
+                );
+                interp.stack.push(val.clone());
+                return Err(AjisaiError::from(error_msg));
+            }
+        }
+        ValueType::Vector(_) => {
+            interp.stack.push(val.clone());
+            return Err(AjisaiError::from("Multi-element vector not supported in this context"));
+        }
+        ValueType::Tensor(_) => {
+            interp.stack.push(val.clone());
+            return Err(AjisaiError::from("Multi-element tensor not supported in this context"));
+        }
+        _ => {
+            interp.stack.push(val.clone());
+            return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+        }
+    };
 
     match &inner_val.val_type {
         ValueType::String(s) => {
@@ -199,7 +270,7 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
                 ));
                 Ok(())
             } else {
-                interp.stack.push(val);
+                interp.stack.push(val.clone());
                 Err(AjisaiError::from(format!(
                     "BOOL: cannot convert number {} to boolean (only 1 and 0 are allowed)",
                     if n.denominator == BigInt::one() {
@@ -211,15 +282,15 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
             }
         }
         ValueType::Boolean(_) => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             Err(AjisaiError::from("BOOL: same-type conversion (Boolean → Boolean) is not allowed"))
         }
         ValueType::Nil => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             Err(AjisaiError::from("BOOL: cannot convert Nil to Boolean"))
         }
         _ => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             Err(AjisaiError::from("BOOL: requires String or Number type"))
         }
     }
@@ -575,8 +646,8 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Number → String
-        interp.stack.push(wrap_in_square_vector(
-            Value { val_type: ValueType::Number(Fraction::new(BigInt::from(42), BigInt::one())) }
+        interp.stack.push(wrap_as_tensor(
+            Fraction::new(BigInt::from(42), BigInt::one())
         ));
         op_str(&mut interp).unwrap();
 
@@ -718,8 +789,8 @@ mod tests {
 
         // Number → Boolean (1 → TRUE)
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
-            Value { val_type: ValueType::Number(Fraction::new(BigInt::from(1), BigInt::from(1))) }
+        interp.stack.push(wrap_as_tensor(
+            Fraction::new(BigInt::from(1), BigInt::from(1))
         ));
         op_bool(&mut interp).unwrap();
 
@@ -733,8 +804,8 @@ mod tests {
 
         // Number → Boolean (0 → FALSE)
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
-            Value { val_type: ValueType::Number(Fraction::new(BigInt::from(0), BigInt::from(1))) }
+        interp.stack.push(wrap_as_tensor(
+            Fraction::new(BigInt::from(0), BigInt::from(1))
         ));
         op_bool(&mut interp).unwrap();
 

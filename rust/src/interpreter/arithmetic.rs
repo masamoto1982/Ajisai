@@ -8,7 +8,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, extract_number, wrap_in_square_vector};
+use crate::interpreter::helpers::{get_integer_from_value, extract_number, wrap_in_square_vector, wrap_as_tensor};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_traits::Zero;
@@ -150,8 +150,9 @@ where
                 return Err(AjisaiError::from("STACK operation resulted in no change"));
             }
 
-            let result_val = Value { val_type: ValueType::Number(acc_num) };
-            interp.stack.push(wrap_in_square_vector(result_val));
+            // 修正: Stackモードの結果はTensorとして返す
+            use crate::types::tensor::Tensor;
+            interp.stack.push(Value::from_tensor(Tensor::vector(vec![acc_num])));
         }
     }
     Ok(())
