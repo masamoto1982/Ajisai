@@ -62,6 +62,7 @@
                 <section class="stack-area">
                     <h2>Stack</h2>
                     <div id="stack-display" class="state-display"></div>
+                    <div id="tensor-view-container"></div>
                 </section>
                 
                 <section class="dictionary-area">
@@ -86,7 +87,7 @@
         import { initTensorView } from './tensorview/index.js';
 
         window.addEventListener('ajisai-gui-ready', () => {
-            const container = document.querySelector('.input-area');
+            const container = document.getElementById('tensor-view-container');
             if (container) {
                 initTensorView(container);
                 console.log('[TensorView] TensorView module loaded');
