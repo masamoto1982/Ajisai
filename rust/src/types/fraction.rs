@@ -70,6 +70,156 @@ impl Fraction {
     pub fn gt(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator > &other.numerator * &self.denominator }
     pub fn ge(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator >= &other.numerator * &self.denominator }
     pub fn eq(&self, other: &Fraction) -> bool { self == other }
+
+    /// 絶対値を返す
+    pub fn abs(&self) -> Fraction {
+        Fraction::new(self.numerator.abs(), self.denominator.clone())
+    }
+
+    /// 符号を返す（正なら1、負なら-1、ゼロなら0）
+    pub fn sign(&self) -> Fraction {
+        if self.numerator.is_zero() {
+            Fraction::new(BigInt::from(0), BigInt::from(1))
+        } else if self.numerator > BigInt::zero() {
+            Fraction::new(BigInt::from(1), BigInt::from(1))
+        } else {
+            Fraction::new(BigInt::from(-1), BigInt::from(1))
+        }
+    }
+
+    /// 符号を反転する
+    pub fn neg(&self) -> Fraction {
+        Fraction::new(-&self.numerator, self.denominator.clone())
+    }
+
+    /// 切り捨て（負の無限大方向への丸め）
+    pub fn floor(&self) -> Fraction {
+        let q = &self.numerator / &self.denominator;
+        let r = &self.numerator % &self.denominator;
+
+        // 負の数で余りがある場合は、さらに1を引く（負の無限大方向）
+        let floored = if self.numerator < BigInt::zero() && !r.is_zero() {
+            q - BigInt::one()
+        } else {
+            q
+        };
+
+        Fraction::new(floored, BigInt::one())
+    }
+
+    /// 切り上げ（正の無限大方向への丸め）
+    pub fn ceil(&self) -> Fraction {
+        let q = &self.numerator / &self.denominator;
+        let r = &self.numerator % &self.denominator;
+
+        // 正の数で余りがある場合は、1を加える（正の無限大方向）
+        let ceiled = if self.numerator > BigInt::zero() && !r.is_zero() {
+            q + BigInt::one()
+        } else if self.numerator < BigInt::zero() && !r.is_zero() {
+            // 負の数の場合、商は既にゼロ方向に切り捨てられているのでそのまま
+            q
+        } else {
+            q
+        };
+
+        Fraction::new(ceiled, BigInt::one())
+    }
+
+    /// 四捨五入（0.5は0から遠い方向へ）
+    pub fn round(&self) -> Fraction {
+        // 2倍して判定する（分数の計算を整数だけで行う）
+        let doubled_num = &self.numerator * BigInt::from(2);
+        let doubled_quot = &doubled_num / &self.denominator;
+        let doubled_rem = &doubled_num % &self.denominator;
+
+        // 丸め判定
+        let rounded = if !doubled_rem.is_zero() {
+            // 余りがある場合
+            if self.numerator > BigInt::zero() {
+                // 正の数: 余りが分母の半分以上なら切り上げ
+                (doubled_quot + BigInt::one()) / BigInt::from(2)
+            } else {
+                // 負の数: 2倍した商を2で割る（負の方向に丸める）
+                doubled_quot / BigInt::from(2)
+            }
+        } else {
+            // 余りなし（偶数割り切れ）
+            // x.5の場合: 2x+1を2で割ると商はx、0から遠い方向はx+sign(x)
+            if doubled_quot.is_odd() {
+                // 0.5, 1.5, 2.5... または -0.5, -1.5, -2.5...
+                if self.numerator > BigInt::zero() {
+                    (doubled_quot + BigInt::one()) / BigInt::from(2)
+                } else {
+                    (doubled_quot - BigInt::one()) / BigInt::from(2)
+                }
+            } else {
+                doubled_quot / BigInt::from(2)
+            }
+        };
+
+        Fraction::new(rounded, BigInt::one())
+    }
+
+    /// 整数かどうかを判定
+    pub fn is_exact_integer(&self) -> bool {
+        self.denominator == BigInt::one()
+    }
+
+    /// 整数に変換（整数でなければNone）
+    pub fn as_exact_bigint(&self) -> Option<BigInt> {
+        if self.is_exact_integer() {
+            Some(self.numerator.clone())
+        } else {
+            None
+        }
+    }
+
+    /// 非負整数としてusizeに変換（分母が1の場合のみ）
+    pub fn as_usize(&self) -> Option<usize> {
+        if self.is_exact_integer() && self.numerator >= BigInt::zero() {
+            self.numerator.to_usize()
+        } else {
+            None
+        }
+    }
+
+    /// 剰余演算（数学的剰余: a mod b = a - b * floor(a/b)）
+    pub fn modulo(&self, other: &Fraction) -> Fraction {
+        if other.numerator.is_zero() {
+            panic!("Modulo by zero");
+        }
+        // a mod b = a - b * floor(a/b)
+        let div_result = self.div(other);
+        let floored = div_result.floor();
+        self.sub(&other.mul(&floored))
+    }
+
+    /// べき乗（整数指数のみ）
+    pub fn pow(&self, exponent: i64) -> Fraction {
+        if exponent == 0 {
+            return Fraction::new(BigInt::from(1), BigInt::from(1));
+        }
+
+        let abs_exp = exponent.unsigned_abs() as u32;
+
+        let result = if exponent > 0 {
+            Fraction::new(
+                self.numerator.pow(abs_exp),
+                self.denominator.pow(abs_exp)
+            )
+        } else {
+            // 負の指数: 逆数のべき乗
+            if self.numerator.is_zero() {
+                panic!("Zero cannot be raised to negative power");
+            }
+            Fraction::new(
+                self.denominator.pow(abs_exp),
+                self.numerator.pow(abs_exp)
+            )
+        };
+
+        result
+    }
 }
 
 impl PartialOrd for Fraction {

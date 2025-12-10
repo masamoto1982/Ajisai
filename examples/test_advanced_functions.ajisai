@@ -1,0 +1,29 @@
+# ALONG テスト - 軸指定リダクション
+[ [ 1 2 3 ] [ 4 5 6 ] ] '+' [ 0 ] ALONG PRINT   # → [ 5 7 9 ] 軸0で集約
+[ [ 1 2 3 ] [ 4 5 6 ] ] '+' [ 1 ] ALONG PRINT   # → [ 6 15 ] 軸1で集約
+[ [ 1 2 3 ] [ 4 5 6 ] ] '*' [ 0 ] ALONG PRINT   # → [ 4 10 18 ] 軸0で積
+[ [ 1 2 3 ] [ 4 5 6 ] ] '*' [ 1 ] ALONG PRINT   # → [ 6 120 ] 軸1で積
+[ [ 1 5 3 ] [ 4 2 6 ] ] 'MAX2' [ 0 ] ALONG PRINT # → [ 4 5 6 ]
+[ [ 1 5 3 ] [ 4 2 6 ] ] 'MIN2' [ 0 ] ALONG PRINT # → [ 1 2 3 ]
+
+# OUTER テスト - 外積演算
+[ 1 2 3 ] [ 4 5 ] '*' OUTER PRINT   # → [ [ 4 5 ] [ 8 10 ] [ 12 15 ] ]
+[ 1 2 ] [ 1 2 3 ] '+' OUTER PRINT   # → [ [ 2 3 4 ] [ 3 4 5 ] ]
+[ 2 3 ] [ 4 5 ] '-' OUTER PRINT     # → [ [ -2 -3 ] [ -1 -2 ] ]
+
+# VAR テスト - 分散
+[ 1 2 3 4 5 ] VAR PRINT             # → [ 2 ]
+[ 2 4 6 8 ] VAR PRINT               # → [ 5 ]
+[ 10 10 10 ] VAR PRINT              # → [ 0 ]
+
+# MEDIAN テスト - 中央値
+[ 1 2 3 4 5 ] MEDIAN PRINT          # → [ 3 ]
+[ 1 2 3 4 ] MEDIAN PRINT            # → [ 5/2 ]
+[ 5 3 1 4 2 ] MEDIAN PRINT          # → [ 3 ]
+[ 1 100 ] MEDIAN PRINT              # → [ 101/2 ]
+
+# 複合テスト - 単位行列との演算
+[ 3 ] EYE [ 3 ] IOTA RESHAPE MATMUL PRINT  # 単位行列との積
+
+# 複合テスト - 等間隔数列の統計
+[ 0 ] [ 100 ] [ 11 ] LINSPACE VAR PRINT    # 0から100まで11点の分散

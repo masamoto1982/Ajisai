@@ -1,0 +1,42 @@
+# ABS テスト
+[ -5 ] ABS PRINT           # → [ 5 ]
+[ 3 -7 0 ] ABS PRINT       # → [ 3 7 0 ]
+[ [ -1 2 ] [ -3 4 ] ] ABS PRINT  # → [ [ 1 2 ] [ 3 4 ] ]
+
+# NEG テスト
+[ 5 ] NEG PRINT            # → [ -5 ]
+[ -3 ] NEG PRINT           # → [ 3 ]
+[ 1 -2 3 ] NEG PRINT       # → [ -1 2 -3 ]
+
+# SIGN テスト
+[ -5 ] SIGN PRINT          # → [ -1 ]
+[ 0 ] SIGN PRINT           # → [ 0 ]
+[ 7 ] SIGN PRINT           # → [ 1 ]
+[ -3 0 5 ] SIGN PRINT      # → [ -1 0 1 ]
+
+# MOD テスト
+[ 7 ] [ 3 ] MOD PRINT      # → [ 1 ]
+[ 10 ] [ 4 ] MOD PRINT     # → [ 2 ]
+[ 7 8 9 ] [ 3 ] MOD PRINT  # → [ 1 2 0 ]
+[ -7 ] [ 3 ] MOD PRINT     # → [ 2 ] (数学的剰余)
+
+# FLOOR テスト
+[ 7/3 ] FLOOR PRINT        # → [ 2 ]
+[ -7/3 ] FLOOR PRINT       # → [ -3 ]
+[ 5 ] FLOOR PRINT          # → [ 5 ]
+
+# CEIL テスト
+[ 7/3 ] CEIL PRINT         # → [ 3 ]
+[ -7/3 ] CEIL PRINT        # → [ -2 ]
+[ 5 ] CEIL PRINT           # → [ 5 ]
+
+# ROUND テスト
+[ 5/2 ] ROUND PRINT        # → [ 3 ]
+[ -5/2 ] ROUND PRINT       # → [ -3 ]
+[ 7/3 ] ROUND PRINT        # → [ 2 ]
+
+# POW テスト
+[ 2 ] [ 3 ] POW PRINT      # → [ 8 ]
+[ 2 ] [ -2 ] POW PRINT     # → [ 1/4 ]
+[ 3 ] [ 0 ] POW PRINT      # → [ 1 ]
+[ 2 3 ] [ 2 ] POW PRINT    # → [ 4 9 ]
