@@ -13,6 +13,10 @@ import type { AjisaiInterpreter } from '../wasm-types';
 declare global {
     interface Window {
         ajisaiInterpreter: AjisaiInterpreter;
+        ajisaiTensorView?: {
+            displayValue(value: any): void;
+            setTensor(data: any): void;
+        };
     }
 }
 
@@ -174,10 +178,19 @@ export class GUI {
     updateAllDisplays(): void {
         if (!window.ajisaiInterpreter) return;
         try {
-            this.display.updateStack(window.ajisaiInterpreter.get_stack());
+            const stack = window.ajisaiInterpreter.get_stack();
+            this.display.updateStack(stack);
             this.dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
             // スタック更新後、エディタの内容に基づいてハイライトを再適用
             this.updateHighlights(this.elements.codeInput.value);
+
+            // TensorViewにスタックTOPを表示
+            if (window.ajisaiTensorView && stack.length > 0) {
+                const top = stack[stack.length - 1];
+                if (top && (top.type === 'vector' || top.type === 'tensor')) {
+                    window.ajisaiTensorView.displayValue(top);
+                }
+            }
         } catch (error) {
             console.error('Failed to update display:', error);
             this.display.showError(new Error('Failed to update display.'));
