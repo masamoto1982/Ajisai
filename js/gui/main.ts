@@ -8,6 +8,7 @@ import { Persistence } from './persistence';
 import { TestRunner } from './test';
 import { WORKER_MANAGER } from '../workers/worker-manager';
 import { ExecutionController } from './execution-controller';
+import { initTensorView } from '../tensorview/index.js';
 import type { AjisaiInterpreter } from '../wasm-types';
 
 declare global {
@@ -95,6 +96,13 @@ export class GUI {
         this.mobile.updateView('input');
 
         await this.initializeWorkers();
+
+        // TensorViewを初期化
+        const tensorViewContainer = document.getElementById('tensor-view-container');
+        if (tensorViewContainer) {
+            initTensorView(tensorViewContainer);
+            console.log('[GUI] TensorView initialized');
+        }
 
         console.log('[GUI] GUI initialization completed');
 
