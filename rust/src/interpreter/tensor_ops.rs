@@ -5,6 +5,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::types::tensor::Tensor;
 use crate::types::fraction::Fraction;
+use num_traits::Zero;
 
 /// 2つの形状からブロードキャスト後の形状を計算
 ///
@@ -243,7 +244,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         .data()
         .iter()
         .map(|f| {
-            f.to_usize()
+            f.as_usize()
                 .ok_or_else(|| AjisaiError::from("Shape dimensions must be positive integers"))
         })
         .collect();
@@ -1052,11 +1053,11 @@ pub fn op_row(interp: &mut Interpreter) -> Result<()> {
 
     let idx = match &idx_val.val_type {
         ValueType::Tensor(t) if t.is_scalar() => {
-            t.as_scalar().unwrap().to_usize()
+            t.as_scalar().unwrap().as_usize()
                 .ok_or_else(|| AjisaiError::from("ROW index must be non-negative integer"))?
         }
         ValueType::Tensor(t) if t.rank() == 1 && t.size() == 1 => {
-            t.data()[0].to_usize()
+            t.data()[0].as_usize()
                 .ok_or_else(|| AjisaiError::from("ROW index must be non-negative integer"))?
         }
         _ => {
@@ -1117,11 +1118,11 @@ pub fn op_col(interp: &mut Interpreter) -> Result<()> {
 
     let idx = match &idx_val.val_type {
         ValueType::Tensor(t) if t.is_scalar() => {
-            t.as_scalar().unwrap().to_usize()
+            t.as_scalar().unwrap().as_usize()
                 .ok_or_else(|| AjisaiError::from("COL index must be non-negative integer"))?
         }
         ValueType::Tensor(t) if t.rank() == 1 && t.size() == 1 => {
-            t.data()[0].to_usize()
+            t.data()[0].as_usize()
                 .ok_or_else(|| AjisaiError::from("COL index must be non-negative integer"))?
         }
         _ => {
@@ -1208,6 +1209,1092 @@ pub fn op_diag(interp: &mut Interpreter) -> Result<()> {
     }
 
     interp.stack.push(Value::from_tensor(Tensor::vector(diag_data)));
+    Ok(())
+}
+
+// ============================================================================
+// 基本数学関数（Phase 1）
+// ============================================================================
+
+/// ABS - 絶対値
+///
+/// 使用法:
+///   [ -5 ] ABS → [ 5 ]
+///   [ -3 7 -2 ] ABS → [ 3 7 2 ]
+///   [ [ -1 2 ] [ -3 4 ] ] ABS → [ [ 1 2 ] [ 3 4 ] ]
+pub fn op_abs(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("ABS does not support Stack (..) mode"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("ABS requires tensor or vector"));
+        }
+    };
+
+    let result_data: Vec<Fraction> = tensor.data().iter().map(|f| f.abs()).collect();
+    let result = Tensor::new(tensor.shape().to_vec(), result_data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// NEG - 符号反転
+///
+/// 使用法:
+///   [ 5 ] NEG → [ -5 ]
+///   [ -3 7 -2 ] NEG → [ 3 -7 2 ]
+pub fn op_neg(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("NEG does not support Stack (..) mode"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("NEG requires tensor or vector"));
+        }
+    };
+
+    let result_data: Vec<Fraction> = tensor.data().iter().map(|f| f.neg()).collect();
+    let result = Tensor::new(tensor.shape().to_vec(), result_data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// SIGN - 符号取得
+///
+/// 使用法:
+///   [ -5 ] SIGN → [ -1 ]
+///   [ 0 ] SIGN → [ 0 ]
+///   [ 7 ] SIGN → [ 1 ]
+///   [ -3 0 5 ] SIGN → [ -1 0 1 ]
+pub fn op_sign(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("SIGN does not support Stack (..) mode"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("SIGN requires tensor or vector"));
+        }
+    };
+
+    let result_data: Vec<Fraction> = tensor.data().iter().map(|f| f.sign()).collect();
+    let result = Tensor::new(tensor.shape().to_vec(), result_data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// FLOOR - 切り捨て（負の無限大方向）
+///
+/// 使用法:
+///   [ 7/3 ] FLOOR → [ 2 ]      # 7/3 = 2.333... → 2
+///   [ -7/3 ] FLOOR → [ -3 ]    # -7/3 = -2.333... → -3
+///   [ 5 ] FLOOR → [ 5 ]        # 整数はそのまま
+pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("FLOOR does not support Stack (..) mode"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("FLOOR requires tensor or vector"));
+        }
+    };
+
+    let result_data: Vec<Fraction> = tensor.data().iter().map(|f| f.floor()).collect();
+    let result = Tensor::new(tensor.shape().to_vec(), result_data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// CEIL - 切り上げ（正の無限大方向）
+///
+/// 使用法:
+///   [ 7/3 ] CEIL → [ 3 ]       # 7/3 = 2.333... → 3
+///   [ -7/3 ] CEIL → [ -2 ]     # -7/3 = -2.333... → -2
+///   [ 5 ] CEIL → [ 5 ]         # 整数はそのまま
+pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("CEIL does not support Stack (..) mode"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("CEIL requires tensor or vector"));
+        }
+    };
+
+    let result_data: Vec<Fraction> = tensor.data().iter().map(|f| f.ceil()).collect();
+    let result = Tensor::new(tensor.shape().to_vec(), result_data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// ROUND - 四捨五入
+///
+/// 使用法:
+///   [ 7/3 ] ROUND → [ 2 ]      # 2.333... → 2
+///   [ 5/2 ] ROUND → [ 3 ]      # 2.5 → 3（0から遠い方向）
+///   [ -5/2 ] ROUND → [ -3 ]    # -2.5 → -3（0から遠い方向）
+pub fn op_round(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("ROUND does not support Stack (..) mode"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("ROUND requires tensor or vector"));
+        }
+    };
+
+    let result_data: Vec<Fraction> = tensor.data().iter().map(|f| f.round()).collect();
+    let result = Tensor::new(tensor.shape().to_vec(), result_data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// MOD - 剰余（数学的剰余: a mod b = a - b * floor(a/b)）
+///
+/// 使用法:
+///   [ 7 ] [ 3 ] MOD → [ 1 ]
+///   [ -7 ] [ 3 ] MOD → [ 2 ]   # 数学的剰余
+///   [ 7 8 9 ] [ 3 ] MOD → [ 1 2 0 ]  # ブロードキャスト
+pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MOD does not support Stack (..) mode"));
+    }
+
+    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let a = match &a_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from("MOD requires tensor or vector"));
+        }
+    };
+
+    let b = match &b_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(AjisaiError::from("MOD requires tensor or vector"));
+        }
+    };
+
+    let result = broadcast_binary_op(&a, &b, |x, y| {
+        if y.numerator.is_zero() {
+            Err(AjisaiError::from("Modulo by zero"))
+        } else {
+            Ok(x.modulo(y))
+        }
+    }, "MOD")?;
+
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// POW - べき乗（整数指数のみ）
+///
+/// 使用法:
+///   [ 2 ] [ 3 ] POW → [ 8 ]
+///   [ 3 ] [ -2 ] POW → [ 1/9 ]
+///   [ 2 3 ] [ 2 ] POW → [ 4 9 ]  # ブロードキャスト
+pub fn op_pow(interp: &mut Interpreter) -> Result<()> {
+    use num_traits::ToPrimitive;
+
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("POW does not support Stack (..) mode"));
+    }
+
+    let exp_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let base_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let base = match &base_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(base_val);
+            interp.stack.push(exp_val);
+            return Err(AjisaiError::from("POW requires tensor or vector"));
+        }
+    };
+
+    let exp = match &exp_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(base_val);
+            interp.stack.push(exp_val);
+            return Err(AjisaiError::from("POW requires tensor or vector"));
+        }
+    };
+
+    let result = broadcast_binary_op(&base, &exp, |b, e| {
+        // 指数が整数であることを確認
+        if !e.is_exact_integer() {
+            return Err(AjisaiError::from("POW exponent must be an integer (rational exponents not supported)"));
+        }
+        let exp_int = e.numerator.to_i64()
+            .ok_or_else(|| AjisaiError::from("POW exponent too large"))?;
+        Ok(b.pow(exp_int))
+    }, "POW")?;
+
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+// ============================================================================
+// テンソル生成関数（Phase 2）
+// ============================================================================
+
+/// ZEROS - ゼロ埋めテンソル生成
+///
+/// 使用法:
+///   [ 3 ] ZEROS → [ 0 0 0 ]
+///   [ 2 3 ] ZEROS → [ [ 0 0 0 ] [ 0 0 0 ] ]
+///   [ 2 2 2 ] ZEROS → [ [ [ 0 0 ] [ 0 0 ] ] [ [ 0 0 ] [ 0 0 ] ] ]
+pub fn op_zeros(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("ZEROS does not support Stack (..) mode"));
+    }
+
+    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let shape_tensor = match &shape_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert shape: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(shape_val);
+            return Err(AjisaiError::from("ZEROS requires tensor for shape"));
+        }
+    };
+
+    let shape: Result<Vec<usize>> = shape_tensor
+        .data()
+        .iter()
+        .map(|f| {
+            f.as_usize()
+                .ok_or_else(|| AjisaiError::from("Shape dimensions must be positive integers"))
+        })
+        .collect();
+    let shape = shape?;
+
+    if shape.is_empty() {
+        interp.stack.push(shape_val);
+        return Err(AjisaiError::from("ZEROS requires non-empty shape"));
+    }
+
+    let size: usize = shape.iter().product();
+    let zero = Fraction::new(BigInt::from(0), BigInt::from(1));
+    let data: Vec<Fraction> = vec![zero; size];
+
+    let result = Tensor::new(shape, data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// ONES - 1埋めテンソル生成
+///
+/// 使用法:
+///   [ 3 ] ONES → [ 1 1 1 ]
+///   [ 2 3 ] ONES → [ [ 1 1 1 ] [ 1 1 1 ] ]
+pub fn op_ones(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("ONES does not support Stack (..) mode"));
+    }
+
+    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let shape_tensor = match &shape_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert shape: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(shape_val);
+            return Err(AjisaiError::from("ONES requires tensor for shape"));
+        }
+    };
+
+    let shape: Result<Vec<usize>> = shape_tensor
+        .data()
+        .iter()
+        .map(|f| {
+            f.as_usize()
+                .ok_or_else(|| AjisaiError::from("Shape dimensions must be positive integers"))
+        })
+        .collect();
+    let shape = shape?;
+
+    if shape.is_empty() {
+        interp.stack.push(shape_val);
+        return Err(AjisaiError::from("ONES requires non-empty shape"));
+    }
+
+    let size: usize = shape.iter().product();
+    let one = Fraction::new(BigInt::from(1), BigInt::from(1));
+    let data: Vec<Fraction> = vec![one; size];
+
+    let result = Tensor::new(shape, data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// FILL - 任意値埋めテンソル生成
+///
+/// 使用法:
+///   [ 2 3 ] [ 5 ] FILL → [ [ 5 5 5 ] [ 5 5 5 ] ]
+///   [ 3 ] [ 1/2 ] FILL → [ 1/2 1/2 1/2 ]
+pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("FILL does not support Stack (..) mode"));
+    }
+
+    let value_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let shape_tensor = match &shape_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert shape: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(shape_val);
+            interp.stack.push(value_val);
+            return Err(AjisaiError::from("FILL requires tensor for shape"));
+        }
+    };
+
+    let fill_value = match &value_val.val_type {
+        ValueType::Tensor(t) => {
+            if t.is_scalar() {
+                t.as_scalar().unwrap().clone()
+            } else if t.size() == 1 {
+                t.data()[0].clone()
+            } else {
+                interp.stack.push(shape_val);
+                interp.stack.push(value_val);
+                return Err(AjisaiError::from("FILL value must be a scalar"));
+            }
+        }
+        ValueType::Vector(v) if v.len() == 1 => {
+            match &v[0].val_type {
+                ValueType::Number(n) => n.clone(),
+                _ => {
+                    interp.stack.push(shape_val);
+                    interp.stack.push(value_val);
+                    return Err(AjisaiError::from("FILL value must be a number"));
+                }
+            }
+        }
+        _ => {
+            interp.stack.push(shape_val);
+            interp.stack.push(value_val);
+            return Err(AjisaiError::from("FILL value must be a scalar tensor"));
+        }
+    };
+
+    let shape: Result<Vec<usize>> = shape_tensor
+        .data()
+        .iter()
+        .map(|f| {
+            f.as_usize()
+                .ok_or_else(|| AjisaiError::from("Shape dimensions must be positive integers"))
+        })
+        .collect();
+    let shape = shape?;
+
+    if shape.is_empty() {
+        return Err(AjisaiError::from("FILL requires non-empty shape"));
+    }
+
+    let size: usize = shape.iter().product();
+    let data: Vec<Fraction> = vec![fill_value; size];
+
+    let result = Tensor::new(shape, data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// EYE - 単位行列生成
+///
+/// 使用法:
+///   [ 3 ] EYE → [ [ 1 0 0 ] [ 0 1 0 ] [ 0 0 1 ] ]
+///   [ 2 ] EYE → [ [ 1 0 ] [ 0 1 ] ]
+pub fn op_eye(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("EYE does not support Stack (..) mode"));
+    }
+
+    let size_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let n = match &size_val.val_type {
+        ValueType::Tensor(t) => {
+            if t.is_scalar() {
+                t.as_scalar().unwrap().as_usize()
+                    .ok_or_else(|| AjisaiError::from("EYE size must be a positive integer"))?
+            } else if t.size() == 1 {
+                t.data()[0].as_usize()
+                    .ok_or_else(|| AjisaiError::from("EYE size must be a positive integer"))?
+            } else {
+                interp.stack.push(size_val);
+                return Err(AjisaiError::from("EYE requires scalar size"));
+            }
+        }
+        ValueType::Vector(v) if v.len() == 1 => {
+            match &v[0].val_type {
+                ValueType::Number(num) => num.as_usize()
+                    .ok_or_else(|| AjisaiError::from("EYE size must be a positive integer"))?,
+                _ => {
+                    interp.stack.push(size_val);
+                    return Err(AjisaiError::from("EYE size must be a number"));
+                }
+            }
+        }
+        _ => {
+            interp.stack.push(size_val);
+            return Err(AjisaiError::from("EYE requires scalar size"));
+        }
+    };
+
+    if n == 0 {
+        return Err(AjisaiError::from("EYE size must be positive"));
+    }
+
+    let zero = Fraction::new(BigInt::from(0), BigInt::from(1));
+    let one = Fraction::new(BigInt::from(1), BigInt::from(1));
+    let mut data = Vec::with_capacity(n * n);
+
+    for i in 0..n {
+        for j in 0..n {
+            if i == j {
+                data.push(one.clone());
+            } else {
+                data.push(zero.clone());
+            }
+        }
+    }
+
+    let result = Tensor::new(vec![n, n], data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// IOTA - 連番テンソル生成
+///
+/// 使用法:
+///   [ 5 ] IOTA → [ 0 1 2 3 4 ]
+///   [ 2 3 ] IOTA → [ [ 0 1 2 ] [ 3 4 5 ] ]
+///   [ 2 2 2 ] IOTA → [ [ [ 0 1 ] [ 2 3 ] ] [ [ 4 5 ] [ 6 7 ] ] ]
+pub fn op_iota(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("IOTA does not support Stack (..) mode"));
+    }
+
+    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let shape_tensor = match &shape_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert shape: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(shape_val);
+            return Err(AjisaiError::from("IOTA requires tensor for shape"));
+        }
+    };
+
+    let shape: Result<Vec<usize>> = shape_tensor
+        .data()
+        .iter()
+        .map(|f| {
+            f.as_usize()
+                .ok_or_else(|| AjisaiError::from("Shape dimensions must be positive integers"))
+        })
+        .collect();
+    let shape = shape?;
+
+    if shape.is_empty() {
+        interp.stack.push(shape_val);
+        return Err(AjisaiError::from("IOTA requires non-empty shape"));
+    }
+
+    let size: usize = shape.iter().product();
+    let data: Vec<Fraction> = (0..size)
+        .map(|i| Fraction::new(BigInt::from(i as i64), BigInt::from(1)))
+        .collect();
+
+    let result = Tensor::new(shape, data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+/// LINSPACE - 等間隔数列生成
+///
+/// 使用法:
+///   [ 0 ] [ 10 ] [ 5 ] LINSPACE → [ 0 5/2 5 15/2 10 ]  # 0から10まで5点
+///   [ 1 ] [ 2 ] [ 3 ] LINSPACE → [ 1 3/2 2 ]           # 1から2まで3点
+pub fn op_linspace(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("LINSPACE does not support Stack (..) mode"));
+    }
+
+    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let end_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let start_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // countを取得
+    let count = match &count_val.val_type {
+        ValueType::Tensor(t) => {
+            if t.is_scalar() {
+                t.as_scalar().unwrap().as_usize()
+                    .ok_or_else(|| AjisaiError::from("LINSPACE count must be a positive integer"))?
+            } else if t.size() == 1 {
+                t.data()[0].as_usize()
+                    .ok_or_else(|| AjisaiError::from("LINSPACE count must be a positive integer"))?
+            } else {
+                interp.stack.push(start_val);
+                interp.stack.push(end_val);
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("LINSPACE count must be a scalar"));
+            }
+        }
+        _ => {
+            interp.stack.push(start_val);
+            interp.stack.push(end_val);
+            interp.stack.push(count_val);
+            return Err(AjisaiError::from("LINSPACE count must be a scalar tensor"));
+        }
+    };
+
+    if count < 2 {
+        interp.stack.push(start_val);
+        interp.stack.push(end_val);
+        interp.stack.push(count_val);
+        return Err(AjisaiError::from("LINSPACE count must be at least 2"));
+    }
+
+    // startとendを取得
+    let start = match &start_val.val_type {
+        ValueType::Tensor(t) => {
+            if t.is_scalar() {
+                t.as_scalar().unwrap().clone()
+            } else if t.size() == 1 {
+                t.data()[0].clone()
+            } else {
+                interp.stack.push(start_val);
+                interp.stack.push(end_val);
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("LINSPACE start must be a scalar"));
+            }
+        }
+        _ => {
+            interp.stack.push(start_val);
+            interp.stack.push(end_val);
+            interp.stack.push(count_val);
+            return Err(AjisaiError::from("LINSPACE start must be a scalar tensor"));
+        }
+    };
+
+    let end = match &end_val.val_type {
+        ValueType::Tensor(t) => {
+            if t.is_scalar() {
+                t.as_scalar().unwrap().clone()
+            } else if t.size() == 1 {
+                t.data()[0].clone()
+            } else {
+                interp.stack.push(start_val);
+                interp.stack.push(end_val);
+                interp.stack.push(count_val);
+                return Err(AjisaiError::from("LINSPACE end must be a scalar"));
+            }
+        }
+        _ => {
+            interp.stack.push(start_val);
+            interp.stack.push(end_val);
+            interp.stack.push(count_val);
+            return Err(AjisaiError::from("LINSPACE end must be a scalar tensor"));
+        }
+    };
+
+    // step = (end - start) / (count - 1)
+    let count_minus_one = Fraction::new(BigInt::from((count - 1) as i64), BigInt::from(1));
+    let step = end.sub(&start).div(&count_minus_one);
+
+    let data: Vec<Fraction> = (0..count)
+        .map(|i| {
+            let i_frac = Fraction::new(BigInt::from(i as i64), BigInt::from(1));
+            start.add(&step.mul(&i_frac))
+        })
+        .collect();
+
+    let result = Tensor::vector(data);
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+// ============================================================================
+// 軸指定演算（Phase 3）
+// ============================================================================
+
+/// ALONG - 汎用軸指定リダクション
+///
+/// 使用法:
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] '+' [ 0 ] ALONG → [ 5 7 9 ]   # 軸0で集約（列方向の合計）
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] '+' [ 1 ] ALONG → [ 6 15 ]    # 軸1で集約（行方向の合計）
+///   [ [ 1 2 3 ] [ 4 5 6 ] ] '*' [ 0 ] ALONG → [ 4 10 18 ] # 軸0で積
+pub fn op_along(interp: &mut Interpreter) -> Result<()> {
+    use num_traits::ToPrimitive;
+
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("ALONG does not support Stack (..) mode"));
+    }
+
+    let axis_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let op_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let tensor_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // 軸を取得
+    let axis = match &axis_val.val_type {
+        ValueType::Tensor(t) => {
+            if t.is_scalar() {
+                t.as_scalar().unwrap().as_usize()
+                    .ok_or_else(|| AjisaiError::from("ALONG axis must be a non-negative integer"))?
+            } else if t.size() == 1 {
+                t.data()[0].as_usize()
+                    .ok_or_else(|| AjisaiError::from("ALONG axis must be a non-negative integer"))?
+            } else {
+                interp.stack.push(tensor_val);
+                interp.stack.push(op_val);
+                interp.stack.push(axis_val);
+                return Err(AjisaiError::from("ALONG axis must be a scalar"));
+            }
+        }
+        _ => {
+            interp.stack.push(tensor_val);
+            interp.stack.push(op_val);
+            interp.stack.push(axis_val);
+            return Err(AjisaiError::from("ALONG axis must be a scalar tensor"));
+        }
+    };
+
+    // 演算ワード名を取得
+    let op_name = match &op_val.val_type {
+        ValueType::String(s) => s.clone(),
+        ValueType::Vector(v) if v.len() == 1 => {
+            match &v[0].val_type {
+                ValueType::String(s) => s.clone(),
+                _ => {
+                    interp.stack.push(tensor_val);
+                    interp.stack.push(op_val);
+                    interp.stack.push(axis_val);
+                    return Err(AjisaiError::from("ALONG operation must be a string"));
+                }
+            }
+        }
+        _ => {
+            interp.stack.push(tensor_val);
+            interp.stack.push(op_val);
+            interp.stack.push(axis_val);
+            return Err(AjisaiError::from("ALONG operation must be a string"));
+        }
+    };
+
+    // テンソルを取得
+    let tensor = match &tensor_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(tensor_val);
+            interp.stack.push(op_val);
+            interp.stack.push(axis_val);
+            return Err(AjisaiError::from("ALONG requires tensor or vector"));
+        }
+    };
+
+    if axis >= tensor.rank() {
+        interp.stack.push(tensor_val);
+        interp.stack.push(op_val);
+        interp.stack.push(axis_val);
+        return Err(AjisaiError::from(format!(
+            "ALONG axis {} out of bounds for tensor of rank {}",
+            axis, tensor.rank()
+        )));
+    }
+
+    // 演算関数を取得
+    let op_fn: Box<dyn Fn(&Fraction, &Fraction) -> Fraction> = match op_name.to_uppercase().as_str() {
+        "+" => Box::new(|a, b| a.add(b)),
+        "-" => Box::new(|a, b| a.sub(b)),
+        "*" => Box::new(|a, b| a.mul(b)),
+        "/" => Box::new(|a, b| a.div(b)),
+        "MAX2" => Box::new(|a, b| if a.gt(b) { a.clone() } else { b.clone() }),
+        "MIN2" => Box::new(|a, b| if a.lt(b) { a.clone() } else { b.clone() }),
+        _ => {
+            interp.stack.push(tensor_val);
+            interp.stack.push(op_val);
+            interp.stack.push(axis_val);
+            return Err(AjisaiError::from(format!(
+                "ALONG: unsupported operation '{}'. Supported: +, -, *, /, MAX2, MIN2",
+                op_name
+            )));
+        }
+    };
+
+    // 軸に沿ってリダクション
+    let shape = tensor.shape();
+    let axis_size = shape[axis];
+
+    if axis_size == 0 {
+        return Err(AjisaiError::from("Cannot reduce along empty axis"));
+    }
+
+    // 結果の形状を計算（軸を削除）
+    let result_shape: Vec<usize> = shape.iter().enumerate()
+        .filter(|(i, _)| *i != axis)
+        .map(|(_, &s)| s)
+        .collect();
+
+    if result_shape.is_empty() {
+        // スカラー結果
+        let mut acc = tensor.data()[0].clone();
+        for i in 1..tensor.data().len() {
+            acc = op_fn(&acc, &tensor.data()[i]);
+        }
+        interp.stack.push(Value::from_tensor(Tensor::scalar(acc)));
+        return Ok(());
+    }
+
+    let result_size: usize = result_shape.iter().product();
+    let mut result_data = Vec::with_capacity(result_size);
+
+    // 各結果要素のインデックスを計算
+    for result_idx in 0..result_size {
+        // 結果インデックスを多次元に変換
+        let mut result_multi_idx = vec![0usize; result_shape.len()];
+        let mut temp = result_idx;
+        for i in (0..result_shape.len()).rev() {
+            result_multi_idx[i] = temp % result_shape[i];
+            temp /= result_shape[i];
+        }
+
+        // 初期値を取得
+        let mut source_idx = Vec::with_capacity(shape.len());
+        let mut r_idx = 0;
+        for s_idx in 0..shape.len() {
+            if s_idx == axis {
+                source_idx.push(0);
+            } else {
+                source_idx.push(result_multi_idx[r_idx]);
+                r_idx += 1;
+            }
+        }
+
+        let init_val = tensor.get(&source_idx)?;
+        let mut acc = init_val.clone();
+
+        // 軸に沿って畳み込み
+        for k in 1..axis_size {
+            source_idx[axis] = k;
+            let val = tensor.get(&source_idx)?;
+            acc = op_fn(&acc, val);
+        }
+
+        result_data.push(acc);
+    }
+
+    let result = Tensor::new(result_shape, result_data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+// ============================================================================
+// 外積（Phase 4）
+// ============================================================================
+
+/// OUTER - 外積演算
+///
+/// 使用法:
+///   [ 1 2 3 ] [ 4 5 ] '*' OUTER → [ [ 4 5 ] [ 8 10 ] [ 12 15 ] ]
+///   [ 1 2 ] [ 1 2 3 ] '+' OUTER → [ [ 2 3 4 ] [ 3 4 5 ] ]
+pub fn op_outer(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("OUTER does not support Stack (..) mode"));
+    }
+
+    let op_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // 演算ワード名を取得
+    let op_name = match &op_val.val_type {
+        ValueType::String(s) => s.clone(),
+        ValueType::Vector(v) if v.len() == 1 => {
+            match &v[0].val_type {
+                ValueType::String(s) => s.clone(),
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    interp.stack.push(op_val);
+                    return Err(AjisaiError::from("OUTER operation must be a string"));
+                }
+            }
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            interp.stack.push(op_val);
+            return Err(AjisaiError::from("OUTER operation must be a string"));
+        }
+    };
+
+    // テンソルを取得
+    let a = match &a_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            interp.stack.push(op_val);
+            return Err(AjisaiError::from("OUTER requires tensor or vector"));
+        }
+    };
+
+    let b = match &b_val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            interp.stack.push(op_val);
+            return Err(AjisaiError::from("OUTER requires tensor or vector"));
+        }
+    };
+
+    // 両方が1次元であることを確認
+    if a.rank() != 1 || b.rank() != 1 {
+        interp.stack.push(a_val);
+        interp.stack.push(b_val);
+        interp.stack.push(op_val);
+        return Err(AjisaiError::from("OUTER requires two 1-dimensional tensors (vectors)"));
+    }
+
+    // 演算関数を取得
+    let op_fn: Box<dyn Fn(&Fraction, &Fraction) -> Fraction> = match op_name.to_uppercase().as_str() {
+        "+" => Box::new(|a, b| a.add(b)),
+        "-" => Box::new(|a, b| a.sub(b)),
+        "*" => Box::new(|a, b| a.mul(b)),
+        "/" => Box::new(|a, b| a.div(b)),
+        _ => {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            interp.stack.push(op_val);
+            return Err(AjisaiError::from(format!(
+                "OUTER: unsupported operation '{}'. Supported: +, -, *, /",
+                op_name
+            )));
+        }
+    };
+
+    let a_len = a.shape()[0];
+    let b_len = b.shape()[0];
+    let mut result_data = Vec::with_capacity(a_len * b_len);
+
+    for i in 0..a_len {
+        for j in 0..b_len {
+            result_data.push(op_fn(&a.data()[i], &b.data()[j]));
+        }
+    }
+
+    let result = Tensor::new(vec![a_len, b_len], result_data)?;
+    interp.stack.push(Value::from_tensor(result));
+    Ok(())
+}
+
+// ============================================================================
+// 統計関数（Phase 5）
+// ============================================================================
+
+/// VAR - 分散（母分散）
+///
+/// 使用法:
+///   [ 1 2 3 4 5 ] VAR → [ 2 ]  # Σ(x-μ)²/n
+pub fn op_var(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("VAR does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("VAR requires tensor or vector"));
+        }
+    };
+
+    if tensor.data().is_empty() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("VAR requires non-empty tensor"));
+    }
+
+    let n = tensor.size();
+    let n_frac = Fraction::new(BigInt::from(n as i64), BigInt::from(1));
+
+    // 平均を計算
+    let sum = tensor.data().iter().fold(
+        Fraction::new(BigInt::from(0), BigInt::from(1)),
+        |acc, x| acc.add(x)
+    );
+    let mean = sum.div(&n_frac);
+
+    // 分散を計算: Σ(x-μ)²/n
+    let var_sum = tensor.data().iter().fold(
+        Fraction::new(BigInt::from(0), BigInt::from(1)),
+        |acc, x| {
+            let diff = x.sub(&mean);
+            acc.add(&diff.mul(&diff))
+        }
+    );
+    let variance = var_sum.div(&n_frac);
+
+    interp.stack.push(Value::from_tensor(Tensor::scalar(variance)));
+    Ok(())
+}
+
+/// MEDIAN - 中央値
+///
+/// 使用法:
+///   [ 1 2 3 4 5 ] MEDIAN → [ 3 ]
+///   [ 1 2 3 4 ] MEDIAN → [ 5/2 ]  # 偶数個の場合は中央2値の平均
+pub fn op_median(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target == OperationTarget::Stack {
+        return Err(AjisaiError::from("MEDIAN does not support Stack (..) mode yet"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let tensor = match &val.val_type {
+        ValueType::Tensor(t) => t.clone(),
+        ValueType::Vector(v) => {
+            Value::vector_to_tensor(v)
+                .map_err(|e| AjisaiError::from(format!("Failed to convert: {}", e)))?
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("MEDIAN requires tensor or vector"));
+        }
+    };
+
+    if tensor.data().is_empty() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("MEDIAN requires non-empty tensor"));
+    }
+
+    // データをソート
+    let mut sorted: Vec<Fraction> = tensor.data().to_vec();
+    sorted.sort();
+
+    let n = sorted.len();
+    let median = if n % 2 == 1 {
+        // 奇数個: 中央の値
+        sorted[n / 2].clone()
+    } else {
+        // 偶数個: 中央2値の平均
+        let mid1 = &sorted[n / 2 - 1];
+        let mid2 = &sorted[n / 2];
+        let two = Fraction::new(BigInt::from(2), BigInt::from(1));
+        mid1.add(mid2).div(&two)
+    };
+
+    interp.stack.push(Value::from_tensor(Tensor::scalar(median)));
     Ok(())
 }
 

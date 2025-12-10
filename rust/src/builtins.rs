@@ -130,6 +130,34 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
 
         // ソートアルゴリズム
         ("FRACTIONSORT", "分数専用高速ソート｜[ 1/2 1/3 2/3 ] FRACTIONSORT → [ 1/3 1/2 2/3 ]", "Sort"),
+
+        // 基本数学関数
+        ("ABS", "絶対値｜[ -5 ] ABS → [ 5 ]", "Math"),
+        ("NEG", "符号反転｜[ 5 ] NEG → [ -5 ]", "Math"),
+        ("SIGN", "符号取得｜[ -5 ] SIGN → [ -1 ], [ 0 ] → [ 0 ], [ 5 ] → [ 1 ]", "Math"),
+        ("MOD", "剰余（数学的）｜[ 7 ] [ 3 ] MOD → [ 1 ]", "Math"),
+        ("FLOOR", "切り捨て（負の無限大方向）｜[ 7/3 ] FLOOR → [ 2 ]", "Math"),
+        ("CEIL", "切り上げ（正の無限大方向）｜[ 7/3 ] CEIL → [ 3 ]", "Math"),
+        ("ROUND", "四捨五入（0から遠い方向）｜[ 5/2 ] ROUND → [ 3 ]", "Math"),
+        ("POW", "べき乗（整数指数のみ）｜[ 2 ] [ 3 ] POW → [ 8 ]", "Math"),
+
+        // テンソル生成
+        ("ZEROS", "ゼロ埋めテンソル生成｜[ 2 3 ] ZEROS → [ [ 0 0 0 ] [ 0 0 0 ] ]", "Tensor Generation"),
+        ("ONES", "1埋めテンソル生成｜[ 2 3 ] ONES → [ [ 1 1 1 ] [ 1 1 1 ] ]", "Tensor Generation"),
+        ("FILL", "任意値埋めテンソル生成｜[ 2 3 ] [ 5 ] FILL → [ [ 5 5 5 ] [ 5 5 5 ] ]", "Tensor Generation"),
+        ("EYE", "単位行列生成｜[ 3 ] EYE → [ [ 1 0 0 ] [ 0 1 0 ] [ 0 0 1 ] ]", "Tensor Generation"),
+        ("IOTA", "連番テンソル生成｜[ 2 3 ] IOTA → [ [ 0 1 2 ] [ 3 4 5 ] ]", "Tensor Generation"),
+        ("LINSPACE", "等間隔数列生成｜[ 0 ] [ 10 ] [ 5 ] LINSPACE → [ 0 5/2 5 15/2 10 ]", "Tensor Generation"),
+
+        // 軸指定演算
+        ("ALONG", "軸指定リダクション｜[ [ 1 2 ] [ 3 4 ] ] '+' [ 0 ] ALONG → [ 4 6 ]", "Tensor"),
+
+        // 外積
+        ("OUTER", "外積｜[ 1 2 ] [ 3 4 ] '*' OUTER → [ [ 3 4 ] [ 6 8 ] ]", "Matrix"),
+
+        // 統計
+        ("VAR", "分散（母分散）｜[ 1 2 3 4 5 ] VAR → [ 2 ]", "Statistics"),
+        ("MEDIAN", "中央値｜[ 1 2 3 4 5 ] MEDIAN → [ 3 ]", "Statistics"),
     ]
 }
 

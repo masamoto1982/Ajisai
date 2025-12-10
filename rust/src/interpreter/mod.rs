@@ -697,6 +697,29 @@ impl Interpreter {
             "ROW" => tensor_ops::op_row(self),
             "COL" => tensor_ops::op_col(self),
             "DIAG" => tensor_ops::op_diag(self),
+            // 基本数学関数
+            "ABS" => tensor_ops::op_abs(self),
+            "NEG" => tensor_ops::op_neg(self),
+            "SIGN" => tensor_ops::op_sign(self),
+            "FLOOR" => tensor_ops::op_floor(self),
+            "CEIL" => tensor_ops::op_ceil(self),
+            "ROUND" => tensor_ops::op_round(self),
+            "MOD" => tensor_ops::op_mod(self),
+            "POW" => tensor_ops::op_pow(self),
+            // テンソル生成関数
+            "ZEROS" => tensor_ops::op_zeros(self),
+            "ONES" => tensor_ops::op_ones(self),
+            "FILL" => tensor_ops::op_fill(self),
+            "EYE" => tensor_ops::op_eye(self),
+            "IOTA" => tensor_ops::op_iota(self),
+            "LINSPACE" => tensor_ops::op_linspace(self),
+            // 軸指定演算
+            "ALONG" => tensor_ops::op_along(self),
+            // 外積
+            "OUTER" => tensor_ops::op_outer(self),
+            // 統計関数
+            "VAR" => tensor_ops::op_var(self),
+            "MEDIAN" => tensor_ops::op_median(self),
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),
