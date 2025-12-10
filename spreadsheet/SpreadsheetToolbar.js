@@ -409,6 +409,11 @@ export class SpreadsheetToolbar extends HTMLElement {
      * @param {string} cellRef
      */
     updateForSelection(cellRef) {
+        // DOM要素がまだ作成されていない場合は何もしない
+        if (!this.cellReferenceDisplay || !this.formulaInput) {
+            return;
+        }
+
         if (!cellRef || !this.engine) {
             this.cellReferenceDisplay.textContent = '';
             this.formulaInput.value = '';

@@ -91,8 +91,11 @@ export class GUI {
         this.mobile.updateView('input');
 
         await this.initializeWorkers();
-        
+
         console.log('[GUI] GUI initialization completed');
+
+        // GUI初期化完了イベントを発火
+        window.dispatchEvent(new CustomEvent('ajisai-gui-ready'));
     }
 
     private async initializeWorkers(): Promise<void> {
