@@ -72,10 +72,17 @@ export class SpreadsheetApp {
      * @param {HTMLElement} inputArea
      */
     createUI(inputArea) {
-        // 既存のinputAreaの内容を保存
-        const existingContent = inputArea.innerHTML;
+        // 既存の要素を取得（移動前に参照を保持）
+        const heading = inputArea.querySelector('h2');
+        const codeInput = inputArea.querySelector('#code-input');
+        const controls = inputArea.querySelector('.controls');
 
-        // モード切り替えボタンを追加
+        if (!codeInput) {
+            console.error('[Spreadsheet] #code-input not found, aborting UI creation');
+            return;
+        }
+
+        // モード切り替えボタンを作成
         const modeToggle = document.createElement('div');
         modeToggle.className = 'mode-toggle';
         modeToggle.innerHTML = `
@@ -83,7 +90,7 @@ export class SpreadsheetApp {
             <button class="mode-toggle-btn" data-mode="spreadsheet">Spreadsheet</button>
         `;
 
-        // テキストモードコンテナ
+        // テキストモードコンテナを作成
         const textModeContainer = document.createElement('div');
         textModeContainer.className = 'text-mode-container';
         textModeContainer.style.display = 'flex';
@@ -91,39 +98,42 @@ export class SpreadsheetApp {
         textModeContainer.style.flex = '1';
         textModeContainer.style.minHeight = '0';
 
-        // 既存のtextareaとcontrolsを移動
-        const codeInput = inputArea.querySelector('#code-input');
-        const controls = inputArea.querySelector('.controls');
-        if (codeInput) textModeContainer.appendChild(codeInput);
-        if (controls) textModeContainer.appendChild(controls);
-
-        // スプレッドシートコンテナ
+        // スプレッドシートコンテナを作成
         this.container = document.createElement('div');
         this.container.className = 'spreadsheet-container';
         this.container.style.display = 'none';
         this.container.style.flex = '1';
         this.container.style.minHeight = '0';
 
-        // ツールバー
+        // ツールバーを作成
         this.toolbar = document.createElement('spreadsheet-toolbar');
         this.container.appendChild(this.toolbar);
 
-        // グリッド
+        // グリッドを作成
         this.grid = document.createElement('spreadsheet-grid');
         this.container.appendChild(this.grid);
 
-        // グリッドとツールバーを接続
-        this.grid.setEngine(this.engine);
-        this.toolbar.connect(this.engine, this.grid);
+        // 既存の要素をテキストモードコンテナに移動
+        // 注意: appendChild は要素を移動する（コピーではない）
+        textModeContainer.appendChild(codeInput);
+        if (controls) {
+            textModeContainer.appendChild(controls);
+        }
 
-        // inputAreaをクリアして再構築
-        inputArea.innerHTML = '';
-        const heading = document.createElement('h2');
-        heading.textContent = 'Input';
-        inputArea.appendChild(heading);
-        inputArea.appendChild(modeToggle);
+        // h2の直後にモード切り替えを挿入
+        if (heading && heading.nextSibling) {
+            inputArea.insertBefore(modeToggle, heading.nextSibling);
+        } else {
+            inputArea.appendChild(modeToggle);
+        }
+
+        // テキストモードコンテナとスプレッドシートコンテナを追加
         inputArea.appendChild(textModeContainer);
         inputArea.appendChild(this.container);
+
+        // グリッドとツールバーを接続（UI構築完了後）
+        this.grid.setEngine(this.engine);
+        this.toolbar.connect(this.engine, this.grid);
 
         // モード切り替えイベント
         modeToggle.addEventListener('click', (e) => {

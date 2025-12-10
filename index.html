@@ -83,19 +83,28 @@
     
     <script type="module" src="js/main.ts"></script>
     <script type="module">
-        // スプレッドシート初期化
+        // スプレッドシート初期化（GUI初期化完了後）
         import { initSpreadsheet } from './spreadsheet/index.js';
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // DOM構築後にスプレッドシートを初期化（GUI初期化より先に）
-            setTimeout(() => {
-                const inputArea = document.querySelector('.input-area');
-                if (inputArea) {
-                    initSpreadsheet(inputArea);
-                    console.log('[Spreadsheet] Spreadsheet module loaded');
-                }
-            }, 100);
+        // GUI初期化完了を待つ
+        window.addEventListener('ajisai-gui-ready', () => {
+            const inputArea = document.querySelector('.input-area');
+            if (inputArea) {
+                initSpreadsheet(inputArea);
+                console.log('[Spreadsheet] Spreadsheet module loaded');
+            }
         });
+
+        // フォールバック: 2秒後にまだ初期化されていなければ初期化
+        setTimeout(() => {
+            if (!window.ajisaiSpreadsheet) {
+                const inputArea = document.querySelector('.input-area');
+                if (inputArea && document.getElementById('code-input')) {
+                    initSpreadsheet(inputArea);
+                    console.log('[Spreadsheet] Spreadsheet module loaded (fallback)');
+                }
+            }
+        }, 2000);
     </script>
 </body>
 </html>
