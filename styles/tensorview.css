@@ -1,0 +1,101 @@
+/* tensorview.css - テンソルビューアのスタイル */
+
+.tensor-view-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
+.tensor-view-layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+.tensor-canvas-area {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+}
+
+.isometric-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.tensor-control-panel {
+    width: 200px;
+    padding: 16px;
+    background: #16213e;
+    border-left: 1px solid #333;
+    overflow-y: auto;
+}
+
+.tensor-info-panel {
+    padding: 8px 16px;
+    background: #0f0f23;
+    border-top: 1px solid #333;
+    font-family: monospace;
+    font-size: 12px;
+    display: flex;
+    gap: 24px;
+}
+
+.control-section {
+    margin-bottom: 16px;
+}
+
+.control-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.slice-slider {
+    margin-bottom: 12px;
+}
+
+.slice-slider label {
+    display: block;
+    font-size: 11px;
+    margin-bottom: 4px;
+    color: #aaa;
+}
+
+.slice-slider input[type="range"] {
+    width: 100%;
+    margin: 4px 0;
+}
+
+.slider-value {
+    font-size: 11px;
+    color: #4dabf7;
+}
+
+.dim-info {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+}
+
+#color-scheme-select {
+    width: 100%;
+    padding: 6px;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    color: #e0e0e0;
+    border-radius: 4px;
+}
+
+.tensor-shape, .tensor-hover {
+    color: #888;
+}
+
+.tensor-shape span, .tensor-hover span {
+    color: #4dabf7;
+}

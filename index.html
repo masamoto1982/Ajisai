@@ -15,7 +15,7 @@
     
     <title>Ajisai</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="styles/spreadsheet.css">
+    <link rel="stylesheet" href="styles/tensorview.css">
 </head>
 <body>
     <div class="container">
@@ -83,28 +83,15 @@
     
     <script type="module" src="js/main.ts"></script>
     <script type="module">
-        // スプレッドシート初期化（GUI初期化完了後）
-        import { initSpreadsheet } from './spreadsheet/index.js';
+        import { initTensorView } from './tensorview/index.js';
 
-        // GUI初期化完了を待つ
         window.addEventListener('ajisai-gui-ready', () => {
-            const inputArea = document.querySelector('.input-area');
-            if (inputArea) {
-                initSpreadsheet(inputArea);
-                console.log('[Spreadsheet] Spreadsheet module loaded');
+            const container = document.querySelector('.input-area');
+            if (container) {
+                initTensorView(container);
+                console.log('[TensorView] TensorView module loaded');
             }
         });
-
-        // フォールバック: 2秒後にまだ初期化されていなければ初期化
-        setTimeout(() => {
-            if (!window.ajisaiSpreadsheet) {
-                const inputArea = document.querySelector('.input-area');
-                if (inputArea && document.getElementById('code-input')) {
-                    initSpreadsheet(inputArea);
-                    console.log('[Spreadsheet] Spreadsheet module loaded (fallback)');
-                }
-            }
-        }, 2000);
     </script>
 </body>
 </html>
