@@ -21,6 +21,20 @@ pub struct Tensor {
 }
 
 impl Tensor {
+    /// 最大次元数（time, layer, row, col）
+    pub const MAX_DIMENSIONS: usize = 4;
+
+    /// 次元数の検証
+    fn validate_dimensions(shape: &[usize]) -> Result<()> {
+        if shape.len() > Self::MAX_DIMENSIONS {
+            return Err(AjisaiError::from(format!(
+                "Ajisai supports up to {} dimensions (time, layer, row, col), got {}",
+                Self::MAX_DIMENSIONS, shape.len()
+            )));
+        }
+        Ok(())
+    }
+
     /// スカラーを作成
     pub fn scalar(value: Fraction) -> Self {
         Tensor {
@@ -40,6 +54,9 @@ impl Tensor {
 
     /// 任意の形状でテンソルを作成
     pub fn new(shape: Vec<usize>, data: Vec<Fraction>) -> Result<Self> {
+        // 次元数の検証
+        Self::validate_dimensions(&shape)?;
+
         let expected_len: usize = if shape.is_empty() {
             1 // スカラーの場合
         } else {
@@ -104,6 +121,9 @@ impl Tensor {
 
     /// 形状を変更（要素数が一致する必要あり）
     pub fn reshape(&self, new_shape: Vec<usize>) -> Result<Self> {
+        // 次元数の検証
+        Self::validate_dimensions(&new_shape)?;
+
         let new_size: usize = if new_shape.is_empty() {
             1
         } else {
