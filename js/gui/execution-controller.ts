@@ -48,7 +48,8 @@ export class ExecutionController {
             this.updateInterpreterStateFromResult(result);
 
             if (result.inputHelper) {
-                // 入力支援ワードの結果: Inputエリアにテキストを挿入
+                // 入力支援ワードの結果: エディタをクリアしてテキストを挿入
+                this.gui.editor.clear(false);
                 this.gui.editor.insertText(result.inputHelper);
                 this.gui.display.showInfo('Input helper text inserted.');
                 // 入力モードに戻す
