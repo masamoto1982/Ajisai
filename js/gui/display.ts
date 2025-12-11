@@ -199,7 +199,7 @@ export class Display {
                 const shape = tensor.shape as number[];
                 const data = tensor.data as any[];
 
-                return this.formatTensor(shape, data, 0);
+                return this.formatTensor(shape, data, 1);  // スタックエリアが暗黙のdepth=0なのでテンソルは1から開始
             }
             case 'string':
                 return `'${item.value}'`;
@@ -208,14 +208,14 @@ export class Display {
             case 'boolean':
                 return item.value ? 'TRUE' : 'FALSE';
             case 'vector': {
-                // ★ ここからが修正箇所
-                const bracketIndex = depth % 3; // ネストレベルを3で割った剰余
+                // depth + 1 でオフセット（スタックが暗黙の深さ0）
+                const bracketIndex = (depth + 1) % 3;
                 let openBracket: string, closeBracket: string;
 
                 switch (bracketIndex) {
-                    case 0: openBracket = '['; closeBracket = ']'; break; // レベル 0, 3, 6...
-                    case 1: openBracket = '{'; closeBracket = '}'; break; // レベル 1, 4, 7...
-                    case 2: openBracket = '('; closeBracket = ')'; break; // レベル 2, 5, 8...
+                    case 0: openBracket = '['; closeBracket = ']'; break;
+                    case 1: openBracket = '{'; closeBracket = '}'; break;
+                    case 2: openBracket = '('; closeBracket = ')'; break;
                     default: openBracket = '['; closeBracket = ']'; break;
                 }
 
@@ -228,8 +228,7 @@ export class Display {
                     return `${openBracket}${elements ? ' ' + elements + ' ' : ''}${closeBracket}`;
                 }
                 // 空のベクタの場合
-                return `${openBracket}${closeBracket}`; 
-                // ★ 修正ここまで
+                return `${openBracket}${closeBracket}`;
             }
             case 'nil':
                 return 'NIL';
