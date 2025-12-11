@@ -47,7 +47,13 @@ export class ExecutionController {
 
             this.updateInterpreterStateFromResult(result);
 
-            if (result.definition_to_load) {
+            if (result.inputHelper) {
+                // 入力支援ワードの結果: Inputエリアにテキストを挿入
+                this.gui.editor.insertText(result.inputHelper);
+                this.gui.display.showInfo('Input helper text inserted.');
+                // 入力モードに戻す
+                this.gui.mobile.updateView('input');
+            } else if (result.definition_to_load) {
                 this.gui.editor.setValue(result.definition_to_load);
                 const wordName = code.replace("?", "").trim();
                 this.gui.display.showInfo(`Loaded definition for ${wordName}.`);

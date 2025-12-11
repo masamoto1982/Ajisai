@@ -11,6 +11,19 @@ use serde::{Deserialize, Serialize};
 use crate::interpreter;
 use crate::tokenizer;
 use crate::builtins;
+/// 指定した次元数のブラケット構造を生成
+fn generate_bracket_structure(depth: usize, repeat: usize) -> String {
+    let single = (0..depth).map(|_| "[ ").collect::<String>()
+                + &(0..depth).map(|_| "] ").collect::<String>();
+    let single = single.trim();
+
+    if repeat == 1 {
+        single.to_string()
+    } else {
+        let inner = (0..repeat).map(|_| single).collect::<Vec<_>>().join(" ");
+        format!("[ {} ]", inner)
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 struct CustomWordData {
@@ -45,7 +58,57 @@ impl AjisaiInterpreter {
     pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
         self.interpreter.definition_to_load = None;
         let obj = js_sys::Object::new();
-        
+
+        // 入力支援ワードの検出
+        let trimmed = code.trim();
+        let upper_code = trimmed.to_uppercase();
+        let input_helper_words = ["SCALAR", "VECTOR", "MATRIX", "TENSOR"];
+
+        for (i, word) in input_helper_words.iter().enumerate() {
+            if upper_code == *word {
+                let depth = i + 1; // SCALAR=1, VECTOR=2, MATRIX=3, TENSOR=4
+
+                // スタックトップに単一数値があるかチェック
+                let repeat = if !self.interpreter.stack.is_empty() {
+                    if let Some(top) = self.interpreter.stack.last() {
+                        if let ValueType::Vector(v) = &top.val_type {
+                            if v.len() == 1 {
+                                if let ValueType::Number(n) = &v[0].val_type {
+                                    n.as_usize()
+                                        .filter(|&r| r > 0 && r <= 100)
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                // 繰り返し数が指定されていた場合、スタックから消費
+                let actual_repeat = if let Some(r) = repeat {
+                    self.interpreter.stack.pop();
+                    r
+                } else {
+                    1
+                };
+
+                let helper_text = generate_bracket_structure(depth, actual_repeat);
+                js_sys::Reflect::set(&obj, &"inputHelper".into(), &helper_text.into()).unwrap();
+                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
+                return Ok(obj.into());
+            }
+        }
+
         match self.interpreter.execute(code).await {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
@@ -378,6 +441,26 @@ fn value_to_js_value(value: &Value) -> JsValue {
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
         },
     };
-    
+
     obj.into()
+}
+
+#[cfg(test)]
+mod test_input_helper {
+    use super::generate_bracket_structure;
+
+    #[test]
+    fn test_generate_bracket_structure() {
+        // 基本的なブラケット構造（繰り返しなし）
+        assert_eq!(generate_bracket_structure(1, 1), "[ ]");
+        assert_eq!(generate_bracket_structure(2, 1), "[ [ ] ]");
+        assert_eq!(generate_bracket_structure(3, 1), "[ [ [ ] ] ]");
+        assert_eq!(generate_bracket_structure(4, 1), "[ [ [ [ ] ] ] ]");
+
+        // 繰り返しありのブラケット構造
+        assert_eq!(generate_bracket_structure(1, 2), "[ [ ] [ ] ]");
+        assert_eq!(generate_bracket_structure(1, 3), "[ [ ] [ ] [ ] ]");
+        assert_eq!(generate_bracket_structure(2, 2), "[ [ [ ] ] [ [ ] ] ]");
+        assert_eq!(generate_bracket_structure(3, 2), "[ [ [ [ ] ] ] [ [ [ ] ] ] ]");
+    }
 }

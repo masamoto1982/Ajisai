@@ -61,15 +61,43 @@ export class Editor {
         const start = this.element.selectionStart;
         const end = this.element.selectionEnd;
         const text = this.element.value;
-        
+
         this.element.value = text.substring(0, start) + word + text.substring(end);
-        
+
         const newPos = start + word.length;
         this.element.selectionStart = newPos;
         this.element.selectionEnd = newPos;
-        
+
         this.element.focus();
         // ワード挿入時は入力モードに切り替え（モバイル用）
+        if (this.gui && this.gui.mobile) {
+            this.gui.mobile.updateView('input');
+        }
+    }
+
+    // 入力支援テキストを挿入（カーソルを最も内側の [ ] の間に配置）
+    insertText(text: string): void {
+        const start = this.element.selectionStart;
+        const end = this.element.selectionEnd;
+        const currentText = this.element.value;
+
+        this.element.value = currentText.substring(0, start) + text + currentText.substring(end);
+
+        // カーソルを最も内側の [ ] の間に配置
+        // "[ [ [ ] ] ]" の場合、中央の空白位置
+        const innerBracketPos = text.lastIndexOf('[ ]');
+        if (innerBracketPos !== -1) {
+            const cursorPos = start + innerBracketPos + 2; // "[ " の後
+            this.element.selectionStart = cursorPos;
+            this.element.selectionEnd = cursorPos;
+        } else {
+            const newPos = start + text.length;
+            this.element.selectionStart = newPos;
+            this.element.selectionEnd = newPos;
+        }
+
+        this.element.focus();
+        // 入力支援時は入力モードに切り替え（モバイル用）
         if (this.gui && this.gui.mobile) {
             this.gui.mobile.updateView('input');
         }

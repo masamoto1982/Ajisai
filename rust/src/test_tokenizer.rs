@@ -498,4 +498,56 @@ mod test_tokenizer {
             Token::Symbol("GET".to_string()),
         ]);
     }
+
+    // === 空白なしブラケットのテスト ===
+
+    #[test]
+    fn test_bracket_without_space() {
+        let custom_words = HashSet::new();
+
+        // 空白なしの基本ケース
+        let result = tokenize_with_custom_words("[1]", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::TensorStart,
+            Token::Number("1".to_string()),
+            Token::TensorEnd,
+        ]);
+
+        // 複数要素
+        let result2 = tokenize_with_custom_words("[1 2 3]", &custom_words).unwrap();
+        assert_eq!(result2, vec![
+            Token::TensorStart,
+            Token::Number("1".to_string()),
+            Token::Number("2".to_string()),
+            Token::Number("3".to_string()),
+            Token::TensorEnd,
+        ]);
+
+        // ネストされた構造
+        let result3 = tokenize_with_custom_words("[[1][2]]", &custom_words).unwrap();
+        assert_eq!(result3, vec![
+            Token::TensorStart,
+            Token::TensorStart,
+            Token::Number("1".to_string()),
+            Token::TensorEnd,
+            Token::TensorStart,
+            Token::Number("2".to_string()),
+            Token::TensorEnd,
+            Token::TensorEnd,
+        ]);
+
+        // ワードとの組み合わせ
+        let result4 = tokenize_with_custom_words("[1 2]+[3 4]", &custom_words).unwrap();
+        assert_eq!(result4, vec![
+            Token::TensorStart,
+            Token::Number("1".to_string()),
+            Token::Number("2".to_string()),
+            Token::TensorEnd,
+            Token::Symbol("+".to_string()),
+            Token::TensorStart,
+            Token::Number("3".to_string()),
+            Token::Number("4".to_string()),
+            Token::TensorEnd,
+        ]);
+    }
 }
