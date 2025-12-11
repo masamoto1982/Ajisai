@@ -98,19 +98,32 @@ impl AjisaiInterpreter {
                 // スタックトップに単一数値があるかチェック
                 let repeat = if !self.interpreter.stack.is_empty() {
                     if let Some(top) = self.interpreter.stack.last() {
-                        if let ValueType::Vector(v) = &top.val_type {
-                            if v.len() == 1 {
-                                if let ValueType::Number(n) = &v[0].val_type {
-                                    n.as_usize()
+                        match &top.val_type {
+                            // Tensor型（新しい形式）: shape=[1]の1次元テンソルまたはスカラー
+                            ValueType::Tensor(t) => {
+                                if t.shape() == &[1] || t.is_scalar() {
+                                    // 単一要素のテンソルから値を取得
+                                    t.data().first()
+                                        .and_then(|f| f.as_usize())
                                         .filter(|&r| r > 0 && r <= 100)
                                 } else {
                                     None
                                 }
-                            } else {
-                                None
                             }
-                        } else {
-                            None
+                            // Vector型（後方互換性）
+                            ValueType::Vector(v) => {
+                                if v.len() == 1 {
+                                    if let ValueType::Number(n) = &v[0].val_type {
+                                        n.as_usize()
+                                            .filter(|&r| r > 0 && r <= 100)
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            }
+                            _ => None
                         }
                     } else {
                         None
