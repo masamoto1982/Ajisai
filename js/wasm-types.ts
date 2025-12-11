@@ -30,6 +30,7 @@ export interface ExecuteResult {
     error?: boolean;
     hasMore?: boolean;
     definition_to_load?: string;
+    inputHelper?: string; // Input helper text to insert into the editor
     // Workerから返されるインタプリタの状態
     stack?: Value[];
     customWords?: CustomWord[];
