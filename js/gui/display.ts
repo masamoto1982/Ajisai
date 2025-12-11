@@ -194,17 +194,12 @@ export class Display {
             case 'tensor': {
                 if (!item.value || typeof item.value !== 'object') return '?';
                 const tensor = item.value as any;
-                if (!('data' in tensor) || !Array.isArray(tensor.data)) return '?';
+                if (!('shape' in tensor) || !('data' in tensor)) return '?';
 
-                // データ配列をフォーマット
-                const formattedData = tensor.data.map((frac: any) => {
-                    if (!('numerator' in frac) || !('denominator' in frac)) return '?';
-                    const denomStr = String(frac.denominator);
-                    const numerStr = String(frac.numerator);
-                    return this.formatFractionScientific(numerStr, denomStr);
-                }).join(' ');
+                const shape = tensor.shape as number[];
+                const data = tensor.data as any[];
 
-                return `[ ${formattedData} ]`;
+                return this.formatTensor(shape, data, 0);
             }
             case 'string':
                 return `'${item.value}'`;
@@ -284,15 +279,15 @@ export class Display {
     private formatIntegerScientific(numStr: string): string {
         const isNegative = numStr.startsWith('-');
         const absNumStr = isNegative ? numStr.substring(1) : numStr;
-        
+
         if (absNumStr.length < this.scientificThreshold) {
             return numStr;
         }
-        
+
         const firstDigit = absNumStr[0];
         const remainingDigits = absNumStr.substring(1);
         const exponent = remainingDigits.length;
-        
+
         let mantissa = firstDigit!;
         if (remainingDigits.length > 0) {
             const fractionalDigits = Math.min(this.mantissaPrecision - 1, remainingDigits.length);
@@ -300,10 +295,64 @@ export class Display {
                 mantissa += '.' + remainingDigits.substring(0, fractionalDigits);
             }
         }
-        
+
         mantissa = mantissa.replace(/\.?0+$/, '');
         if (isNegative) mantissa = '-' + mantissa;
-        
+
         return `${mantissa}e${exponent}`;
+    }
+
+    /**
+     * テンソルを階層的にフォーマット
+     * 深さに応じて括弧をサイクル: depth % 3 (0: [], 1: {}, 2: ())
+     */
+    private formatTensor(shape: number[], data: any[], depth: number): string {
+        const bracketIndex = depth % 3;
+        let openBracket: string, closeBracket: string;
+
+        switch (bracketIndex) {
+            case 0: openBracket = '['; closeBracket = ']'; break;
+            case 1: openBracket = '{'; closeBracket = '}'; break;
+            case 2: openBracket = '('; closeBracket = ')'; break;
+            default: openBracket = '['; closeBracket = ']'; break;
+        }
+
+        if (shape.length === 0) {
+            // スカラー
+            if (data.length === 0) return `${openBracket}${closeBracket}`;
+            const frac = data[0];
+            return `${openBracket} ${this.formatFraction(frac)} ${closeBracket}`;
+        }
+
+        if (shape.length === 1) {
+            // 1次元：数値を並べる
+            if (data.length === 0) return `${openBracket}${closeBracket}`;
+            const elements = data.map(frac => this.formatFraction(frac)).join(' ');
+            return `${openBracket} ${elements} ${closeBracket}`;
+        }
+
+        // 多次元：再帰的に処理
+        const outerSize = shape[0] ?? 0;
+        const innerShape = shape.slice(1);
+        const innerSize = innerShape.reduce((a, b) => a * b, 1);
+
+        const parts: string[] = [];
+        for (let i = 0; i < outerSize; i++) {
+            const start = i * innerSize;
+            const innerData = data.slice(start, start + innerSize);
+            parts.push(this.formatTensor(innerShape, innerData, depth + 1));
+        }
+
+        return `${openBracket} ${parts.join(' ')} ${closeBracket}`;
+    }
+
+    /**
+     * 分数をフォーマット
+     */
+    private formatFraction(frac: any): string {
+        if (!frac || !('numerator' in frac) || !('denominator' in frac)) return '?';
+        const denomStr = String(frac.denominator);
+        const numerStr = String(frac.numerator);
+        return this.formatFractionScientific(numerStr, denomStr);
     }
 }

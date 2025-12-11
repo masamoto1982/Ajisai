@@ -1,8 +1,13 @@
-# Vector Bracket Display System
+# Vector/Tensor Bracket Display System
 
 ## Overview
 
-Ajisai implements a visual distinction system for nested vectors using different bracket types based on nesting depth. This feature enhances code readability by making the nesting structure immediately apparent.
+Ajisai implements a visual distinction system for nested vectors and tensors using different bracket types based on nesting depth. This feature enhances code readability by making the nesting structure immediately apparent.
+
+**Key Points:**
+- The outermost brackets `[ ]` are always displayed
+- Brackets cycle through 3 types based on depth: `[ ]` → `{ }` → `( )` → `[ ]` → ...
+- Ajisai supports up to 4 dimensions; 5+ dimensions result in an error
 
 ## Design Philosophy
 
@@ -19,6 +24,13 @@ This approach provides the following benefits:
 - Visual nesting structure is always clear
 - No cognitive overhead for choosing bracket types
 
+### 4-Dimension Limit
+
+Ajisai uses a [time, layer, row, col] dimension model:
+- Maximum 4 dimensions are supported
+- At 4 dimensions, brackets complete one full cycle
+- Attempting to create 5+ dimensional tensors results in an error
+
 ## Technical Implementation
 
 ### Bracket Depth Mapping
@@ -26,17 +38,29 @@ This approach provides the following benefits:
 The system uses modulo-3 arithmetic to cycle through three bracket styles:
 
 ```
-Depth 0: [ ]  (Square brackets)
+Depth 0: [ ]  (Square brackets) - Outermost, always displayed
 Depth 1: { }  (Curly braces)
 Depth 2: ( )  (Round parentheses)
-Depth 3: [ ]  (Cycles back to square brackets)
-Depth 4: { }
-...and so on
+Depth 3: [ ]  (Cycles back to square brackets) - 4th dimension
 ```
+
+Note: Since Ajisai is limited to 4 dimensions, the cycle completes exactly once at maximum depth.
 
 ### Examples
 
-#### Basic Nesting
+#### 1-Dimensional Tensor
+
+**Input:**
+```
+[ 1 2 3 ]
+```
+
+**Display:**
+```
+[ 1 2 3 ]
+```
+
+#### 2-Dimensional Tensor (Matrix)
 
 **Input:**
 ```
@@ -62,42 +86,42 @@ Depth 4: { }
 
 Note: All three inputs `[ 1 2 3 ]`, `{ 1 2 3 }`, and `( 1 2 3 )` are treated identically.
 
-#### Triple Nesting
+#### 3-Dimensional Tensor
 
 **Input:**
 ```
-[[[ 1 2 ]]]
+[[[ 1 2 ] [ 3 4 ]] [[ 5 6 ] [ 7 8 ]]]
 ```
 
 **Display:**
 ```
-[ { ( 1 2 ) } ]
+[ { ( 1 2 ) ( 3 4 ) } { ( 5 6 ) ( 7 8 ) } ]
 ```
 
-#### Quad Nesting (Demonstrates Cycling)
+#### 4-Dimensional Tensor (Maximum, Demonstrates Cycling)
 
 **Input:**
 ```
-[[[[ 1 ]]]]
+[ 2 2 2 2 ] ZEROS
 ```
 
 **Display:**
 ```
-[ { ( [ 1 ] ) } ]
+[ { ( [ 0 0 ] [ 0 0 ] ) ( [ 0 0 ] [ 0 0 ] ) } { ( [ 0 0 ] [ 0 0 ] ) ( [ 0 0 ] [ 0 0 ] ) } ]
 ```
 
-Notice how depth 3 returns to square brackets.
+Notice how depth 3 returns to square brackets, completing the cycle.
 
-#### Complex Structure
+#### 5+ Dimensions (Error)
 
 **Input:**
 ```
-[[ 1 [ 2 3 ] 4 ] [ 5 [ 6 7 ] 8 ]]
+[ 2 2 2 2 2 ] ZEROS
 ```
 
-**Display:**
+**Result:**
 ```
-[ { 1 ( 2 3 ) 4 } { 5 ( 6 7 ) 8 } ]
+Error: Ajisai supports up to 4 dimensions (time, layer, row, col), got 5
 ```
 
 ## Implementation Details
