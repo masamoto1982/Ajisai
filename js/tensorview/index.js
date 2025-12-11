@@ -87,11 +87,14 @@ export class TensorViewApp {
     }
 
     setTensor(data) {
+        console.log('[TensorView] setTensor called with:', data);
         this.engine.setData(data);
     }
 
     displayValue(value) {
+        console.log('[TensorView] displayValue called with:', value);
         const data = this.convertAjisaiValue(value);
+        console.log('[TensorView] converted data:', data);
         if (data) {
             this.setTensor(data);
         }
