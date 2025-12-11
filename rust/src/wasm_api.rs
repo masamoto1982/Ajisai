@@ -59,14 +59,41 @@ impl AjisaiInterpreter {
         self.interpreter.definition_to_load = None;
         let obj = js_sys::Object::new();
 
-        // 入力支援ワードの検出
+        // 入力支援ワードの検出（末尾にあるかチェック）
         let trimmed = code.trim();
         let upper_code = trimmed.to_uppercase();
         let input_helper_words = ["SCALAR", "VECTOR", "MATRIX", "TENSOR"];
 
         for (i, word) in input_helper_words.iter().enumerate() {
-            if upper_code == *word {
+            // 入力が入力支援ワードで終わっているかチェック
+            if upper_code.ends_with(word) {
+                // ワードの前に空白があるか、完全一致かを確認
+                let prefix_len = upper_code.len() - word.len();
+                let is_valid = if prefix_len == 0 {
+                    true // 完全一致
+                } else {
+                    // ワードの前が空白文字であることを確認
+                    upper_code.chars().nth(prefix_len - 1).map_or(false, |c| c.is_whitespace())
+                };
+
+                if !is_valid {
+                    continue;
+                }
+
                 let depth = i + 1; // SCALAR=1, VECTOR=2, MATRIX=3, TENSOR=4
+
+                // 入力支援ワードより前の部分があれば先に実行
+                if prefix_len > 0 {
+                    let prefix_code = &trimmed[..prefix_len].trim();
+                    if !prefix_code.is_empty() {
+                        if let Err(e) = self.interpreter.execute(prefix_code).await {
+                            js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                            js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
+                            js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                            return Ok(obj.into());
+                        }
+                    }
+                }
 
                 // スタックトップに単一数値があるかチェック
                 let repeat = if !self.interpreter.stack.is_empty() {
