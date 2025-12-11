@@ -90,6 +90,26 @@ impl Interpreter {
         interpreter
     }
 
+    /// スタックにValueをプッシュ（4次元制限チェック付き）
+    ///
+    /// Tensorの次元数が最大値を超える場合はエラーを返す。
+    /// 非Tensor値に対しては通常のpushを行う。
+    pub fn push_value(&mut self, value: Value) -> Result<()> {
+        use crate::types::tensor::Tensor;
+        // Tensorの次元チェック
+        if let ValueType::Tensor(ref tensor) = value.val_type {
+            if tensor.rank() > Tensor::MAX_DIMENSIONS {
+                return Err(AjisaiError::from(format!(
+                    "Cannot push tensor with {} dimensions (max: {})",
+                    tensor.rank(),
+                    Tensor::MAX_DIMENSIONS
+                )));
+            }
+        }
+        self.stack.push(value);
+        Ok(())
+    }
+
     /// Tensor収集メソッド（新しいToken::TensorStart/TensorEnd用）
     ///
     /// Phase 3: すべての配列リテラルをTensorとして扱う
