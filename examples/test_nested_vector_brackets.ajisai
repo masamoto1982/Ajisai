@@ -1,0 +1,23 @@
+// test_nested_vector_brackets.ajisai
+// テンソル/ベクタの括弧表示テスト
+// スタックエリアが暗黙のdepth=0なので、テンソルは{}(depth=1)から開始
+
+// Test 1: 1次元テンソル
+[ 1 2 3 ]
+// Expected display: { 1 2 3 }
+
+// Test 2: 2次元テンソル
+[[ 1 2 ] [ 3 4 ]]
+// Expected display: { ( 1 2 ) ( 3 4 ) }
+
+// Test 3: 3次元テンソル
+[[[ 1 2 ]]]
+// Expected display: { ( [ 1 2 ] ) }
+
+// Test 4: 4次元テンソル（サイクル確認）
+[[[[ 1 ]]]]
+// Expected display: { ( [ { 1 } ] ) }
+
+// Test 5: 複数テンソルのスタック（それぞれ独立して{}から開始）
+// [ 1 2 ] [ 3 4 ]
+// Expected display: { 1 2 }  { 3 4 }
