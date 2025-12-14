@@ -13,7 +13,6 @@ pub mod audio;
 pub mod higher_order;
 pub mod cast;
 pub mod datetime;
-pub mod sort;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine};
@@ -689,46 +688,18 @@ impl Interpreter {
             "SPLIT" => vector_ops::op_split(self),
             "CONCAT" => vector_ops::op_concat(self),
             "REVERSE" => vector_ops::op_reverse(self),
-            "LEVEL" => vector_ops::op_level(self),
             "RANGE" => vector_ops::op_range(self),
             "SHAPE" => tensor_ops::op_shape(self),
             "RANK" => tensor_ops::op_rank(self),
             "RESHAPE" => tensor_ops::op_reshape(self),
             "TRANSPOSE" => tensor_ops::op_transpose(self),
-            // 集約関数
-            "SUM" => tensor_ops::op_sum(self),
-            "MEAN" => tensor_ops::op_mean(self),
-            "MAX" => tensor_ops::op_max(self),
-            "MIN" => tensor_ops::op_min(self),
-            "PRODUCT" => tensor_ops::op_product(self),
-            // 行列演算
-            "DOT" => tensor_ops::op_dot(self),
-            "MATMUL" => tensor_ops::op_matmul(self),
-            // テンソルアクセス
-            "DIAG" => tensor_ops::op_diag(self),
             // 基本数学関数
-            "ABS" => tensor_ops::op_abs(self),
-            "NEG" => tensor_ops::op_neg(self),
-            "SIGN" => tensor_ops::op_sign(self),
             "FLOOR" => tensor_ops::op_floor(self),
             "CEIL" => tensor_ops::op_ceil(self),
             "ROUND" => tensor_ops::op_round(self),
             "MOD" => tensor_ops::op_mod(self),
-            "POW" => tensor_ops::op_pow(self),
             // テンソル生成関数
-            "ZEROS" => tensor_ops::op_zeros(self),
-            "ONES" => tensor_ops::op_ones(self),
             "FILL" => tensor_ops::op_fill(self),
-            "EYE" => tensor_ops::op_eye(self),
-            "IOTA" => tensor_ops::op_iota(self),
-            "LINSPACE" => tensor_ops::op_linspace(self),
-            // 軸指定演算
-            "ALONG" => tensor_ops::op_along(self),
-            // 外積
-            "OUTER" => tensor_ops::op_outer(self),
-            // 統計関数
-            "VAR" => tensor_ops::op_var(self),
-            "MEDIAN" => tensor_ops::op_median(self),
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),
@@ -748,10 +719,7 @@ impl Interpreter {
             "RESET" => self.execute_reset(),
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
-            "COUNT" => higher_order::op_count(self),
-            "REDUCE" => higher_order::op_reduce(self),
             "FOLD" => higher_order::op_fold(self),
-            "SCAN" => higher_order::op_scan(self),
             "UNFOLD" => higher_order::op_unfold(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => {
@@ -770,7 +738,6 @@ impl Interpreter {
             "NOW" => datetime::op_now(self),
             "DATETIME" => datetime::op_datetime(self),
             "TIMESTAMP" => datetime::op_timestamp(self),
-            "FRACTIONSORT" => sort::op_fractionsort(self),
             "!" => {
                 self.force_flag = true;
                 Ok(())
@@ -1536,136 +1503,6 @@ ADDTEST
             if let ValueType::Vector(v) = &val.val_type {
                 if let ValueType::Number(n) = &v[0].val_type {
                     assert_eq!(n.numerator.to_string(), "999");
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_reduce_addition() {
-        let mut interp = Interpreter::new();
-        let code = ": [ 1 2 3 4 5 ] '+' REDUCE";
-        let result = interp.execute(code).await;
-        assert!(result.is_ok(), "REDUCE addition should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
-        // 結果が15であることを確認
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
-                    assert_eq!(n.numerator.to_string(), "15");
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_reduce_multiplication() {
-        let mut interp = Interpreter::new();
-        let code = ": [ 1 2 3 4 5 ] '*' REDUCE";
-        let result = interp.execute(code).await;
-        if let Err(ref e) = result {
-            eprintln!("Error: {:?}", e);
-        }
-        assert!(result.is_ok(), "REDUCE multiplication should succeed: {:?}", result);
-        // 結果が120であることを確認（5! = 120）
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
-                    assert_eq!(n.numerator.to_string(), "120");
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_reduce_subtraction() {
-        let mut interp = Interpreter::new();
-        let code = ": [ 10 3 1 ] '-' REDUCE";
-        let result = interp.execute(code).await;
-        assert!(result.is_ok(), "REDUCE subtraction should succeed: {:?}", result);
-        // 結果が6であることを確認（10-3-1=6）
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
-                    assert_eq!(n.numerator.to_string(), "6");
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_reduce_single_element_error() {
-        let mut interp = Interpreter::new();
-        let code = ": [ 42 ] '+' REDUCE";
-        let result = interp.execute(code).await;
-        assert!(result.is_err(), "REDUCE with single element should fail");
-    }
-
-    #[tokio::test]
-    async fn test_reduce_empty_vector_error() {
-        let mut interp = Interpreter::new();
-        let code = ": [ ] '+' REDUCE";
-        let result = interp.execute(code).await;
-        assert!(result.is_err(), "REDUCE with empty vector should fail");
-    }
-
-    #[tokio::test]
-    async fn test_reduce_stack_mode() {
-        let mut interp = Interpreter::new();
-        let code = ": [1] [2] [3] [4] [5] [5] '+' .. REDUCE";
-        let result = interp.execute(code).await;
-        assert!(result.is_ok(), "REDUCE STACK mode should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
-        // 結果が15であることを確認
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
-                    assert_eq!(n.numerator.to_string(), "15");
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_reduce_with_custom_word() {
-        let mut interp = Interpreter::new();
-
-        // より簡単なカスタムワード: DOUBLE (2倍にする)
-        let def_code = ": [ '[0] [2] *' ] 'DOUBLE' DEF";
-        let def_result = interp.execute(def_code).await;
-        assert!(def_result.is_ok(), "Failed to define DOUBLE: {:?}", def_result);
-
-        // DOUBLEを使ってREDUCE（乗算の代わり）
-        let code = ": [ 1 2 3 ] '+' REDUCE";  // まず加算で動作確認
-        let result = interp.execute(code).await;
-        if let Err(ref e) = result {
-            eprintln!("Error: {:?}", e);
-            eprintln!("Stack: {:?}", interp.stack);
-        }
-        assert!(result.is_ok(), "REDUCE with simple add should succeed: {:?}", result);
-
-        // 結果が6であることを確認 (1+2+3=6)
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
-                    assert_eq!(n.numerator.to_string(), "6");
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_reduce_fractions() {
-        let mut interp = Interpreter::new();
-        let code = ": [ 1/2 1/3 1/6 ] '+' REDUCE";
-        let result = interp.execute(code).await;
-        assert!(result.is_ok(), "REDUCE with fractions should succeed: {:?}", result);
-        // 結果が1であることを確認（1/2 + 1/3 + 1/6 = 1）
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
-                    assert_eq!(n.numerator.to_string(), "1");
-                    assert_eq!(n.denominator.to_string(), "1");
                 }
             }
         }
