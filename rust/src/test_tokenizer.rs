@@ -113,9 +113,9 @@ mod test_tokenizer {
         let custom_words = HashSet::new();
         let result = tokenize_with_custom_words("['test']", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::TensorStart,
+            Token::VectorStart,
             Token::String("test".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
         ]);
     }
 
@@ -285,11 +285,11 @@ mod test_tokenizer {
         // Phase 2: [] のみサポート
         let result = tokenize_with_custom_words("[ 1 2 3 ]", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("1".to_string()),
             Token::Number("2".to_string()),
             Token::Number("3".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
         ]);
 
         // {} と () は削除されたため、エラーとして扱われる
@@ -308,11 +308,11 @@ mod test_tokenizer {
             &custom_words
         ).unwrap();
         assert_eq!(result, vec![
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("1".to_string()),
             Token::Number("2".to_string()),
             Token::Number("3".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
             Token::Symbol("LENGTH".to_string()),
             Token::String("結果".to_string()),
             Token::Symbol("PRINT".to_string()),
@@ -411,10 +411,10 @@ mod test_tokenizer {
 
         let result = tokenize_with_custom_words("[ 1/2 3/4 ]", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("1/2".to_string()),
             Token::Number("3/4".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
         ]);
     }
 
@@ -477,11 +477,11 @@ mod test_tokenizer {
 
         let result = tokenize_with_custom_words("[ 1 2 3 ] . LENGTH", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("1".to_string()),
             Token::Number("2".to_string()),
             Token::Number("3".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
             Token::Symbol(".".to_string()),
             Token::Symbol("LENGTH".to_string()),
         ]);
@@ -491,9 +491,9 @@ mod test_tokenizer {
             Token::Symbol("a".to_string()),
             Token::Symbol("b".to_string()),
             Token::Symbol("c".to_string()),
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("1".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
             Token::Symbol("..".to_string()),
             Token::Symbol("GET".to_string()),
         ]);
@@ -508,46 +508,46 @@ mod test_tokenizer {
         // 空白なしの基本ケース
         let result = tokenize_with_custom_words("[1]", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("1".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
         ]);
 
         // 複数要素
         let result2 = tokenize_with_custom_words("[1 2 3]", &custom_words).unwrap();
         assert_eq!(result2, vec![
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("1".to_string()),
             Token::Number("2".to_string()),
             Token::Number("3".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
         ]);
 
         // ネストされた構造
         let result3 = tokenize_with_custom_words("[[1][2]]", &custom_words).unwrap();
         assert_eq!(result3, vec![
-            Token::TensorStart,
-            Token::TensorStart,
+            Token::VectorStart,
+            Token::VectorStart,
             Token::Number("1".to_string()),
-            Token::TensorEnd,
-            Token::TensorStart,
+            Token::VectorEnd,
+            Token::VectorStart,
             Token::Number("2".to_string()),
-            Token::TensorEnd,
-            Token::TensorEnd,
+            Token::VectorEnd,
+            Token::VectorEnd,
         ]);
 
         // ワードとの組み合わせ
         let result4 = tokenize_with_custom_words("[1 2]+[3 4]", &custom_words).unwrap();
         assert_eq!(result4, vec![
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("1".to_string()),
             Token::Number("2".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
             Token::Symbol("+".to_string()),
-            Token::TensorStart,
+            Token::VectorStart,
             Token::Number("3".to_string()),
             Token::Number("4".to_string()),
-            Token::TensorEnd,
+            Token::VectorEnd,
         ]);
     }
 }

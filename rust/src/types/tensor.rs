@@ -276,7 +276,7 @@ pub fn inner_product(values_a: &[Value], values_b: &[Value]) -> Result<Fraction,
 
     let mut sum = Fraction::new(BigInt::zero(), BigInt::one());
     for (a, b) in data_a.iter().zip(data_b.iter()) {
-        sum = sum + (a.clone() * b.clone());
+        sum = sum.add(&a.mul(b));
     }
 
     Ok(sum)
@@ -311,29 +311,13 @@ pub fn matmul(values_a: &[Value], values_b: &[Value]) -> Result<Vec<Value>, Stri
             for k in 0..k1 {
                 let a_val = &data_a[i * k1 + k];
                 let b_val = &data_b[k * n + j];
-                sum = sum + (a_val.clone() * b_val.clone());
+                sum = sum.add(&a_val.mul(b_val));
             }
             result_data.push(sum);
         }
     }
 
     build_nested_from_data(&[m, n], &result_data)
-}
-
-impl Fraction {
-    /// Fractionをusizeに変換
-    pub fn to_usize(&self) -> Option<usize> {
-        if self.denominator == BigInt::from(1) {
-            self.numerator.to_usize()
-        } else {
-            None
-        }
-    }
-
-    /// Fractionをusizeに変換（as_usizeエイリアス）
-    pub fn as_usize(&self) -> Option<usize> {
-        self.to_usize()
-    }
 }
 
 #[cfg(test)]

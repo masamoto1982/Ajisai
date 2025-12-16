@@ -19,7 +19,7 @@ use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
-use self::helpers::wrap_in_square_vector;
+use self::helpers::{wrap_value, wrap_number};
 use gloo_timers::future::sleep;
 use std::time::Duration;
 
@@ -89,101 +89,35 @@ impl Interpreter {
         interpreter
     }
 
-    /// スタックにValueをプッシュ（4次元制限チェック付き）
-    ///
-    /// Tensorの次元数が最大値を超える場合はエラーを返す。
-    /// 非Tensor値に対しては通常のpushを行う。
+    /// スタックにValueをプッシュ
     pub fn push_value(&mut self, value: Value) -> Result<()> {
-        use crate::types::tensor::Tensor;
-        // Tensorの次元チェック
-        if let ValueType::Tensor(ref tensor) = value.val_type {
-            if tensor.rank() > Tensor::MAX_DIMENSIONS {
-                return Err(AjisaiError::from(format!(
-                    "Cannot push tensor with {} dimensions (max: {})",
-                    tensor.rank(),
-                    Tensor::MAX_DIMENSIONS
-                )));
-            }
-        }
         self.stack.push(value);
         Ok(())
     }
 
-    /// Tensor収集メソッド（新しいToken::TensorStart/TensorEnd用）
+    /// Vector収集メソッド
     ///
-    /// Phase 3: すべての配列リテラルをTensorとして扱う
-    /// - 数値のみの配列はTensorに変換
-    /// - 混合型の配列は一時的にVectorとして扱う（後方互換性）
-    fn collect_tensor(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
-        if !matches!(&tokens[start_index], Token::TensorStart) {
-            return Err(AjisaiError::from("Expected tensor start ([)"));
-        }
-
-        let mut values = Vec::new();
-        let mut i = start_index + 1;
-
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::TensorStart => {
-                    let (nested_values, consumed) = self.collect_tensor(tokens, i)?;
-                    // ネストされたテンソルはVectorとして一時的に保持（後でTensorに変換）
-                    values.push(Value { val_type: ValueType::Vector(nested_values) });
-                    i += consumed;
-                },
-                Token::TensorEnd => {
-                    return Ok((values, i - start_index + 1));
-                },
-                Token::Number(n) => {
-                    values.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
-                    i += 1;
-                },
-                Token::String(s) => {
-                    values.push(Value { val_type: ValueType::String(s.clone()) });
-                    i += 1;
-                },
-                Token::Boolean(b) => {
-                    values.push(Value { val_type: ValueType::Boolean(*b) });
-                    i += 1;
-                },
-                Token::Nil => {
-                    values.push(Value { val_type: ValueType::Nil });
-                    i += 1;
-                },
-                Token::Symbol(s) => {
-                    values.push(Value { val_type: ValueType::Symbol(s.clone()) });
-                    i += 1;
-                },
-                _ => {
-                    i += 1;
-                }
-            }
-        }
-        Err(AjisaiError::from("Unclosed tensor starting with ["))
-    }
-
-    /// 後方互換性のため残存（非推奨）
-    #[allow(deprecated)]
+    /// [], {}, () いずれの形式でもVectorとして収集する
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
-        let bracket_type = match &tokens[start_index] {
-            Token::VectorStart(bt) => bt.clone(),
-            _ => return Err(AjisaiError::from("Expected vector start")),
-        };
+        if !matches!(&tokens[start_index], Token::VectorStart) {
+            return Err(AjisaiError::from("Expected vector start"));
+        }
 
         let mut values = Vec::new();
         let mut i = start_index + 1;
 
         while i < tokens.len() {
             match &tokens[i] {
-                Token::VectorStart(_) => {
+                Token::VectorStart => {
                     let (nested_values, consumed) = self.collect_vector(tokens, i)?;
-                    values.push(Value { val_type: ValueType::Vector(nested_values) });
+                    values.push(Value::from_vector(nested_values));
                     i += consumed;
                 },
-                Token::VectorEnd(bt) if *bt == bracket_type => {
+                Token::VectorEnd => {
                     return Ok((values, i - start_index + 1));
                 },
                 Token::Number(n) => {
-                    values.push(Value { val_type: ValueType::Number(Fraction::from_str(n).map_err(AjisaiError::from)?) });
+                    values.push(Value::from_number(Fraction::from_str(n).map_err(AjisaiError::from)?));
                     i += 1;
                 },
                 Token::String(s) => {
@@ -207,7 +141,7 @@ impl Interpreter {
                 }
             }
         }
-        Err(AjisaiError::from(format!("Unclosed vector starting with {}", bracket_type.opening_char())))
+        Err(AjisaiError::from("Unclosed vector"))
     }
 
     /// ガード構造実行（同期版）
@@ -300,18 +234,8 @@ impl Interpreter {
                     _ => return Err(AjisaiError::type_error("integer", "other type")),
                 }
             },
-            ValueType::Tensor(t) if t.data().len() == 1 => {
-                let n = &t.data()[0];
-                if n.denominator == num_bigint::BigInt::one() {
-                    n.numerator.to_u64().ok_or_else(||
-                        AjisaiError::from("Delay too large")
-                    )?
-                } else {
-                    return Err(AjisaiError::type_error("integer", "fraction"));
-                }
-            },
             _ => return Err(AjisaiError::type_error(
-                "single-element vector or tensor with integer",
+                "single-element vector with integer",
                 "other type"
             )),
         };
@@ -352,64 +276,24 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::Number(n) => {
-                    use crate::types::tensor::Tensor;
                     let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
-                    let tensor = Tensor::vector(vec![frac]);
-                    self.stack.push(Value::from_tensor(tensor));
+                    self.stack.push(wrap_number(frac));
                 },
                 Token::String(s) => {
-                    // 非数値型のため、Vectorでラップ
                     let val = Value { val_type: ValueType::String(s.clone()) };
-                    self.stack.push(wrap_in_square_vector(val));
+                    self.stack.push(wrap_value(val));
                 },
                 Token::Boolean(b) => {
-                    // 非数値型のため、Vectorでラップ
                     let val = Value { val_type: ValueType::Boolean(*b) };
-                    self.stack.push(wrap_in_square_vector(val));
+                    self.stack.push(wrap_value(val));
                 },
                 Token::Nil => {
-                    // 非数値型のため、Vectorでラップ
                     let val = Value { val_type: ValueType::Nil };
-                    self.stack.push(wrap_in_square_vector(val));
+                    self.stack.push(wrap_value(val));
                 },
-                Token::TensorStart => {
-                    // Phase 3: 新しいTensor指向のパース処理
-                    let (values, consumed) = self.collect_tensor(tokens, i)?;
-
-                    // すべての配列リテラルをTensorに変換を試みる
-                    let value_to_push = match crate::types::validate_rectangular(&values) {
-                        Ok(_shape) => {
-                            // Tensorへの変換を試みる
-                            match Value::vector_to_tensor(&values) {
-                                Ok(tensor) => Value::from_tensor(tensor),
-                                Err(_) => {
-                                    // 変換失敗時は混合型としてVectorで保持（後方互換性）
-                                    #[allow(deprecated)]
-                                    { Value { val_type: ValueType::Vector(values) } }
-                                }
-                            }
-                        }
-                        Err(_) => {
-                            // 矩形でない場合も混合型としてVectorで保持
-                            #[allow(deprecated)]
-                            { Value { val_type: ValueType::Vector(values) } }
-                        }
-                    };
-
-                    self.stack.push(value_to_push);
-                    i += consumed;
-                    continue;
-                },
-                #[allow(deprecated)]
-                Token::VectorStart(_) => {
-                    // 後方互換性のため残存（非推奨）
+                Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
-
-                    // 旧形式のVectorStart処理
-                    #[allow(deprecated)]
-                    let value_to_push = { Value { val_type: ValueType::Vector(values) } };
-
-                    self.stack.push(value_to_push);
+                    self.stack.push(Value::from_vector(values));
                     i += consumed;
                     continue;
                 },
@@ -443,11 +327,7 @@ impl Interpreter {
                 Token::GuardSeparator | Token::LineBreak => {
                     // スキップ
                 },
-                Token::TensorEnd => {
-                    return Err(AjisaiError::from("Unexpected tensor end (])"));
-                },
-                #[allow(deprecated)]
-                Token::VectorEnd(_) => {
+                Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
                 },
             }
@@ -754,12 +634,8 @@ impl Interpreter {
             Token::Boolean(false) => "FALSE".to_string(),
             Token::Symbol(s) => s.clone(),
             Token::Nil => "NIL".to_string(),
-            Token::TensorStart => "[".to_string(),
-            Token::TensorEnd => "]".to_string(),
-            #[allow(deprecated)]
-            Token::VectorStart(bt) => bt.opening_char().to_string(),
-            #[allow(deprecated)]
-            Token::VectorEnd(bt) => bt.closing_char().to_string(),
+            Token::VectorStart => "[".to_string(),
+            Token::VectorEnd => "]".to_string(),
             Token::GuardSeparator => ":".to_string(),
             Token::LineBreak => "\n".to_string(),
         }

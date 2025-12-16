@@ -5,13 +5,12 @@
 // すべての演算は単一要素ベクタを想定し、結果を単一要素ベクタとして返す。
 //
 // 【重要: 結果の型について】
-// Phase 1.1: 比較演算の結果は常に Vector[Boolean] として返されます。
-// Boolean値は数値ではないため、Tensorには変換されません。
-// これは意図的な設計であり、算術演算（Tensorを返す）とは異なります。
+// 比較演算の結果は常に Vector[Boolean] として返されます。
+// Boolean値は数値ではないため、算術演算の結果とは異なる扱いになります。
 //
 // 例:
 //   [3] [5] <     → [TRUE]  (Vector[Boolean])
-//   [1 2] [3 4] + → [4 6]   (Tensor[Number])
+//   [1 2] [3 4] + → [4 6]   (Vector[Number])
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
@@ -48,7 +47,7 @@ where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
     match interp.operation_target {
-        // StackTopモード: 2つの単一要素ベクタまたはTensorを比較
+        // StackTopモード: 2つの単一要素ベクタを比較
         OperationTarget::StackTop => {
             if interp.stack.len() < 2 {
                 return Err(AjisaiError::StackUnderflow);
@@ -57,9 +56,8 @@ where
             let b_vec = interp.stack.pop().unwrap();
             let a_vec = interp.stack.pop().unwrap();
 
-            // TensorまたはVectorから数値を抽出（Tensor優先）
+            // Vectorから数値を抽出
             let a_num = match &a_vec.val_type {
-                ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                 ValueType::Vector(v) if v.len() == 1 => {
                     if let ValueType::Number(n) = &v[0].val_type {
                         n
@@ -72,12 +70,11 @@ where
                 _ => {
                     interp.stack.push(a_vec);
                     interp.stack.push(b_vec);
-                    return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+                    return Err(AjisaiError::type_error("single-element vector", "other type"));
                 }
             };
 
             let b_num = match &b_vec.val_type {
-                ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                 ValueType::Vector(v) if v.len() == 1 => {
                     if let ValueType::Number(n) = &v[0].val_type {
                         n
@@ -90,7 +87,7 @@ where
                 _ => {
                     interp.stack.push(a_vec);
                     interp.stack.push(b_vec);
-                    return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+                    return Err(AjisaiError::type_error("single-element vector", "other type"));
                 }
             };
 
@@ -120,9 +117,8 @@ where
             // 全ての隣接ペアをチェック
             let mut all_true = true;
             for i in 0..items.len() - 1 {
-                // TensorまたはVectorから数値を抽出（Tensor優先）
+                // Vectorから数値を抽出
                 let a_num = match &items[i].val_type {
-                    ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                     ValueType::Vector(v) if v.len() == 1 => {
                         if let ValueType::Number(n) = &v[0].val_type {
                             n
@@ -135,12 +131,11 @@ where
                     _ => {
                         interp.stack.extend(items);
                         interp.stack.push(count_val);
-                        return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+                        return Err(AjisaiError::type_error("single-element vector", "other type"));
                     }
                 };
 
                 let b_num = match &items[i + 1].val_type {
-                    ValueType::Tensor(t) if t.data().len() == 1 => &t.data()[0],
                     ValueType::Vector(v) if v.len() == 1 => {
                         if let ValueType::Number(n) = &v[0].val_type {
                             n
@@ -153,7 +148,7 @@ where
                     _ => {
                         interp.stack.extend(items);
                         interp.stack.push(count_val);
-                        return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+                        return Err(AjisaiError::type_error("single-element vector", "other type"));
                     }
                 };
 

@@ -5,10 +5,12 @@
 // StackTopモードではベクタ間の要素ごと演算をサポートし、
 // Stackモードでは複数要素の畳み込み演算を実行する。
 // ブロードキャスト機能（スカラーとベクタの演算）も提供する。
+//
+// Vector指向型システム対応版
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, extract_number, wrap_in_square_vector, wrap_as_tensor};
+use crate::interpreter::helpers::{get_integer_from_value, extract_number, wrap_number};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_traits::Zero;
@@ -59,7 +61,7 @@ where
             let b_vec = match b_val.val_type {
                 ValueType::Vector(v) => v,
                 _ => {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
+                    interp.stack.push(Value::from_vector(a_vec));
                     interp.stack.push(b_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
@@ -76,32 +78,32 @@ where
                 let scalar = &b_vec[0];
                 for elem in &a_vec {
                     let res_num = op(extract_number(elem)?, extract_number(scalar)?)?;
-                    result_vec.push(Value { val_type: ValueType::Number(res_num) });
+                    result_vec.push(Value::from_number(res_num));
                 }
             } else if a_len == 1 && b_len > 1 {
                 // aがスカラー、bがベクタ: aを各要素にブロードキャスト
                 let scalar = &a_vec[0];
                 for elem in &b_vec {
                     let res_num = op(extract_number(scalar)?, extract_number(elem)?)?;
-                    result_vec.push(Value { val_type: ValueType::Number(res_num) });
+                    result_vec.push(Value::from_number(res_num));
                 }
             } else {
                 // 要素数が等しい、または両方とも単一要素
                 if a_len != b_len {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
-                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec) });
+                    interp.stack.push(Value::from_vector(a_vec));
+                    interp.stack.push(Value::from_vector(b_vec));
                     return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
                 }
                 for (a, b) in a_vec.iter().zip(b_vec.iter()) {
                     let res_num = op(extract_number(a)?, extract_number(b)?)?;
-                    result_vec.push(Value { val_type: ValueType::Number(res_num) });
+                    result_vec.push(Value::from_number(res_num));
                 }
             }
 
             // "No change is an error" 原則のチェック（REDUCE等では無効化）
-            let result_value = Value { val_type: ValueType::Vector(result_vec.clone()) };
-            let original_a = Value { val_type: ValueType::Vector(a_vec) };
-            let original_b = Value { val_type: ValueType::Vector(b_vec) };
+            let result_value = Value::from_vector(result_vec.clone());
+            let original_a = Value::from_vector(a_vec);
+            let original_b = Value::from_vector(b_vec);
 
             if !interp.disable_no_change_check && (result_value == original_a || result_value == original_b) {
                 interp.stack.push(original_a);
@@ -150,9 +152,7 @@ where
                 return Err(AjisaiError::from("STACK operation resulted in no change"));
             }
 
-            // 修正: Stackモードの結果はTensorとして返す
-            use crate::types::tensor::Tensor;
-            interp.stack.push(Value::from_tensor(Tensor::vector(vec![acc_num])));
+            interp.stack.push(wrap_number(acc_num));
         }
     }
     Ok(())
@@ -186,8 +186,7 @@ where
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
-    // Phase 4: すべての入力をTensorとして扱う
-    tensor_binary_op(interp, |a, b| Ok(a.add(b)), "ADD")
+    binary_arithmetic_op(interp, |a, b| Ok(a.add(b)))
 }
 
 /// - 演算子 - 減算
@@ -214,8 +213,7 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
-    // Phase 4: すべての入力をTensorとして扱う
-    tensor_binary_op(interp, |a, b| Ok(a.sub(b)), "SUB")
+    binary_arithmetic_op(interp, |a, b| Ok(a.sub(b)))
 }
 
 /// * 演算子 - 乗算
@@ -242,8 +240,7 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
-    // Phase 4: すべての入力をTensorとして扱う
-    tensor_binary_op(interp, |a, b| Ok(a.mul(b)), "MUL")
+    binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)))
 }
 
 /// / 演算子 - 除算
@@ -272,127 +269,11 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    // Phase 4: すべての入力をTensorとして扱う
-    tensor_binary_op(interp, |a, b| {
+    binary_arithmetic_op(interp, |a, b| {
         if b.numerator.is_zero() {
             Err(AjisaiError::DivisionByZero)
         } else {
             Ok(a.div(b))
         }
-    }, "DIV")
-}
-
-// ============================================================================
-// Phase 3: 算術演算での型統一
-// ============================================================================
-
-/// ValueからTensorへの統一的な変換
-///
-/// Vector、Tensor、Numberのいずれもこの関数でTensorに変換される
-fn value_to_tensor(val: &Value) -> Result<crate::types::tensor::Tensor> {
-    use crate::types::tensor::Tensor;
-    match &val.val_type {
-        ValueType::Tensor(t) => Ok(t.clone()),
-        ValueType::Vector(v) => Value::vector_to_tensor(v)
-            .map_err(|e| AjisaiError::from(format!("Failed to convert vector to tensor: {}", e))),
-        ValueType::Number(f) => Ok(Tensor::scalar(f.clone())),
-        _ => {
-            let type_name = format!("{}", val.val_type);
-            Err(AjisaiError::from(format!("Expected numeric value (tensor, vector, or number), got {}", type_name)))
-        }
-    }
-}
-
-/// 二項演算の共通入力処理
-///
-/// スタックから2つの値を取得し、両方をTensorに変換して返す
-fn get_tensor_operands(interp: &mut Interpreter) -> Result<(crate::types::tensor::Tensor, crate::types::tensor::Tensor)> {
-    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let tensor_a = match value_to_tensor(&a_val) {
-        Ok(t) => t,
-        Err(e) => {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
-            return Err(e);
-        }
-    };
-
-    let tensor_b = match value_to_tensor(&b_val) {
-        Ok(t) => t,
-        Err(e) => {
-            interp.stack.push(Value::from_tensor(tensor_a));
-            interp.stack.push(b_val);
-            return Err(e);
-        }
-    };
-
-    Ok((tensor_a, tensor_b))
-}
-
-// ============================================================================
-// Tensor対応の二項演算（次元モデル）
-// ============================================================================
-
-/// Tensor対応の二項算術演算の汎用ハンドラ
-///
-/// NumPy/APL準拠のブロードキャスト規則を適用してテンソル間の演算を実行
-///
-/// 【責務】
-/// - StackTopモード: テンソル間のブロードキャスト演算
-/// - Stackモード: 未実装（今後のPhaseで実装）
-///
-/// 【引数】
-/// - op: Fraction同士の演算関数
-/// - op_name: 演算名（エラーメッセージ用）
-fn tensor_binary_op<F>(
-    interp: &mut Interpreter,
-    op: F,
-    op_name: &str,
-) -> Result<()>
-where
-    F: Fn(&Fraction, &Fraction) -> Result<Fraction>,
-{
-    use crate::interpreter::tensor_ops::broadcast_binary_op;
-
-    match interp.operation_target {
-        OperationTarget::StackTop => {
-            // Phase 3: 統一的な入力処理を使用
-            let (tensor_a, tensor_b) = get_tensor_operands(interp)?;
-            let result_tensor = broadcast_binary_op(&tensor_a, &tensor_b, op, op_name)?;
-            interp.stack.push(Value::from_tensor(result_tensor));
-            Ok(())
-        }
-        OperationTarget::Stack => {
-            // Stackモードは将来のPhaseで実装
-            Err(AjisaiError::from("Tensor arithmetic does not support Stack (..) mode. Use StackTop mode for tensor operations."))
-        }
-    }
-}
-
-/// Tensor対応の加算
-pub fn op_add_tensor(interp: &mut Interpreter) -> Result<()> {
-    tensor_binary_op(interp, |a, b| Ok(a.add(b)), "ADD")
-}
-
-/// Tensor対応の減算
-pub fn op_sub_tensor(interp: &mut Interpreter) -> Result<()> {
-    tensor_binary_op(interp, |a, b| Ok(a.sub(b)), "SUB")
-}
-
-/// Tensor対応の乗算
-pub fn op_mul_tensor(interp: &mut Interpreter) -> Result<()> {
-    tensor_binary_op(interp, |a, b| Ok(a.mul(b)), "MUL")
-}
-
-/// Tensor対応の除算
-pub fn op_div_tensor(interp: &mut Interpreter) -> Result<()> {
-    tensor_binary_op(interp, |a, b| {
-        if b.numerator.is_zero() {
-            Err(AjisaiError::DivisionByZero)
-        } else {
-            Ok(a.div(b))
-        }
-    }, "DIV")
+    })
 }

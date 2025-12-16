@@ -7,7 +7,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, unwrap_single_element, wrap_single_value};
+use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, unwrap_single_element, wrap_value};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
@@ -69,18 +69,12 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // TensorまたはVectorを処理
+            // Vectorを処理
             let elements = match target_val.val_type {
                 ValueType::Vector(v) => v,
-                ValueType::Tensor(ref t) => {
-                    // Tensorを要素のVectorに変換
-                    t.data().iter().map(|f| Value {
-                        val_type: ValueType::Number(f.clone())
-                    }).collect()
-                },
                 _ => {
                     interp.stack.push(target_val);
-                    return Err(AjisaiError::type_error("vector or tensor", "other type"));
+                    return Err(AjisaiError::type_error("vector", "other type"));
                 }
             };
 
@@ -94,15 +88,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             for elem in elements {
-                // 各要素をラップしてプッシュ（数値はTensor、その他はVector）
-                let wrapped = match &elem.val_type {
-                    ValueType::Number(f) => {
-                        use crate::types::tensor::Tensor;
-                        Value::from_tensor(Tensor::vector(vec![f.clone()]))
-                    },
-                    _ => Value { val_type: ValueType::Vector(vec![elem]) }
-                };
-                interp.stack.push(wrapped);
+                // 各要素を単一要素Vectorでラップしてプッシュ
+                interp.stack.push(wrap_value(elem));
                 // ワードを実行
                 interp.execute_word_core(&word_name)?;
 
@@ -110,24 +97,16 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 let result_vec = interp.stack.pop()
                     .ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
 
-                // 単一要素ベクタまたはテンソルの場合はアンラップ
+                // 単一要素ベクタの場合はアンラップ
                 match result_vec.val_type {
                     ValueType::Vector(mut v) if v.len() == 1 => {
                         results.push(v.remove(0));
                     },
                     ValueType::Vector(v) => {
-                        results.push(Value { val_type: ValueType::Vector(v) });
-                    },
-                    ValueType::Tensor(t) if t.data().len() == 1 => {
-                        // 単一要素Tensorは数値としてアンラップ
-                        results.push(Value { val_type: ValueType::Number(t.data()[0].clone()) });
-                    },
-                    ValueType::Tensor(t) => {
-                        // 複数要素Tensorはそのまま保持
-                        results.push(Value { val_type: ValueType::Tensor(t) });
+                        results.push(Value::from_vector(v));
                     },
                     _ => {
-                        return Err(AjisaiError::type_error("vector or tensor result from MAP word", "other type"));
+                        return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
                     }
                 }
             }
@@ -136,19 +115,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
 
-            // Phase 1.2: 結果の返却形式を統一
-            // 全て数値の場合はTensorに変換、混合型はVectorのまま
-            let result = if results.iter().all(|v| matches!(v.val_type, ValueType::Number(_))) {
-                // すべて数値ならTensorに変換
-                let fracs: Vec<Fraction> = results.iter()
-                    .filter_map(|v| if let ValueType::Number(f) = &v.val_type { Some(f.clone()) } else { None })
-                    .collect();
-                Value::from_tensor(crate::types::tensor::Tensor::vector(fracs))
-            } else {
-                // 混合型はVectorのまま
-                Value { val_type: ValueType::Vector(results) }
-            };
-            interp.stack.push(result);
+            // 結果をVectorとして返す
+            interp.stack.push(Value::from_vector(results));
         },
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -273,18 +241,12 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // TensorまたはVectorを処理
+            // Vectorを処理
             let elements = match target_val.val_type {
                 ValueType::Vector(v) => v,
-                ValueType::Tensor(ref t) => {
-                    // Tensorを要素のVectorに変換
-                    t.data().iter().map(|f| Value {
-                        val_type: ValueType::Number(f.clone())
-                    }).collect()
-                },
                 _ => {
                     interp.stack.push(target_val);
-                    return Err(AjisaiError::type_error("vector or tensor", "other type"));
+                    return Err(AjisaiError::type_error("vector", "other type"));
                 }
             };
 
@@ -297,62 +259,40 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             for elem in elements {
-                    // 各要素をラップしてプッシュ（数値はTensor、その他はVector）
-                    let wrapped = match &elem.val_type {
-                        ValueType::Number(f) => {
-                            use crate::types::tensor::Tensor;
-                            Value::from_tensor(Tensor::vector(vec![f.clone()]))
-                        },
-                        _ => Value { val_type: ValueType::Vector(vec![elem.clone()]) }
-                    };
-                    interp.stack.push(wrapped);
-                    // ワードを実行
-                    interp.execute_word_core(&word_name)?;
+                // 各要素を単一要素Vectorでラップしてプッシュ
+                interp.stack.push(wrap_value(elem.clone()));
+                // ワードを実行
+                interp.execute_word_core(&word_name)?;
 
-                    // 条件判定結果を取得
-                    let condition_result = interp.stack.pop()
-                        .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
+                // 条件判定結果を取得
+                let condition_result = interp.stack.pop()
+                    .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
-                    // VectorまたはTensorからBoolean値を抽出
-                    let is_true = match condition_result.val_type {
-                        ValueType::Vector(v) if v.len() == 1 => {
-                            if let ValueType::Boolean(b) = v[0].val_type {
-                                b
-                            } else {
-                                return Err(AjisaiError::type_error("boolean result from FILTER word", "other type"));
-                            }
-                        },
-                        ValueType::Tensor(_) => {
-                            // Tensorから直接Booleanは取得できないのでエラー
-                            return Err(AjisaiError::type_error("boolean result from FILTER word", "tensor type"));
-                        },
-                        _ => {
-                            return Err(AjisaiError::type_error("boolean vector result from FILTER word", "other type"));
+                // VectorからBoolean値を抽出
+                let is_true = match condition_result.val_type {
+                    ValueType::Vector(v) if v.len() == 1 => {
+                        if let ValueType::Boolean(b) = v[0].val_type {
+                            b
+                        } else {
+                            return Err(AjisaiError::type_error("boolean result from FILTER word", "other type"));
                         }
-                    };
-
-                    if is_true {
-                        results.push(elem);
+                    },
+                    _ => {
+                        return Err(AjisaiError::type_error("boolean vector result from FILTER word", "other type"));
                     }
+                };
+
+                if is_true {
+                    results.push(elem);
                 }
+            }
 
             // operation_target と no_change_check を復元
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
 
-            // Phase 1.2: 結果の返却形式を統一
-            // 全て数値の場合はTensorに変換、混合型はVectorのまま
-            let result = if results.iter().all(|v| matches!(v.val_type, ValueType::Number(_))) {
-                // すべて数値ならTensorに変換
-                let fracs: Vec<Fraction> = results.iter()
-                    .filter_map(|v| if let ValueType::Number(f) = &v.val_type { Some(f.clone()) } else { None })
-                    .collect();
-                Value::from_tensor(crate::types::tensor::Tensor::vector(fracs))
-            } else {
-                // 混合型はVectorのまま
-                Value { val_type: ValueType::Vector(results) }
-            };
-            interp.stack.push(result);
+            // 結果をVectorとして返す
+            interp.stack.push(Value::from_vector(results));
         },
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -462,20 +402,14 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             let init_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // TensorまたはVectorを処理
+            // Vectorを処理
             let elements = match target_val.val_type {
                 ValueType::Vector(v) => v,
-                ValueType::Tensor(ref t) => {
-                    // Tensorを要素のVectorに変換
-                    t.data().iter().map(|f| Value {
-                        val_type: ValueType::Number(f.clone())
-                    }).collect()
-                },
                 _ => {
                     interp.stack.push(target_val);
                     interp.stack.push(init_val);
                     interp.stack.push(word_val);
-                    return Err(AjisaiError::type_error("vector or tensor", "other type"));
+                    return Err(AjisaiError::type_error("vector", "other type"));
                 }
             };
 
@@ -484,7 +418,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             if elements.is_empty() {
                 // 空ベクタ: 初期値をそのまま返す
-                interp.stack.push(wrap_single_value(accumulator));
+                interp.stack.push(wrap_value(accumulator));
                 return Ok(());
             }
 
@@ -494,8 +428,8 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 interp.disable_no_change_check = true;
 
                 for elem in elements {
-                    interp.stack.push(wrap_single_value(accumulator));
-                    interp.stack.push(wrap_single_value(elem));
+                    interp.stack.push(wrap_value(accumulator));
+                    interp.stack.push(wrap_value(elem));
 
                     if let Err(e) = interp.execute_word_core(&word_name) {
                         interp.operation_target = saved_target;
@@ -510,7 +444,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
-            interp.stack.push(wrap_single_value(accumulator));
+            interp.stack.push(wrap_value(accumulator));
             Ok(())
         }
         OperationTarget::Stack => {
@@ -539,7 +473,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             for item in targets {
                 interp.stack.clear();
-                interp.stack.push(wrap_single_value(accumulator));
+                interp.stack.push(wrap_value(accumulator));
                 interp.stack.push(item);
 
                 match interp.execute_word_core(&word_name) {
@@ -560,7 +494,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.push(wrap_single_value(accumulator));
+            interp.stack.push(wrap_value(accumulator));
             Ok(())
         }
     }
@@ -726,8 +660,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         match &unwrapped.val_type {
                             ValueType::Nil => break,
                             ValueType::Vector(v) if v.len() == 2 => {
-                                // 修正: 数値ならTensor、非数値ならVectorでラップ
-                                results.push(wrap_single_value(v[0].clone()));
+                                // 結果をVectorでラップ
+                                results.push(wrap_value(v[0].clone()));
 
                                 // 次の状態がNILの場合は終了
                                 if matches!(&v[1].val_type, ValueType::Nil) {
