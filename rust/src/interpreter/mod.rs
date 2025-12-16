@@ -15,7 +15,7 @@ pub mod cast;
 pub mod datetime;
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine};
+use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine, MAX_DIMENSIONS};
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
@@ -98,7 +98,21 @@ impl Interpreter {
     /// Vector収集メソッド
     ///
     /// [], {}, () いずれの形式でもVectorとして収集する
+    /// 4次元を超えるネストはエラーとなる
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
+        self.collect_vector_with_depth(tokens, start_index, 1)
+    }
+
+    /// 深度追跡付きVector収集メソッド（内部関数）
+    fn collect_vector_with_depth(&self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
+        // 次元数チェック
+        if depth > MAX_DIMENSIONS {
+            return Err(AjisaiError::from(format!(
+                "Dimension limit exceeded: nesting depth {} exceeds maximum {} dimensions (time, element, row, column)",
+                depth, MAX_DIMENSIONS
+            )));
+        }
+
         if !matches!(&tokens[start_index], Token::VectorStart) {
             return Err(AjisaiError::from("Expected vector start"));
         }
@@ -109,7 +123,7 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart => {
-                    let (nested_values, consumed) = self.collect_vector(tokens, i)?;
+                    let (nested_values, consumed) = self.collect_vector_with_depth(tokens, i, depth + 1)?;
                     values.push(Value::from_vector(nested_values));
                     i += consumed;
                 },

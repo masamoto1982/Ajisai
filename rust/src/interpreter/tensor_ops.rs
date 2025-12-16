@@ -6,7 +6,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::interpreter::helpers::wrap_number;
-use crate::types::{Value, ValueType, infer_shape, flatten_numbers};
+use crate::types::{Value, ValueType, infer_shape, flatten_numbers, MAX_DIMENSIONS};
 use crate::types::tensor::{transpose, reshape, rank};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
@@ -85,6 +85,8 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
 /// 使用法:
 ///   [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → [ [ 1 2 3 ] [ 4 5 6 ] ]
 ///   [ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE → [ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]
+///
+/// 注意: 4次元までに制限されています
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target == OperationTarget::Stack {
         return Err(AjisaiError::from("RESHAPE does not support Stack (..) mode"));
@@ -96,6 +98,17 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     // 形状をベクタから抽出
     let new_shape: Vec<usize> = match &shape_val.val_type {
         ValueType::Vector(v) => {
+            // 次元数チェック
+            let dim_count = v.len();
+            if dim_count > MAX_DIMENSIONS {
+                interp.stack.push(data_val);
+                interp.stack.push(shape_val);
+                return Err(AjisaiError::from(format!(
+                    "Dimension limit exceeded: RESHAPE shape has {} dimensions, maximum is {} (time, element, row, column)",
+                    dim_count, MAX_DIMENSIONS
+                )));
+            }
+
             let mut shape = Vec::with_capacity(v.len());
             for elem in v {
                 if let ValueType::Number(n) = &elem.val_type {
@@ -360,6 +373,8 @@ where
 /// 使用法:
 ///   [ 2 3 ] [ 5 ] FILL → [ [ 5 5 5 ] [ 5 5 5 ] ]
 ///   [ 3 ] [ 1/2 ] FILL → [ 1/2 1/2 1/2 ]
+///
+/// 注意: 4次元までに制限されています
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target == OperationTarget::Stack {
         return Err(AjisaiError::from("FILL does not support Stack (..) mode"));
@@ -371,6 +386,17 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     // 形状を抽出
     let shape: Vec<usize> = match &shape_val.val_type {
         ValueType::Vector(v) => {
+            // 次元数チェック
+            let dim_count = v.len();
+            if dim_count > MAX_DIMENSIONS {
+                interp.stack.push(shape_val);
+                interp.stack.push(value_val);
+                return Err(AjisaiError::from(format!(
+                    "Dimension limit exceeded: FILL shape has {} dimensions, maximum is {} (time, element, row, column)",
+                    dim_count, MAX_DIMENSIONS
+                )));
+            }
+
             let mut s = Vec::with_capacity(v.len());
             for elem in v {
                 if let ValueType::Number(n) = &elem.val_type {
