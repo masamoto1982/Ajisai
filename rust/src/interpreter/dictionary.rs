@@ -2,7 +2,7 @@
 
 use crate::interpreter::{Interpreter, WordDefinition};
 use crate::error::{AjisaiError, Result};
-use crate::types::{Token, ValueType, ExecutionLine, BracketType};
+use crate::types::{Token, ValueType, ExecutionLine};
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
@@ -189,9 +189,9 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
                 // 内部をトークン化
                 let inner_tokens = crate::tokenizer::tokenize_with_custom_words(inner, &custom_word_names)
                     .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
-                processed_tokens.push(Token::VectorStart(BracketType::Square));
+                processed_tokens.push(Token::VectorStart);
                 processed_tokens.extend(inner_tokens);
-                processed_tokens.push(Token::VectorEnd(BracketType::Square));
+                processed_tokens.push(Token::VectorEnd);
             },
             Token::LineBreak => {
                 if !processed_tokens.is_empty() {
@@ -364,7 +364,7 @@ mod tests {
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
         assert!(result3.is_ok(), "Executing redefined word should succeed");
 
-        // スタックトップが [ 15 ] であることを確認（Vector または Tensor）
+        // スタックトップが [ 15 ] であることを確認（Vector）
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
             match &val.val_type {
@@ -378,14 +378,7 @@ mod tests {
                         panic!("Expected Number type in vector");
                     }
                 }
-                crate::types::ValueType::Tensor(t) => {
-                    // Tensor の場合、shape が [1] でデータに 15 があることを確認
-                    assert_eq!(t.shape(), vec![1], "Tensor shape should be [1]");
-                    assert_eq!(t.data().len(), 1, "Tensor should have one element");
-                    assert_eq!(t.data()[0].numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", t.data()[0].numerator);
-                    assert_eq!(t.data()[0].denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
-                }
-                _ => panic!("Expected Vector or Tensor type, got: {:?}", val.val_type),
+                _ => panic!("Expected Vector type, got: {:?}", val.val_type),
             }
         }
     }

@@ -4,6 +4,8 @@
 // インタプリタ内で頻繁に使用される共通ヘルパー関数を提供する。
 // 型変換、値の抽出、エラーハンドリングなどの定型処理を一元化し、
 // コードの重複を排除して保守性を向上させる。
+//
+// Vector指向型システム対応版
 
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueType, Token};
@@ -29,23 +31,22 @@ use num_traits::{One, ToPrimitive};
 /// - Ok(None): 値を作成しないトークン（Symbol, GuardSeparator など）
 /// - Err: パースエラー
 pub fn token_to_wrapped_value(token: &Token) -> Result<Option<Value>> {
-    use crate::types::tensor::Tensor;
     match token {
         Token::Number(n) => {
             let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
-            Ok(Some(wrap_as_tensor(frac)))
+            Ok(Some(wrap_number(frac)))
         },
         Token::String(s) => {
             let val = Value { val_type: ValueType::String(s.clone()) };
-            Ok(Some(wrap_in_square_vector(val)))
+            Ok(Some(wrap_value(val)))
         },
         Token::Boolean(b) => {
             let val = Value { val_type: ValueType::Boolean(*b) };
-            Ok(Some(wrap_in_square_vector(val)))
+            Ok(Some(wrap_value(val)))
         },
         Token::Nil => {
             let val = Value { val_type: ValueType::Nil };
-            Ok(Some(wrap_in_square_vector(val)))
+            Ok(Some(wrap_value(val)))
         },
         _ => Ok(None), // Symbol, VectorStart, GuardSeparator, LineBreak は呼び出し側で処理
     }
@@ -83,15 +84,15 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
                 Err(AjisaiError::type_error("integer", "other type"))
             }
         },
-        ValueType::Tensor(t) if t.data().len() == 1 => {
-            let n = &t.data()[0];
+        ValueType::Number(n) => {
+            // 直接Number型の場合も処理
             if n.denominator == BigInt::one() {
                 n.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
             } else {
                 Err(AjisaiError::type_error("integer", "fraction"))
             }
         },
-        _ => Err(AjisaiError::type_error("single-element vector or tensor with integer", "other type")),
+        _ => Err(AjisaiError::type_error("single-element vector with integer", "other type")),
     }
 }
 
@@ -118,15 +119,15 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
                 _ => Err(AjisaiError::type_error("integer", "other type")),
             }
         },
-        ValueType::Tensor(t) if t.data().len() == 1 => {
-            let n = &t.data()[0];
+        ValueType::Number(n) => {
+            // 直接Number型の場合も処理
             if n.denominator == BigInt::one() {
                 Ok(n.numerator.clone())
             } else {
                 Err(AjisaiError::type_error("integer", "fraction"))
             }
         },
-        _ => Err(AjisaiError::type_error("single-element vector or tensor with integer", "other type")),
+        _ => Err(AjisaiError::type_error("single-element vector with integer", "other type")),
     }
 }
 
@@ -178,8 +179,37 @@ pub fn extract_number(val: &Value) -> Result<&Fraction> {
                 Err(AjisaiError::type_error("number", "other type in inner vector"))
             }
         },
-        ValueType::Tensor(t) if t.data().len() == 1 => Ok(&t.data()[0]),
-        _ => Err(AjisaiError::type_error("number or single-element number vector/tensor", "other type")),
+        _ => Err(AjisaiError::type_error("number or single-element number vector", "other type")),
+    }
+}
+
+/// 値から複数の数値を抽出する（ベクタの全要素）
+///
+/// 【責務】
+/// - ベクタ内のすべての数値を抽出
+/// - 直接数値の場合は1要素のベクタとして返す
+///
+/// 【用途】
+/// - ベクタ全体の数値演算
+/// - 配列データの取得
+///
+/// 【エラー】
+/// - 数値以外の要素が含まれる場合
+pub fn extract_numbers(val: &Value) -> Result<Vec<&Fraction>> {
+    match &val.val_type {
+        ValueType::Number(n) => Ok(vec![n]),
+        ValueType::Vector(v) => {
+            let mut result = Vec::with_capacity(v.len());
+            for elem in v {
+                if let ValueType::Number(n) = &elem.val_type {
+                    result.push(n);
+                } else {
+                    return Err(AjisaiError::type_error("number", "other type in vector"));
+                }
+            }
+            Ok(result)
+        },
+        _ => Err(AjisaiError::type_error("number or number vector", "other type")),
     }
 }
 
@@ -205,6 +235,10 @@ pub fn get_word_name_from_value(value: &Value) -> Result<String> {
             } else {
                 Err(AjisaiError::type_error("string for word name", "other type"))
             }
+        },
+        ValueType::String(s) => {
+            // 直接String型の場合も処理
+            Ok(s.to_uppercase())
         },
         _ => Err(AjisaiError::type_error("single-element vector with string", "other type")),
     }
@@ -254,35 +288,28 @@ pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
 // ベクタラッピング関数
 // ============================================================================
 
-/// 非数値型を単一要素Vectorでラップする
-///
-/// 【注意】数値型には使用禁止。数値には wrap_as_tensor を使用すること。
+/// 値を単一要素Vectorでラップする
 ///
 /// 【責務】
-/// - 非数値型の値を [value] の形式にラップ
+/// - 任意の値を [value] の形式にラップ
 ///
 /// 【用途】
 /// - 非数値型のリテラル値のスタックへのプッシュ（String、Boolean、Symbol、Nil）
 /// - 非数値型の演算結果の統一形式での返却
 ///
 /// 【引数】
-/// - value: ラップする値（非数値型のみ）
+/// - value: ラップする値
 ///
 /// 【戻り値】
 /// - [value]形式のベクタ
-#[deprecated(note = "数値には wrap_as_tensor または Value::from_tensor を使用してください")]
-pub fn wrap_in_square_vector(value: Value) -> Value {
-    debug_assert!(
-        !matches!(value.val_type, ValueType::Number(_)),
-        "wrap_in_square_vector called with Number - use wrap_as_tensor instead"
-    );
-    Value { val_type: ValueType::Vector(vec![value]) }
+pub fn wrap_value(value: Value) -> Value {
+    Value::from_vector(vec![value])
 }
 
-/// 数値を単一要素Tensorでラップする
+/// 数値を単一要素Vectorでラップする
 ///
 /// 【責務】
-/// - 数値（Fraction）を1要素のTensorとしてラップ
+/// - 数値（Fraction）を1要素のVectorとしてラップ
 ///
 /// 【用途】
 /// - 数値リテラルのスタックへのプッシュ
@@ -292,37 +319,9 @@ pub fn wrap_in_square_vector(value: Value) -> Value {
 /// - fraction: ラップする数値
 ///
 /// 【戻り値】
-/// - 1要素のTensor
-pub fn wrap_as_tensor(fraction: Fraction) -> Value {
-    use crate::types::tensor::Tensor;
-    Value::from_tensor(Tensor::vector(vec![fraction]))
-}
-
-/// 単一値をラップ（数値ならTensor、それ以外ならVector）
-///
-/// 【責務】
-/// - 数値の場合はTensorとしてラップ（wrap_as_tensor使用）
-/// - Tensorの場合はそのまま返す
-/// - それ以外の場合はVectorとしてラップ
-/// - Tensor移行の統一的なラッピング戦略を提供
-///
-/// 【用途】
-/// - 演算結果の返却
-/// - MAP/FILTERなどの高階関数の結果処理
-///
-/// 【引数】
-/// - value: ラップする値
-///
-/// 【戻り値】
-/// - 数値: 1要素のTensor
-/// - Tensor: そのまま
-/// - それ以外: [value]形式のVector
-pub fn wrap_single_value(value: Value) -> Value {
-    match value.val_type {
-        ValueType::Number(f) => wrap_as_tensor(f),
-        ValueType::Tensor(_) => value,
-        _ => wrap_in_square_vector(value)
-    }
+/// - [number]形式のベクタ
+pub fn wrap_number(fraction: Fraction) -> Value {
+    Value::from_vector(vec![Value::from_number(fraction)])
 }
 
 /// 単一要素ベクタの場合は内部要素を取り出す
@@ -344,17 +343,11 @@ pub fn wrap_single_value(value: Value) -> Value {
 pub fn unwrap_single_element(value: Value) -> Value {
     match value.val_type {
         ValueType::Vector(mut v) if v.len() == 1 => v.remove(0),
-        ValueType::Tensor(t) if t.data().len() == 1 => {
-            Value { val_type: ValueType::Number(t.data()[0].clone()) }
-        },
         _ => value,
     }
 }
 
 /// 非数値型の結果値をラップして返す
-///
-/// 【注意】この関数は非数値型（Boolean、Nilなど）専用です。
-/// 数値の結果には wrap_single_value を使用してください。
 ///
 /// 【責務】
 /// - 比較演算・論理演算の結果（Boolean）を単一要素ベクタにラップ
@@ -365,12 +358,37 @@ pub fn unwrap_single_element(value: Value) -> Value {
 /// - 論理演算子の結果返却（Boolean）
 ///
 /// 【引数】
-/// - value: ラップする結果値（非数値型のみ）
+/// - value: ラップする結果値
 ///
 /// 【戻り値】
 /// - [value]形式のベクタ
 pub fn wrap_result_value(value: Value) -> Value {
-    wrap_in_square_vector(value)
+    wrap_value(value)
+}
+
+// ============================================================================
+// 後方互換性エイリアス（段階的移行用）
+// ============================================================================
+
+/// 後方互換性: wrap_as_tensor は wrap_number のエイリアス
+#[deprecated(note = "use wrap_number instead")]
+pub fn wrap_as_tensor(fraction: Fraction) -> Value {
+    wrap_number(fraction)
+}
+
+/// 後方互換性: wrap_in_square_vector は wrap_value のエイリアス
+#[deprecated(note = "use wrap_value instead")]
+pub fn wrap_in_square_vector(value: Value) -> Value {
+    wrap_value(value)
+}
+
+/// 後方互換性: wrap_single_value は wrap_value のエイリアス
+#[deprecated(note = "use wrap_value instead")]
+pub fn wrap_single_value(value: Value) -> Value {
+    match value.val_type {
+        ValueType::Number(f) => wrap_number(f),
+        _ => wrap_value(value)
+    }
 }
 
 // ============================================================================
@@ -398,8 +416,34 @@ mod tests {
     #[test]
     fn test_wrap_unwrap() {
         let frac = Fraction::new(BigInt::from(42), BigInt::one());
-        let wrapped = wrap_as_tensor(frac.clone());
+        let wrapped = wrap_number(frac.clone());
         let unwrapped = unwrap_single_element(wrapped);
         assert_eq!(unwrapped, Value { val_type: ValueType::Number(frac) });
+    }
+
+    #[test]
+    fn test_extract_number() {
+        let frac = Fraction::new(BigInt::from(42), BigInt::one());
+        let wrapped = wrap_number(frac.clone());
+        let extracted = extract_number(&wrapped).unwrap();
+        assert_eq!(extracted, &frac);
+    }
+
+    #[test]
+    fn test_extract_numbers() {
+        let v = Value::from_vector(vec![
+            Value::from_number(Fraction::new(BigInt::from(1), BigInt::one())),
+            Value::from_number(Fraction::new(BigInt::from(2), BigInt::one())),
+            Value::from_number(Fraction::new(BigInt::from(3), BigInt::one())),
+        ]);
+        let nums = extract_numbers(&v).unwrap();
+        assert_eq!(nums.len(), 3);
+    }
+
+    #[test]
+    fn test_get_integer_from_value() {
+        let wrapped = wrap_number(Fraction::new(BigInt::from(42), BigInt::one()));
+        let result = get_integer_from_value(&wrapped).unwrap();
+        assert_eq!(result, 42);
     }
 }

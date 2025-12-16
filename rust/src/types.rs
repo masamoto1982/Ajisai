@@ -1,60 +1,72 @@
 // rust/src/types.rs
+//
+// Vector指向型システム
+// 全てのコンテナデータはVectorで表現し、Fractionによる正確な有理数演算を維持する
 
 pub mod fraction;
-pub mod tensor;
+pub mod tensor;  // 行列演算ユーティリティ（Vectorベースで動作）
 
 use std::collections::HashSet;
 use std::fmt;
 use num_bigint::BigInt;
 use num_traits::One;
 use self::fraction::Fraction;
-use self::tensor::Tensor;
 
+/// トークン定義
+///
+/// パーサーが生成するトークンの種類を定義
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Number(String),
     String(String),
     Boolean(bool),
     Symbol(String),
-    // 新しいTensor指向のトークン（[]のみ）
-    TensorStart,
-    TensorEnd,
-    // 以下は後方互換性のため残存（Phase 2で完全削除予定）
-    #[deprecated(since = "0.5.0", note = "Use TensorStart/TensorEnd instead")]
-    VectorStart(BracketType),
-    #[deprecated(since = "0.5.0", note = "Use TensorStart/TensorEnd instead")]
-    VectorEnd(BracketType),
+    /// ベクタ開始 - [], {}, () 全てをこれで表現
+    VectorStart,
+    /// ベクタ終了
+    VectorEnd,
     GuardSeparator,  // : または ;
     Nil,
     LineBreak,
 }
 
+/// 値の型定義
+///
+/// Ajisaiの全ての値はこの型で表現される
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub val_type: ValueType,
 }
 
+/// 値の種類
+///
+/// - Number: 有理数（Fraction）
+/// - Vector: 値の配列（再帰的にネスト可能、異種型混合可能）
+/// - String: 文字列
+/// - Boolean: 真偽値
+/// - Symbol: シンボル
+/// - Nil: 空値
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueType {
+    /// 数値（有理数）
     Number(Fraction),
-    /// テンソル（N次元配列） - 次元モデルの新しい表現
-    Tensor(Tensor),
-    String(String),
-    Boolean(bool),
-    Symbol(String),
-    /// 非推奨: Tensorを使用してください
-    /// Vectorは後方互換性のために残されています。バージョン1.0で削除予定。
-    #[deprecated(since = "0.5.0", note = "Use Tensor instead. Vector will be removed in 1.0")]
+    /// ベクタ（Valueの配列、再帰的にネスト可能）
     Vector(Vec<Value>),
+    /// 文字列
+    String(String),
+    /// 真偽値
+    Boolean(bool),
+    /// シンボル
+    Symbol(String),
+    /// 空値
     Nil,
 }
 
-// Display トレイトの実装を追加
+// Display トレイトの実装
 impl fmt::Display for ValueType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ValueType::Number(_) => write!(f, "number"),
-            ValueType::Tensor(_) => write!(f, "tensor"),
             ValueType::String(_) => write!(f, "string"),
             ValueType::Boolean(_) => write!(f, "boolean"),
             ValueType::Symbol(_) => write!(f, "symbol"),
@@ -64,9 +76,14 @@ impl fmt::Display for ValueType {
     }
 }
 
+/// ブラケットタイプ（表示専用）
+///
+/// 入力時はブラケットの種類を区別せず、表示時に深さに基づいて決定する
 #[derive(Debug, Clone, PartialEq)]
 pub enum BracketType {
-    Square, Curly, Round,
+    Square,  // []
+    Curly,   // {}
+    Round,   // ()
 }
 
 impl BracketType {
@@ -82,6 +99,16 @@ impl BracketType {
             BracketType::Square => ']',
             BracketType::Curly => '}',
             BracketType::Round => ')',
+        }
+    }
+
+    /// 深さからブラケットタイプを決定
+    pub fn from_depth(depth: usize) -> Self {
+        match depth % 3 {
+            0 => BracketType::Square,
+            1 => BracketType::Curly,
+            2 => BracketType::Round,
+            _ => unreachable!(),
         }
     }
 }
@@ -101,7 +128,7 @@ pub struct WordDefinition {
 }
 
 impl Value {
-    // ブラケットタイプは深さに基づいて計算される
+    /// 深さに基づいてブラケットタイプを決定してフォーマット
     fn fmt_with_depth(&self, f: &mut fmt::Formatter<'_>, depth: usize) -> fmt::Result {
         match &self.val_type {
             ValueType::Number(n) => {
@@ -111,21 +138,13 @@ impl Value {
                     write!(f, "{}/{}", n.numerator, n.denominator)
                 }
             }
-            ValueType::Tensor(t) => {
-                // テンソルの表示（形状に基づいて再帰的に表示）
-                self.fmt_tensor_recursive(f, t, depth, 0, &mut 0)
-            }
             ValueType::String(s) => write!(f, "'{}'", s),
             ValueType::Boolean(b) => write!(f, "{}", if *b { "TRUE" } else { "FALSE" }),
             ValueType::Symbol(s) => write!(f, "{}", s),
             ValueType::Vector(v) => {
                 // 深さに基づいてブラケットタイプを決定
-                let (open, close) = match depth % 3 {
-                    0 => ('[', ']'),  // Square
-                    1 => ('{', '}'),  // Curly
-                    2 => ('(', ')'),  // Round
-                    _ => unreachable!(),
-                };
+                let bracket = BracketType::from_depth(depth);
+                let (open, close) = (bracket.opening_char(), bracket.closing_char());
                 write!(f, "{}", open)?;
                 for (i, item) in v.iter().enumerate() {
                     if i > 0 { write!(f, " ")?; }
@@ -134,47 +153,6 @@ impl Value {
                 write!(f, "{}", close)
             }
             ValueType::Nil => write!(f, "NIL"),
-        }
-    }
-
-    // テンソルを再帰的にフォーマット
-    fn fmt_tensor_recursive(
-        &self,
-        f: &mut fmt::Formatter<'_>,
-        tensor: &Tensor,
-        depth: usize,
-        dim_index: usize,
-        data_index: &mut usize,
-    ) -> fmt::Result {
-        let shape = tensor.shape();
-        let data = tensor.data();
-
-        // ブラケットタイプを決定
-        let (open, close) = match depth % 3 {
-            0 => ('[', ']'),  // Square
-            1 => ('{', '}'),  // Curly
-            2 => ('(', ')'),  // Round
-            _ => unreachable!(),
-        };
-
-        if dim_index >= shape.len() {
-            // 最内次元：数値を表示
-            let n = &data[*data_index];
-            *data_index += 1;
-            if n.denominator == BigInt::one() {
-                write!(f, "{}", n.numerator)
-            } else {
-                write!(f, "{}/{}", n.numerator, n.denominator)
-            }
-        } else {
-            // 中間次元：再帰的に表示
-            write!(f, "{}", open)?;
-            let size = shape[dim_index];
-            for i in 0..size {
-                if i > 0 { write!(f, " ")?; }
-                self.fmt_tensor_recursive(f, tensor, depth + 1, dim_index + 1, data_index)?;
-            }
-            write!(f, "{}", close)
         }
     }
 }
@@ -187,13 +165,6 @@ impl fmt::Display for Value {
 
 // Valueの便利メソッド
 impl Value {
-    /// Tensorバリアントから Value を作成
-    pub fn from_tensor(tensor: Tensor) -> Self {
-        Value {
-            val_type: ValueType::Tensor(tensor),
-        }
-    }
-
     /// Numberバリアントから Value を作成
     pub fn from_number(fraction: Fraction) -> Self {
         Value {
@@ -201,28 +172,42 @@ impl Value {
         }
     }
 
-    /// Tensorへの参照を取得（Tensorバリアントの場合のみ）
-    pub fn as_tensor(&self) -> std::result::Result<&Tensor, String> {
+    /// Vectorバリアントから Value を作成
+    pub fn from_vector(values: Vec<Value>) -> Self {
+        Value {
+            val_type: ValueType::Vector(values),
+        }
+    }
+
+    /// 数値を単一要素Vectorでラップして作成
+    pub fn wrap_number(fraction: Fraction) -> Self {
+        Value {
+            val_type: ValueType::Vector(vec![Value::from_number(fraction)]),
+        }
+    }
+
+    /// Vectorへの参照を取得（Vectorバリアントの場合のみ）
+    pub fn as_vector(&self) -> std::result::Result<&Vec<Value>, String> {
         match &self.val_type {
-            ValueType::Tensor(t) => Ok(t),
-            _ => Err(format!("Expected tensor, got {}", self.val_type)),
+            ValueType::Vector(v) => Ok(v),
+            _ => Err(format!("Expected vector, got {}", self.val_type)),
         }
     }
 
-    /// Tensorへの可変参照を取得（Tensorバリアントの場合のみ）
-    pub fn as_tensor_mut(&mut self) -> std::result::Result<&mut Tensor, String> {
-        if let ValueType::Tensor(ref mut t) = self.val_type {
-            Ok(t)
+    /// Vectorへの可変参照を取得（Vectorバリアントの場合のみ）
+    pub fn as_vector_mut(&mut self) -> std::result::Result<&mut Vec<Value>, String> {
+        if let ValueType::Vector(ref mut v) = self.val_type {
+            Ok(v)
         } else {
-            Err(format!("Expected tensor, got {}", self.val_type))
+            Err(format!("Expected vector, got {}", self.val_type))
         }
     }
 
-    /// Tensorを取り出す（所有権を移動）
-    pub fn into_tensor(self) -> std::result::Result<Tensor, String> {
+    /// Vectorを取り出す（所有権を移動）
+    pub fn into_vector(self) -> std::result::Result<Vec<Value>, String> {
         match self.val_type {
-            ValueType::Tensor(t) => Ok(t),
-            _ => Err(format!("Expected tensor, got {}", self.val_type)),
+            ValueType::Vector(v) => Ok(v),
+            _ => Err(format!("Expected vector, got {}", self.val_type)),
         }
     }
 
@@ -234,57 +219,19 @@ impl Value {
         }
     }
 
-    /// VectorからTensorに変換（互換性レイヤー）
-    ///
-    /// この関数は段階的な移行のために使用されます。
-    /// すべての要素が数値であることを確認し、矩形制約を検証します。
-    pub fn vector_to_tensor(vector: &[Value]) -> std::result::Result<Tensor, String> {
-        // すべての要素が数値かどうかを確認
-        let all_numbers = vector.iter().all(|v| matches!(v.val_type, ValueType::Number(_)));
-
-        if all_numbers {
-            // 1次元のテンソルとして変換
-            let fractions: Vec<Fraction> = vector
-                .iter()
-                .filter_map(|v| {
-                    if let ValueType::Number(ref f) = v.val_type {
-                        Some(f.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            Ok(Tensor::vector(fractions))
-        } else {
-            // ネストされたベクタの可能性があるため、再帰的に変換
-            Self::vector_to_tensor_recursive(vector)
+    /// 数値への参照を取得（Numberバリアントの場合のみ）
+    pub fn as_number(&self) -> std::result::Result<&Fraction, String> {
+        match &self.val_type {
+            ValueType::Number(n) => Ok(n),
+            _ => Err(format!("Expected number, got {}", self.val_type)),
         }
-    }
-
-    /// ネストされたVectorからTensorへの再帰的変換
-    ///
-    /// 矩形制約を検証しながら変換を行います。
-    fn vector_to_tensor_recursive(vector: &[Value]) -> std::result::Result<Tensor, String> {
-        if vector.is_empty() {
-            return Ok(Tensor::vector(vec![]));
-        }
-
-        // 形状を検証
-        let shape = validate_rectangular(vector)?;
-
-        // データを平坦化して抽出
-        let mut data = Vec::new();
-        flatten_vector_data(vector, &mut data)?;
-
-        Tensor::new(shape, data)
-            .map_err(|e| format!("Failed to create tensor: {}", e))
     }
 }
 
-/// ネストされた構造が矩形かどうかを検証
+/// Vectorから形状を推論する
 ///
-/// 同一次元内のすべての要素が同じ形状であることを確認します。
-pub fn validate_rectangular(values: &[Value]) -> std::result::Result<Vec<usize>, String> {
+/// ネストされたVectorの形状を再帰的に計算
+pub fn infer_shape(values: &[Value]) -> std::result::Result<Vec<usize>, String> {
     if values.is_empty() {
         return Ok(vec![0]);
     }
@@ -297,7 +244,7 @@ pub fn validate_rectangular(values: &[Value]) -> std::result::Result<Vec<usize>,
         let shape = get_value_shape(val)?;
         if shape != first_shape {
             return Err(format!(
-                "Non-rectangular tensor: element {} has shape {:?}, expected {:?}",
+                "Non-rectangular structure: element {} has shape {:?}, expected {:?}",
                 i, shape, first_shape
             ));
         }
@@ -313,7 +260,6 @@ pub fn validate_rectangular(values: &[Value]) -> std::result::Result<Vec<usize>,
 fn get_value_shape(value: &Value) -> std::result::Result<Vec<usize>, String> {
     match &value.val_type {
         ValueType::Number(_) => Ok(vec![]),  // スカラー
-        ValueType::Tensor(t) => Ok(t.shape().to_vec()),
         ValueType::Vector(v) => {
             if v.is_empty() {
                 Ok(vec![0])
@@ -322,26 +268,46 @@ fn get_value_shape(value: &Value) -> std::result::Result<Vec<usize>, String> {
                 Ok(vec![v.len()])
             } else {
                 // ネストされている場合は再帰的に確認
-                let inner_shape = validate_rectangular(v)?;
-                Ok(inner_shape)
+                infer_shape(v)
             }
         }
         _ => Err(format!("Cannot get shape of {}", value.val_type)),
     }
 }
 
-/// Vectorのデータを再帰的に平坦化
-fn flatten_vector_data(values: &[Value], output: &mut Vec<Fraction>) -> std::result::Result<(), String> {
+/// 矩形かどうかを検証
+///
+/// 同一次元内のすべての要素が同じ形状であることを確認
+pub fn is_rectangular(values: &[Value]) -> bool {
+    infer_shape(values).is_ok()
+}
+
+/// すべての要素が数値かチェック
+pub fn all_numbers(values: &[Value]) -> bool {
+    values.iter().all(|v| {
+        match &v.val_type {
+            ValueType::Number(_) => true,
+            ValueType::Vector(inner) => all_numbers(inner),
+            _ => false,
+        }
+    })
+}
+
+/// Vectorから数値を平坦化して抽出
+pub fn flatten_numbers(values: &[Value]) -> std::result::Result<Vec<Fraction>, String> {
+    let mut output = Vec::new();
+    flatten_numbers_recursive(values, &mut output)?;
+    Ok(output)
+}
+
+fn flatten_numbers_recursive(values: &[Value], output: &mut Vec<Fraction>) -> std::result::Result<(), String> {
     for val in values {
         match &val.val_type {
             ValueType::Number(ref f) => {
                 output.push(f.clone());
             }
             ValueType::Vector(ref v) => {
-                flatten_vector_data(v, output)?;
-            }
-            ValueType::Tensor(ref t) => {
-                output.extend_from_slice(t.data());
+                flatten_numbers_recursive(v, output)?;
             }
             _ => {
                 return Err(format!("Cannot flatten {}", val.val_type));
@@ -349,6 +315,47 @@ fn flatten_vector_data(values: &[Value], output: &mut Vec<Fraction>) -> std::res
         }
     }
     Ok(())
+}
+
+/// 形状とデータからネストされたVectorを構築
+pub fn build_nested_vector(shape: &[usize], data: &[Fraction]) -> std::result::Result<Value, String> {
+    if shape.is_empty() {
+        // スカラー
+        if data.len() != 1 {
+            return Err("Scalar requires exactly one data element".to_string());
+        }
+        return Ok(Value::from_number(data[0].clone()));
+    }
+
+    let expected_size: usize = shape.iter().product();
+    if data.len() != expected_size {
+        return Err(format!(
+            "Shape {:?} requires {} elements, but got {}",
+            shape, expected_size, data.len()
+        ));
+    }
+
+    if shape.len() == 1 {
+        // 1次元
+        let values: Vec<Value> = data.iter()
+            .map(|f| Value::from_number(f.clone()))
+            .collect();
+        return Ok(Value::from_vector(values));
+    }
+
+    // 多次元
+    let outer_size = shape[0];
+    let inner_shape = &shape[1..];
+    let inner_size: usize = inner_shape.iter().product();
+
+    let mut values = Vec::with_capacity(outer_size);
+    for i in 0..outer_size {
+        let start = i * inner_size;
+        let inner_data = &data[start..start + inner_size];
+        values.push(build_nested_vector(inner_shape, inner_data)?);
+    }
+
+    Ok(Value::from_vector(values))
 }
 
 pub type Stack = Vec<Value>;

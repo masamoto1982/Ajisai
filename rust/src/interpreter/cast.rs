@@ -14,7 +14,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{wrap_in_square_vector, extract_single_element, wrap_as_tensor};
+use crate::interpreter::helpers::{wrap_value, wrap_number, extract_single_element};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
@@ -41,29 +41,16 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // TensorまたはVectorから内部値を取得
+    // Vectorから内部値を取得
     let inner_val = match &val.val_type {
         ValueType::Vector(v) if v.len() == 1 => &v[0],
-        ValueType::Tensor(t) if t.data().len() == 1 => {
-            // Tensorの場合は一時的にNumberに変換
-            let num_val = Value { val_type: ValueType::Number(t.data()[0].clone()) };
-            let string_repr = value_to_string_repr(&num_val);
-            interp.stack.push(wrap_in_square_vector(
-                Value { val_type: ValueType::String(string_repr) }
-            ));
-            return Ok(());
-        }
         ValueType::Vector(_) => {
             interp.stack.push(val);
             return Err(AjisaiError::from("Multi-element vector not supported in this context"));
         }
-        ValueType::Tensor(_) => {
-            interp.stack.push(val);
-            return Err(AjisaiError::from("Multi-element tensor not supported in this context"));
-        }
         _ => {
             interp.stack.push(val);
-            return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+            return Err(AjisaiError::type_error("single-element vector", "other type"));
         }
     };
 
@@ -74,7 +61,7 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
         }
         _ => {
             let string_repr = value_to_string_repr(inner_val);
-            interp.stack.push(wrap_in_square_vector(
+            interp.stack.push(wrap_value(
                 Value { val_type: ValueType::String(string_repr) }
             ));
             Ok(())
@@ -121,16 +108,16 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
         ValueType::String(s) => {
             let fraction = Fraction::from_str(s)
                 .map_err(|_| AjisaiError::from(format!("NUM: cannot parse '{}' as a number", s)))?;
-            // 修正: 数値変換結果はTensorとして返す
-            interp.stack.push(wrap_as_tensor(fraction));
+            // 数値変換結果はVectorとして返す
+            interp.stack.push(wrap_number(fraction));
             Ok(())
         }
         ValueType::Boolean(b) => {
             use num_bigint::BigInt;
             use num_traits::One;
             let num = if *b { BigInt::one() } else { BigInt::from(0) };
-            // 修正: 数値変換結果はTensorとして返す
-            interp.stack.push(wrap_as_tensor(Fraction::new(num, BigInt::one())));
+            // 数値変換結果はVectorとして返す
+            interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
             Ok(())
         }
         ValueType::Number(_) => {
@@ -185,53 +172,16 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // TensorまたはVectorから内部値を取得
-    let (inner_val, is_tensor) = match &val.val_type {
-        ValueType::Vector(v) if v.len() == 1 => (&v[0], false),
-        ValueType::Tensor(t) if t.data().len() == 1 => {
-            // Tensorの場合は一時的にNumberに変換して処理
-            let num_val = Value { val_type: ValueType::Number(t.data()[0].clone()) };
-            use num_bigint::BigInt;
-            use num_traits::One;
-
-            let one = Fraction::new(BigInt::one(), BigInt::one());
-            let zero = Fraction::new(BigInt::from(0), BigInt::one());
-            let n = &t.data()[0];
-
-            if n == &one {
-                interp.stack.push(wrap_in_square_vector(
-                    Value { val_type: ValueType::Boolean(true) }
-                ));
-                return Ok(());
-            } else if n == &zero {
-                interp.stack.push(wrap_in_square_vector(
-                    Value { val_type: ValueType::Boolean(false) }
-                ));
-                return Ok(());
-            } else {
-                let error_msg = format!(
-                    "BOOL: cannot convert number {} to boolean (only 1 and 0 are allowed)",
-                    if n.denominator == BigInt::one() {
-                        format!("{}", n.numerator)
-                    } else {
-                        format!("{}/{}", n.numerator, n.denominator)
-                    }
-                );
-                interp.stack.push(val.clone());
-                return Err(AjisaiError::from(error_msg));
-            }
-        }
+    // Vectorから内部値を取得
+    let inner_val = match &val.val_type {
+        ValueType::Vector(v) if v.len() == 1 => &v[0],
         ValueType::Vector(_) => {
             interp.stack.push(val.clone());
             return Err(AjisaiError::from("Multi-element vector not supported in this context"));
         }
-        ValueType::Tensor(_) => {
-            interp.stack.push(val.clone());
-            return Err(AjisaiError::from("Multi-element tensor not supported in this context"));
-        }
         _ => {
             interp.stack.push(val.clone());
-            return Err(AjisaiError::type_error("single-element vector or tensor", "other type"));
+            return Err(AjisaiError::type_error("single-element vector", "other type"));
         }
     };
 
@@ -247,7 +197,7 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
                     "BOOL: cannot parse '{}' as boolean (expected 'TRUE'/'FALSE', '1'/'0', '真'/'偽')", s
                 )));
             };
-            interp.stack.push(wrap_in_square_vector(
+            interp.stack.push(wrap_value(
                 Value { val_type: ValueType::Boolean(bool_val) }
             ));
             Ok(())
@@ -260,12 +210,12 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
             let zero = Fraction::new(BigInt::from(0), BigInt::one());
 
             if n == &one {
-                interp.stack.push(wrap_in_square_vector(
+                interp.stack.push(wrap_value(
                     Value { val_type: ValueType::Boolean(true) }
                 ));
                 Ok(())
             } else if n == &zero {
-                interp.stack.push(wrap_in_square_vector(
+                interp.stack.push(wrap_value(
                     Value { val_type: ValueType::Boolean(false) }
                 ));
                 Ok(())
@@ -334,7 +284,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
         ValueType::String(s) => {
             let upper = s.to_uppercase();
             if upper == "NIL" {
-                interp.stack.push(wrap_in_square_vector(
+                interp.stack.push(wrap_value(
                     Value { val_type: ValueType::Nil }
                 ));
                 Ok(())
@@ -457,11 +407,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             match &val.val_type {
-                ValueType::Tensor(_) => {
-                    // Tensorは数値の配列なので、JOINできない
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("JOIN: cannot join numeric tensor (expected string vector)"))
-                }
                 ValueType::Vector(vec) => {
                     if vec.is_empty() {
                         interp.stack.push(val);
@@ -481,7 +426,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                                     ValueType::Nil => "nil",
                                     ValueType::Vector(_) => "vector",
                                     ValueType::Symbol(_) => "symbol",
-                                    ValueType::Tensor(_) => "tensor",
                                     _ => "other type",
                                 };
                                 interp.stack.push(val);
@@ -493,7 +437,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         }
                     }
 
-                    interp.stack.push(wrap_in_square_vector(
+                    interp.stack.push(wrap_value(
                         Value { val_type: ValueType::String(result) }
                     ));
                     Ok(())
@@ -548,7 +492,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                             }
                         }
 
-                        results.push(wrap_in_square_vector(
+                        results.push(wrap_value(
                             Value { val_type: ValueType::String(result) }
                         ));
                     }
@@ -586,10 +530,6 @@ fn value_to_string_repr(value: &Value) -> String {
             } else {
                 format!("{}/{}", n.numerator, n.denominator)
             }
-        }
-        ValueType::Tensor(_) => {
-            // Tensorの場合は、Displayトレイトを使用して文字列化
-            format!("{}", value)
         }
         ValueType::String(s) => s.clone(),
         ValueType::Boolean(b) => {
@@ -646,7 +586,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Number → String
-        interp.stack.push(wrap_as_tensor(
+        interp.stack.push(wrap_number(
             Fraction::new(BigInt::from(42), BigInt::one())
         ));
         op_str(&mut interp).unwrap();
@@ -665,7 +605,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // String → Number
-        interp.stack.push(wrap_in_square_vector(
+        interp.stack.push(wrap_value(
             Value { val_type: ValueType::String("42".to_string()) }
         ));
         op_num(&mut interp).unwrap();
@@ -680,7 +620,7 @@ mod tests {
 
         // Boolean → Number (TRUE → 1)
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
+        interp.stack.push(wrap_value(
             Value { val_type: ValueType::Boolean(true) }
         ));
         op_num(&mut interp).unwrap();
@@ -696,7 +636,7 @@ mod tests {
 
         // Boolean → Number (FALSE → 0)
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
+        interp.stack.push(wrap_value(
             Value { val_type: ValueType::Boolean(false) }
         ));
         op_num(&mut interp).unwrap();
@@ -716,7 +656,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // String → Boolean (TRUE/FALSE)
-        interp.stack.push(wrap_in_square_vector(
+        interp.stack.push(wrap_value(
             Value { val_type: ValueType::String("TRUE".to_string()) }
         ));
         op_bool(&mut interp).unwrap();
@@ -731,7 +671,7 @@ mod tests {
 
         // String → Boolean ('1'/'0')
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
+        interp.stack.push(wrap_value(
             Value { val_type: ValueType::String("1".to_string()) }
         ));
         op_bool(&mut interp).unwrap();
@@ -745,7 +685,7 @@ mod tests {
         }
 
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
+        interp.stack.push(wrap_value(
             Value { val_type: ValueType::String("0".to_string()) }
         ));
         op_bool(&mut interp).unwrap();
@@ -760,7 +700,7 @@ mod tests {
 
         // String → Boolean ('真'/'偽')
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
+        interp.stack.push(wrap_value(
             Value { val_type: ValueType::String("真".to_string()) }
         ));
         op_bool(&mut interp).unwrap();
@@ -774,7 +714,7 @@ mod tests {
         }
 
         interp.stack.clear();
-        interp.stack.push(wrap_in_square_vector(
+        interp.stack.push(wrap_value(
             Value { val_type: ValueType::String("偽".to_string()) }
         ));
         op_bool(&mut interp).unwrap();
@@ -789,7 +729,7 @@ mod tests {
 
         // Number → Boolean (1 → TRUE)
         interp.stack.clear();
-        interp.stack.push(wrap_as_tensor(
+        interp.stack.push(wrap_number(
             Fraction::new(BigInt::from(1), BigInt::from(1))
         ));
         op_bool(&mut interp).unwrap();
@@ -804,7 +744,7 @@ mod tests {
 
         // Number → Boolean (0 → FALSE)
         interp.stack.clear();
-        interp.stack.push(wrap_as_tensor(
+        interp.stack.push(wrap_number(
             Fraction::new(BigInt::from(0), BigInt::from(1))
         ));
         op_bool(&mut interp).unwrap();
@@ -899,12 +839,12 @@ mod tests {
     #[tokio::test]
     async fn test_join_empty_error() {
         let mut interp = Interpreter::new();
-        // 空配列は空Tensorに変換されるため、Tensorとして扱われる
+        // 空配列は空Vectorとして扱われる
         let result = interp.execute("[ ] JOIN").await;
         assert!(result.is_err());
         if let Err(e) = result {
-            // 空Tensorの場合はTensorエラーメッセージを期待
-            assert!(e.to_string().contains("tensor") || e.to_string().contains("empty"));
+            // 空Vectorの場合はemptyエラーメッセージを期待
+            assert!(e.to_string().contains("empty") || e.to_string().contains("vector"));
         }
     }
 

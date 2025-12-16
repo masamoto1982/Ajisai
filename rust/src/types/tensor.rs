@@ -1,304 +1,366 @@
-//! テンソル（N次元配列）の実装
+//! 行列演算ユーティリティ
 //!
-//! Ajisaiの次元モデルの中核となるデータ構造。
-//! すべての数値データはTensorとして表現される。
+//! Vectorベースのデータに対する行列演算を提供する。
+//! 内部的にはVectorを使用し、形状情報は演算時に動的に計算する。
 
 use crate::types::fraction::Fraction;
-use crate::error::{AjisaiError, Result};
-use num_traits::ToPrimitive;
+use crate::types::{Value, ValueType};
+use num_bigint::BigInt;
+use num_traits::{One, Zero, ToPrimitive};
 
-/// テンソル構造体
-#[derive(Debug, Clone, PartialEq)]
-pub struct Tensor {
-    /// 形状: 各次元のサイズ
-    /// - [] (空): スカラー（0次元）
-    /// - [n]: ベクタ（1次元、長さn）
-    /// - [m, n]: 行列（2次元、m行n列）
-    shape: Vec<usize>,
+/// ブロードキャスト可能な形状を計算
+///
+/// NumPyスタイルのブロードキャスティングルールに従う
+pub fn broadcast_shapes(shape_a: &[usize], shape_b: &[usize]) -> Result<Vec<usize>, String> {
+    let max_rank = shape_a.len().max(shape_b.len());
+    let mut result = vec![0; max_rank];
 
-    /// データ: 行優先順序（row-major order）で格納
-    data: Vec<Fraction>,
-}
-
-impl Tensor {
-    /// 最大次元数（time, layer, row, col）
-    pub const MAX_DIMENSIONS: usize = 4;
-
-    /// 次元数の検証
-    fn validate_dimensions(shape: &[usize]) -> Result<()> {
-        if shape.len() > Self::MAX_DIMENSIONS {
-            return Err(AjisaiError::from(format!(
-                "Ajisai supports up to {} dimensions (time, layer, row, col), got {}",
-                Self::MAX_DIMENSIONS, shape.len()
-            )));
-        }
-        Ok(())
-    }
-
-    /// スカラーを作成
-    pub fn scalar(value: Fraction) -> Self {
-        Tensor {
-            shape: vec![],
-            data: vec![value],
-        }
-    }
-
-    /// 1次元テンソル（ベクタ）を作成
-    pub fn vector(data: Vec<Fraction>) -> Self {
-        let len = data.len();
-        Tensor {
-            shape: vec![len],
-            data,
-        }
-    }
-
-    /// 任意の形状でテンソルを作成
-    pub fn new(shape: Vec<usize>, data: Vec<Fraction>) -> Result<Self> {
-        // 次元数の検証
-        Self::validate_dimensions(&shape)?;
-
-        let expected_len: usize = if shape.is_empty() {
-            1 // スカラーの場合
+    for i in 0..max_rank {
+        let dim_a = if i < shape_a.len() {
+            shape_a[shape_a.len() - 1 - i]
         } else {
-            shape.iter().product()
-        };
-
-        if expected_len == 0 && data.is_empty() {
-            // 空テンソル
-            Ok(Tensor { shape, data })
-        } else if data.len() != expected_len {
-            Err(AjisaiError::from(format!(
-                "Shape {:?} requires {} elements, but got {}",
-                shape, expected_len, data.len()
-            )))
-        } else {
-            Ok(Tensor { shape, data })
-        }
-    }
-
-    /// 次元数（ランク）を取得
-    pub fn rank(&self) -> usize {
-        self.shape.len()
-    }
-
-    /// 形状を取得
-    pub fn shape(&self) -> &[usize] {
-        &self.shape
-    }
-
-    /// データへの参照を取得（読み取り専用）
-    pub fn data(&self) -> &[Fraction] {
-        &self.data
-    }
-
-    /// 要素総数を取得
-    pub fn size(&self) -> usize {
-        self.data.len()
-    }
-
-    /// スカラーかどうか
-    pub fn is_scalar(&self) -> bool {
-        self.shape.is_empty()
-    }
-
-    /// スカラー値を取得（スカラーの場合のみ）
-    pub fn as_scalar(&self) -> Option<&Fraction> {
-        if self.is_scalar() {
-            self.data.first()
-        } else {
-            None
-        }
-    }
-
-    /// スカラー値をusizeとして取得（スカラーの場合のみ）
-    pub fn as_scalar_usize(&self) -> Result<usize> {
-        let scalar = self.as_scalar()
-            .ok_or_else(|| AjisaiError::from("Expected scalar"))?;
-
-        scalar.to_usize()
-            .ok_or_else(|| AjisaiError::from("Cannot convert to usize"))
-    }
-
-    /// 形状を変更（要素数が一致する必要あり）
-    pub fn reshape(&self, new_shape: Vec<usize>) -> Result<Self> {
-        // 次元数の検証
-        Self::validate_dimensions(&new_shape)?;
-
-        let new_size: usize = if new_shape.is_empty() {
             1
+        };
+        let dim_b = if i < shape_b.len() {
+            shape_b[shape_b.len() - 1 - i]
         } else {
-            new_shape.iter().product()
+            1
         };
 
-        if new_size != self.size() {
-            return Err(AjisaiError::from(format!(
-                "Cannot reshape: {} elements to shape {:?} ({} elements)",
-                self.size(), new_shape, new_size
-            )));
-        }
-        Ok(Tensor {
-            shape: new_shape,
-            data: self.data.clone(),
-        })
-    }
-
-    /// 転置（2次元の場合）
-    pub fn transpose(&self) -> Result<Self> {
-        if self.rank() != 2 {
-            return Err(AjisaiError::from(
-                "TRANSPOSE requires 2-dimensional tensor"
+        if dim_a == dim_b {
+            result[max_rank - 1 - i] = dim_a;
+        } else if dim_a == 1 {
+            result[max_rank - 1 - i] = dim_b;
+        } else if dim_b == 1 {
+            result[max_rank - 1 - i] = dim_a;
+        } else {
+            return Err(format!(
+                "Cannot broadcast shapes {:?} and {:?}: dimension {} ({} vs {})",
+                shape_a, shape_b, i, dim_a, dim_b
             ));
         }
+    }
 
-        let rows = self.shape[0];
-        let cols = self.shape[1];
-        let mut new_data = Vec::with_capacity(self.data.len());
+    Ok(result)
+}
 
-        for j in 0..cols {
-            for i in 0..rows {
-                new_data.push(self.data[i * cols + j].clone());
+/// Vectorから形状を推論する
+pub fn infer_shape(values: &[Value]) -> Result<Vec<usize>, String> {
+    crate::types::infer_shape(values)
+}
+
+/// 矩形かどうかを検証
+pub fn is_rectangular(values: &[Value]) -> bool {
+    crate::types::is_rectangular(values)
+}
+
+/// 行列の転置（2次元Vectorに対して）
+pub fn transpose(values: &[Value]) -> Result<Vec<Value>, String> {
+    if values.is_empty() {
+        return Ok(vec![]);
+    }
+
+    // まず形状を確認
+    let shape = infer_shape(values)?;
+    if shape.len() != 2 {
+        return Err(format!("TRANSPOSE requires 2D array, got shape {:?}", shape));
+    }
+
+    let rows = shape[0];
+    let cols = shape[1];
+
+    // 2次元配列からデータを取り出す
+    let mut result = Vec::with_capacity(cols);
+    for j in 0..cols {
+        let mut new_row = Vec::with_capacity(rows);
+        for i in 0..rows {
+            if let ValueType::Vector(ref row) = values[i].val_type {
+                new_row.push(row[j].clone());
+            } else {
+                return Err("Expected vector of vectors for transpose".to_string());
             }
         }
-
-        Ok(Tensor {
-            shape: vec![cols, rows],
-            data: new_data,
-        })
+        result.push(Value::from_vector(new_row));
     }
 
-    /// インデックスアクセス（多次元対応）
-    pub fn get(&self, indices: &[usize]) -> Result<&Fraction> {
-        if indices.len() != self.rank() {
-            return Err(AjisaiError::from(format!(
-                "Expected {} indices, got {}",
-                self.rank(), indices.len()
-            )));
-        }
+    Ok(result)
+}
 
-        let flat_index = self.flat_index(indices)?;
-        self.data.get(flat_index).ok_or_else(|| {
-            AjisaiError::from("Index out of bounds")
-        })
+/// ゼロで埋めたVectorを生成
+pub fn zeros(shape: &[usize]) -> Value {
+    let zero = Fraction::new(BigInt::zero(), BigInt::one());
+    build_nested_vector_with_value(shape, &zero)
+}
+
+/// 1で埋めたVectorを生成
+pub fn ones(shape: &[usize]) -> Value {
+    let one = Fraction::new(BigInt::one(), BigInt::one());
+    build_nested_vector_with_value(shape, &one)
+}
+
+/// 連番を生成（IOTA相当）
+pub fn iota(n: usize) -> Value {
+    let values: Vec<Value> = (0..n)
+        .map(|i| Value::from_number(Fraction::new(BigInt::from(i), BigInt::one())))
+        .collect();
+    Value::from_vector(values)
+}
+
+/// 指定した値で形状を埋めたVectorを構築
+fn build_nested_vector_with_value(shape: &[usize], value: &Fraction) -> Value {
+    if shape.is_empty() {
+        return Value::from_number(value.clone());
     }
 
-    /// 多次元インデックスを1次元インデックスに変換
-    fn flat_index(&self, indices: &[usize]) -> Result<usize> {
-        let mut flat = 0;
-        let mut stride = 1;
-
-        for (i, (&idx, &dim)) in indices.iter().zip(&self.shape).rev().enumerate() {
-            if idx >= dim {
-                return Err(AjisaiError::from(format!(
-                    "Index {} out of bounds for dimension {} (size {})",
-                    idx, self.rank() - 1 - i, dim
-                )));
-            }
-            flat += idx * stride;
-            stride *= dim;
-        }
-
-        Ok(flat)
+    if shape.len() == 1 {
+        let values: Vec<Value> = (0..shape[0])
+            .map(|_| Value::from_number(value.clone()))
+            .collect();
+        return Value::from_vector(values);
     }
 
-    /// 1次元に平坦化
-    pub fn flatten(&self) -> Self {
-        Tensor {
-            shape: vec![self.size()],
-            data: self.data.clone(),
+    let outer_size = shape[0];
+    let inner_shape = &shape[1..];
+
+    let values: Vec<Value> = (0..outer_size)
+        .map(|_| build_nested_vector_with_value(inner_shape, value))
+        .collect();
+
+    Value::from_vector(values)
+}
+
+/// ブロードキャスト付き二項演算を実行
+pub fn broadcast_binary_op<F>(
+    values_a: &[Value],
+    values_b: &[Value],
+    op: F,
+) -> Result<Vec<Value>, String>
+where
+    F: Fn(&Fraction, &Fraction) -> Fraction + Copy,
+{
+    let shape_a = infer_shape(values_a)?;
+    let shape_b = infer_shape(values_b)?;
+    let result_shape = broadcast_shapes(&shape_a, &shape_b)?;
+
+    // 数値を平坦化して取得
+    let data_a = flatten_to_numbers(values_a)?;
+    let data_b = flatten_to_numbers(values_b)?;
+
+    // ブロードキャスト演算
+    let result_size: usize = result_shape.iter().product();
+    let mut result_data = Vec::with_capacity(result_size);
+
+    for i in 0..result_size {
+        let idx_a = compute_broadcast_index(i, &result_shape, &shape_a);
+        let idx_b = compute_broadcast_index(i, &result_shape, &shape_b);
+        result_data.push(op(&data_a[idx_a], &data_b[idx_b]));
+    }
+
+    // 結果を形状に従って再構築
+    build_nested_from_data(&result_shape, &result_data)
+}
+
+/// 単項演算を実行
+pub fn unary_op<F>(values: &[Value], op: F) -> Result<Vec<Value>, String>
+where
+    F: Fn(&Fraction) -> Fraction,
+{
+    let shape = infer_shape(values)?;
+    let data = flatten_to_numbers(values)?;
+    let result_data: Vec<Fraction> = data.iter().map(op).collect();
+    build_nested_from_data(&shape, &result_data)
+}
+
+/// ブロードキャストインデックスを計算
+fn compute_broadcast_index(flat_index: usize, result_shape: &[usize], source_shape: &[usize]) -> usize {
+    if source_shape.is_empty() || source_shape.iter().product::<usize>() == 1 {
+        return 0;
+    }
+
+    let mut result_indices = vec![0; result_shape.len()];
+    let mut remaining = flat_index;
+    for i in (0..result_shape.len()).rev() {
+        result_indices[i] = remaining % result_shape[i];
+        remaining /= result_shape[i];
+    }
+
+    // ソース形状へのマッピング
+    let rank_diff = result_shape.len() - source_shape.len();
+    let mut source_index = 0;
+    let mut stride = 1;
+
+    for i in (0..source_shape.len()).rev() {
+        let result_idx = result_indices[i + rank_diff];
+        let source_dim = source_shape[i];
+        let idx = if source_dim == 1 { 0 } else { result_idx };
+        source_index += idx * stride;
+        stride *= source_dim;
+    }
+
+    source_index
+}
+
+/// Vectorを数値配列に平坦化
+fn flatten_to_numbers(values: &[Value]) -> Result<Vec<Fraction>, String> {
+    crate::types::flatten_numbers(values)
+}
+
+/// 形状とデータからネストされたVectorを構築
+fn build_nested_from_data(shape: &[usize], data: &[Fraction]) -> Result<Vec<Value>, String> {
+    if shape.is_empty() {
+        if data.len() != 1 {
+            return Err("Scalar requires exactly one data element".to_string());
         }
+        return Ok(vec![Value::from_number(data[0].clone())]);
+    }
+
+    if shape.len() == 1 {
+        let values: Vec<Value> = data.iter()
+            .map(|f| Value::from_number(f.clone()))
+            .collect();
+        return Ok(values);
+    }
+
+    let outer_size = shape[0];
+    let inner_shape = &shape[1..];
+    let inner_size: usize = inner_shape.iter().product();
+
+    let mut values = Vec::with_capacity(outer_size);
+    for i in 0..outer_size {
+        let start = i * inner_size;
+        let inner_data = &data[start..start + inner_size];
+        let inner_values = build_nested_from_data(inner_shape, inner_data)?;
+        values.push(Value::from_vector(inner_values));
+    }
+
+    Ok(values)
+}
+
+/// Reshape操作
+pub fn reshape(values: &[Value], new_shape: &[usize]) -> Result<Vec<Value>, String> {
+    let data = flatten_to_numbers(values)?;
+    let expected_size: usize = new_shape.iter().product();
+
+    if data.len() != expected_size {
+        return Err(format!(
+            "Cannot reshape: data size {} doesn't match new shape {:?} (size {})",
+            data.len(), new_shape, expected_size
+        ));
+    }
+
+    build_nested_from_data(new_shape, &data)
+}
+
+/// Rank（次元数）を取得
+pub fn rank(values: &[Value]) -> Result<usize, String> {
+    let shape = infer_shape(values)?;
+    // 空配列の場合は 1次元
+    if shape == vec![0] {
+        Ok(1)
+    } else {
+        Ok(shape.len())
     }
 }
 
-impl Fraction {
-    /// Fractionをusizeに変換
-    pub fn to_usize(&self) -> Option<usize> {
-        if self.denominator == num_bigint::BigInt::from(1) {
-            self.numerator.to_usize()
-        } else {
-            None
+/// 内積演算
+pub fn inner_product(values_a: &[Value], values_b: &[Value]) -> Result<Fraction, String> {
+    let data_a = flatten_to_numbers(values_a)?;
+    let data_b = flatten_to_numbers(values_b)?;
+
+    if data_a.len() != data_b.len() {
+        return Err(format!(
+            "Inner product requires same length vectors: {} vs {}",
+            data_a.len(), data_b.len()
+        ));
+    }
+
+    let mut sum = Fraction::new(BigInt::zero(), BigInt::one());
+    for (a, b) in data_a.iter().zip(data_b.iter()) {
+        sum = sum.add(&a.mul(b));
+    }
+
+    Ok(sum)
+}
+
+/// 行列積
+pub fn matmul(values_a: &[Value], values_b: &[Value]) -> Result<Vec<Value>, String> {
+    let shape_a = infer_shape(values_a)?;
+    let shape_b = infer_shape(values_b)?;
+
+    if shape_a.len() != 2 || shape_b.len() != 2 {
+        return Err("MATMUL requires 2D matrices".to_string());
+    }
+
+    let (m, k1) = (shape_a[0], shape_a[1]);
+    let (k2, n) = (shape_b[0], shape_b[1]);
+
+    if k1 != k2 {
+        return Err(format!(
+            "Matrix dimensions incompatible for multiplication: {:?} x {:?}",
+            shape_a, shape_b
+        ));
+    }
+
+    let data_a = flatten_to_numbers(values_a)?;
+    let data_b = flatten_to_numbers(values_b)?;
+
+    let mut result_data = Vec::with_capacity(m * n);
+    for i in 0..m {
+        for j in 0..n {
+            let mut sum = Fraction::new(BigInt::zero(), BigInt::one());
+            for k in 0..k1 {
+                let a_val = &data_a[i * k1 + k];
+                let b_val = &data_b[k * n + j];
+                sum = sum.add(&a_val.mul(b_val));
+            }
+            result_data.push(sum);
         }
     }
+
+    build_nested_from_data(&[m, n], &result_data)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_bigint::BigInt;
 
     fn frac(n: i64) -> Fraction {
         Fraction::new(BigInt::from(n), BigInt::from(1))
     }
 
     #[test]
-    fn test_scalar_creation() {
-        let s = Tensor::scalar(frac(5));
-        assert_eq!(s.rank(), 0);
-        let empty: &[usize] = &[];
-        assert_eq!(s.shape(), empty);
-        assert_eq!(s.size(), 1);
-        assert!(s.is_scalar());
+    fn test_broadcast_shapes() {
+        assert_eq!(broadcast_shapes(&[3], &[3]).unwrap(), vec![3]);
+        assert_eq!(broadcast_shapes(&[1], &[3]).unwrap(), vec![3]);
+        assert_eq!(broadcast_shapes(&[3, 1], &[1, 4]).unwrap(), vec![3, 4]);
+        assert_eq!(broadcast_shapes(&[2, 3], &[3]).unwrap(), vec![2, 3]);
+        assert!(broadcast_shapes(&[2], &[3]).is_err());
     }
 
     #[test]
-    fn test_vector_creation() {
-        let v = Tensor::vector(vec![frac(1), frac(2), frac(3)]);
-        assert_eq!(v.rank(), 1);
-        assert_eq!(v.shape(), &[3]);
-        assert_eq!(v.size(), 3);
-        assert!(!v.is_scalar());
+    fn test_zeros_ones() {
+        let z = zeros(&[2, 3]);
+        if let ValueType::Vector(v) = z.val_type {
+            assert_eq!(v.len(), 2);
+        }
+
+        let o = ones(&[3]);
+        if let ValueType::Vector(v) = o.val_type {
+            assert_eq!(v.len(), 3);
+        }
     }
 
     #[test]
-    fn test_matrix_creation() {
-        let m = Tensor::new(
-            vec![2, 2],
-            vec![frac(1), frac(2), frac(3), frac(4)]
-        ).unwrap();
-        assert_eq!(m.rank(), 2);
-        assert_eq!(m.shape(), &[2, 2]);
-        assert_eq!(m.size(), 4);
-    }
-
-    #[test]
-    fn test_reshape() {
-        let v = Tensor::vector(vec![frac(1), frac(2), frac(3), frac(4)]);
-        let m = v.reshape(vec![2, 2]).unwrap();
-        assert_eq!(m.shape(), &[2, 2]);
-        assert_eq!(m.size(), 4);
-    }
-
-    #[test]
-    fn test_reshape_error() {
-        let v = Tensor::vector(vec![frac(1), frac(2), frac(3)]);
-        assert!(v.reshape(vec![2, 2]).is_err());
-    }
-
-    #[test]
-    fn test_transpose() {
-        let m = Tensor::new(
-            vec![2, 3],
-            vec![frac(1), frac(2), frac(3), frac(4), frac(5), frac(6)]
-        ).unwrap();
-
-        let mt = m.transpose().unwrap();
-        assert_eq!(mt.shape(), &[3, 2]);
-
-        // 転置後の値を確認
-        assert_eq!(mt.get(&[0, 0]).unwrap(), &frac(1));
-        assert_eq!(mt.get(&[0, 1]).unwrap(), &frac(4));
-        assert_eq!(mt.get(&[1, 0]).unwrap(), &frac(2));
-        assert_eq!(mt.get(&[1, 1]).unwrap(), &frac(5));
-    }
-
-    #[test]
-    fn test_flatten() {
-        let m = Tensor::new(
-            vec![2, 3],
-            vec![frac(1), frac(2), frac(3), frac(4), frac(5), frac(6)]
-        ).unwrap();
-
-        let f = m.flatten();
-        assert_eq!(f.shape(), &[6]);
-        assert_eq!(f.size(), 6);
+    fn test_iota() {
+        let result = iota(5);
+        if let ValueType::Vector(v) = result.val_type {
+            assert_eq!(v.len(), 5);
+            if let ValueType::Number(ref n) = v[0].val_type {
+                assert_eq!(n.numerator, BigInt::from(0));
+            }
+            if let ValueType::Number(ref n) = v[4].val_type {
+                assert_eq!(n.numerator, BigInt::from(4));
+            }
+        }
     }
 }
