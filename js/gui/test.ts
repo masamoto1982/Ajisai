@@ -433,30 +433,669 @@ export class TestRunner {
     
     private getTestCases(): TestCase[] {
         return [
-            // Placeholder tests to avoid TypeScript unused warnings during rewrite
+            // ============================================
+            // Basic Types - 基本型
+            // ============================================
             {
-                name: "Placeholder - Number",
-                code: "[ 1 ]",
-                expectedStack: [this.createVector([this.createNumber('1')])],
-                category: "Placeholder"
+                name: "Number - integer",
+                code: "[ 42 ]",
+                expectedStack: [this.createVector([this.createNumber('42')])],
+                category: "Basic Types"
             },
             {
-                name: "Placeholder - String",
-                code: "[ 'test' ]",
-                expectedStack: [this.createVector([this.createString('test')])],
-                category: "Placeholder"
+                name: "Number - negative",
+                code: "[ -17 ]",
+                expectedStack: [this.createVector([this.createNumber('-17')])],
+                category: "Basic Types"
             },
             {
-                name: "Placeholder - Boolean",
+                name: "Number - fraction",
+                code: "[ 3/4 ]",
+                expectedStack: [this.createVector([this.createNumber('3', '4')])],
+                category: "Basic Types"
+            },
+            {
+                name: "Number - decimal converts to fraction",
+                code: "[ 0.5 ]",
+                expectedStack: [this.createVector([this.createNumber('1', '2')])],
+                category: "Basic Types"
+            },
+            {
+                name: "String - simple",
+                code: "[ 'hello' ]",
+                expectedStack: [this.createVector([this.createString('hello')])],
+                category: "Basic Types"
+            },
+            {
+                name: "String - with spaces",
+                code: "[ 'hello world' ]",
+                expectedStack: [this.createVector([this.createString('hello world')])],
+                category: "Basic Types"
+            },
+            {
+                name: "Boolean - TRUE",
                 code: "[ TRUE ]",
                 expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Placeholder"
+                category: "Basic Types"
             },
             {
-                name: "Placeholder - Nil",
+                name: "Boolean - FALSE",
+                code: "[ FALSE ]",
+                expectedStack: [this.createVector([this.createBoolean(false)])],
+                category: "Basic Types"
+            },
+            {
+                name: "NIL",
                 code: "[ NIL ]",
                 expectedStack: [this.createVector([this.createNil()])],
-                category: "Placeholder"
+                category: "Basic Types"
+            },
+
+            // ============================================
+            // Arithmetic - 算術演算
+            // ============================================
+            {
+                name: "Addition - integers",
+                code: "[ 2 ] [ 3 ] +",
+                expectedStack: [this.createVector([this.createNumber('5')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Addition - fractions",
+                code: "[ 1/2 ] [ 1/3 ] +",
+                expectedStack: [this.createVector([this.createNumber('5', '6')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Subtraction",
+                code: "[ 10 ] [ 3 ] -",
+                expectedStack: [this.createVector([this.createNumber('7')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Multiplication",
+                code: "[ 4 ] [ 5 ] *",
+                expectedStack: [this.createVector([this.createNumber('20')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Division",
+                code: "[ 10 ] [ 4 ] /",
+                expectedStack: [this.createVector([this.createNumber('5', '2')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Division by zero - error",
+                code: "[ 1 ] [ 0 ] /",
+                expectError: true,
+                category: "Arithmetic"
+            },
+            {
+                name: "Negation",
+                code: "[ 5 ] NEG",
+                expectedStack: [this.createVector([this.createNumber('-5')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Absolute value",
+                code: "[ -7 ] ABS",
+                expectedStack: [this.createVector([this.createNumber('7')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Modulo",
+                code: "[ 7 ] [ 3 ] MOD",
+                expectedStack: [this.createVector([this.createNumber('1')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Power",
+                code: "[ 2 ] [ 3 ] POW",
+                expectedStack: [this.createVector([this.createNumber('8')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Floor",
+                code: "[ 7/3 ] FLOOR",
+                expectedStack: [this.createVector([this.createNumber('2')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Ceil",
+                code: "[ 7/3 ] CEIL",
+                expectedStack: [this.createVector([this.createNumber('3')])],
+                category: "Arithmetic"
+            },
+            {
+                name: "Round",
+                code: "[ 5/2 ] ROUND",
+                expectedStack: [this.createVector([this.createNumber('3')])],
+                category: "Arithmetic"
+            },
+
+            // ============================================
+            // Comparison - 比較演算
+            // ============================================
+            {
+                name: "Less than - true",
+                code: "[ 3 ] [ 5 ] <",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Comparison"
+            },
+            {
+                name: "Less than - false",
+                code: "[ 5 ] [ 3 ] <",
+                expectedStack: [this.createVector([this.createBoolean(false)])],
+                category: "Comparison"
+            },
+            {
+                name: "Greater than",
+                code: "[ 5 ] [ 3 ] >",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Comparison"
+            },
+            {
+                name: "Less than or equal",
+                code: "[ 3 ] [ 3 ] <=",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Comparison"
+            },
+            {
+                name: "Greater than or equal",
+                code: "[ 3 ] [ 3 ] >=",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Comparison"
+            },
+            {
+                name: "Equal - numbers",
+                code: "[ 5 ] [ 5 ] =",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Comparison"
+            },
+            {
+                name: "Equal - strings",
+                code: "[ 'abc' ] [ 'abc' ] =",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Comparison"
+            },
+            {
+                name: "Not equal",
+                code: "[ 3 ] [ 5 ] !=",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Comparison"
+            },
+
+            // ============================================
+            // Logic - 論理演算
+            // ============================================
+            {
+                name: "AND - true && true",
+                code: "[ TRUE ] [ TRUE ] AND",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Logic"
+            },
+            {
+                name: "AND - true && false",
+                code: "[ TRUE ] [ FALSE ] AND",
+                expectedStack: [this.createVector([this.createBoolean(false)])],
+                category: "Logic"
+            },
+            {
+                name: "OR - false || true",
+                code: "[ FALSE ] [ TRUE ] OR",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Logic"
+            },
+            {
+                name: "NOT - true",
+                code: "[ TRUE ] NOT",
+                expectedStack: [this.createVector([this.createBoolean(false)])],
+                category: "Logic"
+            },
+            {
+                name: "NOT - false",
+                code: "[ FALSE ] NOT",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Logic"
+            },
+
+            // ============================================
+            // Vector Operations - ベクタ操作
+            // ============================================
+            {
+                name: "LENGTH",
+                code: "[ 1 2 3 4 5 ] LENGTH",
+                expectedStack: [
+                    this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3'), this.createNumber('4'), this.createNumber('5')]),
+                    this.createVector([this.createNumber('5')])
+                ],
+                category: "Vector Operations"
+            },
+            {
+                name: "GET - first element",
+                code: "[ 10 20 30 ] [ 0 ] GET",
+                expectedStack: [
+                    this.createVector([this.createNumber('10'), this.createNumber('20'), this.createNumber('30')]),
+                    this.createVector([this.createNumber('10')])
+                ],
+                category: "Vector Operations"
+            },
+            {
+                name: "GET - negative index",
+                code: "[ 10 20 30 ] [ -1 ] GET",
+                expectedStack: [
+                    this.createVector([this.createNumber('10'), this.createNumber('20'), this.createNumber('30')]),
+                    this.createVector([this.createNumber('30')])
+                ],
+                category: "Vector Operations"
+            },
+            {
+                name: "TAKE - positive",
+                code: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
+                expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "TAKE - negative",
+                code: "[ 1 2 3 4 5 ] [ -2 ] TAKE",
+                expectedStack: [this.createVector([this.createNumber('4'), this.createNumber('5')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "REVERSE",
+                code: "[ 1 2 3 ] REVERSE",
+                expectedStack: [this.createVector([this.createNumber('3'), this.createNumber('2'), this.createNumber('1')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "CONCAT",
+                code: "[ 1 2 ] [ 3 4 ] CONCAT",
+                expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3'), this.createNumber('4')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "INSERT",
+                code: "[ 1 3 ] [ 1 ] [ 2 ] INSERT",
+                expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "REPLACE",
+                code: "[ 1 2 3 ] [ 1 ] [ 9 ] REPLACE",
+                expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('9'), this.createNumber('3')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "REMOVE",
+                code: "[ 1 2 3 ] [ 1 ] REMOVE",
+                expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('3')])],
+                category: "Vector Operations"
+            },
+            {
+                name: "LEVEL - flatten",
+                code: "[ [ 1 2 ] [ 3 4 ] ] LEVEL",
+                expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3'), this.createNumber('4')])],
+                category: "Vector Operations"
+            },
+
+            // ============================================
+            // Tensor Operations - テンソル操作
+            // ============================================
+            {
+                name: "SHAPE - 1D",
+                code: "[ 1 2 3 ] SHAPE",
+                expectedStack: [
+                    this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3')]),
+                    this.createVector([this.createNumber('3')])
+                ],
+                category: "Tensor Operations"
+            },
+            {
+                name: "SHAPE - 2D",
+                code: "[ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE",
+                expectedStack: [
+                    this.createVector([
+                        this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3')]),
+                        this.createVector([this.createNumber('4'), this.createNumber('5'), this.createNumber('6')])
+                    ]),
+                    this.createVector([this.createNumber('2'), this.createNumber('3')])
+                ],
+                category: "Tensor Operations"
+            },
+            {
+                name: "RANK - 1D",
+                code: "[ 1 2 3 ] RANK",
+                expectedStack: [
+                    this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3')]),
+                    this.createVector([this.createNumber('1')])
+                ],
+                category: "Tensor Operations"
+            },
+            {
+                name: "RANK - 2D",
+                code: "[ [ 1 2 ] [ 3 4 ] ] RANK",
+                expectedStack: [
+                    this.createVector([
+                        this.createVector([this.createNumber('1'), this.createNumber('2')]),
+                        this.createVector([this.createNumber('3'), this.createNumber('4')])
+                    ]),
+                    this.createVector([this.createNumber('2')])
+                ],
+                category: "Tensor Operations"
+            },
+            {
+                name: "TRANSPOSE",
+                code: "[ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE",
+                expectedStack: [
+                    this.createVector([
+                        this.createVector([this.createNumber('1'), this.createNumber('4')]),
+                        this.createVector([this.createNumber('2'), this.createNumber('5')]),
+                        this.createVector([this.createNumber('3'), this.createNumber('6')])
+                    ])
+                ],
+                category: "Tensor Operations"
+            },
+            {
+                name: "RESHAPE",
+                code: "[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE",
+                expectedStack: [
+                    this.createVector([
+                        this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3')]),
+                        this.createVector([this.createNumber('4'), this.createNumber('5'), this.createNumber('6')])
+                    ])
+                ],
+                category: "Tensor Operations"
+            },
+
+            // ============================================
+            // Broadcasting - ブロードキャスト
+            // ============================================
+            {
+                name: "Broadcast - scalar + vector",
+                code: "[ 10 ] [ 1 2 3 ] +",
+                expectedStack: [this.createVector([this.createNumber('11'), this.createNumber('12'), this.createNumber('13')])],
+                category: "Broadcasting"
+            },
+            {
+                name: "Broadcast - vector * scalar",
+                code: "[ 1 2 3 ] [ 2 ] *",
+                expectedStack: [this.createVector([this.createNumber('2'), this.createNumber('4'), this.createNumber('6')])],
+                category: "Broadcasting"
+            },
+            {
+                name: "Broadcast - vector + vector (same length)",
+                code: "[ 1 2 3 ] [ 10 20 30 ] +",
+                expectedStack: [this.createVector([this.createNumber('11'), this.createNumber('22'), this.createNumber('33')])],
+                category: "Broadcasting"
+            },
+
+            // ============================================
+            // Aggregation - 集約演算
+            // ============================================
+            {
+                name: "SUM",
+                code: "[ 1 2 3 4 5 ] SUM",
+                expectedStack: [this.createVector([this.createNumber('15')])],
+                category: "Aggregation"
+            },
+            {
+                name: "PRODUCT",
+                code: "[ 1 2 3 4 ] PRODUCT",
+                expectedStack: [this.createVector([this.createNumber('24')])],
+                category: "Aggregation"
+            },
+            {
+                name: "AVG",
+                code: "[ 2 4 6 8 ] AVG",
+                expectedStack: [this.createVector([this.createNumber('5')])],
+                category: "Aggregation"
+            },
+            {
+                name: "MAX",
+                code: "[ 3 1 4 1 5 ] MAX",
+                expectedStack: [this.createVector([this.createNumber('5')])],
+                category: "Aggregation"
+            },
+            {
+                name: "MIN",
+                code: "[ 3 1 4 1 5 ] MIN",
+                expectedStack: [this.createVector([this.createNumber('1')])],
+                category: "Aggregation"
+            },
+
+            // ============================================
+            // Higher-Order Functions - 高階関数
+            // ============================================
+            {
+                name: "MAP - double",
+                code: "[ ': [ 2 ] *' ] 'DBL' DEF\n[ 1 2 3 ] 'DBL' MAP",
+                expectedStack: [this.createVector([this.createNumber('2'), this.createNumber('4'), this.createNumber('6')])],
+                category: "Higher-Order Functions"
+            },
+            {
+                name: "FILTER - positive",
+                code: "[ ': [ 0 ] >' ] 'POS' DEF\n[ -2 -1 0 1 2 ] 'POS' FILTER",
+                expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('2')])],
+                category: "Higher-Order Functions"
+            },
+            {
+                name: "FOLD - sum",
+                code: "[ 1 2 3 4 ] [ 0 ] '+' FOLD",
+                expectedStack: [this.createVector([this.createNumber('10')])],
+                category: "Higher-Order Functions"
+            },
+
+            // ============================================
+            // Type Conversion - 型変換
+            // ============================================
+            {
+                name: "STR - number to string",
+                code: "[ 42 ] STR",
+                expectedStack: [this.createVector([this.createString('42')])],
+                category: "Type Conversion"
+            },
+            {
+                name: "STR - fraction to string",
+                code: "[ 3/4 ] STR",
+                expectedStack: [this.createVector([this.createString('3/4')])],
+                category: "Type Conversion"
+            },
+            {
+                name: "NUM - string to number",
+                code: "[ '42' ] NUM",
+                expectedStack: [this.createVector([this.createNumber('42')])],
+                category: "Type Conversion"
+            },
+            {
+                name: "BOOL - 1 to true",
+                code: "[ 1 ] BOOL",
+                expectedStack: [this.createVector([this.createBoolean(true)])],
+                category: "Type Conversion"
+            },
+            {
+                name: "BOOL - 0 to false",
+                code: "[ 0 ] BOOL",
+                expectedStack: [this.createVector([this.createBoolean(false)])],
+                category: "Type Conversion"
+            },
+
+            // ============================================
+            // String Operations - 文字列操作
+            // ============================================
+            {
+                name: "CHARS - split string",
+                code: "[ 'hello' ] CHARS",
+                expectedStack: [this.createVector([
+                    this.createString('h'),
+                    this.createString('e'),
+                    this.createString('l'),
+                    this.createString('l'),
+                    this.createString('o')
+                ])],
+                category: "String Operations"
+            },
+            {
+                name: "JOIN - join strings",
+                code: "[ 'h' 'e' 'l' 'l' 'o' ] JOIN",
+                expectedStack: [this.createVector([this.createString('hello')])],
+                category: "String Operations"
+            },
+
+            // ============================================
+            // Stack Mode (..) - スタックモード
+            // ============================================
+            {
+                name: "Stack mode - LENGTH",
+                code: "[ 1 ] [ 2 ] [ 3 ] .. LENGTH",
+                expectedStack: [
+                    this.createVector([this.createNumber('1')]),
+                    this.createVector([this.createNumber('2')]),
+                    this.createVector([this.createNumber('3')]),
+                    this.createVector([this.createNumber('3')])
+                ],
+                category: "Stack Mode"
+            },
+            {
+                name: "Stack mode - GET",
+                code: "[ 'a' ] [ 'b' ] [ 'c' ] [ 1 ] .. GET",
+                expectedStack: [
+                    this.createVector([this.createString('a')]),
+                    this.createVector([this.createString('b')]),
+                    this.createVector([this.createString('c')]),
+                    this.createVector([this.createString('b')])
+                ],
+                category: "Stack Mode"
+            },
+            {
+                name: "Stack mode - REVERSE",
+                code: "[ 1 ] [ 2 ] [ 3 ] .. REVERSE",
+                expectedStack: [
+                    this.createVector([this.createNumber('3')]),
+                    this.createVector([this.createNumber('2')]),
+                    this.createVector([this.createNumber('1')])
+                ],
+                category: "Stack Mode"
+            },
+            {
+                name: "Stack mode - arithmetic",
+                code: "[ 1 ] [ 2 ] [ 3 ] [ 3 ] STACK +",
+                expectedStack: [this.createVector([this.createNumber('6')])],
+                category: "Stack Mode"
+            },
+
+            // ============================================
+            // Custom Word Definition - カスタムワード定義
+            // ============================================
+            {
+                name: "DEF and call",
+                code: "[ ': [ 2 ] *' ] 'DOUBLE' DEF\n[ 5 ] DOUBLE",
+                expectedStack: [this.createVector([this.createNumber('10')])],
+                category: "Custom Words"
+            },
+            {
+                name: "DEF with guard clause",
+                code: "[ ': [ 0 ] >\n: [ 1 ]\n: [ 0 ]' ] 'SIGN' DEF\n[ 5 ] SIGN",
+                expectedStack: [this.createVector([this.createNumber('1')])],
+                category: "Custom Words"
+            },
+            {
+                name: "DEL - delete custom word",
+                code: "[ ': [ 2 ] *' ] 'TEMP' DEF\n'TEMP' DEL\nTEMP",
+                expectError: true,
+                category: "Custom Words"
+            },
+
+            // ============================================
+            // Control Flow - 制御フロー
+            // ============================================
+            {
+                name: "TIMES - repeat",
+                code: "[ ': [ 1 ] +' ] 'INC' DEF\n[ 0 ] 'INC' [ 5 ] TIMES",
+                expectedStack: [this.createVector([this.createNumber('5')])],
+                category: "Control Flow"
+            },
+
+            // ============================================
+            // Tensor Generation - テンソル生成
+            // ============================================
+            {
+                name: "IOTA",
+                code: "[ 5 ] IOTA",
+                expectedStack: [this.createVector([
+                    this.createNumber('0'),
+                    this.createNumber('1'),
+                    this.createNumber('2'),
+                    this.createNumber('3'),
+                    this.createNumber('4')
+                ])],
+                category: "Tensor Generation"
+            },
+            {
+                name: "ZEROS",
+                code: "[ 3 ] ZEROS",
+                expectedStack: [this.createVector([
+                    this.createNumber('0'),
+                    this.createNumber('0'),
+                    this.createNumber('0')
+                ])],
+                category: "Tensor Generation"
+            },
+            {
+                name: "ONES",
+                code: "[ 3 ] ONES",
+                expectedStack: [this.createVector([
+                    this.createNumber('1'),
+                    this.createNumber('1'),
+                    this.createNumber('1')
+                ])],
+                category: "Tensor Generation"
+            },
+            {
+                name: "FILL",
+                code: "[ 3 ] [ 7 ] FILL",
+                expectedStack: [this.createVector([
+                    this.createNumber('7'),
+                    this.createNumber('7'),
+                    this.createNumber('7')
+                ])],
+                category: "Tensor Generation"
+            },
+            {
+                name: "EYE - identity matrix",
+                code: "[ 2 ] EYE",
+                expectedStack: [this.createVector([
+                    this.createVector([this.createNumber('1'), this.createNumber('0')]),
+                    this.createVector([this.createNumber('0'), this.createNumber('1')])
+                ])],
+                category: "Tensor Generation"
+            },
+
+            // ============================================
+            // Error Cases - エラーケース
+            // ============================================
+            {
+                name: "Error - stack underflow",
+                code: "+",
+                expectError: true,
+                category: "Error Cases"
+            },
+            {
+                name: "Error - unknown word",
+                code: "UNKNOWNWORD",
+                expectError: true,
+                category: "Error Cases"
+            },
+            {
+                name: "Error - index out of bounds",
+                code: "[ 1 2 3 ] [ 10 ] GET",
+                expectError: true,
+                category: "Error Cases"
+            },
+            {
+                name: "Error - type mismatch in arithmetic",
+                code: "[ 'hello' ] [ 1 ] +",
+                expectError: true,
+                category: "Error Cases"
             }
         ];
     }
