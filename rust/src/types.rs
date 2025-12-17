@@ -2,6 +2,34 @@
 //
 // Vector指向型システム
 // 全てのコンテナデータはVectorで表現し、Fractionによる正確な有理数演算を維持する
+//
+// ============================================================================
+// 層構造の設計思想（フラクタル構造としてのVector）
+// ============================================================================
+//
+// Ajisaiでは「全てがVector」というフラクタル構造を採用している。
+// スタック自体もVectorであり、その中にVectorが積まれる。
+// これはLISPのリスト構造に通ずる美学を表現している。
+//
+// 層構造:
+//   第0層: スタック（言語基盤、暗黙的なVector）
+//   第1層: 時間（スカラー値の時系列）      ← SCALAR
+//   第2層: 要素（ベクトルの構成要素）      ← VECTOR
+//   第3層: 行（行列の行）                  ← MATRIX
+//   第4層: 列（行列の列）                  ← TENSOR
+//
+// ユーザーが直接操作するデータは第1〜4層であり、
+// Ajisaiは人間の認知限界に基づき、この4次元までをサポートする。
+//
+// Tensorとの違い:
+//   Tensor: 数値専用、同種データのみ許容
+//   Vector: 異種データ混在可能 [1 'hello' TRUE [2 3]]
+//
+// この異種混在の許容が、VectorをLISP的なリスト構造として機能させる鍵である。
+// ============================================================================
+
+/// 最大次元数（人間の認知限界に基づく制限）
+pub const MAX_DIMENSIONS: usize = 4;
 
 pub mod fraction;
 pub mod tensor;  // 行列演算ユーティリティ（Vectorベースで動作）
@@ -231,17 +259,31 @@ impl Value {
 /// Vectorから形状を推論する
 ///
 /// ネストされたVectorの形状を再帰的に計算
+/// 4次元を超える場合はエラーを返す
 pub fn infer_shape(values: &[Value]) -> std::result::Result<Vec<usize>, String> {
+    infer_shape_with_depth(values, 1)
+}
+
+/// 深さを追跡しながら形状を推論（内部関数）
+fn infer_shape_with_depth(values: &[Value], current_depth: usize) -> std::result::Result<Vec<usize>, String> {
+    // 次元数チェック
+    if current_depth > MAX_DIMENSIONS {
+        return Err(format!(
+            "Dimension limit exceeded: Ajisai supports up to {} dimensions (time, element, row, column)",
+            MAX_DIMENSIONS
+        ));
+    }
+
     if values.is_empty() {
         return Ok(vec![0]);
     }
 
     // 最初の要素の形状を基準とする
-    let first_shape = get_value_shape(&values[0])?;
+    let first_shape = get_value_shape_with_depth(&values[0], current_depth)?;
 
     // すべての要素が同じ形状か検証
     for (i, val) in values.iter().enumerate().skip(1) {
-        let shape = get_value_shape(val)?;
+        let shape = get_value_shape_with_depth(val, current_depth)?;
         if shape != first_shape {
             return Err(format!(
                 "Non-rectangular structure: element {} has shape {:?}, expected {:?}",
@@ -253,11 +295,33 @@ pub fn infer_shape(values: &[Value]) -> std::result::Result<Vec<usize>, String> 
     // 全体の形状を構築
     let mut full_shape = vec![values.len()];
     full_shape.extend(first_shape);
+
+    // 最終的な次元数をチェック
+    if full_shape.len() > MAX_DIMENSIONS {
+        return Err(format!(
+            "Dimension limit exceeded: shape {:?} has {} dimensions, maximum is {}",
+            full_shape, full_shape.len(), MAX_DIMENSIONS
+        ));
+    }
+
     Ok(full_shape)
 }
 
 /// Valueの形状を取得
 fn get_value_shape(value: &Value) -> std::result::Result<Vec<usize>, String> {
+    get_value_shape_with_depth(value, 1)
+}
+
+/// 深さを追跡しながらValueの形状を取得（内部関数）
+fn get_value_shape_with_depth(value: &Value, current_depth: usize) -> std::result::Result<Vec<usize>, String> {
+    // 次元数チェック
+    if current_depth > MAX_DIMENSIONS {
+        return Err(format!(
+            "Dimension limit exceeded: Ajisai supports up to {} dimensions (time, element, row, column)",
+            MAX_DIMENSIONS
+        ));
+    }
+
     match &value.val_type {
         ValueType::Number(_) => Ok(vec![]),  // スカラー
         ValueType::Vector(v) => {
@@ -268,7 +332,7 @@ fn get_value_shape(value: &Value) -> std::result::Result<Vec<usize>, String> {
                 Ok(vec![v.len()])
             } else {
                 // ネストされている場合は再帰的に確認
-                infer_shape(v)
+                infer_shape_with_depth(v, current_depth + 1)
             }
         }
         _ => Err(format!("Cannot get shape of {}", value.val_type)),
