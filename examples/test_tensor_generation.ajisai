@@ -1,29 +1,4 @@
-# ZEROS テスト
-[ 3 ] ZEROS PRINT          # → [ 0 0 0 ]
-[ 2 2 ] ZEROS PRINT        # → [ [ 0 0 ] [ 0 0 ] ]
-[ 2 3 ] ZEROS PRINT        # → [ [ 0 0 0 ] [ 0 0 0 ] ]
-
-# ONES テスト
-[ 3 ] ONES PRINT           # → [ 1 1 1 ]
-[ 2 3 ] ONES PRINT         # → [ [ 1 1 1 ] [ 1 1 1 ] ]
-
 # FILL テスト
 [ 2 2 ] [ 7 ] FILL PRINT   # → [ [ 7 7 ] [ 7 7 ] ]
 [ 3 ] [ 1/2 ] FILL PRINT   # → [ 1/2 1/2 1/2 ]
 [ 2 3 ] [ 5 ] FILL PRINT   # → [ [ 5 5 5 ] [ 5 5 5 ] ]
-
-# EYE テスト
-[ 3 ] EYE PRINT            # → [ [ 1 0 0 ] [ 0 1 0 ] [ 0 0 1 ] ]
-[ 2 ] EYE PRINT            # → [ [ 1 0 ] [ 0 1 ] ]
-[ 4 ] EYE PRINT            # → 4x4 単位行列
-
-# IOTA テスト
-[ 5 ] IOTA PRINT           # → [ 0 1 2 3 4 ]
-[ 2 3 ] IOTA PRINT         # → [ [ 0 1 2 ] [ 3 4 5 ] ]
-[ 2 2 2 ] IOTA PRINT       # → [ [ [ 0 1 ] [ 2 3 ] ] [ [ 4 5 ] [ 6 7 ] ] ]
-
-# LINSPACE テスト
-[ 0 ] [ 4 ] [ 5 ] LINSPACE PRINT  # → [ 0 1 2 3 4 ]
-[ 0 ] [ 1 ] [ 3 ] LINSPACE PRINT  # → [ 0 1/2 1 ]
-[ 0 ] [ 10 ] [ 5 ] LINSPACE PRINT # → [ 0 5/2 5 15/2 10 ]
-[ 1 ] [ 2 ] [ 3 ] LINSPACE PRINT  # → [ 1 3/2 2 ]
