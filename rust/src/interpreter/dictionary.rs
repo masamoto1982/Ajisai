@@ -300,10 +300,16 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     // LOOKUP (?) は 'NAME' を期待する
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let name_str = if let ValueType::String(s) = name_val.val_type {
-        s.clone()
-    } else {
-        return Err(AjisaiError::type_error("string 'name'", name_val.val_type.to_string().as_str()));
+    // op_del と同様に、Vector内の文字列も処理する
+    let name_str = match &name_val.val_type {
+        ValueType::Vector(v) if v.len() == 1 => {
+            match &v[0].val_type {
+                ValueType::String(s) => s.clone(),
+                _ => return Err(AjisaiError::type_error("string", "other type")),
+            }
+        }
+        ValueType::String(s) => s.clone(),
+        _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
     };
 
     let upper_name = name_str.to_uppercase();
