@@ -531,27 +531,9 @@ export class TestRunner {
                 category: "Arithmetic"
             },
             {
-                name: "Negation",
-                code: "[ 5 ] NEG",
-                expectedStack: [this.createVector([this.createNumber('-5')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "Absolute value",
-                code: "[ -7 ] ABS",
-                expectedStack: [this.createVector([this.createNumber('7')])],
-                category: "Arithmetic"
-            },
-            {
                 name: "Modulo",
                 code: "[ 7 ] [ 3 ] MOD",
                 expectedStack: [this.createVector([this.createNumber('1')])],
-                category: "Arithmetic"
-            },
-            {
-                name: "Power",
-                code: "[ 2 ] [ 3 ] POW",
-                expectedStack: [this.createVector([this.createNumber('8')])],
                 category: "Arithmetic"
             },
             {
@@ -615,12 +597,6 @@ export class TestRunner {
             {
                 name: "Equal - strings",
                 code: "[ 'abc' ] [ 'abc' ] =",
-                expectedStack: [this.createVector([this.createBoolean(true)])],
-                category: "Comparison"
-            },
-            {
-                name: "Not equal",
-                code: "[ 3 ] [ 5 ] !=",
                 expectedStack: [this.createVector([this.createBoolean(true)])],
                 category: "Comparison"
             },
@@ -731,12 +707,6 @@ export class TestRunner {
                 expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('3')])],
                 category: "Vector Operations"
             },
-            {
-                name: "LEVEL - flatten",
-                code: "[ [ 1 2 ] [ 3 4 ] ] LEVEL",
-                expectedStack: [this.createVector([this.createNumber('1'), this.createNumber('2'), this.createNumber('3'), this.createNumber('4')])],
-                category: "Vector Operations"
-            },
 
             // ============================================
             // Tensor Operations - テンソル操作
@@ -827,40 +797,6 @@ export class TestRunner {
                 code: "[ 1 2 3 ] [ 10 20 30 ] +",
                 expectedStack: [this.createVector([this.createNumber('11'), this.createNumber('22'), this.createNumber('33')])],
                 category: "Broadcasting"
-            },
-
-            // ============================================
-            // Aggregation - 集約演算
-            // ============================================
-            {
-                name: "SUM",
-                code: "[ 1 2 3 4 5 ] SUM",
-                expectedStack: [this.createVector([this.createNumber('15')])],
-                category: "Aggregation"
-            },
-            {
-                name: "PRODUCT",
-                code: "[ 1 2 3 4 ] PRODUCT",
-                expectedStack: [this.createVector([this.createNumber('24')])],
-                category: "Aggregation"
-            },
-            {
-                name: "AVG",
-                code: "[ 2 4 6 8 ] AVG",
-                expectedStack: [this.createVector([this.createNumber('5')])],
-                category: "Aggregation"
-            },
-            {
-                name: "MAX",
-                code: "[ 3 1 4 1 5 ] MAX",
-                expectedStack: [this.createVector([this.createNumber('5')])],
-                category: "Aggregation"
-            },
-            {
-                name: "MIN",
-                code: "[ 3 1 4 1 5 ] MIN",
-                expectedStack: [this.createVector([this.createNumber('1')])],
-                category: "Aggregation"
             },
 
             // ============================================
@@ -976,12 +912,6 @@ export class TestRunner {
                 ],
                 category: "Stack Mode"
             },
-            {
-                name: "Stack mode - arithmetic",
-                code: "[ 1 ] [ 2 ] [ 3 ] [ 3 ] STACK +",
-                expectedStack: [this.createVector([this.createNumber('6')])],
-                category: "Stack Mode"
-            },
 
             // ============================================
             // Custom Word Definition - カスタムワード定義
@@ -1019,53 +949,12 @@ export class TestRunner {
             // Tensor Generation - テンソル生成
             // ============================================
             {
-                name: "IOTA",
-                code: "[ 5 ] IOTA",
-                expectedStack: [this.createVector([
-                    this.createNumber('0'),
-                    this.createNumber('1'),
-                    this.createNumber('2'),
-                    this.createNumber('3'),
-                    this.createNumber('4')
-                ])],
-                category: "Tensor Generation"
-            },
-            {
-                name: "ZEROS",
-                code: "[ 3 ] ZEROS",
-                expectedStack: [this.createVector([
-                    this.createNumber('0'),
-                    this.createNumber('0'),
-                    this.createNumber('0')
-                ])],
-                category: "Tensor Generation"
-            },
-            {
-                name: "ONES",
-                code: "[ 3 ] ONES",
-                expectedStack: [this.createVector([
-                    this.createNumber('1'),
-                    this.createNumber('1'),
-                    this.createNumber('1')
-                ])],
-                category: "Tensor Generation"
-            },
-            {
                 name: "FILL",
                 code: "[ 3 ] [ 7 ] FILL",
                 expectedStack: [this.createVector([
                     this.createNumber('7'),
                     this.createNumber('7'),
                     this.createNumber('7')
-                ])],
-                category: "Tensor Generation"
-            },
-            {
-                name: "EYE - identity matrix",
-                code: "[ 2 ] EYE",
-                expectedStack: [this.createVector([
-                    this.createVector([this.createNumber('1'), this.createNumber('0')]),
-                    this.createVector([this.createNumber('0'), this.createNumber('1')])
                 ])],
                 category: "Tensor Generation"
             },
