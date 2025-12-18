@@ -152,10 +152,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_times_with_stack_target() {
+    async fn test_times_with_operation_target() {
         let mut interp = Interpreter::new();
 
-        // Define a word that uses .. (stack target) to sum multiple elements
+        // Define a word that uses .. (operation target) to sum multiple elements
         // .. [ 2 ] + means: take 2 elements from stack and add them
         interp.execute("[ ': .. [ 2 ] +' ] 'SUM2' DEF").await.unwrap();
 
@@ -163,7 +163,7 @@ mod tests {
         // [1] [2] [3] -> SUM2 -> [1] [5] -> SUM2 -> [6]
         let result = interp.execute("[ 1 ] [ 2 ] [ 3 ] 'SUM2' [ 2 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with stack target should succeed: {:?}", result);
+        assert!(result.is_ok(), "TIMES with operation target should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
