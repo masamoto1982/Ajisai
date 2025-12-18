@@ -285,44 +285,73 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
             let mut results = Vec::new();
 
+            // 元のスタックを保存（MAPと同様）
+            let original_stack_below = interp.stack.clone();
+
             // operation_target と no_change_check を保存
             let saved_target = interp.operation_target;
             let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target = OperationTarget::StackTop;
             interp.disable_no_change_check = true;
 
-            for elem in elements {
+            for elem in &elements {
+                // スタックをクリアして単一要素を処理（MAPと同様）
+                interp.stack.clear();
                 // 各要素を単一要素Vectorでラップしてプッシュ
                 interp.stack.push(wrap_value(elem.clone()));
                 // ワードを実行
-                interp.execute_word_core(&word_name)?;
+                match interp.execute_word_core(&word_name) {
+                    Ok(_) => {
+                        // 条件判定結果を取得
+                        let condition_result = interp.stack.pop()
+                            .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
-                // 条件判定結果を取得
-                let condition_result = interp.stack.pop()
-                    .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
+                        // VectorからBoolean値を抽出
+                        let is_true = match condition_result.val_type {
+                            ValueType::Vector(v) if v.len() == 1 => {
+                                if let ValueType::Boolean(b) = v[0].val_type {
+                                    b
+                                } else {
+                                    // エラー時にスタックを復元
+                                    interp.operation_target = saved_target;
+                                    interp.disable_no_change_check = saved_no_change_check;
+                                    interp.stack = original_stack_below;
+                                    interp.stack.push(Value::from_vector(elements));
+                                    interp.stack.push(word_val);
+                                    return Err(AjisaiError::type_error("boolean result from FILTER word", "other type"));
+                                }
+                            },
+                            _ => {
+                                // エラー時にスタックを復元
+                                interp.operation_target = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = original_stack_below;
+                                interp.stack.push(Value::from_vector(elements));
+                                interp.stack.push(word_val);
+                                return Err(AjisaiError::type_error("boolean vector result from FILTER word", "other type"));
+                            }
+                        };
 
-                // VectorからBoolean値を抽出
-                let is_true = match condition_result.val_type {
-                    ValueType::Vector(v) if v.len() == 1 => {
-                        if let ValueType::Boolean(b) = v[0].val_type {
-                            b
-                        } else {
-                            return Err(AjisaiError::type_error("boolean result from FILTER word", "other type"));
+                        if is_true {
+                            results.push(elem.clone());
                         }
-                    },
-                    _ => {
-                        return Err(AjisaiError::type_error("boolean vector result from FILTER word", "other type"));
                     }
-                };
-
-                if is_true {
-                    results.push(elem);
+                    Err(e) => {
+                        // エラー時にスタックを復元
+                        interp.operation_target = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
+                        interp.stack = original_stack_below;
+                        interp.stack.push(Value::from_vector(elements));
+                        interp.stack.push(word_val);
+                        return Err(e);
+                    }
                 }
             }
 
-            // operation_target と no_change_check を復元
+            // operation_target と no_change_check を復元し、スタックを復元
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = original_stack_below;
 
             // 結果をVectorとして返す
             interp.stack.push(Value::from_vector(results));
@@ -955,6 +984,95 @@ mod tests {
         // 上の要素 [2 4 6] が正しいことを確認
         if let ValueType::Vector(v) = &interp.stack[1].val_type {
             assert_eq!(v.len(), 3);
+            let expected = [2, 4, 6];
+            for (i, expected_val) in expected.iter().enumerate() {
+                if let ValueType::Number(n) = &v[i].val_type {
+                    assert_eq!(n.numerator.to_string(), expected_val.to_string());
+                }
+            }
+        }
+    }
+
+    /// FILTERでガード節を持つカスタムワードを使用するテスト
+    /// ガード節の条件評価後もスタックが正しく管理されることを確認
+    #[tokio::test]
+    async fn test_filter_with_guarded_word() {
+        let mut interp = Interpreter::new();
+        // 値が2以上ならtrue、そうでなければfalseを返すワード（ガード節使用）
+        let def_code = r#"[ ': [ 2 ] >=
+: TRUE
+: FALSE' ] 'GE_TWO' DEF"#;
+        let def_result = interp.execute(def_code).await;
+        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
+
+        let filter_code = "[ 1 2 3 1 4 ] 'GE_TWO' FILTER";
+        let result = interp.execute(filter_code).await;
+
+        // デバッグ出力
+        println!("Result: {:?}", result);
+        println!("Stack after FILTER:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {}", i, val);
+        }
+
+        assert!(result.is_ok(), "FILTER with guarded word should succeed: {:?}", result);
+
+        // 結果: [2 3 4] (2以上の要素のみ)
+        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 3, "Result should have 3 elements");
+                let expected = [2, 3, 4];
+                for (i, expected_val) in expected.iter().enumerate() {
+                    if let ValueType::Number(n) = &v[i].val_type {
+                        assert_eq!(
+                            n.numerator.to_string(),
+                            expected_val.to_string(),
+                            "Element {} should be {}",
+                            i,
+                            expected_val
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// FILTERでスタック下部の要素が保護されることを確認するテスト
+    #[tokio::test]
+    async fn test_filter_preserves_stack_below() {
+        let mut interp = Interpreter::new();
+        // 偶数判定ワード
+        let def_code = "[ ': 2 MOD 0 =' ] 'IS_EVEN' DEF";
+        let def_result = interp.execute(def_code).await;
+        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
+
+        let code = "[ 100 ] [ 1 2 3 4 5 6 ] 'IS_EVEN' FILTER";
+        let result = interp.execute(code).await;
+
+        // デバッグ出力
+        println!("Result: {:?}", result);
+        println!("Stack after FILTER (preserves below):");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {}", i, val);
+        }
+
+        assert!(result.is_ok(), "FILTER should preserve stack below: {:?}", result);
+
+        // スタック: [100] [2 4 6]
+        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements, got {}", interp.stack.len());
+
+        // 下の要素 [100] が保護されていることを確認
+        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+            assert_eq!(v.len(), 1);
+            if let ValueType::Number(n) = &v[0].val_type {
+                assert_eq!(n.numerator.to_string(), "100");
+            }
+        }
+
+        // 上の要素 [2 4 6] が正しいことを確認
+        if let ValueType::Vector(v) = &interp.stack[1].val_type {
+            assert_eq!(v.len(), 3, "Filtered result should have 3 elements");
             let expected = [2, 4, 6];
             for (i, expected_val) in expected.iter().enumerate() {
                 if let ValueType::Number(n) = &v[i].val_type {
