@@ -80,6 +80,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
             let mut results = Vec::new();
 
+            // 元のスタックを保存
+            let original_stack_below = interp.stack.clone();
+
             // operation_target を一時的に保存してStackTopに設定
             // MAP内部では「変化なし」チェックを無効化
             let saved_target = interp.operation_target;
@@ -87,33 +90,63 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = OperationTarget::StackTop;
             interp.disable_no_change_check = true;
 
-            for elem in elements {
+            for elem in &elements {
+                // スタックをクリアして単一要素を処理（Stackモードと同様）
+                interp.stack.clear();
                 // 各要素を単一要素Vectorでラップしてプッシュ
-                interp.stack.push(wrap_value(elem));
+                interp.stack.push(wrap_value(elem.clone()));
                 // ワードを実行
-                interp.execute_word_core(&word_name)?;
-
-                // 結果を取得
-                let result_vec = interp.stack.pop()
-                    .ok_or_else(|| AjisaiError::from("MAP word must return a value"))?;
-
-                // 単一要素ベクタの場合はアンラップ
-                match result_vec.val_type {
-                    ValueType::Vector(mut v) if v.len() == 1 => {
-                        results.push(v.remove(0));
-                    },
-                    ValueType::Vector(v) => {
-                        results.push(Value::from_vector(v));
-                    },
-                    _ => {
-                        return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
+                match interp.execute_word_core(&word_name) {
+                    Ok(_) => {
+                        // 結果を取得
+                        match interp.stack.pop() {
+                            Some(result_vec) => {
+                                // 単一要素ベクタの場合はアンラップ
+                                match result_vec.val_type {
+                                    ValueType::Vector(mut v) if v.len() == 1 => {
+                                        results.push(v.remove(0));
+                                    },
+                                    ValueType::Vector(v) => {
+                                        results.push(Value::from_vector(v));
+                                    },
+                                    _ => {
+                                        // エラー時にスタックを復元
+                                        interp.operation_target = saved_target;
+                                        interp.disable_no_change_check = saved_no_change_check;
+                                        interp.stack = original_stack_below;
+                                        interp.stack.push(Value::from_vector(elements));
+                                        interp.stack.push(word_val);
+                                        return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
+                                    }
+                                }
+                            },
+                            None => {
+                                // エラー時にスタックを復元
+                                interp.operation_target = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = original_stack_below;
+                                interp.stack.push(Value::from_vector(elements));
+                                interp.stack.push(word_val);
+                                return Err(AjisaiError::from("MAP word must return a value"));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        // エラー時にスタックを復元
+                        interp.operation_target = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
+                        interp.stack = original_stack_below;
+                        interp.stack.push(Value::from_vector(elements));
+                        interp.stack.push(word_val);
+                        return Err(e);
                     }
                 }
             }
 
-            // operation_target とno_change_checkを復元
+            // operation_target とno_change_checkを復元、スタックを復元
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = original_stack_below;
 
             // 結果をVectorとして返す
             interp.stack.push(Value::from_vector(results));
@@ -792,6 +825,141 @@ mod tests {
         if let Some(val) = interp.stack.last() {
             if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 0);
+            }
+        }
+    }
+
+    /// MAPでガード節を持つカスタムワードを使用するテスト
+    /// ガード節の条件評価後もスタックが正しく管理されることを確認
+    #[tokio::test]
+    async fn test_map_with_guarded_word() {
+        let mut interp = Interpreter::new();
+        // 値が1なら10を、そうでなければ20を返すワード
+        // ガード節構文: 各行が ':' で始まり、改行で区切られた単一文字列
+        let def_code = r#"[ ': [ 1 ] =
+: [ 10 ]
+: [ 20 ]' ] 'CHECK_ONE' DEF"#;
+        let def_result = interp.execute(def_code).await;
+        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
+
+        let map_code = "[ 1 2 1 3 1 ] 'CHECK_ONE' MAP";
+        let result = interp.execute(map_code).await;
+
+        // デバッグ出力
+        println!("Result: {:?}", result);
+        println!("Stack after MAP:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {}", i, val);
+        }
+
+        assert!(result.is_ok(), "MAP with guarded word should succeed: {:?}", result);
+
+        // 結果: [10 20 10 20 10] (1なら10、それ以外なら20)
+        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 5, "Result should have 5 elements");
+                let expected = [10, 20, 10, 20, 10];
+                for (i, expected_val) in expected.iter().enumerate() {
+                    if let ValueType::Number(n) = &v[i].val_type {
+                        assert_eq!(
+                            n.numerator.to_string(),
+                            expected_val.to_string(),
+                            "Element {} should be {}",
+                            i,
+                            expected_val
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// MAPで複数行のワードを使用するテスト
+    /// 複数の演算を行うワードでも正しく動作することを確認
+    #[tokio::test]
+    async fn test_map_with_multiline_word() {
+        let mut interp = Interpreter::new();
+        // 入力を2倍にして1を足すワード（2行）
+        let def_code = r#"[ ':
+[ 2 ] *
+[ 1 ] +' ] 'DOUBLE_PLUS_ONE' DEF"#;
+        let def_result = interp.execute(def_code).await;
+        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
+
+        let map_code = "[ 1 2 3 ] 'DOUBLE_PLUS_ONE' MAP";
+        let result = interp.execute(map_code).await;
+
+        // デバッグ出力
+        println!("Result: {:?}", result);
+        println!("Stack after MAP (multiline):");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {}", i, val);
+        }
+
+        assert!(result.is_ok(), "MAP with multiline word should succeed: {:?}", result);
+
+        // 結果: [3 5 7]（各要素を2倍して1を足す: 1*2+1=3, 2*2+1=5, 3*2+1=7）
+        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 3, "Result should have 3 elements");
+                let expected = [3, 5, 7];
+                for (i, expected_val) in expected.iter().enumerate() {
+                    if let ValueType::Number(n) = &v[i].val_type {
+                        assert_eq!(
+                            n.numerator.to_string(),
+                            expected_val.to_string(),
+                            "Element {} should be {}",
+                            i,
+                            expected_val
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// MAPでスタック下部の要素が保護されることを確認するテスト
+    #[tokio::test]
+    async fn test_map_preserves_stack_below() {
+        let mut interp = Interpreter::new();
+        // スタックに先に要素を置いてからMAPを実行
+        let def_code = "[ ': 2 *' ] 'DOUBLE' DEF";
+        let def_result = interp.execute(def_code).await;
+        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
+
+        let code = "[ 100 ] [ 1 2 3 ] 'DOUBLE' MAP";
+        let result = interp.execute(code).await;
+
+        // デバッグ出力
+        println!("Result: {:?}", result);
+        println!("Stack after MAP (preserves below):");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {}", i, val);
+        }
+
+        assert!(result.is_ok(), "MAP should preserve stack below: {:?}", result);
+
+        // スタック: [100] [2 4 6]
+        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements");
+
+        // 下の要素 [100] が保護されていることを確認
+        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+            assert_eq!(v.len(), 1);
+            if let ValueType::Number(n) = &v[0].val_type {
+                assert_eq!(n.numerator.to_string(), "100");
+            }
+        }
+
+        // 上の要素 [2 4 6] が正しいことを確認
+        if let ValueType::Vector(v) = &interp.stack[1].val_type {
+            assert_eq!(v.len(), 3);
+            let expected = [2, 4, 6];
+            for (i, expected_val) in expected.iter().enumerate() {
+                if let ValueType::Number(n) = &v[i].val_type {
+                    assert_eq!(n.numerator.to_string(), expected_val.to_string());
+                }
             }
         }
     }
