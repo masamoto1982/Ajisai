@@ -47,9 +47,84 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
-    for _ in 0..count {
-        interp.execute_word_core(&word_name)?;
+    // TIMES内のループでは「変化なしエラー」チェックを無効化
+    // （FOLDなどの高階関数と同様に繰り返し演算を行うため）
+    let saved_no_change_check = interp.disable_no_change_check;
+    interp.disable_no_change_check = true;
+
+    let result = (|| {
+        for _ in 0..count {
+            interp.execute_word_core(&word_name)?;
+        }
+        Ok(())
+    })();
+
+    // フラグを復元
+    interp.disable_no_change_check = saved_no_change_check;
+
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::interpreter::Interpreter;
+
+    #[tokio::test]
+    async fn test_times_basic() {
+        let mut interp = Interpreter::new();
+
+        // Define INC word: adds 1 to the top of stack
+        interp.execute("[ ': [ 1 ] +' ] 'INC' DEF").await.unwrap();
+
+        // Start with 0, call INC 5 times -> should be 5
+        let result = interp.execute("[ 0 ] 'INC' [ 5 ] TIMES").await;
+
+        assert!(result.is_ok(), "TIMES should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        // Check the value is 5
+        if let Some(val) = interp.stack.last() {
+            let debug_str = format!("{:?}", val);
+            assert!(debug_str.contains("5"), "Result should be 5");
+        }
     }
 
-    Ok(())
+    #[tokio::test]
+    async fn test_times_zero_count() {
+        let mut interp = Interpreter::new();
+
+        // Define a word
+        interp.execute("[ ': [ 1 ] +' ] 'INC' DEF").await.unwrap();
+
+        // Start with 10, call INC 0 times -> should still be 10
+        let result = interp.execute("[ 10 ] 'INC' [ 0 ] TIMES").await;
+
+        assert!(result.is_ok(), "TIMES with 0 count should succeed");
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            let debug_str = format!("{:?}", val);
+            assert!(debug_str.contains("10"), "Result should be 10");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_times_unknown_word_error() {
+        let mut interp = Interpreter::new();
+
+        // Try TIMES with undefined word
+        let result = interp.execute("[ 0 ] 'UNDEFINED' [ 3 ] TIMES").await;
+
+        assert!(result.is_err(), "TIMES with undefined word should fail");
+    }
+
+    #[tokio::test]
+    async fn test_times_builtin_word_error() {
+        let mut interp = Interpreter::new();
+
+        // Try TIMES with builtin word (should fail)
+        let result = interp.execute("[ 0 ] 'DUP' [ 3 ] TIMES").await;
+
+        assert!(result.is_err(), "TIMES with builtin word should fail");
+    }
 }
