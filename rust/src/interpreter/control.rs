@@ -127,4 +127,48 @@ mod tests {
 
         assert!(result.is_err(), "TIMES with builtin word should fail");
     }
+
+    #[tokio::test]
+    async fn test_times_with_multiline_word() {
+        let mut interp = Interpreter::new();
+
+        // Define a word with multiple lines (simpler than guard clauses)
+        // This tests that TIMES correctly calls words with multiple execution lines
+        let def = r#"[ ':
+[ 1 ] +
+[ 1 ] +' ] 'ADD_TWO' DEF"#;
+        let def_result = interp.execute(def).await;
+        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
+
+        // Start with 0, call 2 times -> 0 +2 +2 = 4
+        let result = interp.execute("[ 0 ] 'ADD_TWO' [ 2 ] TIMES").await;
+
+        assert!(result.is_ok(), "TIMES with multiline word should succeed: {:?}", result);
+
+        if let Some(val) = interp.stack.last() {
+            let debug_str = format!("{:?}", val);
+            assert!(debug_str.contains("4"), "Result should be 4, got: {}", debug_str);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_times_with_stack_target() {
+        let mut interp = Interpreter::new();
+
+        // Define a word that uses .. (stack target) to sum multiple elements
+        // .. [ 2 ] + means: take 2 elements from stack and add them
+        interp.execute("[ ': .. [ 2 ] +' ] 'SUM2' DEF").await.unwrap();
+
+        // Push 3 elements, then sum them pairwise twice
+        // [1] [2] [3] -> SUM2 -> [1] [5] -> SUM2 -> [6]
+        let result = interp.execute("[ 1 ] [ 2 ] [ 3 ] 'SUM2' [ 2 ] TIMES").await;
+
+        assert!(result.is_ok(), "TIMES with stack target should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            let debug_str = format!("{:?}", val);
+            assert!(debug_str.contains("6"), "Result should be 6, got: {}", debug_str);
+        }
+    }
 }
