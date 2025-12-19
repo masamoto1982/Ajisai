@@ -302,12 +302,17 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             }
         }
         OperationTarget::Stack => {
-            let replace_element = unwrap_single_element(new_element);
-
             let len = interp.stack.len();
-            let actual_index = normalize_index(index, len)
-                .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
+            let actual_index = match normalize_index(index, len) {
+                Some(idx) => idx,
+                None => {
+                    interp.stack.push(index_val);
+                    interp.stack.push(new_element);
+                    return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                }
+            };
 
+            let replace_element = unwrap_single_element(new_element);
             interp.stack[actual_index] = replace_element;
             Ok(())
         }
@@ -382,8 +387,13 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTarget::Stack => {
             let len = interp.stack.len();
-            let actual_index = normalize_index(index, len)
-                .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
+            let actual_index = match normalize_index(index, len) {
+                Some(idx) => idx,
+                None => {
+                    interp.stack.push(index_val);
+                    return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                }
+            };
 
             interp.stack.remove(actual_index);
             Ok(())
