@@ -112,8 +112,8 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             };
 
             let result_elem = interp.stack[actual_index].clone();
-            // 結果を単一要素Vectorでラップ
-            interp.stack.push(wrap_value(result_elem));
+            // Stackモードの場合、スタック上の値はすでにベクタ形式なのでそのまま返す
+            interp.stack.push(result_elem);
             Ok(())
         }
     }
