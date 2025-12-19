@@ -484,28 +484,53 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-                let saved_target = interp.operation_target;
-                let saved_no_change_check = interp.disable_no_change_check;
-                interp.operation_target = OperationTarget::StackTop;
-                interp.disable_no_change_check = true;
+            // 元のスタックを保存（MAPと同様）
+            let original_stack_below = interp.stack.clone();
 
-                for elem in elements {
-                    interp.stack.push(wrap_value(accumulator));
-                    interp.stack.push(wrap_value(elem));
+            // operation_target と no_change_check を保存
+            let saved_target = interp.operation_target;
+            let saved_no_change_check = interp.disable_no_change_check;
+            interp.operation_target = OperationTarget::StackTop;
+            interp.disable_no_change_check = true;
 
-                    if let Err(e) = interp.execute_word_core(&word_name) {
+            for elem in &elements {
+                // スタックをクリアして処理（MAPと同様）
+                interp.stack.clear();
+                interp.stack.push(wrap_value(accumulator.clone()));
+                interp.stack.push(wrap_value(elem.clone()));
+
+                match interp.execute_word_core(&word_name) {
+                    Ok(_) => {
+                        let result = interp.stack.pop()
+                            .ok_or_else(|| {
+                                // エラー時にスタックを復元
+                                interp.operation_target = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = original_stack_below.clone();
+                                interp.stack.push(Value::from_vector(elements.clone()));
+                                interp.stack.push(wrap_value(accumulator.clone()));
+                                interp.stack.push(word_val.clone());
+                                AjisaiError::from("FOLD: word must return a value")
+                            })?;
+                        accumulator = unwrap_single_element(result);
+                    }
+                    Err(e) => {
+                        // エラー時にスタックを復元
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
+                        interp.stack = original_stack_below;
+                        interp.stack.push(Value::from_vector(elements));
+                        interp.stack.push(wrap_value(accumulator));
+                        interp.stack.push(word_val);
                         return Err(e);
                     }
-
-                    let result = interp.stack.pop()
-                        .ok_or_else(|| AjisaiError::from("FOLD: word must return a value"))?;
-                    accumulator = unwrap_single_element(result);
                 }
+            }
 
+            // operation_target と no_change_check を復元し、スタックを復元
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = original_stack_below;
             interp.stack.push(wrap_value(accumulator));
             Ok(())
         }
@@ -1077,6 +1102,78 @@ mod tests {
             for (i, expected_val) in expected.iter().enumerate() {
                 if let ValueType::Number(n) = &v[i].val_type {
                     assert_eq!(n.numerator.to_string(), expected_val.to_string());
+                }
+            }
+        }
+    }
+
+    /// FOLDでスタック下部の要素が保護されることを確認するテスト
+    #[tokio::test]
+    async fn test_fold_preserves_stack_below() {
+        let mut interp = Interpreter::new();
+        // スタックに先に要素を置いてからFOLDを実行
+        let code = "[ 100 ] [ 1 2 3 4 ] [ 0 ] '+' FOLD";
+        let result = interp.execute(code).await;
+
+        // デバッグ出力
+        println!("Result: {:?}", result);
+        println!("Stack after FOLD (preserves below):");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {}", i, val);
+        }
+
+        assert!(result.is_ok(), "FOLD should preserve stack below: {:?}", result);
+
+        // スタック: [100] [10]
+        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements, got {}", interp.stack.len());
+
+        // 下の要素 [100] が保護されていることを確認
+        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+            assert_eq!(v.len(), 1);
+            if let ValueType::Number(n) = &v[0].val_type {
+                assert_eq!(n.numerator.to_string(), "100");
+            }
+        }
+
+        // 上の要素 [10] が正しいことを確認（0+1+2+3+4=10）
+        if let ValueType::Vector(v) = &interp.stack[1].val_type {
+            assert_eq!(v.len(), 1);
+            if let ValueType::Number(n) = &v[0].val_type {
+                assert_eq!(n.numerator.to_string(), "10");
+            }
+        }
+    }
+
+    /// FOLDでカスタムワードを使用するテスト（シンプルな足し算ラッパー）
+    #[tokio::test]
+    async fn test_fold_with_custom_word() {
+        let mut interp = Interpreter::new();
+        // 単純に + を呼び出すカスタムワード
+        // FOLDでは2つの値がスタックにプッシュされるので、単に + で合計できる
+        let def_code = "[ ': +' ] 'MYSUM' DEF";
+        let def_result = interp.execute(def_code).await;
+        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
+
+        // [1 2 3 4] [0] 'MYSUM' FOLD → 0+1+2+3+4 = 10
+        let fold_code = "[ 1 2 3 4 ] [ 0 ] 'MYSUM' FOLD";
+        let result = interp.execute(fold_code).await;
+
+        // デバッグ出力
+        println!("Result: {:?}", result);
+        println!("Stack after FOLD (with custom word):");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {}", i, val);
+        }
+
+        assert!(result.is_ok(), "FOLD with custom word should succeed: {:?}", result);
+
+        // 結果: [10]
+        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "10", "Result should be 10 (0+1+2+3+4)");
                 }
             }
         }
