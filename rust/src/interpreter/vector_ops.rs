@@ -529,12 +529,14 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
             if count < 0 {
                 let abs_count = (-count) as usize;
                 if abs_count > len {
+                    interp.stack.push(count_val);
                     return Err(AjisaiError::from("Take count exceeds stack length"));
                 }
                 interp.stack = interp.stack.split_off(len - abs_count);
             } else {
                 let take_count = count as usize;
                 if take_count > len {
+                    interp.stack.push(count_val);
                     return Err(AjisaiError::from("Take count exceeds stack length"));
                 }
                 interp.stack.truncate(take_count);
