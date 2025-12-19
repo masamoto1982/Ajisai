@@ -801,6 +801,46 @@ mod tests {
         }
 
         assert!(result.is_ok());
+        // スタックには [5] と [5] が含まれるはず (元の値と取得した値)
+        assert_eq!(interp.stack.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_stack_get_with_guard_and_comparison() {
+        let mut interp = Interpreter::new();
+
+        // Test .. GET with comparison
+        // スタックモードでGETした値を比較できることを確認
+        // 修正後: [1] .. GET は [20] を返す（二重ラップなし）
+        // 修正前: [1] .. GET は [[20]] を返していた（二重ラップ）
+        let code = r#"
+: [10] [20] [30] [1] .. GET [20] =
+"#;
+
+        println!("\n=== Stack GET with Comparison Test ===");
+        let result = interp.execute(code).await;
+        println!("Result: {:?}", result);
+        println!("Final stack length: {}", interp.stack.len());
+        println!("Final stack contents:");
+        for (i, val) in interp.stack.iter().enumerate() {
+            println!("  [{}]: {:?}", i, val);
+        }
+
+        assert!(result.is_ok());
+        // スタックには [10], [20], [30], [TRUE] が含まれるはず
+        // [1] .. GET は [20] を取得してプッシュ、[20] = で比較して TRUE
+        assert_eq!(interp.stack.len(), 4);
+        // 最後の値が TRUE であることを確認
+        if let ValueType::Vector(v) = &interp.stack[3].val_type {
+            assert_eq!(v.len(), 1);
+            if let ValueType::Boolean(b) = v[0].val_type {
+                assert!(b, "Expected TRUE from comparison");
+            } else {
+                panic!("Expected Boolean, got {:?}", v[0].val_type);
+            }
+        } else {
+            panic!("Expected Vector, got {:?}", interp.stack[3].val_type);
+        }
     }
 
     #[tokio::test]
