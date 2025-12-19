@@ -203,6 +203,9 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             }
         }
         OperationTarget::Stack => {
+            // REPLACEと同様に単一要素ベクタをアンラップする
+            let element_to_insert = unwrap_single_element(element);
+
             let len = interp.stack.len() as i64;
             let insert_index = if index < 0 {
                 // 負数インデックス: -1は末尾、-2は末尾の1つ前
@@ -212,7 +215,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
                 // 正数インデックス: lengthまで許容（末尾への追加を可能にする）
                 (index as usize).min(interp.stack.len())
             };
-            interp.stack.insert(insert_index, element);
+            interp.stack.insert(insert_index, element_to_insert);
             Ok(())
         }
     }
