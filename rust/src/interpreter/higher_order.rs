@@ -624,6 +624,9 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             let mut state = init_state.clone();
             let mut results = Vec::new();
 
+            // 元のスタックを保存（MAPと同様）
+            let original_stack_below = interp.stack.clone();
+
             let saved_target = interp.operation_target;
             let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target = OperationTarget::StackTop;
@@ -635,6 +638,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                     // MAX_ITERATIONSに達した場合はエラー
                     interp.operation_target = saved_target;
                     interp.disable_no_change_check = saved_no_change_check;
+                    interp.stack = original_stack_below;
                     interp.stack.push(init_state);
                     interp.stack.push(word_val);
                     return Err(AjisaiError::from(
@@ -643,12 +647,15 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 }
                 iteration_count += 1;
 
+                // スタックをクリアして処理（MAPと同様）
+                interp.stack.clear();
                 interp.stack.push(state.clone());
 
                 if let Err(e) = interp.execute_word_core(&word_name) {
-                    // 【修正】エラー時にスタックを復元
+                    // エラー時にスタックを復元
                     interp.operation_target = saved_target;
                     interp.disable_no_change_check = saved_no_change_check;
+                    interp.stack = original_stack_below;
                     interp.stack.push(init_state);
                     interp.stack.push(word_val);
                     return Err(e);
@@ -659,6 +666,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                     .ok_or_else(|| {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
+                        interp.stack = original_stack_below.clone();
                         AjisaiError::from("UNFOLD: word must return a value")
                     })?;
                 let _input = interp.stack.pop(); // 入力状態を破棄
@@ -685,7 +693,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                     _ => {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
-                        // 【修正】エラー時にスタックを復元
+                        // エラー時にスタックを復元
+                        interp.stack = original_stack_below;
                         interp.stack.push(init_state);
                         interp.stack.push(word_val);
                         return Err(AjisaiError::from(
@@ -695,8 +704,10 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
+            // operation_target と no_change_check を復元し、スタックを復元（MAPと同様）
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = original_stack_below;
             interp.stack.push(Value { val_type: ValueType::Vector(results) });
             Ok(())
         }
