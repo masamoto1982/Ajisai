@@ -177,11 +177,13 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let result = transpose(data_vec)
-        .map_err(|e| {
-            interp.stack.push(val.clone());
-            AjisaiError::from(format!("TRANSPOSE failed: {}", e))
-        })?;
+    let result = match transpose(data_vec) {
+        Ok(r) => r,
+        Err(e) => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from(format!("TRANSPOSE failed: {}", e)));
+        }
+    };
     interp.stack.push(Value::from_vector(result));
     Ok(())
 }
