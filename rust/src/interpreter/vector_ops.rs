@@ -699,17 +699,19 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             // スタックトップからcountを取得（オプション、デフォルトは2）
-            let count_i64 = if let Some(top) = interp.stack.last() {
+            // count_value_optはポップした引数を追跡し、エラー時に復元する
+            let (count_i64, count_value_opt) = if let Some(top) = interp.stack.last() {
                 if let Ok(count_bigint) = get_bigint_from_value(top) {
+                    let count_val = interp.stack.pop().unwrap();
                     if let Some(c) = count_bigint.to_i64() {
-                        interp.stack.pop();
-                        c
+                        (c, Some(count_val))
                     } else {
+                        interp.stack.push(count_val);
                         return Err(AjisaiError::from("Count is too large"));
                     }
                 } else {
                     // countが指定されていない場合、デフォルトは2
-                    2
+                    (2, None)
                 }
             } else {
                 return Err(AjisaiError::StackUnderflow);
@@ -719,6 +721,10 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             let is_reversed = count_i64 < 0;
 
             if interp.stack.len() < abs_count {
+                // ガード節エラー時にcount引数を復元
+                if let Some(count_val) = count_value_opt {
+                    interp.stack.push(count_val);
+                }
                 return Err(AjisaiError::StackUnderflow);
             }
 
@@ -743,17 +749,19 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTarget::Stack => {
             // Stackモード: スタックトップがcountかチェック、なければスタック全体
-            let count_i64 = if let Some(top) = interp.stack.last() {
+            // count_value_optはポップした引数を追跡し、エラー時に復元する
+            let (count_i64, count_value_opt) = if let Some(top) = interp.stack.last() {
                 if let Ok(count_bigint) = get_bigint_from_value(top) {
+                    let count_val = interp.stack.pop().unwrap();
                     if let Some(c) = count_bigint.to_i64() {
-                        interp.stack.pop();
-                        c
+                        (c, Some(count_val))
                     } else {
+                        interp.stack.push(count_val);
                         return Err(AjisaiError::from("Count is too large"));
                     }
                 } else {
                     // countが指定されていない場合、スタック全体を使用
-                    interp.stack.len() as i64
+                    (interp.stack.len() as i64, None)
                 }
             } else {
                 return Err(AjisaiError::StackUnderflow);
@@ -763,6 +771,10 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             let is_reversed = count_i64 < 0;
 
             if interp.stack.len() < abs_count {
+                // ガード節エラー時にcount引数を復元
+                if let Some(count_val) = count_value_opt {
+                    interp.stack.push(count_val);
+                }
                 return Err(AjisaiError::StackUnderflow);
             }
 
