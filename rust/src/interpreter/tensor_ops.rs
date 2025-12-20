@@ -414,8 +414,14 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             let mut s = Vec::with_capacity(v.len());
             for elem in v {
                 if let ValueType::Number(n) = &elem.val_type {
-                    let dim = n.as_usize()
-                        .ok_or_else(|| AjisaiError::from("Shape dimensions must be positive integers"))?;
+                    let dim = match n.as_usize() {
+                        Some(d) => d,
+                        None => {
+                            interp.stack.push(shape_val);
+                            interp.stack.push(value_val);
+                            return Err(AjisaiError::from("Shape dimensions must be positive integers"));
+                        }
+                    };
                     s.push(dim);
                 } else {
                     interp.stack.push(shape_val);
@@ -452,6 +458,8 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     };
 
     if shape.is_empty() {
+        interp.stack.push(shape_val);
+        interp.stack.push(value_val);
         return Err(AjisaiError::from("FILL requires non-empty shape"));
     }
 
