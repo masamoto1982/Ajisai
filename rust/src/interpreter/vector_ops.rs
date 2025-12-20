@@ -643,6 +643,10 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::Stack => {
             let total_size: usize = sizes.iter().sum();
             if total_size > interp.stack.len() {
+                // Restore all size values to the stack
+                for val in sizes_values {
+                    interp.stack.push(val);
+                }
                 return Err(AjisaiError::from("Split sizes sum exceeds stack length"));
             }
 
