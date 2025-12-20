@@ -112,8 +112,14 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
             let mut shape = Vec::with_capacity(v.len());
             for elem in v {
                 if let ValueType::Number(n) = &elem.val_type {
-                    let dim = n.as_usize()
-                        .ok_or_else(|| AjisaiError::from("Shape dimensions must be positive integers"))?;
+                    let dim = match n.as_usize() {
+                        Some(d) => d,
+                        None => {
+                            interp.stack.push(data_val);
+                            interp.stack.push(shape_val);
+                            return Err(AjisaiError::from("Shape dimensions must be positive integers"));
+                        }
+                    };
                     shape.push(dim);
                 } else {
                     interp.stack.push(data_val);
@@ -140,8 +146,14 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let result = reshape(data_vec, &new_shape)
-        .map_err(|e| AjisaiError::from(format!("RESHAPE failed: {}", e)))?;
+    let result = match reshape(data_vec, &new_shape) {
+        Ok(r) => r,
+        Err(e) => {
+            interp.stack.push(data_val);
+            interp.stack.push(shape_val);
+            return Err(AjisaiError::from(format!("RESHAPE failed: {}", e)));
+        }
+    };
     interp.stack.push(Value::from_vector(result));
     Ok(())
 }
