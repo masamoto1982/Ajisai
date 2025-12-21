@@ -914,36 +914,89 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
             // 最後の引数を確認（endまたはstep）
             let last_val = interp.stack.pop().unwrap();
-            let last_bigint = get_bigint_from_value(&last_val)?;
-            let last_i64 = last_bigint.to_i64()
-                .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+            let last_bigint = match get_bigint_from_value(&last_val) {
+                Ok(v) => v,
+                Err(e) => {
+                    interp.stack.push(last_val);
+                    return Err(e);
+                }
+            };
+            let last_i64 = match last_bigint.to_i64() {
+                Some(v) => v,
+                None => {
+                    interp.stack.push(last_val);
+                    return Err(AjisaiError::from("RANGE argument is too large"));
+                }
+            };
 
             // 2番目の引数を確認（startまたはend）
             let second_val = interp.stack.pop().unwrap();
-            let second_bigint = get_bigint_from_value(&second_val)?;
-            let second_i64 = second_bigint.to_i64()
-                .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+            let second_bigint = match get_bigint_from_value(&second_val) {
+                Ok(v) => v,
+                Err(e) => {
+                    interp.stack.push(second_val);
+                    interp.stack.push(last_val);
+                    return Err(e);
+                }
+            };
+            let second_i64 = match second_bigint.to_i64() {
+                Some(v) => v,
+                None => {
+                    interp.stack.push(second_val);
+                    interp.stack.push(last_val);
+                    return Err(AjisaiError::from("RANGE argument is too large"));
+                }
+            };
 
             let (start, end, step, start_val, end_val, step_val) = if interp.stack.is_empty() {
                 // 2引数モード: start, end
                 let step = if second_i64 <= last_i64 { 1 } else { -1 };
                 (second_i64, last_i64, step, second_val, last_val, None)
             } else {
-                // 3引数モード: start, end, step
-                let first_val = interp.stack.pop().unwrap();
-                let first_bigint = get_bigint_from_value(&first_val)?;
-                let first_i64 = first_bigint.to_i64()
-                    .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
-                (first_i64, second_i64, last_i64, first_val, second_val, Some(last_val))
+                // 3引数かチェック：次の値が整数かどうか確認
+                if let Some(top) = interp.stack.last() {
+                    if let Ok(first_bigint) = get_bigint_from_value(top) {
+                        // 3引数モード: start, end, step
+                        let first_val = interp.stack.pop().unwrap();
+                        let first_i64 = match first_bigint.to_i64() {
+                            Some(v) => v,
+                            None => {
+                                interp.stack.push(first_val);
+                                interp.stack.push(second_val);
+                                interp.stack.push(last_val);
+                                return Err(AjisaiError::from("RANGE argument is too large"));
+                            }
+                        };
+                        (first_i64, second_i64, last_i64, first_val, second_val, Some(last_val))
+                    } else {
+                        // 2引数モード（次がベクタなど）
+                        let step = if second_i64 <= last_i64 { 1 } else { -1 };
+                        (second_i64, last_i64, step, second_val, last_val, None)
+                    }
+                } else {
+                    // 2引数モード（スタック空）
+                    let step = if second_i64 <= last_i64 { 1 } else { -1 };
+                    (second_i64, last_i64, step, second_val, last_val, None)
+                }
             };
 
-            // stepが0の場合はエラー
+            // stepが0の場合はエラー（引数を復元）
             if step == 0 {
+                interp.stack.push(start_val);
+                interp.stack.push(end_val);
+                if let Some(sv) = step_val {
+                    interp.stack.push(sv);
+                }
                 return Err(AjisaiError::from("RANGE step cannot be 0"));
             }
 
-            // 無限範囲チェック
+            // 無限範囲チェック（引数を復元）
             if (start < end && step < 0) || (start > end && step > 0) {
+                interp.stack.push(start_val);
+                interp.stack.push(end_val);
+                if let Some(sv) = step_val {
+                    interp.stack.push(sv);
+                }
                 return Err(AjisaiError::from("RANGE would create an infinite sequence (check start, end, and step values)"));
             }
 
@@ -989,46 +1042,83 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
             // 最後の引数を確認
             let last_val = interp.stack.pop().unwrap();
-            let last_bigint = get_bigint_from_value(&last_val)?;
-            let last_i64 = last_bigint.to_i64()
-                .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+            let last_bigint = match get_bigint_from_value(&last_val) {
+                Ok(v) => v,
+                Err(e) => {
+                    interp.stack.push(last_val);
+                    return Err(e);
+                }
+            };
+            let last_i64 = match last_bigint.to_i64() {
+                Some(v) => v,
+                None => {
+                    interp.stack.push(last_val);
+                    return Err(AjisaiError::from("RANGE argument is too large"));
+                }
+            };
 
             // 2番目の引数を確認
             let second_val = interp.stack.pop().unwrap();
-            let second_bigint = get_bigint_from_value(&second_val)?;
-            let second_i64 = second_bigint.to_i64()
-                .ok_or_else(|| AjisaiError::from("RANGE argument is too large"))?;
+            let second_bigint = match get_bigint_from_value(&second_val) {
+                Ok(v) => v,
+                Err(e) => {
+                    interp.stack.push(second_val);
+                    interp.stack.push(last_val);
+                    return Err(e);
+                }
+            };
+            let second_i64 = match second_bigint.to_i64() {
+                Some(v) => v,
+                None => {
+                    interp.stack.push(second_val);
+                    interp.stack.push(last_val);
+                    return Err(AjisaiError::from("RANGE argument is too large"));
+                }
+            };
 
-            let (start, end, step) = if let Some(top) = interp.stack.last() {
+            // 3引数かチェック：first_valも追跡してエラー時に復元できるようにする
+            let (start, end, step, first_val_opt) = if let Some(top) = interp.stack.last() {
                 // 3番目の引数があるかチェック
                 if let Ok(third_bigint) = get_bigint_from_value(top) {
+                    // 3引数モード
+                    let first_val = interp.stack.pop().unwrap();
                     if let Some(third_i64) = third_bigint.to_i64() {
-                        // 3引数モード
-                        interp.stack.pop();
-                        (third_i64, second_i64, last_i64)
+                        (third_i64, second_i64, last_i64, Some(first_val))
                     } else {
-                        // 2引数モード（3番目が整数でない）
-                        let step = if second_i64 <= last_i64 { 1 } else { -1 };
-                        (second_i64, last_i64, step)
+                        // 3番目がi64に変換できない
+                        interp.stack.push(first_val);
+                        interp.stack.push(second_val);
+                        interp.stack.push(last_val);
+                        return Err(AjisaiError::from("RANGE argument is too large"));
                     }
                 } else {
                     // 2引数モード
                     let step = if second_i64 <= last_i64 { 1 } else { -1 };
-                    (second_i64, last_i64, step)
+                    (second_i64, last_i64, step, None)
                 }
             } else {
                 // スタックが空なので2引数モード
                 let step = if second_i64 <= last_i64 { 1 } else { -1 };
-                (second_i64, last_i64, step)
+                (second_i64, last_i64, step, None)
             };
 
-            // stepが0の場合はエラー
+            // stepが0の場合はエラー（引数を復元）
             if step == 0 {
+                if let Some(first_val) = first_val_opt {
+                    interp.stack.push(first_val);
+                }
+                interp.stack.push(second_val);
+                interp.stack.push(last_val);
                 return Err(AjisaiError::from("RANGE step cannot be 0"));
             }
 
-            // 無限範囲チェック
+            // 無限範囲チェック（引数を復元）
             if (start < end && step < 0) || (start > end && step > 0) {
+                if let Some(first_val) = first_val_opt {
+                    interp.stack.push(first_val);
+                }
+                interp.stack.push(second_val);
+                interp.stack.push(last_val);
                 return Err(AjisaiError::from("RANGE would create an infinite sequence (check start, end, and step values)"));
             }
 
@@ -1059,5 +1149,102 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interpreter::Interpreter;
+
+    #[tokio::test]
+    async fn test_range_basic_stacktop() {
+        let mut interp = Interpreter::new();
+
+        // 基本的な範囲生成（StackTopモード）
+        let result = interp.execute("[ 0 ] [ 5 ] RANGE").await;
+        assert!(result.is_ok(), "RANGE should succeed: {:?}", result);
+
+        // 引数（[0] [5]）と結果（[0 1 2 3 4 5]）がスタックに残る
+        assert_eq!(interp.stack.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_range_with_step() {
+        let mut interp = Interpreter::new();
+
+        // ステップ付き範囲生成
+        let result = interp.execute("[ 0 ] [ 10 ] [ 2 ] RANGE").await;
+        assert!(result.is_ok(), "RANGE with step should succeed: {:?}", result);
+
+        // 引数（[0] [10] [2]）と結果（[0 2 4 6 8 10]）がスタックに残る
+        assert_eq!(interp.stack.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn test_range_descending() {
+        let mut interp = Interpreter::new();
+
+        // 降順範囲
+        let result = interp.execute("[ 10 ] [ 0 ] [ -2 ] RANGE").await;
+        assert!(result.is_ok(), "RANGE descending should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn test_range_single_element() {
+        let mut interp = Interpreter::new();
+
+        // 単一要素
+        let result = interp.execute("[ 5 ] [ 5 ] RANGE").await;
+        assert!(result.is_ok(), "RANGE single element should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_range_stack_mode() {
+        let mut interp = Interpreter::new();
+
+        // Stackモード
+        let result = interp.execute("0 5 .. RANGE").await;
+        assert!(result.is_ok(), "RANGE stack mode should succeed: {:?}", result);
+        // Stackモードでは引数が消費され、結果のみ残る
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_range_error_step_zero_restores_stack_stacktop() {
+        let mut interp = Interpreter::new();
+
+        // step=0はエラー、エラー時にスタックが復元されるか確認
+        let result = interp.execute("[ 0 ] [ 10 ] [ 0 ] RANGE").await;
+        assert!(result.is_err(), "RANGE with step=0 should fail");
+
+        // エラー時に引数が復元されている
+        assert_eq!(interp.stack.len(), 3, "Arguments should be restored on error");
+    }
+
+    #[tokio::test]
+    async fn test_range_error_step_zero_restores_stack_stack_mode() {
+        let mut interp = Interpreter::new();
+
+        // Stackモードでstep=0はエラー、エラー時にスタックが復元されるか確認
+        let result = interp.execute("0 10 0 .. RANGE").await;
+        assert!(result.is_err(), "RANGE stack mode with step=0 should fail");
+
+        // エラー時に引数が復元されている
+        assert_eq!(interp.stack.len(), 3, "Arguments should be restored on error in stack mode");
+    }
+
+    #[tokio::test]
+    async fn test_range_error_infinite_restores_stack() {
+        let mut interp = Interpreter::new();
+
+        // 無限範囲エラー（start < endだがstep < 0）
+        let result = interp.execute("[ 0 ] [ 10 ] [ -1 ] RANGE").await;
+        assert!(result.is_err(), "RANGE with infinite sequence should fail");
+
+        // エラー時に引数が復元されている
+        assert_eq!(interp.stack.len(), 3, "Arguments should be restored on infinite error");
     }
 }
