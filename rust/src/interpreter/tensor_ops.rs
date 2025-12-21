@@ -302,13 +302,21 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     };
 
     // ブロードキャスト対応の剰余演算
-    let result = apply_binary_broadcast(a_vec, b_vec, |x, y| {
+    let result = match apply_binary_broadcast(a_vec, b_vec, |x, y| {
         if y.numerator.is_zero() {
             Err(AjisaiError::from("Modulo by zero"))
         } else {
             Ok(x.modulo(y))
         }
-    })?;
+    }) {
+        Ok(r) => r,
+        Err(e) => {
+            // エラー時はスタックに引数を復元
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+            return Err(e);
+        }
+    };
 
     interp.stack.push(Value::from_vector(result));
     Ok(())
