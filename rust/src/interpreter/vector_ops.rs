@@ -826,17 +826,24 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             match val.val_type {
                 ValueType::Vector(mut v) => {
-                    if v.len() < 2 {
+                    // "No change is an error" チェック（disable_no_change_check で無効化可能）
+                    if !interp.disable_no_change_check {
+                        if v.len() < 2 {
+                            interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                            return Err(AjisaiError::from("REVERSE resulted in no change on a vector with less than 2 elements"));
+                        }
+                        let original_v = v.clone();
+                        v.reverse();
+                        if v == original_v {
+                            interp.stack.push(Value { val_type: ValueType::Vector(original_v) });
+                            return Err(AjisaiError::from("REVERSE resulted in no change (vector is a palindrome)"));
+                        }
                         interp.stack.push(Value { val_type: ValueType::Vector(v) });
-                        return Err(AjisaiError::from("REVERSE resulted in no change on a vector with less than 2 elements"));
+                    } else {
+                        // disable_no_change_check が true の場合、単純に反転
+                        v.reverse();
+                        interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     }
-                    let original_v = v.clone();
-                    v.reverse();
-                    if v == original_v {
-                        interp.stack.push(Value { val_type: ValueType::Vector(original_v) });
-                        return Err(AjisaiError::from("REVERSE resulted in no change (vector is a palindrome)"));
-                    }
-                    interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
                 _ => {
@@ -846,14 +853,20 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
             }
         }
         OperationTarget::Stack => {
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::from("REVERSE resulted in no change on a stack with less than 2 elements"));
-            }
-            let original_stack = interp.stack.clone();
-            interp.stack.reverse();
-            if interp.stack == original_stack {
-                interp.stack = original_stack;
-                return Err(AjisaiError::from("REVERSE resulted in no change (stack is a palindrome)"));
+            // "No change is an error" チェック（disable_no_change_check で無効化可能）
+            if !interp.disable_no_change_check {
+                if interp.stack.len() < 2 {
+                    return Err(AjisaiError::from("REVERSE resulted in no change on a stack with less than 2 elements"));
+                }
+                let original_stack = interp.stack.clone();
+                interp.stack.reverse();
+                if interp.stack == original_stack {
+                    interp.stack = original_stack;
+                    return Err(AjisaiError::from("REVERSE resulted in no change (stack is a palindrome)"));
+                }
+            } else {
+                // disable_no_change_check が true の場合、単純に反転
+                interp.stack.reverse();
             }
             Ok(())
         }
