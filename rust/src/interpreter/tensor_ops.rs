@@ -205,7 +205,14 @@ where
 
     match &val.val_type {
         ValueType::Vector(v) => {
-            let result = apply_unary_to_vector(v, &op)?;
+            let result = match apply_unary_to_vector(v, &op) {
+                Ok(r) => r,
+                Err(e) => {
+                    // エラー時はスタックに引数を復元
+                    interp.stack.push(val);
+                    return Err(e);
+                }
+            };
             interp.stack.push(Value::from_vector(result));
             Ok(())
         }
