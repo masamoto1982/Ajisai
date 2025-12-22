@@ -14,7 +14,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{wrap_value, wrap_number, extract_single_element};
+use crate::interpreter::helpers::{wrap_value, wrap_number};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
@@ -101,22 +101,38 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let val_clone = val.clone();
-    let inner_val = extract_single_element(&val_clone)?;
+
+    // Vectorから内部値を取得
+    let inner_val = match &val.val_type {
+        ValueType::Vector(v) if v.len() == 1 => &v[0],
+        ValueType::Vector(_) => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("Multi-element vector not supported in this context"));
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::type_error("single-element vector", "other type"));
+        }
+    };
 
     match &inner_val.val_type {
         ValueType::String(s) => {
-            let fraction = Fraction::from_str(s)
-                .map_err(|_| AjisaiError::from(format!("NUM: cannot parse '{}' as a number", s)))?;
-            // 数値変換結果はVectorとして返す
-            interp.stack.push(wrap_number(fraction));
-            Ok(())
+            match Fraction::from_str(s) {
+                Ok(fraction) => {
+                    interp.stack.push(wrap_number(fraction));
+                    Ok(())
+                }
+                Err(_) => {
+                    let err_msg = format!("NUM: cannot parse '{}' as a number", s);
+                    interp.stack.push(val);
+                    Err(AjisaiError::from(err_msg))
+                }
+            }
         }
         ValueType::Boolean(b) => {
             use num_bigint::BigInt;
             use num_traits::One;
             let num = if *b { BigInt::one() } else { BigInt::from(0) };
-            // 数値変換結果はVectorとして返す
             interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
             Ok(())
         }
@@ -277,8 +293,19 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let val_clone = val.clone();
-    let inner_val = extract_single_element(&val_clone)?;
+
+    // Vectorから内部値を取得
+    let inner_val = match &val.val_type {
+        ValueType::Vector(v) if v.len() == 1 => &v[0],
+        ValueType::Vector(_) => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("Multi-element vector not supported in this context"));
+        }
+        _ => {
+            interp.stack.push(val);
+            return Err(AjisaiError::type_error("single-element vector", "other type"));
+        }
+    };
 
     match &inner_val.val_type {
         ValueType::String(s) => {
@@ -289,10 +316,9 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
                 ));
                 Ok(())
             } else {
+                let err_msg = format!("NIL: cannot parse '{}' as nil (expected 'nil')", s);
                 interp.stack.push(val);
-                Err(AjisaiError::from(format!(
-                    "NIL: cannot parse '{}' as nil (expected 'nil')", s
-                )))
+                Err(AjisaiError::from(err_msg))
             }
         }
         ValueType::Boolean(_) => {
@@ -327,7 +353,19 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let inner_val = extract_single_element(&val)?;
+
+            // Vectorから内部値を取得
+            let inner_val = match &val.val_type {
+                ValueType::Vector(v) if v.len() == 1 => &v[0],
+                ValueType::Vector(_) => {
+                    interp.stack.push(val);
+                    return Err(AjisaiError::from("Multi-element vector not supported in this context"));
+                }
+                _ => {
+                    interp.stack.push(val);
+                    return Err(AjisaiError::type_error("single-element vector", "other type"));
+                }
+            };
 
             match &inner_val.val_type {
                 ValueType::String(s) => {
@@ -362,7 +400,21 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
             let elements: Vec<Value> = interp.stack.drain(..).collect();
 
             for elem in elements {
-                let inner = extract_single_element(&elem)?;
+                // Vectorから内部値を取得
+                let inner = match &elem.val_type {
+                    ValueType::Vector(v) if v.len() == 1 => &v[0],
+                    ValueType::Vector(_) => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("Multi-element vector not supported in this context"));
+                    }
+                    _ => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::type_error("single-element vector", "other type"));
+                    }
+                };
+
                 match &inner.val_type {
                     ValueType::String(s) => {
                         if s.is_empty() {
