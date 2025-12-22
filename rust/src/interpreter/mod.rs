@@ -302,8 +302,9 @@ impl Interpreter {
                     self.stack.push(wrap_value(val));
                 },
                 Token::Nil => {
-                    let val = Value { val_type: ValueType::Nil };
-                    self.stack.push(wrap_value(val));
+                    // ベクタ外のNILは型変換ワードとして実行
+                    cast::op_nil(self)?;
+                    self.operation_target = OperationTarget::StackTop;
                 },
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;

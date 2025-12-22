@@ -878,8 +878,9 @@ mod tests {
     async fn test_unfold_immediate_nil() {
         let mut interp = Interpreter::new();
         // 簡単なテスト: 常にNILを返すので空のベクタが生成される
+        // NILは型変換ワードなので、リテラル値としてプッシュするには [ NIL ] を使う
         let code = r#"
-[ ': NIL' ] 'STOPNOW' DEF
+[ ': [ NIL ]' ] 'STOPNOW' DEF
 [ 1 ] 'STOPNOW' UNFOLD
 "#;
         let result = interp.execute(code).await;
