@@ -94,3 +94,131 @@ mod ceil_tests {
         assert_eq!(stack.len(), 1, "Stack should be restored after error");
     }
 }
+
+#[cfg(test)]
+mod round_tests {
+    use crate::interpreter::Interpreter;
+
+    #[tokio::test]
+    async fn test_round_positive_below_half() {
+        // 7/3 ≈ 2.333... → 2 (最も近い整数)
+        let mut interp = Interpreter::new();
+        interp.execute("[ 7/3 ] ROUND").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[2]", "ROUND(7/3) should be 2");
+    }
+
+    #[tokio::test]
+    async fn test_round_positive_half() {
+        // 5/2 = 2.5 → 3 (0から遠い方向)
+        let mut interp = Interpreter::new();
+        interp.execute("[ 5/2 ] ROUND").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[3]", "ROUND(5/2) should be 3");
+    }
+
+    #[tokio::test]
+    async fn test_round_positive_above_half() {
+        // 8/3 ≈ 2.666... → 3 (最も近い整数)
+        let mut interp = Interpreter::new();
+        interp.execute("[ 8/3 ] ROUND").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[3]", "ROUND(8/3) should be 3");
+    }
+
+    #[tokio::test]
+    async fn test_round_negative_below_half() {
+        // -7/3 ≈ -2.333... → -2 (最も近い整数)
+        let mut interp = Interpreter::new();
+        interp.execute("[ -7/3 ] ROUND").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[-2]", "ROUND(-7/3) should be -2");
+    }
+
+    #[tokio::test]
+    async fn test_round_negative_half() {
+        // -5/2 = -2.5 → -3 (0から遠い方向)
+        let mut interp = Interpreter::new();
+        interp.execute("[ -5/2 ] ROUND").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[-3]", "ROUND(-5/2) should be -3");
+    }
+
+    #[tokio::test]
+    async fn test_round_negative_above_half() {
+        // -8/3 ≈ -2.666... → -3 (最も近い整数)
+        let mut interp = Interpreter::new();
+        interp.execute("[ -8/3 ] ROUND").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[-3]", "ROUND(-8/3) should be -3");
+    }
+
+    #[tokio::test]
+    async fn test_round_positive_integer() {
+        // 6/3 = 2 → 2 (整数はそのまま)
+        let mut interp = Interpreter::new();
+        interp.execute("[ 6/3 ] ROUND").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[2]", "ROUND(6/3) should be 2");
+    }
+
+    #[tokio::test]
+    async fn test_round_negative_integer() {
+        // -6/3 = -2 → -2 (整数はそのまま)
+        let mut interp = Interpreter::new();
+        interp.execute("[ -6/3 ] ROUND").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[-2]", "ROUND(-6/3) should be -2");
+    }
+
+    #[tokio::test]
+    async fn test_round_with_guard() {
+        let mut interp = Interpreter::new();
+        // Test ROUND within a guarded word (using multiline definition)
+        // : [ 1 ] [ 3 ] > (1 > 3 = FALSE)
+        // : [ 8/3 ] ROUND (this branch is skipped)
+        // : [ 0 ] (default branch, executed because condition is FALSE)
+        interp.execute("[ ': [ 1 ] [ 3 ] >\n: [ 8/3 ] ROUND\n: [ 0 ]' ] 'TEST' DEF").await.unwrap();
+        interp.execute("TEST").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        // 1 > 3 is FALSE, so default is executed
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "[0]");
+    }
+
+    #[tokio::test]
+    async fn test_round_operation_target_stack_error() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 1 2 3 ] .. ROUND").await;
+        assert!(result.is_err(), "ROUND should not support Stack mode (..)");
+    }
+
+    #[tokio::test]
+    async fn test_round_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // ROUNDに非数値を渡すとエラーになる。エラー時にスタックが復元されることを確認
+        interp.execute("[ 'test' ]").await.unwrap();
+        let result = interp.execute("ROUND").await;
+        assert!(result.is_err());
+        // スタックが復元されているか確認
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "Stack should be restored after error");
+    }
+}
