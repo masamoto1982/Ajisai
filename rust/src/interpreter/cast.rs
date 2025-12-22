@@ -300,11 +300,11 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     let inner_val = match &val.val_type {
         ValueType::Vector(v) if v.len() == 1 => &v[0],
         ValueType::Vector(_) => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             return Err(AjisaiError::from("Multi-element vector not supported in this context"));
         }
         _ => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             return Err(AjisaiError::type_error("single-element vector", "other type"));
         }
     };
@@ -319,24 +319,24 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
                 Ok(())
             } else {
                 let err_msg = format!("NIL: cannot parse '{}' as nil (expected 'nil')", s);
-                interp.stack.push(val);
+                interp.stack.push(val.clone());
                 Err(AjisaiError::from(err_msg))
             }
         }
         ValueType::Boolean(_) => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"))
         }
         ValueType::Number(_) => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             Err(AjisaiError::from("NIL: cannot convert Number to Nil"))
         }
         ValueType::Nil => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"))
         }
         _ => {
-            interp.stack.push(val);
+            interp.stack.push(val.clone());
             Err(AjisaiError::from("NIL: requires String type"))
         }
     }
@@ -997,6 +997,131 @@ mod tests {
             if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 1);
                 assert!(matches!(&v[0].val_type, ValueType::Boolean(true)));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    // NILのスタック復元テスト（ガード節との調和のため重要）
+    #[tokio::test]
+    async fn test_nil_string_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // パース不可能な文字列でエラーが発生することを確認
+        let result = interp.execute("[ 'hello' ] NIL").await;
+        assert!(result.is_err());
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_nil_boolean_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // Boolean型でエラーが発生することを確認
+        let result = interp.execute("[ TRUE ] NIL").await;
+        assert!(result.is_err());
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::Boolean(true)));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_nil_number_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // Number型でエラーが発生することを確認
+        let result = interp.execute("[ 42 ] NIL").await;
+        assert!(result.is_err());
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator, BigInt::from(42));
+                } else {
+                    panic!("Expected Number type");
+                }
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_nil_same_type_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // Nil → Nil の同型変換エラーを確認
+        let result = interp.execute("[ NIL ] NIL").await;
+        assert!(result.is_err());
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL same-type error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::Nil));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_nil_success_case() {
+        let mut interp = Interpreter::new();
+        // 正常なNIL変換
+        let result = interp.execute("[ 'nil' ] NIL").await;
+        assert!(result.is_ok());
+
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::Nil));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_nil_case_insensitive() {
+        let mut interp = Interpreter::new();
+        // 大文字小文字を区別しない
+        let result = interp.execute("[ 'NIL' ] NIL").await;
+        assert!(result.is_ok());
+
+        interp.stack.clear();
+        let result = interp.execute("[ 'Nil' ] NIL").await;
+        assert!(result.is_ok());
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::Nil));
             } else {
                 panic!("Expected Vector type");
             }
