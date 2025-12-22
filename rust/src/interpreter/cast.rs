@@ -385,9 +385,25 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                     });
                     Ok(())
                 }
+                ValueType::Number(_) => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("CHARS: cannot convert Number to characters"))
+                }
+                ValueType::Boolean(_) => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"))
+                }
+                ValueType::Nil => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("CHARS: cannot convert Nil to characters"))
+                }
+                ValueType::Vector(_) => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("CHARS: cannot convert nested Vector to characters"))
+                }
                 _ => {
                     interp.stack.push(val);
-                    Err(AjisaiError::type_error("string", "other type"))
+                    Err(AjisaiError::from("CHARS: requires String type"))
                 }
             }
         }
@@ -432,10 +448,30 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                             val_type: ValueType::Vector(chars)
                         });
                     }
+                    ValueType::Number(_) => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("CHARS: cannot convert Number to characters"));
+                    }
+                    ValueType::Boolean(_) => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"));
+                    }
+                    ValueType::Nil => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("CHARS: cannot convert Nil to characters"));
+                    }
+                    ValueType::Vector(_) => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("CHARS: cannot convert nested Vector to characters"));
+                    }
                     _ => {
                         interp.stack = results;
                         interp.stack.push(elem);
-                        return Err(AjisaiError::type_error("string", "other type"));
+                        return Err(AjisaiError::from("CHARS: requires String type"));
                     }
                 }
             }
@@ -1122,6 +1158,103 @@ mod tests {
             if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 1);
                 assert!(matches!(&v[0].val_type, ValueType::Nil));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    // CHARSのスタック復元テスト（ガード節との調和のため重要）
+    #[tokio::test]
+    async fn test_chars_number_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // Number型でエラーが発生することを確認
+        let result = interp.execute("[ 42 ] CHARS").await;
+        assert!(result.is_err());
+        if let Err(e) = &result {
+            assert!(e.to_string().contains("cannot convert Number"));
+        }
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator, BigInt::from(42));
+                } else {
+                    panic!("Expected Number type");
+                }
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_boolean_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // Boolean型でエラーが発生することを確認
+        let result = interp.execute("[ TRUE ] CHARS").await;
+        assert!(result.is_err());
+        if let Err(e) = &result {
+            assert!(e.to_string().contains("cannot convert Boolean"));
+        }
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::Boolean(true)));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_nil_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // Nil型でエラーが発生することを確認
+        let result = interp.execute("[ NIL ] CHARS").await;
+        assert!(result.is_err());
+        if let Err(e) = &result {
+            assert!(e.to_string().contains("cannot convert Nil"));
+        }
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::Nil));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_chars_empty_string_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // 空文字列でエラーが発生することを確認
+        let result = interp.execute("[ '' ] CHARS").await;
+        assert!(result.is_err());
+        if let Err(e) = &result {
+            assert!(e.to_string().contains("empty string"));
+        }
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS empty string error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == ""));
             } else {
                 panic!("Expected Vector type");
             }
