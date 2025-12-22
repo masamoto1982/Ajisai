@@ -209,6 +209,8 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
             } else if upper == "FALSE" || upper == "0" || s == "偽" {
                 false
             } else {
+                // エラー時はスタックを復元
+                interp.stack.push(val.clone());
                 return Err(AjisaiError::from(format!(
                     "BOOL: cannot parse '{}' as boolean (expected 'TRUE'/'FALSE', '1'/'0', '真'/'偽')", s
                 )));
@@ -932,6 +934,71 @@ mod tests {
             if let ValueType::Vector(v) = &val.val_type {
                 assert_eq!(v.len(), 1);
                 assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "olleh"));
+            }
+        }
+    }
+
+    // BOOLのスタック復元テスト（ガード節との調和のため重要）
+    #[tokio::test]
+    async fn test_bool_string_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // パース不可能な文字列でエラーが発生することを確認
+        let result = interp.execute("[ 'hello' ] BOOL").await;
+        assert!(result.is_err());
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_bool_number_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // 1, 0以外の数値でエラーが発生することを確認
+        let result = interp.execute("[ 42 ] BOOL").await;
+        assert!(result.is_err());
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                if let ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator, BigInt::from(42));
+                } else {
+                    panic!("Expected Number type");
+                }
+            } else {
+                panic!("Expected Vector type");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_bool_same_type_error_restores_stack() {
+        let mut interp = Interpreter::new();
+        // Boolean → Boolean の同型変換エラーを確認
+        let result = interp.execute("[ TRUE ] BOOL").await;
+        assert!(result.is_err());
+
+        // エラー後もスタックが復元されていることを確認
+        assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL same-type error");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                assert!(matches!(&v[0].val_type, ValueType::Boolean(true)));
+            } else {
+                panic!("Expected Vector type");
             }
         }
     }
