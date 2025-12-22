@@ -532,9 +532,25 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     ));
                     Ok(())
                 }
-                _ => {
+                ValueType::String(_) => {
                     interp.stack.push(val);
-                    Err(AjisaiError::type_error("vector", "other type"))
+                    Err(AjisaiError::from("JOIN: requires Vector type, got String"))
+                }
+                ValueType::Number(_) => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("JOIN: requires Vector type, got Number"))
+                }
+                ValueType::Boolean(_) => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("JOIN: requires Vector type, got Boolean"))
+                }
+                ValueType::Nil => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("JOIN: requires Vector type, got Nil"))
+                }
+                ValueType::Symbol(_) => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("JOIN: requires Vector type, got Symbol"))
                 }
             }
         }
@@ -586,10 +602,30 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                             Value { val_type: ValueType::String(result) }
                         ));
                     }
-                    _ => {
+                    ValueType::String(_) => {
                         interp.stack = results;
                         interp.stack.push(elem);
-                        return Err(AjisaiError::type_error("vector", "other type"));
+                        return Err(AjisaiError::from("JOIN: requires Vector type, got String"));
+                    }
+                    ValueType::Number(_) => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("JOIN: requires Vector type, got Number"));
+                    }
+                    ValueType::Boolean(_) => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("JOIN: requires Vector type, got Boolean"));
+                    }
+                    ValueType::Nil => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("JOIN: requires Vector type, got Nil"));
+                    }
+                    ValueType::Symbol(_) => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("JOIN: requires Vector type, got Symbol"));
                     }
                 }
             }
