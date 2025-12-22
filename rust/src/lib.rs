@@ -222,3 +222,52 @@ mod round_tests {
         assert_eq!(stack.len(), 1, "Stack should be restored after error");
     }
 }
+
+#[cfg(test)]
+mod num_tests {
+    use crate::interpreter::Interpreter;
+
+    #[tokio::test]
+    async fn test_num_parse_error_stack_restoration() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 'hello' ]").await.unwrap();
+        let result = interp.execute("NUM").await;
+        assert!(result.is_err());
+        // スタックが復元されているか確認
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "Stack should be restored after parse error");
+    }
+
+    #[tokio::test]
+    async fn test_num_same_type_error_stack_restoration() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 42 ]").await.unwrap();
+        let result = interp.execute("NUM").await;
+        assert!(result.is_err());
+        // スタックが復元されているか確認
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "Stack should be restored after same-type error");
+    }
+
+    #[tokio::test]
+    async fn test_num_nil_error_stack_restoration() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ nil ]").await.unwrap();
+        let result = interp.execute("NUM").await;
+        assert!(result.is_err());
+        // スタックが復元されているか確認
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "Stack should be restored after nil error");
+    }
+
+    #[tokio::test]
+    async fn test_num_operation_target_stack_error() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ '42' ] [ '123' ]").await.unwrap();
+        let result = interp.execute(".. NUM").await;
+        assert!(result.is_err());
+        // Stack modeエラー時はスタックから何もpopしていないので2要素のまま
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 2, "Stack should remain unchanged after Stack mode error");
+    }
+}
