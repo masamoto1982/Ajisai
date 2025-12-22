@@ -125,39 +125,34 @@ impl Fraction {
         Fraction::new(ceiled, BigInt::one())
     }
 
-    /// 四捨五入（0.5は0から遠い方向へ）
+    /// 四捨五入（0.5は0から遠い方向へ: round half away from zero）
+    ///
+    /// 正の数: floor(x + 0.5)
+    /// 負の数: -floor(|x| + 0.5)
     pub fn round(&self) -> Fraction {
-        // 2倍して判定する（分数の計算を整数だけで行う）
-        let doubled_num = &self.numerator * BigInt::from(2);
-        let doubled_quot = &doubled_num / &self.denominator;
-        let doubled_rem = &doubled_num % &self.denominator;
+        if self.numerator.is_zero() {
+            return Fraction::new(BigInt::zero(), BigInt::one());
+        }
 
-        // 丸め判定
-        let rounded = if !doubled_rem.is_zero() {
-            // 余りがある場合
-            if self.numerator > BigInt::zero() {
-                // 正の数: 余りが分母の半分以上なら切り上げ
-                (doubled_quot + BigInt::one()) / BigInt::from(2)
-            } else {
-                // 負の数: 2倍した商を2で割る（負の方向に丸める）
-                doubled_quot / BigInt::from(2)
-            }
+        // Round half away from zero: |x| + 0.5 を floor して符号を戻す
+        // |x| + 1/2 = (2|num| + den) / (2 * den)
+        let is_negative = self.numerator < BigInt::zero();
+        let abs_num = if is_negative {
+            -&self.numerator
         } else {
-            // 余りなし（偶数割り切れ）
-            // x.5の場合: 2x+1を2で割ると商はx、0から遠い方向はx+sign(x)
-            if doubled_quot.is_odd() {
-                // 0.5, 1.5, 2.5... または -0.5, -1.5, -2.5...
-                if self.numerator > BigInt::zero() {
-                    (doubled_quot + BigInt::one()) / BigInt::from(2)
-                } else {
-                    (doubled_quot - BigInt::one()) / BigInt::from(2)
-                }
-            } else {
-                doubled_quot / BigInt::from(2)
-            }
+            self.numerator.clone()
         };
 
-        Fraction::new(rounded, BigInt::one())
+        // floor(|x| + 0.5) = (2*|num| + den) / (2*den) (integer division)
+        let two = BigInt::from(2);
+        let two_abs_num = &abs_num * &two;
+        let result = (&two_abs_num + &self.denominator) / (&two * &self.denominator);
+
+        if is_negative {
+            Fraction::new(-result, BigInt::one())
+        } else {
+            Fraction::new(result, BigInt::one())
+        }
     }
 
     /// 整数かどうかを判定
