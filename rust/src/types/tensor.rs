@@ -6,7 +6,7 @@
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueType};
 use num_bigint::BigInt;
-use num_traits::{One, Zero, ToPrimitive};
+use num_traits::{One, Zero};
 
 /// ブロードキャスト可能な形状を計算
 ///

@@ -1154,7 +1154,6 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::interpreter::Interpreter;
 
     #[tokio::test]

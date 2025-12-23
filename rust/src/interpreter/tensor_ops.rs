@@ -6,7 +6,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::interpreter::helpers::wrap_number;
-use crate::types::{Value, ValueType, infer_shape, flatten_numbers, MAX_DIMENSIONS};
+use crate::types::{Value, ValueType, infer_shape, MAX_DIMENSIONS};
 use crate::types::tensor::{transpose, reshape, rank};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
