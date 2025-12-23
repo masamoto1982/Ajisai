@@ -305,23 +305,14 @@ export class TestRunner {
             case 'vector':
                 if (Array.isArray(value.value)) {
                     const elements = value.value.map(v => this.formatValueForDisplay(v)).join(' ');
-                    const brackets = this.getBracketPair(value.bracketType);
-                    return `${brackets[0]}${elements ? ' ' + elements + ' ' : ''}${brackets[1]}`;
+                    return `[${elements ? ' ' + elements + ' ' : ''}]`;
                 }
                 return '[]';
             default:
                 return JSON.stringify(value.value);
         }
     }
-    
-    private getBracketPair(bracketType?: string): [string, string] {
-        switch (bracketType) {
-            case 'curly': return ['{', '}'];
-            case 'round': return ['(', ')'];
-            default: return ['[', ']'];
-        }
-    }
-    
+
     private compareStack(actual: Value[], expected: Value[]): boolean {
         if (actual.length !== expected.length) {
             return false;
@@ -395,11 +386,10 @@ export class TestRunner {
         outputElement.appendChild(span);
     }
     
-    private createVector(elements: Value[], bracketType: 'square' | 'curly' | 'round' = 'square'): Value {
+    private createVector(elements: Value[]): Value {
         return {
             type: 'vector',
-            value: elements,
-            bracketType: bracketType
+            value: elements
         };
     }
     
