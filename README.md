@@ -54,11 +54,17 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
   - NumPy/APLスタイルのブロードキャスティング
   - *All container data is represented as nestable Vectors (similar to LISP's list structure). Bracket `[ ]` nesting expresses dimensions, with tensor-like operations (SHAPE, RESHAPE, etc.) supported. Heterogeneous data mixing is allowed.*
 
-| 次元 / Dimension | 構造 / Structure | 例 / Example |
-|:---:|:---|:---|
-| 1次元 | Vector | `[ 1 2 3 ]` |
-| 2次元 | ネストされたVector / Nested Vector | `[ [ 1 2 ] [ 3 4 ] ]` |
-| N次元 | 深くネストされたVector / Deeply nested Vector | `[ [ [ ... ] ] ]` |
+- **最大4次元までの次元制限**
+  - 人間の認知限界に基づき、操作可能な次元を4次元に制限
+  - 5次元以上のネストはエラーとなる
+  - *Dimension limit of 4 (based on human cognitive limits). Nesting beyond 5 dimensions results in an error.*
+
+| 次元 / Dim | 軸名 / Axis | 構造 / Structure | 例 / Example |
+|:---:|:---:|:---|:---|
+| 1次元 | col | Vector | `[ 1 2 3 ]` |
+| 2次元 | row, col | ネストされたVector | `[ [ 1 2 ] [ 3 4 ] ]` |
+| 3次元 | layer, row, col | 2段ネスト | `[ [ [ 1 2 ] [ 3 4 ] ] ]` |
+| 4次元 | time, layer, row, col | 3段ネスト（最大） | `[ [ [ [ 1 ] ] ] ]` |
 
 - **完全精度の有理数演算**
   - すべての数値は内部的に分数（Fraction）として扱われ、丸め誤差なし
