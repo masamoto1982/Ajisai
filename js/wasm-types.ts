@@ -44,7 +44,6 @@ export interface Fraction {
 export interface Value {
     type: string;
     value: any | Fraction | Value[];
-    bracketType?: 'square' | 'curly' | 'round';
 }
 
 export interface WasmModule {

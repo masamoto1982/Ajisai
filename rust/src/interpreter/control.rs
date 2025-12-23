@@ -159,7 +159,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Try TIMES with builtin word (should fail)
-        let result = interp.execute("[ 0 ] 'DUP' [ 3 ] TIMES").await;
+        let result = interp.execute("[ 0 ] 'PRINT' [ 3 ] TIMES").await;
 
         assert!(result.is_err(), "TIMES with builtin word should fail");
     }

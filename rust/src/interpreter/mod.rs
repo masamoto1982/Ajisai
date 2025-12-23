@@ -9,7 +9,6 @@ pub mod logic;
 pub mod control;
 pub mod dictionary;
 pub mod io;
-pub mod audio;
 pub mod higher_order;
 pub mod cast;
 pub mod datetime;
