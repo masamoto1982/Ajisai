@@ -20,10 +20,10 @@ use crate::types::{Value, ValueType};
 /// - Stackモード: 現在未対応（StackTopモードのみ）
 ///
 /// 【使用法】
-/// - `[true] NOT` → `[false]`
-/// - `[false] NOT` → `[true]`
-/// - `[true false true] NOT` → `[false true false]`
-/// - `[nil] NOT` → `[nil]` (Kleene論理: NOT unknown = unknown)
+/// - `[TRUE] NOT` → `[FALSE]`
+/// - `[FALSE] NOT` → `[TRUE]`
+/// - `[TRUE FALSE TRUE] NOT` → `[FALSE TRUE FALSE]`
+/// - `[NIL] NOT` → `[NIL]` (Kleene論理: NOT unknown = unknown)
 ///
 /// 【引数スタック】
 /// - [value]: Boolean値またはNilのベクタ
@@ -83,23 +83,23 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 /// 【真理値表（Boolean同士）】
 /// | A     | B     | Result |
 /// |-------|-------|--------|
-/// | true  | true  | true   |
-/// | true  | false | false  |
-/// | false | true  | false  |
-/// | false | false | false  |
-/// | true  | nil   | nil    |
-/// | false | nil   | false  |
-/// | nil   | true  | nil    |
-/// | nil   | false | false  |
-/// | nil   | nil   | nil    |
+/// | TRUE  | TRUE  | TRUE   |
+/// | TRUE  | FALSE | FALSE  |
+/// | FALSE | TRUE  | FALSE  |
+/// | FALSE | FALSE | FALSE  |
+/// | TRUE  | NIL   | NIL    |
+/// | FALSE | NIL   | FALSE  |
+/// | NIL   | TRUE  | NIL    |
+/// | NIL   | FALSE | FALSE  |
+/// | NIL   | NIL   | NIL    |
 ///
 /// 【StackTopモードの使用法】
-/// - `[true] [true] AND` → `[true]`
-/// - `[true false] [false true] AND` → `[false false]`
-/// - `[true false true] [true] AND` → `[true false true]` (ブロードキャスト)
+/// - `[TRUE] [TRUE] AND` → `[TRUE]`
+/// - `[TRUE FALSE] [FALSE TRUE] AND` → `[FALSE FALSE]`
+/// - `[TRUE FALSE TRUE] [TRUE] AND` → `[TRUE FALSE TRUE]` (ブロードキャスト)
 ///
 /// 【Stackモードの使用法】
-/// - `[true] [true] [false] [3] STACK AND` → `[false]` (true AND true AND false)
+/// - `[TRUE] [TRUE] [FALSE] [3] STACK AND` → `[FALSE]` (TRUE AND TRUE AND FALSE)
 ///
 /// 【引数スタック】
 /// - StackTopモード: b, a (2つのベクタ)
@@ -235,23 +235,23 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 /// 【真理値表（Boolean同士）】
 /// | A     | B     | Result |
 /// |-------|-------|--------|
-/// | true  | true  | true   |
-/// | true  | false | true   |
-/// | false | true  | true   |
-/// | false | false | false  |
-/// | true  | nil   | true   |
-/// | false | nil   | nil    |
-/// | nil   | true  | true   |
-/// | nil   | false | nil    |
-/// | nil   | nil   | nil    |
+/// | TRUE  | TRUE  | TRUE   |
+/// | TRUE  | FALSE | TRUE   |
+/// | FALSE | TRUE  | TRUE   |
+/// | FALSE | FALSE | FALSE  |
+/// | TRUE  | NIL   | TRUE   |
+/// | FALSE | NIL   | NIL    |
+/// | NIL   | TRUE  | TRUE   |
+/// | NIL   | FALSE | NIL    |
+/// | NIL   | NIL   | NIL    |
 ///
 /// 【StackTopモードの使用法】
-/// - `[true] [false] OR` → `[true]`
-/// - `[true false] [false true] OR` → `[true true]`
-/// - `[true false true] [false] OR` → `[true false true]` (ブロードキャスト)
+/// - `[TRUE] [FALSE] OR` → `[TRUE]`
+/// - `[TRUE FALSE] [FALSE TRUE] OR` → `[TRUE TRUE]`
+/// - `[TRUE FALSE TRUE] [FALSE] OR` → `[TRUE FALSE TRUE]` (ブロードキャスト)
 ///
 /// 【Stackモードの使用法】
-/// - `[false] [false] [true] [3] STACK OR` → `[true]` (false OR false OR true)
+/// - `[FALSE] [FALSE] [TRUE] [3] STACK OR` → `[TRUE]` (FALSE OR FALSE OR TRUE)
 ///
 /// 【引数スタック】
 /// - StackTopモード: b, a (2つのベクタ)
