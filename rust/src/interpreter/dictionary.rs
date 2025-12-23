@@ -1,11 +1,16 @@
 // rust/src/interpreter/dictionary.rs
 
-use crate::interpreter::{Interpreter, WordDefinition};
+use crate::interpreter::{Interpreter, WordDefinition, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::types::{Token, ValueType, ExecutionLine};
 use std::collections::HashSet;
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
+    // DEFはStackモードをサポートしない（辞書操作ワード）
+    if interp.operation_target != OperationTarget::StackTop {
+        return Err(AjisaiError::from("DEF does not support Stack mode (..)"));
+    }
+
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
@@ -224,6 +229,11 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
 }
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
+    // DELはStackモードをサポートしない（辞書操作ワード）
+    if interp.operation_target != OperationTarget::StackTop {
+        return Err(AjisaiError::from("DEL does not support Stack mode (..)"));
+    }
+
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let name = match &val.val_type {
@@ -297,6 +307,11 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
+    // ?はStackモードをサポートしない（辞書操作ワード）
+    if interp.operation_target != OperationTarget::StackTop {
+        return Err(AjisaiError::from("? (LOOKUP) does not support Stack mode (..)"));
+    }
+
     // LOOKUP (?) は 'NAME' を期待する
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
@@ -404,5 +419,47 @@ mod tests {
             assert!(err_msg.contains("Cannot redefine built-in word"),
                     "Expected error for {}, got: {}", word, err_msg);
         }
+    }
+
+    #[tokio::test]
+    async fn test_def_rejects_stack_mode() {
+        let mut interp = Interpreter::new();
+
+        // Stackモード（..）でDEFを呼び出した場合はエラー
+        let result = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' .. DEF").await;
+        assert!(result.is_err(), "DEF should reject Stack mode");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("DEF") && err_msg.contains("Stack mode"),
+                "Expected Stack mode error for DEF, got: {}", err_msg);
+    }
+
+    #[tokio::test]
+    async fn test_del_rejects_stack_mode() {
+        let mut interp = Interpreter::new();
+
+        // まず定義
+        interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+
+        // Stackモード（..）でDELを呼び出した場合はエラー
+        let result = interp.execute("'DOUBLE' .. DEL").await;
+        assert!(result.is_err(), "DEL should reject Stack mode");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("DEL") && err_msg.contains("Stack mode"),
+                "Expected Stack mode error for DEL, got: {}", err_msg);
+    }
+
+    #[tokio::test]
+    async fn test_lookup_rejects_stack_mode() {
+        let mut interp = Interpreter::new();
+
+        // まず定義
+        interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+
+        // Stackモード（..）で?を呼び出した場合はエラー
+        let result = interp.execute("'DOUBLE' .. ?").await;
+        assert!(result.is_err(), "? (LOOKUP) should reject Stack mode");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("?") && err_msg.contains("Stack mode"),
+                "Expected Stack mode error for ?, got: {}", err_msg);
     }
 }
