@@ -47,26 +47,27 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
   - FORTHスタイルのスタック操作
   - *Stack-based with Reverse Polish Notation, FORTH-style*
 
-- **テンソルベースのデータモデル**
-  - すべての数値データはN次元テンソルとして表現
+- **Vectorベースのフラクタル構造**
+  - 全てのコンテナデータはネスト可能なVectorで表現（LISPのリスト構造に通ずる設計思想）
+  - 括弧 `[ ]` のネストで多次元を表現し、テンソル的な操作（SHAPE, RESHAPE等）をサポート
+  - **異種データ混在可能**: `[ 1 'hello' TRUE [ 2 3 ] ]` のように、数値・文字列・真偽値・Vectorを自由に組み合わせ可能
   - NumPy/APLスタイルのブロードキャスティング
-  - *All numeric data represented as N-dimensional tensors with NumPy/APL-style broadcasting*
+  - *All container data is represented as nestable Vectors (similar to LISP's list structure). Bracket `[ ]` nesting expresses dimensions, with tensor-like operations (SHAPE, RESHAPE, etc.) supported. Heterogeneous data mixing is allowed.*
 
-| 次元 / Dimension | 表現 / Representation | 例 / Example |
+| 次元 / Dimension | 構造 / Structure | 例 / Example |
 |:---:|:---|:---|
-| 0次元 | スカラー / Scalar | `[ 42 ]` |
-| 1次元 | ベクター / Vector | `[ 1 2 3 ]` |
-| 2次元 | 行列 / Matrix | `[ [ 1 2 ] [ 3 4 ] ]` |
-| N次元 | テンソル / Tensor | `[ [ [ ... ] ] ]` |
+| 1次元 | Vector | `[ 1 2 3 ]` |
+| 2次元 | ネストされたVector / Nested Vector | `[ [ 1 2 ] [ 3 4 ] ]` |
+| N次元 | 深くネストされたVector / Deeply nested Vector | `[ [ [ ... ] ] ]` |
 
 - **完全精度の有理数演算**
-  - すべての数値は内部的に分数として扱われ、丸め誤差なし
+  - すべての数値は内部的に分数（Fraction）として扱われ、丸め誤差なし
   - 非常に大きな数値も処理可能
   - *All numbers internally treated as fractions - no rounding errors, capable of handling extremely large numbers*
 
 - **静的型付け（型宣言・型推論不要）**
-  - システムが認識するのは：ワード、テンソル、真偽値、数値、文字列、Nil
-  - *Statically typed: words, tensors, booleans, numbers, strings, and Nil*
+  - システムが認識するのは：ワード、Vector、真偽値、数値、文字列、Nil
+  - *Statically typed: words, vectors, booleans, numbers, strings, and Nil*
 
 - **組み込みワードの保護**
   - 組み込みワードは削除や上書きが不可能
@@ -94,19 +95,22 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
 
 ## コード例 / Code Examples
 
-### テンソル演算 / Tensor Operations
+### Vector演算 / Vector Operations
 
 ```ajisai
-# テンソルの作成 / Creating tensors
-[ 1 2 3 ]               # 1次元ベクター / 1D vector: shape [3]
-[ [ 1 2 ] [ 3 4 ] ]     # 2次元行列 / 2D matrix: shape [2, 2]
+# Vectorの作成 / Creating vectors
+[ 1 2 3 ]               # 1次元Vector / 1D vector: shape [3]
+[ [ 1 2 ] [ 3 4 ] ]     # ネストされたVector（行列的構造） / Nested vector (matrix-like): shape [2, 2]
+
+# 異種データ混在 / Heterogeneous data
+[ 1 'hello' TRUE [ 2 3 ] ]   # 数値、文字列、真偽値、Vectorを混在可能
 
 # ブロードキャスティング算術演算 / Broadcasting arithmetic
 [ 5 ] [ 1 2 3 ] +       # → [ 6 7 8 ]
 [ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +
 # → [ [ 11 22 33 ] [ 14 25 36 ] ]
 
-# 形状操作 / Shape manipulation
+# 形状操作（テンソル的操作） / Shape manipulation (tensor-like operations)
 [ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE      # → [ 2 3 ]
 [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE    # → [ [ 1 2 3 ] [ 4 5 6 ] ]
 [ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE  # → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
@@ -142,10 +146,10 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
 ### 算術演算 / Arithmetic
 `+` `-` `*` `/` `MOD` `FLOOR` `CEIL` `ROUND`
 
-### テンソル操作 / Tensor Operations
+### 形状操作（テンソル的操作） / Shape Manipulation (Tensor-like Operations)
 `SHAPE` `RANK` `RESHAPE` `TRANSPOSE` `FILL`
 
-### ベクター操作 / Vector Operations
+### Vector操作 / Vector Operations
 `GET` `INSERT` `REPLACE` `REMOVE` `LENGTH` `TAKE` `SPLIT` `CONCAT` `REVERSE` `RANGE`
 
 ### 比較・論理演算 / Comparison & Logic
