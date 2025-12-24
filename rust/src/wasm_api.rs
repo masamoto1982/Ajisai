@@ -359,6 +359,16 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 BigInt::from_str(&den_str).map_err(|e| e.to_string())?
             ))
         },
+        "datetime" => {
+            // DateTime型もNumber型と同じ構造（分数）だが、タイプが異なる
+            let num_obj = js_sys::Object::from(value_js);
+            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|_| "No numerator".to_string())?.as_string().ok_or("Numerator not string")?;
+            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|_| "No denominator".to_string())?.as_string().ok_or("Denominator not string")?;
+            ValueType::DateTime(Fraction::new(
+                BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                BigInt::from_str(&den_str).map_err(|e| e.to_string())?
+            ))
+        },
         "string" => ValueType::String(value_js.as_string().ok_or("Value not string")?),
         "boolean" => ValueType::Boolean(value_js.as_bool().ok_or("Value not boolean")?),
         "symbol" => ValueType::Symbol(value_js.as_string().ok_or("Value not string")?),
