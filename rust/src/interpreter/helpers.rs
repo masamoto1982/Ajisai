@@ -144,36 +144,6 @@ pub fn extract_number(val: &Value) -> Result<&Fraction> {
     }
 }
 
-/// 値から複数の数値を抽出する（ベクタの全要素）
-///
-/// 【責務】
-/// - ベクタ内のすべての数値を抽出
-/// - 直接数値の場合は1要素のベクタとして返す
-///
-/// 【用途】
-/// - ベクタ全体の数値演算
-/// - 配列データの取得
-///
-/// 【エラー】
-/// - 数値以外の要素が含まれる場合
-pub fn extract_numbers(val: &Value) -> Result<Vec<&Fraction>> {
-    match &val.val_type {
-        ValueType::Number(n) => Ok(vec![n]),
-        ValueType::Vector(v) => {
-            let mut result = Vec::with_capacity(v.len());
-            for elem in v {
-                if let ValueType::Number(n) = &elem.val_type {
-                    result.push(n);
-                } else {
-                    return Err(AjisaiError::type_error("number", "other type in vector"));
-                }
-            }
-            Ok(result)
-        },
-        _ => Err(AjisaiError::type_error("number or number vector", "other type")),
-    }
-}
-
 /// 単一要素ベクタから文字列を抽出する
 ///
 /// 【責務】
@@ -363,17 +333,6 @@ mod tests {
         let wrapped = wrap_number(frac.clone());
         let extracted = extract_number(&wrapped).unwrap();
         assert_eq!(extracted, &frac);
-    }
-
-    #[test]
-    fn test_extract_numbers() {
-        let v = Value::from_vector(vec![
-            Value::from_number(Fraction::new(BigInt::from(1), BigInt::one())),
-            Value::from_number(Fraction::new(BigInt::from(2), BigInt::one())),
-            Value::from_number(Fraction::new(BigInt::from(3), BigInt::one())),
-        ]);
-        let nums = extract_numbers(&v).unwrap();
-        assert_eq!(nums.len(), 3);
     }
 
     #[test]

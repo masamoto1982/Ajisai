@@ -9,7 +9,6 @@ use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, unwrap_single_element, wrap_value};
 use crate::types::{Value, ValueType};
-use crate::types::fraction::Fraction;
 
 // ============================================================================
 // 高階関数の実装
@@ -802,7 +801,6 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::interpreter::Interpreter;
     use crate::types::ValueType;
 
