@@ -191,7 +191,7 @@ export class TestRunner {
     }
     
     private showTestResult(testCase: TestCase, result: any, passed: boolean): void {
-        const statusIcon = passed ? '✓' : '✗';
+        const statusIcon = passed ? '[OK]' : '[NG]';
         const statusText = passed ? 'PASS' : 'FAIL';
         const statusColor = passed ? 'success' : 'error';
         
@@ -272,7 +272,7 @@ export class TestRunner {
     }
     
     private showTestError(testCase: TestCase, error: any): void {
-        this.showColoredInfo(`✗ ERROR: ${testCase.name}`, 'error');
+        this.showColoredInfo(`[NG] ERROR: ${testCase.name}`, 'error');
         this.showColoredInfo(`  Code: ${testCase.code}`, 'info');
         this.showColoredInfo(`  Error: ${error}`, 'error');
         this.showColoredInfo('', 'info'); // 空行

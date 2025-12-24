@@ -11,11 +11,11 @@
 
 *A stack-based programming language inspired by FORTH*
 
-🔗 **デモ / Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
+**Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
 
 ---
 
-## 🤖 AI駆動開発について / About AI-Driven Development
+## AI駆動開発について / About AI-Driven Development
 
 > **このプロジェクトの実装の大半はAI（Claude）によって行われています。**
 > 設計方針の決定から、Rust/TypeScriptのコード実装、テストケースの作成、ドキュメント整備まで、

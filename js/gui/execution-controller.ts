@@ -94,7 +94,7 @@ export class ExecutionController {
             if (result.status === 'OK' && !result.error) {
                 this.gui.display.showOutput(result.output || 'RESET executed');
                 this.gui.editor.clear();
-                this.gui.display.showInfo('🔄 RESET: All memory cleared.', true);
+                this.gui.display.showInfo('RESET: All memory cleared.', true);
                 // リセット後は入力モードに戻す
                 this.gui.mobile.updateView('input');
             } else {
@@ -155,7 +155,7 @@ export class ExecutionController {
             }
 
             this.gui.display.showInfo(
-                `🔍 Step mode started. ${this.stepMode.tokens.length} tokens to execute. (Ctrl+Enter to continue)`,
+                `[STEP] Step mode started. ${this.stepMode.tokens.length} tokens to execute. (Ctrl+Enter to continue)`,
                 true
             );
 
@@ -169,7 +169,7 @@ export class ExecutionController {
 
     private async executeNextToken(): Promise<void> {
         if (this.stepMode.currentIndex >= this.stepMode.tokens.length) {
-            this.gui.display.showInfo('✅ Step mode completed.', true);
+            this.gui.display.showInfo('[DONE] Step mode completed.', true);
             this.resetStepMode();
             return;
         }
@@ -179,7 +179,7 @@ export class ExecutionController {
 
         try {
             this.gui.display.showInfo(
-                `▶️ Step ${this.stepMode.currentIndex + 1}/${this.stepMode.tokens.length}: "${token}" (${remaining} remaining)`,
+                `[>] Step ${this.stepMode.currentIndex + 1}/${this.stepMode.tokens.length}: "${token}" (${remaining} remaining)`,
                 false
             );
 
@@ -201,7 +201,7 @@ export class ExecutionController {
             this.stepMode.currentIndex++;
 
             if (this.stepMode.currentIndex >= this.stepMode.tokens.length) {
-                this.gui.display.showInfo('✅ Step mode completed.', true);
+                this.gui.display.showInfo('[DONE] Step mode completed.', true);
                 this.resetStepMode();
             }
 
