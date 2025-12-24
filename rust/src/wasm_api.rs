@@ -380,7 +380,7 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
 
 fn value_to_js_value(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
-    
+
     let type_str = match &value.val_type {
         ValueType::Number(_) => "number",
         ValueType::String(_) => "string",
@@ -388,10 +388,11 @@ fn value_to_js_value(value: &Value) -> JsValue {
         ValueType::Symbol(_) => "symbol",
         ValueType::Vector(_) => "vector",
         ValueType::Nil => "nil",
+        ValueType::DateTime(_) => "datetime",
     };
-    
+
     js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
-    
+
     match &value.val_type {
         ValueType::Number(n) => {
             let num_obj = js_sys::Object::new();
@@ -418,6 +419,13 @@ fn value_to_js_value(value: &Value) -> JsValue {
         },
         ValueType::Nil => {
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        },
+        ValueType::DateTime(n) => {
+            // DateTime型は内部的にはFractionと同じ構造だが、type が "datetime" になる
+            let num_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&num_obj, &"numerator".into(), &n.numerator.to_string().into()).unwrap();
+            js_sys::Reflect::set(&num_obj, &"denominator".into(), &n.denominator.to_string().into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
         },
     };
 
