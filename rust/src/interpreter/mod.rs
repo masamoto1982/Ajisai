@@ -51,9 +51,6 @@ pub enum AsyncAction {
         duration_ms: u64,
         word_name: String,
     },
-    // 将来の拡張用:
-    // Fetch { url: String, callback_word: String },
-    // ReadFile { path: String, callback_word: String },
 }
 
 pub struct Interpreter {
