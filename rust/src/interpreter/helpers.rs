@@ -8,49 +8,10 @@
 // Vector指向型システム対応版
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueType, Token};
+use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
-
-// ============================================================================
-// トークン処理関数（execute_section の共通化）
-// ============================================================================
-
-/// トークンから値を作成し、単一要素ベクタでラップする
-///
-/// 【責務】
-/// - Token から Value への変換ロジックを一元化
-/// - execute_section_sync と execute_section の重複を削減
-///
-/// 【引数】
-/// - token: 変換元のトークン
-///
-/// 【戻り値】
-/// - Ok(Some(Value)): 値が作成された場合
-/// - Ok(None): 値を作成しないトークン（Symbol, GuardSeparator など）
-/// - Err: パースエラー
-pub fn token_to_wrapped_value(token: &Token) -> Result<Option<Value>> {
-    match token {
-        Token::Number(n) => {
-            let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
-            Ok(Some(wrap_number(frac)))
-        },
-        Token::String(s) => {
-            let val = Value { val_type: ValueType::String(s.clone()) };
-            Ok(Some(wrap_value(val)))
-        },
-        Token::Boolean(b) => {
-            let val = Value { val_type: ValueType::Boolean(*b) };
-            Ok(Some(wrap_value(val)))
-        },
-        Token::Nil => {
-            let val = Value { val_type: ValueType::Nil };
-            Ok(Some(wrap_value(val)))
-        },
-        _ => Ok(None), // Symbol, VectorStart, GuardSeparator, LineBreak は呼び出し側で処理
-    }
-}
 
 // ============================================================================
 // 整数・インデックス抽出関数
@@ -364,31 +325,6 @@ pub fn unwrap_single_element(value: Value) -> Value {
 /// - [value]形式のベクタ
 pub fn wrap_result_value(value: Value) -> Value {
     wrap_value(value)
-}
-
-// ============================================================================
-// 後方互換性エイリアス（段階的移行用）
-// ============================================================================
-
-/// 後方互換性: wrap_as_tensor は wrap_number のエイリアス
-#[deprecated(note = "use wrap_number instead")]
-pub fn wrap_as_tensor(fraction: Fraction) -> Value {
-    wrap_number(fraction)
-}
-
-/// 後方互換性: wrap_in_square_vector は wrap_value のエイリアス
-#[deprecated(note = "use wrap_value instead")]
-pub fn wrap_in_square_vector(value: Value) -> Value {
-    wrap_value(value)
-}
-
-/// 後方互換性: wrap_single_value は wrap_value のエイリアス
-#[deprecated(note = "use wrap_value instead")]
-pub fn wrap_single_value(value: Value) -> Value {
-    match value.val_type {
-        ValueType::Number(f) => wrap_number(f),
-        _ => wrap_value(value)
-    }
 }
 
 // ============================================================================

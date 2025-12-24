@@ -114,15 +114,6 @@ export class AudioEngine {
     
     console.log(`Oscillator started for ${frequency}Hz`);
 }
-
-    // Test function
-    async playTestTone(): Promise<void> {
-        await this.init();
-        if (!this.audioContext) return;
-
-        this.playTone(440, this.audioContext.currentTime, 1.0);
-        console.log('Test tone played: 440Hz for 1 second');
-    }
 }
 
 export const AUDIO_ENGINE = new AudioEngine();

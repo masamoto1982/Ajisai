@@ -97,7 +97,7 @@ function setupOnlineStatusMonitoring(): void {
             console.log('[Main] Offline');
             if (offlineIndicator) offlineIndicator.style.display = 'inline';
             if (GUI_INSTANCE && GUI_INSTANCE.display) {
-                GUI_INSTANCE.display.showInfo('⚠ オフラインモードで動作中', true);
+                GUI_INSTANCE.display.showInfo('[OFFLINE] オフラインモードで動作中', true);
             }
         }
     }
