@@ -31,10 +31,10 @@ export interface InitOutput {
   readonly ajisaiinterpreter_reset: (a: number) => any;
   readonly ajisaiinterpreter_restore_custom_words: (a: number, b: any) => [number, number];
   readonly ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
-  readonly wasm_bindgen__convert__closures_____invoke__hece2e1b39f751070: (a: number, b: number) => void;
-  readonly wasm_bindgen__closure__destroy__h9c833eb7b8c0b006: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__h10d80980615a3834: (a: number, b: number, c: any) => void;
   readonly wasm_bindgen__closure__destroy__h59d1c5aaf0cbd4f7: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__hece2e1b39f751070: (a: number, b: number) => void;
+  readonly wasm_bindgen__closure__destroy__h9c833eb7b8c0b006: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__hecb430c1a5cb27e4: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
