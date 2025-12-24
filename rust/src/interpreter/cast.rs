@@ -552,6 +552,10 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(val);
                     Err(AjisaiError::from("JOIN: requires Vector type, got Symbol"))
                 }
+                ValueType::DateTime(_) => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("JOIN: requires Vector type, got DateTime"))
+                }
             }
         }
         OperationTarget::Stack => {
@@ -627,6 +631,11 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         interp.stack.push(elem);
                         return Err(AjisaiError::from("JOIN: requires Vector type, got Symbol"));
                     }
+                    ValueType::DateTime(_) => {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("JOIN: requires Vector type, got DateTime"));
+                    }
                 }
             }
 
@@ -655,6 +664,14 @@ fn value_to_string_repr(value: &Value) -> String {
                 format!("{}", n.numerator)
             } else {
                 format!("{}/{}", n.numerator, n.denominator)
+            }
+        }
+        ValueType::DateTime(n) => {
+            // DateTime型は@プレフィックスで表示
+            if n.denominator == num_bigint::BigInt::from(1) {
+                format!("@{}", n.numerator)
+            } else {
+                format!("@{}/{}", n.numerator, n.denominator)
             }
         }
         ValueType::String(s) => s.clone(),

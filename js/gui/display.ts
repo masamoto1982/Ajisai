@@ -191,6 +191,13 @@ export class Display {
                 const numerStr = String(frac.numerator);
                 return this.formatFractionScientific(numerStr, denomStr);
             }
+            case 'datetime': {
+                // DateTime型をローカル日時として表示
+                if (!item.value || typeof item.value !== 'object') return '@?';
+                const frac = item.value as any;
+                if (!('numerator' in frac) || !('denominator' in frac)) return '@?';
+                return this.formatDateTime(String(frac.numerator), String(frac.denominator));
+            }
             case 'tensor': {
                 if (!item.value || typeof item.value !== 'object') return '?';
                 const tensor = item.value as any;
@@ -299,6 +306,50 @@ export class Display {
         if (isNegative) mantissa = '-' + mantissa;
 
         return `${mantissa}e${exponent}`;
+    }
+
+    /**
+     * DateTime型をローカル日時文字列としてフォーマット
+     *
+     * タイムスタンプ（秒単位、分数でサブ秒を表現）をローカル日時に変換
+     * 例: 1732531200500/1000 → "2024-11-25 14:00:00.500"
+     */
+    private formatDateTime(numerStr: string, denomStr: string): string {
+        try {
+            // 分数をミリ秒に変換
+            const numer = BigInt(numerStr);
+            const denom = BigInt(denomStr);
+
+            // ミリ秒単位に変換（タイムスタンプは秒単位なので1000倍）
+            const timestampMs = Number((numer * 1000n) / denom);
+
+            const date = new Date(timestampMs);
+
+            // 有効な日付かチェック
+            if (isNaN(date.getTime())) {
+                return `@${numerStr}${denomStr === '1' ? '' : '/' + denomStr}`;
+            }
+
+            // ローカル日時形式でフォーマット
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            const ms = date.getMilliseconds();
+
+            // サブ秒があれば表示
+            if (ms > 0) {
+                const msStr = String(ms).padStart(3, '0');
+                return `@${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${msStr}`;
+            }
+
+            return `@${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        } catch {
+            // 変換失敗時は生の値を表示
+            return `@${numerStr}${denomStr === '1' ? '' : '/' + denomStr}`;
+        }
     }
 
     /**

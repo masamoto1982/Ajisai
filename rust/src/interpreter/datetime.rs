@@ -145,7 +145,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::wrap_number;
+use crate::interpreter::helpers::wrap_datetime;
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
@@ -187,8 +187,8 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
 
     let timestamp = Fraction::new(ms_bigint, thousand);
 
-    // 数値結果を単一要素Vectorとして返す
-    interp.stack.push(wrap_number(timestamp));
+    // DateTime結果を単一要素Vectorとして返す
+    interp.stack.push(wrap_datetime(timestamp));
 
     Ok(())
 }
@@ -282,22 +282,22 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     // タイムスタンプを取得
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // Vectorから数値を抽出
+    // Vectorから数値またはDateTime型を抽出
     let timestamp = match &val.val_type {
         ValueType::Vector(v) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::Number(n) => n.clone(),
+                ValueType::Number(n) | ValueType::DateTime(n) => n.clone(),
                 _ => {
                     interp.stack.push(val);
                     interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("DATETIME: requires Number type for timestamp"));
+                    return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
                 }
             }
         }
         _ => {
             interp.stack.push(val);
             interp.stack.push(tz_val);
-            return Err(AjisaiError::from("DATETIME: requires Number type for timestamp"));
+            return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
         }
     };
 
@@ -536,8 +536,8 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
         timestamp = timestamp.add(&subsec_frac);
     }
 
-    // 数値結果を単一要素Vectorとして返す
-    interp.stack.push(wrap_number(timestamp));
+    // DateTime結果を単一要素Vectorとして返す
+    interp.stack.push(wrap_datetime(timestamp));
 
     Ok(())
 }

@@ -35,18 +35,19 @@ use num_traits::{One, ToPrimitive};
 pub fn get_integer_from_value(value: &Value) -> Result<i64> {
     match &value.val_type {
         ValueType::Vector(v) if v.len() == 1 => {
-            if let ValueType::Number(n) = &v[0].val_type {
-                if n.denominator == BigInt::one() {
-                    n.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
-                } else {
-                    Err(AjisaiError::type_error("integer", "fraction"))
-                }
-            } else {
-                Err(AjisaiError::type_error("integer", "other type"))
+            match &v[0].val_type {
+                ValueType::Number(n) | ValueType::DateTime(n) => {
+                    if n.denominator == BigInt::one() {
+                        n.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
+                    } else {
+                        Err(AjisaiError::type_error("integer", "fraction"))
+                    }
+                },
+                _ => Err(AjisaiError::type_error("integer", "other type")),
             }
         },
-        ValueType::Number(n) => {
-            // 直接Number型の場合も処理
+        ValueType::Number(n) | ValueType::DateTime(n) => {
+            // 直接Number/DateTime型の場合も処理
             if n.denominator == BigInt::one() {
                 n.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
             } else {
@@ -75,13 +76,13 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
     match &value.val_type {
         ValueType::Vector(ref v) if v.len() == 1 => {
             match &v[0].val_type {
-                ValueType::Number(n) if n.denominator == BigInt::one() => Ok(n.numerator.clone()),
-                ValueType::Number(_) => Err(AjisaiError::type_error("integer", "fraction")),
+                ValueType::Number(n) | ValueType::DateTime(n) if n.denominator == BigInt::one() => Ok(n.numerator.clone()),
+                ValueType::Number(_) | ValueType::DateTime(_) => Err(AjisaiError::type_error("integer", "fraction")),
                 _ => Err(AjisaiError::type_error("integer", "other type")),
             }
         },
-        ValueType::Number(n) => {
-            // 直接Number型の場合も処理
+        ValueType::Number(n) | ValueType::DateTime(n) => {
+            // 直接Number/DateTime型の場合も処理
             if n.denominator == BigInt::one() {
                 Ok(n.numerator.clone())
             } else {
@@ -133,11 +134,12 @@ pub fn extract_single_element(vector_val: &Value) -> Result<&Value> {
 pub fn extract_number(val: &Value) -> Result<&Fraction> {
     match &val.val_type {
         ValueType::Number(n) => Ok(n),
+        ValueType::DateTime(n) => Ok(n),  // DateTimeも内部的にはFraction
         ValueType::Vector(v) if v.len() == 1 => {
-            if let ValueType::Number(n) = &v[0].val_type {
-                Ok(n)
-            } else {
-                Err(AjisaiError::type_error("number", "other type in inner vector"))
+            match &v[0].val_type {
+                ValueType::Number(n) => Ok(n),
+                ValueType::DateTime(n) => Ok(n),  // DateTimeも内部的にはFraction
+                _ => Err(AjisaiError::type_error("number", "other type in inner vector")),
             }
         },
         _ => Err(AjisaiError::type_error("number or single-element number vector", "other type")),
@@ -253,6 +255,21 @@ pub fn wrap_value(value: Value) -> Value {
 /// - [number]形式のベクタ
 pub fn wrap_number(fraction: Fraction) -> Value {
     Value::from_vector(vec![Value::from_number(fraction)])
+}
+
+/// 数値を単一要素ベクタにラップする（DateTime型）
+///
+/// 【責務】
+/// - DateTime型のFractionを[datetime]形式でラップ
+/// - 日付時刻ワードの結果を返すために使用
+///
+/// 【引数】
+/// - fraction: ラップするタイムスタンプ（Unixタイムスタンプ）
+///
+/// 【戻り値】
+/// - [datetime]形式のベクタ
+pub fn wrap_datetime(fraction: Fraction) -> Value {
+    Value::from_vector(vec![Value::from_datetime(fraction)])
 }
 
 /// 単一要素ベクタの場合は内部要素を取り出す

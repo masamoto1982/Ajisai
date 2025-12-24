@@ -88,6 +88,9 @@ pub enum ValueType {
     Symbol(String),
     /// 空値
     Nil,
+    /// 日時（Unixタイムスタンプ、内部的にはFraction）
+    /// 表示時は年月日時刻形式でフォーマットされる
+    DateTime(Fraction),
 }
 
 // Display トレイトの実装
@@ -100,6 +103,7 @@ impl fmt::Display for ValueType {
             ValueType::Symbol(_) => write!(f, "symbol"),
             ValueType::Vector(_) => write!(f, "vector"),
             ValueType::Nil => write!(f, "nil"),
+            ValueType::DateTime(_) => write!(f, "datetime"),
         }
     }
 }
@@ -181,6 +185,15 @@ impl Value {
                 write!(f, "{}", close)
             }
             ValueType::Nil => write!(f, "NIL"),
+            ValueType::DateTime(n) => {
+                // DateTime型は@プレフィックスで表示
+                // JavaScript側で詳細な日時フォーマットを行う
+                if n.denominator == BigInt::one() {
+                    write!(f, "@{}", n.numerator)
+                } else {
+                    write!(f, "@{}/{}", n.numerator, n.denominator)
+                }
+            }
         }
     }
 }
@@ -204,6 +217,13 @@ impl Value {
     pub fn from_vector(values: Vec<Value>) -> Self {
         Value {
             val_type: ValueType::Vector(values),
+        }
+    }
+
+    /// DateTimeバリアントから Value を作成
+    pub fn from_datetime(fraction: Fraction) -> Self {
+        Value {
+            val_type: ValueType::DateTime(fraction),
         }
     }
 }
