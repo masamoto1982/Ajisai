@@ -12,26 +12,13 @@ pub enum AjisaiError {
     StackUnderflow,
     TypeError { expected: String, got: String },
     UnknownWord(String),
-    UnknownBuiltin(String),
     DivisionByZero,
     IndexOutOfBounds { index: i64, length: usize },
     VectorLengthMismatch { len1: usize, len2: usize },
     Custom(String),
-    WithContext { error: Box<AjisaiError>, context: Vec<String> },
 }
 
 impl AjisaiError {
-    pub fn with_context(self, call_stack: &[String]) -> Self {
-        if call_stack.is_empty() {
-            self
-        } else {
-            AjisaiError::WithContext {
-                error: Box::new(self),
-                context: call_stack.to_vec(),
-            }
-        }
-    }
-
     pub fn type_error(expected: &str, got: &str) -> Self {
         AjisaiError::TypeError {
             expected: expected.to_string(),
@@ -48,7 +35,6 @@ impl fmt::Display for AjisaiError {
                 write!(f, "Type error: expected {}, got {}", expected, got)
             },
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
-            AjisaiError::UnknownBuiltin(name) => write!(f, "Unknown builtin: {}", name),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
             AjisaiError::IndexOutOfBounds { index, length } => {
                 write!(f, "Index {} out of bounds for vector of length {}", index, length)
@@ -57,9 +43,6 @@ impl fmt::Display for AjisaiError {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
             },
             AjisaiError::Custom(msg) => write!(f, "{}", msg),
-            AjisaiError::WithContext { error, context } => {
-                write!(f, "{}\n  in word: {}", error, context.join(" -> "))
-            },
         }
     }
 }

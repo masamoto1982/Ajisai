@@ -206,54 +206,6 @@ impl Value {
             val_type: ValueType::Vector(values),
         }
     }
-
-    /// 数値を単一要素Vectorでラップして作成
-    pub fn wrap_number(fraction: Fraction) -> Self {
-        Value {
-            val_type: ValueType::Vector(vec![Value::from_number(fraction)]),
-        }
-    }
-
-    /// Vectorへの参照を取得（Vectorバリアントの場合のみ）
-    pub fn as_vector(&self) -> std::result::Result<&Vec<Value>, String> {
-        match &self.val_type {
-            ValueType::Vector(v) => Ok(v),
-            _ => Err(format!("Expected vector, got {}", self.val_type)),
-        }
-    }
-
-    /// Vectorへの可変参照を取得（Vectorバリアントの場合のみ）
-    pub fn as_vector_mut(&mut self) -> std::result::Result<&mut Vec<Value>, String> {
-        if let ValueType::Vector(ref mut v) = self.val_type {
-            Ok(v)
-        } else {
-            Err(format!("Expected vector, got {}", self.val_type))
-        }
-    }
-
-    /// Vectorを取り出す（所有権を移動）
-    pub fn into_vector(self) -> std::result::Result<Vec<Value>, String> {
-        match self.val_type {
-            ValueType::Vector(v) => Ok(v),
-            _ => Err(format!("Expected vector, got {}", self.val_type)),
-        }
-    }
-
-    /// Stringへの参照を取得（Stringバリアントの場合のみ）
-    pub fn as_string(&self) -> std::result::Result<&str, String> {
-        match &self.val_type {
-            ValueType::String(s) => Ok(s),
-            _ => Err(format!("Expected string, got {}", self.val_type)),
-        }
-    }
-
-    /// 数値への参照を取得（Numberバリアントの場合のみ）
-    pub fn as_number(&self) -> std::result::Result<&Fraction, String> {
-        match &self.val_type {
-            ValueType::Number(n) => Ok(n),
-            _ => Err(format!("Expected number, got {}", self.val_type)),
-        }
-    }
 }
 
 /// Vectorから形状を推論する
@@ -307,11 +259,6 @@ fn infer_shape_with_depth(values: &[Value], current_depth: usize) -> std::result
     Ok(full_shape)
 }
 
-/// Valueの形状を取得
-fn get_value_shape(value: &Value) -> std::result::Result<Vec<usize>, String> {
-    get_value_shape_with_depth(value, 1)
-}
-
 /// 深さを追跡しながらValueの形状を取得（内部関数）
 fn get_value_shape_with_depth(value: &Value, current_depth: usize) -> std::result::Result<Vec<usize>, String> {
     // 次元数チェック
@@ -339,24 +286,6 @@ fn get_value_shape_with_depth(value: &Value, current_depth: usize) -> std::resul
     }
 }
 
-/// 矩形かどうかを検証
-///
-/// 同一次元内のすべての要素が同じ形状であることを確認
-pub fn is_rectangular(values: &[Value]) -> bool {
-    infer_shape(values).is_ok()
-}
-
-/// すべての要素が数値かチェック
-pub fn all_numbers(values: &[Value]) -> bool {
-    values.iter().all(|v| {
-        match &v.val_type {
-            ValueType::Number(_) => true,
-            ValueType::Vector(inner) => all_numbers(inner),
-            _ => false,
-        }
-    })
-}
-
 /// Vectorから数値を平坦化して抽出
 pub fn flatten_numbers(values: &[Value]) -> std::result::Result<Vec<Fraction>, String> {
     let mut output = Vec::new();
@@ -379,47 +308,6 @@ fn flatten_numbers_recursive(values: &[Value], output: &mut Vec<Fraction>) -> st
         }
     }
     Ok(())
-}
-
-/// 形状とデータからネストされたVectorを構築
-pub fn build_nested_vector(shape: &[usize], data: &[Fraction]) -> std::result::Result<Value, String> {
-    if shape.is_empty() {
-        // スカラー
-        if data.len() != 1 {
-            return Err("Scalar requires exactly one data element".to_string());
-        }
-        return Ok(Value::from_number(data[0].clone()));
-    }
-
-    let expected_size: usize = shape.iter().product();
-    if data.len() != expected_size {
-        return Err(format!(
-            "Shape {:?} requires {} elements, but got {}",
-            shape, expected_size, data.len()
-        ));
-    }
-
-    if shape.len() == 1 {
-        // 1次元
-        let values: Vec<Value> = data.iter()
-            .map(|f| Value::from_number(f.clone()))
-            .collect();
-        return Ok(Value::from_vector(values));
-    }
-
-    // 多次元
-    let outer_size = shape[0];
-    let inner_shape = &shape[1..];
-    let inner_size: usize = inner_shape.iter().product();
-
-    let mut values = Vec::with_capacity(outer_size);
-    for i in 0..outer_size {
-        let start = i * inner_size;
-        let inner_data = &data[start..start + inner_size];
-        values.push(build_nested_vector(inner_shape, inner_data)?);
-    }
-
-    Ok(Value::from_vector(values))
 }
 
 pub type Stack = Vec<Value>;

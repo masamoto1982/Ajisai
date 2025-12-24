@@ -69,28 +69,6 @@ impl Fraction {
     pub fn le(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator <= &other.numerator * &self.denominator }
     pub fn gt(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator > &other.numerator * &self.denominator }
     pub fn ge(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator >= &other.numerator * &self.denominator }
-    pub fn eq(&self, other: &Fraction) -> bool { self == other }
-
-    /// 絶対値を返す
-    pub fn abs(&self) -> Fraction {
-        Fraction::new(self.numerator.abs(), self.denominator.clone())
-    }
-
-    /// 符号を返す（正なら1、負なら-1、ゼロなら0）
-    pub fn sign(&self) -> Fraction {
-        if self.numerator.is_zero() {
-            Fraction::new(BigInt::from(0), BigInt::from(1))
-        } else if self.numerator > BigInt::zero() {
-            Fraction::new(BigInt::from(1), BigInt::from(1))
-        } else {
-            Fraction::new(BigInt::from(-1), BigInt::from(1))
-        }
-    }
-
-    /// 符号を反転する
-    pub fn neg(&self) -> Fraction {
-        Fraction::new(-&self.numerator, self.denominator.clone())
-    }
 
     /// 切り捨て（負の無限大方向への丸め）
     pub fn floor(&self) -> Fraction {
@@ -160,15 +138,6 @@ impl Fraction {
         self.denominator == BigInt::one()
     }
 
-    /// 整数に変換（整数でなければNone）
-    pub fn as_exact_bigint(&self) -> Option<BigInt> {
-        if self.is_exact_integer() {
-            Some(self.numerator.clone())
-        } else {
-            None
-        }
-    }
-
     /// 非負整数としてusizeに変換（分母が1の場合のみ）
     pub fn as_usize(&self) -> Option<usize> {
         if self.is_exact_integer() && self.numerator >= BigInt::zero() {
@@ -187,33 +156,6 @@ impl Fraction {
         let div_result = self.div(other);
         let floored = div_result.floor();
         self.sub(&other.mul(&floored))
-    }
-
-    /// べき乗（整数指数のみ）
-    pub fn pow(&self, exponent: i64) -> Fraction {
-        if exponent == 0 {
-            return Fraction::new(BigInt::from(1), BigInt::from(1));
-        }
-
-        let abs_exp = exponent.unsigned_abs() as u32;
-
-        let result = if exponent > 0 {
-            Fraction::new(
-                self.numerator.pow(abs_exp),
-                self.denominator.pow(abs_exp)
-            )
-        } else {
-            // 負の指数: 逆数のべき乗
-            if self.numerator.is_zero() {
-                panic!("Zero cannot be raised to negative power");
-            }
-            Fraction::new(
-                self.denominator.pow(abs_exp),
-                self.numerator.pow(abs_exp)
-            )
-        };
-
-        result
     }
 }
 

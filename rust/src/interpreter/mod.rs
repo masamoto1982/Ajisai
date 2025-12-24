@@ -85,12 +85,6 @@ impl Interpreter {
         interpreter
     }
 
-    /// スタックにValueをプッシュ
-    pub fn push_value(&mut self, value: Value) -> Result<()> {
-        self.stack.push(value);
-        Ok(())
-    }
-
     /// Vector収集メソッド
     ///
     /// [], {}, () いずれの形式でもVectorとして収集する
@@ -348,22 +342,6 @@ impl Interpreter {
         Ok((i, None))
     }
 
-    /// セクション実行（同期版）
-    ///
-    /// WAITワードに遭遇した場合はエラーとなる。
-    fn execute_section_sync(&mut self, tokens: &[Token]) -> Result<()> {
-        let (_, action) = self.execute_section_core(tokens, 0)?;
-
-        if let Some(async_action) = action {
-            return Err(AjisaiError::from(format!(
-                "Async operation {:?} requires async context",
-                async_action
-            )));
-        }
-
-        Ok(())
-    }
-
     /// セクション実行（非同期版）
     #[async_recursion(?Send)]
     async fn execute_section(&mut self, tokens: &[Token]) -> Result<()> {
@@ -535,18 +513,6 @@ impl Interpreter {
         }
 
         Ok(())
-    }
-
-    pub(crate) fn execute_word_sync(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(name).cloned()
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
-
-        if def.is_builtin {
-            return self.execute_builtin(name);
-        }
-
-        // 行の配列としてガード構造を処理
-        self.execute_guard_structure_sync(&def.lines)
     }
 
     /// ワード実行（非同期版）
@@ -737,30 +703,6 @@ impl Interpreter {
             }
         }
         Ok(())
-    }
-
-    pub fn get_custom_words(&self) -> Vec<String> {
-        self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect()
-    }
-
-    pub fn get_custom_words_with_descriptions(&self) -> Vec<(String, Option<String>)> {
-        self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, def)| (name.clone(), def.description.clone()))
-            .collect()
-    }
-
-    pub fn get_custom_words_info(&self) -> Vec<(String, Option<String>, bool)> {
-        self.dictionary.iter()
-            .map(|(name, def)| (name.clone(), def.description.clone(), def.is_builtin))
-            .collect()
-    }
-
-    pub fn get_word_definition(&self, name: &str) -> Option<String> {
-        self.get_word_definition_tokens(name)
     }
 
     /// 指定されたワードを参照している他のワードの集合を取得

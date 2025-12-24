@@ -53,7 +53,7 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
                 i += consumed;
                 continue;
             }
-            QuoteParseResult::Unclosed(_) => {
+            QuoteParseResult::Unclosed => {
                 let quote_char = chars[i];
                 return Err(format!("Unclosed string literal starting with {}", quote_char));
             }
@@ -122,7 +122,7 @@ enum QuoteParseResult {
     /// 正常にパースできた (トークン, 消費文字数)
     Success(Token, usize),
     /// 閉じ引用符がない
-    Unclosed(usize),  // 開始位置からの文字数
+    Unclosed,
     /// 引用文字列ではない
     NotQuote,
 }
@@ -154,7 +154,7 @@ fn parse_quote_string(chars: &[char]) -> QuoteParseResult {
     }
 
     // 閉じ引用符が見つからなかった
-    QuoteParseResult::Unclosed(i)
+    QuoteParseResult::Unclosed
 }
 
 /// クォート文字の後の文字が区切り文字かどうかを判定
