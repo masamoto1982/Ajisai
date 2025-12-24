@@ -12,6 +12,7 @@ pub mod io;
 pub mod higher_order;
 pub mod cast;
 pub mod datetime;
+pub mod sort;           // 分数ソートアルゴリズム
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine, MAX_DIMENSIONS};
@@ -546,6 +547,7 @@ impl Interpreter {
             "CONCAT" => vector_ops::op_concat(self),
             "REVERSE" => vector_ops::op_reverse(self),
             "RANGE" => vector_ops::op_range(self),
+            "SORT" => sort::op_sort(self),
             "SHAPE" => tensor_ops::op_shape(self),
             "RANK" => tensor_ops::op_rank(self),
             "RESHAPE" => tensor_ops::op_reshape(self),
