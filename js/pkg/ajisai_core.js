@@ -214,16 +214,16 @@ if (!('encodeInto' in cachedTextEncoder)) {
 
 let WASM_VECTOR_LEN = 0;
 
-function wasm_bindgen__convert__closures_____invoke__h3d5ab9b5db5c01d3(arg0, arg1) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h3d5ab9b5db5c01d3(arg0, arg1);
+function wasm_bindgen__convert__closures_____invoke__hece2e1b39f751070(arg0, arg1) {
+    wasm.wasm_bindgen__convert__closures_____invoke__hece2e1b39f751070(arg0, arg1);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h898a0f791e66b255(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h898a0f791e66b255(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h10d80980615a3834(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h10d80980615a3834(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h28ea0c2eba360ce2(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h28ea0c2eba360ce2(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__hecb430c1a5cb27e4(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__hecb430c1a5cb27e4(arg0, arg1, arg2, arg3);
 }
 
 const AjisaiInterpreterFinalization = (typeof FinalizationRegistry === 'undefined')
@@ -544,7 +544,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return wasm_bindgen__convert__closures_____invoke__h28ea0c2eba360ce2(a, state0.b, arg0, arg1);
+                    return wasm_bindgen__convert__closures_____invoke__hecb430c1a5cb27e4(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -631,24 +631,24 @@ function __wbg_get_imports() {
         const ret = arg0.value;
         return ret;
     };
-    imports.wbg.__wbindgen_cast_0093e2d96a856a3b = function(arg0, arg1) {
-        // Cast intrinsic for `Closure(Closure { dtor_idx: 61, function: Function { arguments: [Externref], shim_idx: 62, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hdc4390a356fc0a6a, wasm_bindgen__convert__closures_____invoke__h898a0f791e66b255);
-        return ret;
-    };
     imports.wbg.__wbindgen_cast_2241b6af4c4b2941 = function(arg0, arg1) {
         // Cast intrinsic for `Ref(String) -> Externref`.
         const ret = getStringFromWasm0(arg0, arg1);
         return ret;
     };
-    imports.wbg.__wbindgen_cast_500637ae475f666c = function(arg0, arg1) {
-        // Cast intrinsic for `Closure(Closure { dtor_idx: 74, function: Function { arguments: [], shim_idx: 75, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h24832564c91a3850, wasm_bindgen__convert__closures_____invoke__h3d5ab9b5db5c01d3);
+    imports.wbg.__wbindgen_cast_a0f4bc893ed13732 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 69, function: Function { arguments: [], shim_idx: 70, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h9c833eb7b8c0b006, wasm_bindgen__convert__closures_____invoke__hece2e1b39f751070);
         return ret;
     };
     imports.wbg.__wbindgen_cast_d6cd19b81560fd6e = function(arg0) {
         // Cast intrinsic for `F64 -> Externref`.
         const ret = arg0;
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_e7ad0d7b317830d5 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 56, function: Function { arguments: [Externref], shim_idx: 57, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h59d1c5aaf0cbd4f7, wasm_bindgen__convert__closures_____invoke__h10d80980615a3834);
         return ret;
     };
     imports.wbg.__wbindgen_init_externref_table = function() {
