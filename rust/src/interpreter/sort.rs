@@ -1,7 +1,7 @@
 // rust/src/interpreter/sort.rs
 //
 // 【責務】
-// 分数専用の高速ソートアルゴリズム（FRACTIONSORT）を実装する。
+// 高速ソートアルゴリズム（SORT）を実装する。
 // Introsortアルゴリズムを使用し、分数比較には除算を避けて
 // クロス乗算（a/b < c/d ⟺ a*d < b*c）を使用する。
 
@@ -40,7 +40,7 @@ fn introsort_fractions(values: &mut [(usize, Fraction)]) {
     values.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 }
 
-/// FRACTIONSORT - 分数専用の高速ソート
+/// SORT - 高速ソート
 ///
 /// 【責務】
 /// - ベクタまたはスタック内の数値を昇順にソート
@@ -48,9 +48,9 @@ fn introsort_fractions(values: &mut [(usize, Fraction)]) {
 /// - Introsortアルゴリズムで高速かつ安定した性能を提供
 ///
 /// 【使用法】
-/// - StackTopモード: `[ 32 8 2 18 ] FRACTIONSORT` → `[ 2 8 18 32 ]`
-/// - StackTopモード: `[ 1/2 1/3 2/3 ] FRACTIONSORT` → `[ 1/3 1/2 2/3 ]`
-/// - Stackモード: `64 25 12 22 11 .. FRACTIONSORT` → スタック全体が昇順に
+/// - StackTopモード: `[ 32 8 2 18 ] SORT` → `[ 2 8 18 32 ]`
+/// - StackTopモード: `[ 1/2 1/3 2/3 ] SORT` → `[ 1/3 1/2 2/3 ]`
+/// - Stackモード: `64 25 12 22 11 .. SORT` → スタック全体が昇順に
 ///
 /// 【動作原理】
 /// 1. 分数の比較: a/b と c/d を比較する際、a×d と b×c を比較
@@ -61,7 +61,7 @@ fn introsort_fractions(values: &mut [(usize, Fraction)]) {
 /// 【エラー】
 /// - 対象に数値以外の要素が含まれる場合
 /// - 対象がベクタでない場合（StackTopモード）
-pub fn op_fractionsort(interp: &mut Interpreter) -> Result<()> {
+pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -81,7 +81,7 @@ pub fn op_fractionsort(interp: &mut Interpreter) -> Result<()> {
                             None => {
                                 interp.stack.push(Value { val_type: ValueType::Vector(v) });
                                 return Err(AjisaiError::from(
-                                    "FRACTIONSORT requires all elements to be numbers"
+                                    "SORT requires all elements to be numbers"
                                 ));
                             }
                         }
@@ -102,13 +102,13 @@ pub fn op_fractionsort(interp: &mut Interpreter) -> Result<()> {
                         if v.len() < 2 {
                             interp.stack.push(Value { val_type: ValueType::Vector(sorted_v) });
                             return Err(AjisaiError::from(
-                                "FRACTIONSORT resulted in no change on a vector with less than 2 elements"
+                                "SORT resulted in no change on a vector with less than 2 elements"
                             ));
                         }
                         if sorted_v == v {
                             interp.stack.push(Value { val_type: ValueType::Vector(sorted_v) });
                             return Err(AjisaiError::from(
-                                "FRACTIONSORT resulted in no change (vector is already sorted)"
+                                "SORT resulted in no change (vector is already sorted)"
                             ));
                         }
                     }
@@ -134,7 +134,7 @@ pub fn op_fractionsort(interp: &mut Interpreter) -> Result<()> {
                     Some(f) => indexed_fractions.push((i, f.clone())),
                     None => {
                         return Err(AjisaiError::from(
-                            "FRACTIONSORT requires all stack elements to be numbers"
+                            "SORT requires all stack elements to be numbers"
                         ));
                     }
                 }
@@ -154,12 +154,12 @@ pub fn op_fractionsort(interp: &mut Interpreter) -> Result<()> {
             if !interp.disable_no_change_check {
                 if original_stack.len() < 2 {
                     return Err(AjisaiError::from(
-                        "FRACTIONSORT resulted in no change on a stack with less than 2 elements"
+                        "SORT resulted in no change on a stack with less than 2 elements"
                     ));
                 }
                 if sorted_stack == original_stack.as_slice() {
                     return Err(AjisaiError::from(
-                        "FRACTIONSORT resulted in no change (stack is already sorted)"
+                        "SORT resulted in no change (stack is already sorted)"
                     ));
                 }
             }

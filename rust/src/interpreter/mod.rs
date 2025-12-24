@@ -547,7 +547,7 @@ impl Interpreter {
             "CONCAT" => vector_ops::op_concat(self),
             "REVERSE" => vector_ops::op_reverse(self),
             "RANGE" => vector_ops::op_range(self),
-            "FRACTIONSORT" => sort::op_fractionsort(self),
+            "SORT" => sort::op_sort(self),
             "SHAPE" => tensor_ops::op_shape(self),
             "RANK" => tensor_ops::op_rank(self),
             "RESHAPE" => tensor_ops::op_reshape(self),
