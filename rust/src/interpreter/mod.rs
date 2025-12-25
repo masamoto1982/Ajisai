@@ -14,6 +14,7 @@ pub mod cast;
 pub mod datetime;
 pub mod sort;           // 分数ソートアルゴリズム
 pub mod random;         // 暗号論的疑似乱数生成
+pub mod hash;           // 分数ハッシュ関数
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine, MAX_DIMENSIONS};
@@ -599,6 +600,7 @@ impl Interpreter {
             "DATETIME" => datetime::op_datetime(self),
             "TIMESTAMP" => datetime::op_timestamp(self),
             "CSPRNG" => random::op_csprng(self),
+            "HASH" => hash::op_hash(self),
             "!" => {
                 self.force_flag = true;
                 Ok(())
