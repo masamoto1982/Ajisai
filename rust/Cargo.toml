@@ -20,6 +20,7 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 async-recursion = "1.0"
 chrono = { version = "0.4", features = ["wasmbind"] }
 getrandom = { version = "0.2", features = ["js"] }
+lazy_static = "1.4"
 
 [dependencies.web-sys]
 version = "0.3"
