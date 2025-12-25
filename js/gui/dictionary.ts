@@ -58,7 +58,8 @@ export class Dictionary {
         });
 
     Object.keys(groups).sort().forEach((category) => {
-        const groupContainer = document.createElement('div');
+        const groupContainer = document.createElement('span');
+        groupContainer.className = 'builtin-category-group';
         
         const categoryWords = groups[category];
         if (categoryWords) {
