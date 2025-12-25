@@ -14,10 +14,9 @@ import type { CustomWord } from '../wasm-types';
  *
  * 依存関係:
  *   TAX_RATE (独立)
- *       ↓
- *      TAX (TAX_RATE を使用)
- *       ↓
- *   TAX_INCL (TAX を使用)
+ *     ├── TAX (TAX_RATE を使用)
+ *     └── TAX_MULT (TAX_RATE を使用)
+ *           └── TAX_INCL (TAX_MULT を使用)
  */
 export const SAMPLE_CUSTOM_WORDS: CustomWord[] = [
     {
@@ -31,8 +30,13 @@ export const SAMPLE_CUSTOM_WORDS: CustomWord[] = [
         description: '税額を計算 (価格 → 税額)',
     },
     {
+        name: 'TAX_MULT',
+        definition: '[ : 1 TAX_RATE + ]',
+        description: '税込み倍率 (1.1)',
+    },
+    {
         name: 'TAX_INCL',
-        definition: '[ : DUP TAX + ]',
+        definition: '[ : TAX_MULT * ]',
         description: '税込価格を計算 (価格 → 税込価格)',
     },
 ];
