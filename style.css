@@ -306,6 +306,15 @@ section h3 {
     margin-bottom: 0;
 }
 
+/* 組み込みワードのカテゴリーグループ - インライン表示 */
+.builtin-category-group {
+    display: inline;
+    margin-right: 12px;
+}
+.builtin-category-group:last-child {
+    margin-right: 0;
+}
+
 /* ワードボタン */
 .word-button {
     margin: 2px;
