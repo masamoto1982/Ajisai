@@ -8,7 +8,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_bigint_from_value, normalize_index, unwrap_single_element, wrap_value, wrap_number};
+use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index, unwrap_single_element, wrap_value, wrap_number};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
@@ -43,18 +43,11 @@ use std::collections::VecDeque;
 /// - 対象がベクタでない場合
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index_bigint = match get_bigint_from_value(&index_val) {
+    let index = match get_integer_from_value(&index_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(index_val);
             return Err(e);
-        }
-    };
-    let index = match index_bigint.to_i64() {
-        Some(v) => v,
-        None => {
-            interp.stack.push(index_val);
-            return Err(AjisaiError::from("Index is too large"));
         }
     };
 
@@ -147,20 +140,12 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(element.clone());
         AjisaiError::StackUnderflow
     })?;
-    let index_bigint = match get_bigint_from_value(&index_val) {
+    let index = match get_integer_from_value(&index_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(index_val);
             interp.stack.push(element);
             return Err(e);
-        }
-    };
-    let index = match index_bigint.to_i64() {
-        Some(v) => v,
-        None => {
-            interp.stack.push(index_val);
-            interp.stack.push(element);
-            return Err(AjisaiError::from("Index is too large"));
         }
     };
 
@@ -249,20 +234,12 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(new_element.clone());
         AjisaiError::StackUnderflow
     })?;
-    let index_bigint = match get_bigint_from_value(&index_val) {
+    let index = match get_integer_from_value(&index_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(index_val);
             interp.stack.push(new_element);
             return Err(e);
-        }
-    };
-    let index = match index_bigint.to_i64() {
-        Some(v) => v,
-        None => {
-            interp.stack.push(index_val);
-            interp.stack.push(new_element);
-            return Err(AjisaiError::from("Index too large"));
         }
     };
 
@@ -341,18 +318,11 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index_bigint = match get_bigint_from_value(&index_val) {
+    let index = match get_integer_from_value(&index_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(index_val);
             return Err(e);
-        }
-    };
-    let index = match index_bigint.to_i64() {
-        Some(v) => v,
-        None => {
-            interp.stack.push(index_val);
-            return Err(AjisaiError::from("Index too large"));
         }
     };
 
@@ -472,18 +442,11 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let count_bigint = match get_bigint_from_value(&count_val) {
+    let count = match get_integer_from_value(&count_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(count_val);
             return Err(e);
-        }
-    };
-    let count = match count_bigint.to_i64() {
-        Some(v) => v,
-        None => {
-            interp.stack.push(count_val);
-            return Err(AjisaiError::from("Count is too large"));
         }
     };
 

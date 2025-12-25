@@ -210,7 +210,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
 
             // 最初の要素から開始
-            use crate::interpreter::helpers::{extract_single_element, wrap_result_value};
+            use crate::interpreter::helpers::{extract_single_element, wrap_value};
             let first = extract_single_element(&items[0])?;
             let mut acc_type = first.val_type.clone();
 
@@ -220,7 +220,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 acc_type = and_logic(&acc_type, &elem.val_type)?;
             }
 
-            interp.stack.push(wrap_result_value(Value { val_type: acc_type }));
+            interp.stack.push(wrap_value(Value { val_type: acc_type }));
             Ok(())
         }
     }
@@ -362,7 +362,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
 
             // 最初の要素から開始
-            use crate::interpreter::helpers::{extract_single_element, wrap_result_value};
+            use crate::interpreter::helpers::{extract_single_element, wrap_value};
             let first = extract_single_element(&items[0])?;
             let mut acc_type = first.val_type.clone();
 
@@ -372,7 +372,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 acc_type = or_logic(&acc_type, &elem.val_type)?;
             }
 
-            interp.stack.push(wrap_result_value(Value { val_type: acc_type }));
+            interp.stack.push(wrap_value(Value { val_type: acc_type }));
             Ok(())
         }
     }
