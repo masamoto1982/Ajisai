@@ -2,6 +2,7 @@
 
 import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-types';
 import type DB from '../db';
+import { SAMPLE_CUSTOM_WORDS } from './sample-words';
 
 interface InterpreterState {
     stack: Value[];
@@ -56,24 +57,40 @@ export class Persistence {
 
     async loadDatabaseData(): Promise<void> {
         if (!window.ajisaiInterpreter) return;
-        
+
         try {
             const state = await window.AjisaiDB.loadInterpreterState();
             if (state) {
                 if (state.stack) {
                     window.ajisaiInterpreter.restore_stack(state.stack);
                 }
-                
+
                 if (state.customWords && state.customWords.length > 0) {
                     await window.ajisaiInterpreter.restore_custom_words(state.customWords);
+                    console.log('Interpreter state restored.');
+                } else {
+                    // 初回起動時: DBにカスタムワードがない場合、サンプルワードを追加
+                    await this.loadSampleWords();
                 }
-                console.log('Interpreter state restored.');
+            } else {
+                // 初回起動時: DB自体が空の場合、サンプルワードを追加
+                await this.loadSampleWords();
             }
         } catch (error) {
             console.error('Failed to load database data:', error);
             if (this.gui) {
                 this.gui.display.showError(error as Error);
             }
+        }
+    }
+
+    private async loadSampleWords(): Promise<void> {
+        try {
+            await window.ajisaiInterpreter.restore_custom_words(SAMPLE_CUSTOM_WORDS);
+            await this.saveCurrentState();
+            console.log('Sample custom words loaded.');
+        } catch (error) {
+            console.error('Failed to load sample words:', error);
         }
     }
 
