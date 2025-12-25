@@ -14,7 +14,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, wrap_result_value};
+use crate::interpreter::helpers::{get_integer_from_value, wrap_value};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 
@@ -92,7 +92,7 @@ where
             };
 
             let result = Value { val_type: ValueType::Boolean(op(a_num, b_num)) };
-            interp.stack.push(wrap_result_value(result));
+            interp.stack.push(wrap_value(result));
             Ok(())
         },
 
@@ -159,7 +159,7 @@ where
             }
 
             let result = Value { val_type: ValueType::Boolean(all_true) };
-            interp.stack.push(wrap_result_value(result));
+            interp.stack.push(wrap_value(result));
             Ok(())
         }
     }
@@ -303,7 +303,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
             let a_vec = interp.stack.pop().unwrap();
 
             let result = Value { val_type: ValueType::Boolean(a_vec == b_vec) };
-            interp.stack.push(wrap_result_value(result));
+            interp.stack.push(wrap_value(result));
             Ok(())
         },
 
@@ -335,7 +335,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
             }
 
             let result = Value { val_type: ValueType::Boolean(all_equal) };
-            interp.stack.push(wrap_result_value(result));
+            interp.stack.push(wrap_value(result));
             Ok(())
         }
     }

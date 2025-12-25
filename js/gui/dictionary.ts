@@ -14,6 +14,14 @@ export class Dictionary {
     private onWordClick!: (word: string) => void;
     private gui: any;
 
+    // KISS: if文の連続をルックアップテーブルに変換
+    private static readonly SYMBOL_MAP: { [key: string]: string } = {
+        'VSTART': '[', 'VEND': ']', 'BSTART': '{', 'BEND': '}',
+        'NIL': 'nil', 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/',
+        'LT': '<', 'LE': '<=', 'GT': '>', 'GE': '>=', 'EQ': '=',
+        'AND': 'and', 'OR': 'or', 'NOT': 'not',
+    };
+
     init(elements: DictionaryElements, onWordClick: (word: string) => void, gui?: any): void {
         this.elements = elements;
         this.onWordClick = onWordClick;
@@ -83,36 +91,14 @@ export class Dictionary {
     }
 
     private decodeWordName(name: string): string | null {
-        if (name.match(/^W_[0-9A-F]+$/)) {
-            return null;
-        }
-        
-        if (name.includes('_')) {
-            const parts = name.split('_');
-            const decoded = parts.map(part => {
-                if (part === 'VSTART') return '[';
-                if (part === 'VEND') return ']';
-                if (part === 'BSTART') return '{';
-                if (part === 'BEND') return '}';
-                if (part === 'NIL') return 'nil';
-                if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
-                if (part === 'ADD') return '+';
-                if (part === 'SUB') return '-';
-                if (part === 'MUL') return '*';
-                if (part === 'DIV') return '/';
-                if (part === 'LT') return '<';
-                if (part === 'LE') return '<=';
-                if (part === 'GT') return '>';
-                if (part === 'GE') return '>=';
-                if (part === 'EQ') return '=';
-                if (part === 'AND') return 'and';
-                if (part === 'OR') return 'or';
-                if (part === 'NOT') return 'not';
-                return part.toLowerCase();
-            }).join(' ');
-            return `≈ ${decoded}`;
-        }
-        return null;
+        if (name.match(/^W_[0-9A-F]+$/)) return null;
+        if (!name.includes('_')) return null;
+
+        const decoded = name.split('_').map(part => {
+            if (part.startsWith('STR_')) return `"${part.substring(4).replace(/_/g, ' ')}"`;
+            return Dictionary.SYMBOL_MAP[part] ?? part.toLowerCase();
+        }).join(' ');
+        return `≈ ${decoded}`;
     }
 
     private renderWordButtons(container: HTMLElement, words: WordInfo[], isCustom: boolean): void {

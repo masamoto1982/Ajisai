@@ -5,6 +5,13 @@ export class Editor {
     private gui: any; // GUIインスタンスへの参照
     private onContentChangeCallback?: (content: string) => void;
 
+    // KISS: 6箇所で繰り返されていたモバイルビュー切り替えを共通化
+    private switchToInputMode(): void {
+        if (this.gui && this.gui.mobile) {
+            this.gui.mobile.updateView('input');
+        }
+    }
+
     init(element: HTMLTextAreaElement, gui?: any): void {
         this.element = element;
         this.gui = gui;
@@ -17,11 +24,7 @@ export class Editor {
 
     private setupEventListeners(): void {
         // フォーカス時は入力モードに切り替え（モバイル用）
-        this.element.addEventListener('focus', () => {
-            if (this.gui && this.gui.mobile) {
-                this.gui.mobile.updateView('input');
-            }
-        });
+        this.element.addEventListener('focus', () => this.switchToInputMode());
 
         // 入力内容の変更を監視
         this.element.addEventListener('input', () => {
@@ -42,19 +45,13 @@ export class Editor {
 
     setValue(value: string): void {
         this.element.value = value;
-        // 値をセットしたら入力モードに切り替え（モバイル用）
-        if (this.gui && this.gui.mobile) {
-            this.gui.mobile.updateView('input');
-        }
+        this.switchToInputMode();
     }
 
     clear(switchView: boolean = true): void {
         this.element.value = '';
         this.element.focus();
-        // クリア後は入力モードに戻す（モバイル用）
-        if (switchView && this.gui && this.gui.mobile) {
-            this.gui.mobile.updateView('input');
-        }
+        if (switchView) this.switchToInputMode();
     }
 
     insertWord(word: string): void {
@@ -69,10 +66,7 @@ export class Editor {
         this.element.selectionEnd = newPos;
 
         this.element.focus();
-        // ワード挿入時は入力モードに切り替え（モバイル用）
-        if (this.gui && this.gui.mobile) {
-            this.gui.mobile.updateView('input');
-        }
+        this.switchToInputMode();
     }
 
     // 入力支援テキストを挿入（カーソルを最も内側の [ ] の間に配置）
@@ -97,17 +91,11 @@ export class Editor {
         }
 
         this.element.focus();
-        // 入力支援時は入力モードに切り替え（モバイル用）
-        if (this.gui && this.gui.mobile) {
-            this.gui.mobile.updateView('input');
-        }
+        this.switchToInputMode();
     }
 
     focus(): void {
         this.element.focus();
-        // フォーカス時は入力モードに切り替え（モバイル用）
-        if (this.gui && this.gui.mobile) {
-            this.gui.mobile.updateView('input');
-        }
+        this.switchToInputMode();
     }
 }
