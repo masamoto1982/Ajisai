@@ -158,6 +158,9 @@ fn collect_notes_from_value(value: &Value, output: &mut String) -> Result<Vec<Au
                 return Err(AjisaiError::from("Frequency must be positive"));
             }
 
+            // 可聴域チェック（20Hz〜20,000Hz）
+            check_audible_range(numerator, output);
+
             if denominator.is_one() || denominator == 1.0 {
                 // 整数 → 単音
                 Ok(vec![AudioNote {
@@ -171,6 +174,8 @@ fn collect_notes_from_value(value: &Value, output: &mut String) -> Result<Vec<Au
                 if denominator <= 0.0 {
                     return Err(AjisaiError::from("Frequency must be positive"));
                 }
+                // 分母も可聴域チェック
+                check_audible_range(denominator, output);
                 Ok(vec![AudioNote {
                     note_type: "chord".to_string(),
                     frequency: None,
@@ -202,6 +207,18 @@ fn collect_notes_from_value(value: &Value, output: &mut String) -> Result<Vec<Au
             // その他の型は無視
             Ok(vec![])
         }
+    }
+}
+
+/// 可聴域（20Hz〜20,000Hz）のチェックと警告出力
+fn check_audible_range(freq: f64, output: &mut String) {
+    const MIN_AUDIBLE: f64 = 20.0;
+    const MAX_AUDIBLE: f64 = 20000.0;
+
+    if freq < MIN_AUDIBLE {
+        output.push_str(&format!("Warning: {}Hz is below audible range (< 20Hz)\n", freq));
+    } else if freq > MAX_AUDIBLE {
+        output.push_str(&format!("Warning: {}Hz is above audible range (> 20kHz)\n", freq));
     }
 }
 
@@ -369,5 +386,62 @@ mod tests {
         assert_eq!(notes[0].frequency, Some(440.0));
         assert_eq!(notes[1].frequency, Some(880.0));
         assert!(output.contains("Hello"));
+    }
+
+    #[tokio::test]
+    async fn test_audio_integration() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 ] AUDIO").await;
+        assert!(result.is_ok(), "AUDIO should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("AUDIO:"), "Output should contain AUDIO command: {}", output);
+        assert!(output.contains("\"type\":\"single\""), "Should contain single note");
+        assert!(output.contains("\"frequency\":440"), "Should contain frequency 440");
+    }
+
+    #[test]
+    fn test_audible_range_warning_low() {
+        let elements = vec![make_number(10)]; // 10Hz - below audible
+        let mut output = String::new();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
+
+        assert_eq!(notes.len(), 1);
+        assert!(output.contains("Warning:"), "Should warn about inaudible frequency");
+        assert!(output.contains("below audible range"), "Should mention below range");
+    }
+
+    #[test]
+    fn test_audible_range_warning_high() {
+        let elements = vec![make_number(25000)]; // 25kHz - above audible
+        let mut output = String::new();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
+
+        assert_eq!(notes.len(), 1);
+        assert!(output.contains("Warning:"), "Should warn about inaudible frequency");
+        assert!(output.contains("above audible range"), "Should mention above range");
+    }
+
+    #[test]
+    fn test_audible_range_no_warning() {
+        let elements = vec![make_number(440)]; // 440Hz - audible
+        let mut output = String::new();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
+
+        assert_eq!(notes.len(), 1);
+        assert!(!output.contains("Warning:"), "Should not warn for audible frequency");
+    }
+
+    #[test]
+    fn test_audible_range_fraction_warning() {
+        let elements = vec![make_fraction(5, 6)]; // 5Hz and 6Hz - both inaudible
+        let mut output = String::new();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
+
+        assert_eq!(notes.len(), 1);
+        assert!(output.contains("5Hz"), "Should warn about 5Hz");
+        assert!(output.contains("6Hz"), "Should warn about 6Hz");
     }
 }
