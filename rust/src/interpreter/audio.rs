@@ -370,4 +370,18 @@ mod tests {
         assert_eq!(notes[1].frequency, Some(880.0));
         assert!(output.contains("Hello"));
     }
+
+    #[tokio::test]
+    async fn test_audio_integration() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 ] AUDIO").await;
+        assert!(result.is_ok(), "AUDIO should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("AUDIO:"), "Output should contain AUDIO command: {}", output);
+        assert!(output.contains("\"type\":\"single\""), "Should contain single note");
+        assert!(output.contains("\"frequency\":440"), "Should contain frequency 440");
+    }
 }
