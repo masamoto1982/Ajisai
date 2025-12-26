@@ -21,22 +21,22 @@ import type { CustomWord } from '../wasm-types';
 export const SAMPLE_CUSTOM_WORDS: CustomWord[] = [
     {
         name: 'TAX_RATE',
-        definition: '[ 0.1 ]',
+        definition: ': [ 0.1 ]',
         description: '消費税率 (10%)',
     },
     {
         name: 'TAX',
-        definition: '[ : TAX_RATE * ]',
+        definition: ': TAX_RATE *',
         description: '税額を計算 (価格 → 税額)',
     },
     {
         name: 'TAX_MULT',
-        definition: '[ : 1 TAX_RATE + ]',
+        definition: ': 1 TAX_RATE +',
         description: '税込み倍率 (1.1)',
     },
     {
         name: 'TAX_INCL',
-        definition: '[ : TAX_MULT * ]',
+        definition: ': TAX_MULT *',
         description: '税込価格を計算 (価格 → 税込価格)',
     },
 ];
