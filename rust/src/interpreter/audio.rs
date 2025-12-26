@@ -10,10 +10,19 @@
 // - [ 440 ] → 440Hz（分母が1の場合は単音）
 // - [ NIL ] → 休符（無音）
 // - [ 'Hello' ] → Outputエリアに出力
-// - [ [ 1 2 ] [ 3 4 ] ] → 2トラックを同時再生
+//
+// 【時間軸の入れ子】
+// ネストされたベクタは全て順次再生として解釈される。
+// - 1次元: ノート（0.5秒）
+// - 2次元: フレーズ（ノートの集まりを順次再生）
+// - 3次元: セクション（フレーズを順次再生）
+// - 4次元: 楽曲（セクションを順次再生）
+//
+// 例: [ [ 440 880 ] [ 550 660 ] ] AUDIO
+//     → 440Hz → 880Hz → 550Hz → 660Hz（全て順次再生）
 //
 // 【オペレーションターゲット】
-// - StackTop（デフォルト）: スタックトップのベクタを再生
+// - StackTop（デフォルト）: スタックトップのベクタを1トラックとして順次再生
 // - Stack: スタック全体の各要素を複数トラックとして同時再生
 
 use crate::error::{AjisaiError, Result};
@@ -59,7 +68,7 @@ struct AudioCommand {
 pub fn op_audio(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
-            // スタックトップのベクタを再生
+            // スタックトップのベクタを1トラックとして順次再生
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             process_audio_value(&val, &mut interp.output_buffer)?;
             Ok(())
@@ -76,59 +85,15 @@ pub fn op_audio(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// スタックトップのベクタを処理
+/// スタックトップのベクタを処理（全て順次再生）
 fn process_audio_value(value: &Value, output: &mut String) -> Result<()> {
     match &value.val_type {
         ValueType::Vector(elements) => {
-            // ネストされたベクタがあるか確認
-            let has_nested_vectors = elements.iter().any(|e| matches!(e.val_type, ValueType::Vector(_)));
-
-            if has_nested_vectors {
-                // ネストされたベクタ → 複数トラックとして処理
-                let mut tracks = Vec::new();
-                let mut track_index = 0;
-
-                for element in elements {
-                    match &element.val_type {
-                        ValueType::Vector(inner) => {
-                            let notes = build_notes_from_elements(inner, output)?;
-                            if !notes.is_empty() {
-                                tracks.push(AudioTrack {
-                                    track: track_index,
-                                    notes,
-                                });
-                                track_index += 1;
-                            }
-                        }
-                        ValueType::String(s) => {
-                            // 文字列はOutputに出力
-                            output.push_str(s);
-                            output.push(' ');
-                        }
-                        _ => {
-                            // 単一要素はトラックとして扱う
-                            let notes = build_notes_from_elements(&[element.clone()], output)?;
-                            if !notes.is_empty() {
-                                tracks.push(AudioTrack {
-                                    track: track_index,
-                                    notes,
-                                });
-                                track_index += 1;
-                            }
-                        }
-                    }
-                }
-
-                if !tracks.is_empty() {
-                    output_audio_command(output, tracks);
-                }
-            } else {
-                // フラットなベクタ → 1トラックとして処理
-                let notes = build_notes_from_elements(elements, output)?;
-                if !notes.is_empty() {
-                    let tracks = vec![AudioTrack { track: 0, notes }];
-                    output_audio_command(output, tracks);
-                }
+            // 再帰的に全ての要素を収集して1トラックとして順次再生
+            let notes = collect_notes_recursive(elements, output)?;
+            if !notes.is_empty() {
+                let tracks = vec![AudioTrack { track: 0, notes }];
+                output_audio_command(output, tracks);
             }
             Ok(())
         }
@@ -136,31 +101,27 @@ fn process_audio_value(value: &Value, output: &mut String) -> Result<()> {
     }
 }
 
-/// スタック全体を複数トラックとして処理
+/// スタック全体を複数トラックとして処理（同時再生）
 fn process_audio_stack(stack_values: &[Value], output: &mut String) -> Result<()> {
     let mut tracks = Vec::new();
 
     for (track_index, value) in stack_values.iter().enumerate() {
-        match &value.val_type {
+        let notes = match &value.val_type {
             ValueType::Vector(elements) => {
-                let notes = build_notes_from_elements(elements, output)?;
-                if !notes.is_empty() {
-                    tracks.push(AudioTrack {
-                        track: track_index,
-                        notes,
-                    });
-                }
+                // 各スタック要素は1トラックとして、内部は順次再生
+                collect_notes_recursive(elements, output)?
             }
             _ => {
                 // 非ベクタ要素は単一ノートのトラックとして扱う
-                let notes = build_notes_from_single_value(value, output)?;
-                if !notes.is_empty() {
-                    tracks.push(AudioTrack {
-                        track: track_index,
-                        notes,
-                    });
-                }
+                collect_notes_from_value(value, output)?
             }
+        };
+
+        if !notes.is_empty() {
+            tracks.push(AudioTrack {
+                track: track_index,
+                notes,
+            });
         }
     }
 
@@ -171,73 +132,77 @@ fn process_audio_stack(stack_values: &[Value], output: &mut String) -> Result<()
     Ok(())
 }
 
-/// ベクタ要素からノートリストを構築
-fn build_notes_from_elements(elements: &[Value], output: &mut String) -> Result<Vec<AudioNote>> {
+/// ベクタ要素を再帰的に走査してノートリストを構築（時間軸の入れ子）
+fn collect_notes_recursive(elements: &[Value], output: &mut String) -> Result<Vec<AudioNote>> {
     let mut notes = Vec::new();
 
     for element in elements {
-        match &element.val_type {
-            ValueType::Number(frac) => {
-                // 分数 → 分子と分母を周波数として解釈
-                let numerator = frac.numerator.to_f64()
-                    .ok_or_else(|| AjisaiError::from("Numerator too large for frequency"))?;
-                let denominator = frac.denominator.to_f64()
-                    .ok_or_else(|| AjisaiError::from("Denominator too large for frequency"))?;
-
-                if numerator <= 0.0 {
-                    return Err(AjisaiError::from("Frequency must be positive"));
-                }
-
-                if denominator.is_one() || denominator == 1.0 {
-                    // 整数 → 単音
-                    notes.push(AudioNote {
-                        note_type: "single".to_string(),
-                        frequency: Some(numerator),
-                        frequencies: None,
-                        duration: "normal".to_string(),
-                    });
-                } else {
-                    // 分数 → 和音（分子と分母を同時に鳴らす）
-                    if denominator <= 0.0 {
-                        return Err(AjisaiError::from("Frequency must be positive"));
-                    }
-                    notes.push(AudioNote {
-                        note_type: "chord".to_string(),
-                        frequency: None,
-                        frequencies: Some(vec![numerator, denominator]),
-                        duration: "normal".to_string(),
-                    });
-                }
-            }
-            ValueType::Nil => {
-                // NIL → 休符
-                notes.push(AudioNote {
-                    note_type: "rest".to_string(),
-                    frequency: None,
-                    frequencies: None,
-                    duration: "normal".to_string(),
-                });
-            }
-            ValueType::String(s) => {
-                // 文字列 → Outputに出力（音ではない）
-                output.push_str(s);
-                output.push(' ');
-            }
-            ValueType::Vector(_) => {
-                // ネストされたベクタは無視（上位で処理済み）
-            }
-            _ => {
-                // その他の型は無視
-            }
-        }
+        let mut element_notes = collect_notes_from_value(element, output)?;
+        notes.append(&mut element_notes);
     }
 
     Ok(notes)
 }
 
-/// 単一の値からノートリストを構築
-fn build_notes_from_single_value(value: &Value, output: &mut String) -> Result<Vec<AudioNote>> {
-    build_notes_from_elements(&[value.clone()], output)
+/// 単一の値からノートリストを構築（再帰的）
+fn collect_notes_from_value(value: &Value, output: &mut String) -> Result<Vec<AudioNote>> {
+    match &value.val_type {
+        ValueType::Number(frac) => {
+            // 分数 → 分子と分母を周波数として解釈
+            let numerator = frac.numerator.to_f64()
+                .ok_or_else(|| AjisaiError::from("Numerator too large for frequency"))?;
+            let denominator = frac.denominator.to_f64()
+                .ok_or_else(|| AjisaiError::from("Denominator too large for frequency"))?;
+
+            if numerator <= 0.0 {
+                return Err(AjisaiError::from("Frequency must be positive"));
+            }
+
+            if denominator.is_one() || denominator == 1.0 {
+                // 整数 → 単音
+                Ok(vec![AudioNote {
+                    note_type: "single".to_string(),
+                    frequency: Some(numerator),
+                    frequencies: None,
+                    duration: "normal".to_string(),
+                }])
+            } else {
+                // 分数 → 和音（分子と分母を同時に鳴らす）
+                if denominator <= 0.0 {
+                    return Err(AjisaiError::from("Frequency must be positive"));
+                }
+                Ok(vec![AudioNote {
+                    note_type: "chord".to_string(),
+                    frequency: None,
+                    frequencies: Some(vec![numerator, denominator]),
+                    duration: "normal".to_string(),
+                }])
+            }
+        }
+        ValueType::Nil => {
+            // NIL → 休符
+            Ok(vec![AudioNote {
+                note_type: "rest".to_string(),
+                frequency: None,
+                frequencies: None,
+                duration: "normal".to_string(),
+            }])
+        }
+        ValueType::String(s) => {
+            // 文字列 → Outputに出力（音ではない）
+            output.push_str(s);
+            output.push(' ');
+            Ok(vec![])
+        }
+        ValueType::Vector(inner) => {
+            // ネストされたベクタ → 再帰的に処理（順次再生）
+            collect_notes_recursive(inner, output)
+        }
+        _ => {
+            // その他の型は無視
+            Ok(vec![])
+        }
+    }
 }
 
 /// AudioCommand を JSON として output_buffer に出力
@@ -290,11 +255,15 @@ mod tests {
         Value { val_type: ValueType::String(s.to_string()) }
     }
 
+    fn make_vector(elements: Vec<Value>) -> Value {
+        Value { val_type: ValueType::Vector(elements) }
+    }
+
     #[test]
     fn test_single_tone() {
         let elements = vec![make_number(440)];
         let mut output = String::new();
-        let notes = build_notes_from_elements(&elements, &mut output).unwrap();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
 
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].note_type, "single");
@@ -305,7 +274,7 @@ mod tests {
     fn test_chord_dtmf() {
         let elements = vec![make_fraction(1209, 697)];
         let mut output = String::new();
-        let notes = build_notes_from_elements(&elements, &mut output).unwrap();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
 
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].note_type, "chord");
@@ -316,7 +285,7 @@ mod tests {
     fn test_rest() {
         let elements = vec![make_nil()];
         let mut output = String::new();
-        let notes = build_notes_from_elements(&elements, &mut output).unwrap();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
 
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].note_type, "rest");
@@ -326,7 +295,7 @@ mod tests {
     fn test_string_output() {
         let elements = vec![make_string("Hello")];
         let mut output = String::new();
-        let notes = build_notes_from_elements(&elements, &mut output).unwrap();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
 
         assert_eq!(notes.len(), 0);
         assert!(output.contains("Hello"));
@@ -340,11 +309,65 @@ mod tests {
             make_fraction(1336, 770),  // DTMF 5
         ];
         let mut output = String::new();
-        let notes = build_notes_from_elements(&elements, &mut output).unwrap();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
 
         assert_eq!(notes.len(), 3);
         assert_eq!(notes[0].note_type, "chord");
         assert_eq!(notes[1].note_type, "rest");
         assert_eq!(notes[2].note_type, "chord");
+    }
+
+    #[test]
+    fn test_nested_vector_flattens_to_sequence() {
+        // [ [ 440 880 ] [ 550 660 ] ] → 4ノート順次再生
+        let elements = vec![
+            make_vector(vec![make_number(440), make_number(880)]),
+            make_vector(vec![make_number(550), make_number(660)]),
+        ];
+        let mut output = String::new();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
+
+        assert_eq!(notes.len(), 4);
+        assert_eq!(notes[0].frequency, Some(440.0));
+        assert_eq!(notes[1].frequency, Some(880.0));
+        assert_eq!(notes[2].frequency, Some(550.0));
+        assert_eq!(notes[3].frequency, Some(660.0));
+    }
+
+    #[test]
+    fn test_deeply_nested_vector() {
+        // [ [ [ 440 ] [ 880 ] ] [ [ 550 ] ] ] → 3ノート順次再生
+        let elements = vec![
+            make_vector(vec![
+                make_vector(vec![make_number(440)]),
+                make_vector(vec![make_number(880)]),
+            ]),
+            make_vector(vec![
+                make_vector(vec![make_number(550)]),
+            ]),
+        ];
+        let mut output = String::new();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
+
+        assert_eq!(notes.len(), 3);
+        assert_eq!(notes[0].frequency, Some(440.0));
+        assert_eq!(notes[1].frequency, Some(880.0));
+        assert_eq!(notes[2].frequency, Some(550.0));
+    }
+
+    #[test]
+    fn test_mixed_nested_with_string() {
+        // [ [ 440 'Hello' ] [ 880 ] ] → 2ノート + 文字列出力
+        let elements = vec![
+            make_vector(vec![make_number(440), make_string("Hello")]),
+            make_vector(vec![make_number(880)]),
+        ];
+        let mut output = String::new();
+        let notes = collect_notes_recursive(&elements, &mut output).unwrap();
+
+        assert_eq!(notes.len(), 2);
+        assert_eq!(notes[0].frequency, Some(440.0));
+        assert_eq!(notes[1].frequency, Some(880.0));
+        assert!(output.contains("Hello"));
     }
 }
