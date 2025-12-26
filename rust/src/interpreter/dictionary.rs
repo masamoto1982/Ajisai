@@ -103,7 +103,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token], description: Option<String>) -> Result<()> {
     let upper_name = name.to_uppercase();
-    interp.output_buffer.push_str(&format!("[DEBUG] Defining word '{}'\n", upper_name));
 
     // 組み込みワードは再定義不可（! があっても不可）
     if let Some(existing) = interp.dictionary.get(&upper_name) {
