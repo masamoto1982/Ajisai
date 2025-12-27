@@ -5,6 +5,39 @@ use num_traits::{Zero, One, ToPrimitive, Signed};
 use num_integer::Integer;
 use std::str::FromStr;
 
+/// ネイティブi64用のGCD（ユークリッド互除法）
+#[inline]
+fn gcd_i64(mut a: i64, mut b: i64) -> i64 {
+    a = a.abs();
+    b = b.abs();
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
+/// i128からBigIntへの変換
+#[inline]
+fn bigint_from_i128(n: i128) -> BigInt {
+    if n >= i64::MIN as i128 && n <= i64::MAX as i128 {
+        BigInt::from(n as i64)
+    } else {
+        // i128をBigIntに変換（大きな数の場合）
+        let sign = n.signum();
+        let abs_n = n.unsigned_abs();
+        let high = (abs_n >> 64) as u64;
+        let low = abs_n as u64;
+        let result = if high == 0 {
+            BigInt::from(low)
+        } else {
+            BigInt::from(high) * BigInt::from(1u128 << 64) + BigInt::from(low)
+        };
+        if sign < 0 { -result } else { result }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Fraction {
     pub numerator: BigInt,
@@ -23,7 +56,62 @@ impl Fraction {
         }
         Fraction { numerator: num, denominator: den }
     }
-    
+
+    /// i64から直接Fractionを作成（簡約付き、高速）
+    /// 将来の最適化で使用予定
+    #[inline]
+    #[allow(dead_code)]
+    fn new_from_i64(num: i64, den: i64) -> Self {
+        debug_assert!(den != 0);
+        let g = gcd_i64(num, den);
+        let mut n = num / g;
+        let mut d = den / g;
+        if d < 0 {
+            n = -n;
+            d = -d;
+        }
+        Fraction {
+            numerator: BigInt::from(n),
+            denominator: BigInt::from(d),
+        }
+    }
+
+    /// i128から直接Fractionを作成（簡約付き）
+    #[inline]
+    fn new_from_i128(num: i128, den: i128) -> Self {
+        debug_assert!(den != 0);
+        // i128用のGCD
+        fn gcd_i128(mut a: i128, mut b: i128) -> i128 {
+            a = a.abs();
+            b = b.abs();
+            while b != 0 {
+                let t = b;
+                b = a % b;
+                a = t;
+            }
+            a
+        }
+        let g = gcd_i128(num, den);
+        let mut n = num / g;
+        let mut d = den / g;
+        if d < 0 {
+            n = -n;
+            d = -d;
+        }
+        Fraction {
+            numerator: bigint_from_i128(n),
+            denominator: bigint_from_i128(d),
+        }
+    }
+
+    /// 分子と分母がi64に収まる場合にSome((分子, 分母))を返す
+    #[inline]
+    fn try_as_i64_pair(&self) -> Option<(i64, i64)> {
+        let n = self.numerator.to_i64()?;
+        let d = self.denominator.to_i64()?;
+        Some((n, d))
+    }
+
     pub fn from_str(s: &str) -> std::result::Result<Self, String> {
         if s.is_empty() { return Err("Empty string".to_string()); }
 
@@ -64,6 +152,18 @@ impl Fraction {
     /// 加算: (a/b) + (c/d)
     /// 共通分母の場合は通分をスキップして高速化
     pub fn add(&self, other: &Fraction) -> Fraction {
+        // 小整数の場合: ネイティブ演算で高速化
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            // (a/b) + (c/d) = (a*d + c*b) / (b*d)
+            let a = a as i128;
+            let b = b as i128;
+            let c = c as i128;
+            let d = d as i128;
+            let num = a * d + c * b;
+            let den = b * d;
+            return Self::new_from_i128(num, den);
+        }
+
         // 整数同士の場合: 分母の乗算とGCDをスキップ
         if self.denominator.is_one() && other.denominator.is_one() {
             return Fraction {
@@ -88,6 +188,18 @@ impl Fraction {
     /// 減算: (a/b) - (c/d)
     /// 共通分母の場合は通分をスキップして高速化
     pub fn sub(&self, other: &Fraction) -> Fraction {
+        // 小整数の場合: ネイティブ演算で高速化
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            // (a/b) - (c/d) = (a*d - c*b) / (b*d)
+            let a = a as i128;
+            let b = b as i128;
+            let c = c as i128;
+            let d = d as i128;
+            let num = a * d - c * b;
+            let den = b * d;
+            return Self::new_from_i128(num, den);
+        }
+
         // 整数同士の場合: 分母の乗算とGCDをスキップ
         if self.denominator.is_one() && other.denominator.is_one() {
             return Fraction {
@@ -114,6 +226,20 @@ impl Fraction {
     /// g1 = gcd(a, d), g2 = gcd(c, b) を先に計算し、
     /// (a/g1 × c/g2) / (b/g2 × d/g1) とすることで最終GCDを削減
     pub fn mul(&self, other: &Fraction) -> Fraction {
+        // 小整数の場合: ネイティブ演算で高速化
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            // i128で乗算して交差簡約
+            let g1 = gcd_i64(a, d);
+            let g2 = gcd_i64(c, b);
+            let a_r = (a / g1) as i128;
+            let b_r = (b / g2) as i128;
+            let c_r = (c / g2) as i128;
+            let d_r = (d / g1) as i128;
+            let num = a_r * c_r;
+            let den = b_r * d_r;
+            return Self::new_from_i128(num, den);
+        }
+
         // 整数同士の場合: 分母の乗算とGCDをスキップ
         if self.denominator.is_one() && other.denominator.is_one() {
             return Fraction {
@@ -166,6 +292,22 @@ impl Fraction {
         if other.numerator.is_zero() {
             panic!("Division by zero");
         }
+
+        // 小整数の場合: ネイティブ演算で高速化
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            // (a/b) ÷ (c/d) = (a*d) / (b*c)
+            // 交差簡約: g1 = gcd(a, c), g2 = gcd(d, b)
+            let g1 = gcd_i64(a, c);
+            let g2 = gcd_i64(d, b);
+            let a_r = (a / g1) as i128;
+            let b_r = (b / g2) as i128;
+            let c_r = (c / g1) as i128;
+            let d_r = (d / g2) as i128;
+            let num = a_r * d_r;
+            let den = b_r * c_r;
+            return Self::new_from_i128(num, den);
+        }
+
         // 整数同士の場合
         if self.denominator.is_one() && other.denominator.is_one() {
             return Fraction::new(
@@ -209,34 +351,35 @@ impl Fraction {
             b_reduced * c_reduced,
         )
     }
-    /// 小なり比較: 整数同士の場合は乗算をスキップ
+    /// 小なり比較: 小整数の場合はi128で高速計算
     pub fn lt(&self, other: &Fraction) -> bool {
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return self.numerator < other.numerator;
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            // a/b < c/d ⟺ a*d < c*b (分母は正なので符号反転なし)
+            return (a as i128) * (d as i128) < (c as i128) * (b as i128);
         }
         &self.numerator * &other.denominator < &other.numerator * &self.denominator
     }
 
-    /// 小なりイコール比較: 整数同士の場合は乗算をスキップ
+    /// 小なりイコール比較: 小整数の場合はi128で高速計算
     pub fn le(&self, other: &Fraction) -> bool {
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return self.numerator <= other.numerator;
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            return (a as i128) * (d as i128) <= (c as i128) * (b as i128);
         }
         &self.numerator * &other.denominator <= &other.numerator * &self.denominator
     }
 
-    /// 大なり比較: 整数同士の場合は乗算をスキップ
+    /// 大なり比較: 小整数の場合はi128で高速計算
     pub fn gt(&self, other: &Fraction) -> bool {
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return self.numerator > other.numerator;
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            return (a as i128) * (d as i128) > (c as i128) * (b as i128);
         }
         &self.numerator * &other.denominator > &other.numerator * &self.denominator
     }
 
-    /// 大なりイコール比較: 整数同士の場合は乗算をスキップ
+    /// 大なりイコール比較: 小整数の場合はi128で高速計算
     pub fn ge(&self, other: &Fraction) -> bool {
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return self.numerator >= other.numerator;
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            return (a as i128) * (d as i128) >= (c as i128) * (b as i128);
         }
         &self.numerator * &other.denominator >= &other.numerator * &self.denominator
     }
@@ -385,9 +528,11 @@ impl PartialOrd for Fraction {
 
 impl Ord for Fraction {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // 整数同士の場合は乗算をスキップ
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return self.numerator.cmp(&other.numerator);
+        // 小整数の場合: i128で高速計算
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            let lhs = (a as i128) * (d as i128);
+            let rhs = (c as i128) * (b as i128);
+            return lhs.cmp(&rhs);
         }
         // Compare a/b with c/d using a*d vs b*c (integer comparison)
         let lhs = &self.numerator * &other.denominator;
