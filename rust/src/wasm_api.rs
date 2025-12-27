@@ -337,6 +337,11 @@ impl AjisaiInterpreter {
         }
 
         self.interpreter.rebuild_dependencies().map_err(|e| e.to_string())?;
+
+        // 復元操作中に溜まった "Defined word: ..." メッセージをクリア
+        // これらは裏方の処理であり、ユーザーに表示する必要がない
+        let _ = self.interpreter.get_output();
+
         Ok(())
     }
 }
