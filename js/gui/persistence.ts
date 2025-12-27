@@ -197,6 +197,10 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             await window.ajisaiInterpreter.restore_custom_words(SAMPLE_CUSTOM_WORDS);
             await saveCurrentState();
             console.log('Sample custom words loaded.');
+
+            // サンプルワード読み込み完了メッセージを表示
+            const wordNames = SAMPLE_CUSTOM_WORDS.map(w => w.name).join(', ');
+            showInfo?.(`Sample words loaded: ${wordNames}`, false);
         } catch (error) {
             console.error('Failed to load sample words:', error);
         }
