@@ -24,7 +24,7 @@ export interface Display {
     readonly appendExecutionResult: (result: ExecuteResult) => void;
     readonly showOutput: (text: string) => void;
     readonly showError: (error: Error | { message?: string } | string) => void;
-    readonly showInfo: (text: string, append?: boolean) => void;
+    readonly showInfo: (text: string, append?: boolean, en?: string) => void;
     readonly updateStack: (stack: Value[]) => void;
     readonly getState: () => DisplayState;
 }
@@ -304,15 +304,33 @@ export const createDisplay = (elements: DisplayElements): Display => {
         span.style.fontWeight = 'bold';
     };
 
-    // 情報表示
-    const showInfo = (text: string, append = false): void => {
+    // 斜体span追加（英語用）
+    const appendItalicSpan = (text: string, color: string): HTMLSpanElement => {
+        const span = createSpan(text.replace(/\\n/g, '\n'), color);
+        span.style.fontStyle = 'italic';
+        appendToElement(elements.outputDisplay, span);
+        return span;
+    };
+
+    // 情報表示（日本語 + 英語併記対応）
+    const showInfo = (text: string, append = false, en?: string): void => {
+        const fullText = en ? `${text} (${en})` : text;
+
         if (append && elements.outputDisplay.innerHTML.trim() !== '') {
-            mainOutput = `${mainOutput}\n${text}`;
+            mainOutput = `${mainOutput}\n${fullText}`;
             appendSpan('\n' + text, '#666');
+            if (en) {
+                appendSpan(' ', '#666');
+                appendItalicSpan(`(${en})`, '#888');
+            }
         } else {
-            mainOutput = text;
+            mainOutput = fullText;
             clearElement(elements.outputDisplay);
             appendSpan(text, '#666');
+            if (en) {
+                appendSpan(' ', '#666');
+                appendItalicSpan(`(${en})`, '#888');
+            }
         }
     };
 
