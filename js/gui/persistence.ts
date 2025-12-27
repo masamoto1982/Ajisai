@@ -17,7 +17,7 @@ export interface InterpreterState {
 export interface PersistenceCallbacks {
     readonly showError?: (error: Error) => void;
     readonly updateDisplays?: () => void;
-    readonly showInfo?: (text: string, append: boolean) => void;
+    readonly showInfo?: (text: string, append: boolean, en?: string) => void;
 }
 
 export interface Persistence {
@@ -200,7 +200,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
             // サンプルワード読み込み完了メッセージを表示
             const wordNames = SAMPLE_CUSTOM_WORDS.map(w => w.name).join(', ');
-            showInfo?.(`Sample words loaded: ${wordNames}`, false);
+            showInfo?.(`サンプルワードを読み込みました: ${wordNames}`, false, 'Sample words loaded');
         } catch (error) {
             console.error('Failed to load sample words:', error);
         }

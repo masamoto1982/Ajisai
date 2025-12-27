@@ -67,7 +67,7 @@ if ('serviceWorker' in navigator) {
                             console.log('[Main] New version available');
                             try {
                                 const display = GUI_INSTANCE.getDisplay();
-                                display.showInfo('新しいバージョンが利用可能です。ページを再読み込みしてください。', true);
+                                display.showInfo('新しいバージョンが利用可能です。ページを再読み込みしてください。', true, 'New version available. Please reload.');
                             } catch {
                                 // GUI not yet initialized
                             }
@@ -84,27 +84,32 @@ if ('serviceWorker' in navigator) {
 // オフライン/オンライン状態の監視（GUI初期化後に呼ばれる）
 function setupOnlineStatusMonitoring(): void {
     const offlineIndicator = document.getElementById('offline-indicator');
+    let isInitialCheck = true;
 
     function updateOnlineStatus() {
         if (navigator.onLine) {
             console.log('[Main] Online');
             if (offlineIndicator) offlineIndicator.style.display = 'none';
-            try {
-                const display = GUI_INSTANCE.getDisplay();
-                display.showInfo('オンラインに戻りました', true);
-            } catch {
-                // GUI not yet initialized
+            // 初回チェック時はオンラインメッセージを表示しない（サンプルワードメッセージを維持）
+            if (!isInitialCheck) {
+                try {
+                    const display = GUI_INSTANCE.getDisplay();
+                    display.showInfo('オンラインモードで動作中', true, 'Online mode');
+                } catch {
+                    // GUI not yet initialized
+                }
             }
         } else {
             console.log('[Main] Offline');
             if (offlineIndicator) offlineIndicator.style.display = 'inline';
             try {
                 const display = GUI_INSTANCE.getDisplay();
-                display.showInfo('[OFFLINE] オフラインモードで動作中', true);
+                display.showInfo('オフラインモードで動作中', true, 'Offline mode');
             } catch {
                 // GUI not yet initialized
             }
         }
+        isInitialCheck = false;
     }
 
     window.addEventListener('online', updateOnlineStatus);

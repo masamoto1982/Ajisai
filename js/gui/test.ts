@@ -23,7 +23,7 @@ export interface TestSummary {
 }
 
 export interface TestRunnerCallbacks {
-    readonly showInfo: (text: string, append: boolean) => void;
+    readonly showInfo: (text: string, append: boolean, en?: string) => void;
     readonly showError: (error: Error | string) => void;
     readonly updateDisplays: () => void;
 }

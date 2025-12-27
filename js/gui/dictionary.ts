@@ -19,7 +19,7 @@ export interface DictionaryCallbacks {
     readonly onWordClick: (word: string) => void;
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
-    readonly showInfo?: (text: string, append: boolean) => void;
+    readonly showInfo?: (text: string, append: boolean, en?: string) => void;
 }
 
 export interface Dictionary {

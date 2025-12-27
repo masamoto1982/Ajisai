@@ -15,7 +15,7 @@ export interface StepState {
 
 export interface StepExecutorCallbacks {
     readonly getEditorValue: () => string;
-    readonly showInfo: (text: string, append: boolean) => void;
+    readonly showInfo: (text: string, append: boolean, en?: string) => void;
     readonly showError: (error: Error | string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
@@ -140,7 +140,7 @@ export const createStepExecutor = (
     const abort = (): void => {
         if (state.active) {
             reset();
-            showInfo('Step mode aborted.', true);
+            showInfo('ステップモードを中止', true, 'Step mode aborted');
         }
     };
 
@@ -155,15 +155,16 @@ export const createStepExecutor = (
         const tokens = tokenize(code);
 
         if (tokens.length === 0) {
-            showInfo('No code to execute.', true);
+            showInfo('コードがありません', true, 'No code');
             return;
         }
 
         state = createActiveState(tokens);
 
         showInfo(
-            `[STEP] Step mode started. ${tokens.length} tokens to execute. (Ctrl+Enter to continue)`,
-            true
+            `[STEP] ステップモード: ${tokens.length}トークン (Ctrl+Enterで続行)`,
+            true,
+            `Step mode: ${tokens.length} tokens`
         );
 
         await executeNextToken();
@@ -172,7 +173,7 @@ export const createStepExecutor = (
     // 次のトークンを実行
     const executeNextToken = async (): Promise<void> => {
         if (state.currentIndex >= state.tokens.length) {
-            showInfo('[DONE] Step mode completed.', true);
+            showInfo('[DONE] ステップモード完了', true, 'Step mode completed');
             reset();
             return;
         }
@@ -212,14 +213,14 @@ export const createStepExecutor = (
             state = advanceState(state);
 
             if (state.currentIndex >= state.tokens.length) {
-                showInfo('[DONE] Step mode completed.', true);
+                showInfo('[DONE] ステップモード完了', true, 'Step mode completed');
                 reset();
             }
 
         } catch (error) {
             console.error('[StepExecutor] Step execution failed:', error);
             if (error instanceof Error && error.message.includes('aborted')) {
-                showInfo('Step execution aborted by user.', true);
+                showInfo('ステップ実行を中止', true, 'Step execution aborted');
             } else {
                 showError(error as Error);
             }

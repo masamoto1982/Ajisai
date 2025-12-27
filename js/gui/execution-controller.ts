@@ -13,7 +13,7 @@ export interface ExecutionCallbacks {
     readonly clearEditor: (switchView?: boolean) => void;
     readonly setEditorValue: (value: string) => void;
     readonly insertEditorText: (text: string) => void;
-    readonly showInfo: (text: string, append: boolean) => void;
+    readonly showInfo: (text: string, append: boolean, en?: string) => void;
     readonly showError: (error: Error | string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
@@ -111,12 +111,12 @@ export const createExecutionController = (
         if (result.inputHelper) {
             clearEditor(false);
             insertEditorText(result.inputHelper);
-            showInfo('Input helper text inserted.', false);
+            showInfo('入力補助テキストを挿入', false, 'Input helper inserted');
             updateView('input');
         } else if (result.definition_to_load) {
             setEditorValue(result.definition_to_load);
             const wordName = code.replace("?", "").trim();
-            showInfo(`Loaded definition for ${wordName}.`, false);
+            showInfo(`${wordName} の定義を表示中`, false, `Showing definition: ${wordName}`);
             updateView('input');
         } else if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
@@ -139,7 +139,7 @@ export const createExecutionController = (
 
         try {
             updateView('execution');
-            showInfo('Executing...', false);
+            showInfo('実行中...', false, 'Executing...');
 
             const currentState = {
                 stack: interpreter.get_stack(),
@@ -160,7 +160,7 @@ export const createExecutionController = (
         } catch (error) {
             console.error('[ExecController] Code execution failed:', error);
             if (error instanceof Error && isAbortError(error)) {
-                showInfo('Execution aborted by user.', true);
+                showInfo('実行を中止', true, 'Execution aborted');
             } else {
                 showError(error as Error);
             }
@@ -180,9 +180,9 @@ export const createExecutionController = (
             const result = interpreter.reset();
 
             if (result.status === 'OK' && !result.error) {
-                showInfo(result.output || 'RESET executed', false);
+                showInfo(result.output || 'リセット完了', false, 'Reset complete');
                 clearEditor(true);
-                showInfo('RESET: All memory cleared.', true);
+                showInfo('メモリをクリア', true, 'Memory cleared');
                 updateView('input');
             } else {
                 showError(result.message || 'RESET execution failed');
