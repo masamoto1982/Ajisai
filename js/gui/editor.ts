@@ -1,101 +1,189 @@
-// js/gui/editor.ts (ラベル機能完全削除版 + モバイル対応 + ハイライト機能)
+// js/gui/editor.ts - エディタ管理（関数型スタイル）
 
-export class Editor {
-    private element!: HTMLTextAreaElement;
-    private gui: any; // GUIインスタンスへの参照
-    private onContentChangeCallback?: (content: string) => void;
+// ============================================================
+// 型定義
+// ============================================================
 
-    // KISS: 6箇所で繰り返されていたモバイルビュー切り替えを共通化
-    private switchToInputMode(): void {
-        if (this.gui && this.gui.mobile) {
-            this.gui.mobile.updateView('input');
+export interface EditorCallbacks {
+    readonly onContentChange?: (content: string) => void;
+    readonly onSwitchToInputMode?: () => void;
+}
+
+export interface Editor {
+    readonly getValue: () => string;
+    readonly setValue: (value: string) => void;
+    readonly clear: (switchView?: boolean) => void;
+    readonly insertWord: (word: string) => void;
+    readonly insertText: (text: string) => void;
+    readonly focus: () => void;
+    readonly setOnContentChange: (callback: (content: string) => void) => void;
+}
+
+// ============================================================
+// 純粋関数: テキスト操作
+// ============================================================
+
+/**
+ * テキストの指定位置に文字列を挿入した結果を返す
+ */
+const insertAt = (
+    text: string,
+    start: number,
+    end: number,
+    insertion: string
+): string => text.substring(0, start) + insertion + text.substring(end);
+
+/**
+ * 最も内側の "[ ]" の位置を探す
+ */
+const findInnerBracketPosition = (text: string): number | null => {
+    const pos = text.lastIndexOf('[ ]');
+    return pos !== -1 ? pos + 2 : null; // "[ " の後の位置
+};
+
+/**
+ * 新しいカーソル位置を計算
+ */
+const calculateCursorPosition = (
+    basePosition: number,
+    insertedText: string,
+    preferInnerBracket: boolean
+): number => {
+    if (preferInnerBracket) {
+        const innerPos = findInnerBracketPosition(insertedText);
+        if (innerPos !== null) {
+            return basePosition + innerPos;
         }
     }
+    return basePosition + insertedText.length;
+};
 
-    init(element: HTMLTextAreaElement, gui?: any): void {
-        this.element = element;
-        this.gui = gui;
-        this.setupEventListeners();
+// ============================================================
+// 副作用関数: DOM操作
+// ============================================================
 
-        if (this.element.value.trim() === '') {
-            this.element.value = '';
-        }
-    }
+const setElementValue = (element: HTMLTextAreaElement, value: string): void => {
+    element.value = value;
+};
 
-    private setupEventListeners(): void {
-        // フォーカス時は入力モードに切り替え（モバイル用）
-        this.element.addEventListener('focus', () => this.switchToInputMode());
+const focusElement = (element: HTMLTextAreaElement): void => {
+    element.focus();
+};
 
-        // 入力内容の変更を監視
-        this.element.addEventListener('input', () => {
-            if (this.onContentChangeCallback) {
-                this.onContentChangeCallback(this.element.value);
+const setSelectionRange = (
+    element: HTMLTextAreaElement,
+    start: number,
+    end: number
+): void => {
+    element.selectionStart = start;
+    element.selectionEnd = end;
+};
+
+const getSelectionRange = (element: HTMLTextAreaElement): { start: number; end: number } => ({
+    start: element.selectionStart,
+    end: element.selectionEnd
+});
+
+// ============================================================
+// ファクトリ関数: Editor作成
+// ============================================================
+
+export const createEditor = (
+    element: HTMLTextAreaElement,
+    callbacks: EditorCallbacks = {}
+): Editor => {
+    // コールバック（クロージャで保持）
+    let onContentChangeCallback = callbacks.onContentChange;
+    const switchToInputMode = callbacks.onSwitchToInputMode ?? (() => {});
+
+    // イベントリスナーの設定
+    const setupEventListeners = (): void => {
+        element.addEventListener('focus', switchToInputMode);
+
+        element.addEventListener('input', () => {
+            if (onContentChangeCallback) {
+                onContentChangeCallback(element.value);
             }
         });
+    };
+
+    // 初期化
+    if (element.value.trim() === '') {
+        setElementValue(element, '');
     }
+    setupEventListeners();
 
-    // コンテンツ変更時のコールバックを設定
-    setOnContentChange(callback: (content: string) => void): void {
-        this.onContentChangeCallback = callback;
-    }
+    // 値の取得
+    const getValue = (): string => element.value.trim();
 
-    getValue(): string {
-        return this.element.value.trim();
-    }
+    // 値の設定
+    const setValue = (value: string): void => {
+        setElementValue(element, value);
+        switchToInputMode();
+    };
 
-    setValue(value: string): void {
-        this.element.value = value;
-        this.switchToInputMode();
-    }
+    // クリア
+    const clear = (switchView = true): void => {
+        setElementValue(element, '');
+        focusElement(element);
+        if (switchView) {
+            switchToInputMode();
+        }
+    };
 
-    clear(switchView: boolean = true): void {
-        this.element.value = '';
-        this.element.focus();
-        if (switchView) this.switchToInputMode();
-    }
+    // ワードの挿入（カーソル位置に）
+    const insertWord = (word: string): void => {
+        const { start, end } = getSelectionRange(element);
+        const newText = insertAt(element.value, start, end, word);
 
-    insertWord(word: string): void {
-        const start = this.element.selectionStart;
-        const end = this.element.selectionEnd;
-        const text = this.element.value;
-
-        this.element.value = text.substring(0, start) + word + text.substring(end);
+        setElementValue(element, newText);
 
         const newPos = start + word.length;
-        this.element.selectionStart = newPos;
-        this.element.selectionEnd = newPos;
+        setSelectionRange(element, newPos, newPos);
 
-        this.element.focus();
-        this.switchToInputMode();
-    }
+        focusElement(element);
+        switchToInputMode();
+    };
 
-    // 入力支援テキストを挿入（カーソルを最も内側の [ ] の間に配置）
-    insertText(text: string): void {
-        const start = this.element.selectionStart;
-        const end = this.element.selectionEnd;
-        const currentText = this.element.value;
+    // 入力支援テキストの挿入（最も内側の [ ] にカーソル配置）
+    const insertText = (text: string): void => {
+        const { start, end } = getSelectionRange(element);
+        const newText = insertAt(element.value, start, end, text);
 
-        this.element.value = currentText.substring(0, start) + text + currentText.substring(end);
+        setElementValue(element, newText);
 
-        // カーソルを最も内側の [ ] の間に配置
-        // "[ [ [ ] ] ]" の場合、中央の空白位置
-        const innerBracketPos = text.lastIndexOf('[ ]');
-        if (innerBracketPos !== -1) {
-            const cursorPos = start + innerBracketPos + 2; // "[ " の後
-            this.element.selectionStart = cursorPos;
-            this.element.selectionEnd = cursorPos;
-        } else {
-            const newPos = start + text.length;
-            this.element.selectionStart = newPos;
-            this.element.selectionEnd = newPos;
-        }
+        const cursorPos = calculateCursorPosition(start, text, true);
+        setSelectionRange(element, cursorPos, cursorPos);
 
-        this.element.focus();
-        this.switchToInputMode();
-    }
+        focusElement(element);
+        switchToInputMode();
+    };
 
-    focus(): void {
-        this.element.focus();
-        this.switchToInputMode();
-    }
-}
+    // フォーカス
+    const focus = (): void => {
+        focusElement(element);
+        switchToInputMode();
+    };
+
+    // コールバックの設定
+    const setOnContentChange = (callback: (content: string) => void): void => {
+        onContentChangeCallback = callback;
+    };
+
+    return {
+        getValue,
+        setValue,
+        clear,
+        insertWord,
+        insertText,
+        focus,
+        setOnContentChange
+    };
+};
+
+// 純粋関数をエクスポート（テスト用）
+export const editorUtils = {
+    insertAt,
+    findInnerBracketPosition,
+    calculateCursorPosition
+};
