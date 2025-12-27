@@ -111,12 +111,12 @@ export const createExecutionController = (
         if (result.inputHelper) {
             clearEditor(false);
             insertEditorText(result.inputHelper);
-            showInfo('入力補助テキストを挿入しました', false, 'Input helper text inserted');
+            showInfo('入力補助テキストを挿入', false, 'Input helper inserted');
             updateView('input');
         } else if (result.definition_to_load) {
             setEditorValue(result.definition_to_load);
             const wordName = code.replace("?", "").trim();
-            showInfo(`${wordName} の定義を読み込みました`, false, `Loaded definition for ${wordName}`);
+            showInfo(`${wordName} の定義を表示中`, false, `Showing definition: ${wordName}`);
             updateView('input');
         } else if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
@@ -160,7 +160,7 @@ export const createExecutionController = (
         } catch (error) {
             console.error('[ExecController] Code execution failed:', error);
             if (error instanceof Error && isAbortError(error)) {
-                showInfo('ユーザーにより実行が中止されました', true, 'Execution aborted by user');
+                showInfo('実行を中止', true, 'Execution aborted');
             } else {
                 showError(error as Error);
             }
@@ -180,9 +180,9 @@ export const createExecutionController = (
             const result = interpreter.reset();
 
             if (result.status === 'OK' && !result.error) {
-                showInfo(result.output || 'リセット完了', false, 'RESET executed');
+                showInfo(result.output || 'リセット完了', false, 'Reset complete');
                 clearEditor(true);
-                showInfo('すべてのメモリをクリアしました', true, 'All memory cleared');
+                showInfo('メモリをクリア', true, 'Memory cleared');
                 updateView('input');
             } else {
                 showError(result.message || 'RESET execution failed');

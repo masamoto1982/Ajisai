@@ -147,9 +147,9 @@ export const createGUI = (): GUI => {
     // ワーカー初期化
     const initializeWorkers = async (): Promise<void> => {
         try {
-            display.showInfo('並列実行システムを初期化中...', false, 'Initializing parallel execution system...');
+            display.showInfo('並列実行システム初期化中...', false, 'Initializing...');
             await WORKER_MANAGER.init();
-            display.showInfo('並列実行システム準備完了', true, 'Parallel execution system ready');
+            display.showInfo('並列実行システム準備完了', true, 'Ready');
         } catch (error) {
             console.error('[GUI] Failed to initialize workers:', error);
             display.showError(new Error(`Failed to initialize parallel execution: ${error}`));

@@ -140,7 +140,7 @@ export const createStepExecutor = (
     const abort = (): void => {
         if (state.active) {
             reset();
-            showInfo('ステップモードを中止しました', true, 'Step mode aborted');
+            showInfo('ステップモードを中止', true, 'Step mode aborted');
         }
     };
 
@@ -155,16 +155,16 @@ export const createStepExecutor = (
         const tokens = tokenize(code);
 
         if (tokens.length === 0) {
-            showInfo('実行するコードがありません', true, 'No code to execute');
+            showInfo('コードがありません', true, 'No code');
             return;
         }
 
         state = createActiveState(tokens);
 
         showInfo(
-            `[STEP] ステップモード開始: ${tokens.length}トークン (Ctrl+Enterで続行)`,
+            `[STEP] ステップモード: ${tokens.length}トークン (Ctrl+Enterで続行)`,
             true,
-            `Step mode started. ${tokens.length} tokens to execute`
+            `Step mode: ${tokens.length} tokens`
         );
 
         await executeNextToken();
@@ -220,7 +220,7 @@ export const createStepExecutor = (
         } catch (error) {
             console.error('[StepExecutor] Step execution failed:', error);
             if (error instanceof Error && error.message.includes('aborted')) {
-                showInfo('ステップ実行がユーザーにより中止されました', true, 'Step execution aborted by user');
+                showInfo('ステップ実行を中止', true, 'Step execution aborted');
             } else {
                 showError(error as Error);
             }

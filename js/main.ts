@@ -94,7 +94,7 @@ function setupOnlineStatusMonitoring(): void {
             if (!isInitialCheck) {
                 try {
                     const display = GUI_INSTANCE.getDisplay();
-                    display.showInfo('オンラインに復帰しました', true, 'Back online');
+                    display.showInfo('オンラインモードで動作中', true, 'Online mode');
                 } catch {
                     // GUI not yet initialized
                 }
