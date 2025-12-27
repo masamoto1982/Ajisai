@@ -29,11 +29,7 @@ async function main(): Promise<void> {
         console.log('[Main] Initializing GUI...');
         await GUI_INSTANCE.init();
 
-        console.log('[Main] Loading database data...');
-        await GUI_INSTANCE.getPersistence().loadDatabaseData();
-
         GUI_INSTANCE.updateAllDisplays();
-        GUI_INSTANCE.getDisplay().showInfo('Ready. Press Esc for emergency stop.', false);
 
         // GUI初期化完了後にオンライン状態を設定
         setupOnlineStatusMonitoring();
