@@ -265,6 +265,7 @@ export const createGUI = (): GUI => {
             showExecutionResult: (result) => display.showExecutionResult(result),
             updateDisplays: updateAllDisplays,
             saveState: () => persistence.saveCurrentState(),
+            fullReset: () => persistence.fullReset(),
             updateView: (mode) => mobile.updateView(mode)
         });
 
