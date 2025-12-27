@@ -24,6 +24,7 @@ export interface Persistence {
     readonly init: () => Promise<void>;
     readonly saveCurrentState: () => Promise<void>;
     readonly loadDatabaseData: () => Promise<void>;
+    readonly fullReset: () => Promise<void>;
     readonly exportCustomWords: () => void;
     readonly importCustomWords: () => void;
 }
@@ -272,10 +273,28 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         });
     };
 
+    // 完全リセット（IndexedDBクリア + サンプルワード再読み込み）
+    const fullReset = async (): Promise<void> => {
+        try {
+            // IndexedDBをクリア
+            await window.AjisaiDB.clearAll();
+            console.log('IndexedDB cleared.');
+
+            // サンプルワードを読み込む
+            await loadSampleWords();
+
+            updateDisplays?.();
+        } catch (error) {
+            console.error('Failed to perform full reset:', error);
+            showError?.(error as Error);
+        }
+    };
+
     return {
         init,
         saveCurrentState,
         loadDatabaseData,
+        fullReset,
         exportCustomWords,
         importCustomWords
     };

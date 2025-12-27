@@ -18,6 +18,7 @@ export interface ExecutionCallbacks {
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
+    readonly fullReset: () => Promise<void>;
     readonly updateView: (mode: 'input' | 'execution') => void;
 }
 
@@ -93,6 +94,7 @@ export const createExecutionController = (
         showExecutionResult,
         updateDisplays,
         saveState,
+        fullReset,
         updateView
     } = callbacks;
 
@@ -170,19 +172,22 @@ export const createExecutionController = (
         await saveState();
     };
 
-    // リセット実行
+    // リセット実行（完全リセット: IndexedDBクリア + サンプルワード再読み込み）
     const executeReset = async (): Promise<void> => {
         try {
-            console.log('[ExecController] Executing reset');
+            console.log('[ExecController] Executing full reset');
             stepExecutor.reset();
             await WORKER_MANAGER.resetAllWorkers();
 
+            // インタープリターをリセット
             const result = interpreter.reset();
 
             if (result.status === 'OK' && !result.error) {
-                showInfo(result.output || 'リセット完了', false, 'Reset complete');
                 clearEditor(true);
-                showInfo('メモリをクリア', true, 'Memory cleared');
+
+                // IndexedDBをクリアしてサンプルワードを再読み込み
+                await fullReset();
+
                 updateView('input');
             } else {
                 showError(result.message || 'RESET execution failed');
@@ -191,9 +196,6 @@ export const createExecutionController = (
             console.error('[ExecController] Reset failed:', error);
             showError(error as Error);
         }
-
-        updateDisplays();
-        await saveState();
     };
 
     // ステップ実行
