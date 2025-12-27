@@ -61,17 +61,194 @@ impl Fraction {
         }
     }
 
-    pub fn add(&self, other: &Fraction) -> Fraction { Fraction::new(&self.numerator * &other.denominator + &other.numerator * &self.denominator, &self.denominator * &other.denominator) }
-    pub fn sub(&self, other: &Fraction) -> Fraction { Fraction::new(&self.numerator * &other.denominator - &other.numerator * &self.denominator, &self.denominator * &other.denominator) }
-    pub fn mul(&self, other: &Fraction) -> Fraction { Fraction::new(&self.numerator * &other.numerator, &self.denominator * &other.denominator) }
-    pub fn div(&self, other: &Fraction) -> Fraction { if other.numerator.is_zero() { panic!("Division by zero"); } Fraction::new(&self.numerator * &other.denominator, &self.denominator * &other.numerator) }
-    pub fn lt(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator < &other.numerator * &self.denominator }
-    pub fn le(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator <= &other.numerator * &self.denominator }
-    pub fn gt(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator > &other.numerator * &self.denominator }
-    pub fn ge(&self, other: &Fraction) -> bool { &self.numerator * &other.denominator >= &other.numerator * &self.denominator }
+    /// 加算: (a/b) + (c/d)
+    /// 共通分母の場合は通分をスキップして高速化
+    pub fn add(&self, other: &Fraction) -> Fraction {
+        // 整数同士の場合: 分母の乗算とGCDをスキップ
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return Fraction {
+                numerator: &self.numerator + &other.numerator,
+                denominator: BigInt::one(),
+            };
+        }
+        // 共通分母の場合: 通分不要
+        if self.denominator == other.denominator {
+            return Fraction::new(
+                &self.numerator + &other.numerator,
+                self.denominator.clone(),
+            );
+        }
+        // 一般的な場合
+        Fraction::new(
+            &self.numerator * &other.denominator + &other.numerator * &self.denominator,
+            &self.denominator * &other.denominator,
+        )
+    }
+
+    /// 減算: (a/b) - (c/d)
+    /// 共通分母の場合は通分をスキップして高速化
+    pub fn sub(&self, other: &Fraction) -> Fraction {
+        // 整数同士の場合: 分母の乗算とGCDをスキップ
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return Fraction {
+                numerator: &self.numerator - &other.numerator,
+                denominator: BigInt::one(),
+            };
+        }
+        // 共通分母の場合: 通分不要
+        if self.denominator == other.denominator {
+            return Fraction::new(
+                &self.numerator - &other.numerator,
+                self.denominator.clone(),
+            );
+        }
+        // 一般的な場合
+        Fraction::new(
+            &self.numerator * &other.denominator - &other.numerator * &self.denominator,
+            &self.denominator * &other.denominator,
+        )
+    }
+
+    /// 乗算: (a/b) × (c/d)
+    /// 交差簡約（Cross-Cancellation）により、乗算前に約分して高速化
+    /// g1 = gcd(a, d), g2 = gcd(c, b) を先に計算し、
+    /// (a/g1 × c/g2) / (b/g2 × d/g1) とすることで最終GCDを削減
+    pub fn mul(&self, other: &Fraction) -> Fraction {
+        // 整数同士の場合: 分母の乗算とGCDをスキップ
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return Fraction {
+                numerator: &self.numerator * &other.numerator,
+                denominator: BigInt::one(),
+            };
+        }
+        // どちらかが整数の場合の最適化
+        if self.denominator.is_one() {
+            // (a/1) × (c/d) = (a×c)/d - aとdで交差簡約
+            let g = self.numerator.gcd(&other.denominator);
+            let a_reduced = &self.numerator / &g;
+            let d_reduced = &other.denominator / &g;
+            return Fraction::new(
+                a_reduced * &other.numerator,
+                d_reduced,
+            );
+        }
+        if other.denominator.is_one() {
+            // (a/b) × (c/1) = (a×c)/b - cとbで交差簡約
+            let g = other.numerator.gcd(&self.denominator);
+            let c_reduced = &other.numerator / &g;
+            let b_reduced = &self.denominator / &g;
+            return Fraction::new(
+                &self.numerator * c_reduced,
+                b_reduced,
+            );
+        }
+        // 交差簡約: (a/b) × (c/d)
+        // g1 = gcd(a, d), g2 = gcd(c, b)
+        let g1 = self.numerator.gcd(&other.denominator);
+        let g2 = other.numerator.gcd(&self.denominator);
+
+        let a_reduced = &self.numerator / &g1;
+        let d_reduced = &other.denominator / &g1;
+        let c_reduced = &other.numerator / &g2;
+        let b_reduced = &self.denominator / &g2;
+
+        // 交差簡約後は既に互いに素なので、GCDは1になるはず
+        // ただし符号の正規化のためにnewを使用
+        Fraction::new(
+            a_reduced * c_reduced,
+            b_reduced * d_reduced,
+        )
+    }
+
+    /// 除算: (a/b) ÷ (c/d) = (a/b) × (d/c)
+    /// 交差簡約により高速化
+    pub fn div(&self, other: &Fraction) -> Fraction {
+        if other.numerator.is_zero() {
+            panic!("Division by zero");
+        }
+        // 整数同士の場合
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return Fraction::new(
+                self.numerator.clone(),
+                other.numerator.clone(),
+            );
+        }
+        // どちらかが整数の場合の最適化
+        if self.denominator.is_one() {
+            // (a/1) ÷ (c/d) = (a×d)/c - aとcで交差簡約
+            let g = self.numerator.gcd(&other.numerator);
+            let a_reduced = &self.numerator / &g;
+            let c_reduced = &other.numerator / &g;
+            return Fraction::new(
+                a_reduced * &other.denominator,
+                c_reduced,
+            );
+        }
+        if other.denominator.is_one() {
+            // (a/b) ÷ (c/1) = a/(b×c) - aとcで交差簡約
+            let g = self.numerator.gcd(&other.numerator);
+            let a_reduced = &self.numerator / &g;
+            let c_reduced = &other.numerator / &g;
+            return Fraction::new(
+                a_reduced,
+                &self.denominator * c_reduced,
+            );
+        }
+        // 交差簡約: (a/b) ÷ (c/d) = (a×d)/(b×c)
+        // g1 = gcd(a, c), g2 = gcd(d, b)
+        let g1 = self.numerator.gcd(&other.numerator);
+        let g2 = other.denominator.gcd(&self.denominator);
+
+        let a_reduced = &self.numerator / &g1;
+        let c_reduced = &other.numerator / &g1;
+        let d_reduced = &other.denominator / &g2;
+        let b_reduced = &self.denominator / &g2;
+
+        Fraction::new(
+            a_reduced * d_reduced,
+            b_reduced * c_reduced,
+        )
+    }
+    /// 小なり比較: 整数同士の場合は乗算をスキップ
+    pub fn lt(&self, other: &Fraction) -> bool {
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return self.numerator < other.numerator;
+        }
+        &self.numerator * &other.denominator < &other.numerator * &self.denominator
+    }
+
+    /// 小なりイコール比較: 整数同士の場合は乗算をスキップ
+    pub fn le(&self, other: &Fraction) -> bool {
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return self.numerator <= other.numerator;
+        }
+        &self.numerator * &other.denominator <= &other.numerator * &self.denominator
+    }
+
+    /// 大なり比較: 整数同士の場合は乗算をスキップ
+    pub fn gt(&self, other: &Fraction) -> bool {
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return self.numerator > other.numerator;
+        }
+        &self.numerator * &other.denominator > &other.numerator * &self.denominator
+    }
+
+    /// 大なりイコール比較: 整数同士の場合は乗算をスキップ
+    pub fn ge(&self, other: &Fraction) -> bool {
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return self.numerator >= other.numerator;
+        }
+        &self.numerator * &other.denominator >= &other.numerator * &self.denominator
+    }
 
     /// 切り捨て（負の無限大方向への丸め）
+    /// 整数の場合は自身をそのまま返す（高速化）
     pub fn floor(&self) -> Fraction {
+        // 整数の場合はそのまま返す
+        if self.denominator.is_one() {
+            return self.clone();
+        }
+
         let q = &self.numerator / &self.denominator;
         let r = &self.numerator % &self.denominator;
 
@@ -82,11 +259,20 @@ impl Fraction {
             q
         };
 
-        Fraction::new(floored, BigInt::one())
+        Fraction {
+            numerator: floored,
+            denominator: BigInt::one(),
+        }
     }
 
     /// 切り上げ（正の無限大方向への丸め）
+    /// 整数の場合は自身をそのまま返す（高速化）
     pub fn ceil(&self) -> Fraction {
+        // 整数の場合はそのまま返す
+        if self.denominator.is_one() {
+            return self.clone();
+        }
+
         let q = &self.numerator / &self.denominator;
         let r = &self.numerator % &self.denominator;
 
@@ -100,16 +286,28 @@ impl Fraction {
             q
         };
 
-        Fraction::new(ceiled, BigInt::one())
+        Fraction {
+            numerator: ceiled,
+            denominator: BigInt::one(),
+        }
     }
 
     /// 四捨五入（0.5は0から遠い方向へ: round half away from zero）
+    /// 整数の場合は自身をそのまま返す（高速化）
     ///
     /// 正の数: floor(x + 0.5)
     /// 負の数: -floor(|x| + 0.5)
     pub fn round(&self) -> Fraction {
+        // 整数の場合はそのまま返す
+        if self.denominator.is_one() {
+            return self.clone();
+        }
+
         if self.numerator.is_zero() {
-            return Fraction::new(BigInt::zero(), BigInt::one());
+            return Fraction {
+                numerator: BigInt::zero(),
+                denominator: BigInt::one(),
+            };
         }
 
         // Round half away from zero: |x| + 0.5 を floor して符号を戻す
@@ -126,10 +324,9 @@ impl Fraction {
         let two_abs_num = &abs_num * &two;
         let result = (&two_abs_num + &self.denominator) / (&two * &self.denominator);
 
-        if is_negative {
-            Fraction::new(-result, BigInt::one())
-        } else {
-            Fraction::new(result, BigInt::one())
+        Fraction {
+            numerator: if is_negative { -result } else { result },
+            denominator: BigInt::one(),
         }
     }
 
@@ -148,11 +345,32 @@ impl Fraction {
     }
 
     /// 剰余演算（数学的剰余: a mod b = a - b * floor(a/b)）
+    /// 整数同士の場合はBigIntの剰余演算を直接使用（高速化）
     pub fn modulo(&self, other: &Fraction) -> Fraction {
         if other.numerator.is_zero() {
             panic!("Modulo by zero");
         }
-        // a mod b = a - b * floor(a/b)
+
+        // 整数同士の場合: BigIntの剰余演算を直接使用
+        if self.denominator.is_one() && other.denominator.is_one() {
+            // 数学的剰余（常に非負）: ((a % b) + b) % b
+            let rem = &self.numerator % &other.numerator;
+            let result = if rem < BigInt::zero() {
+                if other.numerator > BigInt::zero() {
+                    rem + &other.numerator
+                } else {
+                    rem - &other.numerator
+                }
+            } else {
+                rem
+            };
+            return Fraction {
+                numerator: result,
+                denominator: BigInt::one(),
+            };
+        }
+
+        // 一般的な場合: a mod b = a - b * floor(a/b)
         let div_result = self.div(other);
         let floored = div_result.floor();
         self.sub(&other.mul(&floored))
@@ -167,6 +385,10 @@ impl PartialOrd for Fraction {
 
 impl Ord for Fraction {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // 整数同士の場合は乗算をスキップ
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return self.numerator.cmp(&other.numerator);
+        }
         // Compare a/b with c/d using a*d vs b*c (integer comparison)
         let lhs = &self.numerator * &other.denominator;
         let rhs = &other.numerator * &self.denominator;
