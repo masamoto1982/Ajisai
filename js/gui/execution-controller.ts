@@ -1,133 +1,227 @@
-// js/gui/execution-controller.ts - 実行制御
+// js/gui/execution-controller.ts - 実行制御（関数型スタイル）
 
 import { WORKER_MANAGER } from '../workers/worker-manager';
 import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-types';
-import { StepExecutor } from './step-executor';
+import { createStepExecutor, StepExecutor } from './step-executor';
 
-export class ExecutionController {
-    private gui: any;
-    private interpreter: AjisaiInterpreter;
-    private stepExecutor: StepExecutor;
+// ============================================================
+// 型定義
+// ============================================================
 
-    constructor(gui: any, interpreter: AjisaiInterpreter) {
-        this.gui = gui;
-        this.interpreter = interpreter;
-        this.stepExecutor = new StepExecutor(gui, interpreter);
+export interface ExecutionCallbacks {
+    readonly getEditorValue: () => string;
+    readonly clearEditor: (switchView?: boolean) => void;
+    readonly setEditorValue: (value: string) => void;
+    readonly insertEditorText: (text: string) => void;
+    readonly showInfo: (text: string, append: boolean) => void;
+    readonly showError: (error: Error | string) => void;
+    readonly showExecutionResult: (result: ExecuteResult) => void;
+    readonly updateDisplays: () => void;
+    readonly saveState: () => Promise<void>;
+    readonly updateView: (mode: 'input' | 'execution') => void;
+}
+
+export interface ExecutionController {
+    readonly runCode: (code: string) => Promise<void>;
+    readonly executeReset: () => Promise<void>;
+    readonly executeStep: () => Promise<void>;
+    readonly isStepModeActive: () => boolean;
+    readonly abortExecution: () => void;
+}
+
+// ============================================================
+// 純粋関数
+// ============================================================
+
+/**
+ * カスタムワードを取得
+ */
+const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
+    const customWordsInfo = interpreter.get_custom_words_info();
+    return customWordsInfo.map(wordData => ({
+        name: wordData[0],
+        definition: interpreter.get_word_definition(wordData[0]),
+        description: wordData[1]
+    }));
+};
+
+/**
+ * 実行状態をインタープリタに反映
+ */
+const syncInterpreterState = (
+    interpreter: AjisaiInterpreter,
+    result: ExecuteResult
+): void => {
+    if (!result || result.error) return;
+
+    interpreter.reset();
+    if (result.stack) {
+        interpreter.restore_stack(result.stack);
     }
+    if (result.customWords) {
+        interpreter.restore_custom_words(result.customWords);
+    }
+};
 
-    async runCode(code: string): Promise<void> {
+/**
+ * コードがRESETコマンドかどうか判定
+ */
+const isResetCommand = (code: string): boolean =>
+    code.trim().toUpperCase() === 'RESET';
+
+/**
+ * エラーがユーザーによる中断かどうか判定
+ */
+const isAbortError = (error: Error): boolean =>
+    error.message.includes('aborted');
+
+// ============================================================
+// ファクトリ関数: ExecutionController作成
+// ============================================================
+
+export const createExecutionController = (
+    interpreter: AjisaiInterpreter,
+    callbacks: ExecutionCallbacks
+): ExecutionController => {
+    const {
+        getEditorValue,
+        clearEditor,
+        setEditorValue,
+        insertEditorText,
+        showInfo,
+        showError,
+        showExecutionResult,
+        updateDisplays,
+        saveState,
+        updateView
+    } = callbacks;
+
+    // StepExecutorの作成
+    const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
+        getEditorValue,
+        showInfo,
+        showError,
+        showExecutionResult,
+        updateDisplays,
+        saveState
+    });
+
+    // 実行結果の処理
+    const handleResult = (result: ExecuteResult, code: string): void => {
+        if (result.inputHelper) {
+            clearEditor(false);
+            insertEditorText(result.inputHelper);
+            showInfo('Input helper text inserted.', false);
+            updateView('input');
+        } else if (result.definition_to_load) {
+            setEditorValue(result.definition_to_load);
+            const wordName = code.replace("?", "").trim();
+            showInfo(`Loaded definition for ${wordName}.`, false);
+            updateView('input');
+        } else if (result.status === 'OK' && !result.error) {
+            showExecutionResult(result);
+            clearEditor(false);
+        } else {
+            showError(result.message || 'Unknown error');
+        }
+    };
+
+    // コード実行
+    const runCode = async (code: string): Promise<void> => {
         if (!code) return;
 
-        this.stepExecutor.reset();
+        stepExecutor.reset();
 
-        if (code.trim().toUpperCase() === 'RESET') {
-            await this.executeReset();
+        if (isResetCommand(code)) {
+            await executeReset();
             return;
         }
 
         try {
-            this.gui.mobile.updateView('execution');
-            this.gui.display.showInfo('Executing...', false);
+            updateView('execution');
+            showInfo('Executing...', false);
 
             const currentState = {
-                stack: this.interpreter.get_stack(),
-                customWords: this.getCustomWords(),
+                stack: interpreter.get_stack(),
+                customWords: getCustomWords(interpreter),
             };
 
             const result = await WORKER_MANAGER.execute(code, currentState);
-            this.updateInterpreterState(result);
-            this.handleResult(result, code);
+
+            try {
+                syncInterpreterState(interpreter, result);
+            } catch (error) {
+                console.error('[ExecController] Failed to sync state:', error);
+                showError(error as Error);
+            }
+
+            handleResult(result, code);
+
         } catch (error) {
             console.error('[ExecController] Code execution failed:', error);
-            if (error instanceof Error && error.message.includes('aborted')) {
-                this.gui.display.showInfo('Execution aborted by user.', true);
+            if (error instanceof Error && isAbortError(error)) {
+                showInfo('Execution aborted by user.', true);
             } else {
-                this.gui.display.showError(error as Error);
+                showError(error as Error);
             }
         }
 
-        this.gui.updateAllDisplays();
-        await this.gui.persistence.saveCurrentState();
-    }
+        updateDisplays();
+        await saveState();
+    };
 
-    async executeReset(): Promise<void> {
+    // リセット実行
+    const executeReset = async (): Promise<void> => {
         try {
             console.log('[ExecController] Executing reset');
-            this.stepExecutor.reset();
+            stepExecutor.reset();
             await WORKER_MANAGER.resetAllWorkers();
 
-            const result = this.interpreter.reset();
+            const result = interpreter.reset();
 
             if (result.status === 'OK' && !result.error) {
-                this.gui.display.showOutput(result.output || 'RESET executed');
-                this.gui.editor.clear();
-                this.gui.display.showInfo('RESET: All memory cleared.', true);
-                this.gui.mobile.updateView('input');
+                showInfo(result.output || 'RESET executed', false);
+                clearEditor(true);
+                showInfo('RESET: All memory cleared.', true);
+                updateView('input');
             } else {
-                this.gui.display.showError(result.message || 'RESET execution failed');
+                showError(result.message || 'RESET execution failed');
             }
         } catch (error) {
             console.error('[ExecController] Reset failed:', error);
-            this.gui.display.showError(error as Error);
+            showError(error as Error);
         }
-        this.gui.updateAllDisplays();
-        await this.gui.persistence.saveCurrentState();
-    }
 
-    async executeStep(): Promise<void> {
-        await this.stepExecutor.executeStep();
-    }
+        updateDisplays();
+        await saveState();
+    };
 
-    isStepModeActive(): boolean {
-        return this.stepExecutor.isActive();
-    }
+    // ステップ実行
+    const executeStep = async (): Promise<void> => {
+        await stepExecutor.executeStep();
+    };
 
-    abortExecution(): void {
-        this.stepExecutor.abort();
-    }
+    // ステップモードがアクティブか
+    const isStepModeActive = (): boolean => stepExecutor.isActive();
 
-    private getCustomWords(): CustomWord[] {
-        const customWordsInfo = this.interpreter.get_custom_words_info();
-        return customWordsInfo.map(wordData => ({
-            name: wordData[0],
-            definition: this.interpreter.get_word_definition(wordData[0]),
-            description: wordData[1]
-        }));
-    }
+    // 実行中断
+    const abortExecution = (): void => {
+        stepExecutor.abort();
+    };
 
-    private updateInterpreterState(result: ExecuteResult): void {
-        if (!result || result.error) return;
+    return {
+        runCode,
+        executeReset,
+        executeStep,
+        isStepModeActive,
+        abortExecution
+    };
+};
 
-        try {
-            this.interpreter.reset();
-            if (result.stack) {
-                this.interpreter.restore_stack(result.stack);
-            }
-            if (result.customWords) {
-                this.interpreter.restore_custom_words(result.customWords);
-            }
-        } catch (error) {
-            console.error('[ExecController] Failed to sync state:', error);
-            this.gui.display.showError(error as Error);
-        }
-    }
-
-    private handleResult(result: ExecuteResult, code: string): void {
-        if (result.inputHelper) {
-            this.gui.editor.clear(false);
-            this.gui.editor.insertText(result.inputHelper);
-            this.gui.display.showInfo('Input helper text inserted.');
-            this.gui.mobile.updateView('input');
-        } else if (result.definition_to_load) {
-            this.gui.editor.setValue(result.definition_to_load);
-            const wordName = code.replace("?", "").trim();
-            this.gui.display.showInfo(`Loaded definition for ${wordName}.`);
-            this.gui.mobile.updateView('input');
-        } else if (result.status === 'OK' && !result.error) {
-            this.gui.display.showExecutionResult(result);
-            this.gui.editor.clear(false);
-        } else {
-            this.gui.display.showError(result.message || 'Unknown error');
-        }
-    }
-}
+// 純粋関数をエクスポート（テスト用）
+export const executionControllerUtils = {
+    getCustomWords,
+    syncInterpreterState,
+    isResetCommand,
+    isAbortError
+};

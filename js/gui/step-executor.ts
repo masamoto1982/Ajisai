@@ -1,148 +1,259 @@
-// js/gui/step-executor.ts - ステップ実行管理
+// js/gui/step-executor.ts - ステップ実行管理（関数型スタイル）
 
 import { WORKER_MANAGER } from '../workers/worker-manager';
-import type { AjisaiInterpreter, CustomWord } from '../wasm-types';
+import type { AjisaiInterpreter, CustomWord, ExecuteResult } from '../wasm-types';
 
-interface StepState {
-    active: boolean;
-    tokens: string[];
-    currentIndex: number;
+// ============================================================
+// 型定義
+// ============================================================
+
+export interface StepState {
+    readonly active: boolean;
+    readonly tokens: readonly string[];
+    readonly currentIndex: number;
 }
 
-export class StepExecutor {
-    private gui: any;
-    private interpreter: AjisaiInterpreter;
-    private state: StepState = {
-        active: false,
-        tokens: [],
-        currentIndex: 0
+export interface StepExecutorCallbacks {
+    readonly getEditorValue: () => string;
+    readonly showInfo: (text: string, append: boolean) => void;
+    readonly showError: (error: Error | string) => void;
+    readonly showExecutionResult: (result: ExecuteResult) => void;
+    readonly updateDisplays: () => void;
+    readonly saveState: () => Promise<void>;
+}
+
+export interface StepExecutor {
+    readonly isActive: () => boolean;
+    readonly reset: () => void;
+    readonly executeStep: () => Promise<void>;
+    readonly abort: () => void;
+    readonly getState: () => StepState;
+}
+
+// ============================================================
+// 純粋関数
+// ============================================================
+
+/**
+ * 初期状態を生成
+ */
+const createInitialState = (): StepState => ({
+    active: false,
+    tokens: [],
+    currentIndex: 0
+});
+
+/**
+ * コードをトークンに分割
+ */
+const tokenize = (code: string): string[] =>
+    code.split(/\s+/).filter(token => token.length > 0);
+
+/**
+ * ステップモード開始時の状態を生成
+ */
+const createActiveState = (tokens: string[]): StepState => ({
+    active: true,
+    tokens,
+    currentIndex: 0
+});
+
+/**
+ * 次のトークンへ進んだ状態を生成
+ */
+const advanceState = (state: StepState): StepState => ({
+    ...state,
+    currentIndex: state.currentIndex + 1
+});
+
+/**
+ * ステップ情報のメッセージを生成
+ */
+const formatStepMessage = (
+    currentIndex: number,
+    totalTokens: number,
+    token: string
+): string => {
+    const remaining = totalTokens - currentIndex - 1;
+    return `[>] Step ${currentIndex + 1}/${totalTokens}: "${token}" (${remaining} remaining)`;
+};
+
+/**
+ * カスタムワードを取得
+ */
+const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
+    const customWordsInfo = interpreter.get_custom_words_info();
+    return customWordsInfo.map(wordData => ({
+        name: wordData[0],
+        definition: interpreter.get_word_definition(wordData[0]),
+        description: wordData[1]
+    }));
+};
+
+/**
+ * 実行状態をインタープリタに反映
+ */
+const syncInterpreterState = (
+    interpreter: AjisaiInterpreter,
+    result: ExecuteResult
+): void => {
+    if (!result || result.error) return;
+
+    interpreter.reset();
+    if (result.stack) {
+        interpreter.restore_stack(result.stack);
+    }
+    if (result.customWords) {
+        interpreter.restore_custom_words(result.customWords);
+    }
+};
+
+// ============================================================
+// ファクトリ関数: StepExecutor作成
+// ============================================================
+
+export const createStepExecutor = (
+    interpreter: AjisaiInterpreter,
+    callbacks: StepExecutorCallbacks
+): StepExecutor => {
+    const {
+        getEditorValue,
+        showInfo,
+        showError,
+        showExecutionResult,
+        updateDisplays,
+        saveState
+    } = callbacks;
+
+    // 状態（クロージャで保持）
+    let state = createInitialState();
+
+    // アクティブかどうか
+    const isActive = (): boolean => state.active;
+
+    // リセット
+    const reset = (): void => {
+        state = createInitialState();
     };
 
-    constructor(gui: any, interpreter: AjisaiInterpreter) {
-        this.gui = gui;
-        this.interpreter = interpreter;
-    }
-
-    isActive(): boolean {
-        return this.state.active;
-    }
-
-    reset(): void {
-        this.state = { active: false, tokens: [], currentIndex: 0 };
-    }
-
-    async executeStep(): Promise<void> {
-        if (!this.state.active) {
-            await this.startStepMode();
-        } else {
-            await this.executeNextToken();
+    // 中断
+    const abort = (): void => {
+        if (state.active) {
+            reset();
+            showInfo('Step mode aborted.', true);
         }
-    }
+    };
 
-    abort(): void {
-        if (this.state.active) {
-            this.reset();
-            this.gui.display.showInfo('Step mode aborted.', true);
-        }
-    }
+    // 状態取得
+    const getState = (): StepState => ({ ...state });
 
-    private async startStepMode(): Promise<void> {
-        const code = this.gui.editor.getValue();
+    // ステップモード開始
+    const startStepMode = async (): Promise<void> => {
+        const code = getEditorValue();
         if (!code) return;
 
-        this.state.tokens = code.split(/\s+/).filter((token: string) => token.length > 0);
-        this.state.currentIndex = 0;
-        this.state.active = true;
+        const tokens = tokenize(code);
 
-        if (this.state.tokens.length === 0) {
-            this.gui.display.showInfo('No code to execute.', true);
-            this.reset();
+        if (tokens.length === 0) {
+            showInfo('No code to execute.', true);
             return;
         }
 
-        this.gui.display.showInfo(
-            `[STEP] Step mode started. ${this.state.tokens.length} tokens to execute. (Ctrl+Enter to continue)`,
+        state = createActiveState(tokens);
+
+        showInfo(
+            `[STEP] Step mode started. ${tokens.length} tokens to execute. (Ctrl+Enter to continue)`,
             true
         );
 
-        await this.executeNextToken();
-    }
+        await executeNextToken();
+    };
 
-    private async executeNextToken(): Promise<void> {
-        if (this.state.currentIndex >= this.state.tokens.length) {
-            this.gui.display.showInfo('[DONE] Step mode completed.', true);
-            this.reset();
+    // 次のトークンを実行
+    const executeNextToken = async (): Promise<void> => {
+        if (state.currentIndex >= state.tokens.length) {
+            showInfo('[DONE] Step mode completed.', true);
+            reset();
             return;
         }
 
-        const token = this.state.tokens[this.state.currentIndex]!;
-        const remaining = this.state.tokens.length - this.state.currentIndex - 1;
+        const token = state.tokens[state.currentIndex]!;
 
         try {
-            this.gui.display.showInfo(
-                `[>] Step ${this.state.currentIndex + 1}/${this.state.tokens.length}: "${token}" (${remaining} remaining)`,
+            showInfo(
+                formatStepMessage(state.currentIndex, state.tokens.length, token),
                 false
             );
 
             const currentState = {
-                stack: this.interpreter.get_stack(),
-                customWords: this.getCustomWords(),
+                stack: interpreter.get_stack(),
+                customWords: getCustomWords(interpreter),
             };
 
             const result = await WORKER_MANAGER.execute(token, currentState);
-            this.updateInterpreterState(result);
+
+            try {
+                syncInterpreterState(interpreter, result);
+            } catch (error) {
+                console.error('[StepExecutor] Failed to sync state:', error);
+                showError(error as Error);
+            }
 
             if (result.status === 'OK' && !result.error) {
-                this.gui.display.showExecutionResult(result);
+                showExecutionResult(result);
             } else {
-                this.gui.display.showError(result.message || 'Unknown error');
-                this.reset();
+                showError(result.message || 'Unknown error');
+                reset();
+                updateDisplays();
+                await saveState();
+                return;
             }
 
-            this.state.currentIndex++;
+            state = advanceState(state);
 
-            if (this.state.currentIndex >= this.state.tokens.length) {
-                this.gui.display.showInfo('[DONE] Step mode completed.', true);
-                this.reset();
+            if (state.currentIndex >= state.tokens.length) {
+                showInfo('[DONE] Step mode completed.', true);
+                reset();
             }
+
         } catch (error) {
             console.error('[StepExecutor] Step execution failed:', error);
             if (error instanceof Error && error.message.includes('aborted')) {
-                this.gui.display.showInfo('Step execution aborted by user.', true);
+                showInfo('Step execution aborted by user.', true);
             } else {
-                this.gui.display.showError(error as Error);
+                showError(error as Error);
             }
-            this.reset();
+            reset();
         }
 
-        this.gui.updateAllDisplays();
-        await this.gui.persistence.saveCurrentState();
-    }
+        updateDisplays();
+        await saveState();
+    };
 
-    private getCustomWords(): CustomWord[] {
-        const customWordsInfo = this.interpreter.get_custom_words_info();
-        return customWordsInfo.map(wordData => {
-            const name = wordData[0];
-            const description = wordData[1];
-            const definition = this.interpreter.get_word_definition(name);
-            return { name, definition, description };
-        });
-    }
-
-    private updateInterpreterState(result: any): void {
-        if (!result || result.error) return;
-
-        try {
-            this.interpreter.reset();
-            if (result.stack) {
-                this.interpreter.restore_stack(result.stack);
-            }
-            if (result.customWords) {
-                this.interpreter.restore_custom_words(result.customWords);
-            }
-        } catch (error) {
-            console.error('[StepExecutor] Failed to sync state:', error);
-            this.gui.display.showError(error as Error);
+    // ステップ実行（開始または続行）
+    const executeStep = async (): Promise<void> => {
+        if (!state.active) {
+            await startStepMode();
+        } else {
+            await executeNextToken();
         }
-    }
-}
+    };
+
+    return {
+        isActive,
+        reset,
+        executeStep,
+        abort,
+        getState
+    };
+};
+
+// 純粋関数をエクスポート（テスト用）
+export const stepExecutorUtils = {
+    createInitialState,
+    tokenize,
+    createActiveState,
+    advanceState,
+    formatStepMessage,
+    getCustomWords
+};

@@ -1,12 +1,31 @@
-// js/gui/persistence.ts
+// js/gui/persistence.ts - 永続化管理（関数型スタイル）
 
 import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-types';
 import type DB from '../db';
 import { SAMPLE_CUSTOM_WORDS } from './sample-words';
+import { Result, ok, err } from './fp-utils';
 
-interface InterpreterState {
-    stack: Value[];
-    customWords: CustomWord[];
+// ============================================================
+// 型定義
+// ============================================================
+
+export interface InterpreterState {
+    readonly stack: Value[];
+    readonly customWords: CustomWord[];
+}
+
+export interface PersistenceCallbacks {
+    readonly showError?: (error: Error) => void;
+    readonly updateDisplays?: () => void;
+    readonly showInfo?: (text: string, append: boolean) => void;
+}
+
+export interface Persistence {
+    readonly init: () => Promise<void>;
+    readonly saveCurrentState: () => Promise<void>;
+    readonly loadDatabaseData: () => Promise<void>;
+    readonly exportCustomWords: () => void;
+    readonly importCustomWords: () => void;
 }
 
 declare global {
@@ -16,50 +35,180 @@ declare global {
     }
 }
 
-export class Persistence {
-    private gui: any;
+// ============================================================
+// 純粋関数: データ変換
+// ============================================================
 
-    constructor(gui: any) {
-        this.gui = gui;
+/**
+ * カスタムワード情報を CustomWord 型に変換
+ */
+const toCustomWord = (
+    wordData: [string, string | null, boolean],
+    getDefinition: (name: string) => string | null
+): CustomWord => ({
+    name: wordData[0],
+    description: wordData[1],
+    definition: getDefinition(wordData[0])
+});
+
+/**
+ * インタープリタの現在の状態を取得
+ */
+const getCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
+    const customWordsInfo = interpreter.get_custom_words_info();
+    const customWords: CustomWord[] = customWordsInfo.map(wordData =>
+        toCustomWord(wordData, name => interpreter.get_word_definition(name))
+    );
+
+    return {
+        stack: interpreter.get_stack(),
+        customWords
+    };
+};
+
+/**
+ * エクスポート用のカスタムワードデータを作成
+ */
+const createExportData = (interpreter: AjisaiInterpreter): CustomWord[] => {
+    const customWordsInfo = interpreter.get_custom_words_info();
+    return customWordsInfo.map(wordData => ({
+        name: wordData[0],
+        description: wordData[1],
+        definition: interpreter.get_word_definition(wordData[0])
+    }));
+};
+
+/**
+ * ファイル名を生成（タイムスタンプ付き）
+ */
+const generateExportFilename = (): string => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    return `ajisai_words_${timestamp}.json`;
+};
+
+// ============================================================
+// 副作用関数: ファイル操作
+// ============================================================
+
+/**
+ * JSONファイルをダウンロード
+ */
+const downloadJson = (data: unknown, filename: string): void => {
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+
+/**
+ * ファイル選択ダイアログを開く
+ */
+const openFileDialog = (
+    accept: string,
+    onFileSelected: (file: File) => void
+): void => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+
+    input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+            onFileSelected(file);
+        }
+    };
+
+    input.click();
+};
+
+/**
+ * ファイルをテキストとして読み込む
+ */
+const readFileAsText = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const result = event.target?.result;
+            if (typeof result === 'string') {
+                resolve(result);
+            } else {
+                reject(new Error('Failed to read file'));
+            }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+
+/**
+ * JSONをパースしてカスタムワード配列として検証
+ */
+const parseCustomWords = (jsonString: string): Result<CustomWord[], Error> => {
+    try {
+        const parsed = JSON.parse(jsonString);
+        if (!Array.isArray(parsed)) {
+            return err(new Error('Invalid file format. Expected an array of words.'));
+        }
+        return ok(parsed as CustomWord[]);
+    } catch (e) {
+        return err(e instanceof Error ? e : new Error(String(e)));
     }
+};
 
-    async init(): Promise<void> {
+// ============================================================
+// ファクトリ関数: Persistence作成
+// ============================================================
+
+export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
+    const { showError, updateDisplays, showInfo } = callbacks;
+
+    // データベース初期化
+    const init = async (): Promise<void> => {
         try {
             await window.AjisaiDB.open();
             console.log('Database initialized successfully for Persistence.');
         } catch (error) {
             console.error('Failed to initialize persistence database:', error);
         }
-    }
+    };
 
-    async saveCurrentState(): Promise<void> {
+    // 現在の状態を保存
+    const saveCurrentState = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
-        
+
         try {
-            const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
-            const customWords: CustomWord[] = customWordsInfo.map(wordData => ({
-                name: wordData[0],
-                description: wordData[1],
-                definition: window.ajisaiInterpreter.get_word_definition(wordData[0])
-            }));
-
-            const interpreterState: InterpreterState = {
-                stack: window.ajisaiInterpreter.get_stack(),
-                customWords: customWords,
-            };
-
-            await window.AjisaiDB.saveInterpreterState(interpreterState);
+            const state = getCurrentState(window.ajisaiInterpreter);
+            await window.AjisaiDB.saveInterpreterState(state);
             console.log('State saved automatically.');
         } catch (error) {
             console.error('Failed to auto-save state:', error);
         }
-    }
+    };
 
-    async loadDatabaseData(): Promise<void> {
+    // サンプルワードを読み込む
+    const loadSampleWords = async (): Promise<void> => {
+        try {
+            await window.ajisaiInterpreter.restore_custom_words(SAMPLE_CUSTOM_WORDS);
+            await saveCurrentState();
+            console.log('Sample custom words loaded.');
+        } catch (error) {
+            console.error('Failed to load sample words:', error);
+        }
+    };
+
+    // データベースからデータを読み込む
+    const loadDatabaseData = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
 
         try {
             const state = await window.AjisaiDB.loadInterpreterState();
+
             if (state) {
                 if (state.stack) {
                     window.ajisaiInterpreter.restore_stack(state.stack);
@@ -69,94 +218,70 @@ export class Persistence {
                     await window.ajisaiInterpreter.restore_custom_words(state.customWords);
                     console.log('Interpreter state restored.');
                 } else {
-                    // 初回起動時: DBにカスタムワードがない場合、サンプルワードを追加
-                    await this.loadSampleWords();
+                    await loadSampleWords();
                 }
             } else {
-                // 初回起動時: DB自体が空の場合、サンプルワードを追加
-                await this.loadSampleWords();
+                await loadSampleWords();
             }
         } catch (error) {
             console.error('Failed to load database data:', error);
-            if (this.gui) {
-                this.gui.display.showError(error as Error);
-            }
+            showError?.(error as Error);
         }
-    }
+    };
 
-    private async loadSampleWords(): Promise<void> {
-        try {
-            await window.ajisaiInterpreter.restore_custom_words(SAMPLE_CUSTOM_WORDS);
-            await this.saveCurrentState();
-            console.log('Sample custom words loaded.');
-        } catch (error) {
-            console.error('Failed to load sample words:', error);
-        }
-    }
-
-    exportCustomWords(): void {
+    // カスタムワードをエクスポート
+    const exportCustomWords = (): void => {
         if (!window.ajisaiInterpreter) {
-            this.gui.display.showError('Interpreter not available');
+            showError?.(new Error('Interpreter not available'));
             return;
         }
 
-        const customWordsInfo = window.ajisaiInterpreter.get_custom_words_info();
-        const exportData: CustomWord[] = customWordsInfo.map(wordData => {
-            const name = wordData[0];
-            const description = wordData[1];
-            const definition = window.ajisaiInterpreter.get_word_definition(name);
-            return { name, definition, description };
-        });
+        const exportData = createExportData(window.ajisaiInterpreter);
+        const filename = generateExportFilename();
 
-        const jsonString = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `ajisai_words_${timestamp}.json`;
+        downloadJson(exportData, filename);
+        showInfo?.(`Custom words exported as ${filename}.`, true);
+    };
 
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        this.gui.display.showInfo(`Custom words exported as ${filename}.`, true);
-    }
+    // カスタムワードをインポート
+    const importCustomWords = (): void => {
+        openFileDialog('.json', async (file) => {
+            try {
+                const jsonString = await readFileAsText(file);
+                const parseResult = parseCustomWords(jsonString);
 
-    importCustomWords(): void {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-
-        input.onchange = async (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                try {
-                    const jsonString = event.target?.result as string;
-                    const importedWords = JSON.parse(jsonString) as CustomWord[];
-
-                    if (!Array.isArray(importedWords)) {
-                        throw new Error('Invalid file format. Expected an array of words.');
-                    }
-                    
-                    await window.ajisaiInterpreter.restore_custom_words(importedWords);
-                    
-                    this.gui.updateAllDisplays();
-                    await this.saveCurrentState();
-                    this.gui.display.showInfo(`${importedWords.length} custom words imported and saved.`, true);
-
-                } catch (error) {
-                    this.gui.display.showError(error as Error);
+                if (!parseResult.ok) {
+                    showError?.(parseResult.error);
+                    return;
                 }
-            };
-            reader.readAsText(file);
-        };
 
-        input.click();
-    }
-}
+                const importedWords = parseResult.value;
+                await window.ajisaiInterpreter.restore_custom_words(importedWords);
+
+                updateDisplays?.();
+                await saveCurrentState();
+                showInfo?.(`${importedWords.length} custom words imported and saved.`, true);
+
+            } catch (error) {
+                showError?.(error as Error);
+            }
+        });
+    };
+
+    return {
+        init,
+        saveCurrentState,
+        loadDatabaseData,
+        exportCustomWords,
+        importCustomWords
+    };
+};
+
+// 純粋関数をエクスポート（テスト用）
+export const persistenceUtils = {
+    toCustomWord,
+    getCurrentState,
+    createExportData,
+    generateExportFilename,
+    parseCustomWords
+};
