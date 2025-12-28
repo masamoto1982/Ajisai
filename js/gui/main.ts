@@ -209,7 +209,7 @@ export const createGUI = (): GUI => {
             }
             // Ctrl+Alt+Enter: リセット
             if (e.key === 'Enter' && e.ctrlKey && e.altKey) {
-                if (confirm('Are you sure you want to reset the system?')) {
+                if (confirm('システムをリセットしますか？ (Are you sure you want to reset the system?)')) {
                     executionController.executeReset();
                 }
                 e.preventDefault();

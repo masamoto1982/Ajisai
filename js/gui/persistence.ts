@@ -245,7 +245,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         const filename = generateExportFilename();
 
         downloadJson(exportData, filename);
-        showInfo?.(`Custom words exported as ${filename}.`, true);
+        showInfo?.(`カスタムワードをエクスポートしました: ${filename}`, true, `Custom words exported as ${filename}`);
     };
 
     // カスタムワードをインポート
@@ -265,7 +265,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
                 updateDisplays?.();
                 await saveCurrentState();
-                showInfo?.(`${importedWords.length} custom words imported and saved.`, true);
+                showInfo?.(`${importedWords.length}個のカスタムワードをインポートしました`, true, `${importedWords.length} custom words imported and saved`);
 
             } catch (error) {
                 showError?.(error as Error);
