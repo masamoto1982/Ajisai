@@ -1,54 +1,54 @@
-/* style.css - 光弾性・ホログラム風デザイン */
-/* 色覚障碍者への配慮を維持しながら、光の干渉縞やホログラム的な輝きを表現 */
+/* style.css - 紫陽花（Ajisai）デザイン */
+/* 瑞々しさ、透明感、動きのある光沢を表現 */
+/* 色覚障碍者への配慮を維持 */
 
 /* ===========================================
-   CSS変数 - テーマカラー定義
+   CSS変数 - 紫陽花カラーパレット
    =========================================== */
 :root {
-    /* 基本カラー */
-    --bg-dark: #0a0a14;
-    --bg-gradient-1: #0d0d1a;
-    --bg-gradient-2: #12121f;
-    --panel-bg: rgba(20, 20, 35, 0.85);
-    --panel-border: rgba(255, 255, 255, 0.1);
-    --glass-blur: 12px;
+    /* 紫陽花の基本色 */
+    --ajisai-blue: #7eb8da;
+    --ajisai-purple: #a888c4;
+    --ajisai-pink: #e8a4c4;
+    --ajisai-lavender: #c4b8e8;
+    --ajisai-mint: #a8dac8;
+
+    /* 背景色（淡い紫陽花色） */
+    --bg-base: #f0f4f8;
+    --bg-gradient-start: #e8f4fc;
+    --bg-gradient-end: #f8e8f4;
+
+    /* パネル（水滴のような透明感） */
+    --panel-bg: rgba(255, 255, 255, 0.75);
+    --panel-border: rgba(126, 184, 218, 0.3);
+    --glass-blur: 16px;
 
     /* テキストカラー */
-    --text-primary: #e8e8f0;
-    --text-secondary: #a0a0b8;
-    --text-muted: #606080;
-
-    /* 光弾性カラー（干渉縞のスペクトル） */
-    --spectrum-red: #ff6b6b;
-    --spectrum-orange: #ffa94d;
-    --spectrum-yellow: #ffd43b;
-    --spectrum-green: #69db7c;
-    --spectrum-cyan: #66d9e8;
-    --spectrum-blue: #74c0fc;
-    --spectrum-purple: #b197fc;
-    --spectrum-magenta: #f783ac;
+    --text-primary: #2c3e50;
+    --text-secondary: #546e7a;
+    --text-muted: #90a4ae;
 
     /* ワードボタン用カラー（色覚障碍者配慮） */
-    /* オレンジ系: builtin - 形状で補助（実線ボーダー） */
-    --builtin-color: #ff8c42;
-    --builtin-glow: rgba(255, 140, 66, 0.4);
+    /* 暖色系: builtin - 実線ボーダー */
+    --builtin-color: #e07850;
+    --builtin-bg: rgba(224, 120, 80, 0.08);
 
-    /* 黄色系: dependency - 形状で補助（二重ボーダー） */
-    --dependency-color: #ffc233;
-    --dependency-glow: rgba(255, 194, 51, 0.4);
+    /* 黄色系: dependency - 二重ボーダー */
+    --dependency-color: #d4a020;
+    --dependency-bg: rgba(212, 160, 32, 0.08);
 
-    /* 青緑系: non-dependency - 形状で補助（点線ボーダー） */
-    --non-dependency-color: #3dd9d9;
-    --non-dependency-glow: rgba(61, 217, 217, 0.4);
+    /* 寒色系: non-dependency - 破線ボーダー */
+    --non-dependency-color: #20a0a0;
+    --non-dependency-bg: rgba(32, 160, 160, 0.08);
 
     /* スタック用カラー */
-    --stack-color: #c792ea;
-    --stack-glow: rgba(199, 146, 234, 0.5);
+    --stack-color: #8868a8;
+    --stack-highlight: linear-gradient(135deg, #a888c4 0%, #7eb8da 100%);
 
     /* 出力用カラー */
-    --output-debug: #a0a0b8;
-    --output-program: #82aaff;
-    --output-error: #ff5370;
+    --output-debug: #546e7a;
+    --output-program: #2980b9;
+    --output-error: #c0392b;
 }
 
 /* ===========================================
@@ -68,13 +68,13 @@ body {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-dark);
+    background: var(--bg-base);
     color: var(--text-primary);
     line-height: 1.6;
 }
 
 /* ===========================================
-   光弾性背景パターン
+   紫陽花の背景 - 柔らかいグラデーション
    =========================================== */
 body::before {
     content: '';
@@ -85,27 +85,30 @@ body::before {
     bottom: 0;
     z-index: -2;
     background:
-        /* 干渉縞パターン - 複数の同心円グラデーション */
-        radial-gradient(ellipse at 20% 20%,
-            rgba(107, 107, 255, 0.08) 0%,
+        /* 紫陽花の花びらのような柔らかいグラデーション */
+        radial-gradient(ellipse at 10% 20%,
+            rgba(126, 184, 218, 0.25) 0%,
             transparent 50%),
-        radial-gradient(ellipse at 80% 30%,
-            rgba(255, 107, 180, 0.06) 0%,
+        radial-gradient(ellipse at 90% 20%,
+            rgba(232, 164, 196, 0.2) 0%,
             transparent 45%),
-        radial-gradient(ellipse at 50% 80%,
-            rgba(107, 255, 180, 0.05) 0%,
-            transparent 55%),
-        radial-gradient(ellipse at 10% 70%,
-            rgba(255, 200, 107, 0.04) 0%,
+        radial-gradient(ellipse at 50% 90%,
+            rgba(168, 136, 196, 0.2) 0%,
+            transparent 50%),
+        radial-gradient(ellipse at 20% 70%,
+            rgba(168, 218, 200, 0.15) 0%,
             transparent 40%),
-        /* 基調グラデーション */
+        radial-gradient(ellipse at 80% 60%,
+            rgba(196, 184, 232, 0.2) 0%,
+            transparent 45%),
+        /* ベースグラデーション */
         linear-gradient(135deg,
-            var(--bg-dark) 0%,
-            var(--bg-gradient-1) 50%,
-            var(--bg-gradient-2) 100%);
+            var(--bg-gradient-start) 0%,
+            var(--bg-base) 50%,
+            var(--bg-gradient-end) 100%);
 }
 
-/* 光弾性の応力線を表現する動的パターン */
+/* 動く光沢 - 雨に濡れた紫陽花のキラメキ */
 body::after {
     content: '';
     position: fixed;
@@ -115,37 +118,34 @@ body::after {
     bottom: 0;
     z-index: -1;
     background:
-        /* 等色線（isochromatics）を表現 */
-        conic-gradient(from 45deg at 30% 40%,
-            transparent 0deg,
-            rgba(255, 107, 107, 0.03) 60deg,
-            rgba(255, 180, 107, 0.03) 120deg,
-            rgba(107, 255, 180, 0.03) 180deg,
-            rgba(107, 180, 255, 0.03) 240deg,
-            rgba(180, 107, 255, 0.03) 300deg,
-            transparent 360deg),
-        conic-gradient(from 180deg at 70% 60%,
-            transparent 0deg,
-            rgba(180, 107, 255, 0.02) 72deg,
-            rgba(107, 180, 255, 0.02) 144deg,
-            rgba(107, 255, 180, 0.02) 216deg,
-            rgba(255, 180, 107, 0.02) 288deg,
-            transparent 360deg);
+        /* 水滴のような光の反射 */
+        radial-gradient(circle at 15% 25%,
+            rgba(255, 255, 255, 0.4) 0%,
+            transparent 2%),
+        radial-gradient(circle at 85% 15%,
+            rgba(255, 255, 255, 0.3) 0%,
+            transparent 1.5%),
+        radial-gradient(circle at 45% 75%,
+            rgba(255, 255, 255, 0.35) 0%,
+            transparent 2%),
+        radial-gradient(circle at 75% 85%,
+            rgba(255, 255, 255, 0.25) 0%,
+            transparent 1.8%),
+        radial-gradient(circle at 25% 55%,
+            rgba(255, 255, 255, 0.3) 0%,
+            transparent 1.5%);
     pointer-events: none;
-    animation: photoelastic-shift 30s ease-in-out infinite alternate;
+    animation: dewdrop-shimmer 8s ease-in-out infinite;
 }
 
-@keyframes photoelastic-shift {
-    0% {
-        opacity: 0.8;
-        transform: scale(1) rotate(0deg);
+@keyframes dewdrop-shimmer {
+    0%, 100% {
+        opacity: 0.6;
+        transform: scale(1);
     }
     50% {
         opacity: 1;
-    }
-    100% {
-        opacity: 0.8;
-        transform: scale(1.05) rotate(3deg);
+        transform: scale(1.02);
     }
 }
 
@@ -162,46 +162,48 @@ body::after {
 }
 
 /* ===========================================
-   ヘッダー - ホログラム風ガラス効果
+   ヘッダー - 透明感のあるガラス効果
    =========================================== */
 header {
     background: linear-gradient(135deg,
-        rgba(30, 30, 50, 0.9) 0%,
-        rgba(20, 20, 40, 0.95) 100%);
+        rgba(255, 255, 255, 0.85) 0%,
+        rgba(248, 250, 252, 0.9) 100%);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     padding: 1rem 2rem;
-    border-bottom: 1px solid var(--panel-border);
+    border-bottom: 1px solid rgba(126, 184, 218, 0.25);
     display: flex;
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 4px 20px rgba(126, 184, 218, 0.1);
 }
 
-/* ヘッダーのホログラム光沢 */
+/* ヘッダーの動く光沢 */
 header::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: -50%;
     left: -100%;
-    width: 100%;
-    height: 100%;
+    width: 50%;
+    height: 200%;
     background: linear-gradient(90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.03) 50%,
+        rgba(255, 255, 255, 0.4) 50%,
         transparent 100%);
-    animation: hologram-sweep 8s ease-in-out infinite;
+    transform: skewX(-20deg);
+    animation: header-shine 6s ease-in-out infinite;
     pointer-events: none;
 }
 
-@keyframes hologram-sweep {
-    0%, 100% {
+@keyframes header-shine {
+    0% {
         left: -100%;
     }
-    50% {
-        left: 100%;
+    50%, 100% {
+        left: 200%;
     }
 }
 
@@ -210,17 +212,20 @@ header::before {
     width: 40px;
     height: 40px;
     object-fit: contain;
-    border-radius: 8px;
+    border-radius: 10px;
     box-shadow:
-        0 0 15px rgba(130, 170, 255, 0.3),
-        0 0 30px rgba(130, 170, 255, 0.1);
+        0 2px 8px rgba(126, 184, 218, 0.3),
+        0 0 0 2px rgba(255, 255, 255, 0.8);
 }
 
 header h1 {
     font-size: 1.5rem;
     color: var(--text-primary);
-    font-weight: 500;
-    text-shadow: 0 0 20px rgba(130, 170, 255, 0.3);
+    font-weight: 600;
+    background: linear-gradient(135deg, #5a8cb8 0%, #8868a8 50%, #c888a8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .version {
@@ -233,8 +238,8 @@ header h1 {
     font-size: 0.875rem;
     color: var(--text-primary);
     padding: 0.25rem 0.75rem;
-    background: rgba(255, 107, 107, 0.2);
-    border: 1px solid rgba(255, 107, 107, 0.4);
+    background: rgba(192, 57, 43, 0.1);
+    border: 1px solid rgba(192, 57, 43, 0.3);
     border-radius: 20px;
 }
 
@@ -245,7 +250,7 @@ header h1 {
     gap: 0.5rem;
 }
 
-/* ヘッダーボタン統一スタイル - ホログラムボタン */
+/* ヘッダーボタン - 水滴ボタン */
 .reference-btn,
 .test-btn,
 .header-btn {
@@ -254,50 +259,55 @@ header h1 {
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background: linear-gradient(135deg,
-        rgba(40, 40, 60, 0.8) 0%,
-        rgba(30, 30, 50, 0.9) 100%);
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(248, 250, 252, 0.95) 100%);
     color: var(--text-primary);
     text-decoration: none;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
+    border: 1px solid rgba(126, 184, 218, 0.3);
+    border-radius: 20px;
     font-size: 0.875rem;
-    font-weight: 400;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    box-shadow:
+        0 2px 8px rgba(126, 184, 218, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
+/* ボタンの光沢アニメーション */
 .reference-btn::after,
 .test-btn::after,
 .header-btn::after {
     content: '';
     position: absolute;
-    top: 0;
+    top: -50%;
     left: -100%;
-    width: 100%;
-    height: 100%;
+    width: 50%;
+    height: 200%;
     background: linear-gradient(90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.6) 50%,
         transparent 100%);
-    transition: left 0.5s ease;
+    transform: skewX(-20deg);
+    transition: left 0.6s ease;
 }
 
 .reference-btn:hover,
 .test-btn:hover,
 .header-btn:hover {
-    border-color: rgba(130, 170, 255, 0.4);
+    border-color: var(--ajisai-blue);
     box-shadow:
-        0 0 15px rgba(130, 170, 255, 0.2),
-        inset 0 0 15px rgba(130, 170, 255, 0.05);
-    transform: translateY(-1px);
+        0 4px 15px rgba(126, 184, 218, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transform: translateY(-2px);
 }
 
 .reference-btn:hover::after,
 .test-btn:hover::after,
 .header-btn:hover::after {
-    left: 100%;
+    left: 150%;
 }
 
 .reference-btn svg,
@@ -318,32 +328,34 @@ header h1 {
 }
 
 /* ===========================================
-   パネル共通 - ガラスモーフィズム
+   パネル共通 - 水滴のような透明感
    =========================================== */
 .panel {
     background: var(--panel-bg);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--panel-border);
-    border-radius: 16px;
+    border-radius: 20px;
     padding: 1rem;
     overflow-y: auto;
     position: relative;
+    box-shadow:
+        0 8px 32px rgba(126, 184, 218, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-/* パネルの光弾性エッジ効果 */
+/* パネルの内側の光沢 */
 .panel::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    bottom: 0;
-    border-radius: 16px;
-    background: linear-gradient(135deg,
-        rgba(255, 255, 255, 0.05) 0%,
-        transparent 50%,
-        rgba(255, 255, 255, 0.02) 100%);
+    height: 40%;
+    border-radius: 20px 20px 0 0;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.3) 0%,
+        transparent 100%);
     pointer-events: none;
 }
 
@@ -369,26 +381,26 @@ header h1 {
    各セクション
    =========================================== */
 section {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
+    border: 1px solid rgba(126, 184, 218, 0.2);
+    border-radius: 16px;
     padding: 1rem;
     background: linear-gradient(135deg,
-        rgba(25, 25, 45, 0.6) 0%,
-        rgba(20, 20, 40, 0.8) 100%);
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(248, 250, 252, 0.6) 100%);
     position: relative;
     overflow: hidden;
 }
 
-/* セクションの干渉縞ハイライト */
+/* セクションの装飾 */
 section::after {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(ellipse,
-        rgba(130, 170, 255, 0.03) 0%,
+    top: 0;
+    right: 0;
+    width: 60%;
+    height: 50%;
+    background: radial-gradient(ellipse at top right,
+        rgba(126, 184, 218, 0.08) 0%,
         transparent 70%);
     pointer-events: none;
 }
@@ -397,31 +409,30 @@ section h2 {
     font-size: 1.125rem;
     margin-bottom: 0.75rem;
     color: var(--text-primary);
-    font-weight: 500;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-/* セクションタイトルにホログラム効果 */
+/* セクションタイトルの紫陽花アクセント */
 section h2::before {
     content: '';
     display: inline-block;
     width: 4px;
     height: 1em;
     background: linear-gradient(180deg,
-        var(--spectrum-cyan) 0%,
-        var(--spectrum-purple) 50%,
-        var(--spectrum-magenta) 100%);
+        var(--ajisai-blue) 0%,
+        var(--ajisai-purple) 50%,
+        var(--ajisai-pink) 100%);
     border-radius: 2px;
-    box-shadow: 0 0 8px rgba(130, 170, 255, 0.5);
 }
 
 section h3 {
     font-size: 1rem;
     margin-bottom: 0.5rem;
     color: var(--text-secondary);
-    font-weight: 400;
+    font-weight: 500;
 }
 
 /* ===========================================
@@ -440,16 +451,15 @@ section h3 {
     width: 100%;
     min-height: 0;
     padding: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border: 1px solid rgba(126, 184, 218, 0.25);
+    border-radius: 12px;
     font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
     font-size: 0.95rem;
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background: rgba(10, 10, 20, 0.6);
+    background: rgba(255, 255, 255, 0.7);
     color: var(--text-primary);
-    caret-color: var(--spectrum-cyan);
     transition: all 0.3s ease;
 }
 
@@ -459,10 +469,11 @@ section h3 {
 
 #code-input:focus {
     outline: none;
-    border-color: rgba(130, 170, 255, 0.4);
+    border-color: var(--ajisai-blue);
+    background: rgba(255, 255, 255, 0.9);
     box-shadow:
-        0 0 20px rgba(130, 170, 255, 0.15),
-        inset 0 0 20px rgba(130, 170, 255, 0.03);
+        0 0 0 3px rgba(126, 184, 218, 0.15),
+        0 4px 12px rgba(126, 184, 218, 0.1);
 }
 
 .controls {
@@ -472,51 +483,64 @@ section h3 {
 }
 
 /* ===========================================
-   Runボタン - 光弾性アクセントボタン
+   Runボタン - 紫陽花グラデーション
    =========================================== */
 #run-btn {
     padding: 0.75rem 1.5rem;
     background: linear-gradient(135deg,
-        rgba(61, 217, 217, 0.15) 0%,
-        rgba(130, 170, 255, 0.2) 50%,
-        rgba(199, 146, 234, 0.15) 100%);
-    color: var(--text-primary);
-    border: 1px solid rgba(130, 170, 255, 0.3);
-    border-radius: 8px;
+        var(--ajisai-blue) 0%,
+        var(--ajisai-purple) 50%,
+        var(--ajisai-pink) 100%);
+    background-size: 200% 200%;
+    color: #fff;
+    border: none;
+    border-radius: 25px;
     cursor: pointer;
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    box-shadow:
+        0 4px 15px rgba(126, 184, 218, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    animation: gradient-shift 4s ease infinite;
 }
 
+@keyframes gradient-shift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Runボタンの光沢 */
 #run-btn::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: -50%;
     left: -100%;
-    width: 200%;
-    height: 100%;
+    width: 50%;
+    height: 200%;
     background: linear-gradient(90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.1) 25%,
-        rgba(255, 255, 255, 0.2) 50%,
-        rgba(255, 255, 255, 0.1) 75%,
+        rgba(255, 255, 255, 0.4) 50%,
         transparent 100%);
+    transform: skewX(-20deg);
     transition: left 0.6s ease;
 }
 
 #run-btn:hover {
-    border-color: rgba(130, 170, 255, 0.5);
-    box-shadow:
-        0 0 25px rgba(130, 170, 255, 0.3),
-        0 0 50px rgba(130, 170, 255, 0.1);
     transform: translateY(-2px);
+    box-shadow:
+        0 6px 20px rgba(126, 184, 218, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 #run-btn:hover::before {
-    left: 100%;
+    left: 150%;
 }
 
 #run-btn:active {
@@ -526,20 +550,21 @@ section h3 {
 /* Clearボタン */
 #clear-btn {
     padding: 0.75rem 1.5rem;
-    background: rgba(40, 40, 60, 0.5);
+    background: rgba(255, 255, 255, 0.8);
     color: var(--text-secondary);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border: 1px solid rgba(126, 184, 218, 0.25);
+    border-radius: 25px;
     cursor: pointer;
     font-size: 0.875rem;
-    font-weight: 400;
+    font-weight: 500;
     transition: all 0.3s ease;
 }
 
 #clear-btn:hover {
-    background: rgba(60, 60, 80, 0.5);
+    background: rgba(255, 255, 255, 0.95);
     color: var(--text-primary);
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(126, 184, 218, 0.4);
+    box-shadow: 0 2px 8px rgba(126, 184, 218, 0.15);
 }
 
 /* ===========================================
@@ -548,9 +573,9 @@ section h3 {
 .display-area,
 .state-display,
 .words-display {
-    background: rgba(10, 10, 20, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(126, 184, 218, 0.2);
+    border-radius: 12px;
     padding: 0.75rem;
     min-height: 0;
     overflow-y: auto;
@@ -567,7 +592,7 @@ section h3 {
 }
 
 /* ===========================================
-   スクロールバー - ホログラムスタイル
+   スクロールバー - 紫陽花スタイル
    =========================================== */
 .display-area::-webkit-scrollbar,
 .state-display::-webkit-scrollbar,
@@ -582,7 +607,7 @@ section h3 {
 .words-display::-webkit-scrollbar-track,
 #output-display::-webkit-scrollbar-track,
 .panel::-webkit-scrollbar-track {
-    background: rgba(20, 20, 40, 0.5);
+    background: rgba(126, 184, 218, 0.1);
     border-radius: 4px;
 }
 
@@ -592,8 +617,8 @@ section h3 {
 #output-display::-webkit-scrollbar-thumb,
 .panel::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg,
-        rgba(130, 170, 255, 0.3) 0%,
-        rgba(199, 146, 234, 0.3) 100%);
+        var(--ajisai-blue) 0%,
+        var(--ajisai-purple) 100%);
     border-radius: 4px;
 }
 
@@ -603,8 +628,8 @@ section h3 {
 #output-display::-webkit-scrollbar-thumb:hover,
 .panel::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg,
-        rgba(130, 170, 255, 0.5) 0%,
-        rgba(199, 146, 234, 0.5) 100%);
+        var(--ajisai-purple) 0%,
+        var(--ajisai-pink) 100%);
 }
 
 /* empty表示 */
@@ -650,26 +675,29 @@ section h3 {
 }
 
 /* ===========================================
-   ワードボタン - 光弾性・ホログラム効果
+   ワードボタン - 水滴風の透明感
    色覚障碍者配慮: 色＋形状（ボーダースタイル）で区別
    =========================================== */
 .word-button {
     margin: 2px;
     padding: 0.25rem 0.5rem;
-    background: rgba(20, 20, 40, 0.6);
+    background: rgba(255, 255, 255, 0.8);
     color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(126, 184, 218, 0.3);
     font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
     font-size: 0.75rem;
-    font-weight: 400;
+    font-weight: 500;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 15px;
     transition: all 0.25s ease;
     position: relative;
     overflow: hidden;
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* ホログラム光沢効果 */
+/* ボタンの光沢 */
 .word-button::before {
     content: '';
     position: absolute;
@@ -679,7 +707,7 @@ section h3 {
     height: 100%;
     background: linear-gradient(90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.5) 50%,
         transparent 100%);
     transition: left 0.4s ease;
 }
@@ -689,106 +717,106 @@ section h3 {
 }
 
 /* ===========================================
-   組み込みワード - オレンジ系
-   形状: 実線の太いボーダー（●記号的）
+   組み込みワード - 暖色系（オレンジ）
+   形状: 実線の太いボーダー
    =========================================== */
 .word-button.builtin {
     border: 2px solid var(--builtin-color);
     color: var(--builtin-color);
-    background: rgba(255, 140, 66, 0.08);
-    box-shadow:
-        0 0 0 1px rgba(255, 140, 66, 0.1),
-        0 2px 4px rgba(0, 0, 0, 0.2);
+    background: var(--builtin-bg);
+    background-image: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(255, 255, 255, 0.7) 100%);
 }
 
 .word-button.builtin:hover {
-    background: rgba(255, 140, 66, 0.15);
+    background: rgba(224, 120, 80, 0.15);
     box-shadow:
-        0 0 15px var(--builtin-glow),
-        0 0 30px rgba(255, 140, 66, 0.2);
-    transform: translateY(-1px);
+        0 4px 12px rgba(224, 120, 80, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
 }
 
 /* ===========================================
    依存されているカスタムワード - 黄色系
-   形状: 二重ボーダー（◎記号的）
+   形状: 二重ボーダー
    =========================================== */
 .word-button.dependency {
     border: 2px solid var(--dependency-color);
-    outline: 2px solid rgba(255, 194, 51, 0.3);
+    outline: 2px solid rgba(212, 160, 32, 0.25);
     outline-offset: 1px;
     color: var(--dependency-color);
-    background: rgba(255, 194, 51, 0.08);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: var(--dependency-bg);
+    background-image: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(255, 255, 255, 0.7) 100%);
 }
 
 .word-button.dependency:hover {
-    background: rgba(255, 194, 51, 0.15);
-    outline-color: rgba(255, 194, 51, 0.5);
+    background: rgba(212, 160, 32, 0.12);
+    outline-color: rgba(212, 160, 32, 0.4);
     box-shadow:
-        0 0 15px var(--dependency-glow),
-        0 0 30px rgba(255, 194, 51, 0.2);
-    transform: translateY(-1px);
+        0 4px 12px rgba(212, 160, 32, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
 }
 
 /* ===========================================
-   依存されていないカスタムワード - 青緑系
-   形状: 破線ボーダー（○記号的）
+   依存されていないカスタムワード - 寒色系（青緑）
+   形状: 破線ボーダー
    =========================================== */
 .word-button.non-dependency {
     border: 2px dashed var(--non-dependency-color);
     color: var(--non-dependency-color);
-    background: rgba(61, 217, 217, 0.08);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: var(--non-dependency-bg);
+    background-image: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(255, 255, 255, 0.7) 100%);
 }
 
 .word-button.non-dependency:hover {
-    background: rgba(61, 217, 217, 0.15);
+    background: rgba(32, 160, 160, 0.12);
     box-shadow:
-        0 0 15px var(--non-dependency-glow),
-        0 0 30px rgba(61, 217, 217, 0.2);
-    transform: translateY(-1px);
+        0 4px 12px rgba(32, 160, 160, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
 }
 
 /* ===========================================
-   スタック項目 - 干渉縞グラデーション効果
+   スタック項目 - 紫陽花の花びら風
    =========================================== */
 .stack-item {
     font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
     font-size: 0.75rem;
     display: inline-block;
     margin: 2px;
-    padding: 3px 6px;
+    padding: 3px 8px;
     background: transparent;
     color: var(--stack-color);
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: 12px;
     transition: all 0.25s ease;
 }
 
-/* スタックトップ（最新の要素）を強調 - 光弾性ハイライト */
+/* スタックトップ（最新の要素）を強調 */
 .stack-item:last-child {
     font-weight: bold;
-    background: linear-gradient(135deg,
-        rgba(199, 146, 234, 0.2) 0%,
-        rgba(130, 170, 255, 0.15) 50%,
-        rgba(199, 146, 234, 0.2) 100%);
+    background: var(--stack-highlight);
     color: #fff;
-    border: 1px solid rgba(199, 146, 234, 0.5);
+    border: none;
     box-shadow:
-        0 0 10px var(--stack-glow),
-        0 0 20px rgba(199, 146, 234, 0.2);
+        0 2px 8px rgba(136, 104, 168, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 /* STACKワードが入力されたとき、全スタック要素を強調 */
 #stack-display.highlight-all .stack-item {
     background: linear-gradient(135deg,
-        rgba(199, 146, 234, 0.15) 0%,
-        rgba(130, 170, 255, 0.1) 100%);
-    color: #fff;
-    border: 1px solid rgba(199, 146, 234, 0.4);
+        rgba(168, 136, 196, 0.2) 0%,
+        rgba(126, 184, 218, 0.15) 100%);
+    color: var(--text-primary);
+    border: 1px solid rgba(168, 136, 196, 0.3);
     font-weight: bold;
-    box-shadow: 0 0 8px rgba(199, 146, 234, 0.3);
 }
 
 #stack-display > div {
@@ -864,7 +892,7 @@ section h3 {
         height: auto;
         overflow-y: visible;
         margin-bottom: 0.25rem;
-        border-radius: 12px;
+        border-radius: 16px;
     }
 
     #state-panel {
@@ -872,11 +900,11 @@ section h3 {
     }
 
     .panel {
-        border-radius: 12px;
+        border-radius: 16px;
     }
 
     section {
-        border-radius: 8px;
+        border-radius: 12px;
     }
 
     .output-area,
@@ -890,14 +918,14 @@ section h3 {
     #code-input {
         min-height: 120px;
         max-height: 300px;
-        border-radius: 6px;
+        border-radius: 10px;
     }
 
     .display-area,
     .state-display,
     .words-display {
         min-height: 80px;
-        border-radius: 6px;
+        border-radius: 10px;
     }
 
     #run-btn,
@@ -933,11 +961,11 @@ section h3 {
 
     .panel {
         padding: 0.75rem;
-        border-radius: 12px;
+        border-radius: 16px;
     }
 
     section {
-        border-radius: 10px;
+        border-radius: 12px;
     }
 }
 
@@ -950,6 +978,10 @@ section h3 {
     }
 
     header::before {
+        animation: none;
+    }
+
+    #run-btn {
         animation: none;
     }
 
@@ -971,9 +1003,9 @@ section h3 {
    =========================================== */
 @media (prefers-contrast: high) {
     :root {
-        --text-primary: #ffffff;
-        --text-secondary: #d0d0d0;
-        --panel-border: rgba(255, 255, 255, 0.3);
+        --text-primary: #000000;
+        --text-secondary: #333333;
+        --panel-border: rgba(0, 0, 0, 0.3);
     }
 
     .word-button.builtin,
@@ -983,6 +1015,6 @@ section h3 {
     }
 
     .stack-item:last-child {
-        border-width: 2px;
+        border: 2px solid #000;
     }
 }
