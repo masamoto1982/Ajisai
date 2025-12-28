@@ -142,19 +142,19 @@ export const createDictionary = (
 
     // ワード削除の確認と実行
     const confirmAndDeleteWord = async (wordName: string): Promise<void> => {
-        if (!confirm(`ワード '${wordName}' を削除しますか？ (Delete word '${wordName}'?)`)) return;
+        if (!confirm(`Delete word '${wordName}'?`)) return;
 
         try {
             const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
             if (result.status === 'ERROR') {
-                alert(`ワードの削除に失敗しました (Failed to delete word): ${result.message}`);
+                alert(`Failed to delete word: ${result.message}`);
             } else {
                 onUpdateDisplays?.();
                 await onSaveState?.();
                 showInfo?.(`ワード '${wordName}' を削除しました`, true, `Word '${wordName}' deleted`);
             }
         } catch (error) {
-            alert(`ワードの削除でエラーが発生しました (Error deleting word): ${error}`);
+            alert(`Error deleting word: ${error}`);
         }
     };
 
