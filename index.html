@@ -22,56 +22,56 @@
             <img src="public/images/ajisai-logo-min_w40.jpg" alt="Ajisai Logo" class="logo">
             <h1>Ajisai</h1>
             <span class="version">ver.202512281111</span>
-            <span id="offline-indicator" class="offline-indicator" style="display: none;">オフライン (Offline)</span>
+            <span id="offline-indicator" class="offline-indicator" style="display: none;">Offline</span>
             <div class="header-actions">
                 <a href="reference.html" class="reference-btn" target="_blank">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
                     </svg>
-                    リファレンス (Reference)
+                    Reference
                 </a>
                 <button id="test-btn" class="test-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    テスト (Test)
+                    Test
                 </button>
-                <button id="export-btn" class="header-btn">エクスポート (Export)</button>
-                <button id="import-btn" class="header-btn">インポート (Import)</button>
+                <button id="export-btn" class="header-btn">Export</button>
+                <button id="import-btn" class="header-btn">Import</button>
             </div>
         </header>
         
         <main class="main-layout">
             <div id="editor-panel" class="panel">
                 <section class="output-area">
-                    <h2>出力 (Output)</h2>
+                    <h2>Output</h2>
                     <div id="output-display" class="display-area"></div>
                 </section>
                 <section class="input-area">
-                    <h2>入力 (Input)</h2>
+                    <h2>Input</h2>
                     <textarea id="code-input" placeholder="Ajisaiコードを入力 (Enter code here)&#10;&#10;実行 (Run): Shift+Enter&#10;ステップ実行 (Step): Ctrl+Enter&#10;緊急停止 (Abort): Escape&#10;リセット (Reset): Ctrl+Alt+Enter"></textarea>
                     <div class="controls">
-                        <button id="run-btn">実行 (Run)</button>
-                        <button id="clear-btn">クリア (Clear)</button>
+                        <button id="run-btn">Run</button>
+                        <button id="clear-btn">Clear</button>
                     </div>
                 </section>
             </div>
             
             <div id="state-panel" class="panel">
                 <section class="stack-area">
-                    <h2>スタック (Stack)</h2>
+                    <h2>Stack</h2>
                     <div id="stack-display" class="state-display"></div>
                 </section>
                 
                 <section class="dictionary-area">
-                    <h2>辞書 (Dictionary)</h2>
+                    <h2>Dictionary</h2>
                     <div class="dictionary-container">
                         <div class="builtin-words-area">
-                            <h3>組み込みワード (Built-in)</h3>
+                            <h3>Built-in Words</h3>
                             <div id="builtin-words-display" class="words-display"></div>
                         </div>
                         <div class="custom-words-area">
-                            <h3>カスタムワード (Custom)</h3>
+                            <h3>Custom Words</h3>
                             <div id="custom-words-display" class="words-display"></div>
                         </div>
                     </div>
