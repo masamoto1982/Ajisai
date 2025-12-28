@@ -70,6 +70,67 @@ impl Fraction {
         Fraction { numerator, denominator }
     }
 
+    /// 整数かどうかを高速判定（分母が1かどうか）
+    #[inline]
+    pub fn is_integer(&self) -> bool {
+        self.denominator.is_one()
+    }
+
+    /// 整数との乗算（ブロードキャスト用に最適化）
+    /// (a/b) × n = (a×n)/b - nとbで交差簡約
+    #[inline]
+    pub fn mul_by_integer(&self, n: &Fraction) -> Fraction {
+        debug_assert!(n.denominator.is_one());
+
+        // 小整数の場合: ネイティブ演算
+        if let Some((a, b)) = self.try_as_i64_pair() {
+            if let Some(n_val) = n.numerator.to_i64() {
+                let g = gcd_i64(n_val, b);
+                let n_r = (n_val / g) as i128;
+                let b_r = (b / g) as i128;
+                let num = (a as i128) * n_r;
+                return Self::new_from_i128(num, b_r);
+            }
+        }
+
+        // 一般的な場合: nとbで交差簡約
+        let g = n.numerator.gcd(&self.denominator);
+        let n_reduced = &n.numerator / &g;
+        let b_reduced = &self.denominator / &g;
+        Self::new_already_reduced(
+            &self.numerator * n_reduced,
+            b_reduced,
+        )
+    }
+
+    /// 整数での除算（ブロードキャスト用に最適化）
+    /// (a/b) ÷ n = a/(b×n) - aとnで交差簡約
+    #[inline]
+    pub fn div_by_integer(&self, n: &Fraction) -> Fraction {
+        debug_assert!(n.denominator.is_one());
+        debug_assert!(!n.numerator.is_zero());
+
+        // 小整数の場合: ネイティブ演算
+        if let Some((a, b)) = self.try_as_i64_pair() {
+            if let Some(n_val) = n.numerator.to_i64() {
+                let g = gcd_i64(a, n_val);
+                let a_r = (a / g) as i128;
+                let n_r = (n_val / g) as i128;
+                let den = (b as i128) * n_r;
+                return Self::new_from_i128(a_r, den);
+            }
+        }
+
+        // 一般的な場合: aとnで交差簡約
+        let g = self.numerator.gcd(&n.numerator);
+        let a_reduced = &self.numerator / &g;
+        let n_reduced = &n.numerator / &g;
+        Self::new_already_reduced(
+            a_reduced,
+            &self.denominator * n_reduced,
+        )
+    }
+
     /// i64から直接Fractionを作成（簡約付き、高速）
     /// 将来の最適化で使用予定
     #[inline]

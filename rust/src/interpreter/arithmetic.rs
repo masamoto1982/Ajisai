@@ -221,7 +221,7 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 /// 【責務】
 /// - 数値の乗算を実行
 /// - ベクタ間の要素ごと乗算
-/// - スカラーブロードキャスト乗算
+/// - スカラーブロードキャスト乗算（整数スカラーの場合は最適化）
 ///
 /// 【使用法】
 /// - StackTopモード: `[1 2 3] [4 5 6] *` → `[4 10 18]`
@@ -240,6 +240,91 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
+    // StackTopモードでブロードキャストの場合、整数スカラー最適化を試みる
+    if interp.operation_target == OperationTarget::StackTop {
+        if let (Some(b_val), Some(a_val)) = (interp.stack.pop(), interp.stack.pop()) {
+            let a_vec = match &a_val.val_type {
+                ValueType::Vector(v) => v.clone(),
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+            let b_vec = match &b_val.val_type {
+                ValueType::Vector(v) => v.clone(),
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+
+            let a_len = a_vec.len();
+            let b_len = b_vec.len();
+            let mut result_vec = Vec::with_capacity(a_len.max(b_len));
+
+            // ブロードキャスト判定と整数スカラー最適化
+            if a_len > 1 && b_len == 1 {
+                // bがスカラー: 整数の場合は最適化
+                let scalar = extract_number(&b_vec[0])?;
+                if scalar.is_integer() {
+                    for elem in &a_vec {
+                        let res_num = extract_number(elem)?.mul_by_integer(scalar);
+                        result_vec.push(Value::from_number(res_num));
+                    }
+                } else {
+                    for elem in &a_vec {
+                        let res_num = extract_number(elem)?.mul(scalar);
+                        result_vec.push(Value::from_number(res_num));
+                    }
+                }
+            } else if a_len == 1 && b_len > 1 {
+                // aがスカラー: 整数の場合は最適化
+                let scalar = extract_number(&a_vec[0])?;
+                if scalar.is_integer() {
+                    for elem in &b_vec {
+                        let res_num = extract_number(elem)?.mul_by_integer(scalar);
+                        result_vec.push(Value::from_number(res_num));
+                    }
+                } else {
+                    for elem in &b_vec {
+                        let res_num = scalar.mul(extract_number(elem)?);
+                        result_vec.push(Value::from_number(res_num));
+                    }
+                }
+            } else {
+                // 要素ごと演算
+                if a_len != b_len {
+                    interp.stack.push(Value::from_vector(a_vec));
+                    interp.stack.push(Value::from_vector(b_vec));
+                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
+                }
+                for (a, b) in a_vec.iter().zip(b_vec.iter()) {
+                    let res_num = extract_number(a)?.mul(extract_number(b)?);
+                    result_vec.push(Value::from_number(res_num));
+                }
+            }
+
+            // "No change is an error" 原則のチェック
+            let result_value = Value::from_vector(result_vec);
+            let original_a = Value::from_vector(a_vec);
+            let original_b = Value::from_vector(b_vec);
+
+            if !interp.disable_no_change_check && (result_value == original_a || result_value == original_b) {
+                interp.stack.push(original_a);
+                interp.stack.push(original_b);
+                return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+            }
+
+            interp.stack.push(result_value);
+            return Ok(());
+        } else {
+            return Err(AjisaiError::StackUnderflow);
+        }
+    }
+
+    // Stackモードは汎用ハンドラを使用
     binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)))
 }
 
@@ -248,7 +333,7 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 /// 【責務】
 /// - 数値の除算を実行
 /// - ベクタ間の要素ごと除算
-/// - スカラーブロードキャスト除算
+/// - スカラーブロードキャスト除算（整数スカラーの場合は最適化）
 /// - ゼロ除算チェック
 ///
 /// 【使用法】
@@ -269,6 +354,101 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 /// - ベクタ長が不一致（ブロードキャスト不可の場合）
 /// - 演算結果に変化がない場合
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
+    // StackTopモードでブロードキャストの場合、整数スカラー最適化を試みる
+    if interp.operation_target == OperationTarget::StackTop {
+        if let (Some(b_val), Some(a_val)) = (interp.stack.pop(), interp.stack.pop()) {
+            let a_vec = match &a_val.val_type {
+                ValueType::Vector(v) => v.clone(),
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+            let b_vec = match &b_val.val_type {
+                ValueType::Vector(v) => v.clone(),
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::type_error("vector", "other type"));
+                }
+            };
+
+            let a_len = a_vec.len();
+            let b_len = b_vec.len();
+            let mut result_vec = Vec::with_capacity(a_len.max(b_len));
+
+            // ブロードキャスト判定と整数スカラー最適化
+            if a_len > 1 && b_len == 1 {
+                // bがスカラー（除数）: 整数の場合は最適化
+                let scalar = extract_number(&b_vec[0])?;
+                if scalar.numerator.is_zero() {
+                    interp.stack.push(Value::from_vector(a_vec));
+                    interp.stack.push(Value::from_vector(b_vec));
+                    return Err(AjisaiError::DivisionByZero);
+                }
+                if scalar.is_integer() {
+                    for elem in &a_vec {
+                        let res_num = extract_number(elem)?.div_by_integer(scalar);
+                        result_vec.push(Value::from_number(res_num));
+                    }
+                } else {
+                    for elem in &a_vec {
+                        let res_num = extract_number(elem)?.div(scalar);
+                        result_vec.push(Value::from_number(res_num));
+                    }
+                }
+            } else if a_len == 1 && b_len > 1 {
+                // aがスカラー（被除数）: bの各要素で割る
+                let scalar = extract_number(&a_vec[0])?;
+                for elem in &b_vec {
+                    let divisor = extract_number(elem)?;
+                    if divisor.numerator.is_zero() {
+                        interp.stack.push(Value::from_vector(a_vec));
+                        interp.stack.push(Value::from_vector(b_vec));
+                        return Err(AjisaiError::DivisionByZero);
+                    }
+                    let res_num = scalar.div(divisor);
+                    result_vec.push(Value::from_number(res_num));
+                }
+            } else {
+                // 要素ごと演算
+                if a_len != b_len {
+                    interp.stack.push(Value::from_vector(a_vec));
+                    interp.stack.push(Value::from_vector(b_vec));
+                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
+                }
+                for (a, b) in a_vec.iter().zip(b_vec.iter()) {
+                    let divisor = extract_number(b)?;
+                    if divisor.numerator.is_zero() {
+                        interp.stack.push(Value::from_vector(a_vec));
+                        interp.stack.push(Value::from_vector(b_vec));
+                        return Err(AjisaiError::DivisionByZero);
+                    }
+                    let res_num = extract_number(a)?.div(divisor);
+                    result_vec.push(Value::from_number(res_num));
+                }
+            }
+
+            // "No change is an error" 原則のチェック
+            let result_value = Value::from_vector(result_vec);
+            let original_a = Value::from_vector(a_vec);
+            let original_b = Value::from_vector(b_vec);
+
+            if !interp.disable_no_change_check && (result_value == original_a || result_value == original_b) {
+                interp.stack.push(original_a);
+                interp.stack.push(original_b);
+                return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+            }
+
+            interp.stack.push(result_value);
+            return Ok(());
+        } else {
+            return Err(AjisaiError::StackUnderflow);
+        }
+    }
+
+    // Stackモードは汎用ハンドラを使用
     binary_arithmetic_op(interp, |a, b| {
         if b.numerator.is_zero() {
             Err(AjisaiError::DivisionByZero)
