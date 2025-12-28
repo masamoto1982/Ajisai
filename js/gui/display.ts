@@ -256,7 +256,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         clearElement(elements.outputDisplay);
 
         if (debug) {
-            appendSpan(debug, '#333');
+            appendSpan(debug, '#a0a0b8');
         }
 
         if (debug && program) {
@@ -264,11 +264,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
 
         if (program) {
-            appendSpan(program, '#4DC4FF');
+            appendSpan(program, '#82aaff');
         }
 
         if (!debug && !program && result.status === 'OK') {
-            appendSpan('OK', '#333');
+            appendSpan('OK', '#a0a0b8');
         }
     };
 
@@ -279,7 +279,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         const filteredOutput = filterAudioCommands(programOutput);
 
         if (filteredOutput) {
-            appendSpan(filteredOutput, '#4DC4FF');
+            appendSpan(filteredOutput, '#82aaff');
         }
     };
 
@@ -290,7 +290,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
         mainOutput = filteredText;
         clearElement(elements.outputDisplay);
-        appendSpan(filteredText, '#4DC4FF');
+        appendSpan(filteredText, '#82aaff');
     };
 
     // エラー表示
@@ -300,7 +300,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         mainOutput = errorMessage;
         clearElement(elements.outputDisplay);
 
-        const span = appendSpan(errorMessage, '#dc3545');
+        const span = appendSpan(errorMessage, '#ff5370');
         span.style.fontWeight = 'bold';
     };
 
@@ -318,18 +318,18 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
         if (append && elements.outputDisplay.innerHTML.trim() !== '') {
             mainOutput = `${mainOutput}\n${fullText}`;
-            appendSpan('\n' + text, '#666');
+            appendSpan('\n' + text, '#a0a0b8');
             if (en) {
-                appendSpan(' ', '#666');
-                appendItalicSpan(`(${en})`, '#888');
+                appendSpan(' ', '#a0a0b8');
+                appendItalicSpan(`(${en})`, '#808098');
             }
         } else {
             mainOutput = fullText;
             clearElement(elements.outputDisplay);
-            appendSpan(text, '#666');
+            appendSpan(text, '#a0a0b8');
             if (en) {
-                appendSpan(' ', '#666');
-                appendItalicSpan(`(${en})`, '#888');
+                appendSpan(' ', '#a0a0b8');
+                appendItalicSpan(`(${en})`, '#808098');
             }
         }
     };
@@ -341,11 +341,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
         if (!Array.isArray(stack) || stack.length === 0) {
             display.textContent = '(empty)';
-            display.style.color = '#ccc';
+            display.style.color = '#606080';
             return;
         }
 
-        display.style.color = '#333';
+        display.style.color = '#e8e8f0';
         const container = document.createElement('div');
         container.style.cssText = 'display:flex;flex-wrap:wrap-reverse;justify-content:flex-start;align-content:flex-end;flex-direction:row';
 

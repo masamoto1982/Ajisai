@@ -1,4 +1,59 @@
-/* style.css - シンプル・無機質デザイン */
+/* style.css - 光弾性・ホログラム風デザイン */
+/* 色覚障碍者への配慮を維持しながら、光の干渉縞やホログラム的な輝きを表現 */
+
+/* ===========================================
+   CSS変数 - テーマカラー定義
+   =========================================== */
+:root {
+    /* 基本カラー */
+    --bg-dark: #0a0a14;
+    --bg-gradient-1: #0d0d1a;
+    --bg-gradient-2: #12121f;
+    --panel-bg: rgba(20, 20, 35, 0.85);
+    --panel-border: rgba(255, 255, 255, 0.1);
+    --glass-blur: 12px;
+
+    /* テキストカラー */
+    --text-primary: #e8e8f0;
+    --text-secondary: #a0a0b8;
+    --text-muted: #606080;
+
+    /* 光弾性カラー（干渉縞のスペクトル） */
+    --spectrum-red: #ff6b6b;
+    --spectrum-orange: #ffa94d;
+    --spectrum-yellow: #ffd43b;
+    --spectrum-green: #69db7c;
+    --spectrum-cyan: #66d9e8;
+    --spectrum-blue: #74c0fc;
+    --spectrum-purple: #b197fc;
+    --spectrum-magenta: #f783ac;
+
+    /* ワードボタン用カラー（色覚障碍者配慮） */
+    /* オレンジ系: builtin - 形状で補助（実線ボーダー） */
+    --builtin-color: #ff8c42;
+    --builtin-glow: rgba(255, 140, 66, 0.4);
+
+    /* 黄色系: dependency - 形状で補助（二重ボーダー） */
+    --dependency-color: #ffc233;
+    --dependency-glow: rgba(255, 194, 51, 0.4);
+
+    /* 青緑系: non-dependency - 形状で補助（点線ボーダー） */
+    --non-dependency-color: #3dd9d9;
+    --non-dependency-glow: rgba(61, 217, 217, 0.4);
+
+    /* スタック用カラー */
+    --stack-color: #c792ea;
+    --stack-glow: rgba(199, 146, 234, 0.5);
+
+    /* 出力用カラー */
+    --output-debug: #a0a0b8;
+    --output-program: #82aaff;
+    --output-error: #ff5370;
+}
+
+/* ===========================================
+   リセットと基本設定
+   =========================================== */
 * {
     margin: 0;
     padding: 0;
@@ -13,29 +68,141 @@ body {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f5f5f5;
-    color: #000;
+    background: var(--bg-dark);
+    color: var(--text-primary);
     line-height: 1.6;
 }
 
-/* コンテナ */
+/* ===========================================
+   光弾性背景パターン
+   =========================================== */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -2;
+    background:
+        /* 干渉縞パターン - 複数の同心円グラデーション */
+        radial-gradient(ellipse at 20% 20%,
+            rgba(107, 107, 255, 0.08) 0%,
+            transparent 50%),
+        radial-gradient(ellipse at 80% 30%,
+            rgba(255, 107, 180, 0.06) 0%,
+            transparent 45%),
+        radial-gradient(ellipse at 50% 80%,
+            rgba(107, 255, 180, 0.05) 0%,
+            transparent 55%),
+        radial-gradient(ellipse at 10% 70%,
+            rgba(255, 200, 107, 0.04) 0%,
+            transparent 40%),
+        /* 基調グラデーション */
+        linear-gradient(135deg,
+            var(--bg-dark) 0%,
+            var(--bg-gradient-1) 50%,
+            var(--bg-gradient-2) 100%);
+}
+
+/* 光弾性の応力線を表現する動的パターン */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    background:
+        /* 等色線（isochromatics）を表現 */
+        conic-gradient(from 45deg at 30% 40%,
+            transparent 0deg,
+            rgba(255, 107, 107, 0.03) 60deg,
+            rgba(255, 180, 107, 0.03) 120deg,
+            rgba(107, 255, 180, 0.03) 180deg,
+            rgba(107, 180, 255, 0.03) 240deg,
+            rgba(180, 107, 255, 0.03) 300deg,
+            transparent 360deg),
+        conic-gradient(from 180deg at 70% 60%,
+            transparent 0deg,
+            rgba(180, 107, 255, 0.02) 72deg,
+            rgba(107, 180, 255, 0.02) 144deg,
+            rgba(107, 255, 180, 0.02) 216deg,
+            rgba(255, 180, 107, 0.02) 288deg,
+            transparent 360deg);
+    pointer-events: none;
+    animation: photoelastic-shift 30s ease-in-out infinite alternate;
+}
+
+@keyframes photoelastic-shift {
+    0% {
+        opacity: 0.8;
+        transform: scale(1) rotate(0deg);
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.8;
+        transform: scale(1.05) rotate(3deg);
+    }
+}
+
+/* ===========================================
+   コンテナ
+   =========================================== */
 .container {
     min-height: 100%;
     display: flex;
     flex-direction: column;
     max-width: 1400px;
     margin: 0 auto;
+    position: relative;
 }
 
-/* ヘッダー */
+/* ===========================================
+   ヘッダー - ホログラム風ガラス効果
+   =========================================== */
 header {
-    background: #fff;
+    background: linear-gradient(135deg,
+        rgba(30, 30, 50, 0.9) 0%,
+        rgba(20, 20, 40, 0.95) 100%);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     padding: 1rem 2rem;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--panel-border);
     display: flex;
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ヘッダーのホログラム光沢 */
+header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.03) 50%,
+        transparent 100%);
+    animation: hologram-sweep 8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes hologram-sweep {
+    0%, 100% {
+        left: -100%;
+    }
+    50% {
+        left: 100%;
+    }
 }
 
 /* ロゴ */
@@ -43,26 +210,32 @@ header {
     width: 40px;
     height: 40px;
     object-fit: contain;
+    border-radius: 8px;
+    box-shadow:
+        0 0 15px rgba(130, 170, 255, 0.3),
+        0 0 30px rgba(130, 170, 255, 0.1);
 }
 
 header h1 {
     font-size: 1.5rem;
-    color: #000;
-    font-weight: 400;
+    color: var(--text-primary);
+    font-weight: 500;
+    text-shadow: 0 0 20px rgba(130, 170, 255, 0.3);
 }
 
 .version {
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 /* オフライン表示 */
 .offline-indicator {
     font-size: 0.875rem;
-    color: #000;
-    padding: 0.25rem 0.5rem;
-    background-color: #eee;
-    border: 1px solid #ddd;
+    color: var(--text-primary);
+    padding: 0.25rem 0.75rem;
+    background: rgba(255, 107, 107, 0.2);
+    border: 1px solid rgba(255, 107, 107, 0.4);
+    border-radius: 20px;
 }
 
 /* ヘッダーアクション */
@@ -72,7 +245,7 @@ header h1 {
     gap: 0.5rem;
 }
 
-/* ヘッダーボタン統一スタイル */
+/* ヘッダーボタン統一スタイル - ホログラムボタン */
 .reference-btn,
 .test-btn,
 .header-btn {
@@ -80,19 +253,51 @@ header h1 {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background-color: #fff;
-    color: #000;
+    background: linear-gradient(135deg,
+        rgba(40, 40, 60, 0.8) 0%,
+        rgba(30, 30, 50, 0.9) 100%);
+    color: var(--text-primary);
     text-decoration: none;
-    border: 1px solid #ddd;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
     font-size: 0.875rem;
     font-weight: 400;
     cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.reference-btn::after,
+.test-btn::after,
+.header-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%);
+    transition: left 0.5s ease;
 }
 
 .reference-btn:hover,
 .test-btn:hover,
 .header-btn:hover {
-    background-color: #f5f5f5;
+    border-color: rgba(130, 170, 255, 0.4);
+    box-shadow:
+        0 0 15px rgba(130, 170, 255, 0.2),
+        inset 0 0 15px rgba(130, 170, 255, 0.05);
+    transform: translateY(-1px);
+}
+
+.reference-btn:hover::after,
+.test-btn:hover::after,
+.header-btn:hover::after {
+    left: 100%;
 }
 
 .reference-btn svg,
@@ -101,7 +306,9 @@ header h1 {
     height: 16px;
 }
 
-/* デスクトップレイアウト */
+/* ===========================================
+   デスクトップレイアウト
+   =========================================== */
 .main-layout {
     display: flex;
     flex: 1;
@@ -110,12 +317,34 @@ header h1 {
     min-height: 0;
 }
 
-/* パネル共通 */
+/* ===========================================
+   パネル共通 - ガラスモーフィズム
+   =========================================== */
 .panel {
-    background-color: #fff;
-    border: 1px solid #ddd;
+    background: var(--panel-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
     padding: 1rem;
     overflow-y: auto;
+    position: relative;
+}
+
+/* パネルの光弾性エッジ効果 */
+.panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.02) 100%);
+    pointer-events: none;
 }
 
 /* 作業領域パネル */
@@ -136,28 +365,68 @@ header h1 {
     min-height: 0;
 }
 
-/* 各セクション */
+/* ===========================================
+   各セクション
+   =========================================== */
 section {
-    border: 1px solid #ddd;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
     padding: 1rem;
-    background-color: #fafafa;
+    background: linear-gradient(135deg,
+        rgba(25, 25, 45, 0.6) 0%,
+        rgba(20, 20, 40, 0.8) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* セクションの干渉縞ハイライト */
+section::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse,
+        rgba(130, 170, 255, 0.03) 0%,
+        transparent 70%);
+    pointer-events: none;
 }
 
 section h2 {
     font-size: 1.125rem;
     margin-bottom: 0.75rem;
-    color: #000;
-    font-weight: 400;
+    color: var(--text-primary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* セクションタイトルにホログラム効果 */
+section h2::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 1em;
+    background: linear-gradient(180deg,
+        var(--spectrum-cyan) 0%,
+        var(--spectrum-purple) 50%,
+        var(--spectrum-magenta) 100%);
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(130, 170, 255, 0.5);
 }
 
 section h3 {
     font-size: 1rem;
     margin-bottom: 0.5rem;
-    color: #000;
+    color: var(--text-secondary);
     font-weight: 400;
 }
 
-/* 入力・出力エリア */
+/* ===========================================
+   入力・出力エリア
+   =========================================== */
 .output-area,
 .input-area {
     flex: 1 1 0;
@@ -171,19 +440,29 @@ section h3 {
     width: 100%;
     min-height: 0;
     padding: 0.75rem;
-    border: 1px solid #ddd;
-    font-family: 'Consolas', 'Monaco', monospace;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
     font-size: 0.95rem;
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background-color: #fff;
-    color: #000;
+    background: rgba(10, 10, 20, 0.6);
+    color: var(--text-primary);
+    caret-color: var(--spectrum-cyan);
+    transition: all 0.3s ease;
+}
+
+#code-input::placeholder {
+    color: var(--text-muted);
 }
 
 #code-input:focus {
     outline: none;
-    border-color: #999;
+    border-color: rgba(130, 170, 255, 0.4);
+    box-shadow:
+        0 0 20px rgba(130, 170, 255, 0.15),
+        inset 0 0 20px rgba(130, 170, 255, 0.03);
 }
 
 .controls {
@@ -192,46 +471,90 @@ section h3 {
     gap: 0.75rem;
 }
 
-/* Runボタン */
+/* ===========================================
+   Runボタン - 光弾性アクセントボタン
+   =========================================== */
 #run-btn {
     padding: 0.75rem 1.5rem;
-    background: #fff;
-    color: #000;
-    border: 1px solid #ddd;
+    background: linear-gradient(135deg,
+        rgba(61, 217, 217, 0.15) 0%,
+        rgba(130, 170, 255, 0.2) 50%,
+        rgba(199, 146, 234, 0.15) 100%);
+    color: var(--text-primary);
+    border: 1px solid rgba(130, 170, 255, 0.3);
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.875rem;
-    font-weight: 400;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#run-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 25%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.1) 75%,
+        transparent 100%);
+    transition: left 0.6s ease;
 }
 
 #run-btn:hover {
-    background: #f5f5f5;
+    border-color: rgba(130, 170, 255, 0.5);
+    box-shadow:
+        0 0 25px rgba(130, 170, 255, 0.3),
+        0 0 50px rgba(130, 170, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+#run-btn:hover::before {
+    left: 100%;
+}
+
+#run-btn:active {
+    transform: translateY(0);
 }
 
 /* Clearボタン */
 #clear-btn {
     padding: 0.75rem 1.5rem;
-    background: #fff;
-    color: #000;
-    border: 1px solid #ddd;
+    background: rgba(40, 40, 60, 0.5);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.875rem;
     font-weight: 400;
+    transition: all 0.3s ease;
 }
 
 #clear-btn:hover {
-    background: #f5f5f5;
+    background: rgba(60, 60, 80, 0.5);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* 表示エリア */
+/* ===========================================
+   表示エリア
+   =========================================== */
 .display-area,
 .state-display,
 .words-display {
-    background-color: #fff;
-    border: 1px solid #ddd;
+    background: rgba(10, 10, 20, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
     padding: 0.75rem;
     min-height: 0;
     overflow-y: auto;
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
     font-size: 0.9rem;
 }
 
@@ -243,46 +566,61 @@ section h3 {
     white-space: pre-wrap;
 }
 
-/* スクロールバー */
+/* ===========================================
+   スクロールバー - ホログラムスタイル
+   =========================================== */
 .display-area::-webkit-scrollbar,
 .state-display::-webkit-scrollbar,
 .words-display::-webkit-scrollbar,
-#output-display::-webkit-scrollbar {
-    width: 10px;
+#output-display::-webkit-scrollbar,
+.panel::-webkit-scrollbar {
+    width: 8px;
 }
 
 .display-area::-webkit-scrollbar-track,
 .state-display::-webkit-scrollbar-track,
 .words-display::-webkit-scrollbar-track,
-#output-display::-webkit-scrollbar-track {
-    background: #f5f5f5;
+#output-display::-webkit-scrollbar-track,
+.panel::-webkit-scrollbar-track {
+    background: rgba(20, 20, 40, 0.5);
+    border-radius: 4px;
 }
 
 .display-area::-webkit-scrollbar-thumb,
 .state-display::-webkit-scrollbar-thumb,
 .words-display::-webkit-scrollbar-thumb,
-#output-display::-webkit-scrollbar-thumb {
-    background: #999;
+#output-display::-webkit-scrollbar-thumb,
+.panel::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg,
+        rgba(130, 170, 255, 0.3) 0%,
+        rgba(199, 146, 234, 0.3) 100%);
+    border-radius: 4px;
 }
 
 .display-area::-webkit-scrollbar-thumb:hover,
 .state-display::-webkit-scrollbar-thumb:hover,
 .words-display::-webkit-scrollbar-thumb:hover,
-#output-display::-webkit-scrollbar-thumb:hover {
-    background: #666;
+#output-display::-webkit-scrollbar-thumb:hover,
+.panel::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg,
+        rgba(130, 170, 255, 0.5) 0%,
+        rgba(199, 146, 234, 0.5) 100%);
 }
 
 /* empty表示 */
 .state-display {
-    color: #000;
+    color: var(--text-primary);
 }
 
-.state-display:empty::before,
-.state-display:has(> :only-child:contains("(empty)")) {
-    color: #999;
+.state-display:empty::before {
+    content: '(empty)';
+    color: var(--text-muted);
+    font-style: italic;
 }
 
-/* スタックエリア */
+/* ===========================================
+   スタックエリア
+   =========================================== */
 .stack-area {
     width: 100%;
 }
@@ -311,99 +649,155 @@ section h3 {
     display: inline;
 }
 
-/* ワードボタン */
+/* ===========================================
+   ワードボタン - 光弾性・ホログラム効果
+   色覚障碍者配慮: 色＋形状（ボーダースタイル）で区別
+   =========================================== */
 .word-button {
     margin: 2px;
-    padding: 0.2rem 0.4rem;
-    background-color: #fff;
-    color: #000;
-    border: 1px solid #ddd;
-    font-family: 'Consolas', 'Monaco', monospace;
+    padding: 0.25rem 0.5rem;
+    background: rgba(20, 20, 40, 0.6);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
     font-size: 0.75rem;
     font-weight: 400;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 6px;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
 }
 
-.word-button:hover {
-    background: #f5f5f5;
+/* ホログラム光沢効果 */
+.word-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        transparent 100%);
+    transition: left 0.4s ease;
 }
 
-/* 組み込みワード - 鮮やかな黄みの赤（彩度調整） */
+.word-button:hover::before {
+    left: 100%;
+}
+
+/* ===========================================
+   組み込みワード - オレンジ系
+   形状: 実線の太いボーダー（●記号的）
+   =========================================== */
 .word-button.builtin {
-    border-color: #E65100;
-    background: #fff;
-    color: #E65100;
-    box-shadow: 0 2px 0 #ddd;
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    border: 2px solid var(--builtin-color);
+    color: var(--builtin-color);
+    background: rgba(255, 140, 66, 0.08);
+    box-shadow:
+        0 0 0 1px rgba(255, 140, 66, 0.1),
+        0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .word-button.builtin:hover {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 #ddd;
+    background: rgba(255, 140, 66, 0.15);
+    box-shadow:
+        0 0 15px var(--builtin-glow),
+        0 0 30px rgba(255, 140, 66, 0.2);
+    transform: translateY(-1px);
 }
 
-/* 依存されているカスタムワード - 鮮やかな黄みの橙（彩度調整） */
+/* ===========================================
+   依存されているカスタムワード - 黄色系
+   形状: 二重ボーダー（◎記号的）
+   =========================================== */
 .word-button.dependency {
-    border-color: #E69500;
-    background: #fff;
-    color: #E69500;
-    box-shadow: 0 2px 0 #ddd;
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    border: 2px solid var(--dependency-color);
+    outline: 2px solid rgba(255, 194, 51, 0.3);
+    outline-offset: 1px;
+    color: var(--dependency-color);
+    background: rgba(255, 194, 51, 0.08);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .word-button.dependency:hover {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 #ddd;
+    background: rgba(255, 194, 51, 0.15);
+    outline-color: rgba(255, 194, 51, 0.5);
+    box-shadow:
+        0 0 15px var(--dependency-glow),
+        0 0 30px rgba(255, 194, 51, 0.2);
+    transform: translateY(-1px);
 }
 
-/* 依存されていないカスタムワード - 重厚な青みの緑（彩度調整） */
+/* ===========================================
+   依存されていないカスタムワード - 青緑系
+   形状: 破線ボーダー（○記号的）
+   =========================================== */
 .word-button.non-dependency {
-    border-color: #009B68;
-    background: #fff;
-    color: #009B68;
-    box-shadow: 0 2px 0 #ddd;
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    border: 2px dashed var(--non-dependency-color);
+    color: var(--non-dependency-color);
+    background: rgba(61, 217, 217, 0.08);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .word-button.non-dependency:hover {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 #ddd;
+    background: rgba(61, 217, 217, 0.15);
+    box-shadow:
+        0 0 15px var(--non-dependency-glow),
+        0 0 30px rgba(61, 217, 217, 0.2);
+    transform: translateY(-1px);
 }
 
-/* スタック項目 - フォーカスされていない要素 */
+/* ===========================================
+   スタック項目 - 干渉縞グラデーション効果
+   =========================================== */
 .stack-item {
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
     font-size: 0.75rem;
     display: inline-block;
     margin: 2px;
-    padding: 2px 4px;
-    background-color: transparent;
-    color: #990099;
+    padding: 3px 6px;
+    background: transparent;
+    color: var(--stack-color);
     border: 1px solid transparent;
+    border-radius: 4px;
+    transition: all 0.25s ease;
 }
 
-/* スタックトップ（最新の要素）を強調 - フォーカスされた要素 */
+/* スタックトップ（最新の要素）を強調 - 光弾性ハイライト */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #990099;
+    background: linear-gradient(135deg,
+        rgba(199, 146, 234, 0.2) 0%,
+        rgba(130, 170, 255, 0.15) 50%,
+        rgba(199, 146, 234, 0.2) 100%);
     color: #fff;
-    border: 1px solid #990099;
+    border: 1px solid rgba(199, 146, 234, 0.5);
+    box-shadow:
+        0 0 10px var(--stack-glow),
+        0 0 20px rgba(199, 146, 234, 0.2);
 }
 
 /* STACKワードが入力されたとき、全スタック要素を強調 */
 #stack-display.highlight-all .stack-item {
-    background-color: #990099;
+    background: linear-gradient(135deg,
+        rgba(199, 146, 234, 0.15) 0%,
+        rgba(130, 170, 255, 0.1) 100%);
     color: #fff;
-    border: 1px solid #990099;
+    border: 1px solid rgba(199, 146, 234, 0.4);
     font-weight: bold;
+    box-shadow: 0 0 8px rgba(199, 146, 234, 0.3);
 }
 
 #stack-display > div {
     justify-content: flex-start !important;
 }
 
-/* モバイル対応 */
+/* ===========================================
+   モバイル対応
+   =========================================== */
 @media (max-width: 768px) {
     html,
     body {
@@ -470,10 +864,19 @@ section h3 {
         height: auto;
         overflow-y: visible;
         margin-bottom: 0.25rem;
+        border-radius: 12px;
     }
 
     #state-panel {
         margin-bottom: 0;
+    }
+
+    .panel {
+        border-radius: 12px;
+    }
+
+    section {
+        border-radius: 8px;
     }
 
     .output-area,
@@ -487,12 +890,14 @@ section h3 {
     #code-input {
         min-height: 120px;
         max-height: 300px;
+        border-radius: 6px;
     }
 
     .display-area,
     .state-display,
     .words-display {
         min-height: 80px;
+        border-radius: 6px;
     }
 
     #run-btn,
@@ -517,7 +922,9 @@ section h3 {
     }
 }
 
-/* タブレット対応 */
+/* ===========================================
+   タブレット対応
+   =========================================== */
 @media (min-width: 769px) and (max-width: 1024px) {
     .main-layout {
         gap: 0.75rem;
@@ -526,5 +933,56 @@ section h3 {
 
     .panel {
         padding: 0.75rem;
+        border-radius: 12px;
+    }
+
+    section {
+        border-radius: 10px;
+    }
+}
+
+/* ===========================================
+   減光モーション設定（アクセシビリティ）
+   =========================================== */
+@media (prefers-reduced-motion: reduce) {
+    body::after {
+        animation: none;
+    }
+
+    header::before {
+        animation: none;
+    }
+
+    #run-btn::before,
+    .reference-btn::after,
+    .test-btn::after,
+    .header-btn::after,
+    .word-button::before {
+        display: none;
+    }
+
+    * {
+        transition: none !important;
+    }
+}
+
+/* ===========================================
+   ハイコントラストモード対応
+   =========================================== */
+@media (prefers-contrast: high) {
+    :root {
+        --text-primary: #ffffff;
+        --text-secondary: #d0d0d0;
+        --panel-border: rgba(255, 255, 255, 0.3);
+    }
+
+    .word-button.builtin,
+    .word-button.dependency,
+    .word-button.non-dependency {
+        border-width: 3px;
+    }
+
+    .stack-item:last-child {
+        border-width: 2px;
     }
 }

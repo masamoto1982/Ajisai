@@ -5,18 +5,128 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ajisai Language Reference</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        /* 光弾性・ホログラム風デザイン */
+        :root {
+            --bg-dark: #0a0a14;
+            --bg-gradient-1: #0d0d1a;
+            --panel-bg: rgba(20, 20, 35, 0.95);
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0b8;
+            --accent-cyan: #66d9e8;
+            --accent-purple: #b197fc;
+            --accent-magenta: #f783ac;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.8;
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-gradient-1) 100%);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(107, 107, 255, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 60%, rgba(255, 107, 180, 0.04) 0%, transparent 45%);
+            pointer-events: none;
+        }
+
         header { text-align: center; margin-bottom: 2rem; }
-        h1 { color: #333; }
-        h2 { color: #444; border-bottom: 2px solid #ddd; padding-bottom: 0.5rem; margin-top: 2.5rem; }
-        h3 { color: #555; border-left: 5px solid #007bff; padding-left: 0.75rem; margin-top: 2rem; }
-        p, li { font-size: 1rem; }
-        code { background-color: #eef; color: #333; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; }
-        .code-block { background-color: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin: 1rem 0; white-space: pre-wrap; font-family: 'Consolas', 'Monaco', monospace; }
-        .container { background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .back-link { display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; transition: background-color 0.2s; }
-        .back-link:hover { background-color: #0056b3; }
-        .note { background-color: #fffbe6; border-left: 5px solid #ffc107; padding: 1rem; margin: 1rem 0; }
+
+        h1 {
+            color: var(--text-primary);
+            text-shadow: 0 0 20px rgba(130, 170, 255, 0.3);
+        }
+
+        h2 {
+            color: var(--text-primary);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+
+        h3 {
+            color: var(--text-secondary);
+            border-left: 4px solid;
+            border-image: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple)) 1;
+            padding-left: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        p, li { font-size: 1rem; color: var(--text-secondary); }
+
+        code {
+            background-color: rgba(130, 170, 255, 0.1);
+            color: var(--accent-cyan);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
+            border: 1px solid rgba(130, 170, 255, 0.2);
+        }
+
+        .code-block {
+            background-color: rgba(10, 10, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1rem 0;
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
+            color: var(--text-primary);
+        }
+
+        .container {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg,
+                rgba(61, 217, 217, 0.15) 0%,
+                rgba(130, 170, 255, 0.2) 50%,
+                rgba(199, 146, 234, 0.15) 100%);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 8px;
+            border: 1px solid rgba(130, 170, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            border-color: rgba(130, 170, 255, 0.5);
+            box-shadow: 0 0 25px rgba(130, 170, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .note {
+            background-color: rgba(255, 194, 51, 0.1);
+            border-left: 4px solid #ffc233;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        a { color: var(--accent-cyan); }
+        a:hover { color: var(--accent-purple); }
     </style>
 </head>
 <body>
