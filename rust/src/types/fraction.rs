@@ -57,6 +57,19 @@ impl Fraction {
         Fraction { numerator: num, denominator: den }
     }
 
+    /// 既に簡約済み（または交差簡約済み）の分数を直接構築
+    /// GCD計算をスキップし、符号の正規化のみ行う
+    /// 交差簡約後など、GCDが1であることが保証されている場合に使用
+    #[inline]
+    fn new_already_reduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
+        debug_assert!(!denominator.is_zero());
+        if denominator < BigInt::zero() {
+            numerator = -numerator;
+            denominator = -denominator;
+        }
+        Fraction { numerator, denominator }
+    }
+
     /// i64から直接Fractionを作成（簡約付き、高速）
     /// 将来の最適化で使用予定
     #[inline]
@@ -253,7 +266,8 @@ impl Fraction {
             let g = self.numerator.gcd(&other.denominator);
             let a_reduced = &self.numerator / &g;
             let d_reduced = &other.denominator / &g;
-            return Fraction::new(
+            // 交差簡約後はGCDが1なのでnew_already_reducedを使用
+            return Self::new_already_reduced(
                 a_reduced * &other.numerator,
                 d_reduced,
             );
@@ -263,7 +277,8 @@ impl Fraction {
             let g = other.numerator.gcd(&self.denominator);
             let c_reduced = &other.numerator / &g;
             let b_reduced = &self.denominator / &g;
-            return Fraction::new(
+            // 交差簡約後はGCDが1なのでnew_already_reducedを使用
+            return Self::new_already_reduced(
                 &self.numerator * c_reduced,
                 b_reduced,
             );
@@ -278,9 +293,8 @@ impl Fraction {
         let c_reduced = &other.numerator / &g2;
         let b_reduced = &self.denominator / &g2;
 
-        // 交差簡約後は既に互いに素なので、GCDは1になるはず
-        // ただし符号の正規化のためにnewを使用
-        Fraction::new(
+        // 交差簡約後は既に互いに素なので、GCDスキップ
+        Self::new_already_reduced(
             a_reduced * c_reduced,
             b_reduced * d_reduced,
         )
@@ -308,7 +322,7 @@ impl Fraction {
             return Self::new_from_i128(num, den);
         }
 
-        // 整数同士の場合
+        // 整数同士の場合: 簡約が必要
         if self.denominator.is_one() && other.denominator.is_one() {
             return Fraction::new(
                 self.numerator.clone(),
@@ -321,7 +335,8 @@ impl Fraction {
             let g = self.numerator.gcd(&other.numerator);
             let a_reduced = &self.numerator / &g;
             let c_reduced = &other.numerator / &g;
-            return Fraction::new(
+            // 交差簡約後はGCDが1なのでnew_already_reducedを使用
+            return Self::new_already_reduced(
                 a_reduced * &other.denominator,
                 c_reduced,
             );
@@ -331,7 +346,8 @@ impl Fraction {
             let g = self.numerator.gcd(&other.numerator);
             let a_reduced = &self.numerator / &g;
             let c_reduced = &other.numerator / &g;
-            return Fraction::new(
+            // 交差簡約後はGCDが1なのでnew_already_reducedを使用
+            return Self::new_already_reduced(
                 a_reduced,
                 &self.denominator * c_reduced,
             );
@@ -346,7 +362,8 @@ impl Fraction {
         let d_reduced = &other.denominator / &g2;
         let b_reduced = &self.denominator / &g2;
 
-        Fraction::new(
+        // 交差簡約後は既に互いに素なので、GCDスキップ
+        Self::new_already_reduced(
             a_reduced * d_reduced,
             b_reduced * c_reduced,
         )
