@@ -24,17 +24,17 @@ const AjisaiTheme = {
     // グラデーション設定（階層構造）
     // -------------------------------------------------------------------------
     gradients: {
-        "--gradient-header": "linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium))",
-        "--gradient-background": "linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary))",
+        "--gradient-header": "var(--color-primary)",  // ヘッダー: 紫単色
+        "--gradient-background": "var(--color-light)", // 背景: 明るい単色
         "--gradient-parent": "linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium))",
-        "--gradient-child": "linear-gradient(to bottom, var(--color-light), var(--color-medium))"
+        "--gradient-child": "var(--color-dark)"       // 子エリア: 濃いめ単色
     },
 
     // -------------------------------------------------------------------------
     // 見出し設定（階層構造）
     // -------------------------------------------------------------------------
     headings: {
-        "--heading-h1": "var(--color-primary)",      // H1: プライマリ
+        "--heading-h1": "#fff",                      // H1: 白（紫ヘッダー用）
         "--heading-h2": "var(--color-primary)",      // H2: プライマリ
         "--heading-h3": "var(--color-secondary)"     // H3: セカンダリ
     },
