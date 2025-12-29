@@ -1,34 +1,13 @@
 /* ---------------------------------------------------------------------- */
-/* 1. CSS変数 (デフォルト値) */
-/* ※実際の値は config.js の設定によって上書きされます */
+/* 1. CSS変数
+/* ※すべての値は ajisai-theme.js から注入されます */
 /* ---------------------------------------------------------------------- */
+/* 以下の変数はレイアウト専用（テーマに含まれない） */
 :root {
-    /* デフォルトカラー（Ajisai紫陽花テーマ） */
-    --color-primary: #6b5b95;
-    --color-secondary: #8b7db5;
-    --color-light: #f8f7fc;
-    --color-medium: #d4cfe8;
-    --color-dark: #e8e4f3;
-
-    /* グラデーション（階層構造） */
-    --gradient-background: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
-    --gradient-header: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
-    --gradient-menu-hover: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
-    --gradient-parent: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
-    --gradient-child: linear-gradient(to bottom, var(--color-light), var(--color-medium));
-
-    /* 見出し（階層構造） */
-    --heading-h1: var(--color-primary);
-    --heading-h2: var(--color-primary);
-    --heading-h3: var(--color-secondary);
-
-    /* ボーダー、半径、レイアウト幅 */
-    --border-main: solid 1px var(--color-secondary);
-    --border-light: solid 1px var(--color-medium);
-    --radius-main: 10px;
     --max-width-desktop: 1100px;
     --side-nav-flex-ratio: 1;
     --main-content-flex-ratio: 3;
+    --border-light: solid 1px var(--color-medium);
 }
 
 /* ---------------------------------------------------------------------- */
