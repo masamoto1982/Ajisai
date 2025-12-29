@@ -1,41 +1,5 @@
 /* style.css - 紫陽花カラーテーマ */
-/* 注意: これらのデフォルト値は ajisai-theme.js によって上書きされます */
-:root {
-    /* カラーパレット */
-    --color-primary: #6b5b95;
-    --color-secondary: #8b7db5;
-    --color-light: #f8f7fc;
-    --color-medium: #d4cfe8;
-    --color-dark: #e8e4f3;
-    --color-text: #333;
-    --color-text-light: #666;
-
-    /* グラデーション（階層構造） */
-    --gradient-header: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
-    --gradient-background: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
-    --gradient-parent: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
-    --gradient-child: linear-gradient(to bottom, var(--color-light), var(--color-medium));
-
-    /* 見出し（階層構造） */
-    --heading-h1: var(--color-primary);
-    --heading-h2: var(--color-primary);
-    --heading-h3: var(--color-secondary);
-
-    /* ボーダー・角丸 */
-    --border-main: solid 1px var(--color-secondary);
-    --radius-main: 10px;
-
-    /* コードエディタ */
-    --code-bg: #2d2d2d;
-    --code-text: #f8f8f2;
-    --code-comment: #75715e;
-
-    /* 色覚配慮カラー */
-    --color-builtin: #E65100;
-    --color-dependency: #E69500;
-    --color-non-dependency: #009B68;
-    --color-stack: #990099;
-}
+/* CSS変数は ajisai-theme.js から注入されます */
 
 * {
     margin: 0;

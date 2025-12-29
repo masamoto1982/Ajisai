@@ -14,16 +14,24 @@
     <meta name="apple-mobile-web-app-title" content="Ajisai">
     
     <title>Ajisai</title>
-    <link rel="stylesheet" href="style.css">
 
-    <!-- 共通テーマ設定 -->
+    <!-- 共通テーマ設定（CSSより先に読み込み） -->
     <script src="/ajisai-theme.js"></script>
+    <style id="theme-vars"></style>
     <script>
-        // テーマを即座に適用（DOMContentLoadedを待たない）
+        // テーマをスタイルタグとして注入
         if (typeof AjisaiTheme !== 'undefined') {
-            AjisaiTheme.apply();
+            const vars = AjisaiTheme.getAll();
+            let css = ':root {';
+            for (const [key, value] of Object.entries(vars)) {
+                css += `${key}: ${value};`;
+            }
+            css += '}';
+            document.getElementById('theme-vars').textContent = css;
         }
     </script>
+
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
