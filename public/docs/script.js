@@ -8,9 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const c = SiteConfig;
 
     // ------------------------------------------------------------------------
-    // 0. テーマカラーの適用 (CSS変数の上書き)
+    // 0. テーマカラーの適用 (共通テーマから)
     // ------------------------------------------------------------------------
-    if (c.theme) {
+    if (typeof AjisaiTheme !== 'undefined') {
+        AjisaiTheme.apply();
+    } else if (c.theme) {
+        // フォールバック: SiteConfigのテーマを使用
         const root = document.documentElement;
         for (const [key, value] of Object.entries(c.theme)) {
             root.style.setProperty(key, value);
