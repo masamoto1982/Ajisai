@@ -1,5 +1,7 @@
 /* style.css - 紫陽花カラーテーマ */
+/* 注意: これらのデフォルト値は ajisai-theme.js によって上書きされます */
 :root {
+    /* カラーパレット */
     --color-primary: #6b5b95;
     --color-secondary: #8b7db5;
     --color-light: #f8f7fc;
@@ -8,7 +10,7 @@
     --color-text: #333;
     --color-text-light: #666;
 
-    /* 紫陽花グラデーション */
+    /* グラデーション */
     --gradient-header: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
     --gradient-body: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
     --gradient-article: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
@@ -17,6 +19,17 @@
     /* ボーダー・角丸 */
     --border-main: solid 1px var(--color-secondary);
     --radius-main: 10px;
+
+    /* コードエディタ */
+    --code-bg: #2d2d2d;
+    --code-text: #f8f8f2;
+    --code-comment: #75715e;
+
+    /* 色覚配慮カラー */
+    --color-builtin: #E65100;
+    --color-dependency: #E69500;
+    --color-non-dependency: #009B68;
+    --color-stack: #990099;
 }
 
 * {
@@ -200,8 +213,8 @@ section h3 {
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background-color: #2d2d2d;
-    color: #f8f8f2;
+    background-color: var(--code-bg);
+    color: var(--code-text);
 }
 
 #code-input:focus {
@@ -209,7 +222,7 @@ section h3 {
 }
 
 #code-input::placeholder {
-    color: #75715e;
+    color: var(--code-comment);
 }
 
 .controls {
@@ -359,11 +372,11 @@ section h3 {
     background: var(--color-light);
 }
 
-/* 組み込みワード - 鮮やかな黄みの赤（色覚配慮） */
+/* 組み込みワード - 色覚配慮カラー */
 .word-button.builtin {
-    border-color: #E65100;
+    border-color: var(--color-builtin);
     background: #fff;
-    color: #E65100;
+    color: var(--color-builtin);
     box-shadow: 0 2px 0 var(--color-medium);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
@@ -373,11 +386,11 @@ section h3 {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* 依存されているカスタムワード - 鮮やかな黄みの橙（色覚配慮） */
+/* 依存されているカスタムワード - 色覚配慮カラー */
 .word-button.dependency {
-    border-color: #E69500;
+    border-color: var(--color-dependency);
     background: #fff;
-    color: #E69500;
+    color: var(--color-dependency);
     box-shadow: 0 2px 0 var(--color-medium);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
@@ -387,11 +400,11 @@ section h3 {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* 依存されていないカスタムワード - 重厚な青みの緑（色覚配慮） */
+/* 依存されていないカスタムワード - 色覚配慮カラー */
 .word-button.non-dependency {
-    border-color: #009B68;
+    border-color: var(--color-non-dependency);
     background: #fff;
-    color: #009B68;
+    color: var(--color-non-dependency);
     box-shadow: 0 2px 0 var(--color-medium);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
@@ -401,7 +414,7 @@ section h3 {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* スタック項目 - フォーカスされていない要素（色覚配慮） */
+/* スタック項目 - 色覚配慮カラー */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.75rem;
@@ -409,23 +422,23 @@ section h3 {
     margin: 2px;
     padding: 2px 4px;
     background-color: transparent;
-    color: #990099;
+    color: var(--color-stack);
     border: 1px solid transparent;
 }
 
-/* スタックトップ（最新の要素）を強調 - フォーカスされた要素（色覚配慮） */
+/* スタックトップ（最新の要素）を強調 */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: #990099;
+    background-color: var(--color-stack);
     color: #fff;
-    border: 1px solid #990099;
+    border: 1px solid var(--color-stack);
 }
 
-/* STACKワードが入力されたとき、全スタック要素を強調（色覚配慮） */
+/* STACKワードが入力されたとき、全スタック要素を強調 */
 #stack-display.highlight-all .stack-item {
-    background-color: #990099;
+    background-color: var(--color-stack);
     color: #fff;
-    border: 1px solid #990099;
+    border: 1px solid var(--color-stack);
     font-weight: bold;
 }
 
