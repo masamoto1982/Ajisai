@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Built-in Words - Ajisai Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <div class="page-wrapper">
+        <aside id="sidebar"></aside>
+
+        <main>
+            <h1>Built-in Words</h1>
+
+            <section>
+                <h2>Quick Reference</h2>
+                <table>
+                    <tr>
+                        <th>Category</th>
+                        <th>Words</th>
+                    </tr>
+                    <tr>
+                        <td>Target</td>
+                        <td><code>.</code> <code>..</code></td>
+                    </tr>
+                    <tr>
+                        <td>Input Helper</td>
+                        <td><code>'</code> <code>SCALAR</code> <code>VECTOR</code> <code>MATRIX</code> <code>TENSOR</code></td>
+                    </tr>
+                    <tr>
+                        <td>Position</td>
+                        <td><code>GET</code> <code>INSERT</code> <code>REPLACE</code> <code>REMOVE</code></td>
+                    </tr>
+                    <tr>
+                        <td>Quantity</td>
+                        <td><code>LENGTH</code> <code>TAKE</code></td>
+                    </tr>
+                    <tr>
+                        <td>Vector</td>
+                        <td><code>SPLIT</code> <code>CONCAT</code> <code>REVERSE</code> <code>RANGE</code> <code>SORT</code></td>
+                    </tr>
+                    <tr>
+                        <td>Tensor</td>
+                        <td><code>SHAPE</code> <code>RANK</code> <code>RESHAPE</code> <code>TRANSPOSE</code> <code>FILL</code></td>
+                    </tr>
+                    <tr>
+                        <td>Arithmetic</td>
+                        <td><code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>MOD</code> <code>FLOOR</code> <code>CEIL</code> <code>ROUND</code></td>
+                    </tr>
+                    <tr>
+                        <td>Comparison</td>
+                        <td><code>=</code> <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code></td>
+                    </tr>
+                    <tr>
+                        <td>Logic</td>
+                        <td><code>AND</code> <code>OR</code> <code>NOT</code></td>
+                    </tr>
+                    <tr>
+                        <td>Type Conversion</td>
+                        <td><code>STR</code> <code>NUM</code> <code>BOOL</code> <code>NIL</code> <code>CHARS</code> <code>JOIN</code></td>
+                    </tr>
+                    <tr>
+                        <td>DateTime</td>
+                        <td><code>NOW</code> <code>DATETIME</code> <code>TIMESTAMP</code></td>
+                    </tr>
+                    <tr>
+                        <td>Higher-Order</td>
+                        <td><code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>UNFOLD</code></td>
+                    </tr>
+                    <tr>
+                        <td>Word Management</td>
+                        <td><code>DEF</code> <code>DEL</code> <code>?</code></td>
+                    </tr>
+                    <tr>
+                        <td>Control Flow</td>
+                        <td><code>:</code> <code>TIMES</code> <code>WAIT</code> <code>!</code></td>
+                    </tr>
+                    <tr>
+                        <td>I/O</td>
+                        <td><code>PRINT</code> <code>AUDIO</code></td>
+                    </tr>
+                    <tr>
+                        <td>Random/Hash</td>
+                        <td><code>CSPRNG</code> <code>HASH</code></td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- Target Specification -->
+            <section class="word-category">
+                <h2>Target Specification</h2>
+
+                <div class="word-item">
+                    <h4>.</h4>
+                    <p class="word-description">Set operation target to stack top (default mode).</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 ] . LENGTH    # → [ 1 2 3 ] [ 3 ]
+[ 1 2 3 ] LENGTH      # Same (default)</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>..</h4>
+                    <p class="word-description">Set operation target to entire stack.</p>
+                    <div class="word-example">
+                        <code>a b c [ 1 ] .. GET      # → a b c [ b ]
+a b c d .. LENGTH       # → a b c d [ 4 ]
+a b c .. REVERSE        # → c b a</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Input Helpers -->
+            <section class="word-category">
+                <h2>Input Helpers</h2>
+
+                <div class="word-item">
+                    <h4>'</h4>
+                    <p class="word-description">Input a single quote character.</p>
+                </div>
+
+                <div class="word-item">
+                    <h4>SCALAR</h4>
+                    <p class="word-description">Input 1D brackets <code>[ ]</code>.</p>
+                    <div class="word-example">
+                        <code>SCALAR          # → [ ]
+[ 2 ] SCALAR    # → [ [ ] [ ] ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>VECTOR</h4>
+                    <p class="word-description">Input 2D brackets <code>[ [ ] ]</code>.</p>
+                </div>
+
+                <div class="word-item">
+                    <h4>MATRIX</h4>
+                    <p class="word-description">Input 3D brackets <code>[ [ [ ] ] ]</code>.</p>
+                </div>
+
+                <div class="word-item">
+                    <h4>TENSOR</h4>
+                    <p class="word-description">Input 4D brackets <code>[ [ [ [ ] ] ] ]</code>.</p>
+                </div>
+            </section>
+
+            <!-- Position Operations -->
+            <section class="word-category">
+                <h2>Position Operations (0-indexed)</h2>
+
+                <div class="word-item">
+                    <h4>GET</h4>
+                    <p class="word-description">Get element at specified position. Negative index counts from end.</p>
+                    <div class="word-example">
+                        <code>[ 10 20 30 ] [ 0 ] GET    # → [ 10 20 30 ] [ 10 ]
+[ 10 20 30 ] [ -1 ] GET   # → [ 10 20 30 ] [ 30 ]
+a b c [ 1 ] .. GET        # → a b c [ b ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>INSERT</h4>
+                    <p class="word-description">Insert element at specified position.</p>
+                    <div class="word-example">
+                        <code>[ 1 3 ] [ 1 ] [ 2 ] INSERT    # → [ 1 2 3 ]
+[ a c ] [ 0 ] [ b ] INSERT    # → [ b a c ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>REPLACE</h4>
+                    <p class="word-description">Replace element at specified position.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 ] [ 0 ] [ 9 ] REPLACE    # → [ 9 2 3 ]
+[ 1 2 3 ] [ -1 ] [ 9 ] REPLACE   # → [ 1 2 9 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>REMOVE</h4>
+                    <p class="word-description">Remove element at specified position.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 ] [ 0 ] REMOVE    # → [ 2 3 ]
+[ 1 2 3 ] [ -1 ] REMOVE   # → [ 1 2 ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quantity Operations -->
+            <section class="word-category">
+                <h2>Quantity Operations</h2>
+
+                <div class="word-item">
+                    <h4>LENGTH</h4>
+                    <p class="word-description">Get element count of vector or stack.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 4 5 ] LENGTH    # → [ 1 2 3 4 5 ] [ 5 ]
+a b c d .. LENGTH       # → a b c d [ 4 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>TAKE</h4>
+                    <p class="word-description">Get N elements from start (positive) or end (negative).</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 4 5 ] [ 3 ] TAKE     # → [ 1 2 3 ]
+[ 1 2 3 4 5 ] [ -2 ] TAKE    # → [ 4 5 ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vector Operations -->
+            <section class="word-category">
+                <h2>Vector Operations</h2>
+
+                <div class="word-item">
+                    <h4>SPLIT</h4>
+                    <p class="word-description">Split vector into specified sizes.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 4 5 6 ] [ 2 ] [ 3 ] SPLIT
+# → [ 1 2 ] [ 3 4 5 ] [ 6 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>CONCAT</h4>
+                    <p class="word-description">Concatenate vectors. Default 2, specify count with number.</p>
+                    <div class="word-example">
+                        <code>[ a ] [ b ] CONCAT              # → [ a b ]
+[ a ] [ b ] [ c ] [ 3 ] CONCAT  # → [ a b c ]
+[ a ] [ b ] [ c ] [ -3 ] CONCAT # → [ c b a ] (reverse)</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>REVERSE</h4>
+                    <p class="word-description">Reverse element order. Error if no change (single element, palindrome).</p>
+                    <div class="word-example">
+                        <code>[ a b c ] REVERSE    # → [ c b a ]
+a b c .. REVERSE     # → c b a</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>RANGE</h4>
+                    <p class="word-description">Generate integer range (inclusive). Optional step.</p>
+                    <div class="word-example">
+                        <code>[ 0 ] [ 5 ] RANGE              # → [ 0 ] [ 5 ] [ 0 1 2 3 4 5 ]
+[ 0 ] [ 10 ] [ 2 ] RANGE       # → [ ... ] [ 0 2 4 6 8 10 ]
+[ 10 ] [ 0 ] [ -2 ] RANGE      # → [ ... ] [ 10 8 6 4 2 0 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>SORT</h4>
+                    <p class="word-description">Sort numeric elements in ascending order. Error if already sorted.</p>
+                    <div class="word-example">
+                        <code>[ 32 8 2 18 ] SORT    # → [ 2 8 18 32 ]
+[ 1/2 1/3 2/3 ] SORT  # → [ 1/3 1/2 2/3 ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tensor Operations -->
+            <section class="word-category">
+                <h2>Tensor Operations</h2>
+
+                <div class="word-item">
+                    <h4>SHAPE</h4>
+                    <p class="word-description">Get tensor shape as vector.</p>
+                    <div class="word-example">
+                        <code>[ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE    # → [ ... ] [ 2 3 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>RANK</h4>
+                    <p class="word-description">Get number of dimensions.</p>
+                    <div class="word-example">
+                        <code>[ [ 1 2 ] [ 3 4 ] ] RANK    # → [ ... ] [ 2 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>RESHAPE</h4>
+                    <p class="word-description">Change tensor shape.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE
+# → [ [ 1 2 3 ] [ 4 5 6 ] ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>TRANSPOSE</h4>
+                    <p class="word-description">Transpose 2D tensor.</p>
+                    <div class="word-example">
+                        <code>[ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE
+# → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>FILL</h4>
+                    <p class="word-description">Create tensor filled with specified value.</p>
+                    <div class="word-example">
+                        <code>[ 2 3 ] [ 5 ] FILL    # → [ [ 5 5 5 ] [ 5 5 5 ] ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Arithmetic -->
+            <section class="word-category">
+                <h2>Arithmetic Operations</h2>
+
+                <div class="word-item">
+                    <h4>+</h4>
+                    <p class="word-description">Element-wise addition with broadcasting.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 ] [ 4 5 6 ] +    # → [ 5 7 9 ]
+[ 1 2 3 ] [ 10 ] +       # → [ 11 12 13 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>-</h4>
+                    <p class="word-description">Element-wise subtraction with broadcasting.</p>
+                    <div class="word-example">
+                        <code>[ 5 7 9 ] [ 1 2 3 ] -    # → [ 4 5 6 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>*</h4>
+                    <p class="word-description">Element-wise multiplication with broadcasting.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 ] [ 4 5 6 ] *    # → [ 4 10 18 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>/</h4>
+                    <p class="word-description">Element-wise division with broadcasting. Results are exact fractions.</p>
+                    <div class="word-example">
+                        <code>[ 10 20 30 ] [ 2 4 5 ] /    # → [ 5 5 6 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>MOD</h4>
+                    <p class="word-description">Mathematical modulo (remainder).</p>
+                    <div class="word-example">
+                        <code>[ 7 ] [ 3 ] MOD    # → [ 1 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>FLOOR</h4>
+                    <p class="word-description">Round toward negative infinity.</p>
+                    <div class="word-example">
+                        <code>[ 7/3 ] FLOOR    # → [ 2 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>CEIL</h4>
+                    <p class="word-description">Round toward positive infinity.</p>
+                    <div class="word-example">
+                        <code>[ 7/3 ] CEIL    # → [ 3 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>ROUND</h4>
+                    <p class="word-description">Round away from zero.</p>
+                    <div class="word-example">
+                        <code>[ 5/2 ] ROUND    # → [ 3 ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Comparison -->
+            <section class="word-category">
+                <h2>Comparison Operations</h2>
+
+                <div class="word-item">
+                    <h4>=</h4>
+                    <p class="word-description">Equality comparison. Compares entire vectors.</p>
+                    <div class="word-example">
+                        <code>[ 3 ] [ 3 ] =          # → [ TRUE ]
+[ 1 2 ] [ 1 2 ] =      # → [ TRUE ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>&lt;</h4>
+                    <p class="word-description">Less than. Element-wise with broadcasting.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 ] [ 2 2 2 ] <    # → [ TRUE FALSE FALSE ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>&lt;=</h4>
+                    <p class="word-description">Less than or equal.</p>
+                </div>
+
+                <div class="word-item">
+                    <h4>&gt;</h4>
+                    <p class="word-description">Greater than.</p>
+                </div>
+
+                <div class="word-item">
+                    <h4>&gt;=</h4>
+                    <p class="word-description">Greater than or equal.</p>
+                </div>
+            </section>
+
+            <!-- Logic -->
+            <section class="word-category">
+                <h2>Logical Operations</h2>
+
+                <div class="word-item">
+                    <h4>AND</h4>
+                    <p class="word-description">Logical AND.</p>
+                    <div class="word-example">
+                        <code>[ TRUE FALSE ] [ TRUE TRUE ] AND    # → [ TRUE FALSE ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>OR</h4>
+                    <p class="word-description">Logical OR.</p>
+                    <div class="word-example">
+                        <code>[ TRUE FALSE ] [ FALSE FALSE ] OR    # → [ TRUE FALSE ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>NOT</h4>
+                    <p class="word-description">Logical NOT.</p>
+                    <div class="word-example">
+                        <code>[ TRUE FALSE ] NOT    # → [ FALSE TRUE ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Type Conversion -->
+            <section class="word-category">
+                <h2>Type Conversion</h2>
+
+                <div class="word-item">
+                    <h4>STR</h4>
+                    <p class="word-description">Convert to string. Same-type conversion is an error.</p>
+                    <div class="word-example">
+                        <code>[ 42 ] STR      # → [ '42' ]
+[ TRUE ] STR    # → [ 'TRUE' ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>NUM</h4>
+                    <p class="word-description">Convert string or boolean to number.</p>
+                    <div class="word-example">
+                        <code>[ '42' ] NUM     # → [ 42 ]
+[ TRUE ] NUM     # → [ 1 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>BOOL</h4>
+                    <p class="word-description">Convert to boolean. Accepts 'TRUE'/'FALSE', '1'/'0', 1/0.</p>
+                    <div class="word-example">
+                        <code>[ 'TRUE' ] BOOL    # → [ TRUE ]
+[ 1 ] BOOL         # → [ TRUE ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>NIL</h4>
+                    <p class="word-description">Convert string 'nil' to Nil.</p>
+                    <div class="word-example">
+                        <code>[ 'nil' ] NIL    # → [ nil ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>CHARS</h4>
+                    <p class="word-description">Split string into character vector.</p>
+                    <div class="word-example">
+                        <code>[ 'hello' ] CHARS    # → [ 'h' 'e' 'l' 'l' 'o' ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>JOIN</h4>
+                    <p class="word-description">Concatenate string vector into single string.</p>
+                    <div class="word-example">
+                        <code>[ 'h' 'e' 'l' 'l' 'o' ] JOIN    # → [ 'hello' ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DateTime -->
+            <section class="word-category">
+                <h2>DateTime Operations</h2>
+
+                <div class="word-item">
+                    <h4>NOW</h4>
+                    <p class="word-description">Get current Unix timestamp as DateTime type.</p>
+                    <div class="word-example">
+                        <code>NOW    # → [ @2024-11-25 14:00:00.500 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>DATETIME</h4>
+                    <p class="word-description">Convert timestamp to date-time vector [year month day hour min sec].</p>
+                    <div class="word-example">
+                        <code>[ 1732531200 ] 'LOCAL' DATETIME
+# → [ [ 2024 11 25 14 0 0 ] ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>TIMESTAMP</h4>
+                    <p class="word-description">Convert date-time vector to DateTime type.</p>
+                    <div class="word-example">
+                        <code>[ [ 2024 11 25 14 0 0 ] ] 'LOCAL' TIMESTAMP
+# → [ @2024-11-25 14:00:00 ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Higher-Order Functions -->
+            <section class="word-category">
+                <h2>Higher-Order Functions</h2>
+
+                <div class="word-item">
+                    <h4>MAP</h4>
+                    <p class="word-description">Apply word to each element.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 ] 'DOUBLE' MAP    # → [ 2 4 6 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>FILTER</h4>
+                    <p class="word-description">Keep elements matching condition.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 4 ] 'EVEN?' FILTER    # → [ 2 4 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>FOLD</h4>
+                    <p class="word-description">Reduce with initial value.</p>
+                    <div class="word-example">
+                        <code>[ 1 2 3 4 ] [ 0 ] '+' FOLD    # → [ 10 ]</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>UNFOLD</h4>
+                    <p class="word-description">Generate vector from state.</p>
+                    <div class="word-example">
+                        <code>[ 1 ] 'GEN' UNFOLD    # → [ ... ]</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Word Management -->
+            <section class="word-category">
+                <h2>Word Management</h2>
+
+                <div class="word-item">
+                    <h4>DEF</h4>
+                    <p class="word-description">Define a custom word.</p>
+                    <div class="word-example">
+                        <code>[ '[ 2 ] *' ] 'DOUBLE' DEF</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>DEL</h4>
+                    <p class="word-description">Delete a custom word.</p>
+                    <div class="word-example">
+                        <code>'DOUBLE' DEL</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>?</h4>
+                    <p class="word-description">Show word definition.</p>
+                    <div class="word-example">
+                        <code>'DOUBLE' ?</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Control Flow -->
+            <section class="word-category">
+                <h2>Control Flow</h2>
+
+                <div class="word-item">
+                    <h4>:</h4>
+                    <p class="word-description">Guard separator for conditional branching.</p>
+                    <div class="word-example">
+                        <code>condition : action : condition : action : default_action</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>TIMES</h4>
+                    <p class="word-description">Repeat word N times.</p>
+                    <div class="word-example">
+                        <code>'PROCESS' [ 5 ] TIMES</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>WAIT</h4>
+                    <p class="word-description">Execute word after delay (milliseconds).</p>
+                    <div class="word-example">
+                        <code>'PROCESS' [ 1000 ] WAIT</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>!</h4>
+                    <p class="word-description">Force execution flag. Allows DEL/DEF of dependent words.</p>
+                    <div class="word-example">
+                        <code>! 'WORD' DEL</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- I/O -->
+            <section class="word-category">
+                <h2>I/O Operations</h2>
+
+                <div class="word-item">
+                    <h4>PRINT</h4>
+                    <p class="word-description">Output stack top and remove.</p>
+                    <div class="word-example">
+                        <code>[ 42 ] PRINT    # Outputs: 42</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>AUDIO</h4>
+                    <p class="word-description">Play vector elements as audio (DTMF tones).</p>
+                    <div class="word-example">
+                        <code>[ 1209/697 ] AUDIO    # Play DTMF signal</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Random and Hash -->
+            <section class="word-category">
+                <h2>Random and Hash</h2>
+
+                <div class="word-item">
+                    <h4>CSPRNG</h4>
+                    <p class="word-description">Generate cryptographic pseudo-random numbers.</p>
+                    <div class="word-example">
+                        <code>[ 6 ] [ 1 ] CSPRNG    # → [ 0 ] to [ 5/6 ]
+[ 5 ] CSPRNG          # Generate 5 random numbers</code>
+                    </div>
+                </div>
+
+                <div class="word-item">
+                    <h4>HASH</h4>
+                    <p class="word-description">Deterministically hash any value.</p>
+                    <div class="word-example">
+                        <code>'hello' HASH              # → [ 0.xxx ]
+[ 128 ] 'hello' HASH      # 128-bit output</code>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer id="site-footer"></footer>
+
+    <script src="config.js"></script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Ajisai Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <div class="page-wrapper">
+        <aside id="sidebar"></aside>
+
+        <main>
+            <h1>About Ajisai</h1>
+
+            <section>
+                <h2>Project Information</h2>
+                <table>
+                    <tr>
+                        <th>Project Name</th>
+                        <td>Ajisai</td>
+                    </tr>
+                    <tr>
+                        <th>Author</th>
+                        <td>masamoto yamashiro</td>
+                    </tr>
+                    <tr>
+                        <th>License</th>
+                        <td>MIT License</td>
+                    </tr>
+                    <tr>
+                        <th>Repository</th>
+                        <td><a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">github.com/masamoto1982/Ajisai</a></td>
+                    </tr>
+                    <tr>
+                        <th>Demo</th>
+                        <td><a href="https://masamoto1982.github.io/Ajisai/" target="_blank" rel="noopener noreferrer">masamoto1982.github.io/Ajisai</a></td>
+                    </tr>
+                </table>
+            </section>
+
+            <section>
+                <h2>AI-Driven Development</h2>
+                <p>The majority of this project's implementation was done by AI (Claude). From design decisions to Rust/TypeScript code implementation, test case creation, and documentation, this project is developed through human-AI collaboration.</p>
+                <p>This represents an experimental approach to software development where:</p>
+                <ul>
+                    <li>Human provides high-level design decisions and direction</li>
+                    <li>AI implements detailed code, tests, and documentation</li>
+                    <li>Iterative refinement through human-AI dialogue</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Technology Stack</h2>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Rust</h3>
+                        <p>Core interpreter implementation with memory safety and high performance.</p>
+                    </div>
+                    <div class="card">
+                        <h3>WebAssembly</h3>
+                        <p>Browser runtime for near-native execution speed.</p>
+                    </div>
+                    <div class="card">
+                        <h3>TypeScript</h3>
+                        <p>Type-safe frontend for interactive GUI.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Vite</h3>
+                        <p>Modern build tool for fast development.</p>
+                    </div>
+                    <div class="card">
+                        <h3>GitHub Actions</h3>
+                        <p>CI/CD for automated builds and deployment.</p>
+                    </div>
+                    <div class="card">
+                        <h3>wasm-pack</h3>
+                        <p>Rust to WebAssembly compilation toolchain.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Local Development</h2>
+
+                <h3>Prerequisites</h3>
+                <ul>
+                    <li><a href="https://www.rust-lang.org/tools/install" target="_blank" rel="noopener noreferrer">Rust</a></li>
+                    <li><a href="https://rustwasm.github.io/wasm-pack/installer/" target="_blank" rel="noopener noreferrer">wasm-pack</a></li>
+                    <li><a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node.js</a> (v20 or later recommended)</li>
+                </ul>
+
+                <h3>Setup</h3>
+                <pre><code># Clone the repository
+git clone https://github.com/masamoto1982/Ajisai.git
+cd Ajisai
+
+# Install dependencies
+npm install
+
+# Build WASM
+cd rust
+wasm-pack build --target web --out-dir ../js/pkg
+cd ..
+
+# Build TypeScript
+npm run build
+
+# Start development server
+npx vite</code></pre>
+
+                <h3>Production Build</h3>
+                <pre><code>npx vite build</code></pre>
+            </section>
+
+            <section>
+                <h2>License</h2>
+                <pre><code>MIT License
+
+Copyright (c) 2025 masamoto yamashiro
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</code></pre>
+            </section>
+
+            <section>
+                <h2>Related Documentation</h2>
+                <ul>
+                    <li><a href="https://github.com/masamoto1982/Ajisai/blob/main/Documentation/DIMENSION_MODEL.md" target="_blank" rel="noopener noreferrer">DIMENSION_MODEL.md</a> - Dimension model details</li>
+                    <li><a href="https://github.com/masamoto1982/Ajisai/blob/main/Documentation/BROADCASTING.md" target="_blank" rel="noopener noreferrer">BROADCASTING.md</a> - Broadcasting specification</li>
+                    <li><a href="https://github.com/masamoto1982/Ajisai/blob/main/Documentation/TYPE_SYSTEM_OPTIMIZATION.md" target="_blank" rel="noopener noreferrer">TYPE_SYSTEM_OPTIMIZATION.md</a> - Type system optimization</li>
+                    <li><a href="https://github.com/masamoto1982/Ajisai/blob/main/THREE_VALUED_LOGIC.md" target="_blank" rel="noopener noreferrer">THREE_VALUED_LOGIC.md</a> - Three-valued logic</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Contributing</h2>
+                <p>Contributions are welcome! Please feel free to submit issues and pull requests on <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+            </section>
+        </main>
+    </div>
+
+    <footer id="site-footer"></footer>
+
+    <script src="config.js"></script>
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examples - Ajisai Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <div class="page-wrapper">
+        <aside id="sidebar"></aside>
+
+        <main>
+            <h1>Examples</h1>
+
+            <section>
+                <h2>Basic Vector Operations</h2>
+
+                <h3>Creating and Manipulating Vectors</h3>
+                <pre><code># Create vectors
+[ 1 2 3 4 5 ]                    # Simple vector
+[ [ 1 2 ] [ 3 4 ] ]              # 2D matrix
+[ 1 'hello' TRUE [ 2 3 ] ]       # Mixed types
+
+# Get vector information
+[ 1 2 3 4 5 ] LENGTH             # → [ 1 2 3 4 5 ] [ 5 ]
+[ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE    # → [ ... ] [ 2 3 ]
+[ [ 1 2 3 ] [ 4 5 6 ] ] RANK     # → [ ... ] [ 2 ]
+
+# Access elements
+[ 10 20 30 40 50 ] [ 2 ] GET     # → [ ... ] [ 30 ]
+[ 10 20 30 40 50 ] [ -1 ] GET    # → [ ... ] [ 50 ]
+
+# Modify vectors
+[ 1 2 3 ] [ 1 ] [ 99 ] INSERT    # → [ 1 99 2 3 ]
+[ 1 2 3 ] [ 1 ] [ 99 ] REPLACE   # → [ 1 99 3 ]
+[ 1 2 3 ] [ 1 ] REMOVE           # → [ 1 3 ]</code></pre>
+
+                <h3>Vector Arithmetic with Broadcasting</h3>
+                <pre><code># Scalar broadcasting
+[ 1 2 3 4 5 ] [ 10 ] +           # → [ 11 12 13 14 15 ]
+[ 1 2 3 4 5 ] [ 2 ] *            # → [ 2 4 6 8 10 ]
+
+# Element-wise operations
+[ 1 2 3 ] [ 4 5 6 ] +            # → [ 5 7 9 ]
+[ 10 20 30 ] [ 2 4 5 ] /         # → [ 5 5 6 ]
+
+# Matrix broadcasting
+[ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +
+# → [ [ 11 22 33 ] [ 14 25 36 ] ]
+
+[ [ 1 2 3 ] [ 4 5 6 ] ] [ [ 100 ] [ 200 ] ] +
+# → [ [ 101 102 103 ] [ 204 205 206 ] ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Defining Custom Words</h2>
+
+                <h3>Simple Word Definitions</h3>
+                <pre><code># Double a number
+[ '[ 2 ] *' ] 'DOUBLE' DEF
+[ 5 ] DOUBLE                     # → [ 10 ]
+
+# Square a number
+[ 'DUP *' ] 'SQUARE' DEF
+[ 4 ] SQUARE                     # → [ 16 ]
+
+# Check if even
+[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+[ 6 ] EVEN?                      # → [ TRUE ]
+[ 7 ] EVEN?                      # → [ FALSE ]
+
+# Check if positive
+[ '[ 0 ] >' ] 'POSITIVE?' DEF
+[ 5 ] POSITIVE?                  # → [ TRUE ]
+[ -3 ] POSITIVE?                 # → [ FALSE ]</code></pre>
+
+                <h3>Words with Guards</h3>
+                <pre><code># Absolute value
+[
+  '[ 0 ] <' : '[ -1 ] *' :
+  ''
+] 'ABS' DEF
+[ -5 ] ABS                       # → [ 5 ]
+[ 3 ] ABS                        # → [ 3 ]
+
+# Sign function
+[
+  '[ 0 ] <' : '[ -1 ]' :
+  '[ 0 ] >' : '[ 1 ]' :
+  '[ 0 ]'
+] 'SGN' DEF
+
+# Fizz Buzz classification
+[
+  '[ 15 ] MOD [ 0 ] =' : '[ 'FizzBuzz' ]' :
+  '[ 3 ] MOD [ 0 ] =' : '[ 'Fizz' ]' :
+  '[ 5 ] MOD [ 0 ] =' : '[ 'Buzz' ]' :
+  ''
+] 'FIZZBUZZ' DEF</code></pre>
+            </section>
+
+            <section>
+                <h2>Working with Higher-Order Functions</h2>
+
+                <h3>MAP Examples</h3>
+                <pre><code># Transform all elements
+[ 1 2 3 4 5 ] 'DOUBLE' MAP       # → [ 2 4 6 8 10 ]
+[ 1 2 3 4 5 ] 'SQUARE' MAP       # → [ 1 4 9 16 25 ]
+
+# Convert types
+[ 1 2 3 ] 'STR' MAP              # → [ '1' '2' '3' ]
+
+# Process nested structures
+[ [ 1 2 3 ] [ 4 5 6 ] ] '[ 0 ] '+' FOLD' MAP
+# → [ [ 6 ] [ 15 ] ] (sum of each row)</code></pre>
+
+                <h3>FILTER Examples</h3>
+                <pre><code># Keep even numbers
+[ 1 2 3 4 5 6 7 8 9 10 ] 'EVEN?' FILTER
+# → [ 2 4 6 8 10 ]
+
+# Keep positive numbers
+[ -3 -2 -1 0 1 2 3 ] 'POSITIVE?' FILTER
+# → [ 1 2 3 ]
+
+# Chain filter and map
+[ 1 2 3 4 5 6 7 8 9 10 ]
+  'EVEN?' FILTER          # → [ 2 4 6 8 10 ]
+  'SQUARE' MAP            # → [ 4 16 36 64 100 ]</code></pre>
+
+                <h3>FOLD Examples</h3>
+                <pre><code># Sum
+[ 1 2 3 4 5 ] [ 0 ] '+' FOLD     # → [ 15 ]
+
+# Product
+[ 1 2 3 4 5 ] [ 1 ] '*' FOLD     # → [ 120 ]
+
+# Factorial (5!)
+[ 1 ] [ 5 ] RANGE [ 1 ] '*' FOLD # → [ 120 ]
+
+# Maximum (with custom MAX word)
+[ '>' : '' : 'SWAP' ] 'MAX2' DEF
+[ 3 1 4 1 5 9 2 6 ] [ 0 ] 'MAX2' FOLD  # → [ 9 ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Mathematical Operations</h2>
+
+                <h3>Fraction Arithmetic</h3>
+                <pre><code># Exact fraction calculations
+[ 1/3 ] [ 1/6 ] +                # → [ 1/2 ]
+[ 1/3 ] [ 2 ] *                  # → [ 2/3 ]
+[ 3/4 ] [ 1/2 ] /                # → [ 3/2 ]
+
+# No rounding errors
+[ 0.1 ] [ 0.2 ] +                # → [ 3/10 ] (exact)
+
+# Large number arithmetic
+[ 1000000000000 ] [ 1000000000000 ] *
+# → [ 1000000000000000000000000 ]</code></pre>
+
+                <h3>Statistical Calculations</h3>
+                <pre><code># Mean (average)
+[ 'DUP [ 0 ] '+' FOLD SWAP LENGTH /' ] 'MEAN' DEF
+[ 2 4 6 8 10 ] MEAN              # → [ 6 ]
+
+# Variance (simplified)
+[
+  'DUP MEAN SWAP
+   'SQUARE' MAP [ 0 ] '+' FOLD
+   SWAP LENGTH /'
+] 'VARIANCE' DEF
+
+# Standard deviation
+[ 'VARIANCE SQRT' ] 'STDDEV' DEF</code></pre>
+
+                <h3>Number Theory</h3>
+                <pre><code># GCD using Euclidean algorithm
+[
+  'DUP [ 0 ] =' : 'SWAP' :
+  'DUP ROT SWAP MOD GCD'
+] 'GCD' DEF
+[ 48 ] [ 18 ] GCD                # → [ 6 ]
+
+# LCM
+[ 'DUP ROT DUP ROT GCD / *' ] 'LCM' DEF
+[ 12 ] [ 18 ] LCM                # → [ 36 ]
+
+# Prime check (simplified)
+[
+  '[ 2 ] <' : '[ FALSE ]' :
+  '[ 2 ] =' : '[ TRUE ]' :
+  '[ 2 ] MOD [ 0 ] =' : '[ FALSE ]' :
+  'PRIME_CHECK'
+] 'PRIME?' DEF</code></pre>
+            </section>
+
+            <section>
+                <h2>String Processing</h2>
+
+                <h3>String Manipulation</h3>
+                <pre><code># Reverse a string
+[ 'hello' ] CHARS REVERSE JOIN   # → [ 'olleh' ]
+
+# String length
+[ 'hello world' ] CHARS LENGTH   # → [ ... ] [ 11 ]
+
+# Check palindrome
+[
+  'CHARS DUP REVERSE = '
+] 'PALINDROME?' DEF
+[ 'radar' ] PALINDROME?          # → [ TRUE ]
+[ 'hello' ] PALINDROME?          # → [ FALSE ]
+
+# Convert to uppercase (conceptual)
+# Would require character mapping</code></pre>
+
+                <h3>String Parsing</h3>
+                <pre><code># Split into words (simplified - by spaces)
+# Real implementation would need custom splitter
+
+# Number from string
+[ '42' ] NUM                     # → [ 42 ]
+[ '3.14' ] NUM                   # → [ 157/50 ]
+
+# String from number
+[ 42 ] STR                       # → [ '42' ]
+[ 1/3 ] STR                      # → [ '1/3' ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Matrix Operations</h2>
+
+                <h3>Matrix Creation</h3>
+                <pre><code># Identity matrix (3x3)
+[ [ 1 0 0 ] [ 0 1 0 ] [ 0 0 1 ] ]
+
+# Zero matrix
+[ 3 3 ] [ 0 ] FILL               # → 3x3 zeros
+
+# Matrix from range
+[ 1 ] [ 9 ] RANGE [ 3 3 ] RESHAPE
+# → [ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ]</code></pre>
+
+                <h3>Matrix Operations</h3>
+                <pre><code># Transpose
+[ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE
+# → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
+
+# Element-wise operations
+[ [ 1 2 ] [ 3 4 ] ] [ [ 5 6 ] [ 7 8 ] ] +
+# → [ [ 6 8 ] [ 10 12 ] ]
+
+# Scalar multiplication
+[ [ 1 2 ] [ 3 4 ] ] [ 2 ] *
+# → [ [ 2 4 ] [ 6 8 ] ]
+
+# Row sums
+[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ]
+  '[ 0 ] '+' FOLD' MAP           # → [ [ 6 ] [ 15 ] [ 24 ] ]
+
+# Column sums (via transpose)
+[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ]
+  TRANSPOSE '[ 0 ] '+' FOLD' MAP # → [ [ 12 ] [ 15 ] [ 18 ] ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Date and Time</h2>
+
+                <h3>Current Time Operations</h3>
+                <pre><code># Get current time
+NOW                              # → [ @2024-11-25 14:00:00 ]
+
+# Convert to date components
+NOW 'LOCAL' DATETIME             # → [ [ 2024 11 25 14 0 0 ] ]
+
+# Get year
+NOW 'LOCAL' DATETIME [ 0 ] GET   # → [ 2024 ]
+
+# Get month
+NOW 'LOCAL' DATETIME [ 1 ] GET   # → [ 11 ]</code></pre>
+
+                <h3>Date Calculations</h3>
+                <pre><code># Add one hour (3600 seconds)
+NOW [ 3600 ] +                   # → [ @2024-11-25 15:00:00 ]
+
+# Add one day (86400 seconds)
+NOW [ 86400 ] +                  # → [ @2024-11-26 14:00:00 ]
+
+# Time difference
+[ [ 2024 12 25 0 0 0 ] ] 'LOCAL' TIMESTAMP
+NOW -                            # Seconds until Christmas</code></pre>
+
+                <h3>Date Validation</h3>
+                <pre><code># Valid date
+[ [ 2024 2 29 0 0 0 ] ] 'LOCAL' TIMESTAMP  # OK (leap year)
+
+# Invalid date (would error)
+# [ [ 2023 2 29 0 0 0 ] ] 'LOCAL' TIMESTAMP  # Error!</code></pre>
+            </section>
+
+            <section>
+                <h2>Practical Algorithms</h2>
+
+                <h3>Sorting (using SORT)</h3>
+                <pre><code># Simple sort
+[ 3 1 4 1 5 9 2 6 ] SORT         # → [ 1 1 2 3 4 5 6 9 ]
+
+# Sort fractions
+[ 1/2 1/3 2/3 1/4 ] SORT         # → [ 1/4 1/3 1/2 2/3 ]</code></pre>
+
+                <h3>Binary Search (conceptual)</h3>
+                <pre><code># For sorted array, find if element exists
+[
+  'LENGTH [ 0 ] =' : '[ FALSE ]' :
+  'DUP LENGTH [ 2 ] / GET [ target ] =' : '[ TRUE ]' :
+  # ... continue search
+] 'BINARY_SEARCH' DEF</code></pre>
+
+                <h3>Collatz Sequence</h3>
+                <pre><code># One step of Collatz
+[
+  'EVEN?' : '[ 2 ] /' :
+  '[ 3 ] * [ 1 ] +'
+] 'COLLATZ_STEP' DEF
+
+# Apply until reaching 1
+[ 7 ] 'COLLATZ_STEP' [ 16 ] TIMES PRINT</code></pre>
+            </section>
+
+            <section>
+                <h2>Stack Operations</h2>
+
+                <h3>Stack Mode Examples</h3>
+                <pre><code># Stack length
+a b c d e .. LENGTH              # → a b c d e [ 5 ]
+
+# Get from stack
+a b c d [ 2 ] .. GET             # → a b c d [ c ]
+
+# Reverse stack
+a b c .. REVERSE                 # → c b a
+
+# Stack to vector
+a b c d e .. CONCAT              # → [ a b c d e ]
+
+# Split stack
+a b c d e [ 2 ] [ 2 ] .. SPLIT   # → [ a b ] [ c d ] [ e ]</code></pre>
+            </section>
+        </main>
+    </div>
+
+    <footer id="site-footer"></footer>
+
+    <script src="config.js"></script>
+</body>
+</html>
