@@ -320,16 +320,14 @@ export const createDisplay = (elements: DisplayElements): Display => {
             mainOutput = `${mainOutput}\n${fullText}`;
             appendSpan('\n' + text, '#666');
             if (en) {
-                appendSpan(' ', '#666');
-                appendItalicSpan(`(${en})`, '#888');
+                appendSpan(` (${en})`, '#888');
             }
         } else {
             mainOutput = fullText;
             clearElement(elements.outputDisplay);
             appendSpan(text, '#666');
             if (en) {
-                appendSpan(' ', '#666');
-                appendItalicSpan(`(${en})`, '#888');
+                appendSpan(` (${en})`, '#888');
             }
         }
     };
