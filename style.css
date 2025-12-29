@@ -353,11 +353,11 @@ section h3 {
     background: var(--color-light);
 }
 
-/* 組み込みワード - 紫陽花プライマリ */
+/* 組み込みワード - 鮮やかな黄みの赤（色覚配慮） */
 .word-button.builtin {
-    border-color: var(--color-primary);
+    border-color: #E65100;
     background: #fff;
-    color: var(--color-primary);
+    color: #E65100;
     box-shadow: 0 2px 0 var(--color-medium);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
@@ -367,11 +367,11 @@ section h3 {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* 依存されているカスタムワード - 紫陽花セカンダリ */
+/* 依存されているカスタムワード - 鮮やかな黄みの橙（色覚配慮） */
 .word-button.dependency {
-    border-color: var(--color-secondary);
+    border-color: #E69500;
     background: #fff;
-    color: var(--color-secondary);
+    color: #E69500;
     box-shadow: 0 2px 0 var(--color-medium);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
@@ -381,11 +381,11 @@ section h3 {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* 依存されていないカスタムワード - 紫陽花ダーク */
+/* 依存されていないカスタムワード - 重厚な青みの緑（色覚配慮） */
 .word-button.non-dependency {
-    border-color: #5a4a7a;
+    border-color: #009B68;
     background: #fff;
-    color: #5a4a7a;
+    color: #009B68;
     box-shadow: 0 2px 0 var(--color-medium);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
@@ -395,7 +395,7 @@ section h3 {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* スタック項目 - フォーカスされていない要素 */
+/* スタック項目 - フォーカスされていない要素（色覚配慮） */
 .stack-item {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.75rem;
@@ -403,24 +403,24 @@ section h3 {
     margin: 2px;
     padding: 2px 4px;
     background-color: transparent;
-    color: var(--color-primary);
+    color: #990099;
     border: 1px solid transparent;
     border-radius: 3px;
 }
 
-/* スタックトップ（最新の要素）を強調 - フォーカスされた要素 */
+/* スタックトップ（最新の要素）を強調 - フォーカスされた要素（色覚配慮） */
 .stack-item:last-child {
     font-weight: bold;
-    background-color: var(--color-primary);
+    background-color: #990099;
     color: #fff;
-    border: 1px solid var(--color-primary);
+    border: 1px solid #990099;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を強調 */
+/* STACKワードが入力されたとき、全スタック要素を強調（色覚配慮） */
 #stack-display.highlight-all .stack-item {
-    background-color: var(--color-primary);
+    background-color: #990099;
     color: #fff;
-    border: 1px solid var(--color-primary);
+    border: 1px solid #990099;
     font-weight: bold;
 }
 
