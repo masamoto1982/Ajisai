@@ -19,11 +19,10 @@
     <!-- 共通テーマ設定 -->
     <script src="/ajisai-theme.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof AjisaiTheme !== 'undefined') {
-                AjisaiTheme.apply();
-            }
-        });
+        // テーマを即座に適用（DOMContentLoadedを待たない）
+        if (typeof AjisaiTheme !== 'undefined') {
+            AjisaiTheme.apply();
+        }
     </script>
 </head>
 <body>
