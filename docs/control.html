@@ -1,220 +1,126 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control Flow - Ajisai Documentation</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajisai | Control Flow</title>
+  <meta name="description" content="Ajisai control flow reference">
+  <link href="css/style.css" media="screen" rel="stylesheet" />
 </head>
 <body>
-    <header id="site-header"></header>
+  <div class="container">
+    <header id="js-header" class="site-header"></header>
+    <nav id="js-global-nav" class="global-nav"></nav>
 
-    <div class="page-wrapper">
-        <aside id="sidebar"></aside>
+    <main class="content-wrapper flexbox-a">
+      <nav id="js-side-nav" class="side-nav"></nav>
 
-        <main>
-            <h1>Control Flow</h1>
+      <article class="main-content">
+        <h2>Control Flow</h2>
 
-            <section>
-                <h2>Overview</h2>
-                <p>Ajisai provides control flow mechanisms through guards (conditional branching) and iteration words. Unlike traditional imperative languages, Ajisai's control flow is stack-based and functional in nature.</p>
-            </section>
+        <section>
+          <h3>Guards (Conditional Branching)</h3>
+          <p>Guards use <code>:</code> to create conditionals:</p>
+<pre><code>condition1 : action1 : condition2 : action2 : default</code></pre>
 
-            <section>
-                <h2>Guards (Conditional Branching)</h2>
-                <p>Guards use the <code>:</code> word to create conditional branching structures. They evaluate conditions in order and execute the first matching action.</p>
-
-                <h3>Basic Syntax</h3>
-                <pre><code>condition1 : action1 : condition2 : action2 : default_action</code></pre>
-
-                <h3>How Guards Work</h3>
-                <ol>
-                    <li>Evaluate the first condition</li>
-                    <li>If TRUE, execute the corresponding action and stop</li>
-                    <li>If FALSE, move to the next condition</li>
-                    <li>If no conditions match, execute the default action</li>
-                </ol>
-
-                <h3>Example: Sign Classification</h3>
-                <pre><code># Define a word that classifies a number as negative, positive, or zero
-[
+          <h4>Example: Sign Classification</h4>
+<pre><code>[
   '[ 0 ] <' : '[ -1 ]' :
   '[ 0 ] >' : '[ 1 ]' :
   '[ 0 ]'
 ] 'SIGN' DEF
 
-[ -5 ] SIGN    # → [ -1 ]
-[ 10 ] SIGN    # → [ 1 ]
-[ 0 ] SIGN     # → [ 0 ]</code></pre>
+[ -5 ] SIGN    # Result: [ -1 ]
+[ 10 ] SIGN    # Result: [ 1 ]
+[ 0 ] SIGN     # Result: [ 0 ]</code></pre>
 
-                <h3>Example: Even/Odd Check</h3>
-                <pre><code># Check if a number is even
-[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+          <h4>Example: Absolute Value</h4>
+<pre><code>[
+  '[ 0 ] <' : '[ -1 ] *' :
+  ''
+] 'ABS' DEF
 
-[ 4 ] EVEN?    # → [ TRUE ]
-[ 7 ] EVEN?    # → [ FALSE ]</code></pre>
+[ -5 ] ABS    # Result: [ 5 ]
+[ 3 ] ABS     # Result: [ 3 ]</code></pre>
+        </section>
 
-                <h3>Nested Guards</h3>
-                <pre><code># Classify age groups
-[
-  '[ 18 ] <' : '[ 'minor' ]' :
-  '[ 65 ] <' : '[ 'adult' ]' :
-  '[ 'senior' ]'
-] 'AGE_GROUP' DEF</code></pre>
-            </section>
+        <section>
+          <h3>TIMES - Repetition</h3>
+<pre><code>'word_name' [ count ] TIMES</code></pre>
 
-            <section>
-                <h2>TIMES - Repetition</h2>
-                <p>Execute a word a specified number of times.</p>
-
-                <h3>Syntax</h3>
-                <pre><code>'word_name' [ count ] TIMES</code></pre>
-
-                <h3>Examples</h3>
-                <pre><code># Double a value 3 times (multiply by 8)
+          <h4>Examples</h4>
+<pre><code># Double 3 times (multiply by 8)
 [ '[ 2 ] *' ] 'DOUBLE' DEF
-[ 5 ] 'DOUBLE' [ 3 ] TIMES    # → [ 40 ]
+[ 5 ] 'DOUBLE' [ 3 ] TIMES    # Result: [ 40 ]
 
-# Print "hello" 5 times
-[ '[ 'hello' ] PRINT' ] 'SAY_HELLO' DEF
-'SAY_HELLO' [ 5 ] TIMES</code></pre>
-
-                <h3>Building Patterns</h3>
-                <pre><code># Create a sequence by repeated concatenation
+# Build a sequence
 [ '[ 1 ] CONCAT' ] 'ADD_ONE' DEF
-[ ] 'ADD_ONE' [ 5 ] TIMES    # → [ 1 1 1 1 1 ]</code></pre>
-            </section>
+[ ] 'ADD_ONE' [ 5 ] TIMES     # Result: [ 1 1 1 1 1 ]</code></pre>
+        </section>
 
-            <section>
-                <h2>WAIT - Delayed Execution</h2>
-                <p>Execute a word after a specified delay in milliseconds.</p>
+        <section>
+          <h3>WAIT - Delayed Execution</h3>
+<pre><code>'word_name' [ milliseconds ] WAIT</code></pre>
 
-                <h3>Syntax</h3>
-                <pre><code>'word_name' [ milliseconds ] WAIT</code></pre>
-
-                <h3>Examples</h3>
-                <pre><code># Execute after 1 second
+          <h4>Examples</h4>
+<pre><code># Execute after 1 second
 [ '[ 'Done!' ] PRINT' ] 'NOTIFY' DEF
-'NOTIFY' [ 1000 ] WAIT
+'NOTIFY' [ 1000 ] WAIT</code></pre>
 
-# Delayed update
-[ '[ 42 ]' ] 'SET_VALUE' DEF
-'SET_VALUE' [ 500 ] WAIT    # Set value after 500ms</code></pre>
+          <p>Use cases:</p>
+          <ul>
+            <li>Animation and visual effects</li>
+            <li>Debouncing user input</li>
+            <li>Scheduled operations</li>
+          </ul>
+        </section>
 
-                <h3>Use Cases</h3>
-                <ul>
-                    <li>Animation and visual effects</li>
-                    <li>Debouncing user input</li>
-                    <li>Scheduled operations</li>
-                    <li>Testing asynchronous behavior</li>
-                </ul>
-            </section>
-
-            <section>
-                <h2>Force Execution (!)</h2>
-                <p>The <code>!</code> word allows forced execution of operations that would normally be blocked due to dependencies.</p>
-
-                <h3>Syntax</h3>
-                <pre><code>! 'word_name' DEL
-! 'word_name' 'new_definition' DEF</code></pre>
-
-                <h3>When to Use</h3>
-                <ul>
-                    <li>Deleting words that other words depend on</li>
-                    <li>Redefining words with existing dependencies</li>
-                    <li>Breaking circular dependencies</li>
-                </ul>
-
-                <h3>Example</h3>
-                <pre><code># Define two interdependent words
+        <section>
+          <h3>Force Execution (!)</h3>
+          <p>Allows DEL/DEF of dependent words:</p>
+<pre><code># Define dependent words
 [ 'HELPER' ] 'MAIN' DEF
 [ '[ 1 ]' ] 'HELPER' DEF
 
-# Cannot delete HELPER normally (MAIN depends on it)
+# Cannot delete HELPER normally
 'HELPER' DEL    # Error!
 
 # Force delete
-! 'HELPER' DEL    # Success (MAIN may break)</code></pre>
-            </section>
+! 'HELPER' DEL  # Success</code></pre>
+        </section>
 
-            <section>
-                <h2>Recursion via Custom Words</h2>
-                <p>While Ajisai doesn't have explicit recursion syntax, recursive patterns can be achieved through custom word definitions.</p>
+        <section>
+          <h3>Recursion</h3>
+          <p>Recursive patterns via word definitions:</p>
 
-                <h3>Example: Factorial</h3>
-                <pre><code># Factorial using guards
-[
+          <h4>Factorial</h4>
+<pre><code>[
   '[ 1 ] <=' : '[ 1 ]' :
   '[ 1 ] - FACTORIAL *'
 ] 'FACTORIAL' DEF
 
-[ 5 ] FACTORIAL    # → [ 120 ]</code></pre>
+[ 5 ] FACTORIAL    # Result: [ 120 ]</code></pre>
 
-                <h3>Example: Fibonacci</h3>
-                <pre><code># Fibonacci using guards
-[
-  '[ 2 ] <' : '' :
-  '[ 1 ] - FIB SWAP [ 2 ] - FIB +'
-] 'FIB' DEF</code></pre>
+          <p><strong>Note:</strong> For large iterations, prefer FOLD:</p>
+<pre><code># 5! using FOLD (no recursion)
+[ 1 ] [ 5 ] RANGE [ 1 ] '*' FOLD    # Result: [ 120 ]</code></pre>
+        </section>
 
-                <p><strong>Note:</strong> Deep recursion may hit stack limits. For large iterations, prefer <code>FOLD</code> or <code>UNFOLD</code>.</p>
-            </section>
+        <section>
+          <h3>Best Practices</h3>
+          <ul>
+            <li><strong>Prefer higher-order functions</strong> over explicit loops</li>
+            <li><strong>Keep guard conditions simple</strong> and readable</li>
+            <li><strong>Name complex predicates</strong> for clarity</li>
+            <li><strong>Avoid deep recursion</strong> - use FOLD for large data</li>
+          </ul>
+        </section>
+      </article>
+    </main>
 
-            <section>
-                <h2>Combining Control Flow</h2>
-                <p>Control flow mechanisms can be combined for complex logic:</p>
-
-                <h3>Example: Repeated Conditional</h3>
-                <pre><code># Process list with conditional logic
-[
-  'EVEN?' : '[ 2 ] /' :
-  '[ 3 ] * [ 1 ] +'
-] 'COLLATZ_STEP' DEF
-
-# Apply Collatz step 10 times
-[ 7 ] 'COLLATZ_STEP' [ 10 ] TIMES</code></pre>
-
-                <h3>Example: Guard with Higher-Order</h3>
-                <pre><code># Filter and transform based on conditions
-[ 1 2 3 4 5 6 7 8 9 10 ]
-  'EVEN?' FILTER           # → [ 2 4 6 8 10 ]
-  '[ 2 ] /' MAP            # → [ 1 2 3 4 5 ]</code></pre>
-            </section>
-
-            <section>
-                <h2>Best Practices</h2>
-
-                <h3>1. Prefer Higher-Order Functions</h3>
-                <pre><code># Instead of explicit iteration with TIMES
-# Use MAP, FILTER, FOLD when possible
-[ 1 2 3 4 5 ] '[ 2 ] *' MAP    # Better than loop</code></pre>
-
-                <h3>2. Keep Guard Conditions Simple</h3>
-                <pre><code># Good: Simple, clear conditions
-'[ 0 ] =' : '[ 'zero' ]' :
-'[ 0 ] <' : '[ 'negative' ]' :
-'[ 'positive' ]'</code></pre>
-
-                <h3>3. Name Complex Logic</h3>
-                <pre><code># Define named predicates for readability
-[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
-[ '[ 0 ] >' ] 'POSITIVE?' DEF
-
-# Use in guards
-'EVEN?' : 'HANDLE_EVEN' : 'HANDLE_ODD'</code></pre>
-
-                <h3>4. Avoid Deep Recursion</h3>
-                <pre><code># For large sequences, use FOLD instead of recursion
-[ 1 2 3 4 5 ] [ 0 ] '+' FOLD    # Sum: [ 15 ]
-
-# Instead of recursive factorial
-[ 1 ] [ 5 ] RANGE [ 1 ] '*' FOLD    # 5! = [ 120 ]</code></pre>
-            </section>
-        </main>
-    </div>
-
-    <footer id="site-footer"></footer>
-
-    <script src="config.js"></script>
+    <footer id="js-footer" class="site-footer"></footer>
+  </div>
+  <script src="config.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

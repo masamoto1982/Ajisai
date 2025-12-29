@@ -1,158 +1,93 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Philosophy - Ajisai Documentation</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajisai | Philosophy</title>
+  <meta name="description" content="Ajisai design philosophy and core principles">
+  <link href="css/style.css" media="screen" rel="stylesheet" />
 </head>
 <body>
-    <header id="site-header"></header>
+  <div class="container">
+    <header id="js-header" class="site-header"></header>
+    <nav id="js-global-nav" class="global-nav"></nav>
 
-    <div class="page-wrapper">
-        <aside id="sidebar"></aside>
+    <main class="content-wrapper flexbox-a">
+      <nav id="js-side-nav" class="side-nav"></nav>
 
-        <main>
-            <h1>Design Philosophy</h1>
+      <article class="main-content">
+        <h2>Design Philosophy</h2>
 
-            <section>
-                <h2>The Name "Ajisai"</h2>
-                <p>The name "Ajisai" (紫陽花, hydrangea in Japanese) metaphorically represents FORTH's characteristic of small words coming together to form functionality, like how small flowers come together to form a hydrangea cluster.</p>
-                <p><em>Note: What appears to be petals on a hydrangea are actually sepals.</em></p>
-            </section>
+        <section>
+          <h3>The Name "Ajisai"</h3>
+          <p>The name "Ajisai" (紫陽花, hydrangea) metaphorically represents FORTH's characteristic of small words coming together to form functionality, like how small flowers form a hydrangea cluster.</p>
+          <p><em>Note: What appears to be petals on a hydrangea are actually sepals.</em></p>
+        </section>
 
-            <section>
-                <h2>Core Design Principles</h2>
+        <section>
+          <h3>Core Design Principles</h3>
 
-                <h3>1. Stack-based Computation</h3>
-                <p>Ajisai follows FORTH's stack-based paradigm with Reverse Polish Notation (RPN). This approach:</p>
-                <ul>
-                    <li>Eliminates the need for parentheses to specify operation order</li>
-                    <li>Makes data flow explicit and visible</li>
-                    <li>Enables simple composition of operations</li>
-                </ul>
+          <h4>1. Stack-based Computation</h4>
+          <p>Ajisai follows FORTH's stack-based paradigm with Reverse Polish Notation (RPN):</p>
+          <ul>
+            <li>Eliminates the need for parentheses to specify operation order</li>
+            <li>Makes data flow explicit and visible</li>
+            <li>Enables simple composition of operations</li>
+          </ul>
 
-                <h3>2. Vector-centric Data Model</h3>
-                <p>All container data in Ajisai is represented as nestable Vectors, similar to LISP's list structure. This design philosophy:</p>
-                <ul>
-                    <li>Uses bracket <code>[ ]</code> nesting to express dimensions</li>
-                    <li>Supports tensor-like operations (SHAPE, RESHAPE, TRANSPOSE)</li>
-                    <li>Allows heterogeneous data mixing: <code>[ 1 'hello' TRUE [ 2 3 ] ]</code></li>
-                    <li>Implements NumPy/APL-style broadcasting</li>
-                </ul>
+          <h4>2. Vector-centric Data Model</h4>
+          <p>All container data is represented as nestable Vectors (similar to LISP's list structure):</p>
+          <ul>
+            <li>Bracket <code>[ ]</code> nesting expresses dimensions</li>
+            <li>Supports tensor-like operations (SHAPE, RESHAPE, TRANSPOSE)</li>
+            <li>Allows heterogeneous data: <code>[ 1 'hello' TRUE [ 2 3 ] ]</code></li>
+            <li>NumPy/APL-style broadcasting</li>
+          </ul>
 
-                <h3>3. Dimension Limit (Maximum 4D)</h3>
-                <p>Based on human cognitive limits, Ajisai restricts operable dimensions to 4:</p>
-                <table>
-                    <tr>
-                        <th>Dimension</th>
-                        <th>Axis Name</th>
-                        <th>Structure</th>
-                        <th>Example</th>
-                    </tr>
-                    <tr>
-                        <td>1D</td>
-                        <td>col</td>
-                        <td>Vector</td>
-                        <td><code>[ 1 2 3 ]</code></td>
-                    </tr>
-                    <tr>
-                        <td>2D</td>
-                        <td>row, col</td>
-                        <td>Nested Vector</td>
-                        <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
-                    </tr>
-                    <tr>
-                        <td>3D</td>
-                        <td>layer, row, col</td>
-                        <td>2-level nesting</td>
-                        <td><code>[ [ [ 1 2 ] [ 3 4 ] ] ]</code></td>
-                    </tr>
-                    <tr>
-                        <td>4D</td>
-                        <td>time, layer, row, col</td>
-                        <td>3-level nesting (max)</td>
-                        <td><code>[ [ [ [ 1 ] ] ] ]</code></td>
-                    </tr>
-                </table>
-                <p>Attempting to create 5+ dimensional structures results in an error.</p>
+          <h4>3. Dimension Limit (Maximum 4D)</h4>
+          <p>Based on human cognitive limits, Ajisai restricts dimensions to 4:</p>
+          <table>
+            <tr><th>Dim</th><th>Axes</th><th>Example</th></tr>
+            <tr><td>1D</td><td>col</td><td><code>[ 1 2 3 ]</code></td></tr>
+            <tr><td>2D</td><td>row, col</td><td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td></tr>
+            <tr><td>3D</td><td>layer, row, col</td><td><code>[ [ [ 1 2 ] ] ]</code></td></tr>
+            <tr><td>4D</td><td>time, layer, row, col</td><td><code>[ [ [ [ 1 ] ] ] ]</code></td></tr>
+          </table>
 
-                <h3>4. Exact Fraction Arithmetic</h3>
-                <p>All numbers are internally represented as fractions (Fraction), eliminating rounding errors:</p>
-                <ul>
-                    <li><code>5</code> is stored as <code>Fraction(5, 1)</code></li>
-                    <li><code>3/4</code> is stored as <code>Fraction(3, 4)</code></li>
-                    <li><code>0.5</code> is stored as <code>Fraction(1, 2)</code></li>
-                    <li>Capable of handling extremely large numbers</li>
-                </ul>
+          <h4>4. Exact Fraction Arithmetic</h4>
+          <p>All numbers are internally represented as fractions, eliminating rounding errors:</p>
+          <ul>
+            <li><code>5</code> stored as <code>Fraction(5, 1)</code></li>
+            <li><code>0.5</code> stored as <code>Fraction(1, 2)</code></li>
+            <li>Capable of handling extremely large numbers</li>
+          </ul>
 
-                <h3>5. "No Change is an Error" Principle</h3>
-                <p>Operations that result in no change to the data produce an error. This principle:</p>
-                <ul>
-                    <li>Prevents silent no-ops that may hide bugs</li>
-                    <li>Makes the programmer explicitly handle edge cases</li>
-                    <li>Examples: <code>[ 1 ] REVERSE</code> (single element), <code>[ 1 2 3 ] SORT</code> (already sorted)</li>
-                </ul>
+          <h4>5. "No Change is an Error" Principle</h4>
+          <p>Operations that result in no change produce an error:</p>
+          <ul>
+            <li>Prevents silent no-ops that may hide bugs</li>
+            <li>Examples: <code>[ 1 ] REVERSE</code>, <code>[ 1 2 3 ] SORT</code> (already sorted)</li>
+          </ul>
 
-                <h3>6. Built-in Word Protection</h3>
-                <p>Built-in words cannot be deleted or overwritten, ensuring consistent behavior and preventing accidental redefinition of core operations.</p>
-            </section>
+          <h4>6. Built-in Word Protection</h4>
+          <p>Built-in words cannot be deleted or overwritten, ensuring consistent behavior.</p>
+        </section>
 
-            <section>
-                <h2>Visualization Philosophy</h2>
+        <section>
+          <h3>Influences</h3>
+          <ul>
+            <li><strong>FORTH:</strong> Stack-based computation, word definitions</li>
+            <li><strong>LISP:</strong> Nested list structures</li>
+            <li><strong>APL/J:</strong> Array operations, broadcasting</li>
+            <li><strong>NumPy:</strong> Broadcasting rules, shape operations</li>
+          </ul>
+        </section>
+      </article>
+    </main>
 
-                <h3>Depth-based Bracket Display</h3>
-                <p>To improve readability of nested structures, Ajisai cycles through different bracket styles based on depth:</p>
-                <ul>
-                    <li>Level 0 (Stack area): <code>[ ]</code> (implicit, shown as GUI frame)</li>
-                    <li>Level 1: <code>{ }</code></li>
-                    <li>Level 2: <code>( )</code></li>
-                    <li>Level 3: <code>[ ]</code></li>
-                    <li>Level 4: <code>{ }</code> (cycle repeats)</li>
-                </ul>
-
-                <h3>Input vs Display Separation</h3>
-                <ul>
-                    <li><strong>Input:</strong> <code>[]</code>, <code>{}</code>, <code>()</code> are treated equivalently</li>
-                    <li><strong>Display:</strong> Automatically converted to appropriate brackets based on depth</li>
-                </ul>
-            </section>
-
-            <section>
-                <h2>Technology Choices</h2>
-
-                <h3>Why Rust + WebAssembly?</h3>
-                <ul>
-                    <li>Memory safety without garbage collection</li>
-                    <li>Near-native performance in the browser</li>
-                    <li>Strong type system for reliable fraction arithmetic</li>
-                    <li>Easy deployment via web browsers</li>
-                </ul>
-
-                <h3>Why TypeScript Frontend?</h3>
-                <ul>
-                    <li>Type safety for complex UI interactions</li>
-                    <li>Excellent tooling and ecosystem</li>
-                    <li>Seamless WebAssembly integration</li>
-                </ul>
-            </section>
-
-            <section>
-                <h2>Influences</h2>
-                <p>Ajisai draws inspiration from:</p>
-                <ul>
-                    <li><strong>FORTH:</strong> Stack-based computation, word definitions</li>
-                    <li><strong>LISP:</strong> Nested list structures, homoiconicity concepts</li>
-                    <li><strong>APL/J:</strong> Array operations, broadcasting</li>
-                    <li><strong>NumPy:</strong> Broadcasting rules, shape operations</li>
-                    <li><strong>BigQuery SQL:</strong> Explicit timezone handling philosophy</li>
-                </ul>
-            </section>
-        </main>
-    </div>
-
-    <footer id="site-footer"></footer>
-
-    <script src="config.js"></script>
+    <footer id="js-footer" class="site-footer"></footer>
+  </div>
+  <script src="config.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
