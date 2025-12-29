@@ -1,10 +1,10 @@
-const CACHE_NAME = 'ajisai-v202510041830';
+const CACHE_NAME = 'ajisai-v202512291515';
 const urlsToCache = [
   './',
   './index.html',
-  './reference.html',
   './style.css',
-  './manifest.json'
+  './manifest.json',
+  './ajisai-theme.js'
 ];
 
 self.addEventListener('install', (event) => {
