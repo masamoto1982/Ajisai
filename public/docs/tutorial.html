@@ -5,9 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ajisai | Tutorial</title>
   <meta name="description" content="Ajisai tutorial for beginners">
-  <link href="css/style.css" media="screen" rel="stylesheet" />
-  <script src="../ajisai-theme.js"></script>
-  <script>if(typeof AjisaiTheme!=="undefined")AjisaiTheme.apply();</script>
+  <!-- 共通テーマ設定（CSSより先に読み込み） -->
+  <script src="../ajisai-theme.js?v=20251229"></script>
+  <style id="theme-vars"></style>
+  <script>
+    if (typeof AjisaiTheme !== 'undefined') {
+      const vars = AjisaiTheme.getAll();
+      let css = ':root {';
+      for (const [key, value] of Object.entries(vars)) {
+        css += `${key}: ${value};`;
+      }
+      css += '}';
+      document.getElementById('theme-vars').textContent = css;
+    }
+  </script>
+  <link href="css/style.css?v=20251229" media="screen" rel="stylesheet" />
 </head>
 <body>
   <div class="container">
