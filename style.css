@@ -16,6 +16,11 @@
     --gradient-parent: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
     --gradient-child: linear-gradient(to bottom, var(--color-light), var(--color-medium));
 
+    /* 見出し（階層構造） */
+    --heading-h1: var(--color-primary);
+    --heading-h2: var(--color-primary);
+    --heading-h3: var(--color-secondary);
+
     /* ボーダー・角丸 */
     --border-main: solid 1px var(--color-secondary);
     --radius-main: 10px;
@@ -80,7 +85,7 @@ header {
 
 header h1 {
     font-size: 1.5rem;
-    color: var(--color-primary);
+    color: var(--heading-h1);
     font-weight: 500;
 }
 
@@ -182,14 +187,14 @@ section {
 section h2 {
     font-size: 1.125rem;
     margin-bottom: 0.75rem;
-    color: var(--color-primary);
+    color: var(--heading-h2);
     font-weight: 500;
 }
 
 section h3 {
     font-size: 1rem;
     margin-bottom: 0.5rem;
-    color: var(--color-secondary);
+    color: var(--heading-h3);
     font-weight: 500;
 }
 

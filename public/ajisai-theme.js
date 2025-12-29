@@ -31,6 +31,15 @@ const AjisaiTheme = {
     },
 
     // -------------------------------------------------------------------------
+    // 見出し設定（階層構造）
+    // -------------------------------------------------------------------------
+    headings: {
+        "--heading-h1": "var(--color-primary)",      // H1: プライマリ
+        "--heading-h2": "var(--color-primary)",      // H2: プライマリ
+        "--heading-h3": "var(--color-secondary)"     // H3: セカンダリ
+    },
+
+    // -------------------------------------------------------------------------
     // ボーダー・角丸設定
     // -------------------------------------------------------------------------
     borders: {
@@ -73,6 +82,11 @@ const AjisaiTheme = {
             root.style.setProperty(key, value);
         }
 
+        // 見出し適用
+        for (const [key, value] of Object.entries(this.headings)) {
+            root.style.setProperty(key, value);
+        }
+
         // ボーダー・角丸適用
         for (const [key, value] of Object.entries(this.borders)) {
             root.style.setProperty(key, value);
@@ -96,6 +110,7 @@ const AjisaiTheme = {
         return {
             ...this.colors,
             ...this.gradients,
+            ...this.headings,
             ...this.borders,
             ...this.codeEditor,
             ...this.accessibility

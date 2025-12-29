@@ -17,6 +17,11 @@
     --gradient-parent: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
     --gradient-child: linear-gradient(to bottom, var(--color-light), var(--color-medium));
 
+    /* 見出し（階層構造） */
+    --heading-h1: var(--color-primary);
+    --heading-h2: var(--color-primary);
+    --heading-h3: var(--color-secondary);
+
     /* ボーダー、半径、レイアウト幅 */
     --border-main: solid 1px var(--color-secondary);
     --border-light: solid 1px var(--color-medium);
@@ -227,7 +232,7 @@ address a {
 
 article h2 {
     text-align: center;
-    color: var(--color-primary);
+    color: var(--heading-h2);
     border-bottom: 2px solid var(--color-secondary);
     padding-bottom: 10px;
     margin-bottom: 20px;
@@ -249,7 +254,7 @@ section h3, section h4 {
     margin: 20px 0 10px 0;
     padding-bottom: 5px;
     border-bottom: 1px solid var(--color-secondary);
-    color: var(--color-primary);
+    color: var(--heading-h3);
 }
 
 section h3:first-child {
