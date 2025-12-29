@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ajisai-v202512291515';
+const CACHE_NAME = 'ajisai-v202512291520';
 const urlsToCache = [
   './',
   './index.html',
@@ -6,6 +6,17 @@ const urlsToCache = [
   './manifest.json',
   './ajisai-theme.js'
 ];
+
+// ネットワーク優先で取得すべきファイル（テーマ関連）
+const networkFirstPatterns = [
+  'ajisai-theme.js',
+  'style.css',
+  'index.html'
+];
+
+function shouldUseNetworkFirst(url) {
+  return networkFirstPatterns.some(pattern => url.includes(pattern));
+}
 
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing...');
@@ -50,6 +61,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // テーマ関連ファイルはネットワーク優先
+  if (shouldUseNetworkFirst(event.request.url)) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // 有効なレスポンスをキャッシュに保存
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // ネットワーク失敗時はキャッシュから
+          console.log('[SW] Network failed, serving from cache:', event.request.url);
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // その他のファイルはキャッシュ優先
   event.respondWith(
     caches.match(event.request)
       .then(response => {
@@ -57,16 +92,14 @@ self.addEventListener('fetch', (event) => {
           console.log('[SW] Serving from cache:', event.request.url);
           return response;
         }
-        
+
         console.log('[SW] Fetching:', event.request.url);
         return fetch(event.request).then(response => {
-          // 有効なレスポンスでない場合はキャッシュしない
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
-          
-          // WASMファイルとJSファイルは動的にキャッシュ
-          if (event.request.url.includes('.wasm') || 
+
+          if (event.request.url.includes('.wasm') ||
               event.request.url.includes('.js') ||
               event.request.url.includes('.css')) {
             const responseToCache = response.clone();
@@ -74,13 +107,12 @@ self.addEventListener('fetch', (event) => {
               cache.put(event.request, responseToCache);
             });
           }
-          
+
           return response;
         });
       })
       .catch(err => {
         console.error('[SW] Fetch failed:', err);
-        // オフライン時のフォールバック
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
