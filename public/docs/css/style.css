@@ -89,7 +89,7 @@ address {
     font-size: 90%;
     margin-top: 5px;
     line-height: 1.4;
-    color: var(--header-text-secondary);
+    color: var(--header-text-tertiary);
 }
 
 address a {

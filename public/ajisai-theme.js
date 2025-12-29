@@ -143,11 +143,13 @@ const AjisaiTheme = {
             "--gradient-menu": bg.menu,
             "--gradient-menu-hover": this.lighten(bg.menu, 0.15),
 
-            // ヘッダー用テキスト色（自動計算）
+            // ヘッダー用テキスト色（階層構造・自動計算）
+            // main: タイトル, secondary: サブタイトル/バージョン, tertiary: 説明文
             "--header-text": headerText,
             "--header-text-secondary": this.isLight(bg.header) ? '#555555' : '#cccccc',
+            "--header-text-tertiary": this.isLight(bg.header) ? '#777777' : '#aaaaaa',
 
-            // メニュー用テキスト色（自動計算）
+            // メニュー/ボタン用テキスト色（自動計算）
             "--menu-text": menuText,
             "--menu-text-hover": this.isLight(bg.menu) ? '#000000' : '#ffffff',
 

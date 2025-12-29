@@ -80,11 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sideNavEl.innerHTML = `
             <div class="item-1">
-                <p class="label"><span>Reference</span>Language Reference</p>
+                <p class="label">Reference</p>
                 <ul>${serviceItems}</ul>
             </div>
             <div class="item-2">
-                <p class="label"><span>Links</span>External Links</p>
+                <p class="label">Links</p>
                 <ul>${refItems}</ul>
             </div>
             ${socialHtml}
