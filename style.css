@@ -7,6 +7,10 @@
     --color-dark: #e8e4f3;
     --color-text: #333;
     --color-text-light: #666;
+
+    /* 紫陽花グラデーション */
+    --gradient-header: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
+    --gradient-body: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
 }
 
 * {
@@ -39,7 +43,7 @@ body {
 
 /* ヘッダー */
 header {
-    background: var(--color-primary);
+    background: var(--gradient-header);
     padding: 1rem 2rem;
     border-bottom: 1px solid var(--color-secondary);
     display: flex;
@@ -57,13 +61,13 @@ header {
 
 header h1 {
     font-size: 1.5rem;
-    color: #fff;
-    font-weight: 400;
+    color: var(--color-primary);
+    font-weight: 500;
 }
 
 .version {
     font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--color-secondary);
 }
 
 /* オフライン表示 */
@@ -91,21 +95,23 @@ header h1 {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background-color: rgba(255, 255, 255, 0.15);
-    color: #fff;
+    background-color: #fff;
+    color: var(--color-primary);
     text-decoration: none;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--color-secondary);
     font-size: 0.875rem;
     font-weight: 400;
     cursor: pointer;
     border-radius: 4px;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .reference-btn:hover,
 .test-btn:hover,
 .header-btn:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+    background-color: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
 }
 
 .reference-btn svg,
