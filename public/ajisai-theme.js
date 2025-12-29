@@ -21,13 +21,13 @@ const AjisaiTheme = {
     },
 
     // -------------------------------------------------------------------------
-    // グラデーション設定
+    // グラデーション設定（階層構造）
     // -------------------------------------------------------------------------
     gradients: {
         "--gradient-header": "linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium))",
-        "--gradient-body": "linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary))",
-        "--gradient-article": "linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium))",
-        "--gradient-section": "linear-gradient(to bottom, var(--color-light), var(--color-medium))"
+        "--gradient-background": "linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary))",
+        "--gradient-parent": "linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium))",
+        "--gradient-child": "linear-gradient(to bottom, var(--color-light), var(--color-medium))"
     },
 
     // -------------------------------------------------------------------------

@@ -10,12 +10,12 @@
     --color-medium: #d4cfe8;
     --color-dark: #e8e4f3;
 
-    /* グラデーション */
-    --gradient-body: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
-    --gradient-header-footer: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
+    /* グラデーション（階層構造） */
+    --gradient-background: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
+    --gradient-header: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
     --gradient-menu-hover: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
-    --gradient-article-bg: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
-    --gradient-section-bg: linear-gradient(to bottom, var(--color-light), var(--color-medium));
+    --gradient-parent: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
+    --gradient-child: linear-gradient(to bottom, var(--color-light), var(--color-medium));
 
     /* ボーダー、半径、レイアウト幅 */
     --border-main: solid 1px var(--color-secondary);
@@ -32,7 +32,7 @@
 body {
     margin: 0;
     color: var(--color-primary);
-    background: var(--gradient-body);
+    background: var(--gradient-background);
     font-family: "Inter", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
     line-height: 1.6;
 }
@@ -62,7 +62,7 @@ a:hover {
     justify-content: center;
     align-items: center;
     padding: 45px 20px;
-    background: var(--gradient-header-footer);
+    background: var(--gradient-header);
 }
 
 .logo {
@@ -125,7 +125,7 @@ address a {
     text-align: center;
     border: var(--border-light);
     border-left: none;
-    background: var(--gradient-header-footer);
+    background: var(--gradient-header);
 }
 .menu li:first-child {
     border-left: var(--border-light);
@@ -155,7 +155,7 @@ address a {
 .side-nav {
     padding: 10px;
     flex: var(--side-nav-flex-ratio);
-    background: var(--gradient-article-bg);
+    background: var(--gradient-parent);
 }
 
 .side-nav .item-1,
@@ -221,7 +221,7 @@ address a {
 .main-content {
     padding: 10px;
     flex: var(--main-content-flex-ratio);
-    background: var(--gradient-article-bg);
+    background: var(--gradient-parent);
     min-height: 500px;
 }
 
@@ -240,7 +240,7 @@ section {
     padding: 15px;
     word-break: break-all;
     border: var(--border-main);
-    background: var(--gradient-section-bg);
+    background: var(--gradient-child);
     border-radius: var(--radius-main);
 }
 
@@ -270,7 +270,7 @@ section h3:first-child {
     border: var(--border-main);
     flex: 1;
     border-radius: 5px;
-    background: var(--gradient-section-bg);
+    background: var(--gradient-child);
 }
 
 .catchcopy {
@@ -498,7 +498,7 @@ li {
 .site-footer {
     padding: 15px;
     text-align: center;
-    background: var(--gradient-header-footer);
+    background: var(--gradient-header);
     margin-top: 10px;
 }
 

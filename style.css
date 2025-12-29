@@ -10,11 +10,11 @@
     --color-text: #333;
     --color-text-light: #666;
 
-    /* グラデーション */
+    /* グラデーション（階層構造） */
     --gradient-header: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
-    --gradient-body: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
-    --gradient-article: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
-    --gradient-section: linear-gradient(to bottom, var(--color-light), var(--color-medium));
+    --gradient-background: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
+    --gradient-parent: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
+    --gradient-child: linear-gradient(to bottom, var(--color-light), var(--color-medium));
 
     /* ボーダー・角丸 */
     --border-main: solid 1px var(--color-secondary);
@@ -46,7 +46,7 @@ body {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--gradient-body);
+    background: var(--gradient-background);
     color: var(--color-text);
     line-height: 1.6;
 }
@@ -146,9 +146,9 @@ header h1 {
     min-height: 0;
 }
 
-/* パネル共通 */
+/* パネル共通（親エリア） */
 .panel {
-    background: var(--gradient-article);
+    background: var(--gradient-parent);
     padding: 1rem;
     overflow-y: auto;
 }
@@ -171,11 +171,11 @@ header h1 {
     min-height: 0;
 }
 
-/* 各セクション */
+/* 各セクション（子エリア） */
 section {
     border: var(--border-main);
     padding: 15px;
-    background: var(--gradient-section);
+    background: var(--gradient-child);
     border-radius: var(--radius-main);
 }
 
