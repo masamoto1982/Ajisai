@@ -194,20 +194,22 @@ section h3 {
     width: 100%;
     min-height: 0;
     padding: 0.75rem;
-    border: var(--border-main);
+    border: none;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.95rem;
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background-color: rgba(255, 255, 255, 0.5);
-    color: var(--color-text);
-    border-radius: var(--radius-main);
+    background-color: #2d2d2d;
+    color: #f8f8f2;
 }
 
 #code-input:focus {
     outline: none;
-    background-color: rgba(255, 255, 255, 0.8);
+}
+
+#code-input::placeholder {
+    color: #75715e;
 }
 
 .controls {
