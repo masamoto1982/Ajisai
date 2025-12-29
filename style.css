@@ -13,6 +13,10 @@
     --gradient-body: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
     --gradient-article: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
     --gradient-section: linear-gradient(to bottom, var(--color-light), var(--color-medium));
+
+    /* ボーダー・角丸 */
+    --border-main: solid 1px var(--color-secondary);
+    --radius-main: 10px;
 }
 
 * {
@@ -77,9 +81,9 @@ header h1 {
     font-size: 0.875rem;
     color: var(--color-primary);
     padding: 0.25rem 0.5rem;
-    background-color: var(--color-medium);
-    border: 1px solid var(--color-secondary);
-    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: var(--border-main);
+    border-radius: var(--radius-main);
 }
 
 /* ヘッダーアクション */
@@ -97,23 +101,21 @@ header h1 {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background-color: #fff;
+    background-color: rgba(255, 255, 255, 0.5);
     color: var(--color-primary);
     text-decoration: none;
-    border: 1px solid var(--color-secondary);
+    border: var(--border-main);
     font-size: 0.875rem;
     font-weight: 400;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     transition: all 0.2s ease;
 }
 
 .reference-btn:hover,
 .test-btn:hover,
 .header-btn:hover {
-    background-color: var(--color-primary);
-    color: #fff;
-    border-color: var(--color-primary);
+    background-color: var(--color-light);
 }
 
 .reference-btn svg,
@@ -134,10 +136,8 @@ header h1 {
 /* パネル共通 */
 .panel {
     background: var(--gradient-article);
-    border: 1px solid var(--color-secondary);
     padding: 1rem;
     overflow-y: auto;
-    border-radius: 8px;
 }
 
 /* 作業領域パネル */
@@ -160,10 +160,10 @@ header h1 {
 
 /* 各セクション */
 section {
-    border: 1px solid var(--color-secondary);
-    padding: 1rem;
+    border: var(--border-main);
+    padding: 15px;
     background: var(--gradient-section);
-    border-radius: 6px;
+    border-radius: var(--radius-main);
 }
 
 section h2 {
@@ -194,21 +194,20 @@ section h3 {
     width: 100%;
     min-height: 0;
     padding: 0.75rem;
-    border: 1px solid var(--color-medium);
+    border: var(--border-main);
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.95rem;
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background-color: #fff;
+    background-color: rgba(255, 255, 255, 0.5);
     color: var(--color-text);
-    border-radius: 4px;
+    border-radius: var(--radius-main);
 }
 
 #code-input:focus {
     outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(107, 91, 149, 0.2);
+    background-color: rgba(255, 255, 255, 0.8);
 }
 
 .controls {
@@ -222,48 +221,45 @@ section h3 {
     padding: 0.75rem 1.5rem;
     background: var(--color-primary);
     color: #fff;
-    border: 1px solid var(--color-primary);
+    border: var(--border-main);
     cursor: pointer;
     font-size: 0.875rem;
     font-weight: 500;
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     transition: background-color 0.2s ease;
 }
 
 #run-btn:hover {
     background: var(--color-secondary);
-    border-color: var(--color-secondary);
 }
 
 /* Clearボタン */
 #clear-btn {
     padding: 0.75rem 1.5rem;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.5);
     color: var(--color-primary);
-    border: 1px solid var(--color-medium);
+    border: var(--border-main);
     cursor: pointer;
     font-size: 0.875rem;
     font-weight: 400;
-    border-radius: 4px;
+    border-radius: var(--radius-main);
     transition: background-color 0.2s ease;
 }
 
 #clear-btn:hover {
-    background: var(--color-dark);
+    background: var(--color-light);
 }
 
 /* 表示エリア */
 .display-area,
 .state-display,
 .words-display {
-    background-color: #fff;
-    border: 1px solid var(--color-medium);
+    background-color: rgba(255, 255, 255, 0.5);
     padding: 0.75rem;
     min-height: 0;
     overflow-y: auto;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.9rem;
-    border-radius: 4px;
 }
 
 #output-display {
@@ -347,14 +343,14 @@ section h3 {
 .word-button {
     margin: 2px;
     padding: 0.2rem 0.4rem;
-    background-color: #fff;
+    background-color: rgba(255, 255, 255, 0.5);
     color: var(--color-text);
-    border: 1px solid var(--color-medium);
+    border: var(--border-main);
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.75rem;
     font-weight: 400;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--radius-main);
 }
 
 .word-button:hover {
@@ -413,7 +409,6 @@ section h3 {
     background-color: transparent;
     color: #990099;
     border: 1px solid transparent;
-    border-radius: 3px;
 }
 
 /* スタックトップ（最新の要素）を強調 - フォーカスされた要素（色覚配慮） */
