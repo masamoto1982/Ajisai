@@ -55,7 +55,7 @@ header h1 {
 
 .version {
     font-size: 0.875rem;
-    color: var(--color-secondary);
+    color: var(--header-text-secondary);
 }
 
 /* オフライン表示 */

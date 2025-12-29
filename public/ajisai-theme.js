@@ -4,117 +4,191 @@
  * ============================================================================
  * このファイルを編集することで、アプリとReferenceサイトの
  * カラーテーマを一括で変更できます。
+ *
+ * 背景色を指定すると、文字色は自動的に計算されます。
+ * - 暗い背景 → 明るい文字色
+ * - 明るい背景 → 暗い文字色
  */
 
 const AjisaiTheme = {
-    // -------------------------------------------------------------------------
-    // カラーパレット（紫陽花テーマ）
-    // -------------------------------------------------------------------------
-    colors: {
-        "--color-primary": "#6b5b95",    // 紫陽花カラー（メイン）
-        "--color-secondary": "#8b7db5",  // 紫陽花カラー（アクセント）
-        "--color-light": "#f8f7fc",      // 背景色（明るい）
-        "--color-medium": "#d4cfe8",     // 背景色（中間）
-        "--color-dark": "#e8e4f3",       // 背景色（濃いめ）
-        "--color-text": "#333",          // テキスト色
-        "--color-text-light": "#666"     // テキスト色（薄め）
+    // =========================================================================
+    // カラーユーティリティ関数
+    // =========================================================================
+
+    // HEX → RGB 変換
+    hexToRgb: function(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
     },
 
-    // -------------------------------------------------------------------------
-    // グラデーション設定（階層構造）
-    // -------------------------------------------------------------------------
-    gradients: {
-        "--gradient-header": "#6b5b95",  // ヘッダー: 紫単色（直接指定）
-        "--gradient-background": "#f8f7fc", // 背景: 明るい単色（直接指定）
-        "--gradient-parent": "linear-gradient(to bottom, #d4cfe8, #f8f7fc, #d4cfe8)",
-        "--gradient-child": "#e8e4f3"       // 子エリア: 濃いめ単色（直接指定）
+    // RGB → HEX 変換
+    rgbToHex: function(r, g, b) {
+        return '#' + [r, g, b].map(x => {
+            const hex = Math.max(0, Math.min(255, Math.round(x))).toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        }).join('');
     },
 
-    // -------------------------------------------------------------------------
-    // 見出し設定（階層構造）
-    // -------------------------------------------------------------------------
-    headings: {
-        "--heading-h1": "#fff",                      // H1: 白（紫ヘッダー用）
-        "--heading-h2": "var(--color-primary)",      // H2: プライマリ
-        "--heading-h3": "var(--color-secondary)"     // H3: セカンダリ
+    // 相対輝度を計算 (0 = 黒, 1 = 白)
+    getLuminance: function(hex) {
+        const rgb = this.hexToRgb(hex);
+        if (!rgb) return 0.5;
+        const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(v => {
+            v /= 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     },
 
-    // -------------------------------------------------------------------------
-    // ボーダー・角丸設定
-    // -------------------------------------------------------------------------
-    borders: {
-        "--border-main": "solid 1px var(--color-secondary)",
-        "--radius-main": "10px"
+    // 色が明るいかどうか判定 (閾値: 0.5)
+    isLight: function(hex) {
+        return this.getLuminance(hex) > 0.5;
     },
 
-    // -------------------------------------------------------------------------
-    // コードエディタテーマ（ダークテーマ）
-    // -------------------------------------------------------------------------
-    codeEditor: {
-        "--code-bg": "#2d2d2d",
-        "--code-text": "#f8f8f2",
-        "--code-comment": "#75715e"
+    // 色を明るくする
+    lighten: function(hex, amount) {
+        const rgb = this.hexToRgb(hex);
+        if (!rgb) return hex;
+        return this.rgbToHex(
+            rgb.r + (255 - rgb.r) * amount,
+            rgb.g + (255 - rgb.g) * amount,
+            rgb.b + (255 - rgb.b) * amount
+        );
     },
 
-    // -------------------------------------------------------------------------
-    // 色覚配慮カラー（ワードボタン用）
-    // -------------------------------------------------------------------------
-    accessibility: {
-        "--color-builtin": "#E65100",      // 組み込みワード（オレンジレッド）
-        "--color-dependency": "#E69500",    // 依存カスタムワード（イエローオレンジ）
-        "--color-non-dependency": "#009B68", // 非依存カスタムワード（ティールグリーン）
-        "--color-stack": "#990099"          // スタック表示（マゼンタ）
+    // 色を暗くする
+    darken: function(hex, amount) {
+        const rgb = this.hexToRgb(hex);
+        if (!rgb) return hex;
+        return this.rgbToHex(
+            rgb.r * (1 - amount),
+            rgb.g * (1 - amount),
+            rgb.b * (1 - amount)
+        );
     },
 
-    // -------------------------------------------------------------------------
+    // 背景色に対するコントラスト文字色を取得
+    getContrastText: function(bgHex, lightText = '#ffffff', darkText = '#333333') {
+        return this.isLight(bgHex) ? darkText : lightText;
+    },
+
+    // グラデーションから基準色を抽出
+    extractBaseColor: function(gradient) {
+        const hexMatch = gradient.match(/#[a-fA-F0-9]{6}/);
+        return hexMatch ? hexMatch[0] : '#888888';
+    },
+
+    // =========================================================================
+    // テーマ設定（ここを編集してテーマを変更）
+    // =========================================================================
+
+    // プライマリカラー（テーマの基準色）
+    primaryColor: '#6b5b95',  // 紫陽花カラー
+
+    // 各エリアの背景色設定
+    backgrounds: {
+        header: '#6b5b95',        // ヘッダー背景
+        page: '#f8f7fc',          // ページ背景
+        parent: '#e8e4f3',        // 親エリア背景
+        child: '#f0eef7',         // 子エリア背景
+        menu: '#7b6ba5'           // メニューバー背景
+    },
+
+    // =========================================================================
+    // 自動計算されたCSS変数を生成
+    // =========================================================================
+
+    generateVariables: function() {
+        const bg = this.backgrounds;
+        const primary = this.primaryColor;
+
+        // 各背景に対するテキスト色を自動計算
+        const headerText = this.getContrastText(bg.header);
+        const pageText = this.getContrastText(bg.page);
+        const parentText = this.getContrastText(bg.parent);
+        const childText = this.getContrastText(bg.child);
+        const menuText = this.getContrastText(bg.menu);
+
+        // H1, H2, H3 の階層的な色を計算
+        // ヘッダー用（暗い背景なら明るく、明るい背景なら暗く）
+        const h1Color = headerText;
+
+        // コンテンツエリア用（親エリアの背景に基づく）
+        const isParentLight = this.isLight(bg.parent);
+        const h2Color = isParentLight ? this.darken(primary, 0.1) : this.lighten(primary, 0.3);
+        const h3Color = isParentLight ? this.lighten(primary, 0.1) : this.lighten(primary, 0.5);
+
+        // セカンダリカラー（プライマリを少し明るく）
+        const secondary = this.lighten(primary, 0.2);
+
+        return {
+            // カラーパレット
+            "--color-primary": primary,
+            "--color-secondary": secondary,
+            "--color-light": bg.page,
+            "--color-medium": this.darken(bg.page, 0.1),
+            "--color-dark": bg.parent,
+            "--color-text": pageText,
+            "--color-text-light": this.isLight(bg.page) ? '#666666' : '#aaaaaa',
+
+            // 背景色
+            "--gradient-header": bg.header,
+            "--gradient-background": bg.page,
+            "--gradient-parent": bg.parent,
+            "--gradient-child": bg.child,
+            "--gradient-menu": bg.menu,
+            "--gradient-menu-hover": this.lighten(bg.menu, 0.15),
+
+            // ヘッダー用テキスト色（自動計算）
+            "--header-text": headerText,
+            "--header-text-secondary": this.isLight(bg.header) ? '#555555' : '#cccccc',
+
+            // メニュー用テキスト色（自動計算）
+            "--menu-text": menuText,
+            "--menu-text-hover": this.isLight(bg.menu) ? '#000000' : '#ffffff',
+
+            // 見出し色（階層構造・自動計算）
+            "--heading-h1": h1Color,
+            "--heading-h2": h2Color,
+            "--heading-h3": h3Color,
+
+            // ボーダー・角丸
+            "--border-main": `solid 1px ${secondary}`,
+            "--radius-main": "10px",
+
+            // コードエディタテーマ
+            "--code-bg": "#2d2d2d",
+            "--code-text": "#f8f8f2",
+            "--code-comment": "#75715e",
+
+            // 色覚配慮カラー
+            "--color-builtin": "#E65100",
+            "--color-dependency": "#E69500",
+            "--color-non-dependency": "#009B68",
+            "--color-stack": "#990099"
+        };
+    },
+
+    // =========================================================================
     // テーマを適用する関数
-    // -------------------------------------------------------------------------
+    // =========================================================================
+
     apply: function() {
         const root = document.documentElement;
+        const vars = this.generateVariables();
 
-        // カラー適用
-        for (const [key, value] of Object.entries(this.colors)) {
-            root.style.setProperty(key, value);
-        }
-
-        // グラデーション適用
-        for (const [key, value] of Object.entries(this.gradients)) {
-            root.style.setProperty(key, value);
-        }
-
-        // 見出し適用
-        for (const [key, value] of Object.entries(this.headings)) {
-            root.style.setProperty(key, value);
-        }
-
-        // ボーダー・角丸適用
-        for (const [key, value] of Object.entries(this.borders)) {
-            root.style.setProperty(key, value);
-        }
-
-        // コードエディタテーマ適用
-        for (const [key, value] of Object.entries(this.codeEditor)) {
-            root.style.setProperty(key, value);
-        }
-
-        // 色覚配慮カラー適用
-        for (const [key, value] of Object.entries(this.accessibility)) {
+        for (const [key, value] of Object.entries(vars)) {
             root.style.setProperty(key, value);
         }
     },
 
-    // -------------------------------------------------------------------------
     // 全設定を一つのオブジェクトとして取得
-    // -------------------------------------------------------------------------
     getAll: function() {
-        return {
-            ...this.colors,
-            ...this.gradients,
-            ...this.headings,
-            ...this.borders,
-            ...this.codeEditor,
-            ...this.accessibility
-        };
+        return this.generateVariables();
     }
 };
 
