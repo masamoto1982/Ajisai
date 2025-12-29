@@ -11,6 +11,8 @@
     /* 紫陽花グラデーション */
     --gradient-header: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
     --gradient-body: linear-gradient(to bottom, var(--color-secondary), var(--color-dark), var(--color-secondary));
+    --gradient-article: linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium));
+    --gradient-section: linear-gradient(to bottom, var(--color-light), var(--color-medium));
 }
 
 * {
@@ -27,7 +29,7 @@ body {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--color-light);
+    background: var(--gradient-body);
     color: var(--color-text);
     line-height: 1.6;
 }
@@ -131,8 +133,8 @@ header h1 {
 
 /* パネル共通 */
 .panel {
-    background-color: #fff;
-    border: 1px solid var(--color-medium);
+    background: var(--gradient-article);
+    border: 1px solid var(--color-secondary);
     padding: 1rem;
     overflow-y: auto;
     border-radius: 8px;
@@ -158,9 +160,9 @@ header h1 {
 
 /* 各セクション */
 section {
-    border: 1px solid var(--color-medium);
+    border: 1px solid var(--color-secondary);
     padding: 1rem;
-    background-color: var(--color-dark);
+    background: var(--gradient-section);
     border-radius: 6px;
 }
 
