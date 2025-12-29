@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial - Ajisai Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <div class="page-wrapper">
+        <aside id="sidebar"></aside>
+
+        <main>
+            <h1>Tutorial</h1>
+
+            <section>
+                <h2>Getting Started</h2>
+                <p>Welcome to Ajisai! This tutorial will guide you through the basics of the language. The best way to learn is by trying examples in the <a href="https://masamoto1982.github.io/Ajisai/" target="_blank">interactive demo</a>.</p>
+            </section>
+
+            <section>
+                <h2>Lesson 1: The Stack</h2>
+                <p>Ajisai is a stack-based language. Think of the stack as a pile of values where you can only add or remove from the top.</p>
+
+                <h3>Pushing Values</h3>
+                <p>When you type a value, it gets pushed onto the stack:</p>
+                <pre><code># Type these one at a time and watch the stack
+[ 1 ]       # Stack: [ 1 ]
+[ 2 ]       # Stack: [ 1 ] [ 2 ]
+[ 3 ]       # Stack: [ 1 ] [ 2 ] [ 3 ]</code></pre>
+
+                <h3>Operations Use the Stack</h3>
+                <p>Operations take values from the stack and push results back:</p>
+                <pre><code>[ 2 ] [ 3 ] +    # Takes [ 2 ] and [ 3 ], pushes [ 5 ]
+# Stack: [ 5 ]
+
+[ 4 ] *          # Takes [ 5 ] and [ 4 ], pushes [ 20 ]
+# Stack: [ 20 ]</code></pre>
+
+                <h3>Try It!</h3>
+                <pre><code># Calculate (2 + 3) * 4
+[ 2 ] [ 3 ] + [ 4 ] *    # → [ 20 ]
+
+# Calculate 10 - 3 - 2
+[ 10 ] [ 3 ] - [ 2 ] -   # → [ 5 ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Lesson 2: Vectors</h2>
+                <p>Vectors are lists of values in brackets. They're the main data structure in Ajisai.</p>
+
+                <h3>Creating Vectors</h3>
+                <pre><code>[ 1 2 3 ]            # A vector with 3 numbers
+[ 'a' 'b' 'c' ]      # A vector with 3 strings
+[ 1 'hello' TRUE ]   # Mixed types are OK!</code></pre>
+
+                <h3>Vector Operations</h3>
+                <pre><code># Get length
+[ 1 2 3 4 5 ] LENGTH         # → [ 1 2 3 4 5 ] [ 5 ]
+
+# Access elements (0-indexed)
+[ 10 20 30 ] [ 0 ] GET       # → [ 10 20 30 ] [ 10 ]
+[ 10 20 30 ] [ 2 ] GET       # → [ 10 20 30 ] [ 30 ]
+[ 10 20 30 ] [ -1 ] GET      # → [ 10 20 30 ] [ 30 ] (last)
+
+# Reverse
+[ 1 2 3 ] REVERSE            # → [ 3 2 1 ]</code></pre>
+
+                <h3>Vector Arithmetic</h3>
+                <pre><code># Element-wise operations
+[ 1 2 3 ] [ 4 5 6 ] +        # → [ 5 7 9 ]
+[ 2 4 6 ] [ 2 ] /            # → [ 1 2 3 ] (broadcasting)</code></pre>
+            </section>
+
+            <section>
+                <h2>Lesson 3: Defining Words</h2>
+                <p>You can define your own operations (called "words") using DEF.</p>
+
+                <h3>Basic Definition</h3>
+                <pre><code># Define a word that doubles a number
+[ '[ 2 ] *' ] 'DOUBLE' DEF
+
+# Now use it
+[ 5 ] DOUBLE                 # → [ 10 ]
+[ 3 ] DOUBLE                 # → [ 6 ]</code></pre>
+
+                <h3>Word Definition Syntax</h3>
+                <pre><code>[ 'word body goes here' ] 'WORD_NAME' DEF</code></pre>
+                <ul>
+                    <li>The body is a string containing Ajisai code</li>
+                    <li>The name is a string</li>
+                    <li>DEF creates the word</li>
+                </ul>
+
+                <h3>More Examples</h3>
+                <pre><code># Square a number
+[ 'DUP *' ] 'SQUARE' DEF
+[ 4 ] SQUARE                 # → [ 16 ]
+
+# Add 10
+[ '[ 10 ] +' ] 'ADD10' DEF
+[ 5 ] ADD10                  # → [ 15 ]
+
+# Check if even
+[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+[ 4 ] EVEN?                  # → [ TRUE ]
+[ 7 ] EVEN?                  # → [ FALSE ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Lesson 4: Higher-Order Functions</h2>
+                <p>Higher-order functions take word names as arguments to process collections.</p>
+
+                <h3>MAP - Transform Each Element</h3>
+                <pre><code># Define DOUBLE first
+[ '[ 2 ] *' ] 'DOUBLE' DEF
+
+# Apply to each element
+[ 1 2 3 4 5 ] 'DOUBLE' MAP   # → [ 2 4 6 8 10 ]</code></pre>
+
+                <h3>FILTER - Keep Matching Elements</h3>
+                <pre><code># Define EVEN? first
+[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+
+# Keep only even numbers
+[ 1 2 3 4 5 6 7 8 ] 'EVEN?' FILTER    # → [ 2 4 6 8 ]</code></pre>
+
+                <h3>FOLD - Reduce to Single Value</h3>
+                <pre><code># Sum all numbers
+[ 1 2 3 4 5 ] [ 0 ] '+' FOLD         # → [ 15 ]
+
+# Product of all numbers
+[ 1 2 3 4 5 ] [ 1 ] '*' FOLD         # → [ 120 ]</code></pre>
+
+                <h3>Chaining</h3>
+                <pre><code># Get sum of squares of even numbers
+[ 1 2 3 4 5 6 7 8 9 10 ]
+  'EVEN?' FILTER         # → [ 2 4 6 8 10 ]
+  'SQUARE' MAP           # → [ 4 16 36 64 100 ]
+  [ 0 ] '+' FOLD         # → [ 220 ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Lesson 5: Conditionals with Guards</h2>
+                <p>Guards provide conditional branching using the <code>:</code> word.</p>
+
+                <h3>Guard Syntax</h3>
+                <pre><code>condition1 : action1 : condition2 : action2 : default_action</code></pre>
+
+                <h3>Example: Absolute Value</h3>
+                <pre><code>[
+  '[ 0 ] <' : '[ -1 ] *' :    # If negative, multiply by -1
+  ''                          # Otherwise, do nothing
+] 'ABS' DEF
+
+[ -5 ] ABS                    # → [ 5 ]
+[ 3 ] ABS                     # → [ 3 ]</code></pre>
+
+                <h3>Example: Number Classification</h3>
+                <pre><code>[
+  '[ 0 ] <' : '[ 'negative' ]' :
+  '[ 0 ] >' : '[ 'positive' ]' :
+  '[ 'zero' ]'
+] 'CLASSIFY' DEF
+
+[ -5 ] CLASSIFY               # → [ 'negative' ]
+[ 10 ] CLASSIFY               # → [ 'positive' ]
+[ 0 ] CLASSIFY                # → [ 'zero' ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Lesson 6: Stack Mode (..) </h2>
+                <p>The <code>..</code> operator lets you work with the entire stack instead of just the top element.</p>
+
+                <h3>Stack Length</h3>
+                <pre><code>a b c d e .. LENGTH      # → a b c d e [ 5 ]</code></pre>
+
+                <h3>Stack Operations</h3>
+                <pre><code># Reverse entire stack
+a b c .. REVERSE         # → c b a
+
+# Get from stack position
+a b c d [ 1 ] .. GET     # → a b c d [ b ]
+
+# Combine stack into vector
+a b c d e .. CONCAT      # → [ a b c d e ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Lesson 7: Exact Fractions</h2>
+                <p>All numbers in Ajisai are exact fractions - no floating point errors!</p>
+
+                <h3>Fraction Arithmetic</h3>
+                <pre><code># Input fractions directly
+[ 1/3 ] [ 1/6 ] +        # → [ 1/2 ] (exact!)
+
+# Decimals become fractions
+[ 0.1 ] [ 0.2 ] +        # → [ 3/10 ] (not 0.30000000000000004)
+
+# Large numbers work too
+[ 1000000000000 ] [ 1000000000000 ] *</code></pre>
+
+                <h3>Rounding When Needed</h3>
+                <pre><code>[ 7/3 ] FLOOR            # → [ 2 ]
+[ 7/3 ] CEIL             # → [ 3 ]
+[ 5/2 ] ROUND            # → [ 3 ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Lesson 8: Tensor Operations</h2>
+                <p>Ajisai supports up to 4-dimensional arrays with tensor operations.</p>
+
+                <h3>Shape and Rank</h3>
+                <pre><code>[ 1 2 3 ] SHAPE                      # → [ ... ] [ 3 ]
+[ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE        # → [ ... ] [ 2 3 ]
+[ [ 1 2 3 ] [ 4 5 6 ] ] RANK         # → [ ... ] [ 2 ]</code></pre>
+
+                <h3>Reshape</h3>
+                <pre><code>[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE
+# → [ [ 1 2 3 ] [ 4 5 6 ] ]
+
+[ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE
+# → [ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]</code></pre>
+
+                <h3>Transpose</h3>
+                <pre><code>[ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE
+# → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]</code></pre>
+
+                <h3>Fill</h3>
+                <pre><code>[ 3 3 ] [ 0 ] FILL
+# → [ [ 0 0 0 ] [ 0 0 0 ] [ 0 0 0 ] ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Practice Exercises</h2>
+
+                <h3>Exercise 1: Calculate Average</h3>
+                <p>Define a word AVERAGE that calculates the mean of a vector.</p>
+                <details>
+                    <summary>Solution</summary>
+                    <pre><code>[ 'DUP [ 0 ] '+' FOLD SWAP LENGTH /' ] 'AVERAGE' DEF
+[ 2 4 6 8 10 ] AVERAGE    # → [ 6 ]</code></pre>
+                </details>
+
+                <h3>Exercise 2: Factorial</h3>
+                <p>Calculate 6! (6 factorial = 720) using RANGE and FOLD.</p>
+                <details>
+                    <summary>Solution</summary>
+                    <pre><code>[ 1 ] [ 6 ] RANGE [ 1 ] '*' FOLD    # → [ 720 ]</code></pre>
+                </details>
+
+                <h3>Exercise 3: Filter and Sum</h3>
+                <p>From [1..20], keep only numbers divisible by 3, then sum them.</p>
+                <details>
+                    <summary>Solution</summary>
+                    <pre><code>[ '[ 3 ] MOD [ 0 ] =' ] 'DIV3?' DEF
+[ 1 ] [ 20 ] RANGE
+  'DIV3?' FILTER
+  [ 0 ] '+' FOLD    # → [ 63 ] (3+6+9+12+15+18)</code></pre>
+                </details>
+
+                <h3>Exercise 4: Palindrome Check</h3>
+                <p>Define a word that checks if a string is a palindrome.</p>
+                <details>
+                    <summary>Solution</summary>
+                    <pre><code>[ 'CHARS DUP REVERSE =' ] 'PALINDROME?' DEF
+[ 'radar' ] PALINDROME?    # → [ TRUE ]
+[ 'hello' ] PALINDROME?    # → [ FALSE ]</code></pre>
+                </details>
+            </section>
+
+            <section>
+                <h2>Next Steps</h2>
+                <ul>
+                    <li><a href="syntax.html">Syntax Reference</a> - Complete syntax documentation</li>
+                    <li><a href="words.html">Built-in Words</a> - All available operations</li>
+                    <li><a href="examples.html">Examples</a> - More code examples</li>
+                    <li><a href="https://masamoto1982.github.io/Ajisai/" target="_blank">Interactive Demo</a> - Try it yourself!</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <footer id="site-footer"></footer>
+
+    <script src="config.js"></script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajisai - FORTH-inspired Stack-based Programming Language</title>
+    <meta name="description" content="Ajisai - A stack-based programming language inspired by FORTH, running on WebAssembly with a web-based interactive GUI.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <div class="page-wrapper">
+        <aside id="sidebar"></aside>
+
+        <main>
+            <div class="hero">
+                <h1>Ajisai</h1>
+                <p class="subtitle">FORTH-inspired Stack-based Programming Language</p>
+                <p>WebAssembly + Rust + TypeScript</p>
+                <div class="hero-buttons">
+                    <a href="https://masamoto1982.github.io/Ajisai/" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Try Demo</a>
+                    <a href="tutorial.html" class="btn btn-secondary">Get Started</a>
+                </div>
+            </div>
+
+            <section>
+                <h2>What is Ajisai?</h2>
+                <p>Ajisai is a stack-based programming language inspired by FORTH, featuring a WebAssembly-based interpreter and an interactive web-based GUI. The name "Ajisai" (hydrangea in Japanese) represents how small words come together to form functionality, like how small flowers form a hydrangea cluster.</p>
+            </section>
+
+            <section>
+                <h2>Key Features</h2>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <div class="feature-icon">&#x1F4DA;</div>
+                        <h3>Stack-based RPN</h3>
+                        <p>FORTH-style stack operations with Reverse Polish Notation for intuitive data manipulation.</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">&#x1F9EE;</div>
+                        <h3>Vector Operations</h3>
+                        <p>Nestable vectors with NumPy/APL-style broadcasting and tensor operations (SHAPE, RESHAPE, TRANSPOSE).</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">&#x1F522;</div>
+                        <h3>Exact Fractions</h3>
+                        <p>All numbers are internally represented as fractions - no rounding errors, even for very large numbers.</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">&#x1F680;</div>
+                        <h3>WebAssembly</h3>
+                        <p>Core interpreter written in Rust, compiled to WebAssembly for fast execution in the browser.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Quick Example</h2>
+                <pre><code># Vector creation and operations
+[ 1 2 3 ]               # 1D vector: [1, 2, 3]
+[ [ 1 2 ] [ 3 4 ] ]     # 2D nested vector (matrix-like)
+
+# Broadcasting arithmetic
+[ 5 ] [ 1 2 3 ] +       # Result: [ 6 7 8 ]
+
+# Custom word definition
+[ '[ 2 ] *' ] 'DOUBLE' DEF
+[ 5 ] DOUBLE            # Result: [ 10 ]
+
+# Higher-order functions
+[ 1 2 3 4 5 ] 'DOUBLE' MAP    # Result: [ 2 4 6 8 10 ]
+</code></pre>
+            </section>
+
+            <section>
+                <h2>Technology Stack</h2>
+                <table>
+                    <tr>
+                        <th>Component</th>
+                        <th>Technology</th>
+                    </tr>
+                    <tr>
+                        <td>Core Interpreter</td>
+                        <td>Rust</td>
+                    </tr>
+                    <tr>
+                        <td>Runtime</td>
+                        <td>WebAssembly</td>
+                    </tr>
+                    <tr>
+                        <td>Frontend</td>
+                        <td>TypeScript</td>
+                    </tr>
+                    <tr>
+                        <td>Build Tool</td>
+                        <td>Vite</td>
+                    </tr>
+                    <tr>
+                        <td>CI/CD</td>
+                        <td>GitHub Actions</td>
+                    </tr>
+                </table>
+            </section>
+
+            <section>
+                <h2>Get Started</h2>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Tutorial</h3>
+                        <p>Learn the basics of Ajisai with step-by-step examples.</p>
+                        <a href="tutorial.html">Start Learning &rarr;</a>
+                    </div>
+                    <div class="card">
+                        <h3>Built-in Words</h3>
+                        <p>Complete reference of all built-in words and operations.</p>
+                        <a href="words.html">View Reference &rarr;</a>
+                    </div>
+                    <div class="card">
+                        <h3>Examples</h3>
+                        <p>Explore practical code examples and use cases.</p>
+                        <a href="examples.html">See Examples &rarr;</a>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>AI-Driven Development</h2>
+                <p>The majority of this project's implementation was done by AI (Claude). From design decisions to Rust/TypeScript code implementation, test case creation, and documentation, this project is developed through human-AI collaboration.</p>
+            </section>
+        </main>
+    </div>
+
+    <footer id="site-footer"></footer>
+
+    <script src="config.js"></script>
+</body>
+</html>

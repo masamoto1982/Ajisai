@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Higher-Order Functions - Ajisai Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <div class="page-wrapper">
+        <aside id="sidebar"></aside>
+
+        <main>
+            <h1>Higher-Order Functions</h1>
+
+            <section>
+                <h2>Overview</h2>
+                <p>Higher-order functions are operations that take other words (functions) as arguments. Ajisai provides four core higher-order functions: MAP, FILTER, FOLD, and UNFOLD.</p>
+            </section>
+
+            <section>
+                <h2>MAP</h2>
+                <p>Apply a word to each element of a vector, producing a new vector of the same length.</p>
+
+                <h3>Syntax</h3>
+                <pre><code>[ elements ] 'word_name' MAP</code></pre>
+
+                <h3>Basic Examples</h3>
+                <pre><code># Double each element
+[ '[ 2 ] *' ] 'DOUBLE' DEF
+[ 1 2 3 4 5 ] 'DOUBLE' MAP    # → [ 2 4 6 8 10 ]
+
+# Square each element
+[ 'DUP *' ] 'SQUARE' DEF
+[ 1 2 3 4 ] 'SQUARE' MAP    # → [ 1 4 9 16 ]
+
+# Convert numbers to strings
+[ 1 2 3 ] 'STR' MAP    # → [ '1' '2' '3' ]</code></pre>
+
+                <h3>Chaining MAP</h3>
+                <pre><code># Apply multiple transformations
+[ 1 2 3 4 5 ]
+  'DOUBLE' MAP       # → [ 2 4 6 8 10 ]
+  '[ 1 ] +' MAP      # → [ 3 5 7 9 11 ]</code></pre>
+
+                <h3>With Nested Vectors</h3>
+                <pre><code># MAP applies to top-level elements
+[ [ 1 2 ] [ 3 4 ] ] 'LENGTH' MAP    # → [ [ 2 ] [ 2 ] ]</code></pre>
+            </section>
+
+            <section>
+                <h2>FILTER</h2>
+                <p>Keep only elements that satisfy a predicate (a word that returns TRUE/FALSE).</p>
+
+                <h3>Syntax</h3>
+                <pre><code>[ elements ] 'predicate_word' FILTER</code></pre>
+
+                <h3>Basic Examples</h3>
+                <pre><code># Keep even numbers
+[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+[ 1 2 3 4 5 6 7 8 ] 'EVEN?' FILTER    # → [ 2 4 6 8 ]
+
+# Keep positive numbers
+[ '[ 0 ] >' ] 'POSITIVE?' DEF
+[ -2 -1 0 1 2 3 ] 'POSITIVE?' FILTER    # → [ 1 2 3 ]
+
+# Keep strings longer than 3 characters
+[ 'CHARS LENGTH [ 3 ] >' ] 'LONG?' DEF
+[ 'a' 'abc' 'hello' 'hi' ] 'LONG?' FILTER    # → [ 'hello' ]</code></pre>
+
+                <h3>Combining FILTER with MAP</h3>
+                <pre><code># Get squares of even numbers
+[ 1 2 3 4 5 6 7 8 9 10 ]
+  'EVEN?' FILTER       # → [ 2 4 6 8 10 ]
+  'SQUARE' MAP         # → [ 4 16 36 64 100 ]</code></pre>
+            </section>
+
+            <section>
+                <h2>FOLD</h2>
+                <p>Reduce a vector to a single value by repeatedly applying a binary operation with an accumulator.</p>
+
+                <h3>Syntax</h3>
+                <pre><code>[ elements ] [ initial_value ] 'binary_word' FOLD</code></pre>
+
+                <h3>How FOLD Works</h3>
+                <ol>
+                    <li>Start with the initial value as the accumulator</li>
+                    <li>For each element, apply the binary word to (accumulator, element)</li>
+                    <li>The result becomes the new accumulator</li>
+                    <li>Return the final accumulator</li>
+                </ol>
+
+                <h3>Basic Examples</h3>
+                <pre><code># Sum of elements
+[ 1 2 3 4 5 ] [ 0 ] '+' FOLD    # → [ 15 ]
+
+# Product of elements
+[ 1 2 3 4 5 ] [ 1 ] '*' FOLD    # → [ 120 ]
+
+# Maximum value
+[ 3 1 4 1 5 9 2 6 ] [ 0 ] 'MAX' FOLD    # (if MAX is defined)
+
+# Concatenate strings
+[ 'H' 'e' 'l' 'l' 'o' ] [ '' ] 'JOIN' FOLD</code></pre>
+
+                <h3>Computing Factorial with FOLD</h3>
+                <pre><code># 5! = 1 * 2 * 3 * 4 * 5
+[ 1 ] [ 5 ] RANGE    # → [ 1 2 3 4 5 ]
+[ 1 ] '*' FOLD       # → [ 120 ]</code></pre>
+
+                <h3>Counting with FOLD</h3>
+                <pre><code># Count even numbers
+[ '[ 2 ] MOD [ 0 ] =' : '[ 1 ] +' : '' ] 'COUNT_IF_EVEN' DEF
+[ 1 2 3 4 5 6 ] [ 0 ] 'COUNT_IF_EVEN' FOLD    # → [ 3 ]</code></pre>
+            </section>
+
+            <section>
+                <h2>UNFOLD</h2>
+                <p>Generate a vector from an initial state by repeatedly applying a generator function until a stopping condition is met.</p>
+
+                <h3>Syntax</h3>
+                <pre><code>[ initial_state ] 'generator_word' UNFOLD</code></pre>
+
+                <h3>Generator Word Requirements</h3>
+                <p>The generator word should:</p>
+                <ul>
+                    <li>Take the current state</li>
+                    <li>Return <code>[ next_value next_state ]</code> to continue</li>
+                    <li>Return <code>[ ]</code> (empty) to stop</li>
+                </ul>
+
+                <h3>Example: Generate Range</h3>
+                <pre><code># Generate 1 to 5
+[
+  '[ 5 ] >' : '[ ]' :    # Stop if > 5
+  'DUP [ 1 ] +'          # Return (current, current+1)
+] 'RANGE_GEN' DEF
+
+[ 1 ] 'RANGE_GEN' UNFOLD    # → [ 1 2 3 4 5 ]</code></pre>
+
+                <h3>Example: Collatz Sequence</h3>
+                <pre><code># Generate Collatz sequence until reaching 1
+[
+  '[ 1 ] =' : '[ 1 ]' :    # Stop at 1, output 1
+  'EVEN?' : 'DUP [ 2 ] /' :
+  'DUP [ 3 ] * [ 1 ] +'
+] 'COLLATZ_GEN' DEF
+
+[ 7 ] 'COLLATZ_GEN' UNFOLD</code></pre>
+
+                <h3>Example: Fibonacci Sequence</h3>
+                <pre><code># Generate first 10 Fibonacci numbers
+# State: [current, next, count]
+[
+  '[ 2 ] GET [ 0 ] <=' : '[ ]' :
+  '[ 0 ] GET OVER [ 1 ] GET + [ 2 ] GET [ 1 ] -'
+] 'FIB_GEN' DEF
+
+[ [ 1 1 10 ] ] 'FIB_GEN' UNFOLD</code></pre>
+            </section>
+
+            <section>
+                <h2>Combining Higher-Order Functions</h2>
+
+                <h3>Pipeline Pattern</h3>
+                <pre><code># Process data through multiple stages
+[ 1 2 3 4 5 6 7 8 9 10 ]
+  'EVEN?' FILTER           # Keep even: [ 2 4 6 8 10 ]
+  'SQUARE' MAP             # Square: [ 4 16 36 64 100 ]
+  [ 0 ] '+' FOLD           # Sum: [ 220 ]</code></pre>
+
+                <h3>Data Transformation</h3>
+                <pre><code># Extract and process specific data
+[ [ 'Alice' 25 ] [ 'Bob' 30 ] [ 'Carol' 35 ] ]
+  '[ 1 ] GET' MAP              # Get ages: [ 25 30 35 ]
+  '[ 30 ] >=' FILTER           # Filter >= 30: [ 30 35 ]
+  [ 0 ] '+' FOLD               # Sum: [ 65 ]</code></pre>
+
+                <h3>Nested Processing</h3>
+                <pre><code># Process each row of a matrix
+[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ]
+  '[ 0 ] '+' FOLD' MAP    # Sum each row: [ 6 15 24 ]</code></pre>
+            </section>
+
+            <section>
+                <h2>Common Patterns</h2>
+
+                <h3>Any / All</h3>
+                <pre><code># Check if any element satisfies condition
+[ 'PREDICATE' FILTER LENGTH [ 0 ] >' ] 'ANY' DEF
+
+# Check if all elements satisfy condition
+[ 'DUP LENGTH SWAP 'PREDICATE' FILTER LENGTH =' ] 'ALL' DEF</code></pre>
+
+                <h3>Find First</h3>
+                <pre><code># Find first matching element
+[ 'PREDICATE' FILTER [ 0 ] GET' ] 'FIND_FIRST' DEF</code></pre>
+
+                <h3>Group By</h3>
+                <pre><code># Group by even/odd (simplified)
+[ 1 2 3 4 5 6 ]
+  DUP 'EVEN?' FILTER    # Evens: [ 2 4 6 ]
+  SWAP 'ODD?' FILTER    # Odds: [ 1 3 5 ]</code></pre>
+
+                <h3>Zip</h3>
+                <pre><code># Combine two vectors element-wise
+# [ a b c ] [ 1 2 3 ] → [ [ a 1 ] [ b 2 ] [ c 3 ] ]
+# (Requires custom implementation)</code></pre>
+            </section>
+
+            <section>
+                <h2>Performance Considerations</h2>
+
+                <h3>Lazy vs Eager</h3>
+                <p>All Ajisai higher-order functions are eager - they process the entire input immediately. For large datasets:</p>
+                <ul>
+                    <li>Filter early to reduce data size</li>
+                    <li>Combine operations when possible</li>
+                    <li>Consider FOLD for single-pass aggregations</li>
+                </ul>
+
+                <h3>Vectorization</h3>
+                <p>For numeric operations, direct vector arithmetic may be faster than MAP:</p>
+                <pre><code># MAP version
+[ 1 2 3 4 5 ] '[ 2 ] *' MAP
+
+# Direct vector arithmetic (often faster)
+[ 1 2 3 4 5 ] [ 2 ] *</code></pre>
+            </section>
+
+            <section>
+                <h2>Summary</h2>
+                <table>
+                    <tr>
+                        <th>Function</th>
+                        <th>Purpose</th>
+                        <th>Input → Output</th>
+                    </tr>
+                    <tr>
+                        <td><code>MAP</code></td>
+                        <td>Transform each element</td>
+                        <td><code>[n] → [n]</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>FILTER</code></td>
+                        <td>Keep matching elements</td>
+                        <td><code>[n] → [0..n]</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>FOLD</code></td>
+                        <td>Reduce to single value</td>
+                        <td><code>[n] → [1]</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>UNFOLD</code></td>
+                        <td>Generate from state</td>
+                        <td><code>[1] → [n]</code></td>
+                    </tr>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <footer id="site-footer"></footer>
+
+    <script src="config.js"></script>
+</body>
+</html>
