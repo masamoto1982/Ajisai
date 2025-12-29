@@ -304,14 +304,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         span.style.fontWeight = 'bold';
     };
 
-    // 斜体span追加（英語用）
-    const appendItalicSpan = (text: string, color: string): HTMLSpanElement => {
-        const span = createSpan(text.replace(/\\n/g, '\n'), color);
-        span.style.fontStyle = 'italic';
-        appendToElement(elements.outputDisplay, span);
-        return span;
-    };
-
     // 情報表示（日本語 + 英語併記対応）
     const showInfo = (text: string, append = false, en?: string): void => {
         const fullText = en ? `${text} (${en})` : text;
