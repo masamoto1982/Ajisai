@@ -24,10 +24,10 @@ const AjisaiTheme = {
     // グラデーション設定（階層構造）
     // -------------------------------------------------------------------------
     gradients: {
-        "--gradient-header": "var(--color-primary)",  // ヘッダー: 紫単色
-        "--gradient-background": "var(--color-light)", // 背景: 明るい単色
-        "--gradient-parent": "linear-gradient(to bottom, var(--color-medium), var(--color-light), var(--color-medium))",
-        "--gradient-child": "var(--color-dark)"       // 子エリア: 濃いめ単色
+        "--gradient-header": "#6b5b95",  // ヘッダー: 紫単色（直接指定）
+        "--gradient-background": "#f8f7fc", // 背景: 明るい単色（直接指定）
+        "--gradient-parent": "linear-gradient(to bottom, #d4cfe8, #f8f7fc, #d4cfe8)",
+        "--gradient-child": "#e8e4f3"       // 子エリア: 濃いめ単色（直接指定）
     },
 
     // -------------------------------------------------------------------------
