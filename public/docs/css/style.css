@@ -71,12 +71,17 @@ a:hover {
 h1 {
     font-size: 200%;
     margin: 0 0 5px 0;
+    color: var(--header-text);
+}
+
+h1 a {
+    color: var(--header-text);
 }
 
 .subtitle {
     font-size: 60%;
     display: block;
-    color: #444;
+    color: var(--header-text-secondary);
 }
 
 address {
@@ -84,6 +89,7 @@ address {
     font-size: 90%;
     margin-top: 5px;
     line-height: 1.4;
+    color: var(--header-text-secondary);
 }
 
 address a {
@@ -109,7 +115,7 @@ address a {
     text-align: center;
     border: var(--border-light);
     border-left: none;
-    background: var(--gradient-header);
+    background: var(--gradient-menu);
 }
 .menu li:first-child {
     border-left: var(--border-light);
@@ -122,10 +128,14 @@ address a {
 .menu a {
     display: block;
     padding: 10px;
-    color: var(--color-primary);
+    color: var(--menu-text);
     width: 100%;
     height: 100%;
     box-sizing: border-box;
+}
+
+.menu a:hover {
+    color: var(--menu-text-hover);
 }
 
 /* コンテンツエリア */
