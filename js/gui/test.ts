@@ -258,7 +258,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
     const showStackDifference = (expected: Value[], actual: Value[]): void => {
         if (expected.length !== actual.length) {
             showColoredInfo(
-                `  Stack length mismatch: expected ${expected.length}, got ${actual.length}`,
+                `  Stack length mismatch → expected ${expected.length}, got ${actual.length}`,
                 'error'
             );
         }
@@ -268,14 +268,14 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         differences.forEach(diff => {
             switch (diff.type) {
                 case 'extra':
-                    showColoredInfo(`  [${diff.index}] Extra: ${formatValueSimple(diff.actual!)}`, 'error');
+                    showColoredInfo(`  [${diff.index}] Extra → ${formatValueSimple(diff.actual!)}`, 'error');
                     break;
                 case 'missing':
-                    showColoredInfo(`  [${diff.index}] Missing: ${formatValueSimple(diff.expected!)}`, 'error');
+                    showColoredInfo(`  [${diff.index}] Missing → ${formatValueSimple(diff.expected!)}`, 'error');
                     break;
                 case 'mismatch':
-                    showColoredInfo(`  [${diff.index}] Expected: ${formatValueSimple(diff.expected!)}`, 'error');
-                    showColoredInfo(`  [${diff.index}] Got:      ${formatValueSimple(diff.actual!)}`, 'error');
+                    showColoredInfo(`  [${diff.index}] Expected → ${formatValueSimple(diff.expected!)}`, 'error');
+                    showColoredInfo(`  [${diff.index}] Got      → ${formatValueSimple(diff.actual!)}`, 'error');
                     break;
             }
         });
@@ -287,15 +287,15 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         const statusText = passed ? 'PASS' : 'FAIL';
         const statusColor: InfoType = passed ? 'success' : 'error';
 
-        console.log(`${statusIcon} ${statusText}: ${testCase.name}`);
-        showColoredInfo(`${statusIcon} ${statusText}: ${testCase.name}`, statusColor);
+        console.log(`${statusIcon} ${statusText} → ${testCase.name}`);
+        showColoredInfo(`${statusIcon} ${statusText} → ${testCase.name}`, statusColor);
 
         // コードを表示
         const codeLines = testCase.code.split('\n');
         if (codeLines.length === 1) {
-            showColoredInfo(`  Code: ${testCase.code}`, 'info');
+            showColoredInfo(`  Code → ${testCase.code}`, 'info');
         } else {
-            showColoredInfo(`  Code:`, 'info');
+            showColoredInfo(`  Code →`, 'info');
             codeLines.forEach((line, index) => {
                 showColoredInfo(`    Step${index + 1}. ${line}`, 'info');
             });
@@ -303,43 +303,43 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
 
         // 期待値と実際の値を表示
         if (testCase.expectError) {
-            showColoredInfo(`  Expected: Error should occur`, 'info');
+            showColoredInfo(`  Expected → Error should occur`, 'info');
             if (result.errorMessage) {
-                showColoredInfo(`  Actual error: ${result.errorMessage}`, 'info');
+                showColoredInfo(`  Actual error → ${result.errorMessage}`, 'info');
             } else {
-                showColoredInfo(`  Actual: No error occurred`, passed ? 'info' : 'error');
+                showColoredInfo(`  Actual → No error occurred`, passed ? 'info' : 'error');
             }
         } else if (testCase.expectedStack !== undefined) {
-            showColoredInfo(`  Expected stack: ${formatStack(testCase.expectedStack)}`, 'info');
+            showColoredInfo(`  Expected stack → ${formatStack(testCase.expectedStack)}`, 'info');
             if (result.actualStack !== undefined) {
                 showColoredInfo(
-                    `  Actual stack:   ${formatStack(result.actualStack)}`,
+                    `  Actual stack   → ${formatStack(result.actualStack)}`,
                     passed ? 'info' : 'error'
                 );
                 if (!passed) {
                     showStackDifference(testCase.expectedStack, result.actualStack);
                 }
             } else {
-                showColoredInfo(`  Actual stack: (not captured)`, 'error');
+                showColoredInfo(`  Actual stack → (not captured)`, 'error');
             }
         } else if (testCase.expectedOutput !== undefined) {
-            showColoredInfo(`  Expected output: "${testCase.expectedOutput}"`, 'info');
+            showColoredInfo(`  Expected output → "${testCase.expectedOutput}"`, 'info');
             if (result.actualOutput !== undefined) {
                 showColoredInfo(
-                    `  Actual output:   "${result.actualOutput}"`,
+                    `  Actual output   → "${result.actualOutput}"`,
                     passed ? 'info' : 'error'
                 );
             } else {
-                showColoredInfo(`  Actual output: (not captured)`, 'error');
+                showColoredInfo(`  Actual output → (not captured)`, 'error');
             }
         }
 
         if (result.reason) {
-            showColoredInfo(`  Reason: ${result.reason}`, passed ? 'info' : 'error');
+            showColoredInfo(`  Reason → ${result.reason}`, passed ? 'info' : 'error');
         }
 
         if (!passed && result.errorMessage) {
-            showColoredInfo(`  Error: ${result.errorMessage}`, 'error');
+            showColoredInfo(`  Error → ${result.errorMessage}`, 'error');
         }
 
         showColoredInfo('', 'info');
@@ -347,9 +347,9 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
 
     // テストエラーの表示
     const showTestError = (testCase: TestCase, error: unknown): void => {
-        showColoredInfo(`[NG] ERROR: ${testCase.name}`, 'error');
-        showColoredInfo(`  Code: ${testCase.code}`, 'info');
-        showColoredInfo(`  Error: ${error}`, 'error');
+        showColoredInfo(`[NG] ERROR → ${testCase.name}`, 'error');
+        showColoredInfo(`  Code → ${testCase.code}`, 'info');
+        showColoredInfo(`  Error → ${error}`, 'error');
         showColoredInfo('', 'info');
     };
 
@@ -396,11 +396,11 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         }
 
         showColoredInfo(`\n=== Final Results ===`, 'info');
-        showColoredInfo(`Total Passed: ${totalPassed}`, 'success');
+        showColoredInfo(`Total Passed → ${totalPassed}`, 'success');
 
         if (totalFailed > 0) {
-            showColoredInfo(`Total Failed: ${totalFailed}`, 'error');
-            showColoredInfo(`Failed tests: ${failedTests.join(', ')}`, 'error');
+            showColoredInfo(`Total Failed → ${totalFailed}`, 'error');
+            showColoredInfo(`Failed tests → ${failedTests.join(', ')}`, 'error');
         } else {
             showColoredInfo('All tests passed!', 'success');
         }
