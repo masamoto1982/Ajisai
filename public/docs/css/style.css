@@ -167,6 +167,7 @@ address a {
     display: flex;
     flex: 1;
     gap: 0;
+    background: var(--gradient-parent);
 }
 
 /* サイドバー */
