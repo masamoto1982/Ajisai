@@ -82,6 +82,19 @@ const AjisaiTheme = {
         return hexMatch ? hexMatch[0] : '#888888';
     },
 
+    // 基調色を含んだ暗い色を生成（コードエディタ用）
+    // 黒ベースに基調色を少し混ぜる
+    getTintedDark: function(hex, baseValue = 0.15, tintAmount = 0.3) {
+        const rgb = this.hexToRgb(hex);
+        if (!rgb) return '#2d2d2d';
+        // ベースの暗さ + 基調色のティント
+        return this.rgbToHex(
+            baseValue * 255 + rgb.r * tintAmount,
+            baseValue * 255 + rgb.g * tintAmount,
+            baseValue * 255 + rgb.b * tintAmount
+        );
+    },
+
     // =========================================================================
     // テーマ設定（ここを編集してテーマを変更）
     // =========================================================================
@@ -172,10 +185,10 @@ const AjisaiTheme = {
             "--border-main": `solid 1px ${secondary}`,
             "--radius-main": "10px",
 
-            // コードエディタテーマ
-            "--code-bg": "#2d2d2d",
+            // コードエディタテーマ（基調色に連動）
+            "--code-bg": this.getTintedDark(primary),
             "--code-text": "#f8f8f2",
-            "--code-comment": "#75715e",
+            "--code-comment": this.lighten(primary, 0.3),
 
             // 色覚配慮カラー
             "--color-builtin": "#E65100",
