@@ -2,12 +2,20 @@
  * ============================================================================
  * Ajisai 共通テーマ設定
  * ============================================================================
- * このファイルを編集することで、アプリとReferenceサイトの
- * カラーテーマを一括で変更できます。
  *
- * 背景色を指定すると、文字色は自動的に計算されます。
- * - 暗い背景 → 明るい文字色
- * - 明るい背景 → 暗い文字色
+ * 基調色（primaryColor）を1つ指定するだけで、
+ * 全ての背景色・文字色が自動的に計算されます。
+ *
+ * HTMLの階層構造に基づく色の濃さ:
+ *   header/footer  = 基調色そのもの（最も濃い）
+ *   body           = 基調色を極めて薄く（最も明るい）
+ *   article        = 基調色を薄く
+ *   section        = 基調色をやや薄く
+ *   code           = 基調色を含んだ暗い色
+ *
+ * 文字色は各エリアの背景色に基づいて自動決定:
+ *   暗い背景 → 明るい文字
+ *   明るい背景 → 暗い文字
  */
 
 const AjisaiTheme = {
@@ -15,7 +23,6 @@ const AjisaiTheme = {
     // カラーユーティリティ関数
     // =========================================================================
 
-    // HEX → RGB 変換
     hexToRgb: function(hex) {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
@@ -25,7 +32,6 @@ const AjisaiTheme = {
         } : null;
     },
 
-    // RGB → HEX 変換
     rgbToHex: function(r, g, b) {
         return '#' + [r, g, b].map(x => {
             const hex = Math.max(0, Math.min(255, Math.round(x))).toString(16);
@@ -33,7 +39,6 @@ const AjisaiTheme = {
         }).join('');
     },
 
-    // 相対輝度を計算 (0 = 黒, 1 = 白)
     getLuminance: function(hex) {
         const rgb = this.hexToRgb(hex);
         if (!rgb) return 0.5;
@@ -44,12 +49,10 @@ const AjisaiTheme = {
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     },
 
-    // 色が明るいかどうか判定 (閾値: 0.5)
     isLight: function(hex) {
         return this.getLuminance(hex) > 0.5;
     },
 
-    // 色を明るくする
     lighten: function(hex, amount) {
         const rgb = this.hexToRgb(hex);
         if (!rgb) return hex;
@@ -60,7 +63,6 @@ const AjisaiTheme = {
         );
     },
 
-    // 色を暗くする
     darken: function(hex, amount) {
         const rgb = this.hexToRgb(hex);
         if (!rgb) return hex;
@@ -71,23 +73,31 @@ const AjisaiTheme = {
         );
     },
 
-    // 背景色に対するコントラスト文字色を取得
-    getContrastText: function(bgHex, lightText = '#ffffff', darkText = '#333333') {
-        return this.isLight(bgHex) ? darkText : lightText;
+    // 背景色に基づくメインテキスト色
+    getTextColor: function(bgHex) {
+        return this.isLight(bgHex) ? '#333333' : '#ffffff';
     },
 
-    // グラデーションから基準色を抽出
-    extractBaseColor: function(gradient) {
-        const hexMatch = gradient.match(/#[a-fA-F0-9]{6}/);
-        return hexMatch ? hexMatch[0] : '#888888';
+    // 背景色に基づくセカンダリテキスト色（やや薄め）
+    getTextColorSecondary: function(bgHex) {
+        return this.isLight(bgHex) ? '#555555' : '#cccccc';
+    },
+
+    // 背景色に基づくターシャリテキスト色（さらに薄め）
+    getTextColorTertiary: function(bgHex) {
+        return this.isLight(bgHex) ? '#777777' : '#aaaaaa';
+    },
+
+    // 背景色に基づく枠線色（背景より濃い/薄い色）
+    getBorderColor: function(bgHex) {
+        // 明るい背景 → 暗い枠線、暗い背景 → 明るい枠線
+        return this.isLight(bgHex) ? this.darken(bgHex, 0.25) : this.lighten(bgHex, 0.3);
     },
 
     // 基調色を含んだ暗い色を生成（コードエディタ用）
-    // 黒ベースに基調色を少し混ぜる
-    getTintedDark: function(hex, baseValue = 0.15, tintAmount = 0.3) {
+    getTintedDark: function(hex, baseValue = 0.12, tintAmount = 0.25) {
         const rgb = this.hexToRgb(hex);
         if (!rgb) return '#2d2d2d';
-        // ベースの暗さ + 基調色のティント
         return this.rgbToHex(
             baseValue * 255 + rgb.r * tintAmount,
             baseValue * 255 + rgb.g * tintAmount,
@@ -99,99 +109,116 @@ const AjisaiTheme = {
     // テーマ設定（ここを編集してテーマを変更）
     // =========================================================================
 
-    // プライマリカラー（テーマの基準色）
+    // 基調色のみを指定 - 他の全ての色はここから自動生成されます
     primaryColor: '#6b5b95',  // ディープパープル（紫陽花カラー）
-    // primaryColor: '#8B0000',  // 深紅（テスト用）
-
-    // 各エリアの背景色設定
-    // ディープパープル（紫陽花）テーマ:
-    backgrounds: {
-        header: '#6b5b95',
-        page: '#f8f7fc',
-        parent: '#e8e4f3',
-        child: '#f0eef7',
-        menu: '#7b6ba5'
-    },
-    // 深紅テーマ（テスト用）:
-    // backgrounds: {
-    //     header: '#8B0000',        // ヘッダー背景（深紅）
-    //     page: '#fef8f8',          // ページ背景（淡いピンク）
-    //     parent: '#f5e6e6',        // 親エリア背景
-    //     child: '#faf0f0',         // 子エリア背景
-    //     menu: '#a52a2a'           // メニューバー背景（ブラウン系）
-    // },
+    // primaryColor: '#8B0000',  // 深紅
+    // primaryColor: '#2E7D32',  // フォレストグリーン
+    // primaryColor: '#1565C0',  // オーシャンブルー
 
     // =========================================================================
-    // 自動計算されたCSS変数を生成
+    // 背景色の自動生成（HTMLの階層構造に対応）
+    // =========================================================================
+
+    getBackgrounds: function() {
+        const p = this.primaryColor;
+        return {
+            // header/footer: 基調色そのもの（最も濃い）
+            header: p,
+            // body: 極めて薄く（95%白に近づける）
+            body: this.lighten(p, 0.94),
+            // article/main: 薄く（85%白に近づける）
+            article: this.lighten(p, 0.82),
+            // section: やや薄く（88%白に近づける）
+            section: this.lighten(p, 0.88),
+            // menu/nav: ヘッダーより少し明るく
+            menu: this.lighten(p, 0.12),
+            // code: 暗いが基調色を含む
+            code: this.getTintedDark(p)
+        };
+    },
+
+    // =========================================================================
+    // CSS変数の自動生成
     // =========================================================================
 
     generateVariables: function() {
-        const bg = this.backgrounds;
         const primary = this.primaryColor;
-
-        // 各背景に対するテキスト色を自動計算
-        const headerText = this.getContrastText(bg.header);
-        const pageText = this.getContrastText(bg.page);
-        const parentText = this.getContrastText(bg.parent);
-        const childText = this.getContrastText(bg.child);
-        const menuText = this.getContrastText(bg.menu);
-
-        // H1, H2, H3 の階層的な色を計算
-        // ヘッダー用（暗い背景なら明るく、明るい背景なら暗く）
-        const h1Color = headerText;
-
-        // コンテンツエリア用（親エリアの背景に基づく）
-        const isParentLight = this.isLight(bg.parent);
-        const h2Color = isParentLight ? this.darken(primary, 0.1) : this.lighten(primary, 0.3);
-        const h3Color = isParentLight ? this.lighten(primary, 0.1) : this.lighten(primary, 0.5);
-
-        // セカンダリカラー（プライマリを少し明るく）
+        const bg = this.getBackgrounds();
         const secondary = this.lighten(primary, 0.2);
+        const rgb = this.hexToRgb(primary);
 
         return {
-            // カラーパレット
+            // 基調色
             "--color-primary": primary,
             "--color-secondary": secondary,
-            "--color-light": bg.page,
-            "--color-medium": this.darken(bg.page, 0.1),
-            "--color-dark": bg.parent,
-            "--color-text": pageText,
-            "--color-text-light": this.isLight(bg.page) ? '#666666' : '#aaaaaa',
 
-            // 背景色
-            "--gradient-header": bg.header,
-            "--gradient-background": bg.page,
-            "--gradient-parent": bg.parent,
-            "--gradient-child": bg.child,
-            "--gradient-menu": bg.menu,
-            "--gradient-menu-hover": this.lighten(bg.menu, 0.15),
+            // 背景色（HTML階層に対応）
+            "--bg-header": bg.header,
+            "--bg-body": bg.body,
+            "--bg-article": bg.article,
+            "--bg-section": bg.section,
+            "--bg-menu": bg.menu,
+            "--bg-menu-hover": this.lighten(bg.menu, 0.15),
+            "--bg-code": bg.code,
+            "--bg-code-inline": `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`,
 
-            // ヘッダー用テキスト色（階層構造・自動計算）
-            // main: タイトル, secondary: サブタイトル/バージョン, tertiary: 説明文
-            "--header-text": headerText,
-            "--header-text-secondary": this.isLight(bg.header) ? '#555555' : '#cccccc',
-            "--header-text-tertiary": this.isLight(bg.header) ? '#777777' : '#aaaaaa',
+            // テキスト色（各背景に基づいて自動計算）
+            "--text-on-header": this.getTextColor(bg.header),
+            "--text-on-header-secondary": this.getTextColorSecondary(bg.header),
+            "--text-on-header-tertiary": this.getTextColorTertiary(bg.header),
+            "--text-on-body": this.getTextColor(bg.body),
+            "--text-on-body-secondary": this.getTextColorSecondary(bg.body),
+            "--text-on-article": this.getTextColor(bg.article),
+            "--text-on-section": this.getTextColor(bg.section),
+            "--text-on-menu": this.getTextColor(bg.menu),
+            "--text-on-menu-hover": this.isLight(bg.menu) ? '#000000' : '#ffffff',
+            "--text-on-code": "#f8f8f2",
 
-            // メニュー/ボタン用テキスト色（自動計算）
-            "--menu-text": menuText,
-            "--menu-text-hover": this.isLight(bg.menu) ? '#000000' : '#ffffff',
+            // 見出し色（コンテンツエリアの背景に基づく）
+            "--heading-h1": this.getTextColor(bg.header),
+            "--heading-h2": this.isLight(bg.article) ? this.darken(primary, 0.1) : this.lighten(primary, 0.3),
+            "--heading-h3": this.isLight(bg.article) ? primary : this.lighten(primary, 0.5),
 
-            // 見出し色（階層構造・自動計算）
-            "--heading-h1": h1Color,
-            "--heading-h2": h2Color,
-            "--heading-h3": h3Color,
+            // コード内コメント
+            "--text-code-comment": this.lighten(primary, 0.4),
 
-            // ボーダー・角丸
-            "--border-main": `solid 1px ${secondary}`,
+            // 枠線色（各エリアの背景に基づいて自動計算）
+            "--border-on-header": this.getBorderColor(bg.header),
+            "--border-on-body": this.getBorderColor(bg.body),
+            "--border-on-article": this.getBorderColor(bg.article),
+            "--border-on-section": this.getBorderColor(bg.section),
+            "--border-on-menu": this.getBorderColor(bg.menu),
+            "--border-on-code": this.getBorderColor(bg.code),
+
+            // その他
             "--radius-main": "10px",
 
-            // コードエディタテーマ（基調色に連動）
-            "--code-bg": this.getTintedDark(primary),
+            // ====== 後方互換性のための変数（既存CSSとの互換） ======
+            "--border-color": this.getBorderColor(bg.article),
+            "--border-main": `solid 1px ${this.getBorderColor(bg.article)}`,
+            "--color-secondary": this.getBorderColor(bg.article),
+            "--gradient-header": bg.header,
+            "--gradient-background": bg.body,
+            "--gradient-parent": bg.article,
+            "--gradient-child": bg.section,
+            "--gradient-menu": bg.menu,
+            "--gradient-menu-hover": this.lighten(bg.menu, 0.15),
+            "--header-text": this.getTextColor(bg.header),
+            "--header-text-secondary": this.getTextColorSecondary(bg.header),
+            "--header-text-tertiary": this.getTextColorTertiary(bg.header),
+            "--menu-text": this.getTextColor(bg.menu),
+            "--menu-text-hover": this.isLight(bg.menu) ? '#000000' : '#ffffff',
+            "--color-light": bg.body,
+            "--color-medium": this.darken(bg.body, 0.1),
+            "--color-dark": bg.article,
+            "--color-text": this.getTextColor(bg.body),
+            "--color-text-light": this.getTextColorSecondary(bg.body),
+            "--code-bg": bg.code,
             "--code-text": "#f8f8f2",
-            "--code-comment": this.lighten(primary, 0.3),
-            "--code-inline-bg": `rgba(${this.hexToRgb(primary).r}, ${this.hexToRgb(primary).g}, ${this.hexToRgb(primary).b}, 0.1)`,
+            "--code-comment": this.lighten(primary, 0.4),
+            "--code-inline-bg": `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`,
 
-            // 色覚配慮カラー
+            // 色覚配慮カラー（固定）
             "--color-builtin": "#E65100",
             "--color-dependency": "#E69500",
             "--color-non-dependency": "#009B68",
@@ -200,25 +227,22 @@ const AjisaiTheme = {
     },
 
     // =========================================================================
-    // テーマを適用する関数
+    // テーマ適用
     // =========================================================================
 
     apply: function() {
         const root = document.documentElement;
         const vars = this.generateVariables();
-
         for (const [key, value] of Object.entries(vars)) {
             root.style.setProperty(key, value);
         }
     },
 
-    // 全設定を一つのオブジェクトとして取得
     getAll: function() {
         return this.generateVariables();
     }
 };
 
-// グローバルに公開
 if (typeof window !== 'undefined') {
     window.AjisaiTheme = AjisaiTheme;
 }

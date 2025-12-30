@@ -152,15 +152,19 @@ section {
 section h2 {
     font-size: 1.125rem;
     margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
     color: var(--heading-h2);
     font-weight: 500;
+    border-bottom: 2px solid var(--color-secondary);
 }
 
 section h3 {
     font-size: 1rem;
     margin-bottom: 0.5rem;
+    padding-bottom: 0.25rem;
     color: var(--heading-h3);
     font-weight: 500;
+    border-bottom: 1px solid var(--color-secondary);
 }
 
 /* 入力・出力エリア */
