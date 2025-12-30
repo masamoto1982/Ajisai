@@ -1,15 +1,19 @@
-const CACHE_NAME = 'ajisai-v202512291520';
+const CACHE_NAME = 'ajisai-v202512301000';
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './manifest.json',
+  './ajisai-config.js',
   './ajisai-theme.js'
 ];
 
-// ネットワーク優先で取得すべきファイル（テーマ関連）
+// ネットワーク優先で取得すべきファイル（設定・テーマ関連）
 const networkFirstPatterns = [
+  'ajisai-config.js',
   'ajisai-theme.js',
+  'config.js',
+  'script.js',
   'style.css',
   'index.html'
 ];
