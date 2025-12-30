@@ -171,7 +171,7 @@ address a {
 
 /* サイドバー */
 .side-nav {
-    padding: 10px;
+    padding: 0 10px 10px 10px;
     flex: var(--side-nav-flex-ratio);
     background: var(--gradient-parent);
 }
@@ -237,7 +237,7 @@ address a {
 
 /* メイン記事 */
 .main-content {
-    padding: 10px;
+    padding: 0 10px 10px 10px;
     flex: var(--main-content-flex-ratio);
     background: var(--gradient-parent);
     min-height: 500px;
@@ -580,7 +580,7 @@ li {
     .main-content {
         flex: auto;
         width: 100%;
-        padding: 10px 0;
+        padding: 0;
     }
     .side-nav {
         background: none;
@@ -590,7 +590,7 @@ li {
         margin: 0 10px 20px 10px;
     }
     .main-content {
-        padding: 10px 0;
+        padding: 0;
         min-height: auto;
     }
 
