@@ -1,11 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 設定ファイルチェック
-    if (typeof SiteConfig === 'undefined') {
-        console.error("Config file (SiteConfig) is not loaded.");
+    if (typeof AjisaiConfig === 'undefined') {
+        console.error("Config file (AjisaiConfig) is not loaded.");
         return;
     }
 
-    const c = SiteConfig;
+    const c = AjisaiConfig;
 
     // ------------------------------------------------------------------------
     // 0. テーマカラーの適用 (共通テーマから)
@@ -98,8 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (companyTableEl) {
         companyTableEl.innerHTML = `
             <table>
-                <tr><th>Project</th><td>${c.company.name}</td></tr>
-                <tr><th>Author</th><td>${c.company.representative}</td></tr>
+                <tr><th>Project</th><td>${c.project.name}</td></tr>
+                <tr><th>Author</th><td>${c.project.author}</td></tr>
                 <tr><th>License</th><td>MIT License</td></tr>
                 <tr>
                     <th>Repository</th>
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
                 <tr>
                     <th>Demo</th>
-                    <td><a href="${c.company.url}" target="_blank" rel="noopener noreferrer">${c.company.url}</a></td>
+                    <td><a href="${c.project.url}" target="_blank" rel="noopener noreferrer">${c.project.url}</a></td>
                 </tr>
                 <tr>
                     <th>Technology</th>
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (footerEl) {
         footerEl.innerHTML = `
             <a href="index.html" target="_self">
-                &copy;<time>${c.meta.copyrightYear}</time> ${c.company.representative} - ${c.meta.title}
+                &copy;<time>${c.meta.copyrightYear}</time> ${c.project.author} - ${c.meta.title}
             </a>
             &nbsp;|&nbsp;
             <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">GitHub</a>

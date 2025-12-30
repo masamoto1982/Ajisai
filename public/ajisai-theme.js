@@ -1,21 +1,24 @@
 /**
  * ============================================================================
- * Ajisai 共通テーマ設定
+ * Ajisai テーマ計算エンジン
  * ============================================================================
  *
- * 基調色（primaryColor）を1つ指定するだけで、
- * 全ての背景色・文字色が自動的に計算されます。
+ * ajisai-config.js で指定された基調色（primaryColor）から、
+ * 全ての背景色・文字色・枠線色を自動計算します。
  *
- * HTMLの階層構造に基づく色の濃さ:
+ * 【依存関係】
+ *   このファイルより先に ajisai-config.js を読み込む必要があります。
+ *
+ * 【HTMLの階層構造に基づく色の濃さ】
  *   header/footer  = 基調色そのもの（最も濃い）
  *   body           = 基調色を極めて薄く（最も明るい）
  *   article        = 基調色を薄く
  *   section        = 基調色をやや薄く
  *   code           = 基調色を含んだ暗い色
  *
- * 文字色は各エリアの背景色に基づいて自動決定:
- *   暗い背景 → 明るい文字
- *   明るい背景 → 暗い文字
+ * 【自動計算される色】
+ *   文字色: 各エリアの背景色に基づいて自動決定（暗い背景→明るい文字）
+ *   枠線色: 各エリアの背景色に基づいて自動決定（明るい背景→暗い枠線）
  */
 
 const AjisaiTheme = {
@@ -106,21 +109,24 @@ const AjisaiTheme = {
     },
 
     // =========================================================================
-    // テーマ設定（ここを編集してテーマを変更）
+    // 基調色の取得（ajisai-config.js から読み込み）
     // =========================================================================
 
-    // 基調色のみを指定 - 他の全ての色はここから自動生成されます
-    primaryColor: '#6b5b95',  // ディープパープル（紫陽花カラー）
-    // primaryColor: '#8B0000',  // 深紅
-    // primaryColor: '#2E7D32',  // フォレストグリーン
-    // primaryColor: '#1565C0',  // オーシャンブルー
+    getPrimaryColor: function() {
+        if (typeof AjisaiConfig !== 'undefined' && AjisaiConfig.primaryColor) {
+            return AjisaiConfig.primaryColor;
+        }
+        // フォールバック（config.jsが読み込まれていない場合）
+        console.warn('AjisaiConfig not found, using fallback color');
+        return '#6b5b95';
+    },
 
     // =========================================================================
     // 背景色の自動生成（HTMLの階層構造に対応）
     // =========================================================================
 
     getBackgrounds: function() {
-        const p = this.primaryColor;
+        const p = this.getPrimaryColor();
         return {
             // header/footer: 基調色そのもの（最も濃い）
             header: p,
@@ -142,7 +148,7 @@ const AjisaiTheme = {
     // =========================================================================
 
     generateVariables: function() {
-        const primary = this.primaryColor;
+        const primary = this.getPrimaryColor();
         const bg = this.getBackgrounds();
         const secondary = this.lighten(primary, 0.2);
         const rgb = this.hexToRgb(primary);
