@@ -13,8 +13,13 @@
 /* ---------------------------------------------------------------------- */
 /* 2. ベーススタイル */
 /* ---------------------------------------------------------------------- */
-body {
+* {
     margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
     color: var(--color-primary);
     background: var(--gradient-background);
     font-family: "Inter", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
