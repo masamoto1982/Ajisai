@@ -126,15 +126,14 @@ address a {
     list-style: none;
     padding: 0;
     margin: 0;
-    border-top: none;
 }
 
 .menu li {
     flex: 1;
     padding: 0;
     text-align: center;
-    border: var(--border-light);
-    border-left: none;
+    border-top: var(--border-light);
+    border-right: var(--border-light);
     background: var(--gradient-menu);
 }
 .menu li:first-child {
@@ -555,11 +554,11 @@ li {
 
     .menu li {
         flex: 1;
-        border-left: var(--border-light);
-        border-top: none;
+        border-top: var(--border-light);
+        border-right: var(--border-light);
     }
     .menu li:first-child {
-        border-left: none;
+        border-left: var(--border-light);
     }
     .menu a {
         padding: 12px 4px;
