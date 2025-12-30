@@ -42,7 +42,6 @@ a:hover {
     flex-direction: column;
     max-width: var(--max-width-desktop);
     margin: 0 auto;
-    gap: 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -56,12 +55,10 @@ a:hover {
     align-items: center;
     padding: 45px 20px;
     background: var(--gradient-header);
-    margin: 0;
 }
 
 .logo {
     padding-right: 20px;
-    margin: 0;
 }
 
 .logo-icon {
@@ -127,13 +124,12 @@ address a {
 /* ナビゲーション */
 .global-nav {
     width: 100%;
-    margin: 0;
-    padding: 0;
 }
 
 .menu {
     display: flex;
     list-style: none;
+    padding: 0;
     margin: 0;
 }
 
@@ -171,13 +167,11 @@ address a {
     display: flex;
     flex: 1;
     gap: 0;
-    margin: 0;
-    padding: 0;
 }
 
 /* サイドバー */
 .side-nav {
-    padding: 10px;
+    padding: 0 10px 10px 10px;
     flex: var(--side-nav-flex-ratio);
     background: var(--gradient-parent);
 }
@@ -243,7 +237,7 @@ address a {
 
 /* メイン記事 */
 .main-content {
-    padding: 10px;
+    padding: 0 10px 10px 10px;
     flex: var(--main-content-flex-ratio);
     background: var(--gradient-parent);
     min-height: 500px;
@@ -586,7 +580,7 @@ li {
     .main-content {
         flex: auto;
         width: 100%;
-        padding: 10px 0;
+        padding: 0;
     }
     .side-nav {
         background: none;
@@ -596,7 +590,7 @@ li {
         margin: 0 10px 20px 10px;
     }
     .main-content {
-        padding: 10px 0;
+        padding: 0;
         min-height: auto;
     }
 
