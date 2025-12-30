@@ -494,7 +494,7 @@ li {
     text-align: center;
     background: var(--gradient-header);
     margin-top: 10px;
-    color: var(--header-text-secondary);
+    color: var(--header-text);
 }
 
 .site-footer a {
