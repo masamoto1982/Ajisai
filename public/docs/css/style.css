@@ -551,23 +551,21 @@ li {
         margin-bottom: 10px;
     }
     .menu {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
 
     .menu li {
-        flex-basis: 50%;
+        flex: 1;
         border-left: var(--border-light);
         border-top: none;
     }
-    .menu li:nth-child(odd) {
+    .menu li:first-child {
         border-left: none;
     }
-    .menu li:nth-child(3), .menu li:nth-child(4) {
-        border-top: var(--border-light);
-    }
     .menu a {
-        padding: 15px 5px;
-        font-size: 90%;
+        padding: 12px 4px;
+        font-size: 80%;
+        white-space: nowrap;
     }
 
     .content-wrapper {
