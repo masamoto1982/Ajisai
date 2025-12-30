@@ -488,16 +488,22 @@ li {
     transition: opacity 1s ease-in-out;
 }
 
-/* フッター */
+/* フッター（ヘッダーと同じ配色） */
 .site-footer {
     padding: 15px;
     text-align: center;
     background: var(--gradient-header);
     margin-top: 10px;
+    color: var(--header-text-secondary);
 }
 
 .site-footer a {
     margin: 0 5px;
+    color: var(--header-text);
+}
+
+.site-footer a:hover {
+    color: var(--header-text-secondary);
 }
 
 /* ---------------------------------------------------------------------- */
