@@ -75,7 +75,7 @@ header h1 {
     gap: 0.5rem;
 }
 
-/* ヘッダーボタン統一スタイル */
+/* ヘッダーボタン統一スタイル（Reference メニューバーと統一） */
 .reference-btn,
 .test-btn,
 .header-btn {
@@ -83,10 +83,10 @@ header h1 {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background-color: rgba(255, 255, 255, 0.5);
-    color: var(--color-primary);
+    background-color: var(--gradient-menu);
+    color: var(--menu-text);
     text-decoration: none;
-    border: var(--border-main);
+    border: none;
     font-size: 0.875rem;
     font-weight: 400;
     cursor: pointer;
@@ -97,7 +97,8 @@ header h1 {
 .reference-btn:hover,
 .test-btn:hover,
 .header-btn:hover {
-    background-color: var(--color-light);
+    background-color: var(--gradient-menu-hover);
+    color: var(--menu-text-hover);
 }
 
 .reference-btn svg,
