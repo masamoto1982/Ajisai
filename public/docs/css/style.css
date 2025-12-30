@@ -133,7 +133,6 @@ address a {
     list-style: none;
     padding: 0;
     margin: 0;
-    border-bottom: none;
 }
 
 .menu li {
@@ -142,6 +141,7 @@ address a {
     text-align: center;
     border-top: var(--border-light);
     border-right: var(--border-light);
+    border-bottom: var(--border-light);
     background: var(--gradient-menu);
 }
 .menu li:first-child {
@@ -567,6 +567,7 @@ li {
         flex: 1;
         border-top: var(--border-light);
         border-right: var(--border-light);
+        border-bottom: var(--border-light);
     }
     .menu li:first-child {
         border-left: var(--border-light);
