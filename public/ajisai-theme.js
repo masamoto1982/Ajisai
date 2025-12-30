@@ -100,26 +100,26 @@ const AjisaiTheme = {
     // =========================================================================
 
     // プライマリカラー（テーマの基準色）
-    // primaryColor: '#6b5b95',  // ディープパープル（紫陽花カラー）
-    primaryColor: '#8B0000',  // 深紅（テスト用）
+    primaryColor: '#6b5b95',  // ディープパープル（紫陽花カラー）
+    // primaryColor: '#8B0000',  // 深紅（テスト用）
 
     // 各エリアの背景色設定
     // ディープパープル（紫陽花）テーマ:
-    // backgrounds: {
-    //     header: '#6b5b95',
-    //     page: '#f8f7fc',
-    //     parent: '#e8e4f3',
-    //     child: '#f0eef7',
-    //     menu: '#7b6ba5'
-    // },
-    // 深紅テーマ（テスト用）:
     backgrounds: {
-        header: '#8B0000',        // ヘッダー背景（深紅）
-        page: '#fef8f8',          // ページ背景（淡いピンク）
-        parent: '#f5e6e6',        // 親エリア背景
-        child: '#faf0f0',         // 子エリア背景
-        menu: '#a52a2a'           // メニューバー背景（ブラウン系）
+        header: '#6b5b95',
+        page: '#f8f7fc',
+        parent: '#e8e4f3',
+        child: '#f0eef7',
+        menu: '#7b6ba5'
     },
+    // 深紅テーマ（テスト用）:
+    // backgrounds: {
+    //     header: '#8B0000',        // ヘッダー背景（深紅）
+    //     page: '#fef8f8',          // ページ背景（淡いピンク）
+    //     parent: '#f5e6e6',        // 親エリア背景
+    //     child: '#faf0f0',         // 子エリア背景
+    //     menu: '#a52a2a'           // メニューバー背景（ブラウン系）
+    // },
 
     // =========================================================================
     // 自動計算されたCSS変数を生成
@@ -189,6 +189,7 @@ const AjisaiTheme = {
             "--code-bg": this.getTintedDark(primary),
             "--code-text": "#f8f8f2",
             "--code-comment": this.lighten(primary, 0.3),
+            "--code-inline-bg": `rgba(${this.hexToRgb(primary).r}, ${this.hexToRgb(primary).g}, ${this.hexToRgb(primary).b}, 0.1)`,
 
             // 色覚配慮カラー
             "--color-builtin": "#E65100",

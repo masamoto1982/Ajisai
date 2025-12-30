@@ -334,20 +334,20 @@ table td {
 }
 
 /* ---------------------------------------------------------------------- */
-/* 4. コードブロック（ドキュメント用追加） */
+/* 4. コードブロック（テーマ連動） */
 /* ---------------------------------------------------------------------- */
 code {
     font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
     font-size: 14px;
-    background: rgba(107, 91, 149, 0.1);
+    background: var(--code-inline-bg, rgba(0, 0, 0, 0.08));
     padding: 2px 6px;
     border-radius: 3px;
     border: 1px solid var(--color-medium);
 }
 
 pre {
-    background: #2d2d2d;
-    color: #f8f8f2;
+    background: var(--code-bg);
+    color: var(--code-text);
     border: 1px solid var(--color-secondary);
     border-radius: var(--radius-main);
     padding: 16px;
@@ -360,13 +360,13 @@ pre code {
     background: none;
     border: none;
     padding: 0;
-    color: #f8f8f2;
+    color: var(--code-text);
     font-size: 13px;
 }
 
 /* コード内のコメント */
 pre code .comment {
-    color: #75715e;
+    color: var(--code-comment);
 }
 
 /* ワードリファレンス用 */
