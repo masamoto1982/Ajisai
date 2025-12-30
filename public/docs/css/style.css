@@ -141,7 +141,6 @@ address a {
     text-align: center;
     border-top: var(--border-light);
     border-right: var(--border-light);
-    border-bottom: var(--border-light);
     background: var(--gradient-menu);
 }
 .menu li:first-child {
@@ -170,9 +169,10 @@ address a {
     display: flex;
     flex: 1;
     gap: 0;
-    margin: -1px 0 0 0;
+    margin: 0;
     padding: 0;
     background: var(--gradient-parent);
+    border-top: var(--border-light);
 }
 
 /* サイドバー */
@@ -567,7 +567,6 @@ li {
         flex: 1;
         border-top: var(--border-light);
         border-right: var(--border-light);
-        border-bottom: var(--border-light);
     }
     .menu li:first-child {
         border-left: var(--border-light);
