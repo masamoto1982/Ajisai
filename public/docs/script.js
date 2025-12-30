@@ -1,11 +1,43 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 設定ファイルチェック
-    if (typeof AjisaiConfig === 'undefined') {
-        console.error("Config file (AjisaiConfig) is not loaded.");
-        return;
-    }
-
-    const c = AjisaiConfig;
+    // 設定ファイルチェック（フォールバック付き）
+    const c = (typeof AjisaiConfig !== 'undefined') ? AjisaiConfig : {
+        // フォールバック設定
+        primaryColor: '#6b5b95',
+        meta: {
+            title: "Ajisai",
+            subTitle: "FORTH-inspired Stack-based Language",
+            copyrightYear: new Date().getFullYear()
+        },
+        project: {
+            name: "Ajisai Programming Language",
+            shortName: "Ajisai",
+            author: "masamoto yamashiro",
+            url: "https://masamoto1982.github.io/Ajisai/",
+            repository: "https://github.com/masamoto1982/Ajisai"
+        },
+        globalMenu: [
+            { label: "Home", link: "index.html" },
+            { label: "Philosophy", link: "philosophy.html" },
+            { label: "About", link: "about.html" },
+            { label: "Tutorial", link: "tutorial.html" }
+        ],
+        serviceMenu: [
+            { label: "Syntax", link: "syntax.html" },
+            { label: "Built-in Words", link: "words.html" },
+            { label: "Data Types", link: "types.html" },
+            { label: "Control Flow", link: "control.html" },
+            { label: "Higher-Order", link: "higher-order.html" }
+        ],
+        referenceMenu: [
+            { label: "Examples", link: "examples.html" },
+            { label: "GitHub", link: "https://github.com/masamoto1982/Ajisai" },
+            { label: "Demo", link: "https://masamoto1982.github.io/Ajisai/" }
+        ],
+        social: {
+            github: { url: "https://github.com/masamoto1982/Ajisai", label: "GitHub" },
+            demo: { url: "https://masamoto1982.github.io/Ajisai/", label: "Try Demo" }
+        }
+    };
 
     // ------------------------------------------------------------------------
     // 0. テーマカラーの適用 (共通テーマから)
@@ -27,8 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (headerEl) {
         headerEl.innerHTML = `
             <div class="logo">
-                <a href="index.html">
-                    <img src="images/logo.png" class="icon logo-icon" alt="${c.meta.title} Logo">
+                <a href="index.html" class="logo-text" title="${c.meta.title}">
+                    <span class="logo-icon-placeholder">&#x1F338;</span>
                 </a>
             </div>
             <div class="title-area">
