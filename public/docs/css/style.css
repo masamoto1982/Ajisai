@@ -64,6 +64,23 @@ a:hover {
     transform: rotateY(360deg);
 }
 
+/* ロゴプレースホルダー（将来画像に置き換え予定） */
+.logo-icon-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    font-size: 2.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.logo a:hover .logo-icon-placeholder {
+    transform: scale(1.1);
+}
+
 .title-area {
     padding-left: 5px;
 }
