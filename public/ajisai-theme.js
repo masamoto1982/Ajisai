@@ -88,6 +88,12 @@ const AjisaiTheme = {
         return this.isLight(bgHex) ? '#777777' : '#aaaaaa';
     },
 
+    // 背景色に基づく枠線色（背景より濃い/薄い色）
+    getBorderColor: function(bgHex) {
+        // 明るい背景 → 暗い枠線、暗い背景 → 明るい枠線
+        return this.isLight(bgHex) ? this.darken(bgHex, 0.25) : this.lighten(bgHex, 0.3);
+    },
+
     // 基調色を含んだ暗い色を生成（コードエディタ用）
     getTintedDark: function(hex, baseValue = 0.12, tintAmount = 0.25) {
         const rgb = this.hexToRgb(hex);
@@ -176,12 +182,21 @@ const AjisaiTheme = {
             // コード内コメント
             "--text-code-comment": this.lighten(primary, 0.4),
 
-            // ボーダー・その他
-            "--border-color": secondary,
-            "--border-main": `solid 1px ${secondary}`,
+            // 枠線色（各エリアの背景に基づいて自動計算）
+            "--border-on-header": this.getBorderColor(bg.header),
+            "--border-on-body": this.getBorderColor(bg.body),
+            "--border-on-article": this.getBorderColor(bg.article),
+            "--border-on-section": this.getBorderColor(bg.section),
+            "--border-on-menu": this.getBorderColor(bg.menu),
+            "--border-on-code": this.getBorderColor(bg.code),
+
+            // その他
             "--radius-main": "10px",
 
             // ====== 後方互換性のための変数（既存CSSとの互換） ======
+            "--border-color": this.getBorderColor(bg.article),
+            "--border-main": `solid 1px ${this.getBorderColor(bg.article)}`,
+            "--color-secondary": this.getBorderColor(bg.article),
             "--gradient-header": bg.header,
             "--gradient-background": bg.body,
             "--gradient-parent": bg.article,
