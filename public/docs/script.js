@@ -101,12 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         sideNavEl.innerHTML = `
-            <div class="item-1">
-                <p class="label">Reference</p>
+            <div class="nav-section">
+                <p class="nav-section-title">Reference</p>
                 <ul>${serviceItems}</ul>
             </div>
-            <div class="item-2">
-                <p class="label">Links</p>
+            <div class="nav-section">
+                <p class="nav-section-title">Links</p>
                 <ul>${refItems}</ul>
             </div>
             ${socialHtml}

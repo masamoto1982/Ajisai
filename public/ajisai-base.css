@@ -180,8 +180,7 @@ footer a:hover {
     background: var(--gradient-parent);
 }
 
-.side-nav .item-1,
-.side-nav .item-2 {
+.side-nav .nav-section {
     line-height: 1.4;
     margin-bottom: 20px;
     padding: 10px;
@@ -201,14 +200,14 @@ footer a:hover {
     margin: 5px 0;
 }
 
-.side-nav .label {
+.side-nav .nav-section-title {
     font-weight: bold;
     margin: 10px 0;
     padding-bottom: 5px;
     border-bottom: 1px solid var(--color-secondary);
 }
 
-.side-nav .label span {
+.side-nav .nav-section-title span {
     font-size: 60%;
     display: block;
     color: var(--color-text-light);
@@ -688,7 +687,7 @@ small {
         background: none;
     }
 
-    .side-nav > div {
+    .side-nav .nav-section {
         padding: 10px;
         margin: 0 10px 20px 10px;
     }
