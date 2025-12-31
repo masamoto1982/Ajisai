@@ -1,0 +1,864 @@
+/* ============================================================================
+ * Ajisai 共通ベースCSS
+ * ============================================================================
+ * アプリ側・リファレンス側で共通して使用するスタイル
+ * CSS変数は ajisai-theme.js から注入されます
+ */
+
+/* --------------------------------------------------------------------------
+ * 1. リセット
+ * -------------------------------------------------------------------------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+ * 2. ベーススタイル
+ * -------------------------------------------------------------------------- */
+body {
+    font-family: var(--font-stack-primary);
+    background: var(--gradient-background);
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+a:hover {
+    color: var(--color-secondary);
+}
+
+/* --------------------------------------------------------------------------
+ * 3. コンテナ（フル幅レイアウト）
+ * -------------------------------------------------------------------------- */
+.container {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --------------------------------------------------------------------------
+ * 4. ヘッダー
+ * -------------------------------------------------------------------------- */
+header,
+.site-header {
+    background: var(--gradient-header);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.logo-icon {
+    width: 60px;
+    height: 60px;
+    transition: transform 0.5s;
+    display: block;
+}
+
+.logo a:hover .logo-icon {
+    transform: rotateY(360deg);
+}
+
+.logo-icon-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    font-size: 2.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.logo a:hover .logo-icon-placeholder {
+    transform: scale(1.1);
+}
+
+header h1,
+.site-header h1 {
+    font-size: 1.5rem;
+    color: var(--heading-h1);
+    font-weight: 500;
+    margin: 0;
+}
+
+header h1 a,
+.site-header h1 a {
+    color: var(--header-text);
+}
+
+.title-area {
+    padding-left: 5px;
+}
+
+.subtitle {
+    font-size: 60%;
+    display: block;
+    color: var(--header-text-secondary);
+}
+
+.version {
+    font-size: 0.875rem;
+    color: var(--header-text-secondary);
+}
+
+address {
+    font-style: normal;
+    font-size: 0.875rem;
+    margin-top: 5px;
+    line-height: 1.4;
+    color: var(--header-text-tertiary);
+}
+
+address a {
+    margin-right: 10px;
+    color: var(--header-text-secondary);
+}
+
+/* --------------------------------------------------------------------------
+ * 5. フッター
+ * -------------------------------------------------------------------------- */
+footer,
+.site-footer {
+    background: var(--gradient-header);
+    padding: 0.75rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-shrink: 0;
+    color: var(--header-text);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+footer a,
+.site-footer a {
+    color: var(--header-text-secondary);
+    text-decoration: none;
+}
+
+footer a:hover,
+.site-footer a:hover {
+    color: var(--header-text);
+}
+
+/* --------------------------------------------------------------------------
+ * 6. サイドナビゲーション
+ * -------------------------------------------------------------------------- */
+.side-nav {
+    padding: 10px;
+    flex: var(--side-nav-flex-ratio);
+    background: var(--gradient-parent);
+}
+
+.side-nav .item-1,
+.side-nav .item-2 {
+    line-height: 1.4;
+    margin-bottom: 20px;
+    padding: 10px;
+    word-break: break-all;
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.side-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.side-nav li {
+    margin: 5px 0;
+}
+
+.side-nav .label {
+    font-weight: bold;
+    margin: 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--color-secondary);
+}
+
+.side-nav .label span {
+    font-size: 60%;
+    display: block;
+    color: var(--color-text-light);
+}
+
+.social-links {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.social-links li {
+    margin: 0;
+}
+
+.social-links a {
+    padding: 5px 10px;
+    color: var(--color-primary);
+    border-radius: var(--radius-main);
+    border: var(--border-main);
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.social-links a:hover {
+    background: var(--color-light);
+}
+
+/* --------------------------------------------------------------------------
+ * 8. メインコンテンツエリア
+ * -------------------------------------------------------------------------- */
+.content-wrapper {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    background: var(--gradient-parent);
+    border-top: var(--border-main);
+}
+
+.main-content {
+    padding: 10px;
+    flex: var(--main-content-flex-ratio);
+    background: var(--gradient-parent);
+    min-height: 500px;
+}
+
+/* --------------------------------------------------------------------------
+ * 9. パネル（アプリ用）
+ * -------------------------------------------------------------------------- */
+.panel {
+    background: var(--gradient-parent);
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+/* --------------------------------------------------------------------------
+ * 10. セクション
+ * -------------------------------------------------------------------------- */
+section {
+    line-height: 1.6;
+    overflow: hidden;
+    margin-bottom: 20px;
+    padding: 15px;
+    word-break: break-all;
+    border: var(--border-main);
+    background: var(--gradient-child);
+    border-radius: var(--radius-main);
+}
+
+section h2 {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    color: var(--heading-h2);
+    font-weight: 500;
+    border-bottom: 2px solid var(--color-secondary);
+}
+
+section h3,
+section h4 {
+    font-size: 1rem;
+    font-weight: bold;
+    margin: 20px 0 10px 0;
+    color: var(--heading-h3);
+}
+
+section h3:first-child {
+    margin-top: 0;
+}
+
+article h2 {
+    text-align: center;
+    color: var(--heading-h2);
+    border-bottom: 2px solid var(--color-secondary);
+    padding-bottom: 10px;
+    margin: 0 0 20px 0;
+}
+
+/* --------------------------------------------------------------------------
+ * 11. ボタン共通
+ * -------------------------------------------------------------------------- */
+.btn-primary,
+#run-btn {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-primary);
+    color: #fff;
+    border: var(--border-main);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: var(--radius-main);
+    transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover,
+#run-btn:hover {
+    background: var(--color-secondary);
+}
+
+.btn-secondary,
+#clear-btn {
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.5);
+    color: var(--color-primary);
+    border: var(--border-main);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 400;
+    border-radius: var(--radius-main);
+    transition: background-color 0.2s ease;
+}
+
+.btn-secondary:hover,
+#clear-btn:hover {
+    background: var(--color-light);
+}
+
+/* ヘッダーボタン（メニュースタイル） */
+.header-btn,
+.reference-btn,
+.test-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--gradient-menu);
+    color: var(--menu-text);
+    text-decoration: none;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 400;
+    cursor: pointer;
+    border-radius: var(--radius-main);
+    transition: all 0.2s ease;
+}
+
+.header-btn:hover,
+.reference-btn:hover,
+.test-btn:hover {
+    background-color: var(--gradient-menu-hover);
+    color: var(--menu-text-hover);
+}
+
+.reference-btn svg,
+.test-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.header-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* --------------------------------------------------------------------------
+ * 12. コードブロック
+ * -------------------------------------------------------------------------- */
+code {
+    font-family: var(--font-stack-mono);
+    font-size: 14px;
+    background: var(--code-inline-bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--color-medium);
+}
+
+pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border: 1px solid var(--color-secondary);
+    border-radius: var(--radius-main);
+    padding: 16px;
+    overflow-x: auto;
+    margin: 16px 0;
+    line-height: 1.5;
+}
+
+pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--code-text);
+    font-size: 13px;
+}
+
+pre code .comment {
+    color: var(--code-comment);
+}
+
+/* --------------------------------------------------------------------------
+ * 13. テーブル
+ * -------------------------------------------------------------------------- */
+table {
+    line-height: 1.4;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    word-break: break-all;
+    margin-top: 15px;
+}
+
+table th {
+    width: 30%;
+    padding: 10px;
+    vertical-align: middle;
+    background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border: solid 0.5px var(--color-secondary);
+}
+
+table td {
+    padding: 10px;
+    vertical-align: middle;
+    background-color: transparent;
+    border: solid 0.5px var(--color-secondary);
+}
+
+/* --------------------------------------------------------------------------
+ * 14. カード・グリッド
+ * -------------------------------------------------------------------------- */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.feature {
+    text-align: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: var(--radius-main);
+    border: var(--border-main);
+}
+
+.feature-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.feature h4 {
+    border-bottom: none;
+    margin: 10px 0;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.7);
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    padding: 20px;
+    transition: box-shadow 0.2s;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card h4 {
+    margin-top: 0;
+    color: var(--color-primary);
+}
+
+/* --------------------------------------------------------------------------
+ * 15. ワードリファレンス用
+ * -------------------------------------------------------------------------- */
+.word-item {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--color-secondary);
+    border-radius: var(--radius-main);
+    padding: 16px;
+    margin: 12px 0;
+}
+
+.word-item h4 {
+    margin: 0 0 8px;
+    color: var(--color-primary);
+    font-family: var(--font-stack-mono);
+    font-size: 18px;
+    border-bottom: none;
+}
+
+.word-item p {
+    margin: 8px 0;
+}
+
+.word-example {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 8px;
+}
+
+.word-example code {
+    display: block;
+    white-space: pre-wrap;
+    color: var(--code-text);
+    background: none;
+    border: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 16. リスト
+ * -------------------------------------------------------------------------- */
+ul,
+ol {
+    margin: 0 0 16px 0;
+    padding-left: 24px;
+}
+
+li {
+    margin-bottom: 8px;
+}
+
+/* --------------------------------------------------------------------------
+ * 17. ボックスレイアウト
+ * -------------------------------------------------------------------------- */
+.info-boxes,
+.qr-box-wrapper {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.box-1,
+.box-2,
+.box-3,
+.box-a,
+.box-b {
+    padding: 15px;
+    text-align: left;
+    word-break: break-all;
+    border: var(--border-main);
+    flex: 1;
+    border-radius: 5px;
+    background: var(--gradient-child);
+}
+
+.catchcopy {
+    font-size: 180%;
+    border-bottom: 1px solid var(--color-secondary);
+    margin-bottom: 15px;
+}
+
+small {
+    font-size: 80%;
+    color: var(--color-secondary);
+    display: block;
+    margin-top: 5px;
+}
+
+/* --------------------------------------------------------------------------
+ * 18. 画像スタイル
+ * -------------------------------------------------------------------------- */
+.left_fix,
+.right_fix {
+    width: min(45%, 300px);
+    height: auto;
+    margin: 0 15px 15px 0;
+    border: var(--border-main);
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.left_fix {
+    float: left;
+}
+
+.right_fix {
+    float: right;
+    margin: 0 0 15px 15px;
+}
+
+.left {
+    float: left;
+    margin: 0 10px 10px 0;
+}
+
+.right {
+    float: right;
+    margin: 0 0 10px 10px;
+}
+
+/* --------------------------------------------------------------------------
+ * 19. スライドショー
+ * -------------------------------------------------------------------------- */
+#slideshow {
+    width: 100%;
+    height: 500px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#slideshow img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+/* --------------------------------------------------------------------------
+ * 20. 表示エリア共通
+ * -------------------------------------------------------------------------- */
+.display-area,
+.state-display,
+.words-display {
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 0.75rem;
+    min-height: 0;
+    overflow-y: auto;
+    font-family: var(--font-stack-mono);
+    font-size: 0.9rem;
+}
+
+/* スクロールバー */
+.display-area::-webkit-scrollbar,
+.state-display::-webkit-scrollbar,
+.words-display::-webkit-scrollbar {
+    width: 10px;
+}
+
+.display-area::-webkit-scrollbar-track,
+.state-display::-webkit-scrollbar-track,
+.words-display::-webkit-scrollbar-track {
+    background: var(--color-light);
+}
+
+.display-area::-webkit-scrollbar-thumb,
+.state-display::-webkit-scrollbar-thumb,
+.words-display::-webkit-scrollbar-thumb {
+    background: var(--color-medium);
+    border-radius: 5px;
+}
+
+.display-area::-webkit-scrollbar-thumb:hover,
+.state-display::-webkit-scrollbar-thumb:hover,
+.words-display::-webkit-scrollbar-thumb:hover {
+    background: var(--color-secondary);
+}
+
+/* --------------------------------------------------------------------------
+ * 21. オフライン表示
+ * -------------------------------------------------------------------------- */
+.offline-indicator {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    padding: 0.25rem 0.5rem;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+}
+
+/* --------------------------------------------------------------------------
+ * 22. レスポンシブデザイン
+ * -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    html,
+    body {
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .container {
+        min-height: 100vh;
+        height: auto;
+        width: 100%;
+    }
+
+    /* ヘッダー */
+    header,
+    .site-header {
+        padding: 0.75rem 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        flex-wrap: wrap;
+        flex-direction: column;
+    }
+
+    .logo {
+        width: 32px;
+        height: 32px;
+        padding-right: 0;
+        margin-bottom: 10px;
+    }
+
+    .title-area {
+        display: none;
+    }
+
+    header h1,
+    .site-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .version {
+        font-size: 0.75rem;
+    }
+
+    .offline-indicator {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+    }
+
+    .header-actions {
+        width: 100%;
+        margin-top: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .reference-btn,
+    .test-btn,
+    .header-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    /* グローバルナビ */
+    .global-nav {
+        margin-bottom: 0;
+    }
+
+    .menu {
+        flex-wrap: nowrap;
+    }
+
+    .menu a {
+        padding: 12px 4px;
+        font-size: 80%;
+        white-space: nowrap;
+    }
+
+    /* コンテンツエリア */
+    .content-wrapper {
+        flex-wrap: wrap-reverse;
+        gap: 0;
+    }
+
+    .side-nav,
+    .main-content {
+        flex: auto;
+        width: 100%;
+        padding: 10px 0;
+    }
+
+    .side-nav {
+        background: none;
+    }
+
+    .side-nav > div {
+        padding: 10px;
+        margin: 0 10px 20px 10px;
+    }
+
+    .main-content {
+        padding: 10px 0;
+        min-height: auto;
+    }
+
+    .main-content section {
+        padding: 10px;
+        margin: 10px;
+    }
+
+    /* ボックス */
+    .info-boxes,
+    .qr-box-wrapper {
+        flex-wrap: wrap;
+        margin-bottom: 0;
+        gap: 0;
+    }
+
+    .box-1,
+    .box-2,
+    .box-3,
+    .box-a,
+    .box-b {
+        margin: 0 10px 10px 10px;
+        width: 100%;
+        flex: auto;
+    }
+
+    /* 画像 */
+    .left_fix,
+    .right_fix {
+        float: none;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        margin: 0 0 10px 0;
+        display: block;
+    }
+
+    /* 見出し */
+    .catchcopy,
+    h1 {
+        font-size: 150%;
+    }
+
+    /* スライドショー */
+    #slideshow {
+        height: 250px;
+    }
+
+    /* グリッド */
+    .feature-grid,
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* コード */
+    pre {
+        font-size: 12px;
+        padding: 10px;
+    }
+
+    /* ボタン */
+    #run-btn,
+    #clear-btn {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+}

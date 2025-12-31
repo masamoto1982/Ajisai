@@ -1,132 +1,13 @@
-/* style.css - 紫陽花カラーテーマ */
-/* CSS変数は ajisai-theme.js から注入されます */
+/* ============================================================================
+ * Ajisai アプリ固有スタイル
+ * ============================================================================
+ * 共通スタイルは ajisai-base.css を参照
+ * このファイルにはアプリ（インタプリタUI）固有のスタイルのみ記述
+ */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-html,
-body {
-    height: 100%;
-    overflow-x: hidden;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--gradient-background);
-    color: var(--color-text);
-    line-height: 1.6;
-}
-
-/* コンテナ */
-.container {
-    min-height: 100%;
-    display: flex;
-    flex-direction: column;
-    max-width: 1400px;
-    margin: 0 auto;
-}
-
-/* ヘッダー */
-header {
-    background: var(--gradient-header);
-    padding: 1rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-shrink: 0;
-}
-
-/* フッター */
-footer {
-    background: var(--gradient-header);
-    padding: 0.75rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2rem;
-    flex-shrink: 0;
-    color: var(--header-text);
-    font-size: 0.875rem;
-}
-
-footer a {
-    color: var(--header-text-secondary);
-    text-decoration: none;
-}
-
-footer a:hover {
-    color: var(--header-text);
-}
-
-/* ロゴ */
-.logo {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-}
-
-header h1 {
-    font-size: 1.5rem;
-    color: var(--heading-h1);
-    font-weight: 500;
-}
-
-.version {
-    font-size: 0.875rem;
-    color: var(--header-text-secondary);
-}
-
-/* オフライン表示 */
-.offline-indicator {
-    font-size: 0.875rem;
-    color: var(--color-primary);
-    padding: 0.25rem 0.5rem;
-    background-color: rgba(255, 255, 255, 0.5);
-    border: var(--border-main);
-    border-radius: var(--radius-main);
-}
-
-/* ヘッダーアクション */
-.header-actions {
-    margin-left: auto;
-    display: flex;
-    gap: 0.5rem;
-}
-
-/* ヘッダーボタン統一スタイル（Reference メニューバーと統一） */
-.reference-btn,
-.test-btn,
-.header-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: var(--gradient-menu);
-    color: var(--menu-text);
-    text-decoration: none;
-    border: none;
-    font-size: 0.875rem;
-    font-weight: 400;
-    cursor: pointer;
-    border-radius: var(--radius-main);
-    transition: all 0.2s ease;
-}
-
-.reference-btn:hover,
-.test-btn:hover,
-.header-btn:hover {
-    background-color: var(--gradient-menu-hover);
-    color: var(--menu-text-hover);
-}
-
-.reference-btn svg,
-.test-btn svg {
-    width: 16px;
-    height: 16px;
-}
+/* --------------------------------------------------------------------------
+ * 1. アプリ用レイアウト
+ * -------------------------------------------------------------------------- */
 
 /* デスクトップレイアウト */
 .main-layout {
@@ -135,13 +16,6 @@ header h1 {
     gap: 0;
     padding: 0;
     min-height: 0;
-}
-
-/* パネル共通（親エリア） */
-.panel {
-    background: var(--gradient-parent);
-    padding: 1rem;
-    overflow-y: auto;
 }
 
 /* 作業領域パネル */
@@ -162,30 +36,6 @@ header h1 {
     min-height: 0;
 }
 
-/* 各セクション（子エリア） */
-section {
-    border: var(--border-main);
-    padding: 15px;
-    background: var(--gradient-child);
-    border-radius: var(--radius-main);
-}
-
-section h2 {
-    font-size: 1.125rem;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    color: var(--heading-h2);
-    font-weight: 500;
-    border-bottom: 2px solid var(--color-secondary);
-}
-
-section h3 {
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
-    color: var(--heading-h3);
-    font-weight: 500;
-}
-
 /* 入力・出力エリア */
 .output-area,
 .input-area {
@@ -196,12 +46,15 @@ section h3 {
     overflow: hidden;
 }
 
+/* --------------------------------------------------------------------------
+ * 2. コード入力
+ * -------------------------------------------------------------------------- */
 #code-input {
     width: 100%;
     min-height: 0;
     padding: 0.75rem;
     border: none;
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-stack-mono);
     font-size: 0.95rem;
     resize: none;
     flex: 1;
@@ -224,52 +77,9 @@ section h3 {
     gap: 0.75rem;
 }
 
-/* Runボタン */
-#run-btn {
-    padding: 0.75rem 1.5rem;
-    background: var(--color-primary);
-    color: #fff;
-    border: var(--border-main);
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: var(--radius-main);
-    transition: background-color 0.2s ease;
-}
-
-#run-btn:hover {
-    background: var(--color-secondary);
-}
-
-/* Clearボタン */
-#clear-btn {
-    padding: 0.75rem 1.5rem;
-    background: rgba(255, 255, 255, 0.5);
-    color: var(--color-primary);
-    border: var(--border-main);
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 400;
-    border-radius: var(--radius-main);
-    transition: background-color 0.2s ease;
-}
-
-#clear-btn:hover {
-    background: var(--color-light);
-}
-
-/* 表示エリア */
-.display-area,
-.state-display,
-.words-display {
-    background-color: rgba(255, 255, 255, 0.5);
-    padding: 0.75rem;
-    min-height: 0;
-    overflow-y: auto;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 0.9rem;
-}
-
+/* --------------------------------------------------------------------------
+ * 3. 出力表示
+ * -------------------------------------------------------------------------- */
 #output-display {
     flex: 1;
     min-height: 0;
@@ -278,52 +88,30 @@ section h3 {
     white-space: pre-wrap;
 }
 
-/* スクロールバー */
-.display-area::-webkit-scrollbar,
-.state-display::-webkit-scrollbar,
-.words-display::-webkit-scrollbar,
 #output-display::-webkit-scrollbar {
     width: 10px;
 }
 
-.display-area::-webkit-scrollbar-track,
-.state-display::-webkit-scrollbar-track,
-.words-display::-webkit-scrollbar-track,
 #output-display::-webkit-scrollbar-track {
     background: var(--color-light);
 }
 
-.display-area::-webkit-scrollbar-thumb,
-.state-display::-webkit-scrollbar-thumb,
-.words-display::-webkit-scrollbar-thumb,
 #output-display::-webkit-scrollbar-thumb {
     background: var(--color-medium);
     border-radius: 5px;
 }
 
-.display-area::-webkit-scrollbar-thumb:hover,
-.state-display::-webkit-scrollbar-thumb:hover,
-.words-display::-webkit-scrollbar-thumb:hover,
 #output-display::-webkit-scrollbar-thumb:hover {
     background: var(--color-secondary);
 }
 
-/* empty表示 */
-.state-display {
-    color: var(--color-text);
-}
-
-.state-display:empty::before,
-.state-display:has(> :only-child:contains("(empty)")) {
-    color: var(--color-text-light);
-}
-
-/* スタックエリア */
+/* --------------------------------------------------------------------------
+ * 4. スタック・辞書エリア
+ * -------------------------------------------------------------------------- */
 .stack-area {
     width: 100%;
 }
 
-/* 辞書コンテナ */
 .dictionary-container {
     display: flex;
     flex-direction: column;
@@ -338,6 +126,7 @@ section h3 {
 .words-display > div {
     margin-bottom: 4px;
 }
+
 .words-display > div:last-child {
     margin-bottom: 0;
 }
@@ -347,14 +136,30 @@ section h3 {
     display: inline;
 }
 
-/* ワードボタン */
+/* empty表示 */
+.state-display {
+    color: var(--color-text);
+}
+
+.state-display:empty::before,
+.state-display:has(> :only-child:contains("(empty)")) {
+    color: var(--color-text-light);
+}
+
+#stack-display > div {
+    justify-content: flex-start !important;
+}
+
+/* --------------------------------------------------------------------------
+ * 5. ワードボタン（色覚配慮カラー）
+ * -------------------------------------------------------------------------- */
 .word-button {
     margin: 2px;
     padding: 0.2rem 0.4rem;
     background-color: rgba(255, 255, 255, 0.5);
     color: var(--color-text);
     border: var(--border-main);
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-stack-mono);
     font-size: 0.75rem;
     font-weight: 400;
     cursor: pointer;
@@ -407,9 +212,11 @@ section h3 {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* スタック項目 - 色覚配慮カラー */
+/* --------------------------------------------------------------------------
+ * 6. スタック項目（色覚配慮カラー）
+ * -------------------------------------------------------------------------- */
 .stack-item {
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-stack-mono);
     font-size: 0.75rem;
     display: inline-block;
     margin: 2px;
@@ -435,63 +242,10 @@ section h3 {
     font-weight: bold;
 }
 
-#stack-display > div {
-    justify-content: flex-start !important;
-}
-
-/* モバイル対応 */
+/* --------------------------------------------------------------------------
+ * 7. モバイル対応（アプリ固有）
+ * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
-    html,
-    body {
-        height: auto;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-
-    .container {
-        min-height: 100vh;
-        height: auto;
-    }
-
-    header {
-        padding: 0.75rem 1rem;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        flex-wrap: wrap;
-    }
-
-    .logo {
-        width: 32px;
-        height: 32px;
-    }
-
-    header h1 {
-        font-size: 1.25rem;
-    }
-
-    .version {
-        font-size: 0.75rem;
-    }
-
-    .offline-indicator {
-        font-size: 0.75rem;
-        padding: 0.2rem 0.4rem;
-    }
-
-    .header-actions {
-        width: 100%;
-        margin-top: 0.5rem;
-        justify-content: flex-end;
-    }
-
-    .reference-btn,
-    .test-btn,
-    .header-btn {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
-    }
-
     .main-layout {
         flex-direction: column;
         padding: 0;
@@ -528,12 +282,6 @@ section h3 {
     .state-display,
     .words-display {
         min-height: 80px;
-    }
-
-    #run-btn,
-    #clear-btn {
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
     }
 
     .stack-area {

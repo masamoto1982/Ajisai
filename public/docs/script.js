@@ -54,41 +54,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ------------------------------------------------------------------------
     // 1. ヘッダー情報の生成 (#js-header)
+    //    アプリ側と同様のレイアウト（ロゴ + タイトル + ナビボタン）
     // ------------------------------------------------------------------------
     const headerEl = document.getElementById('js-header');
     if (headerEl) {
+        // ナビゲーションボタンを生成（アプリ側の.header-actionsと同様）
+        const navButtons = c.globalMenu.map(item =>
+            `<a href="${item.link}" class="header-btn">${item.label}</a>`
+        ).join('');
+
+        // Demoボタンを追加
+        const demoButton = `<a href="${c.social.demo.url}" class="header-btn" target="_blank" rel="noopener noreferrer">Demo</a>`;
+
         headerEl.innerHTML = `
-            <div class="logo">
-                <a href="index.html" class="logo-text" title="${c.meta.title}">
-                    <span class="logo-icon-placeholder">&#x1F338;</span>
-                </a>
-            </div>
-            <div class="title-area">
-                <h1>
-                    <span class="subtitle">${c.meta.subTitle}</span>
-                    <a href="index.html">${c.meta.title}</a>
-                </h1>
-                <address>
-                    A stack-based programming language inspired by FORTH<br>
-                    Running on WebAssembly with Rust + TypeScript
-                </address>
+            <a href="index.html" class="logo" title="${c.meta.title}">
+                <span class="logo-icon-placeholder">&#x1F338;</span>
+            </a>
+            <h1><a href="index.html">${c.meta.title}</a></h1>
+            <span class="version">${c.meta.subTitle}</span>
+            <div class="header-actions">
+                ${navButtons}
+                ${demoButton}
             </div>
         `;
     }
 
     // ------------------------------------------------------------------------
-    // 2. グローバルナビゲーションの生成 (#js-global-nav)
-    // ------------------------------------------------------------------------
-    const navEl = document.getElementById('js-global-nav');
-    if (navEl) {
-        const listItems = c.globalMenu.map(item =>
-            `<li><a href="${item.link}">${item.label}</a></li>`
-        ).join('');
-        navEl.innerHTML = `<ul class="menu">${listItems}</ul>`;
-    }
-
-    // ------------------------------------------------------------------------
-    // 3. サイドバーの生成 (#js-side-nav)
+    // 2. サイドバーの生成 (#js-side-nav)
     // ------------------------------------------------------------------------
     const sideNavEl = document.getElementById('js-side-nav');
     if (sideNavEl) {
@@ -124,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ------------------------------------------------------------------------
-    // 4. プロジェクト情報テーブル (#js-company-table)
+    // 3. プロジェクト情報テーブル (#js-company-table)
     // ------------------------------------------------------------------------
     const companyTableEl = document.getElementById('js-company-table');
     if (companyTableEl) {
@@ -150,23 +142,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ------------------------------------------------------------------------
-    // 5. フッター (#js-footer)
+    // 4. フッター (#js-footer)
     // ------------------------------------------------------------------------
     const footerEl = document.getElementById('js-footer');
     if (footerEl) {
         footerEl.innerHTML = `
-            <a href="index.html" target="_self">
-                &copy;<time>${c.meta.copyrightYear}</time> ${c.project.author} - ${c.meta.title}
-            </a>
-            &nbsp;|&nbsp;
+            <span>&copy; ${c.meta.copyrightYear} ${c.project.author} - ${c.meta.title}</span>
             <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">GitHub</a>
-            &nbsp;|&nbsp;
-            <a href="https://masamoto1982.github.io/Ajisai/" target="_blank" rel="noopener noreferrer">Demo</a>
+            <a href="index.html">Reference</a>
         `;
     }
 
     // ------------------------------------------------------------------------
-    // 6. スライドショー機能
+    // 5. スライドショー機能
     // ------------------------------------------------------------------------
     const slideshow = document.getElementById("slideshow");
     if (slideshow) {
