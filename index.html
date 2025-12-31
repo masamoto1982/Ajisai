@@ -36,27 +36,28 @@
     <link rel="stylesheet" href="style.css?v=20251230">
 </head>
 <body>
+    <a href="#code-input" class="skip-link">Skip to main content</a>
     <div class="container">
-        <header>
+        <header role="banner">
             <img src="public/images/ajisai-logo-min_w40.jpg" alt="Ajisai Logo" class="logo">
             <h1>Ajisai</h1>
             <span class="version">ver.202512302302</span>
             <span id="offline-indicator" class="offline-indicator" style="display: none;">Offline</span>
             <div class="header-actions">
                 <a href="docs/index.html" class="reference-btn" target="_blank">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
                     </svg>
                     Reference
                 </a>
-                <button id="test-btn" class="test-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button id="test-btn" class="test-btn" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     Test
                 </button>
-                <button id="export-btn" class="header-btn">Export</button>
-                <button id="import-btn" class="header-btn">Import</button>
+                <button id="export-btn" class="header-btn" type="button">Export</button>
+                <button id="import-btn" class="header-btn" type="button">Import</button>
             </div>
         </header>
         
@@ -64,14 +65,14 @@
             <div id="editor-panel" class="panel">
                 <section class="output-area">
                     <h2>Output</h2>
-                    <div id="output-display" class="display-area"></div>
+                    <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 <section class="input-area">
                     <h2>Input</h2>
-                    <textarea id="code-input" placeholder="Ajisaiコードを入力 (Enter code here)&#10;&#10;Run → Shift+Enter&#10;Step → Ctrl+Enter&#10;Abort → Escape&#10;Reset → Ctrl+Alt+Enter"></textarea>
+                    <textarea id="code-input" aria-label="Ajisai code input" placeholder="Ajisaiコードを入力 (Enter code here)&#10;&#10;Run → Shift+Enter&#10;Step → Ctrl+Enter&#10;Abort → Escape&#10;Reset → Ctrl+Alt+Enter"></textarea>
                     <div class="controls">
-                        <button id="run-btn">Run</button>
-                        <button id="clear-btn">Clear</button>
+                        <button id="run-btn" type="button">Run</button>
+                        <button id="clear-btn" type="button">Clear</button>
                     </div>
                 </section>
             </div>
@@ -79,7 +80,7 @@
             <div id="state-panel" class="panel">
                 <section class="stack-area">
                     <h2>Stack</h2>
-                    <div id="stack-display" class="state-display"></div>
+                    <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 
                 <section class="dictionary-area">
@@ -98,10 +99,11 @@
             </div>
         </main>
         <footer>
-            <span>&copy; 2025 masamoto yamashiro - Ajisai</span>
+            <span>&copy; <span id="footer-year"></span> masamoto yamashiro</span>
             <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href="public/docs/index.html">Reference</a>
         </footer>
+        <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
     </div>
 
     <script type="module" src="js/main.ts"></script>

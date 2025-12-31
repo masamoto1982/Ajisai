@@ -41,6 +41,56 @@ a:hover {
 }
 
 /* --------------------------------------------------------------------------
+ * 2.1 スキップリンク (アクセシビリティ)
+ * -------------------------------------------------------------------------- */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--color-primary);
+    color: #fff;
+    padding: 8px 16px;
+    z-index: 1000;
+    text-decoration: none;
+    font-weight: 500;
+    border-radius: 0 0 var(--radius-main) 0;
+    transition: top 0.2s;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+ * 2.2 フォーカススタイル (アクセシビリティ)
+ * -------------------------------------------------------------------------- */
+:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+/* --------------------------------------------------------------------------
  * 3. コンテナ（フル幅レイアウト）
  * -------------------------------------------------------------------------- */
 .container {
@@ -52,8 +102,7 @@ a:hover {
 /* --------------------------------------------------------------------------
  * 4. ヘッダー
  * -------------------------------------------------------------------------- */
-header,
-.site-header {
+header {
     background: var(--gradient-header);
     padding: 1rem 2rem;
     display: flex;
@@ -68,54 +117,15 @@ header,
     object-fit: contain;
 }
 
-.logo-icon {
-    width: 60px;
-    height: 60px;
-    transition: transform 0.5s;
-    display: block;
-}
-
-.logo a:hover .logo-icon {
-    transform: rotateY(360deg);
-}
-
-.logo-icon-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 60px;
-    font-size: 2.5rem;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    transition: transform 0.3s;
-}
-
-.logo a:hover .logo-icon-placeholder {
-    transform: scale(1.1);
-}
-
-header h1,
-.site-header h1 {
+header h1 {
     font-size: 1.5rem;
     color: var(--heading-h1);
     font-weight: 500;
     margin: 0;
 }
 
-header h1 a,
-.site-header h1 a {
+header h1 a {
     color: var(--header-text);
-}
-
-.title-area {
-    padding-left: 5px;
-}
-
-.subtitle {
-    font-size: 60%;
-    display: block;
-    color: var(--header-text-secondary);
 }
 
 .version {
@@ -139,8 +149,7 @@ address a {
 /* --------------------------------------------------------------------------
  * 5. フッター
  * -------------------------------------------------------------------------- */
-footer,
-.site-footer {
+footer {
     background: var(--gradient-header);
     padding: 0.75rem 2rem;
     display: flex;
@@ -153,14 +162,12 @@ footer,
     text-align: center;
 }
 
-footer a,
-.site-footer a {
+footer a {
     color: var(--header-text-secondary);
     text-decoration: none;
 }
 
-footer a:hover,
-.site-footer a:hover {
+footer a:hover {
     color: var(--header-text);
 }
 
@@ -173,8 +180,7 @@ footer a:hover,
     background: var(--gradient-parent);
 }
 
-.side-nav .item-1,
-.side-nav .item-2 {
+.side-nav .nav-section {
     line-height: 1.4;
     margin-bottom: 20px;
     padding: 10px;
@@ -194,14 +200,14 @@ footer a:hover,
     margin: 5px 0;
 }
 
-.side-nav .label {
+.side-nav .nav-section-title {
     font-weight: bold;
     margin: 10px 0;
     padding-bottom: 5px;
     border-bottom: 1px solid var(--color-secondary);
 }
 
-.side-nav .label span {
+.side-nav .nav-section-title span {
     font-size: 60%;
     display: block;
     color: var(--color-text-light);
@@ -233,7 +239,7 @@ footer a:hover,
 }
 
 /* --------------------------------------------------------------------------
- * 8. メインコンテンツエリア
+ * 7. メインコンテンツエリア
  * -------------------------------------------------------------------------- */
 .content-wrapper {
     display: flex;
@@ -253,7 +259,7 @@ footer a:hover,
 }
 
 /* --------------------------------------------------------------------------
- * 9. パネル（アプリ用）
+ * 8. パネル（アプリ用）
  * -------------------------------------------------------------------------- */
 .panel {
     background: var(--gradient-parent);
@@ -262,7 +268,7 @@ footer a:hover,
 }
 
 /* --------------------------------------------------------------------------
- * 10. セクション
+ * 9. セクション
  * -------------------------------------------------------------------------- */
 section {
     line-height: 1.6;
@@ -305,9 +311,8 @@ article h2 {
 }
 
 /* --------------------------------------------------------------------------
- * 11. ボタン共通
+ * 10. ボタン共通
  * -------------------------------------------------------------------------- */
-.btn-primary,
 #run-btn {
     padding: 0.75rem 1.5rem;
     background: var(--color-primary);
@@ -320,12 +325,10 @@ article h2 {
     transition: background-color 0.2s ease;
 }
 
-.btn-primary:hover,
 #run-btn:hover {
     background: var(--color-secondary);
 }
 
-.btn-secondary,
 #clear-btn {
     padding: 0.75rem 1.5rem;
     background: rgba(255, 255, 255, 0.5);
@@ -338,7 +341,6 @@ article h2 {
     transition: background-color 0.2s ease;
 }
 
-.btn-secondary:hover,
 #clear-btn:hover {
     background: var(--color-light);
 }
@@ -382,7 +384,7 @@ article h2 {
 }
 
 /* --------------------------------------------------------------------------
- * 12. コードブロック
+ * 11. コードブロック
  * -------------------------------------------------------------------------- */
 code {
     font-family: var(--font-stack-mono);
@@ -417,7 +419,7 @@ pre code .comment {
 }
 
 /* --------------------------------------------------------------------------
- * 13. テーブル
+ * 12. テーブル
  * -------------------------------------------------------------------------- */
 table {
     line-height: 1.4;
@@ -444,7 +446,7 @@ table td {
 }
 
 /* --------------------------------------------------------------------------
- * 14. カード・グリッド
+ * 13. カード・グリッド
  * -------------------------------------------------------------------------- */
 .feature-grid {
     display: grid;
@@ -496,7 +498,7 @@ table td {
 }
 
 /* --------------------------------------------------------------------------
- * 15. ワードリファレンス用
+ * 14. ワードリファレンス用
  * -------------------------------------------------------------------------- */
 .word-item {
     background: rgba(255, 255, 255, 0.7);
@@ -534,7 +536,7 @@ table td {
 }
 
 /* --------------------------------------------------------------------------
- * 16. リスト
+ * 15. リスト
  * -------------------------------------------------------------------------- */
 ul,
 ol {
@@ -547,35 +549,8 @@ li {
 }
 
 /* --------------------------------------------------------------------------
- * 17. ボックスレイアウト
+ * 16. small要素
  * -------------------------------------------------------------------------- */
-.info-boxes,
-.qr-box-wrapper {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.box-1,
-.box-2,
-.box-3,
-.box-a,
-.box-b {
-    padding: 15px;
-    text-align: left;
-    word-break: break-all;
-    border: var(--border-main);
-    flex: 1;
-    border-radius: 5px;
-    background: var(--gradient-child);
-}
-
-.catchcopy {
-    font-size: 180%;
-    border-bottom: 1px solid var(--color-secondary);
-    margin-bottom: 15px;
-}
-
 small {
     font-size: 80%;
     color: var(--color-secondary);
@@ -584,62 +559,7 @@ small {
 }
 
 /* --------------------------------------------------------------------------
- * 18. 画像スタイル
- * -------------------------------------------------------------------------- */
-.left_fix,
-.right_fix {
-    width: min(45%, 300px);
-    height: auto;
-    margin: 0 15px 15px 0;
-    border: var(--border-main);
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.left_fix {
-    float: left;
-}
-
-.right_fix {
-    float: right;
-    margin: 0 0 15px 15px;
-}
-
-.left {
-    float: left;
-    margin: 0 10px 10px 0;
-}
-
-.right {
-    float: right;
-    margin: 0 0 10px 10px;
-}
-
-/* --------------------------------------------------------------------------
- * 19. スライドショー
- * -------------------------------------------------------------------------- */
-#slideshow {
-    width: 100%;
-    height: 500px;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 20px;
-    border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-#slideshow img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 1s ease-in-out;
-}
-
-/* --------------------------------------------------------------------------
- * 20. 表示エリア共通
+ * 17. 表示エリア共通
  * -------------------------------------------------------------------------- */
 .display-area,
 .state-display,
@@ -679,7 +599,7 @@ small {
 }
 
 /* --------------------------------------------------------------------------
- * 21. オフライン表示
+ * 18. オフライン表示
  * -------------------------------------------------------------------------- */
 .offline-indicator {
     font-size: 0.875rem;
@@ -691,7 +611,7 @@ small {
 }
 
 /* --------------------------------------------------------------------------
- * 22. レスポンシブデザイン
+ * 19. レスポンシブデザイン
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     html,
@@ -708,8 +628,7 @@ small {
     }
 
     /* ヘッダー */
-    header,
-    .site-header {
+    header {
         padding: 0.75rem 1rem;
         position: sticky;
         top: 0;
@@ -725,12 +644,7 @@ small {
         margin-bottom: 10px;
     }
 
-    .title-area {
-        display: none;
-    }
-
-    header h1,
-    .site-header h1 {
+    header h1 {
         font-size: 1.25rem;
     }
 
@@ -756,21 +670,6 @@ small {
         font-size: 0.8rem;
     }
 
-    /* グローバルナビ */
-    .global-nav {
-        margin-bottom: 0;
-    }
-
-    .menu {
-        flex-wrap: nowrap;
-    }
-
-    .menu a {
-        padding: 12px 4px;
-        font-size: 80%;
-        white-space: nowrap;
-    }
-
     /* コンテンツエリア */
     .content-wrapper {
         flex-wrap: wrap-reverse;
@@ -788,7 +687,7 @@ small {
         background: none;
     }
 
-    .side-nav > div {
+    .side-nav .nav-section {
         padding: 10px;
         margin: 0 10px 20px 10px;
     }
@@ -801,46 +700,6 @@ small {
     .main-content section {
         padding: 10px;
         margin: 10px;
-    }
-
-    /* ボックス */
-    .info-boxes,
-    .qr-box-wrapper {
-        flex-wrap: wrap;
-        margin-bottom: 0;
-        gap: 0;
-    }
-
-    .box-1,
-    .box-2,
-    .box-3,
-    .box-a,
-    .box-b {
-        margin: 0 10px 10px 10px;
-        width: 100%;
-        flex: auto;
-    }
-
-    /* 画像 */
-    .left_fix,
-    .right_fix {
-        float: none;
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        margin: 0 0 10px 0;
-        display: block;
-    }
-
-    /* 見出し */
-    .catchcopy,
-    h1 {
-        font-size: 150%;
-    }
-
-    /* スライドショー */
-    #slideshow {
-        height: 250px;
     }
 
     /* グリッド */
