@@ -13,7 +13,7 @@ export interface ExecutionCallbacks {
     readonly clearEditor: (switchView?: boolean) => void;
     readonly setEditorValue: (value: string) => void;
     readonly insertEditorText: (text: string) => void;
-    readonly showInfo: (text: string, append: boolean, en?: string) => void;
+    readonly showInfo: (text: string, append: boolean) => void;
     readonly showError: (error: Error | string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
@@ -113,12 +113,12 @@ export const createExecutionController = (
         if (result.inputHelper) {
             clearEditor(false);
             insertEditorText(result.inputHelper);
-            showInfo('入力補助テキストを挿入', false, 'Input helper inserted');
+            showInfo('Input helper inserted', false);
             updateView('input');
         } else if (result.definition_to_load) {
             setEditorValue(result.definition_to_load);
             const wordName = code.replace("?", "").trim();
-            showInfo(`${wordName} の定義を表示中`, false, `Showing definition: ${wordName}`);
+            showInfo(`Showing definition: ${wordName}`, false);
             updateView('input');
         } else if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
@@ -141,7 +141,7 @@ export const createExecutionController = (
 
         try {
             updateView('execution');
-            showInfo('実行中...', false, 'Executing...');
+            showInfo('Executing...', false);
 
             const currentState = {
                 stack: interpreter.get_stack(),
@@ -162,7 +162,7 @@ export const createExecutionController = (
         } catch (error) {
             console.error('[ExecController] Code execution failed:', error);
             if (error instanceof Error && isAbortError(error)) {
-                showInfo('実行を中止', true, 'Execution aborted');
+                showInfo('Execution aborted', true);
             } else {
                 showError(error as Error);
             }

@@ -19,7 +19,7 @@ export interface DictionaryCallbacks {
     readonly onWordClick: (word: string) => void;
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
-    readonly showInfo?: (text: string, append: boolean, en?: string) => void;
+    readonly showInfo?: (text: string, append: boolean) => void;
 }
 
 export interface Dictionary {
@@ -151,7 +151,7 @@ export const createDictionary = (
             } else {
                 onUpdateDisplays?.();
                 await onSaveState?.();
-                showInfo?.(`ワード '${wordName}' を削除しました`, true, `Word '${wordName}' deleted`);
+                showInfo?.(`Word '${wordName}' deleted`, true);
             }
         } catch (error) {
             alert(`Error deleting word: ${error}`);

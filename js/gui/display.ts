@@ -24,7 +24,7 @@ export interface Display {
     readonly appendExecutionResult: (result: ExecuteResult) => void;
     readonly showOutput: (text: string) => void;
     readonly showError: (error: Error | { message?: string } | string) => void;
-    readonly showInfo: (text: string, append?: boolean, en?: string) => void;
+    readonly showInfo: (text: string, append?: boolean) => void;
     readonly updateStack: (stack: Value[]) => void;
     readonly getState: () => DisplayState;
 }
@@ -304,23 +304,15 @@ export const createDisplay = (elements: DisplayElements): Display => {
         span.style.fontWeight = 'bold';
     };
 
-    // 情報表示（日本語 + 英語併記対応）
-    const showInfo = (text: string, append = false, en?: string): void => {
-        const fullText = en ? `${text} (${en})` : text;
-
+    // Show info message
+    const showInfo = (text: string, append = false): void => {
         if (append && elements.outputDisplay.innerHTML.trim() !== '') {
-            mainOutput = `${mainOutput}\n${fullText}`;
+            mainOutput = `${mainOutput}\n${text}`;
             appendSpan('\n' + text, '#666');
-            if (en) {
-                appendSpan(` (${en})`, '#888');
-            }
         } else {
-            mainOutput = fullText;
+            mainOutput = text;
             clearElement(elements.outputDisplay);
             appendSpan(text, '#666');
-            if (en) {
-                appendSpan(` (${en})`, '#888');
-            }
         }
     };
 

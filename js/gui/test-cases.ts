@@ -1,4 +1,4 @@
-// js/gui/test-cases.ts - テストケース定義
+// js/gui/test-cases.ts - Test case definitions
 
 import type { Value } from '../wasm-types';
 
@@ -32,10 +32,10 @@ export function createNil(): Value {
     return { type: 'nil', value: null };
 }
 
-// テストケース定義
+// Test case definitions
 export const TEST_CASES: TestCase[] = [
     // ============================================
-    // Basic Types - 基本型
+    // Basic Types
     // ============================================
     {
         name: "Number - integer",
@@ -93,7 +93,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Arithmetic - 算術演算
+    // Arithmetic
     // ============================================
     {
         name: "Addition - integers",
@@ -157,7 +157,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Comparison - 比較演算
+    // Comparison
     // ============================================
     {
         name: "Less than - true",
@@ -203,7 +203,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Logic - 論理演算
+    // Logic
     // ============================================
     {
         name: "AND - true && true",
@@ -237,7 +237,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Vector Operations - ベクタ操作
+    // Vector Operations
     // ============================================
     {
         name: "LENGTH",
@@ -310,7 +310,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Tensor Operations - テンソル操作
+    // Tensor Operations
     // ============================================
     {
         name: "SHAPE - 1D",
@@ -379,7 +379,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Broadcasting - ブロードキャスト
+    // Broadcasting
     // ============================================
     {
         name: "Broadcast - scalar + vector",
@@ -401,7 +401,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Higher-Order Functions - 高階関数
+    // Higher-Order Functions
     // ============================================
     {
         name: "MAP - double",
@@ -423,7 +423,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Type Conversion - 型変換
+    // Type Conversion
     // ============================================
     {
         name: "STR - number to string",
@@ -457,7 +457,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // String Operations - 文字列操作
+    // String Operations
     // ============================================
     {
         name: "CHARS - split string",
@@ -479,7 +479,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Stack Mode (..) - スタックモード
+    // Stack Mode (..)
     // ============================================
     {
         name: "Stack mode - LENGTH",
@@ -515,7 +515,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Custom Word Definition - カスタムワード定義
+    // Custom Word Definition
     // ============================================
     {
         name: "DEF and call",
@@ -537,7 +537,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Control Flow - 制御フロー
+    // Control Flow
     // ============================================
     {
         name: "TIMES - repeat",
@@ -547,7 +547,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Tensor Generation - テンソル生成
+    // Tensor Generation
     // ============================================
     {
         name: "FILL",
@@ -561,7 +561,7 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Error Cases - エラーケース
+    // Error Cases
     // ============================================
     {
         name: "Error - stack underflow",
