@@ -153,21 +153,4 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // ------------------------------------------------------------------------
-    // 5. スライドショー機能
-    // ------------------------------------------------------------------------
-    const slideshow = document.getElementById("slideshow");
-    if (slideshow) {
-        const images = slideshow.getElementsByTagName("img");
-        if (images.length > 0) {
-            let currentIndex = 0;
-            function showImage(index) {
-                Array.from(images).forEach((img) => img.style.opacity = 0);
-                currentIndex = (index + images.length) % images.length;
-                images[currentIndex].style.opacity = 1;
-            }
-            showImage(0);
-            setInterval(() => showImage(currentIndex + 1), 5000);
-        }
-    }
 });
