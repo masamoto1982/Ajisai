@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ------------------------------------------------------------------------
     // 1. ヘッダー情報の生成 (#js-header)
-    //    アプリ側と同様のレイアウト（ロゴ + タイトル + ナビボタン）
+    //    アプリ側と完全に同じレイアウト（画像ロゴ + タイトル + ナビボタン）
     // ------------------------------------------------------------------------
     const headerEl = document.getElementById('js-header');
     if (headerEl) {
@@ -67,10 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const demoButton = `<a href="${c.social.demo.url}" class="header-btn" target="_blank" rel="noopener noreferrer">Demo</a>`;
 
         headerEl.innerHTML = `
-            <a href="index.html" class="logo" title="${c.meta.title}">
-                <span class="logo-icon-placeholder">&#x1F338;</span>
-            </a>
-            <h1><a href="index.html">${c.meta.title}</a></h1>
+            <img src="../images/ajisai-logo-min_w40.jpg" alt="Ajisai Logo" class="logo">
+            <h1>${c.meta.title}</h1>
             <span class="version">${c.meta.subTitle}</span>
             <div class="header-actions">
                 ${navButtons}
@@ -143,11 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ------------------------------------------------------------------------
     // 4. フッター (#js-footer)
+    //    アプリ側と同じ形式（年は自動更新）
     // ------------------------------------------------------------------------
     const footerEl = document.getElementById('js-footer');
     if (footerEl) {
+        const currentYear = new Date().getFullYear();
         footerEl.innerHTML = `
-            <span>&copy; ${c.meta.copyrightYear} ${c.project.author} - ${c.meta.title}</span>
+            <span>&copy; ${currentYear} ${c.project.author}</span>
             <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href="index.html">Reference</a>
         `;
