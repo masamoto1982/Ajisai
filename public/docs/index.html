@@ -25,13 +25,14 @@
   <link href="css/style.css?v=20251230" media="screen" rel="stylesheet" />
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <div class="container">
-    <header id="js-header"></header>
+    <header id="js-header" role="banner"></header>
 
-    <main class="content-wrapper">
+    <main class="content-wrapper" role="main">
       <nav id="js-side-nav" class="side-nav"></nav>
 
-      <article class="main-content">
+      <article id="main-content" class="main-content">
         <h2>Welcome to Ajisai</h2>
 
         <section>
@@ -42,22 +43,22 @@
 
         <div class="feature-grid">
           <div class="feature">
-            <div class="feature-icon">&#x1F4DA;</div>
+            <div class="feature-icon" role="img" aria-hidden="true">&#x1F4DA;</div>
             <h4>Stack-based RPN</h4>
             <p>FORTH-style stack operations with Reverse Polish Notation</p>
           </div>
           <div class="feature">
-            <div class="feature-icon">&#x1F9EE;</div>
+            <div class="feature-icon" role="img" aria-hidden="true">&#x1F9EE;</div>
             <h4>Vector Operations</h4>
             <p>NumPy/APL-style broadcasting and tensor operations</p>
           </div>
           <div class="feature">
-            <div class="feature-icon">&#x1F522;</div>
+            <div class="feature-icon" role="img" aria-hidden="true">&#x1F522;</div>
             <h4>Exact Fractions</h4>
             <p>All numbers as fractions - no rounding errors</p>
           </div>
           <div class="feature">
-            <div class="feature-icon">&#x1F680;</div>
+            <div class="feature-icon" role="img" aria-hidden="true">&#x1F680;</div>
             <h4>WebAssembly</h4>
             <p>Rust core compiled to WASM for fast browser execution</p>
           </div>

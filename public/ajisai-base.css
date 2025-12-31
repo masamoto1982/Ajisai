@@ -41,6 +41,56 @@ a:hover {
 }
 
 /* --------------------------------------------------------------------------
+ * 2.1 スキップリンク (アクセシビリティ)
+ * -------------------------------------------------------------------------- */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--color-primary);
+    color: #fff;
+    padding: 8px 16px;
+    z-index: 1000;
+    text-decoration: none;
+    font-weight: 500;
+    border-radius: 0 0 var(--radius-main) 0;
+    transition: top 0.2s;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+ * 2.2 フォーカススタイル (アクセシビリティ)
+ * -------------------------------------------------------------------------- */
+:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+/* --------------------------------------------------------------------------
  * 3. コンテナ（フル幅レイアウト）
  * -------------------------------------------------------------------------- */
 .container {
