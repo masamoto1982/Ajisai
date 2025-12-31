@@ -147,9 +147,9 @@ export const createGUI = (): GUI => {
     // ワーカー初期化
     const initializeWorkers = async (): Promise<void> => {
         try {
-            display.showInfo('並列実行システム初期化中...', false, 'Initializing...');
+            display.showInfo('Initializing...', false);
             await WORKER_MANAGER.init();
-            display.showInfo('並列実行システム準備完了', true, 'Ready');
+            display.showInfo('Ready', true);
         } catch (error) {
             console.error('[GUI] Failed to initialize workers:', error);
             display.showError(new Error(`Failed to initialize parallel execution: ${error}`));
@@ -172,7 +172,7 @@ export const createGUI = (): GUI => {
             // TestRunnerは別途処理
             import('./test').then(({ createTestRunner }) => {
                 const testRunner = createTestRunner({
-                    showInfo: (text, append, en) => display.showInfo(text, append, en),
+                    showInfo: (text, append) => display.showInfo(text, append),
                     showError: (error) => display.showError(error),
                     updateDisplays: updateAllDisplays
                 });
@@ -236,7 +236,7 @@ export const createGUI = (): GUI => {
         persistence = createPersistence({
             showError: (error) => display.showError(error),
             updateDisplays: updateAllDisplays,
-            showInfo: (text, append, en) => display.showInfo(text, append, en)
+            showInfo: (text, append) => display.showInfo(text, append)
         });
         await persistence.init();
 
@@ -251,7 +251,7 @@ export const createGUI = (): GUI => {
             onWordClick: (word) => editor.insertWord(word),
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
-            showInfo: (text, append, en) => display.showInfo(text, append, en)
+            showInfo: (text, append) => display.showInfo(text, append)
         });
 
         // ExecutionControllerの作成
@@ -260,7 +260,7 @@ export const createGUI = (): GUI => {
             clearEditor: (switchView) => editor.clear(switchView),
             setEditorValue: (value) => editor.setValue(value),
             insertEditorText: (text) => editor.insertText(text),
-            showInfo: (text, append, en) => display.showInfo(text, append, en),
+            showInfo: (text, append) => display.showInfo(text, append),
             showError: (error) => display.showError(error),
             showExecutionResult: (result) => display.showExecutionResult(result),
             updateDisplays: updateAllDisplays,

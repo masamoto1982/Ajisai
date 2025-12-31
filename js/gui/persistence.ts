@@ -17,7 +17,7 @@ export interface InterpreterState {
 export interface PersistenceCallbacks {
     readonly showError?: (error: Error) => void;
     readonly updateDisplays?: () => void;
-    readonly showInfo?: (text: string, append: boolean, en?: string) => void;
+    readonly showInfo?: (text: string, append: boolean) => void;
 }
 
 export interface Persistence {
@@ -201,7 +201,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
             // サンプルワード読み込み完了メッセージを表示
             const wordNames = SAMPLE_CUSTOM_WORDS.map(w => w.name).join(', ');
-            showInfo?.(`サンプルワードを読み込みました: ${wordNames}`, false, 'Sample words loaded');
+            showInfo?.(`Sample words loaded: ${wordNames}`, false);
         } catch (error) {
             console.error('Failed to load sample words:', error);
         }
@@ -245,7 +245,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         const filename = generateExportFilename();
 
         downloadJson(exportData, filename);
-        showInfo?.(`カスタムワードをエクスポートしました: ${filename}`, true, `Custom words exported as ${filename}`);
+        showInfo?.(`Custom words exported as ${filename}`, true);
     };
 
     // カスタムワードをインポート
@@ -265,7 +265,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
                 updateDisplays?.();
                 await saveCurrentState();
-                showInfo?.(`${importedWords.length}個のカスタムワードをインポートしました`, true, `${importedWords.length} custom words imported and saved`);
+                showInfo?.(`${importedWords.length} custom words imported and saved`, true);
 
             } catch (error) {
                 showError?.(error as Error);
