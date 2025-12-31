@@ -199,6 +199,16 @@ const AjisaiTheme = {
             // その他
             "--radius-main": "10px",
 
+            // フォント（統一）
+            "--font-stack-primary": '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif',
+            "--font-stack-mono": '"SF Mono", Consolas, "Liberation Mono", Monaco, monospace',
+
+            // レイアウト（統一）
+            "--max-width-container": "1200px",
+            "--breakpoint-mobile": "768px",
+            "--side-nav-flex-ratio": "1",
+            "--main-content-flex-ratio": "3",
+
             // ====== 後方互換性のための変数（既存CSSとの互換） ======
             "--border-color": this.getBorderColor(bg.article),
             "--border-main": `solid 1px ${this.getBorderColor(bg.article)}`,
