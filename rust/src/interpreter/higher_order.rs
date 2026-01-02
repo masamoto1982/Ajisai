@@ -352,8 +352,12 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
 
-            // 結果をVectorとして返す
-            interp.stack.push(Value::from_vector(results));
+            // 結果が空の場合はNILを返す（空ベクタ禁止ルール）
+            if results.is_empty() {
+                interp.stack.push(Value { val_type: ValueType::Nil });
+            } else {
+                interp.stack.push(Value::from_vector(results));
+            }
         },
         OperationTarget::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -824,22 +828,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fold_empty_vector() {
+    async fn test_fold_empty_vector_now_prohibited() {
+        // Empty vectors are now prohibited in Ajisai
         let mut interp = Interpreter::new();
         let code = r#"[ ] [ 42 ] '+' FOLD"#;
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "FOLD with empty vector should succeed: {:?}", result);
-
-        // 結果が [42] であることを確認（初期値がそのまま）
-        assert_eq!(interp.stack.len(), 1);
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = &v[0].val_type {
-                    assert_eq!(n.numerator.to_string(), "42");
-                }
-            }
-        }
+        assert!(result.is_err(), "Empty vector should now be an error");
     }
 
     #[tokio::test]

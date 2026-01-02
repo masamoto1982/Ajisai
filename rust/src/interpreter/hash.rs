@@ -457,11 +457,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hash_empty_vector() {
+    async fn test_hash_empty_vector_now_prohibited() {
+        // Empty vectors are now prohibited in Ajisai
         let mut interp = Interpreter::new();
         let result = interp.execute("[ ] HASH").await;
-        assert!(result.is_ok(), "HASH on empty vector should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert!(result.is_err(), "Empty vector should now be an error");
     }
 
     #[tokio::test]

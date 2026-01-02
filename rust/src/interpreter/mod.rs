@@ -69,6 +69,8 @@ pub struct Interpreter {
     // 追加: 継続実行用の状態
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
+    // 追加: 音楽DSL用の再生モード
+    pub(crate) play_mode: audio::PlayMode,
 }
 
 impl Interpreter {
@@ -84,6 +86,7 @@ impl Interpreter {
             disable_no_change_check: false,
             pending_tokens: None,
             pending_token_index: 0,
+            play_mode: audio::PlayMode::default(),
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -302,6 +305,9 @@ impl Interpreter {
                 },
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
+                    if values.is_empty() {
+                        return Err(AjisaiError::from("Empty vector not allowed. Use NIL for representing absence of value."));
+                    }
                     self.stack.push(Value::from_vector(values));
                     i += consumed;
                     continue;
@@ -602,7 +608,10 @@ impl Interpreter {
             "TIMESTAMP" => datetime::op_timestamp(self),
             "CSPRNG" => random::op_csprng(self),
             "HASH" => hash::op_hash(self),
-            "AUDIO" => audio::op_audio(self),
+            // 音楽DSL
+            "SEQ" => audio::op_seq(self),
+            "SIM" => audio::op_sim(self),
+            "PLAY" => audio::op_play(self),
             "!" => {
                 self.force_flag = true;
                 Ok(())
@@ -654,6 +663,7 @@ impl Interpreter {
         self.force_flag = false;
         self.pending_tokens = None;
         self.pending_token_index = 0;
+        self.play_mode = audio::PlayMode::default();
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
