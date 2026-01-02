@@ -333,7 +333,10 @@ impl Interpreter {
                                 _ => {
                                     // 通常のワード実行（同期）
                                     self.execute_word_core(&upper)?;
-                                    self.operation_target = OperationTarget::StackTop;
+                                    // SEQ/SIM は操作対象を保持する（PLAYで使用するため）
+                                    if upper != "SEQ" && upper != "SIM" {
+                                        self.operation_target = OperationTarget::StackTop;
+                                    }
                                 }
                             }
                         }
