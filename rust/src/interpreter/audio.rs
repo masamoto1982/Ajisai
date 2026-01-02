@@ -515,6 +515,37 @@ mod tests {
 
         let output = interp.get_output();
         assert!(output.contains("\"type\":\"sim\""), "Should contain sim structure for multitrack");
+
+        // スタックが空であることを確認（両方のベクタが消費されたはず）
+        assert!(interp.get_stack().is_empty(), "Stack should be empty after .. SIM PLAY, but had {} elements", interp.get_stack().len());
+    }
+
+    #[tokio::test]
+    async fn test_multitrack_seq_play() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 550 ] [ 220 275 ] .. SEQ PLAY").await;
+        assert!(result.is_ok(), "Multitrack SEQ PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"type\":\"seq\""), "Should contain seq structure for multitrack");
+
+        // スタックが空であることを確認
+        assert!(interp.get_stack().is_empty(), "Stack should be empty after .. SEQ PLAY");
+    }
+
+    #[tokio::test]
+    async fn test_multitrack_play_consumes_all() {
+        use crate::interpreter::Interpreter;
+
+        // 3つのトラックをテスト
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 ] [ 550 ] [ 660 ] .. SIM PLAY").await;
+        assert!(result.is_ok(), "3-track PLAY should succeed: {:?}", result);
+
+        // スタックが完全に空であることを確認
+        assert!(interp.get_stack().is_empty(), "Stack should be completely empty after playing 3 tracks");
     }
 
     #[tokio::test]
