@@ -477,7 +477,12 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                         v[..take_count].to_vec()
                     };
 
-                    interp.stack.push(Value::from_vector(result));
+                    // 結果が空の場合はNILを返す（空ベクタ禁止ルール）
+                    if result.is_empty() {
+                        interp.stack.push(Value { val_type: ValueType::Nil });
+                    } else {
+                        interp.stack.push(Value::from_vector(result));
+                    }
                     Ok(())
                 },
                 _ => {
