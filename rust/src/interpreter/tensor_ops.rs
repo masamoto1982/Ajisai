@@ -6,7 +6,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::interpreter::helpers::wrap_number;
-use crate::types::{Value, ValueType, infer_shape, MAX_DIMENSIONS};
+use crate::types::{Value, ValueType, infer_shape, MAX_VISIBLE_DIMENSIONS};
 use crate::types::tensor::{transpose, reshape, rank};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
@@ -100,12 +100,12 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         ValueType::Vector(v) => {
             // 次元数チェック
             let dim_count = v.len();
-            if dim_count > MAX_DIMENSIONS {
+            if dim_count > MAX_VISIBLE_DIMENSIONS {
                 interp.stack.push(data_val);
                 interp.stack.push(shape_val);
                 return Err(AjisaiError::from(format!(
-                    "Dimension limit exceeded: RESHAPE shape has {} dimensions, maximum is {} (time, element, row, column)",
-                    dim_count, MAX_DIMENSIONS
+                    "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+                    dim_count
                 )));
             }
 
@@ -417,12 +417,12 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         ValueType::Vector(v) => {
             // 次元数チェック
             let dim_count = v.len();
-            if dim_count > MAX_DIMENSIONS {
+            if dim_count > MAX_VISIBLE_DIMENSIONS {
                 interp.stack.push(shape_val);
                 interp.stack.push(value_val);
                 return Err(AjisaiError::from(format!(
-                    "Dimension limit exceeded: FILL shape has {} dimensions, maximum is {} (time, element, row, column)",
-                    dim_count, MAX_DIMENSIONS
+                    "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+                    dim_count
                 )));
             }
 

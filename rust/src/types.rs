@@ -11,15 +11,12 @@
 // スタック自体もVectorであり、その中にVectorが積まれる。
 // これはLISPのリスト構造に通ずる美学を表現している。
 //
-// 層構造:
-//   第0層: スタック（言語基盤、暗黙的なVector）
-//   第1層: 時間（スカラー値の時系列）      ← SCALAR
-//   第2層: 要素（ベクトルの構成要素）      ← VECTOR
-//   第3層: 行（行列の行）                  ← MATRIX
-//   第4層: 列（行列の列）                  ← TENSOR
-//
-// ユーザーが直接操作するデータは第1〜4層であり、
-// Ajisaiは人間の認知限界に基づき、この4次元までをサポートする。
+// 次元構造（0次元を含めて4次元、可視は3次元まで）:
+//   0次元: スタック（GUIの枠そのもの、不可視）
+//   1次元: { } で表示（可視の最外殻）
+//   2次元: ( ) で表示
+//   3次元: [ ] で表示（可視の限界）
+//   4次元〜: エラー
 //
 // Tensorとの違い:
 //   Tensor: 数値専用、同種データのみ許容
@@ -28,8 +25,12 @@
 // この異種混在の許容が、VectorをLISP的なリスト構造として機能させる鍵である。
 // ============================================================================
 
-/// 最大次元数（人間の認知限界に基づく制限）
-pub const MAX_DIMENSIONS: usize = 4;
+/// 可視次元の最大数（0次元のスタックを除く）
+/// 0次元: スタック（不可視、GUIの枠）
+/// 1次元: { } - 最外殻
+/// 2次元: ( )
+/// 3次元: [ ] - 可視限界
+pub const MAX_VISIBLE_DIMENSIONS: usize = 3;
 
 pub mod fraction;
 pub mod tensor;  // 行列演算ユーティリティ（Vectorベースで動作）
@@ -135,11 +136,15 @@ impl BracketType {
     }
 
     /// 深さからブラケットタイプを決定
+    /// depth 0 (1次元/可視最外殻): { }
+    /// depth 1 (2次元): ( )
+    /// depth 2 (3次元/可視限界): [ ]
+    /// depth 3〜: サイクル
     pub fn from_depth(depth: usize) -> Self {
         match depth % 3 {
-            0 => BracketType::Square,
-            1 => BracketType::Curly,
-            2 => BracketType::Round,
+            0 => BracketType::Curly,   // 1次元: { }
+            1 => BracketType::Round,   // 2次元: ( )
+            2 => BracketType::Square,  // 3次元: [ ]
             _ => unreachable!(),
         }
     }
@@ -239,10 +244,10 @@ pub fn infer_shape(values: &[Value]) -> std::result::Result<Vec<usize>, String> 
 /// 深さを追跡しながら形状を推論（内部関数）
 fn infer_shape_with_depth(values: &[Value], current_depth: usize) -> std::result::Result<Vec<usize>, String> {
     // 次元数チェック
-    if current_depth > MAX_DIMENSIONS {
+    if current_depth > MAX_VISIBLE_DIMENSIONS {
         return Err(format!(
-            "Dimension limit exceeded: Ajisai supports up to {} dimensions (time, element, row, column)",
-            MAX_DIMENSIONS
+            "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+            current_depth
         ));
     }
 
@@ -269,10 +274,10 @@ fn infer_shape_with_depth(values: &[Value], current_depth: usize) -> std::result
     full_shape.extend(first_shape);
 
     // 最終的な次元数をチェック
-    if full_shape.len() > MAX_DIMENSIONS {
+    if full_shape.len() > MAX_VISIBLE_DIMENSIONS {
         return Err(format!(
-            "Dimension limit exceeded: shape {:?} has {} dimensions, maximum is {}",
-            full_shape, full_shape.len(), MAX_DIMENSIONS
+            "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+            full_shape.len()
         ));
     }
 
@@ -282,10 +287,10 @@ fn infer_shape_with_depth(values: &[Value], current_depth: usize) -> std::result
 /// 深さを追跡しながらValueの形状を取得（内部関数）
 fn get_value_shape_with_depth(value: &Value, current_depth: usize) -> std::result::Result<Vec<usize>, String> {
     // 次元数チェック
-    if current_depth > MAX_DIMENSIONS {
+    if current_depth > MAX_VISIBLE_DIMENSIONS {
         return Err(format!(
-            "Dimension limit exceeded: Ajisai supports up to {} dimensions (time, element, row, column)",
-            MAX_DIMENSIONS
+            "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+            current_depth
         ));
     }
 
