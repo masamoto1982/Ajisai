@@ -54,17 +54,18 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
   - NumPy/APLスタイルのブロードキャスティング
   - *All container data is represented as nestable Vectors (similar to LISP's list structure). Bracket `[ ]` nesting expresses dimensions, with tensor-like operations (SHAPE, RESHAPE, etc.) supported. Heterogeneous data mixing is allowed.*
 
-- **最大4次元までの次元制限**
-  - 人間の認知限界に基づき、操作可能な次元を4次元に制限
-  - 5次元以上のネストはエラーとなる
-  - *Dimension limit of 4 (based on human cognitive limits). Nesting beyond 5 dimensions results in an error.*
+- **0次元を含めて4次元までの次元制限**
+  - 0次元：スタック（不可視、GUIの枠）
+  - 1〜3次元：可視のネスト
+  - 4次元以上のネストはエラーとなる
+  - *Dimension limit: 0-3 dimensions visible (dimension 0 is the stack). Nesting beyond 3 visible dimensions results in an error.*
 
-| 次元 / Dim | 軸名 / Axis | 構造 / Structure | 例 / Example |
-|:---:|:---:|:---|:---|
-| 1次元 | col | Vector | `[ 1 2 3 ]` |
-| 2次元 | row, col | ネストされたVector | `[ [ 1 2 ] [ 3 4 ] ]` |
-| 3次元 | layer, row, col | 2段ネスト | `[ [ [ 1 2 ] [ 3 4 ] ] ]` |
-| 4次元 | time, layer, row, col | 3段ネスト（最大） | `[ [ [ [ 1 ] ] ] ]` |
+| 次元 / Dim | 括弧 / Bracket | 可視性 / Visibility | 構造 / Structure |
+|:---:|:---:|:---:|:---|
+| 0次元 | — | 不可視 | スタック（暗黙の最外殻） |
+| 1次元 | `{ }` | 可視 | `{ 1 2 3 }` |
+| 2次元 | `( )` | 可視 | `{ ( 1 2 ) ( 3 4 ) }` |
+| 3次元 | `[ ]` | 可視 | `{ ( [ 1 ] [ 2 ] ) }` |
 
 - **完全精度の有理数演算**
   - すべての数値は内部的に分数（Fraction）として扱われ、丸め誤差なし

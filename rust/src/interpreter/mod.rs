@@ -18,7 +18,7 @@ pub mod hash;           // 分数ハッシュ関数
 pub mod audio;          // 音声再生
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine, MAX_DIMENSIONS};
+use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
@@ -103,10 +103,10 @@ impl Interpreter {
     /// 深度追跡付きVector収集メソッド（内部関数）
     fn collect_vector_with_depth(&self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
         // 次元数チェック
-        if depth > MAX_DIMENSIONS {
+        if depth > MAX_VISIBLE_DIMENSIONS {
             return Err(AjisaiError::from(format!(
-                "Dimension limit exceeded: nesting depth {} exceeds maximum {} dimensions (time, element, row, column)",
-                depth, MAX_DIMENSIONS
+                "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+                depth
             )));
         }
 
