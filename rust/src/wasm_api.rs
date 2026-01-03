@@ -12,16 +12,26 @@ use crate::interpreter;
 use crate::tokenizer;
 use crate::builtins;
 /// 指定した次元数のブラケット構造を生成
+/// 次元に応じたブラケット構造を生成
+/// depth: 1=1D, 2=2D, 3=3D
+/// repeat: 繰り返し数（1Dでは別々のスタック要素、2D/3Dでは内部要素数）
 fn generate_bracket_structure(depth: usize, repeat: usize) -> String {
-    let single = (0..depth).map(|_| "[ ").collect::<String>()
-                + &(0..depth).map(|_| "] ").collect::<String>();
-    let single = single.trim();
-
-    if repeat == 1 {
-        single.to_string()
-    } else {
-        let inner = (0..repeat).map(|_| single).collect::<Vec<_>>().join(" ");
-        format!("[ {} ]", inner)
+    match depth {
+        1 => {
+            // 1D: { } を repeat 個生成（スタックに別々に配置）
+            (0..repeat).map(|_| "{ }").collect::<Vec<_>>().join(" ")
+        }
+        2 => {
+            // 2D: { ( ) ( ) ... } を生成（repeat 個の内部要素）
+            let inner = (0..repeat).map(|_| "( )").collect::<Vec<_>>().join(" ");
+            format!("{{ {} }}", inner)
+        }
+        3 => {
+            // 3D: { ( [ ] [ ] ... ) } を生成（repeat 個の最内殻要素）
+            let innermost = (0..repeat).map(|_| "[ ]").collect::<Vec<_>>().join(" ");
+            format!("{{ ( {} ) }}", innermost)
+        }
+        _ => "{ }".to_string() // フォールバック
     }
 }
 
@@ -62,7 +72,7 @@ impl AjisaiInterpreter {
         // 入力支援ワードの検出（末尾にあるかチェック）
         let trimmed = code.trim();
         let upper_code = trimmed.to_uppercase();
-        let input_helper_words = ["SCALAR", "VECTOR", "MATRIX", "TENSOR"];
+        let input_helper_words = ["1D", "2D", "3D"];
 
         for (i, word) in input_helper_words.iter().enumerate() {
             // 入力が入力支援ワードで終わっているかチェック
@@ -80,7 +90,7 @@ impl AjisaiInterpreter {
                     continue;
                 }
 
-                let depth = i + 1; // SCALAR=1, VECTOR=2, MATRIX=3, TENSOR=4
+                let depth = i + 1; // 1D=1, 2D=2, 3D=3
 
                 // 入力支援ワードより前の部分があれば先に実行
                 if prefix_len > 0 {
@@ -453,16 +463,19 @@ mod test_input_helper {
 
     #[test]
     fn test_generate_bracket_structure() {
-        // 基本的なブラケット構造（繰り返しなし）
-        assert_eq!(generate_bracket_structure(1, 1), "[ ]");
-        assert_eq!(generate_bracket_structure(2, 1), "[ [ ] ]");
-        assert_eq!(generate_bracket_structure(3, 1), "[ [ [ ] ] ]");
-        assert_eq!(generate_bracket_structure(4, 1), "[ [ [ [ ] ] ] ]");
+        // 1D: { } を生成
+        assert_eq!(generate_bracket_structure(1, 1), "{ }");
+        assert_eq!(generate_bracket_structure(1, 2), "{ } { }");
+        assert_eq!(generate_bracket_structure(1, 3), "{ } { } { }");
 
-        // 繰り返しありのブラケット構造
-        assert_eq!(generate_bracket_structure(1, 2), "[ [ ] [ ] ]");
-        assert_eq!(generate_bracket_structure(1, 3), "[ [ ] [ ] [ ] ]");
-        assert_eq!(generate_bracket_structure(2, 2), "[ [ [ ] ] [ [ ] ] ]");
-        assert_eq!(generate_bracket_structure(3, 2), "[ [ [ [ ] ] ] [ [ [ ] ] ] ]");
+        // 2D: { ( ) ( ) ... } を生成
+        assert_eq!(generate_bracket_structure(2, 1), "{ ( ) }");
+        assert_eq!(generate_bracket_structure(2, 2), "{ ( ) ( ) }");
+        assert_eq!(generate_bracket_structure(2, 3), "{ ( ) ( ) ( ) }");
+
+        // 3D: { ( [ ] [ ] ... ) } を生成
+        assert_eq!(generate_bracket_structure(3, 1), "{ ( [ ] ) }");
+        assert_eq!(generate_bracket_structure(3, 2), "{ ( [ ] [ ] ) }");
+        assert_eq!(generate_bracket_structure(3, 3), "{ ( [ ] [ ] [ ] ) }");
     }
 }

@@ -184,7 +184,7 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
 `.` `..`
 
 ### 入力ヘルパー / Input Helpers
-`'` `SCALAR` `VECTOR` `MATRIX` `TENSOR`
+`'` `1D` `2D` `3D`
 
 ---
 
