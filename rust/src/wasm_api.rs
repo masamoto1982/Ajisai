@@ -11,25 +11,28 @@ use serde::{Deserialize, Serialize};
 use crate::interpreter;
 use crate::tokenizer;
 use crate::builtins;
-/// 指定した次元数のブラケット構造を生成
-/// 次元に応じたブラケット構造を生成
-/// depth: 1=1D, 2=2D, 3=3D
-/// repeat: 繰り返し数（1Dでは別々のスタック要素、2D/3Dでは内部要素数）
-fn generate_bracket_structure(depth: usize, repeat: usize) -> String {
-    match depth {
+/// 形状ベクタからブラケット構造を生成
+/// shape: [dim1] → { } × dim1
+/// shape: [dim1, dim2] → { ( ) × dim2 } × dim1
+/// shape: [dim1, dim2, dim3] → { ( [ ] × dim3 ) × dim2 } × dim1
+fn generate_bracket_structure_from_shape(shape: &[usize]) -> String {
+    match shape.len() {
         1 => {
-            // 1D: { } を repeat 個生成（スタックに別々に配置）
-            (0..repeat).map(|_| "{ }").collect::<Vec<_>>().join(" ")
+            // 1D: { } を dim1 個生成（スタックに別々に配置）
+            (0..shape[0]).map(|_| "{ }").collect::<Vec<_>>().join(" ")
         }
         2 => {
-            // 2D: { ( ) ( ) ... } を生成（repeat 個の内部要素）
-            let inner = (0..repeat).map(|_| "( )").collect::<Vec<_>>().join(" ");
-            format!("{{ {} }}", inner)
+            // 2D: { ( ) × dim2 } を dim1 個生成
+            let inner = (0..shape[1]).map(|_| "( )").collect::<Vec<_>>().join(" ");
+            let one_element = format!("{{ {} }}", inner);
+            (0..shape[0]).map(|_| one_element.as_str()).collect::<Vec<_>>().join(" ")
         }
         3 => {
-            // 3D: { ( [ ] [ ] ... ) } を生成（repeat 個の最内殻要素）
-            let innermost = (0..repeat).map(|_| "[ ]").collect::<Vec<_>>().join(" ");
-            format!("{{ ( {} ) }}", innermost)
+            // 3D: { ( [ ] × dim3 ) × dim2 } を dim1 個生成
+            let innermost = (0..shape[2]).map(|_| "[ ]").collect::<Vec<_>>().join(" ");
+            let middle = (0..shape[1]).map(|_| format!("( {} )", innermost)).collect::<Vec<_>>().join(" ");
+            let one_element = format!("{{ {} }}", middle);
+            (0..shape[0]).map(|_| one_element.as_str()).collect::<Vec<_>>().join(" ")
         }
         _ => "{ }".to_string() // フォールバック
     }
@@ -72,26 +75,19 @@ impl AjisaiInterpreter {
         // 入力支援ワードの検出（末尾にあるかチェック）
         let trimmed = code.trim();
         let upper_code = trimmed.to_uppercase();
-        let input_helper_words = ["1D", "2D", "3D"];
 
-        for (i, word) in input_helper_words.iter().enumerate() {
-            // 入力が入力支援ワードで終わっているかチェック
-            if upper_code.ends_with(word) {
-                // ワードの前に空白があるか、完全一致かを確認
-                let prefix_len = upper_code.len() - word.len();
-                let is_valid = if prefix_len == 0 {
-                    true // 完全一致
-                } else {
-                    // ワードの前が空白文字であることを確認
-                    upper_code.chars().nth(prefix_len - 1).map_or(false, |c| c.is_whitespace())
-                };
+        // FRAME ワードの検出
+        if upper_code.ends_with("FRAME") {
+            // ワードの前に空白があるか、完全一致かを確認
+            let prefix_len = upper_code.len() - 5; // "FRAME".len() == 5
+            let is_valid = if prefix_len == 0 {
+                true // 完全一致
+            } else {
+                // ワードの前が空白文字であることを確認
+                upper_code.chars().nth(prefix_len - 1).map_or(false, |c| c.is_whitespace())
+            };
 
-                if !is_valid {
-                    continue;
-                }
-
-                let depth = i + 1; // 1D=1, 2D=2, 3D=3
-
+            if is_valid {
                 // 入力支援ワードより前の部分があれば先に実行
                 if prefix_len > 0 {
                     let prefix_code = &trimmed[..prefix_len].trim();
@@ -105,46 +101,57 @@ impl AjisaiInterpreter {
                     }
                 }
 
-                // スタックトップに単一数値があるかチェック
-                let repeat = if !self.interpreter.stack.is_empty() {
-                    if let Some(top) = self.interpreter.stack.last() {
-                        match &top.val_type {
-                            // Vector型: 単一要素ベクタ
-                            ValueType::Vector(v) => {
-                                if v.len() == 1 {
-                                    if let ValueType::Number(n) = &v[0].val_type {
-                                        n.as_usize()
-                                            .filter(|&r| r > 0 && r <= 100)
+                // スタックトップから形状ベクタを取得
+                let shape = if let Some(top) = self.interpreter.stack.last() {
+                    match &top.val_type {
+                        ValueType::Vector(v) => {
+                            // ベクタ内の全要素が正の整数（1〜100）かチェック
+                            let mut dims = Vec::new();
+                            let mut valid = v.len() >= 1 && v.len() <= 3;
+                            if valid {
+                                for elem in v.iter() {
+                                    if let ValueType::Number(n) = &elem.val_type {
+                                        if let Some(val) = n.as_usize() {
+                                            if val >= 1 && val <= 100 {
+                                                dims.push(val);
+                                            } else {
+                                                valid = false;
+                                                break;
+                                            }
+                                        } else {
+                                            valid = false;
+                                            break;
+                                        }
                                     } else {
-                                        None
+                                        valid = false;
+                                        break;
                                     }
-                                } else {
-                                    None
                                 }
                             }
-                            _ => None
+                            if valid { Some(dims) } else { None }
                         }
-                    } else {
-                        None
+                        _ => None
                     }
                 } else {
                     None
                 };
 
-                // 繰り返し数が指定されていた場合、スタックから消費
-                let actual_repeat = if let Some(r) = repeat {
+                // 形状ベクタが指定されていた場合、スタックから消費してブラケット構造を生成
+                if let Some(shape_vec) = shape {
                     self.interpreter.stack.pop();
-                    r
+                    let helper_text = generate_bracket_structure_from_shape(&shape_vec);
+                    js_sys::Reflect::set(&obj, &"inputHelper".into(), &helper_text.into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                    js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
+                    return Ok(obj.into());
                 } else {
-                    1
-                };
-
-                let helper_text = generate_bracket_structure(depth, actual_repeat);
-                js_sys::Reflect::set(&obj, &"inputHelper".into(), &helper_text.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
-                return Ok(obj.into());
+                    // 形状ベクタがない場合はエラー
+                    js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"message".into(), &"FRAME requires a shape vector [ dim1 dim2 ... ] (1-3 dimensions, values 1-100)".into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                    return Ok(obj.into());
+                }
             }
         }
 
@@ -459,23 +466,25 @@ fn value_to_js_value(value: &Value) -> JsValue {
 
 #[cfg(test)]
 mod test_input_helper {
-    use super::generate_bracket_structure;
+    use super::generate_bracket_structure_from_shape;
 
     #[test]
-    fn test_generate_bracket_structure() {
+    fn test_generate_bracket_structure_from_shape() {
         // 1D: { } を生成
-        assert_eq!(generate_bracket_structure(1, 1), "{ }");
-        assert_eq!(generate_bracket_structure(1, 2), "{ } { }");
-        assert_eq!(generate_bracket_structure(1, 3), "{ } { } { }");
+        assert_eq!(generate_bracket_structure_from_shape(&[1]), "{ }");
+        assert_eq!(generate_bracket_structure_from_shape(&[2]), "{ } { }");
+        assert_eq!(generate_bracket_structure_from_shape(&[3]), "{ } { } { }");
 
-        // 2D: { ( ) ( ) ... } を生成
-        assert_eq!(generate_bracket_structure(2, 1), "{ ( ) }");
-        assert_eq!(generate_bracket_structure(2, 2), "{ ( ) ( ) }");
-        assert_eq!(generate_bracket_structure(2, 3), "{ ( ) ( ) ( ) }");
+        // 2D: { ( ) × dim2 } × dim1 を生成
+        assert_eq!(generate_bracket_structure_from_shape(&[1, 1]), "{ ( ) }");
+        assert_eq!(generate_bracket_structure_from_shape(&[1, 2]), "{ ( ) ( ) }");
+        assert_eq!(generate_bracket_structure_from_shape(&[1, 3]), "{ ( ) ( ) ( ) }");
+        assert_eq!(generate_bracket_structure_from_shape(&[2, 3]), "{ ( ) ( ) ( ) } { ( ) ( ) ( ) }");
 
-        // 3D: { ( [ ] [ ] ... ) } を生成
-        assert_eq!(generate_bracket_structure(3, 1), "{ ( [ ] ) }");
-        assert_eq!(generate_bracket_structure(3, 2), "{ ( [ ] [ ] ) }");
-        assert_eq!(generate_bracket_structure(3, 3), "{ ( [ ] [ ] [ ] ) }");
+        // 3D: { ( [ ] × dim3 ) × dim2 } × dim1 を生成
+        assert_eq!(generate_bracket_structure_from_shape(&[1, 1, 1]), "{ ( [ ] ) }");
+        assert_eq!(generate_bracket_structure_from_shape(&[1, 1, 2]), "{ ( [ ] [ ] ) }");
+        assert_eq!(generate_bracket_structure_from_shape(&[1, 2, 3]), "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }");
+        assert_eq!(generate_bracket_structure_from_shape(&[2, 2, 3]), "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) } { ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }");
     }
 }
