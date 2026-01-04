@@ -336,9 +336,9 @@ mod dimension_limit_tests {
 
     #[tokio::test]
     async fn test_fill_dimension_limit() {
-        // FILLで4次元を作成しようとするとエラー
+        // FILLで4次元を作成しようとするとエラー（統一形式）
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 2 2 2 1 ] [ 0 ] FILL").await;
+        let result = interp.execute("[ 2 2 2 1 0 ] FILL").await;
         assert!(result.is_err(), "FILL with 4 dimensions should fail");
 
         let error_msg = result.unwrap_err().to_string();
