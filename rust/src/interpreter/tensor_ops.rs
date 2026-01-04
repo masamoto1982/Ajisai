@@ -400,83 +400,71 @@ where
 /// FILL - 任意値埋めベクタ生成
 ///
 /// 使用法:
-///   [ 2 3 ] [ 5 ] FILL → [ [ 5 5 5 ] [ 5 5 5 ] ]
-///   [ 3 ] [ 1/2 ] FILL → [ 1/2 1/2 1/2 ]
+///   [ 2 3 5 ] FILL → [ [ 5 5 5 ] [ 5 5 5 ] ]
+///   [ 3 1/2 ] FILL → [ 1/2 1/2 1/2 ]
 ///
-/// 注意: 4次元までに制限されています
+/// 引数ベクタの最後の要素が埋める値、それより前が形状
+/// 注意: 3次元までに制限されています
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target == OperationTarget::Stack {
         return Err(AjisaiError::from("FILL does not support Stack (..) mode"));
     }
 
-    let value_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    // 引数ベクタ [ shape... value ] を取得
+    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 形状を抽出
-    let shape: Vec<usize> = match &shape_val.val_type {
+    // 引数から形状と埋める値を抽出
+    let (shape, fill_value) = match &args_val.val_type {
         ValueType::Vector(v) => {
-            // 次元数チェック
-            let dim_count = v.len();
-            if dim_count > MAX_VISIBLE_DIMENSIONS {
-                interp.stack.push(shape_val);
-                interp.stack.push(value_val);
+            if v.len() < 2 {
+                interp.stack.push(args_val);
+                return Err(AjisaiError::from("FILL requires [shape... value] (at least 2 elements)"));
+            }
+
+            // 最後の要素が埋める値
+            let value_elem = &v[v.len() - 1];
+            let fill_value = match &value_elem.val_type {
+                ValueType::Number(n) => n.clone(),
+                _ => {
+                    interp.stack.push(args_val);
+                    return Err(AjisaiError::from("FILL value (last element) must be a number"));
+                }
+            };
+
+            // それより前の要素が形状
+            let shape_len = v.len() - 1;
+            if shape_len > MAX_VISIBLE_DIMENSIONS {
+                interp.stack.push(args_val);
                 return Err(AjisaiError::from(format!(
                     "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
-                    dim_count
+                    shape_len
                 )));
             }
 
-            let mut s = Vec::with_capacity(v.len());
-            for elem in v {
-                if let ValueType::Number(n) = &elem.val_type {
+            let mut shape = Vec::with_capacity(shape_len);
+            for i in 0..shape_len {
+                if let ValueType::Number(n) = &v[i].val_type {
                     let dim = match n.as_usize() {
-                        Some(d) => d,
-                        None => {
-                            interp.stack.push(shape_val);
-                            interp.stack.push(value_val);
+                        Some(d) if d > 0 => d,
+                        _ => {
+                            interp.stack.push(args_val);
                             return Err(AjisaiError::from("Shape dimensions must be positive integers"));
                         }
                     };
-                    s.push(dim);
+                    shape.push(dim);
                 } else {
-                    interp.stack.push(shape_val);
-                    interp.stack.push(value_val);
-                    return Err(AjisaiError::from("Shape must contain only numbers"));
+                    interp.stack.push(args_val);
+                    return Err(AjisaiError::from("Shape dimensions must be numbers"));
                 }
             }
-            s
+
+            (shape, fill_value)
         }
         _ => {
-            interp.stack.push(shape_val);
-            interp.stack.push(value_val);
-            return Err(AjisaiError::from("FILL requires shape as vector"));
+            interp.stack.push(args_val);
+            return Err(AjisaiError::from("FILL requires [shape... value] vector"));
         }
     };
-
-    // 埋める値を抽出
-    let fill_value = match &value_val.val_type {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) => n.clone(),
-                _ => {
-                    interp.stack.push(shape_val);
-                    interp.stack.push(value_val);
-                    return Err(AjisaiError::from("FILL value must be a number"));
-                }
-            }
-        }
-        _ => {
-            interp.stack.push(shape_val);
-            interp.stack.push(value_val);
-            return Err(AjisaiError::from("FILL value must be a single-element vector"));
-        }
-    };
-
-    if shape.is_empty() {
-        interp.stack.push(shape_val);
-        interp.stack.push(value_val);
-        return Err(AjisaiError::from("FILL requires non-empty shape"));
-    }
 
     let result = build_filled_vector(&shape, &fill_value);
     interp.stack.push(result);

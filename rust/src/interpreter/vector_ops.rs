@@ -8,12 +8,11 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index, unwrap_single_element, wrap_value, wrap_number};
+use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index, wrap_value, wrap_number};
 use crate::types::{Value, ValueType};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
-use std::collections::VecDeque;
 
 // ============================================================================
 // 位置指定操作（0オリジン）
@@ -117,90 +116,89 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 /// 【責務】
 /// - スタックトップのベクタまたはスタック全体の指定位置に要素を挿入
 /// - 負数インデックスをサポート（-1 = 末尾の要素の位置）
-/// - 単一要素ベクタは自動的にアンラップして挿入
 ///
 /// 【使用法】
-/// - StackTopモード: `[a c] [1] [b] INSERT` → `[a b c]`（インデックス1の位置に挿入）
-/// - StackTopモード: `[a b c] [-1] [X] INSERT` → `[a b X c]`（末尾の要素の前に挿入）
-/// - Stackモード: `a c [1] x .. INSERT` → `a x c`
+/// - StackTopモード: `[a c] [1 b] INSERT` → `[a b c]`（インデックス1の位置にbを挿入）
+/// - StackTopモード: `[a b c] [-1 X] INSERT` → `[a b X c]`（末尾の要素の前にXを挿入）
+/// - Stackモード: `a c [1 x] .. INSERT` → `a x c`
 ///
 /// 【引数スタック】
-/// - element: 挿入する要素
-/// - [index]: 挿入位置（単一要素ベクタの整数）
+/// - [index element]: 挿入位置と挿入する要素
 /// - (StackTopモード) target: 対象ベクタ
 ///
 /// 【戻り値スタック】
 /// - 挿入後のベクタまたはスタック
 ///
 /// 【エラー】
+/// - 引数が[index element]形式でない場合
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
-    let element = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index_val = interp.stack.pop().ok_or_else(|| {
-        interp.stack.push(element.clone());
-        AjisaiError::StackUnderflow
-    })?;
-    let index = match get_integer_from_value(&index_val) {
-        Ok(v) => v,
-        Err(e) => {
-            interp.stack.push(index_val);
-            interp.stack.push(element);
-            return Err(e);
+    // 引数ベクタ [index element] を取得
+    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // 引数から index と element を抽出
+    let (index, element) = match &args_val.val_type {
+        ValueType::Vector(v) => {
+            if v.len() != 2 {
+                interp.stack.push(args_val);
+                return Err(AjisaiError::from("INSERT requires [index element]"));
+            }
+
+            // index を抽出
+            let index = match get_integer_from_value(&v[0]) {
+                Ok(i) => i,
+                Err(_) => {
+                    interp.stack.push(args_val);
+                    return Err(AjisaiError::from("INSERT index must be an integer"));
+                }
+            };
+
+            // element を抽出（2番目の要素）
+            let element = v[1].clone();
+
+            (index, element)
+        }
+        _ => {
+            interp.stack.push(args_val);
+            return Err(AjisaiError::from("INSERT requires [index element]"));
         }
     };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or_else(|| {
-                interp.stack.push(index_val.clone());
-                interp.stack.push(element.clone());
+                interp.stack.push(args_val.clone());
                 AjisaiError::StackUnderflow
             })?;
-
-            let element_to_insert = unwrap_single_element(element.clone());
 
             match vector_val.val_type {
                 ValueType::Vector(mut v) => {
                     let len = v.len() as i64;
                     let insert_index = if index < 0 {
-                        // 負数インデックス: -1は末尾、-2は末尾の1つ前
-                        // これは他の位置指定操作（GET/REPLACE/REMOVE）と一貫
                         (len + index).max(0) as usize
                     } else {
-                        // 正数インデックス: lengthまで許容（末尾への追加を可能にする）
                         (index as usize).min(v.len())
                     };
 
-                    if let ValueType::Vector(elems) = element_to_insert.val_type {
-                        v.splice(insert_index..insert_index, elems);
-                    } else {
-                        v.insert(insert_index, element_to_insert);
-                    }
+                    v.insert(insert_index, element);
                     interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
                 _ => {
                     interp.stack.push(vector_val);
-                    interp.stack.push(index_val);
-                    interp.stack.push(element);
+                    interp.stack.push(args_val);
                     Err(AjisaiError::type_error("vector", "other type"))
                 }
             }
         }
         OperationTarget::Stack => {
-            // REPLACEと同様に単一要素ベクタをアンラップする
-            let element_to_insert = unwrap_single_element(element);
-
             let len = interp.stack.len() as i64;
             let insert_index = if index < 0 {
-                // 負数インデックス: -1は末尾、-2は末尾の1つ前
-                // これは他の位置指定操作（GET/REPLACE/REMOVE）と一貫
                 (len + index).max(0) as usize
             } else {
-                // 正数インデックス: lengthまで許容（末尾への追加を可能にする）
                 (index as usize).min(interp.stack.len())
             };
-            interp.stack.insert(insert_index, element_to_insert);
+            interp.stack.insert(insert_index, element);
             Ok(())
         }
     }
@@ -211,47 +209,60 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 /// 【責務】
 /// - スタックトップのベクタまたはスタック全体の指定位置の要素を置き換え
 /// - 負数インデックスをサポート
-/// - 単一要素ベクタは自動的にアンラップして置換
 ///
 /// 【使用法】
-/// - StackTopモード: `[a b c] [1] [X] REPLACE` → `[a X c]`
-/// - Stackモード: `a b c [1] X .. REPLACE` → `a X c`
+/// - StackTopモード: `[a b c] [1 X] REPLACE` → `[a X c]`
+/// - Stackモード: `a b c [1 X] .. REPLACE` → `a X c`
 ///
 /// 【引数スタック】
-/// - new_element: 新しい要素
-/// - [index]: 置換位置（単一要素ベクタの整数）
+/// - [index new_element]: 置換位置と新しい要素
 /// - (StackTopモード) target: 対象ベクタ
 ///
 /// 【戻り値スタック】
 /// - 置換後のベクタまたはスタック
 ///
 /// 【エラー】
+/// - 引数が[index element]形式でない場合
 /// - インデックスが範囲外の場合
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
-    let new_element = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index_val = interp.stack.pop().ok_or_else(|| {
-        interp.stack.push(new_element.clone());
-        AjisaiError::StackUnderflow
-    })?;
-    let index = match get_integer_from_value(&index_val) {
-        Ok(v) => v,
-        Err(e) => {
-            interp.stack.push(index_val);
-            interp.stack.push(new_element);
-            return Err(e);
+    // 引数ベクタ [index new_element] を取得
+    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // 引数から index と new_element を抽出
+    let (index, new_element) = match &args_val.val_type {
+        ValueType::Vector(v) => {
+            if v.len() != 2 {
+                interp.stack.push(args_val);
+                return Err(AjisaiError::from("REPLACE requires [index element]"));
+            }
+
+            // index を抽出
+            let index = match get_integer_from_value(&v[0]) {
+                Ok(i) => i,
+                Err(_) => {
+                    interp.stack.push(args_val);
+                    return Err(AjisaiError::from("REPLACE index must be an integer"));
+                }
+            };
+
+            // new_element を抽出（2番目の要素）
+            let new_element = v[1].clone();
+
+            (index, new_element)
+        }
+        _ => {
+            interp.stack.push(args_val);
+            return Err(AjisaiError::from("REPLACE requires [index element]"));
         }
     };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or_else(|| {
-                interp.stack.push(index_val.clone());
-                interp.stack.push(new_element.clone());
+                interp.stack.push(args_val.clone());
                 AjisaiError::StackUnderflow
             })?;
-
-            let replace_element = unwrap_single_element(new_element.clone());
 
             match vector_val.val_type {
                 ValueType::Vector(mut v) => {
@@ -260,20 +271,18 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
                         Some(idx) => idx,
                         None => {
                             interp.stack.push(Value { val_type: ValueType::Vector(v) });
-                            interp.stack.push(index_val);
-                            interp.stack.push(new_element);
+                            interp.stack.push(args_val);
                             return Err(AjisaiError::IndexOutOfBounds { index, length: len });
                         }
                     };
 
-                    v[actual_index] = replace_element;
+                    v[actual_index] = new_element;
                     interp.stack.push(Value { val_type: ValueType::Vector(v) });
                     Ok(())
                 },
                 _ => {
                     interp.stack.push(vector_val);
-                    interp.stack.push(index_val);
-                    interp.stack.push(new_element);
+                    interp.stack.push(args_val);
                     Err(AjisaiError::type_error("vector", "other type"))
                 }
             }
@@ -283,14 +292,12 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             let actual_index = match normalize_index(index, len) {
                 Some(idx) => idx,
                 None => {
-                    interp.stack.push(index_val);
-                    interp.stack.push(new_element);
+                    interp.stack.push(args_val);
                     return Err(AjisaiError::IndexOutOfBounds { index, length: len });
                 }
             };
 
-            let replace_element = unwrap_single_element(new_element);
-            interp.stack[actual_index] = replace_element;
+            interp.stack[actual_index] = new_element;
             Ok(())
         }
     }
@@ -517,70 +524,75 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
 /// SPLIT - 指定サイズで分割する
 ///
 /// 【責務】
-/// - 複数のサイズ指定を受け取り、ベクタまたはスタックを分割
+/// - サイズ指定ベクタを受け取り、ベクタまたはスタックを分割
 /// - サイズの合計が全体より小さい場合、残りは最後の要素に含まれる
 ///
 /// 【使用法】
-/// - StackTopモード: `[a b c d e] [2] [2] SPLIT` → `[a b] [c d] [e]`
-/// - Stackモード: `a b c d e [2] [1] .. SPLIT` → `[a b] [c] [d e]`
+/// - StackTopモード: `[a b c d e] [2 2] SPLIT` → `[a b] [c d] [e]`
+/// - Stackモード: `a b c d e [2 1] .. SPLIT` → `[a b] [c] [d e]`
 ///
 /// 【引数スタック】
-/// - [size_n] ... [size_1]: 分割サイズ（複数指定可能）
+/// - [size1 size2 ...]: 分割サイズ（ベクタで指定）
 /// - (StackTopモード) target: 対象ベクタ
 ///
 /// 【戻り値スタック】
 /// - 分割された複数のベクタ
 ///
 /// 【エラー】
-/// - サイズ指定がない場合
+/// - サイズ指定が空の場合
 /// - サイズの合計が長さを超える場合
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {
-    let mut sizes_values = VecDeque::new();
-    while let Some(top) = interp.stack.last() {
-        if get_bigint_from_value(top).is_ok() {
-            sizes_values.push_front(interp.stack.pop().unwrap());
-        } else {
-            break;
-        }
-    }
+    // 引数ベクタ [sizes...] を取得
+    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    if sizes_values.is_empty() {
-        return Err(AjisaiError::from("SPLIT requires at least one size"));
-    }
-
-    let sizes: Vec<usize> = match sizes_values.iter()
-        .map(|v| get_bigint_from_value(v).and_then(|bi| {
-            bi.to_usize().ok_or_else(|| AjisaiError::from("Split size is too large"))
-        }))
-        .collect::<Result<Vec<_>>>() {
-        Ok(v) => v,
-        Err(e) => {
-            // Restore all size values to the stack
-            for val in sizes_values {
-                interp.stack.push(val);
+    // サイズを抽出
+    let sizes: Vec<usize> = match &args_val.val_type {
+        ValueType::Vector(v) => {
+            if v.is_empty() {
+                interp.stack.push(args_val);
+                return Err(AjisaiError::from("SPLIT requires at least one size"));
             }
-            return Err(e);
+
+            let mut sizes = Vec::with_capacity(v.len());
+            for elem in v {
+                match get_bigint_from_value(elem) {
+                    Ok(bi) => {
+                        match bi.to_usize() {
+                            Some(s) => sizes.push(s),
+                            None => {
+                                interp.stack.push(args_val);
+                                return Err(AjisaiError::from("Split size is too large"));
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        interp.stack.push(args_val);
+                        return Err(AjisaiError::from("Split sizes must be integers"));
+                    }
+                }
+            }
+            sizes
+        }
+        _ => {
+            interp.stack.push(args_val);
+            return Err(AjisaiError::from("SPLIT requires [sizes...] vector"));
         }
     };
 
     match interp.operation_target {
         OperationTarget::StackTop => {
             let vector_val = interp.stack.pop().ok_or_else(|| {
-                // Restore all size values to the stack
-                for val in &sizes_values {
-                    interp.stack.push(val.clone());
-                }
+                interp.stack.push(args_val.clone());
                 AjisaiError::from("SPLIT requires a vector to split")
             })?;
+
             match vector_val.val_type {
                 ValueType::Vector(v) => {
                     let total_size: usize = sizes.iter().sum();
                     if total_size > v.len() {
                         interp.stack.push(Value { val_type: ValueType::Vector(v) });
-                        for val in &sizes_values {
-                            interp.stack.push(val.clone());
-                        }
+                        interp.stack.push(args_val);
                         return Err(AjisaiError::from("Split sizes sum exceeds vector length"));
                     }
 
@@ -601,9 +613,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                 },
                 _ => {
                     interp.stack.push(vector_val);
-                    for val in &sizes_values {
-                        interp.stack.push(val.clone());
-                    }
+                    interp.stack.push(args_val);
                     Err(AjisaiError::type_error("vector", "other type"))
                 }
             }
@@ -611,10 +621,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::Stack => {
             let total_size: usize = sizes.iter().sum();
             if total_size > interp.stack.len() {
-                // Restore all size values to the stack
-                for val in sizes_values {
-                    interp.stack.push(val);
-                }
+                interp.stack.push(args_val);
                 return Err(AjisaiError::from("Split sizes sum exceeds stack length"));
             }
 
@@ -849,19 +856,16 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
 /// - 等差数列の生成に対応
 ///
 /// 【使用法】
-/// - StackTopモード（2引数）: `[0] [5] RANGE` → `[0] [5] [0 1 2 3 4 5]`
-/// - StackTopモード（3引数）: `[0] [10] [2] RANGE` → `[0] [10] [2] [0 2 4 6 8 10]`
-/// - Stackモード（2引数）: `0 5 .. RANGE` → `[0 1 2 3 4 5]`
-/// - Stackモード（3引数）: `0 10 2 .. RANGE` → `[0 2 4 6 8 10]`
+/// - `[0 5] RANGE` → `[0 1 2 3 4 5]`
+/// - `[0 10 2] RANGE` → `[0 2 4 6 8 10]`
+/// - `[0 5] .. RANGE` → `[0 1 2 3 4 5]`（Stackモードも同じ引数形式）
 ///
 /// 【引数スタック】
-/// - [start]: 開始値（整数）
-/// - [end]: 終了値（整数、この値を含む）
-/// - (オプション) [step]: 増分（整数、デフォルトは自動判定: start <= end なら 1、そうでなければ -1）
+/// - [start end]: 開始値と終了値（整数）
+/// - [start end step]: 開始値、終了値、増分（整数）
 ///
 /// 【戻り値スタック】
-/// - (StackTopモード) 元の引数 + 生成されたベクタ
-/// - (Stackモード) 生成されたベクタ
+/// - 生成されたベクタ
 ///
 /// 【エラー】
 /// - stepが0の場合
@@ -873,251 +877,113 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
 /// - 負のstepで降順の範囲を生成可能
 /// - start == endの場合は単一要素のベクタを返す
 pub fn op_range(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
-            // スタックから引数を取得（2個または3個）
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::from("RANGE requires at least 2 arguments: [start] [end] or [start] [end] [step]"));
+    // 引数ベクタを取得
+    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // 引数ベクタから start, end, step を抽出
+    let (start, end, step) = match &args_val.val_type {
+        ValueType::Vector(v) => {
+            if v.len() < 2 || v.len() > 3 {
+                interp.stack.push(args_val);
+                return Err(AjisaiError::from("RANGE requires [start end] or [start end step]"));
             }
 
-            // 最後の引数を確認（endまたはstep）
-            let last_val = interp.stack.pop().unwrap();
-            let last_bigint = match get_bigint_from_value(&last_val) {
-                Ok(v) => v,
-                Err(e) => {
-                    interp.stack.push(last_val);
-                    return Err(e);
-                }
-            };
-            let last_i64 = match last_bigint.to_i64() {
-                Some(v) => v,
-                None => {
-                    interp.stack.push(last_val);
-                    return Err(AjisaiError::from("RANGE argument is too large"));
-                }
-            };
-
-            // 2番目の引数を確認（startまたはend）
-            let second_val = interp.stack.pop().unwrap();
-            let second_bigint = match get_bigint_from_value(&second_val) {
-                Ok(v) => v,
-                Err(e) => {
-                    interp.stack.push(second_val);
-                    interp.stack.push(last_val);
-                    return Err(e);
-                }
-            };
-            let second_i64 = match second_bigint.to_i64() {
-                Some(v) => v,
-                None => {
-                    interp.stack.push(second_val);
-                    interp.stack.push(last_val);
-                    return Err(AjisaiError::from("RANGE argument is too large"));
-                }
-            };
-
-            let (start, end, step, start_val, end_val, step_val) = if interp.stack.is_empty() {
-                // 2引数モード: start, end
-                let step = if second_i64 <= last_i64 { 1 } else { -1 };
-                (second_i64, last_i64, step, second_val, last_val, None)
-            } else {
-                // 3引数かチェック：次の値が整数かどうか確認
-                if let Some(top) = interp.stack.last() {
-                    if let Ok(first_bigint) = get_bigint_from_value(top) {
-                        // 3引数モード: start, end, step
-                        let first_val = interp.stack.pop().unwrap();
-                        let first_i64 = match first_bigint.to_i64() {
-                            Some(v) => v,
-                            None => {
-                                interp.stack.push(first_val);
-                                interp.stack.push(second_val);
-                                interp.stack.push(last_val);
-                                return Err(AjisaiError::from("RANGE argument is too large"));
-                            }
-                        };
-                        (first_i64, second_i64, last_i64, first_val, second_val, Some(last_val))
-                    } else {
-                        // 2引数モード（次がベクタなど）
-                        let step = if second_i64 <= last_i64 { 1 } else { -1 };
-                        (second_i64, last_i64, step, second_val, last_val, None)
+            // start を抽出
+            let start = match get_bigint_from_value(&v[0]) {
+                Ok(bi) => match bi.to_i64() {
+                    Some(i) => i,
+                    None => {
+                        interp.stack.push(args_val);
+                        return Err(AjisaiError::from("RANGE start is too large"));
                     }
-                } else {
-                    // 2引数モード（スタック空）
-                    let step = if second_i64 <= last_i64 { 1 } else { -1 };
-                    (second_i64, last_i64, step, second_val, last_val, None)
+                },
+                Err(_) => {
+                    interp.stack.push(args_val);
+                    return Err(AjisaiError::from("RANGE start must be an integer"));
                 }
             };
 
-            // stepが0の場合はエラー（引数を復元）
-            if step == 0 {
-                interp.stack.push(start_val);
-                interp.stack.push(end_val);
-                if let Some(sv) = step_val {
-                    interp.stack.push(sv);
+            // end を抽出
+            let end = match get_bigint_from_value(&v[1]) {
+                Ok(bi) => match bi.to_i64() {
+                    Some(i) => i,
+                    None => {
+                        interp.stack.push(args_val);
+                        return Err(AjisaiError::from("RANGE end is too large"));
+                    }
+                },
+                Err(_) => {
+                    interp.stack.push(args_val);
+                    return Err(AjisaiError::from("RANGE end must be an integer"));
                 }
-                return Err(AjisaiError::from("RANGE step cannot be 0"));
-            }
+            };
 
-            // 無限範囲チェック（引数を復元）
-            if (start < end && step < 0) || (start > end && step > 0) {
-                interp.stack.push(start_val);
-                interp.stack.push(end_val);
-                if let Some(sv) = step_val {
-                    interp.stack.push(sv);
-                }
-                return Err(AjisaiError::from("RANGE would create an infinite sequence (check start, end, and step values)"));
-            }
-
-            // 範囲を生成
-            let mut range_vec = Vec::new();
-            let mut current = start;
-
-            if step > 0 {
-                while current <= end {
-                    range_vec.push(Value {
-                        val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
-                    });
-                    current += step;
+            // step を抽出（オプション）
+            let step = if v.len() == 3 {
+                match get_bigint_from_value(&v[2]) {
+                    Ok(bi) => match bi.to_i64() {
+                        Some(i) => i,
+                        None => {
+                            interp.stack.push(args_val);
+                            return Err(AjisaiError::from("RANGE step is too large"));
+                        }
+                    },
+                    Err(_) => {
+                        interp.stack.push(args_val);
+                        return Err(AjisaiError::from("RANGE step must be an integer"));
+                    }
                 }
             } else {
-                while current >= end {
-                    range_vec.push(Value {
-                        val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
-                    });
-                    current += step;
-                }
-            }
+                // デフォルトstep: start <= end なら 1、そうでなければ -1
+                if start <= end { 1 } else { -1 }
+            };
 
-            // 元の引数をスタックに戻す
-            interp.stack.push(start_val);
-            interp.stack.push(end_val);
-            if let Some(sv) = step_val {
-                interp.stack.push(sv);
-            }
-
-            // 結果をプッシュ
-            interp.stack.push(Value {
-                val_type: ValueType::Vector(range_vec),
-            });
-
-            Ok(())
+            (start, end, step)
         }
-        OperationTarget::Stack => {
-            // スタックから引数を取得（2個または3個）
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::from("RANGE requires at least 2 arguments"));
-            }
+        _ => {
+            interp.stack.push(args_val);
+            return Err(AjisaiError::from("RANGE requires [start end] or [start end step]"));
+        }
+    };
 
-            // 最後の引数を確認
-            let last_val = interp.stack.pop().unwrap();
-            let last_bigint = match get_bigint_from_value(&last_val) {
-                Ok(v) => v,
-                Err(e) => {
-                    interp.stack.push(last_val);
-                    return Err(e);
-                }
-            };
-            let last_i64 = match last_bigint.to_i64() {
-                Some(v) => v,
-                None => {
-                    interp.stack.push(last_val);
-                    return Err(AjisaiError::from("RANGE argument is too large"));
-                }
-            };
+    // stepが0の場合はエラー
+    if step == 0 {
+        interp.stack.push(args_val);
+        return Err(AjisaiError::from("RANGE step cannot be 0"));
+    }
 
-            // 2番目の引数を確認
-            let second_val = interp.stack.pop().unwrap();
-            let second_bigint = match get_bigint_from_value(&second_val) {
-                Ok(v) => v,
-                Err(e) => {
-                    interp.stack.push(second_val);
-                    interp.stack.push(last_val);
-                    return Err(e);
-                }
-            };
-            let second_i64 = match second_bigint.to_i64() {
-                Some(v) => v,
-                None => {
-                    interp.stack.push(second_val);
-                    interp.stack.push(last_val);
-                    return Err(AjisaiError::from("RANGE argument is too large"));
-                }
-            };
+    // 無限範囲チェック
+    if (start < end && step < 0) || (start > end && step > 0) {
+        interp.stack.push(args_val);
+        return Err(AjisaiError::from("RANGE would create an infinite sequence (check start, end, and step values)"));
+    }
 
-            // 3引数かチェック：first_valも追跡してエラー時に復元できるようにする
-            let (start, end, step, first_val_opt) = if let Some(top) = interp.stack.last() {
-                // 3番目の引数があるかチェック
-                if let Ok(third_bigint) = get_bigint_from_value(top) {
-                    // 3引数モード
-                    let first_val = interp.stack.pop().unwrap();
-                    if let Some(third_i64) = third_bigint.to_i64() {
-                        (third_i64, second_i64, last_i64, Some(first_val))
-                    } else {
-                        // 3番目がi64に変換できない
-                        interp.stack.push(first_val);
-                        interp.stack.push(second_val);
-                        interp.stack.push(last_val);
-                        return Err(AjisaiError::from("RANGE argument is too large"));
-                    }
-                } else {
-                    // 2引数モード
-                    let step = if second_i64 <= last_i64 { 1 } else { -1 };
-                    (second_i64, last_i64, step, None)
-                }
-            } else {
-                // スタックが空なので2引数モード
-                let step = if second_i64 <= last_i64 { 1 } else { -1 };
-                (second_i64, last_i64, step, None)
-            };
+    // 範囲を生成
+    let mut range_vec = Vec::new();
+    let mut current = start;
 
-            // stepが0の場合はエラー（引数を復元）
-            if step == 0 {
-                if let Some(first_val) = first_val_opt {
-                    interp.stack.push(first_val);
-                }
-                interp.stack.push(second_val);
-                interp.stack.push(last_val);
-                return Err(AjisaiError::from("RANGE step cannot be 0"));
-            }
-
-            // 無限範囲チェック（引数を復元）
-            if (start < end && step < 0) || (start > end && step > 0) {
-                if let Some(first_val) = first_val_opt {
-                    interp.stack.push(first_val);
-                }
-                interp.stack.push(second_val);
-                interp.stack.push(last_val);
-                return Err(AjisaiError::from("RANGE would create an infinite sequence (check start, end, and step values)"));
-            }
-
-            // 範囲を生成
-            let mut range_vec = Vec::new();
-            let mut current = start;
-
-            if step > 0 {
-                while current <= end {
-                    range_vec.push(Value {
-                        val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
-                    });
-                    current += step;
-                }
-            } else {
-                while current >= end {
-                    range_vec.push(Value {
-                        val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
-                    });
-                    current += step;
-                }
-            }
-
-            // 結果をプッシュ
-            interp.stack.push(Value {
-                val_type: ValueType::Vector(range_vec),
+    if step > 0 {
+        while current <= end {
+            range_vec.push(Value {
+                val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
             });
-
-            Ok(())
+            current += step;
+        }
+    } else {
+        while current >= end {
+            range_vec.push(Value {
+                val_type: ValueType::Number(Fraction::new(BigInt::from(current), BigInt::one())),
+            });
+            current += step;
         }
     }
+
+    // 結果をプッシュ
+    interp.stack.push(Value {
+        val_type: ValueType::Vector(range_vec),
+    });
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1128,54 +994,54 @@ mod tests {
     async fn test_range_basic_stacktop() {
         let mut interp = Interpreter::new();
 
-        // 基本的な範囲生成（StackTopモード）
-        let result = interp.execute("[ 0 ] [ 5 ] RANGE").await;
+        // 基本的な範囲生成（統一形式）
+        let result = interp.execute("[ 0 5 ] RANGE").await;
         assert!(result.is_ok(), "RANGE should succeed: {:?}", result);
 
-        // 引数（[0] [5]）と結果（[0 1 2 3 4 5]）がスタックに残る
-        assert_eq!(interp.stack.len(), 3);
+        // 結果のみがスタックに残る
+        assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
     async fn test_range_with_step() {
         let mut interp = Interpreter::new();
 
-        // ステップ付き範囲生成
-        let result = interp.execute("[ 0 ] [ 10 ] [ 2 ] RANGE").await;
+        // ステップ付き範囲生成（統一形式）
+        let result = interp.execute("[ 0 10 2 ] RANGE").await;
         assert!(result.is_ok(), "RANGE with step should succeed: {:?}", result);
 
-        // 引数（[0] [10] [2]）と結果（[0 2 4 6 8 10]）がスタックに残る
-        assert_eq!(interp.stack.len(), 4);
+        // 結果のみがスタックに残る
+        assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
     async fn test_range_descending() {
         let mut interp = Interpreter::new();
 
-        // 降順範囲
-        let result = interp.execute("[ 10 ] [ 0 ] [ -2 ] RANGE").await;
+        // 降順範囲（統一形式）
+        let result = interp.execute("[ 10 0 -2 ] RANGE").await;
         assert!(result.is_ok(), "RANGE descending should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 4);
+        assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
     async fn test_range_single_element() {
         let mut interp = Interpreter::new();
 
-        // 単一要素
-        let result = interp.execute("[ 5 ] [ 5 ] RANGE").await;
+        // 単一要素（統一形式）
+        let result = interp.execute("[ 5 5 ] RANGE").await;
         assert!(result.is_ok(), "RANGE single element should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 3);
+        assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
     async fn test_range_stack_mode() {
         let mut interp = Interpreter::new();
 
-        // Stackモード
-        let result = interp.execute("0 5 .. RANGE").await;
+        // Stackモード（統一形式）
+        let result = interp.execute("[ 0 5 ] .. RANGE").await;
         assert!(result.is_ok(), "RANGE stack mode should succeed: {:?}", result);
-        // Stackモードでは引数が消費され、結果のみ残る
+        // 結果のみ残る
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -1183,35 +1049,35 @@ mod tests {
     async fn test_range_error_step_zero_restores_stack_stacktop() {
         let mut interp = Interpreter::new();
 
-        // step=0はエラー、エラー時にスタックが復元されるか確認
-        let result = interp.execute("[ 0 ] [ 10 ] [ 0 ] RANGE").await;
+        // step=0はエラー、エラー時にスタックが復元されるか確認（統一形式）
+        let result = interp.execute("[ 0 10 0 ] RANGE").await;
         assert!(result.is_err(), "RANGE with step=0 should fail");
 
         // エラー時に引数が復元されている
-        assert_eq!(interp.stack.len(), 3, "Arguments should be restored on error");
+        assert_eq!(interp.stack.len(), 1, "Arguments should be restored on error");
     }
 
     #[tokio::test]
     async fn test_range_error_step_zero_restores_stack_stack_mode() {
         let mut interp = Interpreter::new();
 
-        // Stackモードでstep=0はエラー、エラー時にスタックが復元されるか確認
-        let result = interp.execute("0 10 0 .. RANGE").await;
+        // Stackモードでstep=0はエラー、エラー時にスタックが復元されるか確認（統一形式）
+        let result = interp.execute("[ 0 10 0 ] .. RANGE").await;
         assert!(result.is_err(), "RANGE stack mode with step=0 should fail");
 
         // エラー時に引数が復元されている
-        assert_eq!(interp.stack.len(), 3, "Arguments should be restored on error in stack mode");
+        assert_eq!(interp.stack.len(), 1, "Arguments should be restored on error in stack mode");
     }
 
     #[tokio::test]
     async fn test_range_error_infinite_restores_stack() {
         let mut interp = Interpreter::new();
 
-        // 無限範囲エラー（start < endだがstep < 0）
-        let result = interp.execute("[ 0 ] [ 10 ] [ -1 ] RANGE").await;
+        // 無限範囲エラー（start < endだがstep < 0）（統一形式）
+        let result = interp.execute("[ 0 10 -1 ] RANGE").await;
         assert!(result.is_err(), "RANGE with infinite sequence should fail");
 
         // エラー時に引数が復元されている
-        assert_eq!(interp.stack.len(), 3, "Arguments should be restored on infinite error");
+        assert_eq!(interp.stack.len(), 1, "Arguments should be restored on infinite error");
     }
 }
