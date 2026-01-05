@@ -411,6 +411,11 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(target_val);
                     len
                 }
+                ValueType::Nil => {
+                    // NIL = 空ベクタ → 長さ0
+                    interp.stack.push(target_val);
+                    0
+                }
                 _ => {
                     interp.stack.push(target_val);
                     return Err(AjisaiError::type_error("vector", "other type"));

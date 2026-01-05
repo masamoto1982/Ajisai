@@ -982,12 +982,14 @@ mod tests {
     #[tokio::test]
     async fn test_join_empty_error() {
         let mut interp = Interpreter::new();
-        // 空配列は空Vectorとして扱われる
+        // 空ベクタ = NIL なので、JOIN は型エラーになる
         let result = interp.execute("[ ] JOIN").await;
         assert!(result.is_err());
         if let Err(e) = result {
-            // 空Vectorの場合はemptyエラーメッセージを期待
-            assert!(e.to_string().contains("empty") || e.to_string().contains("vector"));
+            // NIL に対する JOIN はエラー
+            let err_str = e.to_string();
+            assert!(err_str.contains("Nil") || err_str.contains("empty") || err_str.contains("vector"),
+                "Expected error about NIL or empty vector, got: {}", err_str);
         }
     }
 
