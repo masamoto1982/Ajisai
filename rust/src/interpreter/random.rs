@@ -30,10 +30,10 @@
 //   3. 完全な一様分布を保証（リジェクションサンプリング）
 //   4. 後続の演算も高速
 //
-// ## 使用例
+// ## 使用例（統一形式：RANGE方式）
 //
-// [ 6 ] [ 1 ] CSPRNG     # サイコロ: 0/6, 1/6, ..., 5/6 のいずれか
-// [ 100 ] [ 3 ] CSPRNG   # パーセント精度で3個
+// [ 6 1 ] CSPRNG         # サイコロ: 0/6, 1/6, ..., 5/6 のいずれか（分母6、1個）
+// [ 100 3 ] CSPRNG       # パーセント精度で3個（分母100、3個）
 // [ 5 ] CSPRNG           # デフォルト精度（2^32）で5個
 // CSPRNG                 # デフォルト精度で1個
 //
@@ -87,50 +87,32 @@ fn generate_uniform(denominator: &BigInt) -> Result<BigInt> {
     Err(AjisaiError::from("CSPRNG: failed to generate random number"))
 }
 
-/// スタックから整数を抽出（単一要素Vectorの数値）
-fn extract_positive_integer(val: &Value) -> Option<BigInt> {
-    match &val.val_type {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(n) => {
-                    // 整数かつ正数かチェック
-                    if n.denominator == BigInt::one() && n.numerator > BigInt::from(0) {
-                        Some(n.numerator.clone())
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            }
-        }
-        _ => None,
-    }
-}
-
-/// CSPRNG - 暗号論的疑似乱数を生成（分母指定モード対応）
+/// CSPRNG - 暗号論的疑似乱数を生成（統一形式：RANGE方式）
 ///
 /// 【責務】
 /// - 暗号論的に安全な乱数を分数として生成
 /// - 分母を指定することで必要な粒度だけを効率的に生成
 ///
-/// 【使用法】
+/// 【使用法】（統一形式：引数を単一ベクタにまとめる）
 /// ```ajisai
 /// CSPRNG                  # デフォルト精度（分母2^32）で1個
-/// [ 5 ] CSPRNG            # デフォルト精度で5個
-/// [ 6 ] [ 1 ] CSPRNG      # 分母6で1個（サイコロ: 0/6〜5/6）
-/// [ 100 ] [ 3 ] CSPRNG    # 分母100で3個
+/// [ 5 ] CSPRNG            # [ 個数 ] - デフォルト精度で5個
+/// [ 6 3 ] CSPRNG          # [ 分母 個数 ] - 分母6で3個（サイコロ: 0/6〜5/6）
+/// [ 100 10 ] CSPRNG       # [ 分母 個数 ] - 分母100で10個
 /// ```
 ///
-/// 【引数】
+/// 【引数】（RANGE方式と同じ形式）
 /// - 引数なし: 分母2^32で1個生成
 /// - [ count ]: 分母2^32でcount個生成
-/// - [ denominator ] [ count ]: 分母denominatorでcount個生成
+/// - [ denominator count ]: 分母denominatorでcount個生成
 ///
 /// 【戻り値】
 /// - count個の乱数を含むVector
 /// - 各乱数は [0, 1) の範囲の分数（0/denom, 1/denom, ..., (denom-1)/denom）
 ///
 /// 【エラー】
+/// - 引数がベクタでない場合
+/// - 引数に非整数が含まれる場合
 /// - 生成個数が0以下
 /// - 分母が0以下
 /// - 乱数生成に失敗
@@ -140,10 +122,10 @@ pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("CSPRNG does not support Stack mode (..)"));
     }
 
-    // スタックから引数を解析
+    // スタックから引数を解析（統一形式：RANGE方式）
     // パターン1: 引数なし → 分母デフォルト、個数1
     // パターン2: [ count ] → 分母デフォルト、個数count
-    // パターン3: [ denom ] [ count ] → 分母denom、個数count
+    // パターン3: [ denom count ] → 分母denom、個数count
 
     let (denominator, count) = parse_csprng_args(interp)?;
 
@@ -166,7 +148,12 @@ pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// CSPRNGの引数を解析
+/// CSPRNGの引数を解析（統一形式：RANGE方式）
+///
+/// 引数形式:
+/// - 引数なし: (デフォルト分母, 1)
+/// - [ count ]: (デフォルト分母, count)
+/// - [ denom count ]: (denom, count)
 fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
     let default_denom = BigInt::from(1u64 << DEFAULT_DENOMINATOR_BITS);
 
@@ -178,30 +165,68 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
     // スタックトップを確認
     let top = interp.stack.last().unwrap();
 
-    // 整数でない場合：デフォルト分母で1個（スタックはそのまま）
-    let Some(first_int) = extract_positive_integer(top) else {
-        return Ok((default_denom, 1));
+    // ベクタでない場合：引数なしとして扱う（デフォルト分母で1個）
+    let args = match &top.val_type {
+        ValueType::Vector(v) => v.clone(),
+        _ => return Ok((default_denom, 1)),
     };
 
-    // 1つ目の整数をpop
-    interp.stack.pop();
+    // ベクタの要素数で分岐
+    match args.len() {
+        1 => {
+            // [ count ] 形式
+            let count_val = &args[0];
+            let count = extract_positive_integer_from_element(count_val)
+                .ok_or_else(|| AjisaiError::from("CSPRNG: count must be a positive integer"))?;
 
-    // 次の要素も整数かチェック
-    if let Some(second) = interp.stack.last() {
-        if let Some(second_int) = extract_positive_integer(second) {
-            // パターン3: [ denom ] [ count ]
+            // 引数を消費
             interp.stack.pop();
-            let count = first_int.to_usize()
+
+            let count_usize = count.to_usize()
                 .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
-            return Ok((second_int, count));
+            Ok((default_denom, count_usize))
+        }
+        2 => {
+            // [ denom count ] 形式
+            let denom_val = &args[0];
+            let count_val = &args[1];
+
+            let denom = extract_positive_integer_from_element(denom_val)
+                .ok_or_else(|| AjisaiError::from("CSPRNG: denominator must be a positive integer"))?;
+            let count = extract_positive_integer_from_element(count_val)
+                .ok_or_else(|| AjisaiError::from("CSPRNG: count must be a positive integer"))?;
+
+            // 引数を消費
+            interp.stack.pop();
+
+            let count_usize = count.to_usize()
+                .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
+            Ok((denom, count_usize))
+        }
+        0 => {
+            // 空ベクタは無効（空ベクタ禁止ルールにより通常ここには来ない）
+            Err(AjisaiError::from("CSPRNG: empty vector is not allowed"))
+        }
+        _ => {
+            // 3要素以上は無効
+            Err(AjisaiError::from("CSPRNG requires [] or [count] or [denom count]"))
         }
     }
+}
 
-    // パターン2: [ count ]
-    let count = first_int.to_usize()
-        .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
-
-    Ok((default_denom, count))
+/// ベクタ要素から正の整数を抽出
+fn extract_positive_integer_from_element(val: &Value) -> Option<BigInt> {
+    match &val.val_type {
+        ValueType::Number(n) => {
+            // 整数かつ正数かチェック
+            if n.denominator == BigInt::one() && n.numerator > BigInt::from(0) {
+                Some(n.numerator.clone())
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -273,8 +298,8 @@ mod tests {
     #[tokio::test]
     async fn test_csprng_with_denominator() {
         let mut interp = Interpreter::new();
-        // 分母6で3個生成（サイコロのような用途）
-        let result = interp.execute("[ 6 ] [ 3 ] CSPRNG").await;
+        // 統一形式: [ 分母 個数 ] CSPRNG（サイコロのような用途）
+        let result = interp.execute("[ 6 3 ] CSPRNG").await;
         assert!(result.is_ok(), "CSPRNG with denominator should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
 
@@ -300,8 +325,8 @@ mod tests {
     #[tokio::test]
     async fn test_csprng_dice_range() {
         let mut interp = Interpreter::new();
-        // 分母6で100個生成し、[ 6 ] * で整数化したときに 0〜5 の範囲になることを確認
-        let result = interp.execute("[ 6 ] [ 100 ] CSPRNG [ 6 ] *").await;
+        // 統一形式: [ 分母 個数 ] CSPRNG で100個生成し、[ 6 ] * で整数化したときに 0〜5 の範囲になることを確認
+        let result = interp.execute("[ 6 100 ] CSPRNG [ 6 ] *").await;
         assert!(result.is_ok());
 
         if let ValueType::Vector(v) = &interp.stack[0].val_type {
@@ -323,20 +348,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_csprng_preserves_non_integer_on_stack() {
+    async fn test_csprng_invalid_args_error() {
         let mut interp = Interpreter::new();
-        // 分数がスタックにあっても、それは個数として解釈されない
+        // 統一形式では [ 1/2 ] は無効な引数（整数でない）のでエラー
         let result = interp.execute("[ 1/2 ] CSPRNG").await;
+        assert!(result.is_err(), "CSPRNG with non-integer should fail");
+    }
+
+    #[tokio::test]
+    async fn test_csprng_preserves_unrelated_stack() {
+        let mut interp = Interpreter::new();
+        // CSPRNGに無関係なスタック要素は保持される
+        let result = interp.execute("'hello' [ 5 ] CSPRNG").await;
         assert!(result.is_ok());
-        // スタックには [ 1/2 ] と CSPRNG結果の2つがあるはず
+        // スタックには 'hello' と CSPRNG結果の2つがあるはず
         assert_eq!(interp.stack.len(), 2);
     }
 
     #[tokio::test]
     async fn test_csprng_small_denominator_efficiency() {
         let mut interp = Interpreter::new();
-        // 分母2で生成（コイントス）- 0/2 または 1/2
-        let result = interp.execute("[ 2 ] [ 50 ] CSPRNG").await;
+        // 統一形式: [ 分母 個数 ] CSPRNG でコイントス（分母2）
+        let result = interp.execute("[ 2 50 ] CSPRNG").await;
         assert!(result.is_ok());
 
         if let ValueType::Vector(v) = &interp.stack[0].val_type {
@@ -357,6 +390,28 @@ mod tests {
             }
             // 50個あれば、両方の値が出現するはず（極めて高い確率で）
             assert!(has_zero || has_half, "Should have at least one of 0 or 1/2");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_csprng_unified_format_consistency() {
+        // RANGE方式と同じ形式であることを確認
+        let mut interp = Interpreter::new();
+
+        // [ 個数 ] CSPRNG - 1要素ベクタ
+        let result = interp.execute("[ 3 ] CSPRNG").await;
+        assert!(result.is_ok(), "[ count ] CSPRNG should work");
+        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+            assert_eq!(v.len(), 3, "Should generate 3 values");
+        }
+
+        interp.stack.clear();
+
+        // [ 分母 個数 ] CSPRNG - 2要素ベクタ
+        let result = interp.execute("[ 10 5 ] CSPRNG").await;
+        assert!(result.is_ok(), "[ denom count ] CSPRNG should work");
+        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+            assert_eq!(v.len(), 5, "Should generate 5 values");
         }
     }
 }
