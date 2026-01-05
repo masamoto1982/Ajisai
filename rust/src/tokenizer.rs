@@ -108,10 +108,10 @@ fn is_special_char(c: char) -> bool {
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
     match c {
-        '[' => Some((Token::VectorStart, 1)),
-        ']' => Some((Token::VectorEnd, 1)),
-        // {} と () は将来の拡張用に予約（現在は未サポート）
-        // '{' | '}' | '(' | ')' は構文エラーとして扱われる
+        // [], {}, () は全て同等にVectorとして扱う
+        // 表示時に深さに応じて適切な括弧に変換される
+        '[' | '{' | '(' => Some((Token::VectorStart, 1)),
+        ']' | '}' | ')' => Some((Token::VectorEnd, 1)),
         ':' | ';' => Some((Token::GuardSeparator, 1)),
         _ => None,
     }
