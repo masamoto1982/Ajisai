@@ -282,7 +282,7 @@ mod test_tokenizer {
     fn test_brackets() {
         let custom_words = HashSet::new();
 
-        // Phase 2: [] のみサポート
+        // [] のテスト
         let result = tokenize_with_custom_words("[ 1 2 3 ]", &custom_words).unwrap();
         assert_eq!(result, vec![
             Token::VectorStart,
@@ -292,9 +292,71 @@ mod test_tokenizer {
             Token::VectorEnd,
         ]);
 
-        // {} と () は削除されたため、エラーとして扱われる
-        let result2 = tokenize_with_custom_words("{ a b c }", &custom_words);
-        assert!(result2.is_err(), "Curly brackets should cause an error");
+        // {} も同等に扱われる
+        let result2 = tokenize_with_custom_words("{ a b c }", &custom_words).unwrap();
+        assert_eq!(result2, vec![
+            Token::VectorStart,
+            Token::Symbol("a".to_string()),
+            Token::Symbol("b".to_string()),
+            Token::Symbol("c".to_string()),
+            Token::VectorEnd,
+        ]);
+
+        // () も同等に扱われる
+        let result3 = tokenize_with_custom_words("( x y z )", &custom_words).unwrap();
+        assert_eq!(result3, vec![
+            Token::VectorStart,
+            Token::Symbol("x".to_string()),
+            Token::Symbol("y".to_string()),
+            Token::Symbol("z".to_string()),
+            Token::VectorEnd,
+        ]);
+    }
+
+    #[test]
+    fn test_mixed_bracket_styles() {
+        let custom_words = HashSet::new();
+
+        // 異なる括弧スタイルの混在（FRAMEワードが生成する形式）
+        let result = tokenize_with_custom_words("{ ( [ 1 ] ) }", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::VectorStart,   // {
+            Token::VectorStart,   // (
+            Token::VectorStart,   // [
+            Token::Number("1".to_string()),
+            Token::VectorEnd,     // ]
+            Token::VectorEnd,     // )
+            Token::VectorEnd,     // }
+        ]);
+
+        // 2次元構造
+        let result2 = tokenize_with_custom_words("{ ( ) ( ) }", &custom_words).unwrap();
+        assert_eq!(result2, vec![
+            Token::VectorStart,   // {
+            Token::VectorStart,   // (
+            Token::VectorEnd,     // )
+            Token::VectorStart,   // (
+            Token::VectorEnd,     // )
+            Token::VectorEnd,     // }
+        ]);
+    }
+
+    #[test]
+    fn test_frame_output_format() {
+        let custom_words = HashSet::new();
+
+        // FRAMEワードが生成する3次元構造の形式
+        // [ 1 2 3 ] FRAME → { ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }
+        let frame_output = "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }";
+        let result = tokenize_with_custom_words(frame_output, &custom_words).unwrap();
+
+        // 正しくトークン化されることを確認
+        assert!(result.iter().all(|t| matches!(t, Token::VectorStart | Token::VectorEnd)));
+
+        // VectorStart と VectorEnd の数が一致
+        let starts = result.iter().filter(|t| matches!(t, Token::VectorStart)).count();
+        let ends = result.iter().filter(|t| matches!(t, Token::VectorEnd)).count();
+        assert_eq!(starts, ends);
     }
 
     // === 複雑なパターンのテスト ===
