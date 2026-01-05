@@ -68,14 +68,21 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // Vectorを処理
+            // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = match target_val.val_type {
                 ValueType::Vector(v) => v,
+                ValueType::Nil => vec![], // NIL = 空ベクタ
                 _ => {
                     interp.stack.push(target_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
             };
+
+            // 空ベクタ/NILの場合はNILを返す
+            if elements.is_empty() {
+                interp.stack.push(Value { val_type: ValueType::Nil });
+                return Ok(());
+            }
 
             let mut results = Vec::new();
 
@@ -259,7 +266,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 /// 【注意事項】
 /// - 適用するワードは必ず [true] または [false] を返す必要がある
 /// - 各要素は単一要素ベクタとしてワードに渡される
-/// - 条件に合う要素がない場合は空のベクタが返される
+/// - 条件に合う要素がない場合はNILが返される
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let word_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let word_name = get_word_name_from_value(&word_val)?;
@@ -273,14 +280,21 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // Vectorを処理
+            // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = match target_val.val_type {
                 ValueType::Vector(v) => v,
+                ValueType::Nil => vec![], // NIL = 空ベクタ
                 _ => {
                     interp.stack.push(target_val);
                     return Err(AjisaiError::type_error("vector", "other type"));
                 }
             };
+
+            // 空ベクタ/NILの場合はNILを返す
+            if elements.is_empty() {
+                interp.stack.push(Value { val_type: ValueType::Nil });
+                return Ok(());
+            }
 
             let mut results = Vec::new();
 
@@ -467,9 +481,10 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             let init_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // Vectorを処理
+            // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = match target_val.val_type {
                 ValueType::Vector(v) => v,
+                ValueType::Nil => vec![], // NIL = 空ベクタ
                 _ => {
                     interp.stack.push(target_val);
                     interp.stack.push(init_val);
@@ -482,7 +497,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             let mut accumulator = unwrap_single_element(init_val);
 
             if elements.is_empty() {
-                // 空ベクタ: 初期値をそのまま返す
+                // 空ベクタ/NIL: 初期値をそのまま返す
                 interp.stack.push(wrap_value(accumulator));
                 return Ok(());
             }
@@ -828,12 +843,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fold_empty_vector_now_prohibited() {
-        // Empty vectors are now prohibited in Ajisai
+    async fn test_fold_empty_vector_returns_initial() {
+        // 空ベクタ = NIL、FOLD は初期値をそのまま返す
         let mut interp = Interpreter::new();
         let code = r#"[ ] [ 42 ] '+' FOLD"#;
         let result = interp.execute(code).await;
-        assert!(result.is_err(), "Empty vector should now be an error");
+        assert!(result.is_ok(), "FOLD on empty vector (NIL) should return initial value: {:?}", result);
+
+        // 結果は初期値 [42]
+        assert_eq!(interp.stack.len(), 1);
+        if let Some(val) = interp.stack.last() {
+            if let crate::types::ValueType::Vector(v) = &val.val_type {
+                assert_eq!(v.len(), 1);
+                if let crate::types::ValueType::Number(n) = &v[0].val_type {
+                    assert_eq!(n.numerator.to_string(), "42");
+                }
+            }
+        }
     }
 
     #[tokio::test]

@@ -310,10 +310,12 @@ impl Interpreter {
                 },
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
+                    // 空ベクタ = NIL（空の存在を表す統一的な方法）
                     if values.is_empty() {
-                        return Err(AjisaiError::from("Empty vector not allowed. Use NIL for representing absence of value."));
+                        self.stack.push(Value { val_type: ValueType::Nil });
+                    } else {
+                        self.stack.push(Value::from_vector(values));
                     }
-                    self.stack.push(Value::from_vector(values));
                     i += consumed;
                     continue;
                 },

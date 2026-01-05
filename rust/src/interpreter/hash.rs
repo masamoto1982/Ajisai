@@ -457,11 +457,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hash_empty_vector_now_prohibited() {
-        // Empty vectors are now prohibited in Ajisai
+    async fn test_hash_empty_vector_becomes_nil() {
+        // 空ベクタ = NIL として扱われる
         let mut interp = Interpreter::new();
         let result = interp.execute("[ ] HASH").await;
-        assert!(result.is_err(), "Empty vector should now be an error");
+        assert!(result.is_ok(), "Empty vector (NIL) should be hashable: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
