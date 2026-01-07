@@ -12,12 +12,12 @@ use crate::types::fraction::Fraction;
 
 /// 値から数値（Fraction）を抽出する
 /// 単一要素ベクタの場合は中の値を取り出す
-fn extract_fraction(val: &Value) -> Option<&Fraction> {
-    match &val.val_type {
-        ValueType::Number(f) => Some(f),
+fn extract_fraction(val: &Value) -> Option<Fraction> {
+    match val.val_type() {
+        ValueType::Number(f) => Some(f.clone()),
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
-                ValueType::Number(f) => Some(f),
+            match v[0].val_type() {
+                ValueType::Number(f) => Some(f.clone()),
                 _ => None,
             }
         }
@@ -65,11 +65,12 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            match val.val_type {
+            match val.val_type() {
                 ValueType::Vector(v) => {
+                    let v = v.clone();
                     if v.is_empty() {
                         // 空ベクタはそのまま返す
-                        interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                        interp.stack.push(Value::from_vector(v));
                         return Ok(());
                     }
 
@@ -77,9 +78,9 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                     let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(v.len());
                     for (i, elem) in v.iter().enumerate() {
                         match extract_fraction(elem) {
-                            Some(f) => indexed_fractions.push((i, f.clone())),
+                            Some(f) => indexed_fractions.push((i, f)),
                             None => {
-                                interp.stack.push(Value { val_type: ValueType::Vector(v) });
+                                interp.stack.push(Value::from_vector(v));
                                 return Err(AjisaiError::from(
                                     "SORT requires all elements to be numbers"
                                 ));
@@ -100,20 +101,20 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                     // "No change is an error" チェック
                     if !interp.disable_no_change_check {
                         if v.len() < 2 {
-                            interp.stack.push(Value { val_type: ValueType::Vector(sorted_v) });
+                            interp.stack.push(Value::from_vector(sorted_v));
                             return Err(AjisaiError::from(
                                 "SORT resulted in no change on a vector with less than 2 elements"
                             ));
                         }
                         if sorted_v == v {
-                            interp.stack.push(Value { val_type: ValueType::Vector(sorted_v) });
+                            interp.stack.push(Value::from_vector(sorted_v));
                             return Err(AjisaiError::from(
                                 "SORT resulted in no change (vector is already sorted)"
                             ));
                         }
                     }
 
-                    interp.stack.push(Value { val_type: ValueType::Vector(sorted_v) });
+                    interp.stack.push(Value::from_vector(sorted_v));
                     Ok(())
                 },
                 _ => {
@@ -131,7 +132,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(interp.stack.len());
             for (i, elem) in interp.stack.iter().enumerate() {
                 match extract_fraction(elem) {
-                    Some(f) => indexed_fractions.push((i, f.clone())),
+                    Some(f) => indexed_fractions.push((i, f)),
                     None => {
                         return Err(AjisaiError::from(
                             "SORT requires all stack elements to be numbers"

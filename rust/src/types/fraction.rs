@@ -644,3 +644,55 @@ impl ToPrimitive for Fraction {
         }
     }
 }
+
+// ============================================================================
+// 統一分数アーキテクチャ用の追加メソッド
+// ============================================================================
+
+impl Fraction {
+    /// ゼロかどうかを判定
+    #[inline]
+    pub fn is_zero(&self) -> bool {
+        self.numerator.is_zero()
+    }
+
+    /// 整数値としてi64を取得（分母が1で、範囲内の場合のみ）
+    #[inline]
+    pub fn to_i64(&self) -> Option<i64> {
+        if self.denominator.is_one() {
+            self.numerator.to_i64()
+        } else {
+            None
+        }
+    }
+}
+
+impl From<i64> for Fraction {
+    #[inline]
+    fn from(n: i64) -> Self {
+        Fraction {
+            numerator: BigInt::from(n),
+            denominator: BigInt::one(),
+        }
+    }
+}
+
+impl From<i32> for Fraction {
+    #[inline]
+    fn from(n: i32) -> Self {
+        Fraction {
+            numerator: BigInt::from(n),
+            denominator: BigInt::one(),
+        }
+    }
+}
+
+impl std::fmt::Display for Fraction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.denominator.is_one() {
+            write!(f, "{}", self.numerator)
+        } else {
+            write!(f, "{}/{}", self.numerator, self.denominator)
+        }
+    }
+}

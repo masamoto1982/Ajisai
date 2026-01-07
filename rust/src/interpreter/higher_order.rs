@@ -69,7 +69,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
-            let elements = match target_val.val_type {
+            let elements = match target_val.val_type() {
                 ValueType::Vector(v) => v,
                 ValueType::Nil => vec![], // NIL = 空ベクタ
                 _ => {
@@ -80,7 +80,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
             // 空ベクタ/NILの場合はNILを返す
             if elements.is_empty() {
-                interp.stack.push(Value { val_type: ValueType::Nil });
+                interp.stack.push(Value::nil());
                 return Ok(());
             }
 
@@ -108,7 +108,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         match interp.stack.pop() {
                             Some(result_vec) => {
                                 // 単一要素ベクタの場合はアンラップ
-                                match result_vec.val_type {
+                                match result_vec.val_type() {
                                     ValueType::Vector(mut v) if v.len() == 1 => {
                                         results.push(v.remove(0));
                                     },
@@ -281,7 +281,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
-            let elements = match target_val.val_type {
+            let elements = match target_val.val_type() {
                 ValueType::Vector(v) => v,
                 ValueType::Nil => vec![], // NIL = 空ベクタ
                 _ => {
@@ -292,7 +292,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
             // 空ベクタ/NILの場合はNILを返す
             if elements.is_empty() {
-                interp.stack.push(Value { val_type: ValueType::Nil });
+                interp.stack.push(Value::nil());
                 return Ok(());
             }
 
@@ -320,9 +320,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
                         // VectorからBoolean値を抽出
-                        let is_true = match condition_result.val_type {
+                        let is_true = match condition_result.val_type() {
                             ValueType::Vector(v) if v.len() == 1 => {
-                                if let ValueType::Boolean(b) = v[0].val_type {
+                                if let ValueType::Boolean(b) = v[0].val_type() {
                                     b
                                 } else {
                                     // エラー時にスタックを復元
@@ -368,7 +368,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
             // 結果が空の場合はNILを返す（空ベクタ禁止ルール）
             if results.is_empty() {
-                interp.stack.push(Value { val_type: ValueType::Nil });
+                interp.stack.push(Value::nil());
             } else {
                 interp.stack.push(Value::from_vector(results));
             }
@@ -418,9 +418,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             }
                         };
 
-                        if let ValueType::Vector(v) = condition_result.val_type {
+                        if let ValueType::Vector(v) = condition_result.val_type() {
                             if v.len() == 1 {
-                                if let ValueType::Boolean(b) = v[0].val_type {
+                                if let ValueType::Boolean(b) = v[0].val_type() {
                                     if b {
                                         results.push(item.clone());
                                     }
@@ -482,7 +482,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
-            let elements = match target_val.val_type {
+            let elements = match target_val.val_type() {
                 ValueType::Vector(v) => v,
                 ValueType::Nil => vec![], // NIL = 空ベクタ
                 _ => {
@@ -692,7 +692,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 // 単一要素ベクタの場合はアンラップ
                 let unwrapped = unwrap_single_element(result);
 
-                match &unwrapped.val_type {
+                match unwrapped.val_type() {
                     ValueType::Nil => {
                         // 終了
                         break;
@@ -702,11 +702,11 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         results.push(v[0].clone());
 
                         // 次の状態がNILの場合は終了
-                        if matches!(&v[1].val_type, ValueType::Nil) {
+                        if matches!(v[1].val_type(), ValueType::Nil) {
                             break;
                         }
 
-                        state = Value { val_type: ValueType::Vector(vec![v[1].clone()]) };
+                        state = Value::from_vector(vec![v[1].clone()]);
                     }
                     _ => {
                         interp.operation_target = saved_target;
@@ -726,7 +726,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.push(Value { val_type: ValueType::Vector(results) });
+            interp.stack.push(Value::from_vector(results));
             Ok(())
         }
         OperationTarget::Stack => {
@@ -773,18 +773,18 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         // 単一要素ベクタの場合はアンラップ
                         let unwrapped = unwrap_single_element(result);
 
-                        match &unwrapped.val_type {
+                        match unwrapped.val_type() {
                             ValueType::Nil => break,
                             ValueType::Vector(v) if v.len() == 2 => {
                                 // 結果をVectorでラップ
                                 results.push(wrap_value(v[0].clone()));
 
                                 // 次の状態がNILの場合は終了
-                                if matches!(&v[1].val_type, ValueType::Nil) {
+                                if matches!(v[1].val_type(), ValueType::Nil) {
                                     break;
                                 }
 
-                                state = Value { val_type: ValueType::Vector(vec![v[1].clone()]) };
+                                state = Value::from_vector(vec![v[1].clone()]);
                             }
                             _ => {
                                 interp.operation_target = saved_target;
@@ -833,9 +833,9 @@ mod tests {
         // 結果が [10] であることを確認
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type() {
                 assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = &v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "10");
                 }
             }
@@ -853,9 +853,9 @@ mod tests {
         // 結果は初期値 [42]
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let crate::types::ValueType::Vector(v) = &val.val_type {
+            if let crate::types::ValueType::Vector(v) = &val.val_type() {
                 assert_eq!(v.len(), 1);
-                if let crate::types::ValueType::Number(n) = &v[0].val_type {
+                if let crate::types::ValueType::Number(n) = &v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "42");
                 }
             }
@@ -882,10 +882,10 @@ mod tests {
         // 結果が [1] であることを確認（1回だけ生成）
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type() {
                 println!("Result vector length: {}", v.len());
                 assert_eq!(v.len(), 1, "Should generate 1 element");
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = &v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "1");
                 }
             }
@@ -907,7 +907,7 @@ mod tests {
         // 結果が空のベクタであることを確認
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type() {
                 assert_eq!(v.len(), 0);
             }
         }
@@ -941,11 +941,11 @@ mod tests {
         // 結果: [10 20 10 20 10] (1なら10、それ以外なら20)
         assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type() {
                 assert_eq!(v.len(), 5, "Result should have 5 elements");
                 let expected = [10, 20, 10, 20, 10];
                 for (i, expected_val) in expected.iter().enumerate() {
-                    if let ValueType::Number(n) = &v[i].val_type {
+                    if let ValueType::Number(n) = &v[i].val_type() {
                         assert_eq!(
                             n.numerator.to_string(),
                             expected_val.to_string(),
@@ -986,11 +986,11 @@ mod tests {
         // 結果: [3 5 7]（各要素を2倍して1を足す: 1*2+1=3, 2*2+1=5, 3*2+1=7）
         assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type() {
                 assert_eq!(v.len(), 3, "Result should have 3 elements");
                 let expected = [3, 5, 7];
                 for (i, expected_val) in expected.iter().enumerate() {
-                    if let ValueType::Number(n) = &v[i].val_type {
+                    if let ValueType::Number(n) = &v[i].val_type() {
                         assert_eq!(
                             n.numerator.to_string(),
                             expected_val.to_string(),
@@ -1029,19 +1029,19 @@ mod tests {
         assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements");
 
         // 下の要素 [100] が保護されていることを確認
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = &interp.stack[0].val_type() {
             assert_eq!(v.len(), 1);
-            if let ValueType::Number(n) = &v[0].val_type {
+            if let ValueType::Number(n) = &v[0].val_type() {
                 assert_eq!(n.numerator.to_string(), "100");
             }
         }
 
         // 上の要素 [2 4 6] が正しいことを確認
-        if let ValueType::Vector(v) = &interp.stack[1].val_type {
+        if let ValueType::Vector(v) = &interp.stack[1].val_type() {
             assert_eq!(v.len(), 3);
             let expected = [2, 4, 6];
             for (i, expected_val) in expected.iter().enumerate() {
-                if let ValueType::Number(n) = &v[i].val_type {
+                if let ValueType::Number(n) = &v[i].val_type() {
                     assert_eq!(n.numerator.to_string(), expected_val.to_string());
                 }
             }
@@ -1075,11 +1075,11 @@ mod tests {
         // 結果: [2 3 4] (2以上の要素のみ)
         assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type() {
                 assert_eq!(v.len(), 3, "Result should have 3 elements");
                 let expected = [2, 3, 4];
                 for (i, expected_val) in expected.iter().enumerate() {
-                    if let ValueType::Number(n) = &v[i].val_type {
+                    if let ValueType::Number(n) = &v[i].val_type() {
                         assert_eq!(
                             n.numerator.to_string(),
                             expected_val.to_string(),
@@ -1118,19 +1118,19 @@ mod tests {
         assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements, got {}", interp.stack.len());
 
         // 下の要素 [100] が保護されていることを確認
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = &interp.stack[0].val_type() {
             assert_eq!(v.len(), 1);
-            if let ValueType::Number(n) = &v[0].val_type {
+            if let ValueType::Number(n) = &v[0].val_type() {
                 assert_eq!(n.numerator.to_string(), "100");
             }
         }
 
         // 上の要素 [2 4 6] が正しいことを確認
-        if let ValueType::Vector(v) = &interp.stack[1].val_type {
+        if let ValueType::Vector(v) = &interp.stack[1].val_type() {
             assert_eq!(v.len(), 3, "Filtered result should have 3 elements");
             let expected = [2, 4, 6];
             for (i, expected_val) in expected.iter().enumerate() {
-                if let ValueType::Number(n) = &v[i].val_type {
+                if let ValueType::Number(n) = &v[i].val_type() {
                     assert_eq!(n.numerator.to_string(), expected_val.to_string());
                 }
             }
@@ -1158,17 +1158,17 @@ mod tests {
         assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements, got {}", interp.stack.len());
 
         // 下の要素 [100] が保護されていることを確認
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = &interp.stack[0].val_type() {
             assert_eq!(v.len(), 1);
-            if let ValueType::Number(n) = &v[0].val_type {
+            if let ValueType::Number(n) = &v[0].val_type() {
                 assert_eq!(n.numerator.to_string(), "100");
             }
         }
 
         // 上の要素 [10] が正しいことを確認（0+1+2+3+4=10）
-        if let ValueType::Vector(v) = &interp.stack[1].val_type {
+        if let ValueType::Vector(v) = &interp.stack[1].val_type() {
             assert_eq!(v.len(), 1);
-            if let ValueType::Number(n) = &v[0].val_type {
+            if let ValueType::Number(n) = &v[0].val_type() {
                 assert_eq!(n.numerator.to_string(), "10");
             }
         }
@@ -1200,9 +1200,9 @@ mod tests {
         // 結果: [10]
         assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = &val.val_type() {
                 assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = &v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "10", "Result should be 10 (0+1+2+3+4)");
                 }
             }

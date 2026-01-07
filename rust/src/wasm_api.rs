@@ -103,14 +103,14 @@ impl AjisaiInterpreter {
 
                 // スタックトップから形状ベクタを取得
                 let shape = if let Some(top) = self.interpreter.stack.last() {
-                    match &top.val_type {
+                    match &top.val_type() {
                         ValueType::Vector(v) => {
                             // ベクタ内の全要素が正の整数（1〜100）かチェック
                             let mut dims = Vec::new();
                             let mut valid = v.len() >= 1 && v.len() <= 3;
                             if valid {
                                 for elem in v.iter() {
-                                    if let ValueType::Number(n) = &elem.val_type {
+                                    if let ValueType::Number(n) = &elem.val_type() {
                                         if let Some(val) = n.as_usize() {
                                             if val >= 1 && val <= 100 {
                                                 dims.push(val);
@@ -371,29 +371,40 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let value_js = js_sys::Reflect::get(&obj, &"value".into())
         .map_err(|_| "Failed to get 'value' property".to_string())?;
 
-    let val_type = match type_str.as_str() {
+    match type_str.as_str() {
         "number" => {
             let num_obj = js_sys::Object::from(value_js);
             let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|_| "No numerator".to_string())?.as_string().ok_or("Numerator not string")?;
             let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|_| "No denominator".to_string())?.as_string().ok_or("Denominator not string")?;
-            ValueType::Number(Fraction::new(
+            let fraction = Fraction::new(
                 BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
                 BigInt::from_str(&den_str).map_err(|e| e.to_string())?
-            ))
+            );
+            Ok(Value::from_fraction(fraction))
         },
         "datetime" => {
             // DateTime型もNumber型と同じ構造（分数）だが、タイプが異なる
             let num_obj = js_sys::Object::from(value_js);
             let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|_| "No numerator".to_string())?.as_string().ok_or("Numerator not string")?;
             let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|_| "No denominator".to_string())?.as_string().ok_or("Denominator not string")?;
-            ValueType::DateTime(Fraction::new(
+            let fraction = Fraction::new(
                 BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
                 BigInt::from_str(&den_str).map_err(|e| e.to_string())?
-            ))
+            );
+            Ok(Value::from_datetime(fraction))
         },
-        "string" => ValueType::String(value_js.as_string().ok_or("Value not string")?),
-        "boolean" => ValueType::Boolean(value_js.as_bool().ok_or("Value not boolean")?),
-        "symbol" => ValueType::Symbol(value_js.as_string().ok_or("Value not string")?),
+        "string" => {
+            let s = value_js.as_string().ok_or("Value not string")?;
+            Ok(Value::from_string(&s))
+        },
+        "boolean" => {
+            let b = value_js.as_bool().ok_or("Value not boolean")?;
+            Ok(Value::from_bool(b))
+        },
+        "symbol" => {
+            let s = value_js.as_string().ok_or("Value not string")?;
+            Ok(Value::from_symbol(&s))
+        },
         "vector" => {
             // bracketType は表示層で深さから計算されるため、ここでは無視
             let js_array = js_sys::Array::from(&value_js);
@@ -401,19 +412,17 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             for i in 0..js_array.length() {
                 vec.push(js_value_to_value(js_array.get(i))?);
             }
-            ValueType::Vector(vec)
+            Ok(Value::from_vector(vec))
         },
-        "nil" => ValueType::Nil,
-        _ => return Err(format!("Unknown type: {}", type_str)),
-    };
-
-    Ok(Value { val_type })
+        "nil" => Ok(Value::nil()),
+        _ => Err(format!("Unknown type: {}", type_str)),
+    }
 }
 
 fn value_to_js_value(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
 
-    let type_str = match &value.val_type {
+    let type_str = match &value.val_type() {
         ValueType::Number(_) => "number",
         ValueType::String(_) => "string",
         ValueType::Boolean(_) => "boolean",
@@ -425,7 +434,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
 
     js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
 
-    match &value.val_type {
+    match &value.val_type() {
         ValueType::Number(n) => {
             let num_obj = js_sys::Object::new();
             js_sys::Reflect::set(&num_obj, &"numerator".into(), &n.numerator.to_string().into()).unwrap();

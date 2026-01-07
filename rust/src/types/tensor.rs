@@ -1,82 +1,93 @@
 //! 行列演算ユーティリティ
 //!
+//! 統一分数アーキテクチャ版
+//!
 //! Vectorベースのデータに対する行列演算を提供する。
-//! 内部的にはVectorを使用し、形状情報は演算時に動的に計算する。
+//! 新しいアーキテクチャでは、すべてのデータは Vec<Fraction> として表現される。
 
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueType};
+use crate::types::{Value, DisplayHint};
 
-/// Vectorから形状を推論する
-fn infer_shape(values: &[Value]) -> Result<Vec<usize>, String> {
-    crate::types::infer_shape(values)
+/// Valueの配列から形状を推論する
+///
+/// 統一分数アーキテクチャでは、Valueは常にフラットな分数配列。
+/// このバージョンでは、形状は単にデータの長さとして扱う。
+pub fn infer_shape(values: &[Value]) -> Result<Vec<usize>, String> {
+    if values.is_empty() {
+        return Ok(vec![0]);
+    }
+
+    // 統一分数アーキテクチャでは、各Valueのdataを連結したものが全体のデータ
+    let total_elements: usize = values.iter().map(|v| v.data.len()).sum();
+    Ok(vec![total_elements])
 }
 
 /// 行列の転置（2次元Vectorに対して）
-pub fn transpose(values: &[Value]) -> Result<Vec<Value>, String> {
+///
+/// 統一分数アーキテクチャでは、転置は行列構造を前提とする。
+/// 入力は [rows * cols] の形状を持つ必要がある。
+pub fn transpose(values: &[Value], rows: usize, cols: usize) -> Result<Vec<Value>, String> {
     if values.is_empty() {
         return Ok(vec![]);
     }
 
-    // まず形状を確認
-    let shape = infer_shape(values)?;
-    if shape.len() != 2 {
-        return Err(format!("TRANSPOSE requires 2D array, got shape {:?}", shape));
+    // すべてのデータを収集
+    let data: Vec<Fraction> = values.iter()
+        .flat_map(|v| v.data.iter().cloned())
+        .collect();
+
+    let expected_size = rows * cols;
+    if data.len() != expected_size {
+        return Err(format!(
+            "TRANSPOSE: data size {} doesn't match rows {} * cols {} = {}",
+            data.len(), rows, cols, expected_size
+        ));
     }
 
-    let rows = shape[0];
-    let cols = shape[1];
-
-    // 2次元配列からデータを取り出す
-    let mut result = Vec::with_capacity(cols);
+    // 転置を計算
+    let mut result_data = Vec::with_capacity(expected_size);
     for j in 0..cols {
-        let mut new_row = Vec::with_capacity(rows);
         for i in 0..rows {
-            if let ValueType::Vector(ref row) = values[i].val_type {
-                new_row.push(row[j].clone());
-            } else {
-                return Err("Expected vector of vectors for transpose".to_string());
-            }
+            result_data.push(data[i * cols + j].clone());
         }
-        result.push(Value::from_vector(new_row));
     }
 
-    Ok(result)
+    Ok(vec![Value {
+        data: result_data,
+        display_hint: DisplayHint::Number,
+    }])
 }
 
 /// Vectorを数値配列に平坦化
-fn flatten_to_numbers(values: &[Value]) -> Result<Vec<Fraction>, String> {
-    crate::types::flatten_numbers(values)
+pub fn flatten_to_numbers(values: &[Value]) -> Result<Vec<Fraction>, String> {
+    let data: Vec<Fraction> = values.iter()
+        .flat_map(|v| v.data.iter().cloned())
+        .collect();
+    Ok(data)
 }
 
-/// 形状とデータからネストされたVectorを構築
-fn build_nested_from_data(shape: &[usize], data: &[Fraction]) -> Result<Vec<Value>, String> {
+/// 形状とデータからValueを構築
+pub fn build_nested_from_data(shape: &[usize], data: &[Fraction]) -> Result<Vec<Value>, String> {
     if shape.is_empty() {
         if data.len() != 1 {
             return Err("Scalar requires exactly one data element".to_string());
         }
-        return Ok(vec![Value::from_number(data[0].clone())]);
+        return Ok(vec![Value::from_fraction(data[0].clone())]);
     }
 
-    if shape.len() == 1 {
-        let values: Vec<Value> = data.iter()
-            .map(|f| Value::from_number(f.clone()))
-            .collect();
-        return Ok(values);
+    // 統一分数アーキテクチャでは、すべてのデータはフラットな配列として格納
+    let expected_size: usize = shape.iter().product();
+    if data.len() != expected_size {
+        return Err(format!(
+            "Data size {} doesn't match shape {:?} (size {})",
+            data.len(), shape, expected_size
+        ));
     }
 
-    let outer_size = shape[0];
-    let inner_shape = &shape[1..];
-    let inner_size: usize = inner_shape.iter().product();
-
-    let mut values = Vec::with_capacity(outer_size);
-    for i in 0..outer_size {
-        let start = i * inner_size;
-        let inner_data = &data[start..start + inner_size];
-        let inner_values = build_nested_from_data(inner_shape, inner_data)?;
-        values.push(Value::from_vector(inner_values));
-    }
-
-    Ok(values)
+    Ok(vec![Value {
+        data: data.to_vec(),
+        display_hint: DisplayHint::Number,
+    }])
 }
 
 /// Reshape操作
@@ -95,9 +106,11 @@ pub fn reshape(values: &[Value], new_shape: &[usize]) -> Result<Vec<Value>, Stri
 }
 
 /// Rank（次元数）を取得
+///
+/// 統一分数アーキテクチャでは、すべてのデータは1次元配列として格納される。
+/// 形状情報は別途管理する必要がある。
 pub fn rank(values: &[Value]) -> Result<usize, String> {
     let shape = infer_shape(values)?;
-    // 空配列の場合は 1次元
     if shape == vec![0] {
         Ok(1)
     } else {

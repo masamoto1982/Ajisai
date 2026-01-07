@@ -1,13 +1,14 @@
 // rust/src/interpreter/logic.rs
 //
-// 【責務】
-// 論理演算子（AND、OR、NOT）を実装する。
-// ベクタ間の要素ごと論理演算とブロードキャスト機能を提供する。
+// 統一分数アーキテクチャ版の論理演算
+//
+// 論理演算（0 = false、非0 = true）
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, ValueType};
+use crate::types::{Value, DisplayHint};
+use crate::types::fraction::Fraction;
 
 // ============================================================================
 // 論理演算子
@@ -15,56 +16,33 @@ use crate::types::{Value, ValueType};
 
 /// NOT 演算子 - 論理否定
 ///
-/// 【責務】
-/// - StackTopモード: ベクタの各要素のBoolean値を反転
-/// - Stackモード: 現在未対応（StackTopモードのみ）
-///
-/// 【使用法】
-/// - `[TRUE] NOT` → `[FALSE]`
-/// - `[FALSE] NOT` → `[TRUE]`
-/// - `[TRUE FALSE TRUE] NOT` → `[FALSE TRUE FALSE]`
-/// - `[NIL] NOT` → `[NIL]` (Kleene論理: NOT unknown = unknown)
-///
-/// 【引数スタック】
-/// - [value]: Boolean値またはNilのベクタ
-///
-/// 【戻り値スタック】
-/// - [result]: 反転後の論理値のベクタ
-///
-/// 【エラー】
-/// - Boolean/Nil以外の型の場合
+/// ゼロなら 1、非ゼロなら 0
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let vec = match val.val_type {
-                ValueType::Vector(v) => v,
-                _ => {
-                    interp.stack.push(val);
-                    return Err(AjisaiError::type_error("vector", "other type"));
-                }
-            };
-
-            let mut result_vec = Vec::new();
-            for elem in &vec {
-                match &elem.val_type {
-                    ValueType::Boolean(b) => {
-                        result_vec.push(Value { val_type: ValueType::Boolean(!b) });
-                    },
-                    ValueType::Nil => {
-                        // NOT nil = nil (Kleene論理: NOT unknown = unknown)
-                        result_vec.push(Value { val_type: ValueType::Nil });
-                    },
-                    _ => {
-                        interp.stack.push(Value { val_type: ValueType::Vector(vec) });
-                        return Err(AjisaiError::type_error("boolean or nil", "other type"));
-                    }
-                }
+            // NIL（空）の場合はエラー
+            if val.data.is_empty() {
+                interp.stack.push(val);
+                return Err(AjisaiError::from("Cannot apply NOT to NIL"));
             }
 
-            let result = Value { val_type: ValueType::Vector(result_vec) };
-            interp.stack.push(result);
+            // 各要素を反転
+            let result_data: Vec<Fraction> = val.data.iter()
+                .map(|f| {
+                    if f.is_zero() {
+                        Fraction::from(1)
+                    } else {
+                        Fraction::from(0)
+                    }
+                })
+                .collect();
+
+            interp.stack.push(Value {
+                data: result_data,
+                display_hint: DisplayHint::Boolean,
+            });
             Ok(())
         },
         OperationTarget::Stack => {
@@ -76,115 +54,59 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 
 /// AND 演算子 - 論理積
 ///
-/// 【責務】
-/// - StackTopモード: ベクタ間の要素ごとAND演算、ブロードキャスト対応
-/// - Stackモード: N個の要素を左から右へAND畳み込み
-///
-/// 【真理値表（Boolean同士）】
-/// | A     | B     | Result |
-/// |-------|-------|--------|
-/// | TRUE  | TRUE  | TRUE   |
-/// | TRUE  | FALSE | FALSE  |
-/// | FALSE | TRUE  | FALSE  |
-/// | FALSE | FALSE | FALSE  |
-/// | TRUE  | NIL   | NIL    |
-/// | FALSE | NIL   | FALSE  |
-/// | NIL   | TRUE  | NIL    |
-/// | NIL   | FALSE | FALSE  |
-/// | NIL   | NIL   | NIL    |
-///
-/// 【StackTopモードの使用法】
-/// - `[TRUE] [TRUE] AND` → `[TRUE]`
-/// - `[TRUE FALSE] [FALSE TRUE] AND` → `[FALSE FALSE]`
-/// - `[TRUE FALSE TRUE] [TRUE] AND` → `[TRUE FALSE TRUE]` (ブロードキャスト)
-///
-/// 【Stackモードの使用法】
-/// - `[TRUE] [TRUE] [FALSE] [3] STACK AND` → `[FALSE]` (TRUE AND TRUE AND FALSE)
-///
-/// 【引数スタック】
-/// - StackTopモード: b, a (2つのベクタ)
-/// - Stackモード: count (要素数)
-///
-/// 【戻り値スタック】
-/// - [result]: ANDの結果
-///
-/// 【エラー】
-/// - オペランドがBoolean/Nilでない場合
-/// - ベクタの長さが不一致（ブロードキャスト以外）
+/// 両方が非ゼロなら 1、それ以外は 0
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
-    /// 2つの論理値のANDを計算（Nil対応）
-    fn and_logic(a: &ValueType, b: &ValueType) -> Result<ValueType> {
-        match (a, b) {
-            (ValueType::Boolean(a), ValueType::Boolean(b)) => {
-                Ok(ValueType::Boolean(*a && *b))
-            },
-            (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) => {
-                Ok(ValueType::Boolean(false))
-            },
-            (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) | (ValueType::Nil, ValueType::Nil) => {
-                Ok(ValueType::Nil)
-            },
-            _ => Err(AjisaiError::type_error("boolean or nil", "other types")),
-        }
-    }
-
     match interp.operation_target {
         OperationTarget::StackTop => {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let a_vec = match a_val.val_type {
-                ValueType::Vector(v) => v,
-                _ => {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
-                    return Err(AjisaiError::type_error("vector", "other type"));
-                }
-            };
-            let b_vec = match b_val.val_type {
-                ValueType::Vector(v) => v,
-                _ => {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
-                    interp.stack.push(b_val);
-                    return Err(AjisaiError::type_error("vector", "other type"));
-                }
-            };
-
-            let a_len = a_vec.len();
-            let b_len = b_vec.len();
-
-            let mut result_vec = Vec::new();
-
-            // ブロードキャスト判定と要素ごと演算
-            if a_len > 1 && b_len == 1 {
-                // aがベクタ、bがスカラー: bを各要素にブロードキャスト
-                let scalar = &b_vec[0];
-                for elem in &a_vec {
-                    let res_type = and_logic(&elem.val_type, &scalar.val_type)?;
-                    result_vec.push(Value { val_type: res_type });
-                }
-            } else if a_len == 1 && b_len > 1 {
-                // aがスカラー、bがベクタ: aを各要素にブロードキャスト
-                let scalar = &a_vec[0];
-                for elem in &b_vec {
-                    let res_type = and_logic(&scalar.val_type, &elem.val_type)?;
-                    result_vec.push(Value { val_type: res_type });
-                }
-            } else {
-                // 要素数が等しい、または両方とも単一要素
-                if a_len != b_len {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
-                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec) });
-                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
-                }
-                for (a, b) in a_vec.iter().zip(b_vec.iter()) {
-                    let res_type = and_logic(&a.val_type, &b.val_type)?;
-                    result_vec.push(Value { val_type: res_type });
-                }
+            // NILチェック
+            if a_val.data.is_empty() || b_val.data.is_empty() {
+                interp.stack.push(a_val);
+                interp.stack.push(b_val);
+                return Err(AjisaiError::from("Cannot apply AND to NIL"));
             }
 
-            let result = Value { val_type: ValueType::Vector(result_vec) };
-            interp.stack.push(result);
+            let a_len = a_val.data.len();
+            let b_len = b_val.data.len();
+
+            let result_data = if a_len > 1 && b_len == 1 {
+                // aがベクタ、bがスカラー: bを各要素にブロードキャスト
+                let b_truthy = !b_val.data[0].is_zero();
+                a_val.data.iter()
+                    .map(|a| {
+                        let a_truthy = !a.is_zero();
+                        Fraction::from(if a_truthy && b_truthy { 1 } else { 0 })
+                    })
+                    .collect()
+            } else if a_len == 1 && b_len > 1 {
+                // aがスカラー、bがベクタ: aを各要素にブロードキャスト
+                let a_truthy = !a_val.data[0].is_zero();
+                b_val.data.iter()
+                    .map(|b| {
+                        let b_truthy = !b.is_zero();
+                        Fraction::from(if a_truthy && b_truthy { 1 } else { 0 })
+                    })
+                    .collect()
+            } else if a_len != b_len {
+                interp.stack.push(a_val);
+                interp.stack.push(b_val);
+                return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
+            } else {
+                // 要素ごと演算
+                a_val.data.iter().zip(b_val.data.iter())
+                    .map(|(a, b)| {
+                        let result = !a.is_zero() && !b.is_zero();
+                        Fraction::from(if result { 1 } else { 0 })
+                    })
+                    .collect()
+            };
+
+            interp.stack.push(Value {
+                data: result_data,
+                display_hint: DisplayHint::Boolean,
+            });
             Ok(())
         },
 
@@ -192,14 +114,9 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
-            if count == 0 {
+            if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation with count 0 results in no change"));
-            }
-
-            if count == 1 {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation with count 1 results in no change"));
+                return Err(AjisaiError::from("STACK operation with count 0 or 1 results in no change"));
             }
 
             if interp.stack.len() < count {
@@ -209,18 +126,10 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
 
-            // 最初の要素から開始
-            use crate::interpreter::helpers::{extract_single_element, wrap_value};
-            let first = extract_single_element(&items[0])?;
-            let mut acc_type = first.val_type.clone();
+            // 全ての要素が truthy かチェック
+            let all_truthy = items.iter().all(|v| v.is_truthy());
 
-            // 残りの要素を順にAND
-            for item in items.iter().skip(1) {
-                let elem = extract_single_element(item)?;
-                acc_type = and_logic(&acc_type, &elem.val_type)?;
-            }
-
-            interp.stack.push(wrap_value(Value { val_type: acc_type }));
+            interp.stack.push(Value::from_bool(all_truthy));
             Ok(())
         }
     }
@@ -228,115 +137,59 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
 /// OR 演算子 - 論理和
 ///
-/// 【責務】
-/// - StackTopモード: ベクタ間の要素ごとOR演算、ブロードキャスト対応
-/// - Stackモード: N個の要素を左から右へOR畳み込み
-///
-/// 【真理値表（Boolean同士）】
-/// | A     | B     | Result |
-/// |-------|-------|--------|
-/// | TRUE  | TRUE  | TRUE   |
-/// | TRUE  | FALSE | TRUE   |
-/// | FALSE | TRUE  | TRUE   |
-/// | FALSE | FALSE | FALSE  |
-/// | TRUE  | NIL   | TRUE   |
-/// | FALSE | NIL   | NIL    |
-/// | NIL   | TRUE  | TRUE   |
-/// | NIL   | FALSE | NIL    |
-/// | NIL   | NIL   | NIL    |
-///
-/// 【StackTopモードの使用法】
-/// - `[TRUE] [FALSE] OR` → `[TRUE]`
-/// - `[TRUE FALSE] [FALSE TRUE] OR` → `[TRUE TRUE]`
-/// - `[TRUE FALSE TRUE] [FALSE] OR` → `[TRUE FALSE TRUE]` (ブロードキャスト)
-///
-/// 【Stackモードの使用法】
-/// - `[FALSE] [FALSE] [TRUE] [3] STACK OR` → `[TRUE]` (FALSE OR FALSE OR TRUE)
-///
-/// 【引数スタック】
-/// - StackTopモード: b, a (2つのベクタ)
-/// - Stackモード: count (要素数)
-///
-/// 【戻り値スタック】
-/// - [result]: ORの結果
-///
-/// 【エラー】
-/// - オペランドがBoolean/Nilでない場合
-/// - ベクタの長さが不一致（ブロードキャスト以外）
+/// どちらかが非ゼロなら 1
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    /// 2つの論理値のORを計算（Nil対応）
-    fn or_logic(a: &ValueType, b: &ValueType) -> Result<ValueType> {
-        match (a, b) {
-            (ValueType::Boolean(a), ValueType::Boolean(b)) => {
-                Ok(ValueType::Boolean(*a || *b))
-            },
-            (ValueType::Boolean(true), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(true)) => {
-                Ok(ValueType::Boolean(true))
-            },
-            (ValueType::Boolean(false), ValueType::Nil) | (ValueType::Nil, ValueType::Boolean(false)) | (ValueType::Nil, ValueType::Nil) => {
-                Ok(ValueType::Nil)
-            },
-            _ => Err(AjisaiError::type_error("boolean or nil", "other types")),
-        }
-    }
-
     match interp.operation_target {
         OperationTarget::StackTop => {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let a_vec = match a_val.val_type {
-                ValueType::Vector(v) => v,
-                _ => {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
-                    return Err(AjisaiError::type_error("vector", "other type"));
-                }
-            };
-            let b_vec = match b_val.val_type {
-                ValueType::Vector(v) => v,
-                _ => {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
-                    interp.stack.push(b_val);
-                    return Err(AjisaiError::type_error("vector", "other type"));
-                }
-            };
-
-            let a_len = a_vec.len();
-            let b_len = b_vec.len();
-
-            let mut result_vec = Vec::new();
-
-            // ブロードキャスト判定と要素ごと演算
-            if a_len > 1 && b_len == 1 {
-                // aがベクタ、bがスカラー: bを各要素にブロードキャスト
-                let scalar = &b_vec[0];
-                for elem in &a_vec {
-                    let res_type = or_logic(&elem.val_type, &scalar.val_type)?;
-                    result_vec.push(Value { val_type: res_type });
-                }
-            } else if a_len == 1 && b_len > 1 {
-                // aがスカラー、bがベクタ: aを各要素にブロードキャスト
-                let scalar = &a_vec[0];
-                for elem in &b_vec {
-                    let res_type = or_logic(&scalar.val_type, &elem.val_type)?;
-                    result_vec.push(Value { val_type: res_type });
-                }
-            } else {
-                // 要素数が等しい、または両方とも単一要素
-                if a_len != b_len {
-                    interp.stack.push(Value { val_type: ValueType::Vector(a_vec) });
-                    interp.stack.push(Value { val_type: ValueType::Vector(b_vec) });
-                    return Err(AjisaiError::VectorLengthMismatch{ len1: a_len, len2: b_len });
-                }
-                for (a, b) in a_vec.iter().zip(b_vec.iter()) {
-                    let res_type = or_logic(&a.val_type, &b.val_type)?;
-                    result_vec.push(Value { val_type: res_type });
-                }
+            // NILチェック
+            if a_val.data.is_empty() || b_val.data.is_empty() {
+                interp.stack.push(a_val);
+                interp.stack.push(b_val);
+                return Err(AjisaiError::from("Cannot apply OR to NIL"));
             }
 
-            let result = Value { val_type: ValueType::Vector(result_vec) };
-            interp.stack.push(result);
+            let a_len = a_val.data.len();
+            let b_len = b_val.data.len();
+
+            let result_data = if a_len > 1 && b_len == 1 {
+                // aがベクタ、bがスカラー: bを各要素にブロードキャスト
+                let b_truthy = !b_val.data[0].is_zero();
+                a_val.data.iter()
+                    .map(|a| {
+                        let a_truthy = !a.is_zero();
+                        Fraction::from(if a_truthy || b_truthy { 1 } else { 0 })
+                    })
+                    .collect()
+            } else if a_len == 1 && b_len > 1 {
+                // aがスカラー、bがベクタ: aを各要素にブロードキャスト
+                let a_truthy = !a_val.data[0].is_zero();
+                b_val.data.iter()
+                    .map(|b| {
+                        let b_truthy = !b.is_zero();
+                        Fraction::from(if a_truthy || b_truthy { 1 } else { 0 })
+                    })
+                    .collect()
+            } else if a_len != b_len {
+                interp.stack.push(a_val);
+                interp.stack.push(b_val);
+                return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
+            } else {
+                // 要素ごと演算
+                a_val.data.iter().zip(b_val.data.iter())
+                    .map(|(a, b)| {
+                        let result = !a.is_zero() || !b.is_zero();
+                        Fraction::from(if result { 1 } else { 0 })
+                    })
+                    .collect()
+            };
+
+            interp.stack.push(Value {
+                data: result_data,
+                display_hint: DisplayHint::Boolean,
+            });
             Ok(())
         },
 
@@ -344,14 +197,9 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
-            if count == 0 {
+            if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation with count 0 results in no change"));
-            }
-
-            if count == 1 {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation with count 1 results in no change"));
+                return Err(AjisaiError::from("STACK operation with count 0 or 1 results in no change"));
             }
 
             if interp.stack.len() < count {
@@ -361,18 +209,10 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
 
-            // 最初の要素から開始
-            use crate::interpreter::helpers::{extract_single_element, wrap_value};
-            let first = extract_single_element(&items[0])?;
-            let mut acc_type = first.val_type.clone();
+            // どれかが truthy かチェック
+            let any_truthy = items.iter().any(|v| v.is_truthy());
 
-            // 残りの要素を順にOR
-            for item in items.iter().skip(1) {
-                let elem = extract_single_element(item)?;
-                acc_type = or_logic(&acc_type, &elem.val_type)?;
-            }
-
-            interp.stack.push(wrap_value(Value { val_type: acc_type }));
+            interp.stack.push(Value::from_bool(any_truthy));
             Ok(())
         }
     }

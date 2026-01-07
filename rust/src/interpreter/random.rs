@@ -89,9 +89,9 @@ fn generate_uniform(denominator: &BigInt) -> Result<BigInt> {
 
 /// スタックから整数を抽出（単一要素Vectorの数値）
 fn extract_positive_integer(val: &Value) -> Option<BigInt> {
-    match &val.val_type {
+    match val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
+            match v[0].val_type() {
                 ValueType::Number(n) => {
                     // 整数かつ正数かチェック
                     if n.denominator == BigInt::one() && n.numerator > BigInt::from(0) {
@@ -230,13 +230,13 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         // 1要素のVectorであることを確認
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = interp.stack[0].val_type() {
             assert_eq!(v.len(), 1);
             // 値が[0, 1)の範囲にあることを確認
-            if let ValueType::Number(frac) = &v[0].val_type {
+            if let ValueType::Number(frac) = v[0].val_type() {
                 let zero = Fraction::new(BigInt::from(0), BigInt::one());
                 let one = Fraction::new(BigInt::one(), BigInt::one());
-                assert!(*frac >= zero && *frac < one, "Random value should be in [0, 1)");
+                assert!(frac >= zero && frac < one, "Random value should be in [0, 1)");
             } else {
                 panic!("Expected Number");
             }
@@ -253,14 +253,14 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         // 5要素のVectorであることを確認
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = interp.stack[0].val_type() {
             assert_eq!(v.len(), 5);
             // 各値が[0, 1)の範囲にあることを確認
             let zero = Fraction::new(BigInt::from(0), BigInt::one());
             let one = Fraction::new(BigInt::one(), BigInt::one());
             for elem in v {
-                if let ValueType::Number(frac) = &elem.val_type {
-                    assert!(*frac >= zero && *frac < one, "Random value should be in [0, 1)");
+                if let ValueType::Number(frac) = elem.val_type() {
+                    assert!(frac >= zero && frac < one, "Random value should be in [0, 1)");
                 } else {
                     panic!("Expected Number");
                 }
@@ -279,15 +279,15 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         // 3要素のVectorであることを確認
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = interp.stack[0].val_type() {
             assert_eq!(v.len(), 3);
             // 各要素が[0, 1)の範囲の分数であることを確認
             // 注: Fractionは自動約分されるため、分母が6とは限らない（例: 2/6 → 1/3）
             let zero = Fraction::new(BigInt::from(0), BigInt::one());
             let one = Fraction::new(BigInt::one(), BigInt::one());
             for elem in v {
-                if let ValueType::Number(frac) = &elem.val_type {
-                    assert!(*frac >= zero && *frac < one, "Random value should be in [0, 1)");
+                if let ValueType::Number(frac) = elem.val_type() {
+                    assert!(frac >= zero && frac < one, "Random value should be in [0, 1)");
                 } else {
                     panic!("Expected Number");
                 }
@@ -304,10 +304,10 @@ mod tests {
         let result = interp.execute("[ 6 ] [ 100 ] CSPRNG [ 6 ] *").await;
         assert!(result.is_ok());
 
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = interp.stack[0].val_type() {
             assert_eq!(v.len(), 100);
             for elem in v {
-                if let ValueType::Number(frac) = &elem.val_type {
+                if let ValueType::Number(frac) = elem.val_type() {
                     // 分母6の乱数に6を掛けると、0〜5の整数になる
                     assert!(frac.denominator == BigInt::one(), "Should be integer after *6");
                     let num = &frac.numerator;
@@ -339,12 +339,12 @@ mod tests {
         let result = interp.execute("[ 2 ] [ 50 ] CSPRNG").await;
         assert!(result.is_ok());
 
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = interp.stack[0].val_type() {
             assert_eq!(v.len(), 50);
             let mut has_zero = false;
             let mut has_half = false;
             for elem in v {
-                if let ValueType::Number(frac) = &elem.val_type {
+                if let ValueType::Number(frac) = elem.val_type() {
                     // 0/2 は 0/1 に約分、1/2 はそのまま
                     if frac.numerator == BigInt::from(0) {
                         has_zero = true;

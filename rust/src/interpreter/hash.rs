@@ -80,7 +80,7 @@ lazy_static::lazy_static! {
 /// 分数の正規形を使用するため、1/2と2/4は同じバイト列を生成
 fn serialize_value(value: &Value) -> Vec<u8> {
     let mut bytes = Vec::new();
-    serialize_value_inner(&value.val_type, &mut bytes);
+    serialize_value_inner(&value.val_type(), &mut bytes);
     bytes
 }
 
@@ -124,7 +124,7 @@ fn serialize_value_inner(val_type: &ValueType, bytes: &mut Vec<u8>) {
             bytes.push(0x04);
             bytes.extend_from_slice(&(v.len() as u32).to_le_bytes());
             for elem in v {
-                serialize_value_inner(&elem.val_type, bytes);
+                serialize_value_inner(&elem.val_type(), bytes);
             }
         }
         ValueType::Symbol(s) => {
@@ -200,9 +200,9 @@ fn multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
 
 /// スタックから整数を抽出（単一要素Vectorの数値）
 fn extract_positive_integer(val: &Value) -> Option<u32> {
-    match &val.val_type {
+    match val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
+            match v[0].val_type() {
                 ValueType::Number(n) => {
                     // 整数かつ正数かチェック
                     if n.denominator == BigInt::one() && n.numerator > BigInt::from(0) {
@@ -334,12 +334,12 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         // 結果が[0, 1)の範囲の分数であることを確認
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = &interp.stack[0].val_type() {
             assert_eq!(v.len(), 1);
-            if let ValueType::Number(frac) = &v[0].val_type {
+            if let ValueType::Number(frac) = &v[0].val_type() {
                 let zero = Fraction::new(BigInt::from(0), BigInt::one());
                 let one = Fraction::new(BigInt::one(), BigInt::one());
-                assert!(*frac >= zero && *frac < one, "Hash should be in [0, 1)");
+                assert!(frac >= zero && frac < one, "Hash should be in [0, 1)");
             } else {
                 panic!("Expected Number");
             }
@@ -359,7 +359,7 @@ mod tests {
         interp.execute("'hello' HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_eq!(hash1.val_type, hash2.val_type, "Same input should produce same hash");
+        assert_eq!(hash1.val_type(), hash2.val_type(), "Same input should produce same hash");
     }
 
     #[tokio::test]
@@ -372,7 +372,7 @@ mod tests {
         interp.execute("'world' HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_ne!(hash1.val_type, hash2.val_type, "Different inputs should produce different hashes");
+        assert_ne!(hash1.val_type(), hash2.val_type(), "Different inputs should produce different hashes");
     }
 
     #[tokio::test]
@@ -394,7 +394,7 @@ mod tests {
         interp.execute("[ 2/4 ] HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_eq!(hash1.val_type, hash2.val_type,
+        assert_eq!(hash1.val_type(), hash2.val_type(),
                    "Equivalent fractions should produce same hash (1/2 = 2/4)");
     }
 
@@ -408,12 +408,12 @@ mod tests {
 
         // 結果が[0, 1)の範囲の分数であることを確認
         // 注: Fraction::new()は自動約分するため、分母が正確に2^128とは限らない
-        if let ValueType::Vector(v) = &interp.stack[0].val_type {
+        if let ValueType::Vector(v) = &interp.stack[0].val_type() {
             assert_eq!(v.len(), 1);
-            if let ValueType::Number(frac) = &v[0].val_type {
+            if let ValueType::Number(frac) = &v[0].val_type() {
                 let zero = Fraction::new(BigInt::from(0), BigInt::one());
                 let one = Fraction::new(BigInt::one(), BigInt::one());
-                assert!(*frac >= zero && *frac < one, "Hash should be in [0, 1)");
+                assert!(frac >= zero && frac < one, "Hash should be in [0, 1)");
                 // 分母が2^128の約数であることを確認
                 let max_denom = BigInt::one() << 128usize;
                 assert!(&max_denom % &frac.denominator == BigInt::from(0),
@@ -436,7 +436,7 @@ mod tests {
         interp.execute("[ FALSE ] HASH").await.unwrap();
         let hash_false = interp.stack.pop().unwrap();
 
-        assert_ne!(hash_true.val_type, hash_false.val_type,
+        assert_ne!(hash_true.val_type(), hash_false.val_type(),
                    "TRUE and FALSE should have different hashes");
     }
 
@@ -514,7 +514,7 @@ mod tests {
         // すべて異なることを確認
         for i in 0..hashes.len() {
             for j in (i+1)..hashes.len() {
-                assert_ne!(hashes[i].val_type, hashes[j].val_type,
+                assert_ne!(hashes[i].val_type(), hashes[j].val_type(),
                            "Different inputs should have different hashes");
             }
         }

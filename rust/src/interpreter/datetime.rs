@@ -255,9 +255,9 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
 
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let timezone = match &tz_val.val_type {
+    let timezone = match &tz_val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
+            match &v[0].val_type() {
                 ValueType::String(s) => s.clone(),
                 _ => {
                     interp.stack.push(tz_val);
@@ -283,9 +283,9 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから数値またはDateTime型を抽出
-    let timestamp = match &val.val_type {
+    let timestamp = match &val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
+            match &v[0].val_type() {
                 ValueType::Number(n) | ValueType::DateTime(n) => n.clone(),
                 _ => {
                     interp.stack.push(val);
@@ -398,9 +398,9 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let timezone = match &tz_val.val_type {
+    let timezone = match &tz_val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
+            match &v[0].val_type() {
                 ValueType::String(s) => s.clone(),
                 _ => {
                     interp.stack.push(tz_val);
@@ -426,9 +426,9 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから日付時刻成分を抽出
-    let components = match &val.val_type {
+    let components = match &val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
+            match &v[0].val_type() {
                 ValueType::Vector(inner) => inner.clone(),
                 _ => {
                     interp.stack.push(val);
@@ -456,7 +456,7 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // 各成分を整数として抽出（サブ秒を除く）
     let mut integers = Vec::new();
     for (i, component) in components.iter().take(6).enumerate() {
-        match &component.val_type {
+        match &component.val_type() {
             ValueType::Number(n) => {
                 if n.denominator != BigInt::one() {
                     interp.stack.push(val);
@@ -490,7 +490,7 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     // サブ秒成分を抽出（あれば）
     let subsec = if components.len() == 7 {
-        match &components[6].val_type {
+        match &components[6].val_type() {
             ValueType::Number(n) => Some(n.clone()),
             _ => {
                 interp.stack.push(val);

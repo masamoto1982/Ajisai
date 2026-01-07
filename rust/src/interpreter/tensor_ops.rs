@@ -6,8 +6,8 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::interpreter::helpers::wrap_number;
-use crate::types::{Value, ValueType, infer_shape, MAX_VISIBLE_DIMENSIONS};
-use crate::types::tensor::{transpose, reshape, rank};
+use crate::types::{Value, ValueType, MAX_VISIBLE_DIMENSIONS};
+use crate::types::tensor::{transpose, reshape, rank, infer_shape};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
@@ -30,14 +30,14 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
-    let shape_vec = match &val.val_type {
+    let shape_vec = match &val.val_type() {
         ValueType::Vector(v) => {
             infer_shape(v).map_err(|e| AjisaiError::from(format!("Failed to get shape: {}", e)))?
         }
         _ => {
             return Err(AjisaiError::from(format!(
-                "SHAPE requires vector, got {}",
-                val.val_type
+                "SHAPE requires vector, got {:?}",
+                val.val_type()
             )));
         }
     };
@@ -63,14 +63,14 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
-    let r = match &val.val_type {
+    let r = match &val.val_type() {
         ValueType::Vector(v) => {
             rank(v).map_err(|e| AjisaiError::from(format!("Failed to get rank: {}", e)))?
         }
         _ => {
             return Err(AjisaiError::from(format!(
-                "RANK requires vector, got {}",
-                val.val_type
+                "RANK requires vector, got {:?}",
+                val.val_type()
             )));
         }
     };
@@ -96,7 +96,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     let data_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 形状をベクタから抽出
-    let new_shape: Vec<usize> = match &shape_val.val_type {
+    let new_shape: Vec<usize> = match &shape_val.val_type() {
         ValueType::Vector(v) => {
             // 次元数チェック
             let dim_count = v.len();
@@ -111,7 +111,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
 
             let mut shape = Vec::with_capacity(v.len());
             for elem in v {
-                if let ValueType::Number(n) = &elem.val_type {
+                if let ValueType::Number(n) = &elem.val_type() {
                     let dim = match n.as_usize() {
                         Some(d) => d,
                         None => {
@@ -137,7 +137,8 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     };
 
     // データをベクタから抽出
-    let data_vec = match &data_val.val_type {
+    let data_val_type = data_val.val_type();
+    let data_vec = match &data_val_type {
         ValueType::Vector(v) => v,
         _ => {
             interp.stack.push(data_val);
@@ -169,7 +170,8 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let data_vec = match &val.val_type {
+    let val_type = val.val_type();
+    let data_vec = match &val_type {
         ValueType::Vector(v) => v,
         _ => {
             interp.stack.push(val);
@@ -177,7 +179,24 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let result = match transpose(data_vec) {
+    // Get shape to extract rows and cols
+    let shape = match infer_shape(data_vec) {
+        Ok(s) => s,
+        Err(e) => {
+            interp.stack.push(val);
+            return Err(AjisaiError::from(format!("TRANSPOSE failed to infer shape: {}", e)));
+        }
+    };
+
+    if shape.len() != 2 {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("TRANSPOSE requires 2D vector"));
+    }
+
+    let rows = shape[0];
+    let cols = shape[1];
+
+    let result = match transpose(data_vec, rows, cols) {
         Ok(r) => r,
         Err(e) => {
             interp.stack.push(val);
@@ -203,7 +222,7 @@ where
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    match &val.val_type {
+    match &val.val_type() {
         ValueType::Vector(v) => {
             let result = match apply_unary_to_vector(v, &op) {
                 Ok(r) => r,
@@ -230,7 +249,7 @@ where
 {
     let mut result = Vec::with_capacity(values.len());
     for val in values {
-        match &val.val_type {
+        match &val.val_type() {
             ValueType::Number(n) => {
                 result.push(Value::from_number(op(n)));
             }
@@ -290,7 +309,8 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let a_vec = match &a_val.val_type {
+    let a_val_type = a_val.val_type();
+    let a_vec = match &a_val_type {
         ValueType::Vector(v) => v,
         _ => {
             interp.stack.push(a_val);
@@ -299,7 +319,8 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let b_vec = match &b_val.val_type {
+    let b_val_type = b_val.val_type();
+    let b_vec = match &b_val_type {
         ValueType::Vector(v) => v,
         _ => {
             interp.stack.push(a_val);
@@ -370,7 +391,7 @@ where
 }
 
 fn extract_single_number(val: &Value) -> Result<Fraction> {
-    match &val.val_type {
+    match &val.val_type() {
         ValueType::Number(n) => Ok(n.clone()),
         _ => Err(AjisaiError::from("Expected number")),
     }
@@ -380,7 +401,7 @@ fn apply_binary_element<F>(elem: &Value, scalar: &Fraction, op: F) -> Result<Val
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
-    match &elem.val_type {
+    match &elem.val_type() {
         ValueType::Number(n) => Ok(Value::from_number(op(n, scalar)?)),
         ValueType::Vector(inner) => {
             let result: Result<Vec<Value>> = inner
@@ -414,7 +435,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 引数から形状と埋める値を抽出
-    let (shape, fill_value) = match &args_val.val_type {
+    let (shape, fill_value) = match &args_val.val_type() {
         ValueType::Vector(v) => {
             if v.len() < 2 {
                 interp.stack.push(args_val);
@@ -423,7 +444,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 
             // 最後の要素が埋める値
             let value_elem = &v[v.len() - 1];
-            let fill_value = match &value_elem.val_type {
+            let fill_value = match &value_elem.val_type() {
                 ValueType::Number(n) => n.clone(),
                 _ => {
                     interp.stack.push(args_val);
@@ -443,7 +464,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 
             let mut shape = Vec::with_capacity(shape_len);
             for i in 0..shape_len {
-                if let ValueType::Number(n) = &v[i].val_type {
+                if let ValueType::Number(n) = &v[i].val_type() {
                     let dim = match n.as_usize() {
                         Some(d) if d > 0 => d,
                         _ => {
