@@ -339,7 +339,7 @@ mod tests {
             if let ValueType::Number(frac) = &v[0].val_type() {
                 let zero = Fraction::new(BigInt::from(0), BigInt::one());
                 let one = Fraction::new(BigInt::one(), BigInt::one());
-                assert!(frac >= zero && frac < one, "Hash should be in [0, 1)");
+                assert!(*frac >= zero && *frac < one, "Hash should be in [0, 1)");
             } else {
                 panic!("Expected Number");
             }
@@ -413,7 +413,7 @@ mod tests {
             if let ValueType::Number(frac) = &v[0].val_type() {
                 let zero = Fraction::new(BigInt::from(0), BigInt::one());
                 let one = Fraction::new(BigInt::one(), BigInt::one());
-                assert!(frac >= zero && frac < one, "Hash should be in [0, 1)");
+                assert!(*frac >= zero && *frac < one, "Hash should be in [0, 1)");
                 // 分母が2^128の約数であることを確認
                 let max_denom = BigInt::one() << 128usize;
                 assert!(&max_denom % &frac.denominator == BigInt::from(0),

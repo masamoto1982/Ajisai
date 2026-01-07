@@ -252,33 +252,29 @@ mod tests {
     use num_bigint::BigInt;
 
     fn make_number(n: i64) -> Value {
-        Value {
-            val_type: ValueType::Number(Fraction::new(
-                BigInt::from(n),
-                BigInt::from(1),
-            )),
-        }
+        Value::from_fraction(Fraction::new(
+            BigInt::from(n),
+            BigInt::from(1),
+        ))
     }
 
     fn make_fraction(num: i64, den: i64) -> Value {
-        Value {
-            val_type: ValueType::Number(Fraction::new(
-                BigInt::from(num),
-                BigInt::from(den),
-            )),
-        }
+        Value::from_fraction(Fraction::new(
+            BigInt::from(num),
+            BigInt::from(den),
+        ))
     }
 
     fn make_nil() -> Value {
-        Value { val_type: ValueType::Nil }
+        Value::nil()
     }
 
     fn make_string(s: &str) -> Value {
-        Value { val_type: ValueType::String(s.to_string()) }
+        Value::from_string(s)
     }
 
     fn make_vector(elements: Vec<Value>) -> Value {
-        Value { val_type: ValueType::Vector(elements) }
+        Value::from_vector(elements)
     }
 
     #[test]
