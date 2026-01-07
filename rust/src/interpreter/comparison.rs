@@ -1,98 +1,43 @@
 // rust/src/interpreter/comparison.rs
 //
-// 【責務】
-// 比較演算子（=、<、<=、>、>=）を実装する。
-// すべての演算は単一要素ベクタを想定し、結果を単一要素ベクタとして返す。
+// 統一分数アーキテクチャ版の比較演算
 //
-// 【重要: 結果の型について】
-// 比較演算の結果は常に Vector[Boolean] として返されます。
-// Boolean値は数値ではないため、算術演算の結果とは異なる扱いになります。
-//
-// 例:
-//   [3] [5] <     → [TRUE]  (Vector[Boolean])
-//   [1 2] [3 4] + → [4 6]   (Vector[Number])
+// 比較演算の結果は Boolean ヒント付きの値として返す
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, wrap_value};
-use crate::types::{Value, ValueType};
+use crate::interpreter::helpers::get_integer_from_value;
+use crate::types::{Value, DisplayHint};
 use crate::types::fraction::Fraction;
 
 // ============================================================================
-// 二項比較演算の汎用実装
+// 比較演算子
 // ============================================================================
 
 /// 二項比較演算の汎用ハンドラ
-///
-/// 【責務】
-/// - StackTopモード: 2つの単一要素ベクタから数値を取り出して比較
-/// - Stackモード: N個の要素を順に比較し、全ての隣接ペアが条件を満たすかチェック
-/// - 比較結果をBoolean値として返す
-/// - すべての比較演算（<、<=、>、>=）で共通使用
-///
-/// 【StackTopモードの動作】
-/// - スタックから2つのベクタをポップ
-/// - 各ベクタから単一要素を抽出して比較
-/// - 例: `[3] [5] <` → `[TRUE]`
-///
-/// 【Stackモードの動作】
-/// - スタックからカウント値をポップ
-/// - 指定個数の要素を取得し、全ての隣接ペアが条件を満たすかチェック
-/// - 例: `[1] [2] [3] [3] STACK <` → `(1<2) AND (2<3)` → `[FALSE]`
-///
-/// 【引数】
-/// - op: Fraction同士の比較関数
 fn binary_comparison_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
     match interp.operation_target {
-        // StackTopモード: 2つの単一要素ベクタを比較
+        // StackTopモード: 2つの単一要素値を比較
         OperationTarget::StackTop => {
             if interp.stack.len() < 2 {
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let b_vec = interp.stack.pop().unwrap();
-            let a_vec = interp.stack.pop().unwrap();
+            let b_val = interp.stack.pop().unwrap();
+            let a_val = interp.stack.pop().unwrap();
 
-            // Vectorから数値を抽出
-            let a_num = match &a_vec.val_type {
-                ValueType::Vector(v) if v.len() == 1 => {
-                    if let ValueType::Number(n) = &v[0].val_type {
-                        n
-                    } else {
-                        interp.stack.push(a_vec);
-                        interp.stack.push(b_vec);
-                        return Err(AjisaiError::type_error("number", "other type"));
-                    }
-                },
-                _ => {
-                    interp.stack.push(a_vec);
-                    interp.stack.push(b_vec);
-                    return Err(AjisaiError::type_error("single-element vector", "other type"));
-                }
-            };
+            // 単一要素であることを確認
+            if a_val.data.len() != 1 || b_val.data.len() != 1 {
+                interp.stack.push(a_val);
+                interp.stack.push(b_val);
+                return Err(AjisaiError::type_error("single-element value", "multi-element or empty value"));
+            }
 
-            let b_num = match &b_vec.val_type {
-                ValueType::Vector(v) if v.len() == 1 => {
-                    if let ValueType::Number(n) = &v[0].val_type {
-                        n
-                    } else {
-                        interp.stack.push(a_vec);
-                        interp.stack.push(b_vec);
-                        return Err(AjisaiError::type_error("number", "other type"));
-                    }
-                },
-                _ => {
-                    interp.stack.push(a_vec);
-                    interp.stack.push(b_vec);
-                    return Err(AjisaiError::type_error("single-element vector", "other type"));
-                }
-            };
-
-            let result = Value { val_type: ValueType::Boolean(op(a_num, b_num)) };
-            interp.stack.push(wrap_value(result));
+            let result = op(&a_val.data[0], &b_val.data[0]);
+            interp.stack.push(Value::from_bool(result));
             Ok(())
         },
 
@@ -117,180 +62,48 @@ where
             // 全ての隣接ペアをチェック
             let mut all_true = true;
             for i in 0..items.len() - 1 {
-                // Vectorから数値を抽出
-                let a_num = match &items[i].val_type {
-                    ValueType::Vector(v) if v.len() == 1 => {
-                        if let ValueType::Number(n) = &v[0].val_type {
-                            n
-                        } else {
-                            interp.stack.extend(items);
-                            interp.stack.push(count_val);
-                            return Err(AjisaiError::type_error("number", "other type"));
-                        }
-                    },
-                    _ => {
-                        interp.stack.extend(items);
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::type_error("single-element vector", "other type"));
-                    }
-                };
+                // 単一要素であることを確認
+                if items[i].data.len() != 1 || items[i + 1].data.len() != 1 {
+                    interp.stack.extend(items);
+                    interp.stack.push(count_val);
+                    return Err(AjisaiError::type_error("single-element value", "multi-element or empty value"));
+                }
 
-                let b_num = match &items[i + 1].val_type {
-                    ValueType::Vector(v) if v.len() == 1 => {
-                        if let ValueType::Number(n) = &v[0].val_type {
-                            n
-                        } else {
-                            interp.stack.extend(items);
-                            interp.stack.push(count_val);
-                            return Err(AjisaiError::type_error("number", "other type"));
-                        }
-                    },
-                    _ => {
-                        interp.stack.extend(items);
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::type_error("single-element vector", "other type"));
-                    }
-                };
-
-                if !op(a_num, b_num) {
+                if !op(&items[i].data[0], &items[i + 1].data[0]) {
                     all_true = false;
                     break;
                 }
             }
 
-            let result = Value { val_type: ValueType::Boolean(all_true) };
-            interp.stack.push(wrap_value(result));
+            interp.stack.push(Value::from_bool(all_true));
             Ok(())
         }
     }
 }
 
-// ============================================================================
-// 比較演算子
-// ============================================================================
-
 /// < 演算子 - 小なり
-///
-/// 【責務】
-/// - 2つの数値を比較し、左辺が右辺より小さいか判定
-///
-/// 【使用法】
-/// - `[3] [5] <` → `[TRUE]`
-/// - `[5] [3] <` → `[FALSE]`
-/// - `[3] [3] <` → `[FALSE]`
-///
-/// 【引数スタック】
-/// - [b]: 右オペランド（単一要素ベクタの数値）
-/// - [a]: 左オペランド（単一要素ベクタの数値）
-///
-/// 【戻り値スタック】
-/// - [result]: 比較結果（Boolean）
-///
-/// 【エラー】
-/// - オペランドが数値でない場合
-/// - オペランドが単一要素ベクタでない場合
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.lt(b))
 }
 
 /// <= 演算子 - 小なりイコール
-///
-/// 【責務】
-/// - 2つの数値を比較し、左辺が右辺以下か判定
-///
-/// 【使用法】
-/// - `[3] [5] <=` → `[TRUE]`
-/// - `[5] [3] <=` → `[FALSE]`
-/// - `[3] [3] <=` → `[TRUE]`
-///
-/// 【引数スタック】
-/// - [b]: 右オペランド（単一要素ベクタの数値）
-/// - [a]: 左オペランド（単一要素ベクタの数値）
-///
-/// 【戻り値スタック】
-/// - [result]: 比較結果（Boolean）
-///
-/// 【エラー】
-/// - オペランドが数値でない場合
-/// - オペランドが単一要素ベクタでない場合
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.le(b))
 }
 
 /// > 演算子 - 大なり
-///
-/// 【責務】
-/// - 2つの数値を比較し、左辺が右辺より大きいか判定
-///
-/// 【使用法】
-/// - `[5] [3] >` → `[TRUE]`
-/// - `[3] [5] >` → `[FALSE]`
-/// - `[3] [3] >` → `[FALSE]`
-///
-/// 【引数スタック】
-/// - [b]: 右オペランド（単一要素ベクタの数値）
-/// - [a]: 左オペランド（単一要素ベクタの数値）
-///
-/// 【戻り値スタック】
-/// - [result]: 比較結果（Boolean）
-///
-/// 【エラー】
-/// - オペランドが数値でない場合
-/// - オペランドが単一要素ベクタでない場合
 pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.gt(b))
 }
 
 /// >= 演算子 - 大なりイコール
-///
-/// 【責務】
-/// - 2つの数値を比較し、左辺が右辺以上か判定
-///
-/// 【使用法】
-/// - `[5] [3] >=` → `[TRUE]`
-/// - `[3] [5] >=` → `[FALSE]`
-/// - `[3] [3] >=` → `[TRUE]`
-///
-/// 【引数スタック】
-/// - [b]: 右オペランド（単一要素ベクタの数値）
-/// - [a]: 左オペランド（単一要素ベクタの数値）
-///
-/// 【戻り値スタック】
-/// - [result]: 比較結果（Boolean）
-///
-/// 【エラー】
-/// - オペランドが数値でない場合
-/// - オペランドが単一要素ベクタでない場合
 pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.ge(b))
 }
 
 /// = 演算子 - 等価比較
 ///
-/// 【責務】
-/// - StackTopモード: 2つの値を比較し、完全に等しいか判定
-/// - Stackモード: N個の要素を順に比較し、全て等しいか判定
-/// - あらゆる型の値を比較可能（Number、String、Boolean、Vector、Nil）
-///
-/// 【StackTopモードの使用法】
-/// - `[3] [3] =` → `[TRUE]`
-/// - `[3] [5] =` → `[FALSE]`
-/// - `['hello'] ['hello'] =` → `[TRUE]`
-/// - `[a b] [a b] =` → `[TRUE]`
-///
-/// 【Stackモードの使用法】
-/// - `[3] [3] [3] [3] STACK =` → `[TRUE]` (全て等しい)
-/// - `[1] [2] [1] [3] STACK =` → `[FALSE]` (1≠2)
-///
-/// 【引数スタック】
-/// - StackTopモード: b, a (2つの値)
-/// - Stackモード: count (要素数)
-///
-/// 【戻り値スタック】
-/// - [result]: 比較結果（Boolean）
-///
-/// 【エラー】
-/// - なし（すべての型で比較可能）
+/// データが完全に等しいかを比較（DisplayHintは無視）
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         // StackTopモード: 2つの値を比較
@@ -299,11 +112,12 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let b_vec = interp.stack.pop().unwrap();
-            let a_vec = interp.stack.pop().unwrap();
+            let b_val = interp.stack.pop().unwrap();
+            let a_val = interp.stack.pop().unwrap();
 
-            let result = Value { val_type: ValueType::Boolean(a_vec == b_vec) };
-            interp.stack.push(wrap_value(result));
+            // データが等しいかを比較（DisplayHintは無視）
+            let result = a_val.data == b_val.data;
+            interp.stack.push(Value::from_bool(result));
             Ok(())
         },
 
@@ -325,17 +139,16 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
 
-            // 全ての隣接ペアをチェック
+            // 全ての隣接ペアをチェック（データのみ比較）
             let mut all_equal = true;
             for i in 0..items.len() - 1 {
-                if items[i] != items[i + 1] {
+                if items[i].data != items[i + 1].data {
                     all_equal = false;
                     break;
                 }
             }
 
-            let result = Value { val_type: ValueType::Boolean(all_equal) };
-            interp.stack.push(wrap_value(result));
+            interp.stack.push(Value::from_bool(all_equal));
             Ok(())
         }
     }

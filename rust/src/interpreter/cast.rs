@@ -42,29 +42,29 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから内部値を取得
-    let inner_val = match &val.val_type {
-        ValueType::Vector(v) if v.len() == 1 => &v[0],
+    match val.val_type() {
+        ValueType::Vector(v) if v.len() == 1 => {
+            match v[0].val_type() {
+                ValueType::String(_) => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("STR: same-type conversion (String → String) is not allowed"))
+                }
+                _ => {
+                    let string_repr = value_to_string_repr(&v[0]);
+                    interp.stack.push(wrap_value(
+                        Value::from_string(&string_repr)
+                    ));
+                    Ok(())
+                }
+            }
+        }
         ValueType::Vector(_) => {
             interp.stack.push(val);
-            return Err(AjisaiError::from("Multi-element vector not supported in this context"));
+            Err(AjisaiError::from("Multi-element vector not supported in this context"))
         }
         _ => {
             interp.stack.push(val);
-            return Err(AjisaiError::type_error("single-element vector", "other type"));
-        }
-    };
-
-    match &inner_val.val_type {
-        ValueType::String(_) => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("STR: same-type conversion (String → String) is not allowed"))
-        }
-        _ => {
-            let string_repr = value_to_string_repr(inner_val);
-            interp.stack.push(wrap_value(
-                Value { val_type: ValueType::String(string_repr) }
-            ));
-            Ok(())
+            Err(AjisaiError::type_error("single-element vector", "other type"))
         }
     }
 }
@@ -103,50 +103,50 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから内部値を取得
-    let inner_val = match &val.val_type {
-        ValueType::Vector(v) if v.len() == 1 => &v[0],
-        ValueType::Vector(_) => {
-            interp.stack.push(val);
-            return Err(AjisaiError::from("Multi-element vector not supported in this context"));
-        }
-        _ => {
-            interp.stack.push(val);
-            return Err(AjisaiError::type_error("single-element vector", "other type"));
-        }
-    };
-
-    match &inner_val.val_type {
-        ValueType::String(s) => {
-            match Fraction::from_str(s) {
-                Ok(fraction) => {
-                    interp.stack.push(wrap_number(fraction));
+    match val.val_type() {
+        ValueType::Vector(v) if v.len() == 1 => {
+            match v[0].val_type() {
+                ValueType::String(s) => {
+                    match Fraction::from_str(&s) {
+                        Ok(fraction) => {
+                            interp.stack.push(wrap_number(fraction));
+                            Ok(())
+                        }
+                        Err(_) => {
+                            let err_msg = format!("NUM: cannot parse '{}' as a number", s);
+                            interp.stack.push(val);
+                            Err(AjisaiError::from(err_msg))
+                        }
+                    }
+                }
+                ValueType::Boolean(b) => {
+                    use num_bigint::BigInt;
+                    use num_traits::One;
+                    let num = if b { BigInt::one() } else { BigInt::from(0) };
+                    interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
                     Ok(())
                 }
-                Err(_) => {
-                    let err_msg = format!("NUM: cannot parse '{}' as a number", s);
+                ValueType::Number(_) => {
                     interp.stack.push(val);
-                    Err(AjisaiError::from(err_msg))
+                    Err(AjisaiError::from("NUM: same-type conversion (Number → Number) is not allowed"))
+                }
+                ValueType::Nil => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("NUM: cannot convert Nil to Number"))
+                }
+                _ => {
+                    interp.stack.push(val);
+                    Err(AjisaiError::from("NUM: requires String or Boolean type"))
                 }
             }
         }
-        ValueType::Boolean(b) => {
-            use num_bigint::BigInt;
-            use num_traits::One;
-            let num = if *b { BigInt::one() } else { BigInt::from(0) };
-            interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
-            Ok(())
-        }
-        ValueType::Number(_) => {
+        ValueType::Vector(_) => {
             interp.stack.push(val);
-            Err(AjisaiError::from("NUM: same-type conversion (Number → Number) is not allowed"))
-        }
-        ValueType::Nil => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("NUM: cannot convert Nil to Number"))
+            Err(AjisaiError::from("Multi-element vector not supported in this context"))
         }
         _ => {
             interp.stack.push(val);
-            Err(AjisaiError::from("NUM: requires String or Boolean type"))
+            Err(AjisaiError::type_error("single-element vector", "other type"))
         }
     }
 }
@@ -189,77 +189,77 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから内部値を取得
-    let inner_val = match &val.val_type {
-        ValueType::Vector(v) if v.len() == 1 => &v[0],
-        ValueType::Vector(_) => {
-            interp.stack.push(val.clone());
-            return Err(AjisaiError::from("Multi-element vector not supported in this context"));
-        }
-        _ => {
-            interp.stack.push(val.clone());
-            return Err(AjisaiError::type_error("single-element vector", "other type"));
-        }
-    };
-
-    match &inner_val.val_type {
-        ValueType::String(s) => {
-            let upper = s.to_uppercase();
-            let bool_val = if upper == "TRUE" || upper == "1" || s == "真" {
-                true
-            } else if upper == "FALSE" || upper == "0" || s == "偽" {
-                false
-            } else {
-                // エラー時はスタックを復元
-                interp.stack.push(val.clone());
-                return Err(AjisaiError::from(format!(
-                    "BOOL: cannot parse '{}' as boolean (expected 'TRUE'/'FALSE', '1'/'0', '真'/'偽')", s
-                )));
-            };
-            interp.stack.push(wrap_value(
-                Value { val_type: ValueType::Boolean(bool_val) }
-            ));
-            Ok(())
-        }
-        ValueType::Number(n) => {
-            use num_bigint::BigInt;
-            use num_traits::One;
-
-            let one = Fraction::new(BigInt::one(), BigInt::one());
-            let zero = Fraction::new(BigInt::from(0), BigInt::one());
-
-            if n == &one {
-                interp.stack.push(wrap_value(
-                    Value { val_type: ValueType::Boolean(true) }
-                ));
-                Ok(())
-            } else if n == &zero {
-                interp.stack.push(wrap_value(
-                    Value { val_type: ValueType::Boolean(false) }
-                ));
-                Ok(())
-            } else {
-                interp.stack.push(val.clone());
-                Err(AjisaiError::from(format!(
-                    "BOOL: cannot convert number {} to boolean (only 1 and 0 are allowed)",
-                    if n.denominator == BigInt::one() {
-                        format!("{}", n.numerator)
+    match val.val_type() {
+        ValueType::Vector(v) if v.len() == 1 => {
+            match v[0].val_type() {
+                ValueType::String(s) => {
+                    let upper = s.to_uppercase();
+                    let bool_val = if upper == "TRUE" || upper == "1" || s == "真" {
+                        true
+                    } else if upper == "FALSE" || upper == "0" || s == "偽" {
+                        false
                     } else {
-                        format!("{}/{}", n.numerator, n.denominator)
+                        // エラー時はスタックを復元
+                        interp.stack.push(val.clone());
+                        return Err(AjisaiError::from(format!(
+                            "BOOL: cannot parse '{}' as boolean (expected 'TRUE'/'FALSE', '1'/'0', '真'/'偽')", s
+                        )));
+                    };
+                    interp.stack.push(wrap_value(
+                        Value::from_bool(bool_val)
+                    ));
+                    Ok(())
+                }
+                ValueType::Number(n) => {
+                    use num_bigint::BigInt;
+                    use num_traits::One;
+
+                    let one = Fraction::new(BigInt::one(), BigInt::one());
+                    let zero = Fraction::new(BigInt::from(0), BigInt::one());
+
+                    if n == one {
+                        interp.stack.push(wrap_value(
+                            Value::from_bool(true)
+                        ));
+                        Ok(())
+                    } else if n == zero {
+                        interp.stack.push(wrap_value(
+                            Value::from_bool(false)
+                        ));
+                        Ok(())
+                    } else {
+                        interp.stack.push(val.clone());
+                        Err(AjisaiError::from(format!(
+                            "BOOL: cannot convert number {} to boolean (only 1 and 0 are allowed)",
+                            if n.denominator == BigInt::one() {
+                                format!("{}", n.numerator)
+                            } else {
+                                format!("{}/{}", n.numerator, n.denominator)
+                            }
+                        )))
                     }
-                )))
+                }
+                ValueType::Boolean(_) => {
+                    interp.stack.push(val.clone());
+                    Err(AjisaiError::from("BOOL: same-type conversion (Boolean → Boolean) is not allowed"))
+                }
+                ValueType::Nil => {
+                    interp.stack.push(val.clone());
+                    Err(AjisaiError::from("BOOL: cannot convert Nil to Boolean"))
+                }
+                _ => {
+                    interp.stack.push(val.clone());
+                    Err(AjisaiError::from("BOOL: requires String or Number type"))
+                }
             }
         }
-        ValueType::Boolean(_) => {
+        ValueType::Vector(_) => {
             interp.stack.push(val.clone());
-            Err(AjisaiError::from("BOOL: same-type conversion (Boolean → Boolean) is not allowed"))
-        }
-        ValueType::Nil => {
-            interp.stack.push(val.clone());
-            Err(AjisaiError::from("BOOL: cannot convert Nil to Boolean"))
+            Err(AjisaiError::from("Multi-element vector not supported in this context"))
         }
         _ => {
             interp.stack.push(val.clone());
-            Err(AjisaiError::from("BOOL: requires String or Number type"))
+            Err(AjisaiError::type_error("single-element vector", "other type"))
         }
     }
 }
@@ -297,47 +297,47 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから内部値を取得
-    let inner_val = match &val.val_type {
-        ValueType::Vector(v) if v.len() == 1 => &v[0],
-        ValueType::Vector(_) => {
-            interp.stack.push(val.clone());
-            return Err(AjisaiError::from("Multi-element vector not supported in this context"));
-        }
-        _ => {
-            interp.stack.push(val.clone());
-            return Err(AjisaiError::type_error("single-element vector", "other type"));
-        }
-    };
-
-    match &inner_val.val_type {
-        ValueType::String(s) => {
-            let upper = s.to_uppercase();
-            if upper == "NIL" {
-                interp.stack.push(wrap_value(
-                    Value { val_type: ValueType::Nil }
-                ));
-                Ok(())
-            } else {
-                let err_msg = format!("NIL: cannot parse '{}' as nil (expected 'nil')", s);
-                interp.stack.push(val.clone());
-                Err(AjisaiError::from(err_msg))
+    match val.val_type() {
+        ValueType::Vector(v) if v.len() == 1 => {
+            match v[0].val_type() {
+                ValueType::String(s) => {
+                    let upper = s.to_uppercase();
+                    if upper == "NIL" {
+                        interp.stack.push(wrap_value(
+                            Value::nil()
+                        ));
+                        Ok(())
+                    } else {
+                        let err_msg = format!("NIL: cannot parse '{}' as nil (expected 'nil')", s);
+                        interp.stack.push(val.clone());
+                        Err(AjisaiError::from(err_msg))
+                    }
+                }
+                ValueType::Boolean(_) => {
+                    interp.stack.push(val.clone());
+                    Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"))
+                }
+                ValueType::Number(_) => {
+                    interp.stack.push(val.clone());
+                    Err(AjisaiError::from("NIL: cannot convert Number to Nil"))
+                }
+                ValueType::Nil => {
+                    interp.stack.push(val.clone());
+                    Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"))
+                }
+                _ => {
+                    interp.stack.push(val.clone());
+                    Err(AjisaiError::from("NIL: requires String type"))
+                }
             }
         }
-        ValueType::Boolean(_) => {
+        ValueType::Vector(_) => {
             interp.stack.push(val.clone());
-            Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"))
-        }
-        ValueType::Number(_) => {
-            interp.stack.push(val.clone());
-            Err(AjisaiError::from("NIL: cannot convert Number to Nil"))
-        }
-        ValueType::Nil => {
-            interp.stack.push(val.clone());
-            Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"))
+            Err(AjisaiError::from("Multi-element vector not supported in this context"))
         }
         _ => {
             interp.stack.push(val.clone());
-            Err(AjisaiError::from("NIL: requires String type"))
+            Err(AjisaiError::type_error("single-element vector", "other type"))
         }
     }
 }
@@ -357,53 +357,51 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // Vectorから内部値を取得
-            let inner_val = match &val.val_type {
-                ValueType::Vector(v) if v.len() == 1 => &v[0],
-                ValueType::Vector(_) => {
-                    interp.stack.push(val);
-                    return Err(AjisaiError::from("Multi-element vector not supported in this context"));
-                }
-                _ => {
-                    interp.stack.push(val);
-                    return Err(AjisaiError::type_error("single-element vector", "other type"));
-                }
-            };
+            match val.val_type() {
+                ValueType::Vector(v) if v.len() == 1 => {
+                    match v[0].val_type() {
+                        ValueType::String(s) => {
+                            if s.is_empty() {
+                                interp.stack.push(val);
+                                return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                            }
 
-            match &inner_val.val_type {
-                ValueType::String(s) => {
-                    if s.is_empty() {
-                        interp.stack.push(val);
-                        return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                            let chars: Vec<Value> = s.chars()
+                                .map(|c| Value::from_string(&c.to_string()))
+                                .collect();
+
+                            interp.stack.push(Value::from_vector(chars));
+                            Ok(())
+                        }
+                        ValueType::Number(_) => {
+                            interp.stack.push(val);
+                            Err(AjisaiError::from("CHARS: cannot convert Number to characters"))
+                        }
+                        ValueType::Boolean(_) => {
+                            interp.stack.push(val);
+                            Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"))
+                        }
+                        ValueType::Nil => {
+                            interp.stack.push(val);
+                            Err(AjisaiError::from("CHARS: cannot convert Nil to characters"))
+                        }
+                        ValueType::Vector(_) => {
+                            interp.stack.push(val);
+                            Err(AjisaiError::from("CHARS: cannot convert nested Vector to characters"))
+                        }
+                        _ => {
+                            interp.stack.push(val);
+                            Err(AjisaiError::from("CHARS: requires String type"))
+                        }
                     }
-
-                    let chars: Vec<Value> = s.chars()
-                        .map(|c| Value { val_type: ValueType::String(c.to_string()) })
-                        .collect();
-
-                    interp.stack.push(Value {
-                        val_type: ValueType::Vector(chars)
-                    });
-                    Ok(())
-                }
-                ValueType::Number(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: cannot convert Number to characters"))
-                }
-                ValueType::Boolean(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"))
-                }
-                ValueType::Nil => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: cannot convert Nil to characters"))
                 }
                 ValueType::Vector(_) => {
                     interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: cannot convert nested Vector to characters"))
+                    Err(AjisaiError::from("Multi-element vector not supported in this context"))
                 }
                 _ => {
                     interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: requires String type"))
+                    Err(AjisaiError::type_error("single-element vector", "other type"))
                 }
             }
         }
@@ -419,8 +417,48 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
 
             for elem in elements {
                 // Vectorから内部値を取得
-                let inner = match &elem.val_type {
-                    ValueType::Vector(v) if v.len() == 1 => &v[0],
+                match elem.val_type() {
+                    ValueType::Vector(v) if v.len() == 1 => {
+                        match v[0].val_type() {
+                            ValueType::String(s) => {
+                                if s.is_empty() {
+                                    // エラー時はスタックを復元
+                                    interp.stack = results;
+                                    interp.stack.push(elem);
+                                    return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                                }
+                                let chars: Vec<Value> = s.chars()
+                                    .map(|c| Value::from_string(&c.to_string()))
+                                    .collect();
+                                results.push(Value::from_vector(chars));
+                            }
+                            ValueType::Number(_) => {
+                                interp.stack = results;
+                                interp.stack.push(elem);
+                                return Err(AjisaiError::from("CHARS: cannot convert Number to characters"));
+                            }
+                            ValueType::Boolean(_) => {
+                                interp.stack = results;
+                                interp.stack.push(elem);
+                                return Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"));
+                            }
+                            ValueType::Nil => {
+                                interp.stack = results;
+                                interp.stack.push(elem);
+                                return Err(AjisaiError::from("CHARS: cannot convert Nil to characters"));
+                            }
+                            ValueType::Vector(_) => {
+                                interp.stack = results;
+                                interp.stack.push(elem);
+                                return Err(AjisaiError::from("CHARS: cannot convert nested Vector to characters"));
+                            }
+                            _ => {
+                                interp.stack = results;
+                                interp.stack.push(elem);
+                                return Err(AjisaiError::from("CHARS: requires String type"));
+                            }
+                        }
+                    }
                     ValueType::Vector(_) => {
                         interp.stack = results;
                         interp.stack.push(elem);
@@ -430,48 +468,6 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                         interp.stack = results;
                         interp.stack.push(elem);
                         return Err(AjisaiError::type_error("single-element vector", "other type"));
-                    }
-                };
-
-                match &inner.val_type {
-                    ValueType::String(s) => {
-                        if s.is_empty() {
-                            // エラー時はスタックを復元
-                            interp.stack = results;
-                            interp.stack.push(elem);
-                            return Err(AjisaiError::from("CHARS: empty string has no characters"));
-                        }
-                        let chars: Vec<Value> = s.chars()
-                            .map(|c| Value { val_type: ValueType::String(c.to_string()) })
-                            .collect();
-                        results.push(Value {
-                            val_type: ValueType::Vector(chars)
-                        });
-                    }
-                    ValueType::Number(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: cannot convert Number to characters"));
-                    }
-                    ValueType::Boolean(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"));
-                    }
-                    ValueType::Nil => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: cannot convert Nil to characters"));
-                    }
-                    ValueType::Vector(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: cannot convert nested Vector to characters"));
-                    }
-                    _ => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: requires String type"));
                     }
                 }
             }
@@ -496,7 +492,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            match &val.val_type {
+            match val.val_type() {
                 ValueType::Vector(vec) => {
                     if vec.is_empty() {
                         interp.stack.push(val);
@@ -505,9 +501,9 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 
                     let mut result = String::new();
                     for (i, elem) in vec.iter().enumerate() {
-                        match &elem.val_type {
+                        match elem.val_type() {
                             ValueType::String(s) => {
-                                result.push_str(s);
+                                result.push_str(&s);
                             }
                             other => {
                                 let type_name = match other {
@@ -528,7 +524,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     }
 
                     interp.stack.push(wrap_value(
-                        Value { val_type: ValueType::String(result) }
+                        Value::from_string(&result)
                     ));
                     Ok(())
                 }
@@ -569,7 +565,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             let elements: Vec<Value> = interp.stack.drain(..).collect();
 
             for elem in elements {
-                match &elem.val_type {
+                match elem.val_type() {
                     ValueType::Vector(vec) => {
                         if vec.is_empty() {
                             interp.stack = results;
@@ -579,9 +575,9 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 
                         let mut result = String::new();
                         for (i, v) in vec.iter().enumerate() {
-                            match &v.val_type {
+                            match v.val_type() {
                                 ValueType::String(s) => {
-                                    result.push_str(s);
+                                    result.push_str(&s);
                                 }
                                 other => {
                                     let type_name = match other {
@@ -603,7 +599,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         }
 
                         results.push(wrap_value(
-                            Value { val_type: ValueType::String(result) }
+                            Value::from_string(&result)
                         ));
                     }
                     ValueType::String(_) => {
@@ -658,7 +654,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 /// 【戻り値】
 /// - 文字列表現
 fn value_to_string_repr(value: &Value) -> String {
-    match &value.val_type {
+    match value.val_type() {
         ValueType::Number(n) => {
             if n.denominator == num_bigint::BigInt::from(1) {
                 format!("{}", n.numerator)
@@ -676,7 +672,7 @@ fn value_to_string_repr(value: &Value) -> String {
         }
         ValueType::String(s) => s.clone(),
         ValueType::Boolean(b) => {
-            if *b { "TRUE".to_string() } else { "FALSE".to_string() }
+            if b { "TRUE".to_string() } else { "FALSE".to_string() }
         }
         ValueType::Symbol(s) => s.clone(),
         ValueType::Nil => "NIL".to_string(),
@@ -698,29 +694,25 @@ mod tests {
     #[test]
     fn test_value_to_string_repr() {
         // Number
-        let num = Value {
-            val_type: ValueType::Number(Fraction::new(BigInt::from(42), BigInt::one()))
-        };
+        let num = Value::from_fraction(Fraction::new(BigInt::from(42), BigInt::one()));
         assert_eq!(value_to_string_repr(&num), "42");
 
         // Boolean
-        let bool_val = Value { val_type: ValueType::Boolean(true) };
+        let bool_val = Value::from_bool(true);
         assert_eq!(value_to_string_repr(&bool_val), "TRUE");
 
         // Nil
-        let nil = Value { val_type: ValueType::Nil };
+        let nil = Value::nil();
         assert_eq!(value_to_string_repr(&nil), "NIL");
 
         // Vector
-        let vec = Value {
-            val_type: ValueType::Vector(
-                vec![
-                    Value { val_type: ValueType::Number(Fraction::new(BigInt::from(1), BigInt::one())) },
-                    Value { val_type: ValueType::Number(Fraction::new(BigInt::from(2), BigInt::one())) },
-                    Value { val_type: ValueType::Number(Fraction::new(BigInt::from(3), BigInt::one())) },
-                ]
-            )
-        };
+        let vec = Value::from_vector(
+            vec![
+                Value::from_fraction(Fraction::new(BigInt::from(1), BigInt::one())),
+                Value::from_fraction(Fraction::new(BigInt::from(2), BigInt::one())),
+                Value::from_fraction(Fraction::new(BigInt::from(3), BigInt::one())),
+            ]
+        );
         assert_eq!(value_to_string_repr(&vec), "1 2 3");
     }
 
@@ -735,8 +727,8 @@ mod tests {
         op_str(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::String(s) = &v[0].val_type {
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::String(s) = v[0].val_type() {
                     assert_eq!(s, "42");
                 }
             }
@@ -749,13 +741,13 @@ mod tests {
 
         // String → Number
         interp.stack.push(wrap_value(
-            Value { val_type: ValueType::String("42".to_string()) }
+            Value::from_string("42")
         ));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator, BigInt::from(42));
                 }
             }
@@ -764,13 +756,13 @@ mod tests {
         // Boolean → Number (TRUE → 1)
         interp.stack.clear();
         interp.stack.push(wrap_value(
-            Value { val_type: ValueType::Boolean(true) }
+            Value::from_bool(true)
         ));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator, BigInt::from(1));
                     assert_eq!(n.denominator, BigInt::from(1));
                 }
@@ -780,13 +772,13 @@ mod tests {
         // Boolean → Number (FALSE → 0)
         interp.stack.clear();
         interp.stack.push(wrap_value(
-            Value { val_type: ValueType::Boolean(false) }
+            Value::from_bool(false)
         ));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator, BigInt::from(0));
                     assert_eq!(n.denominator, BigInt::from(1));
                 }
@@ -800,14 +792,14 @@ mod tests {
 
         // String → Boolean (TRUE/FALSE)
         interp.stack.push(wrap_value(
-            Value { val_type: ValueType::String("TRUE".to_string()) }
+            Value::from_string("TRUE")
         ));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Boolean(b) = &v[0].val_type {
-                    assert_eq!(*b, true);
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Boolean(b) = v[0].val_type() {
+                    assert_eq!(b, true);
                 }
             }
         }
@@ -815,28 +807,28 @@ mod tests {
         // String → Boolean ('1'/'0')
         interp.stack.clear();
         interp.stack.push(wrap_value(
-            Value { val_type: ValueType::String("1".to_string()) }
+            Value::from_string("1")
         ));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Boolean(b) = &v[0].val_type {
-                    assert_eq!(*b, true);
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Boolean(b) = v[0].val_type() {
+                    assert_eq!(b, true);
                 }
             }
         }
 
         interp.stack.clear();
         interp.stack.push(wrap_value(
-            Value { val_type: ValueType::String("0".to_string()) }
+            Value::from_string("0")
         ));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Boolean(b) = &v[0].val_type {
-                    assert_eq!(*b, false);
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Boolean(b) = v[0].val_type() {
+                    assert_eq!(b, false);
                 }
             }
         }
@@ -844,28 +836,28 @@ mod tests {
         // String → Boolean ('真'/'偽')
         interp.stack.clear();
         interp.stack.push(wrap_value(
-            Value { val_type: ValueType::String("真".to_string()) }
+            Value::from_string("真")
         ));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Boolean(b) = &v[0].val_type {
-                    assert_eq!(*b, true);
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Boolean(b) = v[0].val_type() {
+                    assert_eq!(b, true);
                 }
             }
         }
 
         interp.stack.clear();
         interp.stack.push(wrap_value(
-            Value { val_type: ValueType::String("偽".to_string()) }
+            Value::from_string("偽")
         ));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Boolean(b) = &v[0].val_type {
-                    assert_eq!(*b, false);
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Boolean(b) = v[0].val_type() {
+                    assert_eq!(b, false);
                 }
             }
         }
@@ -878,9 +870,9 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Boolean(b) = &v[0].val_type {
-                    assert_eq!(*b, true);
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Boolean(b) = v[0].val_type() {
+                    assert_eq!(b, true);
                 }
             }
         }
@@ -893,9 +885,9 @@ mod tests {
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Boolean(b) = &v[0].val_type {
-                    assert_eq!(*b, false);
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Boolean(b) = v[0].val_type() {
+                    assert_eq!(b, false);
                 }
             }
         }
@@ -908,13 +900,13 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 5);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "h"));
-                assert!(matches!(&v[1].val_type, ValueType::String(s) if s == "e"));
-                assert!(matches!(&v[2].val_type, ValueType::String(s) if s == "l"));
-                assert!(matches!(&v[3].val_type, ValueType::String(s) if s == "l"));
-                assert!(matches!(&v[4].val_type, ValueType::String(s) if s == "o"));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "h"));
+                assert!(matches!(v[1].val_type(), ValueType::String(s) if s == "e"));
+                assert!(matches!(v[2].val_type(), ValueType::String(s) if s == "l"));
+                assert!(matches!(v[3].val_type(), ValueType::String(s) if s == "l"));
+                assert!(matches!(v[4].val_type(), ValueType::String(s) if s == "o"));
             }
         }
     }
@@ -926,11 +918,11 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 3);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "日"));
-                assert!(matches!(&v[1].val_type, ValueType::String(s) if s == "本"));
-                assert!(matches!(&v[2].val_type, ValueType::String(s) if s == "語"));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "日"));
+                assert!(matches!(v[1].val_type(), ValueType::String(s) if s == "本"));
+                assert!(matches!(v[2].val_type(), ValueType::String(s) if s == "語"));
             }
         }
     }
@@ -959,9 +951,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "hello"));
             }
         }
     }
@@ -972,9 +964,9 @@ mod tests {
         interp.execute("[ 'hel' 'lo' ] JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "hello"));
             }
         }
     }
@@ -1009,9 +1001,9 @@ mod tests {
         interp.execute("[ 'hello' ] CHARS JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "hello"));
             }
         }
     }
@@ -1022,9 +1014,9 @@ mod tests {
         interp.execute("[ 'hello' ] CHARS REVERSE JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "olleh"));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "olleh"));
             }
         }
     }
@@ -1041,9 +1033,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "hello"));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1061,9 +1053,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator, BigInt::from(42));
                 } else {
                     panic!("Expected Number type");
@@ -1085,9 +1077,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL same-type error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::Boolean(true)));
+                assert!(matches!(v[0].val_type(), ValueType::Boolean(true)));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1106,9 +1098,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == "hello"));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "hello"));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1126,9 +1118,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::Boolean(true)));
+                assert!(matches!(v[0].val_type(), ValueType::Boolean(true)));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1146,9 +1138,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator, BigInt::from(42));
                 } else {
                     panic!("Expected Number type");
@@ -1170,9 +1162,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL same-type error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::Nil));
+                assert!(matches!(v[0].val_type(), ValueType::Nil));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1189,9 +1181,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::Nil));
+                assert!(matches!(v[0].val_type(), ValueType::Nil));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1210,9 +1202,9 @@ mod tests {
         assert!(result.is_ok());
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::Nil));
+                assert!(matches!(v[0].val_type(), ValueType::Nil));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1234,9 +1226,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator, BigInt::from(42));
                 } else {
                     panic!("Expected Number type");
@@ -1261,9 +1253,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::Boolean(true)));
+                assert!(matches!(v[0].val_type(), ValueType::Boolean(true)));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1284,9 +1276,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::Nil));
+                assert!(matches!(v[0].val_type(), ValueType::Nil));
             } else {
                 panic!("Expected Vector type");
             }
@@ -1307,9 +1299,9 @@ mod tests {
         assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS empty string error");
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
-                assert!(matches!(&v[0].val_type, ValueType::String(s) if s == ""));
+                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == ""));
             } else {
                 panic!("Expected Vector type");
             }

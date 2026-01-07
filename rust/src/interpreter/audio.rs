@@ -152,7 +152,7 @@ fn build_audio_structure(
     mode: PlayMode,
     output: &mut String
 ) -> Result<AudioStructure> {
-    match &value.val_type {
+    match &value.val_type() {
         ValueType::Number(frac) => {
             let freq = frac.numerator.to_f64()
                 .ok_or_else(|| AjisaiError::from("Frequency too large"))?;
@@ -180,7 +180,7 @@ fn build_audio_structure(
         }
         ValueType::String(s) => {
             // 歌詞をOutputに出力
-            output.push_str(s);
+            output.push_str(&s);
             output.push(' ');
             // 時間消費なしなので空のSeqを返す（後で除去）
             Ok(AudioStructure::Seq { children: vec![] })

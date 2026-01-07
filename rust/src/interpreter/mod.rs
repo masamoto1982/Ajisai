@@ -123,7 +123,7 @@ impl Interpreter {
                     let (nested_values, consumed) = self.collect_vector_with_depth(tokens, i, depth + 1)?;
                     // 空のベクターはNILに置換（FRAMEの鋳型をそのまま実行可能にする）
                     if nested_values.is_empty() {
-                        values.push(Value { val_type: ValueType::Nil });
+                        values.push(Value::nil());
                     } else {
                         values.push(Value::from_vector(nested_values));
                     }
@@ -137,19 +137,19 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::String(s) => {
-                    values.push(Value { val_type: ValueType::String(s.clone()) });
+                    values.push(Value::from_string(s));
                     i += 1;
                 },
                 Token::Boolean(b) => {
-                    values.push(Value { val_type: ValueType::Boolean(*b) });
+                    values.push(Value::from_bool(*b));
                     i += 1;
                 },
                 Token::Nil => {
-                    values.push(Value { val_type: ValueType::Nil });
+                    values.push(Value::nil());
                     i += 1;
                 },
                 Token::Symbol(s) => {
-                    values.push(Value { val_type: ValueType::Symbol(s.clone()) });
+                    values.push(Value::from_string(s));
                     i += 1;
                 },
                 _ => {
@@ -239,9 +239,9 @@ impl Interpreter {
         let name_val = self.stack.pop().unwrap();
 
         // 遅延時間を取得
-        let duration_ms = match &delay_val.val_type {
+        let duration_ms = match delay_val.val_type() {
             ValueType::Vector(v) if v.len() == 1 => {
-                match &v[0].val_type {
+                match v[0].val_type() {
                     ValueType::Number(n) if n.denominator == num_bigint::BigInt::one() => {
                         n.numerator.to_u64().ok_or_else(||
                             AjisaiError::from("Delay too large")
@@ -296,11 +296,11 @@ impl Interpreter {
                     self.stack.push(wrap_number(frac));
                 },
                 Token::String(s) => {
-                    let val = Value { val_type: ValueType::String(s.clone()) };
+                    let val = Value::from_string(s);
                     self.stack.push(wrap_value(val));
                 },
                 Token::Boolean(b) => {
-                    let val = Value { val_type: ValueType::Boolean(*b) };
+                    let val = Value::from_bool(*b);
                     self.stack.push(wrap_value(val));
                 },
                 Token::Nil => {
@@ -312,7 +312,7 @@ impl Interpreter {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
                     // 空ベクタ = NIL（空の存在を表す統一的な方法）
                     if values.is_empty() {
-                        self.stack.push(Value { val_type: ValueType::Nil });
+                        self.stack.push(Value::nil());
                     } else {
                         self.stack.push(Value::from_vector(values));
                     }
@@ -462,11 +462,11 @@ impl Interpreter {
 
         let top = self.stack.pop().unwrap();
 
-        match &top.val_type {
-            ValueType::Boolean(b) => Ok(*b),
+        match top.val_type() {
+            ValueType::Boolean(b) => Ok(b),
             ValueType::Vector(v) => {
                 if v.len() == 1 {
-                    if let ValueType::Boolean(b) = v[0].val_type {
+                    if let ValueType::Boolean(b) = v[0].val_type() {
                         Ok(b)
                     } else {
                         Ok(true)
@@ -798,15 +798,15 @@ mod tests {
         // [1] .. GET は [20] を取得してプッシュ、[20] = で比較して TRUE
         assert_eq!(interp.stack.len(), 4);
         // 最後の値が TRUE であることを確認
-        if let ValueType::Vector(v) = &interp.stack[3].val_type {
+        if let ValueType::Vector(v) = interp.stack[3].val_type() {
             assert_eq!(v.len(), 1);
-            if let ValueType::Boolean(b) = v[0].val_type {
+            if let ValueType::Boolean(b) = v[0].val_type() {
                 assert!(b, "Expected TRUE from comparison");
             } else {
-                panic!("Expected Boolean, got {:?}", v[0].val_type);
+                panic!("Expected Boolean, got {:?}", v[0].val_type());
             }
         } else {
-            panic!("Expected Vector, got {:?}", interp.stack[3].val_type);
+            panic!("Expected Vector, got {:?}", interp.stack[3].val_type());
         }
     }
 
@@ -1053,9 +1053,9 @@ ADDTEST
         // Verify result
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1, "Result vector should have one element");
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "8", "Result should be 8");
                 }
             }
@@ -1097,9 +1097,9 @@ ADDTEST
         // Verify result: (1 + 2) * 3 = 9
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1, "Result vector should have one element");
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "9", "Result should be 9");
                 }
             }
@@ -1122,9 +1122,9 @@ ADDTEST
         // Verify result: (10 + 20) * 5 = 150
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1, "Result vector should have one element");
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "150", "Result should be 150");
                 }
             }
@@ -1148,9 +1148,9 @@ ADDTEST
         // Result should be [100] because 5 > 3 is true
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
+            if let ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1, "Result vector should have one element");
-                if let ValueType::Number(n) = &v[0].val_type {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "100", "Result should be 100");
                 }
             }
@@ -1192,8 +1192,8 @@ ADDTEST
         // すべての条件がfalseなのでデフォルトの999
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = &val.val_type {
-                if let ValueType::Number(n) = &v[0].val_type {
+            if let ValueType::Vector(v) = val.val_type() {
+                if let ValueType::Number(n) = v[0].val_type() {
                     assert_eq!(n.numerator.to_string(), "999");
                 }
             }
@@ -1210,7 +1210,7 @@ ADDTEST
         // 結果が [ 1 2 3 ] であることを確認
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let crate::types::ValueType::Vector(v) = &val.val_type {
+            if let crate::types::ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 3);
             }
         }
@@ -1238,10 +1238,10 @@ ADDTEST
 
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let crate::types::ValueType::Vector(v) = &val.val_type {
+            if let crate::types::ValueType::Vector(v) = val.val_type() {
                 assert_eq!(v.len(), 1);
                 // 内側の要素がNILであることを確認
-                assert!(matches!(v[0].val_type, crate::types::ValueType::Nil));
+                assert!(matches!(v[0].val_type(), crate::types::ValueType::Nil));
             } else {
                 panic!("Expected vector");
             }
@@ -1258,15 +1258,15 @@ ADDTEST
 
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let crate::types::ValueType::Vector(outer) = &val.val_type {
+            if let crate::types::ValueType::Vector(outer) = val.val_type() {
                 // 外側は2要素
                 assert_eq!(outer.len(), 2);
                 // 各要素も2要素のベクター（NILが2つ）
                 for inner in outer {
-                    if let crate::types::ValueType::Vector(v) = &inner.val_type {
+                    if let crate::types::ValueType::Vector(v) = inner.val_type() {
                         assert_eq!(v.len(), 2);
                         for elem in v {
-                            assert!(matches!(elem.val_type, crate::types::ValueType::Nil));
+                            assert!(matches!(elem.val_type(), crate::types::ValueType::Nil));
                         }
                     } else {
                         panic!("Expected inner vector");

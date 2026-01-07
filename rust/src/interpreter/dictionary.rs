@@ -22,9 +22,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     // ヘルパー関数: ベクトルラップされた文字列かチェック
     let is_wrapped_string = |val: &crate::types::Value| -> bool {
-        if let ValueType::Vector(v) = &val.val_type {
+        if let ValueType::Vector(v) = &val.val_type() {
             if v.len() == 1 {
-                matches!(v[0].val_type, ValueType::String(_))
+                matches!(v[0].val_type(), ValueType::String(_))
             } else {
                 false
             }
@@ -56,9 +56,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if has_description {
         if let Some(desc_val) = interp.stack.pop() {
             // ベクトルラップされた文字列から取得
-            if let ValueType::Vector(v) = desc_val.val_type {
+            if let ValueType::Vector(v) = desc_val.val_type() {
                 if v.len() == 1 {
-                    if let ValueType::String(s) = &v[0].val_type {
+                    if let ValueType::String(s) = &v[0].val_type() {
                         description = Some(s.clone());
                     }
                 }
@@ -72,12 +72,12 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     
     // 定義本体を取得
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    
+
     // 定義本体を文字列として取得
-    let definition_str = match &def_val.val_type {
+    let definition_str = match &def_val.val_type() {
         ValueType::Vector(vec) => {
             if vec.len() == 1 {
-                match &vec[0].val_type {
+                match &vec[0].val_type() {
                     ValueType::String(s) => s.clone(),
                     _ => return Err(AjisaiError::type_error("string in vector", "other type")),
                 }
@@ -235,9 +235,9 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let name = match &val.val_type {
+    let name = match &val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
+            match &v[0].val_type() {
                 ValueType::String(s) => s.clone(),
                 _ => return Err(AjisaiError::type_error("string", "other type")),
             }
@@ -315,9 +315,9 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // op_del と同様に、Vector内の文字列も処理する
-    let name_str = match &name_val.val_type {
+    let name_str = match &name_val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type {
+            match &v[0].val_type() {
                 ValueType::String(s) => s.clone(),
                 _ => return Err(AjisaiError::type_error("string", "other type")),
             }
@@ -387,10 +387,10 @@ mod tests {
         // スタックトップが [ 15 ] であることを確認（Vector）
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            match &val.val_type {
+            match &val.val_type() {
                 crate::types::ValueType::Vector(v) => {
                     assert_eq!(v.len(), 1, "Vector should have one element");
-                    if let crate::types::ValueType::Number(n) = &v[0].val_type {
+                    if let crate::types::ValueType::Number(n) = &v[0].val_type() {
                         // 15 は分数として 15/1 で表現される
                         assert_eq!(n.numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", n.numerator);
                         assert_eq!(n.denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
@@ -398,7 +398,7 @@ mod tests {
                         panic!("Expected Number type in vector");
                     }
                 }
-                _ => panic!("Expected Vector type, got: {:?}", val.val_type),
+                _ => panic!("Expected Vector type, got: {:?}", val.val_type()),
             }
         }
     }

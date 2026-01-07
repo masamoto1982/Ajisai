@@ -41,9 +41,9 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     let count = get_integer_from_value(&count_val)?;
 
     // 文字列を取得（大文字変換なし）
-    let code_str = match &code_val.val_type {
+    let code_str = match code_val.val_type() {
         ValueType::Vector(v) if v.len() == 1 => {
-            if let ValueType::String(s) = &v[0].val_type {
+            if let ValueType::String(s) = v[0].val_type() {
                 s.clone()
             } else {
                 return Err(AjisaiError::type_error("string", "other type"));
