@@ -384,8 +384,8 @@ impl Value {
     ///
     /// 古いAPIとの互換性のため、Value のベクタを受け取ります。
     ///
-    /// 単一要素の場合はその要素をそのまま返します（表示ヒント保持）。
-    /// 複数要素の場合は、数値要素のみをフラット化します。
+    /// 統一分数アーキテクチャ: 単一要素の場合はそのまま返します（表示ヒント保持）。
+    /// 複数要素の場合は、すべての要素をフラット化します。
     pub fn from_vector(values: Vec<Value>) -> Self {
         if values.is_empty() {
             // 空ベクタ = NIL
@@ -397,11 +397,15 @@ impl Value {
             return values.into_iter().next().unwrap();
         }
 
-        // 複数要素の場合
-        // 数値要素のみをフラット化（ネストされたベクタや文字列はそのまま）
+        // 複数要素の場合: すべての要素をフラット化
         let data: Vec<Fraction> = values.iter()
             .flat_map(|v| v.data.iter().cloned())
             .collect();
+
+        // 空になった場合はNIL
+        if data.is_empty() {
+            return Self::nil();
+        }
 
         Self {
             data,

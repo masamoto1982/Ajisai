@@ -1231,20 +1231,16 @@ ADDTEST
     async fn test_empty_nested_vector_becomes_nil() {
         let mut interp = Interpreter::new();
 
-        // ネストした空ベクターはNILに置換される
-        // FRAMEが生成する形式: { ( [ ] ) } → { ( NIL ) }
+        // 統一分数アーキテクチャ: ネストした空ベクターはNILになる
+        // [ [ ] ] → [ NIL ] → フラット化されて NIL
         let result = interp.execute("[ [ ] ]").await;
         assert!(result.is_ok(), "Nested empty vector should be converted to NIL: {:?}", result);
 
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let crate::types::ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                // 内側の要素がNILであることを確認
-                assert!(matches!(v[0].val_type(), crate::types::ValueType::Nil));
-            } else {
-                panic!("Expected vector");
-            }
+            // 統一分数アーキテクチャでは、空の入れ子はすべてNILになる
+            assert!(matches!(val.val_type(), crate::types::ValueType::Nil),
+                "Expected NIL, got {:?}", val.val_type());
         }
     }
 
@@ -1252,29 +1248,16 @@ ADDTEST
     async fn test_frame_template_with_empty_brackets() {
         let mut interp = Interpreter::new();
 
-        // FRAMEの出力形式（空の括弧が混在）をパースできることを確認
+        // 統一分数アーキテクチャ: 空の括弧はすべてNILに
+        // { ( [ ] [ ] ) ( [ ] [ ] ) } → フラット化されてNIL
         let result = interp.execute("{ ( [ ] [ ] ) ( [ ] [ ] ) }").await;
         assert!(result.is_ok(), "FRAME template should parse: {:?}", result);
 
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let crate::types::ValueType::Vector(outer) = val.val_type() {
-                // 外側は2要素
-                assert_eq!(outer.len(), 2);
-                // 各要素も2要素のベクター（NILが2つ）
-                for inner in outer {
-                    if let crate::types::ValueType::Vector(v) = inner.val_type() {
-                        assert_eq!(v.len(), 2);
-                        for elem in v {
-                            assert!(matches!(elem.val_type(), crate::types::ValueType::Nil));
-                        }
-                    } else {
-                        panic!("Expected inner vector");
-                    }
-                }
-            } else {
-                panic!("Expected outer vector");
-            }
+            // 統一分数アーキテクチャでは、空のネスト構造はNILになる
+            assert!(matches!(val.val_type(), crate::types::ValueType::Nil),
+                "Expected NIL, got {:?}", val.val_type());
         }
     }
 }
