@@ -59,7 +59,12 @@ fn display_as_numbers(data: &[Fraction]) -> String {
 
     let inner: Vec<String> = data.iter().map(format_fraction).collect();
 
-    format!("{{ {} }}", inner.join(" "))
+    // 単一要素の場合はスペースなし、複数要素の場合はスペースあり
+    if data.len() == 1 {
+        format!("{{{}}}", inner[0])
+    } else {
+        format!("{{ {} }}", inner.join(" "))
+    }
 }
 
 /// Fractionを表示用にフォーマット

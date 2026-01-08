@@ -20,26 +20,24 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // 説明なしの場合: [ベクタ] ['NAME']
     let mut description = None;
 
-    // ヘルパー関数: ベクトルラップされた文字列かチェック
-    let is_wrapped_string = |val: &crate::types::Value| -> bool {
-        if let ValueType::Vector(v) = &val.val_type() {
-            if v.len() == 1 {
+    // ヘルパー関数: 文字列かチェック（直接またはベクトルラップ）
+    let is_string_value = |val: &crate::types::Value| -> bool {
+        match &val.val_type() {
+            ValueType::String(_) => true,
+            ValueType::Vector(v) if v.len() == 1 => {
                 matches!(v[0].val_type(), ValueType::String(_))
-            } else {
-                false
             }
-        } else {
-            false
+            _ => false,
         }
     };
 
     let has_description = if interp.stack.len() >= 3 {
-        // トップ2つがベクトルラップされた文字列の場合のみ、説明ありと判定
+        // トップ2つが文字列の場合のみ、説明ありと判定
         if let Some(top_val) = interp.stack.last() {
-            if is_wrapped_string(top_val) {
-                // 次（2番目）もベクトルラップされた文字列かチェック
+            if is_string_value(top_val) {
+                // 次（2番目）も文字列かチェック
                 if let Some(second_val) = interp.stack.get(interp.stack.len() - 2) {
-                    is_wrapped_string(second_val)
+                    is_string_value(second_val)
                 } else {
                     false
                 }
@@ -55,13 +53,17 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     if has_description {
         if let Some(desc_val) = interp.stack.pop() {
-            // ベクトルラップされた文字列から取得
-            if let ValueType::Vector(v) = desc_val.val_type() {
-                if v.len() == 1 {
+            // 文字列を取得（直接またはベクトルラップ）
+            match desc_val.val_type() {
+                ValueType::String(s) => {
+                    description = Some(s);
+                }
+                ValueType::Vector(v) if v.len() == 1 => {
                     if let ValueType::String(s) = &v[0].val_type() {
                         description = Some(s.clone());
                     }
                 }
+                _ => {}
             }
         }
     }
@@ -74,7 +76,9 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 定義本体を文字列として取得
+    // 新アーキテクチャ: 直接 String または Vector[String] のどちらも受け付ける
     let definition_str = match &def_val.val_type() {
+        ValueType::String(s) => s.clone(),
         ValueType::Vector(vec) => {
             if vec.len() == 1 {
                 match &vec[0].val_type() {

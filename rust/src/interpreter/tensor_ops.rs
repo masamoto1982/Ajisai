@@ -223,6 +223,12 @@ where
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     match &val.val_type() {
+        ValueType::Number(n) => {
+            // 単一数値の場合
+            let result = op(n);
+            interp.stack.push(wrap_number(result));
+            Ok(())
+        }
         ValueType::Vector(v) => {
             let result = match apply_unary_to_vector(v, &op) {
                 Ok(r) => r,
@@ -237,7 +243,7 @@ where
         }
         _ => {
             interp.stack.push(val);
-            Err(AjisaiError::from(format!("{} requires vector", op_name)))
+            Err(AjisaiError::from(format!("{} requires number or vector", op_name)))
         }
     }
 }
