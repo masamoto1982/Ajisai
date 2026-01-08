@@ -382,13 +382,30 @@ impl Value {
 
     /// 後方互換性: from_vector
     ///
-    /// 古いAPIとの互換性のため、Value のベクタを受け取り
-    /// フラットな分数ベクタに変換します。
+    /// 古いAPIとの互換性のため、Value のベクタを受け取ります。
+    ///
+    /// 統一分数アーキテクチャ: 単一要素の場合はそのまま返します（表示ヒント保持）。
+    /// 複数要素の場合は、すべての要素をフラット化します。
     pub fn from_vector(values: Vec<Value>) -> Self {
-        // 各Valueのデータを連結
+        if values.is_empty() {
+            // 空ベクタ = NIL
+            return Self::nil();
+        }
+
+        if values.len() == 1 {
+            // 単一要素の場合はそのまま返す（表示ヒントを保持）
+            return values.into_iter().next().unwrap();
+        }
+
+        // 複数要素の場合: すべての要素をフラット化
         let data: Vec<Fraction> = values.iter()
             .flat_map(|v| v.data.iter().cloned())
             .collect();
+
+        // 空になった場合はNIL
+        if data.is_empty() {
+            return Self::nil();
+        }
 
         Self {
             data,
