@@ -18,7 +18,11 @@ pub mod hash;           // 分数ハッシュ関数
 pub mod audio;          // 音声再生
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, ValueType, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
+
+// テストで後方互換性APIを使用するため、cfg(test)でのみインポート
+#[cfg(test)]
+use crate::types::ValueType;
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
@@ -227,8 +231,6 @@ impl Interpreter {
 
     /// WAIT ワードの引数を取得し、AsyncAction を構築する
     fn prepare_wait_action(&mut self) -> Result<AsyncAction> {
-        use num_traits::{One, ToPrimitive};
-
         if self.stack.len() < 2 {
             return Err(AjisaiError::from(
                 "WAIT requires word name and delay. Usage: 'WORD' [ ms ] WAIT"
@@ -238,22 +240,12 @@ impl Interpreter {
         let delay_val = self.stack.pop().unwrap();
         let name_val = self.stack.pop().unwrap();
 
-        // 遅延時間を取得
-        let duration_ms = match delay_val.val_type() {
-            ValueType::Vector(v) if v.len() == 1 => {
-                match v[0].val_type() {
-                    ValueType::Number(n) if n.denominator == num_bigint::BigInt::one() => {
-                        n.numerator.to_u64().ok_or_else(||
-                            AjisaiError::from("Delay too large")
-                        )?
-                    },
-                    _ => return Err(AjisaiError::type_error("integer", "other type")),
-                }
-            },
-            _ => return Err(AjisaiError::type_error(
-                "single-element vector with integer",
-                "other type"
-            )),
+        // 遅延時間を取得（統一分数アーキテクチャ: 直接整数を抽出）
+        let n = helpers::get_integer_from_value(&delay_val)?;
+        let duration_ms = if n < 0 {
+            return Err(AjisaiError::from("Delay must be non-negative"));
+        } else {
+            n as u64
         };
 
         // ワード名を取得
@@ -455,29 +447,19 @@ impl Interpreter {
         Ok(None)
     }
 
+    /// ガード節の条件評価
+    ///
+    /// 統一分数アーキテクチャ:
+    /// - 空Vector（NIL）= false
+    /// - 全てゼロのVector = false
+    /// - それ以外 = true
     fn is_condition_true(&mut self) -> Result<bool> {
         if self.stack.is_empty() {
             return Ok(false);
         }
 
         let top = self.stack.pop().unwrap();
-
-        match top.val_type() {
-            ValueType::Boolean(b) => Ok(b),
-            ValueType::Vector(v) => {
-                if v.len() == 1 {
-                    if let ValueType::Boolean(b) = v[0].val_type() {
-                        Ok(b)
-                    } else {
-                        Ok(true)
-                    }
-                } else {
-                    Ok(!v.is_empty())
-                }
-            },
-            ValueType::Nil => Ok(false),
-            _ => Ok(true),
-        }
+        Ok(top.is_truthy())
     }
 
     // トークンを行に分割

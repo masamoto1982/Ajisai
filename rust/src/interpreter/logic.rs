@@ -16,16 +16,18 @@ use crate::types::fraction::Fraction;
 
 /// NOT 演算子 - 論理否定
 ///
-/// ゼロなら 1、非ゼロなら 0
+/// Kleene三値論理:
+/// - ゼロなら 1、非ゼロなら 0
+/// - NIL（空Vector）なら NIL を返す（不明の否定は不明）
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // NIL（空）の場合はエラー
+            // NIL（空）の場合はNILを返す（Kleene三値論理: NOT NIL = NIL）
             if val.data.is_empty() {
-                interp.stack.push(val);
-                return Err(AjisaiError::from("Cannot apply NOT to NIL"));
+                interp.stack.push(Value::nil());
+                return Ok(());
             }
 
             // 各要素を反転
@@ -56,18 +58,43 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 
 /// AND 演算子 - 論理積
 ///
-/// 両方が非ゼロなら 1、それ以外は 0
+/// Kleene三値論理:
+/// - 両方が非ゼロなら 1、それ以外は 0
+/// - FALSE AND NIL = FALSE（FALSEが確定的に偽）
+/// - TRUE AND NIL = NIL（不明が伝播）
+/// - NIL AND NIL = NIL（不明が伝播）
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // NILチェック
-            if a_val.data.is_empty() || b_val.data.is_empty() {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::from("Cannot apply AND to NIL"));
+            let a_is_nil = a_val.data.is_empty();
+            let b_is_nil = b_val.data.is_empty();
+
+            // Kleene三値論理でのAND処理
+            if a_is_nil && b_is_nil {
+                // NIL AND NIL = NIL
+                interp.stack.push(Value::nil());
+                return Ok(());
+            } else if a_is_nil {
+                // NIL AND b: bがfalsy（全て0）ならFALSE、それ以外はNIL
+                let b_has_any_truthy = b_val.data.iter().any(|f| !f.is_zero());
+                if b_has_any_truthy {
+                    interp.stack.push(Value::nil());
+                } else {
+                    interp.stack.push(Value::from_bool(false));
+                }
+                return Ok(());
+            } else if b_is_nil {
+                // a AND NIL: aがfalsy（全て0）ならFALSE、それ以外はNIL
+                let a_has_any_truthy = a_val.data.iter().any(|f| !f.is_zero());
+                if a_has_any_truthy {
+                    interp.stack.push(Value::nil());
+                } else {
+                    interp.stack.push(Value::from_bool(false));
+                }
+                return Ok(());
             }
 
             let a_len = a_val.data.len();
@@ -130,10 +157,23 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
 
-            // 全ての要素が truthy かチェック
+            // Kleene三値論理でのSTACKモードAND:
+            // - どれかがNILでどれかがtruthyなら NIL
+            // - どれかがfalsy（非NILで全て0）なら FALSE
+            // - 全てがtruthyなら TRUE
+            let has_nil = items.iter().any(|v| v.data.is_empty());
+            let has_falsy_non_nil = items.iter().any(|v| !v.data.is_empty() && !v.is_truthy());
             let all_truthy = items.iter().all(|v| v.is_truthy());
 
-            interp.stack.push(Value::from_bool(all_truthy));
+            if has_falsy_non_nil {
+                interp.stack.push(Value::from_bool(false));
+            } else if has_nil {
+                interp.stack.push(Value::nil());
+            } else if all_truthy {
+                interp.stack.push(Value::from_bool(true));
+            } else {
+                interp.stack.push(Value::from_bool(false));
+            }
             Ok(())
         }
     }
@@ -141,18 +181,43 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
 /// OR 演算子 - 論理和
 ///
-/// どちらかが非ゼロなら 1
+/// Kleene三値論理:
+/// - どちらかが非ゼロなら 1
+/// - TRUE OR NIL = TRUE（TRUEが確定的に真）
+/// - FALSE OR NIL = NIL（不明が伝播）
+/// - NIL OR NIL = NIL（不明が伝播）
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // NILチェック
-            if a_val.data.is_empty() || b_val.data.is_empty() {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::from("Cannot apply OR to NIL"));
+            let a_is_nil = a_val.data.is_empty();
+            let b_is_nil = b_val.data.is_empty();
+
+            // Kleene三値論理でのOR処理
+            if a_is_nil && b_is_nil {
+                // NIL OR NIL = NIL
+                interp.stack.push(Value::nil());
+                return Ok(());
+            } else if a_is_nil {
+                // NIL OR b: bがtruthy（どれか非0）ならTRUE、それ以外はNIL
+                let b_has_any_truthy = b_val.data.iter().any(|f| !f.is_zero());
+                if b_has_any_truthy {
+                    interp.stack.push(Value::from_bool(true));
+                } else {
+                    interp.stack.push(Value::nil());
+                }
+                return Ok(());
+            } else if b_is_nil {
+                // a OR NIL: aがtruthy（どれか非0）ならTRUE、それ以外はNIL
+                let a_has_any_truthy = a_val.data.iter().any(|f| !f.is_zero());
+                if a_has_any_truthy {
+                    interp.stack.push(Value::from_bool(true));
+                } else {
+                    interp.stack.push(Value::nil());
+                }
+                return Ok(());
             }
 
             let a_len = a_val.data.len();
@@ -215,10 +280,20 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
 
-            // どれかが truthy かチェック
-            let any_truthy = items.iter().any(|v| v.is_truthy());
+            // Kleene三値論理でのSTACKモードOR:
+            // - どれかがtruthy（非NILで非0要素あり）なら TRUE
+            // - どれかがNILで残りがfalsy（全て0）なら NIL
+            // - 全てがfalsy（非NILで全て0）なら FALSE
+            let has_nil = items.iter().any(|v| v.data.is_empty());
+            let has_truthy = items.iter().any(|v| v.is_truthy());
 
-            interp.stack.push(Value::from_bool(any_truthy));
+            if has_truthy {
+                interp.stack.push(Value::from_bool(true));
+            } else if has_nil {
+                interp.stack.push(Value::nil());
+            } else {
+                interp.stack.push(Value::from_bool(false));
+            }
             Ok(())
         }
     }
