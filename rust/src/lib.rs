@@ -383,6 +383,21 @@ mod dimension_limit_tests {
     }
 
     #[tokio::test]
+    async fn test_bracket_display_3d_complex() {
+        // 3次元構造 [2, 3, 1] のテスト
+        let mut interp = Interpreter::new();
+        interp.execute("{ ( [ 1 ] [ 2 ] [ 3 ] ) ( [ 4 ] [ 5 ] [ 6 ] ) }").await.unwrap();
+        let stack = interp.get_stack();
+        let result = format!("{}", stack[0]);
+        // shape should be [2, 3, 1] - 3D structure
+        assert!(result.starts_with('{'), "3D outermost should be {{ }}, got: {}", result);
+        assert!(result.contains('('), "3D second level should contain (), got: {}", result);
+        assert!(result.contains('['), "3D innermost should contain [], got: {}", result);
+        // Verify exact format
+        assert_eq!(result, "{ ( [1] [2] [3] ) ( [4] [5] [6] ) }", "Expected 3D structure");
+    }
+
+    #[tokio::test]
     async fn test_dotdot_operation_sets_mode() {
         // .. オペレーションがスタック操作モードを設定する
         let mut interp = Interpreter::new();

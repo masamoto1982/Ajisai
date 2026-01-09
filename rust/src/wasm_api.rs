@@ -422,6 +422,43 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
 fn value_to_js_value(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
 
+    // 統一分数アーキテクチャ: shape情報を使って型を決定
+    // NILチェック
+    if value.data.is_empty() {
+        js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
+        js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        return obj.into();
+    }
+
+    // 多次元配列（shape.len() > 1）の場合はtensorとして送信
+    // これにより shape [2, 3, 1] などのネスト構造が保持される
+    if value.shape.len() > 1 {
+        js_sys::Reflect::set(&obj, &"type".into(), &"tensor".into()).unwrap();
+
+        let tensor_obj = js_sys::Object::new();
+
+        // shape配列を作成
+        let shape_array = js_sys::Array::new();
+        for &dim in &value.shape {
+            shape_array.push(&(dim as u32).into());
+        }
+        js_sys::Reflect::set(&tensor_obj, &"shape".into(), &shape_array).unwrap();
+
+        // data配列を作成（各分数をオブジェクトとして）
+        let data_array = js_sys::Array::new();
+        for frac in &value.data {
+            let num_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&num_obj, &"numerator".into(), &frac.numerator.to_string().into()).unwrap();
+            js_sys::Reflect::set(&num_obj, &"denominator".into(), &frac.denominator.to_string().into()).unwrap();
+            data_array.push(&num_obj);
+        }
+        js_sys::Reflect::set(&tensor_obj, &"data".into(), &data_array).unwrap();
+
+        js_sys::Reflect::set(&obj, &"value".into(), &tensor_obj).unwrap();
+        return obj.into();
+    }
+
+    // 以下は従来のロジック（後方互換性のため）
     let type_str = match &value.val_type() {
         ValueType::Number(_) => "number",
         ValueType::String(_) => "string",
