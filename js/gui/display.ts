@@ -96,11 +96,17 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number):
 
     if (shape.length === 0) {
         if (data.length === 0) return `${open}${close}`;
-        return `${open} ${formatFraction(data[0])} ${close}`;
+        // 単一要素はスペースなし
+        return `${open}${formatFraction(data[0])}${close}`;
     }
 
     if (shape.length === 1) {
         if (data.length === 0) return `${open}${close}`;
+        if (data.length === 1) {
+            // 単一要素はスペースなし
+            return `${open}${formatFraction(data[0])}${close}`;
+        }
+        // 複数要素はスペースあり
         const elements = data.map(frac => formatFraction(frac)).join(' ');
         return `${open} ${elements} ${close}`;
     }
@@ -115,6 +121,11 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number):
         parts.push(formatTensorRecursive(innerShape, innerData, depth + 1));
     }
 
+    if (parts.length === 1) {
+        // 単一要素はスペースなし
+        return `${open}${parts[0]}${close}`;
+    }
+    // 複数要素はスペースあり
     return `${open} ${parts.join(' ')} ${close}`;
 };
 
@@ -130,11 +141,22 @@ const formatVector = (value: unknown, depth: number): string => {
     const [open, close] = getBrackets(depth);
 
     if (Array.isArray(value)) {
+        if (value.length === 0) {
+            return `${open}${close}`;
+        }
+        if (value.length === 1) {
+            // 単一要素はスペースなし
+            try {
+                return `${open}${formatValue(value[0], depth + 1)}${close}`;
+            } catch {
+                return `${open}?${close}`;
+            }
+        }
+        // 複数要素はスペースあり
         const elements = value.map((v: Value) => {
-            // ネストした要素は depth + 1 で表示
             try { return formatValue(v, depth + 1); } catch { return '?'; }
         }).join(' ');
-        return `${open}${elements ? ' ' + elements + ' ' : ''}${close}`;
+        return `${open} ${elements} ${close}`;
     }
     return `${open}${close}`;
 };
