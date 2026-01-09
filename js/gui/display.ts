@@ -34,11 +34,15 @@ export interface Display {
 // ============================================================
 
 const getBrackets = (depth: number): [string, string] => {
+    // Rust側のBracketType::from_depthと一致させる
+    // depth 0: { } (最外殻)
+    // depth 1: ( ) (2番目の次元)
+    // depth 2: [ ] (3番目の次元、サイクル)
     switch (depth % 3) {
-        case 0: return ['[', ']'];
-        case 1: return ['{', '}'];
-        case 2: return ['(', ')'];
-        default: return ['[', ']'];
+        case 0: return ['{', '}'];
+        case 1: return ['(', ')'];
+        case 2: return ['[', ']'];
+        default: return ['{', '}'];
     }
 };
 
@@ -122,10 +126,12 @@ const formatTensor = (value: unknown, depth: number): string => {
 };
 
 const formatVector = (value: unknown, depth: number): string => {
-    const [open, close] = getBrackets(depth + 1);
+    // depth=0で最外殻の{}を使用するため、depthをそのまま使用
+    const [open, close] = getBrackets(depth);
 
     if (Array.isArray(value)) {
         const elements = value.map((v: Value) => {
+            // ネストした要素は depth + 1 で表示
             try { return formatValue(v, depth + 1); } catch { return '?'; }
         }).join(' ');
         return `${open}${elements ? ' ' + elements + ' ' : ''}${close}`;
@@ -143,7 +149,8 @@ const formatValue = (item: Value, depth: number): string => {
         case 'datetime':
             return formatDateTime(item.value);
         case 'tensor':
-            return formatTensor(item.value, depth + 1);
+            // tensorはdepth=0から開始し、formatTensorRecursive内でdepthを増加
+            return formatTensor(item.value, depth);
         case 'string':
             return `'${item.value}'`;
         case 'symbol':
