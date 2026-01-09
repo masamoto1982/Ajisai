@@ -65,11 +65,8 @@ fn display_with_shape(data: &[Fraction], shape: &[usize], depth: usize) -> Strin
     // 形状が空、または1次元の場合
     if shape.is_empty() || shape.len() == 1 {
         let inner: Vec<String> = data.iter().map(format_fraction).collect();
-        if inner.len() == 1 {
-            format!("{}{}{}", open, inner[0], close)
-        } else {
-            format!("{} {} {}", open, inner.join(" "), close)
-        }
+        // 常にスペースあり表示で統一
+        format!("{} {} {}", open, inner.join(" "), close)
     } else {
         // 多次元の場合: 再帰的に処理
         let outer_size = shape[0];

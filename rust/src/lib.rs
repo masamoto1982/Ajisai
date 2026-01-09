@@ -394,7 +394,7 @@ mod dimension_limit_tests {
         assert!(result.contains('('), "3D second level should contain (), got: {}", result);
         assert!(result.contains('['), "3D innermost should contain [], got: {}", result);
         // Verify exact format
-        assert_eq!(result, "{ ( [1] [2] [3] ) ( [4] [5] [6] ) }", "Expected 3D structure");
+        assert_eq!(result, "{ ( [ 1 ] [ 2 ] [ 3 ] ) ( [ 4 ] [ 5 ] [ 6 ] ) }", "Expected 3D structure");
     }
 
     #[tokio::test]
