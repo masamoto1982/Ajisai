@@ -55,6 +55,7 @@ pub fn transpose(values: &[Value], rows: usize, cols: usize) -> Result<Vec<Value
     Ok(vec![Value {
         data: result_data,
         display_hint: DisplayHint::Number,
+        shape: vec![cols, rows],  // Transposed shape
     }])
 }
 
@@ -87,6 +88,7 @@ pub fn build_nested_from_data(shape: &[usize], data: &[Fraction]) -> Result<Vec<
     Ok(vec![Value {
         data: data.to_vec(),
         display_hint: DisplayHint::Number,
+        shape: shape.to_vec(),
     }])
 }
 

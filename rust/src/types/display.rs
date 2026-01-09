@@ -3,8 +3,9 @@
 // 値の表示ロジック
 //
 // DisplayHint に基づいて、または自動判定で適切な形式に変換する。
+// 形状情報に基づいて深さに応じた括弧を使用する。
 
-use super::{Value, DisplayHint};
+use super::{Value, DisplayHint, BracketType};
 use super::fraction::Fraction;
 use std::fmt;
 use num_traits::One;
@@ -12,8 +13,8 @@ use num_traits::One;
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.display_hint {
-            DisplayHint::Auto => write!(f, "{}", auto_display(&self.data)),
-            DisplayHint::Number => write!(f, "{}", display_as_numbers(&self.data)),
+            DisplayHint::Auto => write!(f, "{}", auto_display(&self.data, &self.shape)),
+            DisplayHint::Number => write!(f, "{}", display_with_shape(&self.data, &self.shape, 0)),
             DisplayHint::String => write!(f, "{}", display_as_string(&self.data)),
             DisplayHint::Boolean => write!(f, "{}", display_as_boolean(&self.data)),
             DisplayHint::DateTime => write!(f, "{}", display_as_datetime(&self.data)),
@@ -22,7 +23,7 @@ impl fmt::Display for Value {
 }
 
 /// 自動判定による表示
-fn auto_display(data: &[Fraction]) -> String {
+fn auto_display(data: &[Fraction], shape: &[usize]) -> String {
     // 空なら NIL
     if data.is_empty() {
         return "NIL".to_string();
@@ -33,8 +34,8 @@ fn auto_display(data: &[Fraction]) -> String {
         return display_as_string(data);
     }
 
-    // それ以外は数値として表示
-    display_as_numbers(data)
+    // それ以外は数値として表示（形状情報付き）
+    display_with_shape(data, shape, 0)
 }
 
 /// 文字列っぽいかどうかを判定
@@ -51,19 +52,41 @@ fn looks_like_string(data: &[Fraction]) -> bool {
     })
 }
 
-/// 数値として表示
-fn display_as_numbers(data: &[Fraction]) -> String {
+/// 形状情報を使用した表示（深さに応じた括弧）
+fn display_with_shape(data: &[Fraction], shape: &[usize], depth: usize) -> String {
     if data.is_empty() {
         return "NIL".to_string();
     }
 
-    let inner: Vec<String> = data.iter().map(format_fraction).collect();
+    let bracket = BracketType::from_depth(depth);
+    let open = bracket.opening_char();
+    let close = bracket.closing_char();
 
-    // 単一要素の場合はスペースなし、複数要素の場合はスペースあり
-    if data.len() == 1 {
-        format!("{{{}}}", inner[0])
+    // 形状が空、または1次元の場合
+    if shape.is_empty() || shape.len() == 1 {
+        let inner: Vec<String> = data.iter().map(format_fraction).collect();
+        if inner.len() == 1 {
+            format!("{}{}{}", open, inner[0], close)
+        } else {
+            format!("{} {} {}", open, inner.join(" "), close)
+        }
     } else {
-        format!("{{ {} }}", inner.join(" "))
+        // 多次元の場合: 再帰的に処理
+        let outer_size = shape[0];
+        let inner_shape = &shape[1..];
+        let inner_size: usize = inner_shape.iter().product();
+
+        let mut parts = Vec::new();
+        for i in 0..outer_size {
+            let start = i * inner_size;
+            let end = start + inner_size;
+            if end <= data.len() {
+                let slice = &data[start..end];
+                parts.push(display_with_shape(slice, inner_shape, depth + 1));
+            }
+        }
+
+        format!("{} {} {}", open, parts.join(" "), close)
     }
 }
 
@@ -124,7 +147,7 @@ fn display_as_boolean(data: &[Fraction]) -> String {
 /// 日時として表示
 fn display_as_datetime(data: &[Fraction]) -> String {
     if data.is_empty() || data.len() != 1 {
-        return display_as_numbers(data);
+        return display_with_shape(data, &[data.len()], 0);
     }
 
     // Unix タイムスタンプとして解釈
