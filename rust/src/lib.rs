@@ -26,7 +26,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{3}", "CEIL(7/3) should be 3");
+        assert_eq!(result, "{ 3 }", "CEIL(7/3) should be 3");
     }
 
     #[tokio::test]
@@ -36,7 +36,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{-2}", "CEIL(-7/3) should be -2");
+        assert_eq!(result, "{ -2 }", "CEIL(-7/3) should be -2");
     }
 
     #[tokio::test]
@@ -46,7 +46,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{2}", "CEIL(6/3) should be 2");
+        assert_eq!(result, "{ 2 }", "CEIL(6/3) should be 2");
     }
 
     #[tokio::test]
@@ -56,7 +56,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{-2}", "CEIL(-6/3) should be -2");
+        assert_eq!(result, "{ -2 }", "CEIL(-6/3) should be -2");
     }
 
     #[tokio::test]
@@ -72,7 +72,7 @@ mod ceil_tests {
         assert_eq!(stack.len(), 1);
         // 1 > 3 is FALSE, so default is executed
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{0}");
+        assert_eq!(result, "{ 0 }");
     }
 
     #[tokio::test]
@@ -107,7 +107,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{2}", "ROUND(7/3) should be 2");
+        assert_eq!(result, "{ 2 }", "ROUND(7/3) should be 2");
     }
 
     #[tokio::test]
@@ -118,7 +118,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{3}", "ROUND(5/2) should be 3");
+        assert_eq!(result, "{ 3 }", "ROUND(5/2) should be 3");
     }
 
     #[tokio::test]
@@ -129,7 +129,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{3}", "ROUND(8/3) should be 3");
+        assert_eq!(result, "{ 3 }", "ROUND(8/3) should be 3");
     }
 
     #[tokio::test]
@@ -140,7 +140,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{-2}", "ROUND(-7/3) should be -2");
+        assert_eq!(result, "{ -2 }", "ROUND(-7/3) should be -2");
     }
 
     #[tokio::test]
@@ -151,7 +151,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{-3}", "ROUND(-5/2) should be -3");
+        assert_eq!(result, "{ -3 }", "ROUND(-5/2) should be -3");
     }
 
     #[tokio::test]
@@ -162,7 +162,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{-3}", "ROUND(-8/3) should be -3");
+        assert_eq!(result, "{ -3 }", "ROUND(-8/3) should be -3");
     }
 
     #[tokio::test]
@@ -173,7 +173,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{2}", "ROUND(6/3) should be 2");
+        assert_eq!(result, "{ 2 }", "ROUND(6/3) should be 2");
     }
 
     #[tokio::test]
@@ -184,7 +184,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{-2}", "ROUND(-6/3) should be -2");
+        assert_eq!(result, "{ -2 }", "ROUND(-6/3) should be -2");
     }
 
     #[tokio::test]
@@ -200,7 +200,7 @@ mod round_tests {
         assert_eq!(stack.len(), 1);
         // 1 > 3 is FALSE, so default is executed
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{0}");
+        assert_eq!(result, "{ 0 }");
     }
 
     #[tokio::test]
