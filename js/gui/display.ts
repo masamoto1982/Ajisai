@@ -144,8 +144,11 @@ const formatValue = (item: Value, depth: number): string => {
     if (!item || !item.type) return 'unknown';
 
     switch (item.type) {
-        case 'number':
-            return formatNumber(item.value);
+        case 'number': {
+            // スカラー値も括弧で囲む（統一分数アーキテクチャ）
+            const [open, close] = getBrackets(depth);
+            return `${open}${formatNumber(item.value)}${close}`;
+        }
         case 'datetime':
             return formatDateTime(item.value);
         case 'tensor':
