@@ -1,9 +1,58 @@
 // rust/src/interpreter/dictionary.rs
+//
+// 統一分数アーキテクチャ版の辞書操作
+//
+// すべての値は Vec<Fraction> として表現される。
+// 文字列は分数のベクタ（各要素がコードポイント）として格納される。
 
 use crate::interpreter::{Interpreter, WordDefinition, OperationTarget};
+use crate::interpreter::helpers::get_word_name_from_value;
 use crate::error::{AjisaiError, Result};
-use crate::types::{Token, ValueType, ExecutionLine};
+use crate::types::{Token, ExecutionLine, DisplayHint};
 use std::collections::HashSet;
+
+/// 値を文字列として解釈する
+///
+/// 統一分数アーキテクチャ: すべての値は分数のベクタなので、
+/// 各分数をコードポイントとして文字列に変換する。
+fn value_to_string(val: &crate::types::Value) -> Result<String> {
+    if val.data.is_empty() {
+        return Err(AjisaiError::from("Cannot convert NIL to string"));
+    }
+
+    let chars: String = val.data.iter()
+        .filter_map(|f| {
+            f.to_i64().and_then(|n| {
+                if n >= 0 && n <= 0x10FFFF {
+                    char::from_u32(n as u32)
+                } else {
+                    None
+                }
+            })
+        })
+        .collect();
+
+    Ok(chars)
+}
+
+/// 値が文字列として解釈可能かチェック
+///
+/// DisplayHint が String の場合、または有効なコードポイントの範囲内にある場合
+fn is_string_like(val: &crate::types::Value) -> bool {
+    if val.data.is_empty() {
+        return false;
+    }
+
+    // DisplayHint が String の場合は確実に文字列
+    if val.display_hint == DisplayHint::String {
+        return true;
+    }
+
+    // すべての要素が有効なコードポイント範囲にあるかチェック
+    val.data.iter().all(|f| {
+        f.to_i64().map(|n| n >= 0 && n <= 0x10FFFF).unwrap_or(false)
+    })
+}
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // DEFはStackモードをサポートしない（辞書操作ワード）
@@ -20,24 +69,13 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // 説明なしの場合: [ベクタ] ['NAME']
     let mut description = None;
 
-    // ヘルパー関数: 文字列かチェック（直接またはベクトルラップ）
-    let is_string_value = |val: &crate::types::Value| -> bool {
-        match &val.val_type() {
-            ValueType::String(_) => true,
-            ValueType::Vector(v) if v.len() == 1 => {
-                matches!(v[0].val_type(), ValueType::String(_))
-            }
-            _ => false,
-        }
-    };
-
     let has_description = if interp.stack.len() >= 3 {
-        // トップ2つが文字列の場合のみ、説明ありと判定
+        // トップ2つが文字列的な値の場合のみ、説明ありと判定
         if let Some(top_val) = interp.stack.last() {
-            if is_string_value(top_val) {
-                // 次（2番目）も文字列かチェック
+            if is_string_like(top_val) {
+                // 次（2番目）も文字列的かチェック
                 if let Some(second_val) = interp.stack.get(interp.stack.len() - 2) {
-                    is_string_value(second_val)
+                    is_string_like(second_val)
                 } else {
                     false
                 }
@@ -53,44 +91,22 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     if has_description {
         if let Some(desc_val) = interp.stack.pop() {
-            // 文字列を取得（直接またはベクトルラップ）
-            match desc_val.val_type() {
-                ValueType::String(s) => {
-                    description = Some(s);
-                }
-                ValueType::Vector(v) if v.len() == 1 => {
-                    if let ValueType::String(s) = &v[0].val_type() {
-                        description = Some(s.clone());
-                    }
-                }
-                _ => {}
+            // 文字列を取得（統一分数アーキテクチャ: 直接変換）
+            if let Ok(s) = value_to_string(&desc_val) {
+                description = Some(s);
             }
         }
     }
-    
-    // スタックから名前を取得（ベクトルラップされた文字列として）
+
+    // スタックから名前を取得
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let name_str = crate::interpreter::helpers::get_word_name_from_value(&name_val)?;
-    
+    let name_str = get_word_name_from_value(&name_val)?;
+
     // 定義本体を取得
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 定義本体を文字列として取得
-    // 新アーキテクチャ: 直接 String または Vector[String] のどちらも受け付ける
-    let definition_str = match &def_val.val_type() {
-        ValueType::String(s) => s.clone(),
-        ValueType::Vector(vec) => {
-            if vec.len() == 1 {
-                match &vec[0].val_type() {
-                    ValueType::String(s) => s.clone(),
-                    _ => return Err(AjisaiError::type_error("string in vector", "other type")),
-                }
-            } else {
-                return Err(AjisaiError::type_error("single-element vector", "multi-element vector"));
-            }
-        },
-        _ => return Err(AjisaiError::type_error("vector with string", "other type")),
-    };
+    // 定義本体を文字列として取得（統一分数アーキテクチャ）
+    let definition_str = value_to_string(&def_val)?;
 
     // 定義本体をトークン化
     let custom_word_names: HashSet<String> = interp.dictionary.iter()
@@ -239,16 +255,8 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let name = match &val.val_type() {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type() {
-                ValueType::String(s) => s.clone(),
-                _ => return Err(AjisaiError::type_error("string", "other type")),
-            }
-        }
-        ValueType::String(s) => s.clone(),
-        _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
-    };
+    // 統一分数アーキテクチャ: 値を文字列として解釈
+    let name = get_word_name_from_value(&val)?;
 
     let upper_name = name.to_uppercase();
 
@@ -318,17 +326,8 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     // LOOKUP (?) は 'NAME' を期待する
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // op_del と同様に、Vector内の文字列も処理する
-    let name_str = match &name_val.val_type() {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type() {
-                ValueType::String(s) => s.clone(),
-                _ => return Err(AjisaiError::type_error("string", "other type")),
-            }
-        }
-        ValueType::String(s) => s.clone(),
-        _ => return Err(AjisaiError::type_error("string 'name'", "other type")),
-    };
+    // 統一分数アーキテクチャ: 値を文字列として解釈
+    let name_str = get_word_name_from_value(&name_val)?;
 
     let upper_name = name_str.to_uppercase();
     
