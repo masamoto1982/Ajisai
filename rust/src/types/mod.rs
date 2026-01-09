@@ -70,6 +70,11 @@ pub struct Value {
 
     /// 表示ヒント（演算には使用しない）
     pub display_hint: DisplayHint,
+
+    /// 形状情報（多次元配列の構造を保持）
+    /// 例: [2, 3] は 2x3 の行列を表す
+    /// 空の場合はスカラーまたは1次元配列
+    pub shape: Vec<usize>,
 }
 
 impl Value {
@@ -79,76 +84,91 @@ impl Value {
         Self {
             data: Vec::new(),
             display_hint: DisplayHint::Auto,
+            shape: vec![],
         }
     }
 
-    /// 単一の分数から値を作成
+    /// 単一の分数から値を作成（スカラー）
     #[inline]
     pub fn from_fraction(f: Fraction) -> Self {
         Self {
             data: vec![f],
             display_hint: DisplayHint::Number,
+            shape: vec![],  // スカラーは空の形状
         }
     }
 
-    /// 整数から値を作成
+    /// 整数から値を作成（スカラー）
     #[inline]
     pub fn from_int(n: i64) -> Self {
         Self {
             data: vec![Fraction::from(n)],
             display_hint: DisplayHint::Number,
+            shape: vec![],  // スカラーは空の形状
         }
     }
 
-    /// 真偽値から値を作成
+    /// 真偽値から値を作成（スカラー）
     #[inline]
     pub fn from_bool(b: bool) -> Self {
         Self {
             data: vec![Fraction::from(if b { 1 } else { 0 })],
             display_hint: DisplayHint::Boolean,
+            shape: vec![],  // スカラーは空の形状
         }
     }
 
     /// 文字列から値を作成
     pub fn from_string(s: &str) -> Self {
+        let data: Vec<Fraction> = s.bytes().map(|b| Fraction::from(b as i64)).collect();
+        let len = data.len();
         Self {
-            data: s.bytes().map(|b| Fraction::from(b as i64)).collect(),
+            data,
             display_hint: DisplayHint::String,
+            shape: vec![len],
         }
     }
 
     /// シンボルから値を作成（文字列として格納）
     pub fn from_symbol(s: &str) -> Self {
+        let data: Vec<Fraction> = s.bytes().map(|b| Fraction::from(b as i64)).collect();
+        let len = data.len();
         Self {
-            data: s.bytes().map(|b| Fraction::from(b as i64)).collect(),
+            data,
             display_hint: DisplayHint::String,
+            shape: vec![len],
         }
     }
 
     /// 分数の配列から値を作成
     #[inline]
     pub fn from_vec(v: Vec<Fraction>) -> Self {
+        let len = v.len();
         Self {
             data: v,
             display_hint: DisplayHint::Auto,
+            shape: vec![len],
         }
     }
 
     /// 分数の配列から値を作成（数値ヒント付き）
     #[inline]
     pub fn from_numbers(v: Vec<Fraction>) -> Self {
+        let len = v.len();
         Self {
             data: v,
             display_hint: DisplayHint::Number,
+            shape: vec![len],
         }
     }
 
-    /// DateTimeとして値を作成（Unixタイムスタンプ）
+    /// DateTimeとして値を作成（Unixタイムスタンプ、スカラー）
     #[inline]
     pub fn from_datetime(f: Fraction) -> Self {
         Self {
             data: vec![f],
             display_hint: DisplayHint::DateTime,
+            shape: vec![],  // スカラーは空の形状
         }
     }
 
@@ -156,6 +176,13 @@ impl Value {
     #[inline]
     pub fn with_hint(mut self, hint: DisplayHint) -> Self {
         self.display_hint = hint;
+        self
+    }
+
+    /// 形状を設定
+    #[inline]
+    pub fn with_shape(mut self, shape: Vec<usize>) -> Self {
+        self.shape = shape;
         self
     }
 
@@ -384,20 +411,21 @@ impl Value {
     ///
     /// 古いAPIとの互換性のため、Value のベクタを受け取ります。
     ///
-    /// 統一分数アーキテクチャ: 単一要素の場合はそのまま返します（表示ヒント保持）。
-    /// 複数要素の場合は、すべての要素をフラット化します。
+    /// 統一分数アーキテクチャ:
+    /// - 空ベクタ: NILを返す
+    /// - スカラー要素のみ: 1Dベクタを作成（shape = [n]）
+    /// - ベクタ要素: 次元を追加（shape = [n, inner_shape...]）
+    ///
+    /// スカラーは shape = [] として表現される。
+    /// これにより `[ 1 ]` → shape [1]、`[ [ 1 ] ]` → shape [1, 1] と区別できる。
     pub fn from_vector(values: Vec<Value>) -> Self {
         if values.is_empty() {
             // 空ベクタ = NIL
             return Self::nil();
         }
 
-        if values.len() == 1 {
-            // 単一要素の場合はそのまま返す（表示ヒントを保持）
-            return values.into_iter().next().unwrap();
-        }
-
-        // 複数要素の場合: すべての要素をフラット化
+        // すべての要素をフラット化しつつ形状情報を計算
+        let inner_shape = values[0].shape.clone();
         let data: Vec<Fraction> = values.iter()
             .flat_map(|v| v.data.iter().cloned())
             .collect();
@@ -407,9 +435,21 @@ impl Value {
             return Self::nil();
         }
 
+        // 新しい形状を計算: [要素数, 内部形状...]
+        let mut new_shape = vec![values.len()];
+        new_shape.extend(inner_shape);
+
+        // 表示ヒントを継承（単一要素の場合のみ）
+        let hint = if values.len() == 1 {
+            values[0].display_hint
+        } else {
+            DisplayHint::Auto
+        };
+
         Self {
             data,
-            display_hint: DisplayHint::Auto,
+            display_hint: hint,
+            shape: new_shape,
         }
     }
 

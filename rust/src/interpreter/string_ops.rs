@@ -27,7 +27,8 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         DisplayHint::Auto
     };
 
-    interp.stack.push(Value { data: result, display_hint: hint });
+    let len = result.len();
+    interp.stack.push(Value { data: result, display_hint: hint, shape: vec![len] });
     Ok(())
 }
 
@@ -48,9 +49,11 @@ pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
         }
     }).collect();
 
+    let len = result.len();
     interp.stack.push(Value {
         data: result,
         display_hint: DisplayHint::String,
+        shape: vec![len],
     });
     Ok(())
 }
@@ -72,9 +75,11 @@ pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
         }
     }).collect();
 
+    let len = result.len();
     interp.stack.push(Value {
         data: result,
         display_hint: DisplayHint::String,
+        shape: vec![len],
     });
     Ok(())
 }

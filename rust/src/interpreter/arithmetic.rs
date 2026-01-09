@@ -80,9 +80,11 @@ where
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
             }
 
+            let len = result_data.len();
             interp.stack.push(Value {
                 data: result_data,
                 display_hint: DisplayHint::Auto,
+                shape: vec![len],
             });
         },
 
@@ -213,9 +215,11 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
             }
 
+            let len = result_vec.len();
             interp.stack.push(Value {
                 data: result_vec,
                 display_hint: DisplayHint::Auto,
+                shape: vec![len],
             });
             return Ok(());
         } else {
@@ -298,9 +302,11 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
             }
 
+            let len = result_vec.len();
             interp.stack.push(Value {
                 data: result_vec,
                 display_hint: DisplayHint::Auto,
+                shape: vec![len],
             });
             return Ok(());
         } else {

@@ -39,9 +39,11 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                 })
                 .collect();
 
+            let len = result_data.len();
             interp.stack.push(Value {
                 data: result_data,
                 display_hint: DisplayHint::Boolean,
+                shape: vec![len],
             });
             Ok(())
         },
@@ -71,7 +73,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             let a_len = a_val.data.len();
             let b_len = b_val.data.len();
 
-            let result_data = if a_len > 1 && b_len == 1 {
+            let result_data: Vec<Fraction> = if a_len > 1 && b_len == 1 {
                 // aがベクタ、bがスカラー: bを各要素にブロードキャスト
                 let b_truthy = !b_val.data[0].is_zero();
                 a_val.data.iter()
@@ -103,9 +105,11 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                     .collect()
             };
 
+            let len = result_data.len();
             interp.stack.push(Value {
                 data: result_data,
                 display_hint: DisplayHint::Boolean,
+                shape: vec![len],
             });
             Ok(())
         },
@@ -154,7 +158,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             let a_len = a_val.data.len();
             let b_len = b_val.data.len();
 
-            let result_data = if a_len > 1 && b_len == 1 {
+            let result_data: Vec<Fraction> = if a_len > 1 && b_len == 1 {
                 // aがベクタ、bがスカラー: bを各要素にブロードキャスト
                 let b_truthy = !b_val.data[0].is_zero();
                 a_val.data.iter()
@@ -186,9 +190,11 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                     .collect()
             };
 
+            let len = result_data.len();
             interp.stack.push(Value {
                 data: result_data,
                 display_hint: DisplayHint::Boolean,
+                shape: vec![len],
             });
             Ok(())
         },
