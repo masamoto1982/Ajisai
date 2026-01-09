@@ -7,7 +7,7 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, DisplayHint};
+use crate::types::Value;
 use crate::types::fraction::Fraction;
 
 // ============================================================================
