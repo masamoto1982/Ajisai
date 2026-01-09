@@ -8,7 +8,7 @@
 // 統一分数アーキテクチャ対応版
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, DisplayHint};
+use crate::types::Value;
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
@@ -192,20 +192,6 @@ pub fn wrap_number(fraction: Fraction) -> Value {
     Value::from_fraction(fraction)
 }
 
-/// 真偽値を単一要素の値として作成する
-///
-/// 【責務】
-/// - 真偽値を1要素のValueとして作成
-///
-/// 【引数】
-/// - b: 真偽値
-///
-/// 【戻り値】
-/// - 真偽値ヒント付きの単一要素Value
-pub fn wrap_bool(b: bool) -> Value {
-    Value::from_bool(b)
-}
-
 /// DateTimeを単一要素の値として作成する
 ///
 /// 【責務】
@@ -236,16 +222,6 @@ pub fn wrap_value(value: Value) -> Value {
 /// 旧アーキテクチャとの互換性のために残されています。
 pub fn unwrap_single_element(value: Value) -> Value {
     value
-}
-
-/// 後方互換性: 単一要素ベクタから内部の値への参照を取得
-///
-/// 統一分数アーキテクチャでは、この関数は値の参照をそのまま返します。
-pub fn extract_single_element(value: &Value) -> Result<&Value> {
-    if value.data.is_empty() {
-        return Err(AjisaiError::from("Cannot extract element from NIL"));
-    }
-    Ok(value)
 }
 
 // ============================================================================
