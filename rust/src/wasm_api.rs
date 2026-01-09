@@ -414,6 +414,46 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             }
             Ok(Value::from_vector(vec))
         },
+        "tensor" => {
+            // 多次元配列: shape と data から Value を復元
+            let tensor_obj = js_sys::Object::from(value_js);
+
+            // shape を取得
+            let shape_js = js_sys::Reflect::get(&tensor_obj, &"shape".into())
+                .map_err(|_| "No shape in tensor".to_string())?;
+            let shape_array = js_sys::Array::from(&shape_js);
+            let mut shape = Vec::new();
+            for i in 0..shape_array.length() {
+                let dim = shape_array.get(i).as_f64().ok_or("Shape element not number")? as usize;
+                shape.push(dim);
+            }
+
+            // data を取得
+            let data_js = js_sys::Reflect::get(&tensor_obj, &"data".into())
+                .map_err(|_| "No data in tensor".to_string())?;
+            let data_array = js_sys::Array::from(&data_js);
+            let mut data = Vec::new();
+            for i in 0..data_array.length() {
+                let frac_obj = js_sys::Object::from(data_array.get(i));
+                let num_str = js_sys::Reflect::get(&frac_obj, &"numerator".into())
+                    .map_err(|_| "No numerator in tensor data".to_string())?
+                    .as_string().ok_or("Numerator not string")?;
+                let den_str = js_sys::Reflect::get(&frac_obj, &"denominator".into())
+                    .map_err(|_| "No denominator in tensor data".to_string())?
+                    .as_string().ok_or("Denominator not string")?;
+                let fraction = Fraction::new(
+                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?
+                );
+                data.push(fraction);
+            }
+
+            Ok(Value {
+                data,
+                display_hint: crate::types::DisplayHint::Auto,
+                shape,
+            })
+        },
         "nil" => Ok(Value::nil()),
         _ => Err(format!("Unknown type: {}", type_str)),
     }
