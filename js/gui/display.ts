@@ -126,15 +126,16 @@ const formatTensor = (value: unknown, depth: number): string => {
 };
 
 const formatVector = (value: unknown, depth: number): string => {
-    // depth=0で最外殻の{}を使用するため、depthをそのまま使用
     const [open, close] = getBrackets(depth);
 
     if (Array.isArray(value)) {
+        if (value.length === 0) {
+            return `${open}${close}`;
+        }
         const elements = value.map((v: Value) => {
-            // ネストした要素は depth + 1 で表示
             try { return formatValue(v, depth + 1); } catch { return '?'; }
         }).join(' ');
-        return `${open}${elements ? ' ' + elements + ' ' : ''}${close}`;
+        return `${open} ${elements} ${close}`;
     }
     return `${open}${close}`;
 };
@@ -147,7 +148,7 @@ const formatValue = (item: Value, depth: number): string => {
         case 'number': {
             // スカラー値も括弧で囲む（統一分数アーキテクチャ）
             const [open, close] = getBrackets(depth);
-            return `${open}${formatNumber(item.value)}${close}`;
+            return `${open} ${formatNumber(item.value)} ${close}`;
         }
         case 'datetime':
             return formatDateTime(item.value);
