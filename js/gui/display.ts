@@ -96,17 +96,11 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number):
 
     if (shape.length === 0) {
         if (data.length === 0) return `${open}${close}`;
-        // 単一要素はスペースなし
-        return `${open}${formatFraction(data[0])}${close}`;
+        return `${open} ${formatFraction(data[0])} ${close}`;
     }
 
     if (shape.length === 1) {
         if (data.length === 0) return `${open}${close}`;
-        if (data.length === 1) {
-            // 単一要素はスペースなし
-            return `${open}${formatFraction(data[0])}${close}`;
-        }
-        // 複数要素はスペースあり
         const elements = data.map(frac => formatFraction(frac)).join(' ');
         return `${open} ${elements} ${close}`;
     }
@@ -121,11 +115,6 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number):
         parts.push(formatTensorRecursive(innerShape, innerData, depth + 1));
     }
 
-    if (parts.length === 1) {
-        // 単一要素はスペースなし
-        return `${open}${parts[0]}${close}`;
-    }
-    // 複数要素はスペースあり
     return `${open} ${parts.join(' ')} ${close}`;
 };
 
@@ -137,22 +126,12 @@ const formatTensor = (value: unknown, depth: number): string => {
 };
 
 const formatVector = (value: unknown, depth: number): string => {
-    // depth=0で最外殻の{}を使用するため、depthをそのまま使用
     const [open, close] = getBrackets(depth);
 
     if (Array.isArray(value)) {
         if (value.length === 0) {
             return `${open}${close}`;
         }
-        if (value.length === 1) {
-            // 単一要素はスペースなし
-            try {
-                return `${open}${formatValue(value[0], depth + 1)}${close}`;
-            } catch {
-                return `${open}?${close}`;
-            }
-        }
-        // 複数要素はスペースあり
         const elements = value.map((v: Value) => {
             try { return formatValue(v, depth + 1); } catch { return '?'; }
         }).join(' ');
@@ -169,7 +148,7 @@ const formatValue = (item: Value, depth: number): string => {
         case 'number': {
             // スカラー値も括弧で囲む（統一分数アーキテクチャ）
             const [open, close] = getBrackets(depth);
-            return `${open}${formatNumber(item.value)}${close}`;
+            return `${open} ${formatNumber(item.value)} ${close}`;
         }
         case 'datetime':
             return formatDateTime(item.value);
