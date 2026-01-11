@@ -1,14 +1,40 @@
 // rust/src/interpreter/control.rs
 //
+// 統一分数アーキテクチャ版の制御フロー操作
+//
 // 【責務】
-// 制御フロー操作（TIMES、WAIT）を実装する。
+// TIMES、WAIT などの制御フロー操作を実装する。
 // カスタムワードの繰り返し実行や遅延実行をサポートする。
 
 use crate::interpreter::Interpreter;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::ValueType;
+use crate::types::DisplayHint;
 use std::collections::HashSet;
+
+/// 値を文字列として解釈する（内部ヘルパー）
+fn value_as_string(val: &crate::types::Value) -> Option<String> {
+    if val.data.is_empty() {
+        return None;
+    }
+
+    Some(val.data.iter()
+        .filter_map(|f| {
+            f.to_i64().and_then(|n| {
+                if n >= 0 && n <= 0x10FFFF {
+                    char::from_u32(n as u32)
+                } else {
+                    None
+                }
+            })
+        })
+        .collect())
+}
+
+/// 値が文字列として扱えるかチェック
+fn is_string_value(val: &crate::types::Value) -> bool {
+    val.display_hint == DisplayHint::String && !val.data.is_empty()
+}
 
 /// TIMES - ワードまたはコード片をN回繰り返し実行する
 ///
@@ -40,17 +66,11 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
 
     let count = get_integer_from_value(&count_val)?;
 
-    // 文字列を取得（大文字変換なし）
-    let code_str = match code_val.val_type() {
-        ValueType::Vector(v) if v.len() == 1 => {
-            if let ValueType::String(s) = v[0].val_type() {
-                s.clone()
-            } else {
-                return Err(AjisaiError::type_error("string", "other type"));
-            }
-        },
-        ValueType::String(s) => s.clone(),
-        _ => return Err(AjisaiError::type_error("string", "other type")),
+    // 文字列を取得（統一分数アーキテクチャ：直接データアクセス）
+    let code_str = if is_string_value(&code_val) {
+        value_as_string(&code_val).ok_or_else(|| AjisaiError::type_error("string", "other type"))?
+    } else {
+        return Err(AjisaiError::type_error("string", "other type"));
     };
 
     // TIMES内のループでは「変化なしエラー」チェックを無効化

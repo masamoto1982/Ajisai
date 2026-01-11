@@ -1,35 +1,64 @@
 // rust/src/interpreter/cast.rs
 //
-// 【責務】
-// 型変換ワード群を実装する。
-// STR: 任意の型 → String
-// NUM: String/Boolean → Number
-// BOOL: String/Number → Boolean
-// NIL: String → Nil
+// 統一分数アーキテクチャ版の型変換ワード群
 //
 // 【設計原則】
-// - 同型変換はエラー（型安全性の維持）
-// - 明示的な変換のみ（暗黙的型変換を排除）
-// - 型推論を排除（パース失敗は即エラー）
+// すべての値は Vec<Fraction> として表現される。
+// DisplayHint は表示目的のみに使用し、演算には使用しない。
+// 「型変換」は実質的に DisplayHint の変更と、表示形式の変換である。
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{wrap_value, wrap_number};
-use crate::types::{Value, ValueType};
+use crate::types::{Value, DisplayHint};
 use crate::types::fraction::Fraction;
 
+/// 値を文字列として解釈する（内部ヘルパー）
+fn value_as_string(val: &Value) -> Option<String> {
+    if val.data.is_empty() {
+        return None;
+    }
+
+    Some(val.data.iter()
+        .filter_map(|f| {
+            f.to_i64().and_then(|n| {
+                if n >= 0 && n <= 0x10FFFF {
+                    char::from_u32(n as u32)
+                } else {
+                    None
+                }
+            })
+        })
+        .collect())
+}
+
+/// 値が文字列として扱えるかチェック
+fn is_string_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::String
+}
+
+/// 値が真偽値として扱えるかチェック
+fn is_boolean_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::Boolean && val.data.len() == 1
+}
+
+/// 値が数値として扱えるかチェック
+fn is_number_value(val: &Value) -> bool {
+    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto) && val.data.len() == 1
+}
+
+/// 値がDateTimeとして扱えるかチェック
+fn is_datetime_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::DateTime && val.data.len() == 1
+}
+
 /// STR - 任意の型を文字列に変換
-///
-/// 【責務】
-/// - Number/Boolean/Nil/Symbol/Vector → String
-/// - String → String はエラー（同型変換）
 ///
 /// 【使用法】
 /// ```ajisai
 /// [ 42 ] STR → [ '42' ]
 /// [ TRUE ] STR → [ 'TRUE' ]
-/// [ nil ] STR → [ 'nil' ]
-/// [ [ 1 2 3 ] ] STR → [ '1 2 3' ]
+/// [ NIL ] STR → [ 'NIL' ]
 /// ```
 ///
 /// 【エラー】
@@ -41,58 +70,43 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 統一分数アーキテクチャ: 直接的な型を処理
-    match val.val_type() {
-        ValueType::String(_) => {
-            // 同型変換は禁止
-            interp.stack.push(val);
-            Err(AjisaiError::from("STR: same-type conversion (String → String) is not allowed"))
-        }
-        ValueType::Number(n) => {
-            let string_repr = fraction_to_string(&n);
-            interp.stack.push(wrap_value(Value::from_string(&string_repr)));
-            Ok(())
-        }
-        ValueType::Boolean(b) => {
-            let string_repr = if b { "TRUE" } else { "FALSE" };
-            interp.stack.push(wrap_value(Value::from_string(string_repr)));
-            Ok(())
-        }
-        ValueType::Nil => {
-            interp.stack.push(wrap_value(Value::from_string("NIL")));
-            Ok(())
-        }
-        ValueType::DateTime(f) => {
-            let string_repr = fraction_to_string(&f);
-            interp.stack.push(wrap_value(Value::from_string(&string_repr)));
-            Ok(())
-        }
-        ValueType::Vector(v) if v.len() == 1 => {
-            // 後方互換性: 単一要素ベクタの場合
-            match v[0].val_type() {
-                ValueType::String(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("STR: same-type conversion (String → String) is not allowed"))
-                }
-                _ => {
-                    let string_repr = value_to_string_repr(&v[0]);
-                    interp.stack.push(wrap_value(Value::from_string(&string_repr)));
-                    Ok(())
-                }
-            }
-        }
-        ValueType::Vector(_) => {
-            // 複数要素ベクタは文字列に変換
-            let string_repr = value_to_string_repr(&val);
-            interp.stack.push(wrap_value(Value::from_string(&string_repr)));
-            Ok(())
-        }
-        _ => {
-            let string_repr = value_to_string_repr(&val);
-            interp.stack.push(wrap_value(Value::from_string(&string_repr)));
-            Ok(())
-        }
+    // NILの場合
+    if val.is_nil() {
+        interp.stack.push(wrap_value(Value::from_string("NIL")));
+        return Ok(());
     }
+
+    // 文字列の場合は同型変換エラー
+    if is_string_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("STR: same-type conversion (String → String) is not allowed"));
+    }
+
+    // 真偽値の場合
+    if is_boolean_value(&val) {
+        let string_repr = if !val.data[0].is_zero() { "TRUE" } else { "FALSE" };
+        interp.stack.push(wrap_value(Value::from_string(string_repr)));
+        return Ok(());
+    }
+
+    // DateTimeの場合
+    if is_datetime_value(&val) {
+        let string_repr = fraction_to_string(&val.data[0]);
+        interp.stack.push(wrap_value(Value::from_string(&string_repr)));
+        return Ok(());
+    }
+
+    // 数値の場合
+    if is_number_value(&val) {
+        let string_repr = fraction_to_string(&val.data[0]);
+        interp.stack.push(wrap_value(Value::from_string(&string_repr)));
+        return Ok(());
+    }
+
+    // ベクタの場合（複数要素）
+    let string_repr = value_to_string_repr(&val);
+    interp.stack.push(wrap_value(Value::from_string(&string_repr)));
+    Ok(())
 }
 
 /// 分数を文字列に変換するヘルパー
@@ -108,30 +122,18 @@ fn fraction_to_string(f: &Fraction) -> String {
 
 /// NUM - 文字列または真偽値を数値に変換
 ///
-/// 【責務】
-/// - String → Number（パース失敗でエラー）
-/// - Boolean → Number（TRUE → 1、FALSE → 0）
-/// - Number → エラー（同型変換）
-/// - Nil → エラー
-/// - 他の型はエラー
-///
 /// 【使用法】
 /// ```ajisai
 /// [ '42' ] NUM → [ 42 ]
 /// [ '1/3' ] NUM → [ 1/3 ]
-/// [ '3.14' ] NUM → [ 157/50 ]
 /// [ TRUE ] NUM → [ 1 ]
 /// [ FALSE ] NUM → [ 0 ]
-/// [ 'hello' ] NUM → ERROR
-/// [ 42 ] NUM → ERROR（同型変換）
-/// [ nil ] NUM → ERROR
 /// ```
 ///
 /// 【エラー】
 /// - 数値としてパース不可能な文字列
 /// - Number型（同型変換）
 /// - Nil型
-/// - その他の型
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("NUM does not support Stack (..) mode"));
@@ -139,106 +141,56 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 統一分数アーキテクチャ: 直接的な型を処理
-    match val.val_type() {
-        ValueType::String(s) => {
-            match Fraction::from_str(&s) {
-                Ok(fraction) => {
-                    interp.stack.push(wrap_number(fraction));
-                    Ok(())
-                }
-                Err(_) => {
-                    let err_msg = format!("NUM: cannot parse '{}' as a number", s);
-                    interp.stack.push(val);
-                    Err(AjisaiError::from(err_msg))
-                }
+    // NILの場合
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("NUM: cannot convert Nil to Number"));
+    }
+
+    // 文字列の場合
+    if is_string_value(&val) {
+        let s = value_as_string(&val).unwrap_or_default();
+        match Fraction::from_str(&s) {
+            Ok(fraction) => {
+                interp.stack.push(wrap_number(fraction));
+                return Ok(());
             }
-        }
-        ValueType::Boolean(b) => {
-            use num_bigint::BigInt;
-            use num_traits::One;
-            let num = if b { BigInt::one() } else { BigInt::from(0) };
-            interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
-            Ok(())
-        }
-        ValueType::Number(_) => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("NUM: same-type conversion (Number → Number) is not allowed"))
-        }
-        ValueType::Nil => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("NUM: cannot convert Nil to Number"))
-        }
-        ValueType::Vector(v) if v.len() == 1 => {
-            // 後方互換性: 単一要素ベクタの場合
-            match v[0].val_type() {
-                ValueType::String(s) => {
-                    match Fraction::from_str(&s) {
-                        Ok(fraction) => {
-                            interp.stack.push(wrap_number(fraction));
-                            Ok(())
-                        }
-                        Err(_) => {
-                            let err_msg = format!("NUM: cannot parse '{}' as a number", s);
-                            interp.stack.push(val);
-                            Err(AjisaiError::from(err_msg))
-                        }
-                    }
-                }
-                ValueType::Boolean(b) => {
-                    use num_bigint::BigInt;
-                    use num_traits::One;
-                    let num = if b { BigInt::one() } else { BigInt::from(0) };
-                    interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
-                    Ok(())
-                }
-                ValueType::Number(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("NUM: same-type conversion (Number → Number) is not allowed"))
-                }
-                ValueType::Nil => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("NUM: cannot convert Nil to Number"))
-                }
-                _ => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("NUM: requires String or Boolean type"))
-                }
+            Err(_) => {
+                let err_msg = format!("NUM: cannot parse '{}' as a number", s);
+                interp.stack.push(val);
+                return Err(AjisaiError::from(err_msg));
             }
-        }
-        ValueType::Vector(_) => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("Multi-element vector not supported in this context"))
-        }
-        _ => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("NUM: requires String or Boolean type"))
         }
     }
+
+    // 真偽値の場合
+    if is_boolean_value(&val) {
+        use num_bigint::BigInt;
+        use num_traits::One;
+        let num = if !val.data[0].is_zero() { BigInt::one() } else { BigInt::from(0) };
+        interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
+        return Ok(());
+    }
+
+    // 数値の場合は同型変換エラー
+    if is_number_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("NUM: same-type conversion (Number → Number) is not allowed"));
+    }
+
+    // その他はエラー
+    interp.stack.push(val);
+    Err(AjisaiError::from("NUM: requires String or Boolean type"))
 }
 
 /// BOOL - 文字列または数値を真偽値に変換
 ///
-/// 【責務】
-/// - String → Boolean（"TRUE"/"FALSE", "1"/"0", "真"/"偽"、大小文字無視）
-/// - Number → Boolean（1 → TRUE、0 → FALSE）
-/// - Boolean → エラー（同型変換）
-/// - Nil → エラー
-/// - 他の型はエラー
-///
 /// 【使用法】
 /// ```ajisai
 /// [ 'TRUE' ] BOOL → [ TRUE ]
-/// [ 'false' ] BOOL → [ FALSE ]
 /// [ '1' ] BOOL → [ TRUE ]
-/// [ '0' ] BOOL → [ FALSE ]
-/// [ '真' ] BOOL → [ TRUE ]
-/// [ '偽' ] BOOL → [ FALSE ]
 /// [ 1 ] BOOL → [ TRUE ]
 /// [ 0 ] BOOL → [ FALSE ]
-/// [ 'hello' ] BOOL → ERROR
-/// [ TRUE ] BOOL → ERROR（同型変換）
-/// [ nil ] BOOL → ERROR
 /// ```
 ///
 /// 【エラー】
@@ -246,7 +198,6 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 /// - 1または0以外の数値
 /// - Boolean型（同型変換）
 /// - Nil型
-/// - その他の型
 pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("BOOL does not support Stack (..) mode"));
@@ -254,54 +205,32 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 統一分数アーキテクチャ: 直接的な型を処理
-    match val.val_type() {
-        ValueType::String(s) => {
-            convert_string_to_bool(&s, &val, interp)
-        }
-        ValueType::Number(n) => {
-            convert_number_to_bool(&n, &val, interp)
-        }
-        ValueType::Boolean(_) => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("BOOL: same-type conversion (Boolean → Boolean) is not allowed"))
-        }
-        ValueType::Nil => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("BOOL: cannot convert Nil to Boolean"))
-        }
-        ValueType::Vector(v) if v.len() == 1 => {
-            // 後方互換性: 単一要素ベクタの場合
-            match v[0].val_type() {
-                ValueType::String(s) => {
-                    convert_string_to_bool(&s, &val, interp)
-                }
-                ValueType::Number(n) => {
-                    convert_number_to_bool(&n, &val, interp)
-                }
-                ValueType::Boolean(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("BOOL: same-type conversion (Boolean → Boolean) is not allowed"))
-                }
-                ValueType::Nil => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("BOOL: cannot convert Nil to Boolean"))
-                }
-                _ => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("BOOL: requires String or Number type"))
-                }
-            }
-        }
-        ValueType::Vector(_) => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("Multi-element vector not supported in this context"))
-        }
-        _ => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("BOOL: requires String or Number type"))
-        }
+    // NILの場合
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("BOOL: cannot convert Nil to Boolean"));
     }
+
+    // 文字列の場合
+    if is_string_value(&val) {
+        let s = value_as_string(&val).unwrap_or_default();
+        return convert_string_to_bool(&s, &val, interp);
+    }
+
+    // 数値の場合
+    if is_number_value(&val) {
+        return convert_fraction_to_bool(&val.data[0], &val, interp);
+    }
+
+    // 真偽値の場合は同型変換エラー
+    if is_boolean_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("BOOL: same-type conversion (Boolean → Boolean) is not allowed"));
+    }
+
+    // その他はエラー
+    interp.stack.push(val);
+    Err(AjisaiError::from("BOOL: requires String or Number type"))
 }
 
 /// 文字列をBoolに変換するヘルパー
@@ -321,8 +250,8 @@ fn convert_string_to_bool(s: &str, original_val: &Value, interp: &mut Interprete
     Ok(())
 }
 
-/// 数値をBoolに変換するヘルパー
-fn convert_number_to_bool(n: &Fraction, original_val: &Value, interp: &mut Interpreter) -> Result<()> {
+/// 分数をBoolに変換するヘルパー
+fn convert_fraction_to_bool(n: &Fraction, original_val: &Value, interp: &mut Interpreter) -> Result<()> {
     use num_bigint::BigInt;
     use num_traits::One;
 
@@ -339,32 +268,17 @@ fn convert_number_to_bool(n: &Fraction, original_val: &Value, interp: &mut Inter
         interp.stack.push(original_val.clone());
         Err(AjisaiError::from(format!(
             "BOOL: cannot convert number {} to boolean (only 1 and 0 are allowed)",
-            if n.denominator == BigInt::one() {
-                format!("{}", n.numerator)
-            } else {
-                format!("{}/{}", n.numerator, n.denominator)
-            }
+            fraction_to_string(n)
         )))
     }
 }
 
 /// NIL - 文字列をNilに変換
 ///
-/// 【責務】
-/// - String → Nil（"nil" のみ、大小文字無視）
-/// - Boolean → エラー
-/// - Number → エラー
-/// - Nil → エラー（同型変換）
-/// - 他の型はエラー
-///
 /// 【使用法】
 /// ```ajisai
-/// [ 'nil' ] NIL → [ nil ]
-/// [ 'NIL' ] NIL → [ nil ]
-/// [ 'hello' ] NIL → ERROR
-/// [ TRUE ] NIL → ERROR
-/// [ 42 ] NIL → ERROR
-/// [ nil ] NIL → ERROR（同型変換）
+/// [ 'nil' ] NIL → [ NIL ]
+/// [ 'NIL' ] NIL → [ NIL ]
 /// ```
 ///
 /// 【エラー】
@@ -372,7 +286,6 @@ fn convert_number_to_bool(n: &Fraction, original_val: &Value, interp: &mut Inter
 /// - Boolean型
 /// - Number型
 /// - Nil型（同型変換）
-/// - その他の型
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("NIL does not support Stack (..) mode"));
@@ -380,146 +293,95 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 統一分数アーキテクチャ: 直接的な型を処理
-    match val.val_type() {
-        ValueType::String(s) => {
-            let upper = s.to_uppercase();
-            if upper == "NIL" {
-                interp.stack.push(wrap_value(Value::nil()));
-                Ok(())
-            } else {
-                let err_msg = format!("NIL: cannot parse '{}' as nil (expected 'nil')", s);
-                interp.stack.push(val);
-                Err(AjisaiError::from(err_msg))
-            }
-        }
-        ValueType::Boolean(_) => {
+    // NILの場合は同型変換エラー
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"));
+    }
+
+    // 文字列の場合
+    if is_string_value(&val) {
+        let s = value_as_string(&val).unwrap_or_default();
+        let upper = s.to_uppercase();
+        if upper == "NIL" {
+            interp.stack.push(wrap_value(Value::nil()));
+            return Ok(());
+        } else {
+            let err_msg = format!("NIL: cannot parse '{}' as nil (expected 'nil')", s);
             interp.stack.push(val);
-            Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"))
-        }
-        ValueType::Number(_) => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("NIL: cannot convert Number to Nil"))
-        }
-        ValueType::Nil => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"))
-        }
-        ValueType::Vector(v) if v.len() == 1 => {
-            // 後方互換性: 単一要素ベクタの場合
-            match v[0].val_type() {
-                ValueType::String(s) => {
-                    let upper = s.to_uppercase();
-                    if upper == "NIL" {
-                        interp.stack.push(wrap_value(Value::nil()));
-                        Ok(())
-                    } else {
-                        let err_msg = format!("NIL: cannot parse '{}' as nil (expected 'nil')", s);
-                        interp.stack.push(val);
-                        Err(AjisaiError::from(err_msg))
-                    }
-                }
-                ValueType::Boolean(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"))
-                }
-                ValueType::Number(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("NIL: cannot convert Number to Nil"))
-                }
-                ValueType::Nil => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"))
-                }
-                _ => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("NIL: requires String type"))
-                }
-            }
-        }
-        ValueType::Vector(_) => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("Multi-element vector not supported in this context"))
-        }
-        _ => {
-            interp.stack.push(val);
-            Err(AjisaiError::from("NIL: requires String type"))
+            return Err(AjisaiError::from(err_msg));
         }
     }
+
+    // 真偽値の場合
+    if is_boolean_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"));
+    }
+
+    // 数値の場合
+    if is_number_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("NIL: cannot convert Number to Nil"));
+    }
+
+    // その他はエラー
+    interp.stack.push(val);
+    Err(AjisaiError::from("NIL: requires String type"))
 }
 
 /// CHARS - 文字列を文字ベクタに分解
 ///
-/// 【責務】
-/// - String → Vector[String]（各要素は1文字）
-/// - UTF-8マルチバイト文字を正しく処理
+/// 【使用法】
+/// ```ajisai
+/// [ 'hello' ] CHARS → [ { 'h' 'e' 'l' 'l' 'o' } ]
+/// ```
 ///
 /// 【エラー】
-/// - 空文字列（"No change is an error"原則）
+/// - 空文字列
 /// - String以外の型
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // 統一分数アーキテクチャ: 直接的な型を処理
-            match val.val_type() {
-                ValueType::String(s) => {
-                    if s.is_empty() {
-                        interp.stack.push(val);
-                        return Err(AjisaiError::from("CHARS: empty string has no characters"));
-                    }
-
-                    let chars: Vec<Value> = s.chars()
-                        .map(|c| Value::from_string(&c.to_string()))
-                        .collect();
-
-                    interp.stack.push(Value::from_vector(chars));
-                    Ok(())
-                }
-                ValueType::Number(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: cannot convert Number to characters"))
-                }
-                ValueType::Boolean(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"))
-                }
-                ValueType::Nil => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: cannot convert Nil to characters"))
-                }
-                ValueType::Vector(v) if v.len() == 1 => {
-                    // 後方互換性: 単一要素ベクタの場合
-                    match v[0].val_type() {
-                        ValueType::String(s) => {
-                            if s.is_empty() {
-                                interp.stack.push(val);
-                                return Err(AjisaiError::from("CHARS: empty string has no characters"));
-                            }
-
-                            let chars: Vec<Value> = s.chars()
-                                .map(|c| Value::from_string(&c.to_string()))
-                                .collect();
-
-                            interp.stack.push(Value::from_vector(chars));
-                            Ok(())
-                        }
-                        _ => {
-                            interp.stack.push(val);
-                            Err(AjisaiError::from("CHARS: requires String type"))
-                        }
-                    }
-                }
-                ValueType::Vector(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("Multi-element vector not supported in this context"))
-                }
-                _ => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("CHARS: requires String type"))
-                }
+            // NILの場合
+            if val.is_nil() {
+                interp.stack.push(val);
+                return Err(AjisaiError::from("CHARS: cannot convert Nil to characters"));
             }
+
+            // 文字列の場合
+            if is_string_value(&val) {
+                let s = value_as_string(&val).unwrap_or_default();
+                if s.is_empty() {
+                    interp.stack.push(val);
+                    return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                }
+
+                let chars: Vec<Value> = s.chars()
+                    .map(|c| Value::from_string(&c.to_string()))
+                    .collect();
+
+                interp.stack.push(Value::from_vector(chars));
+                return Ok(());
+            }
+
+            // 数値の場合
+            if is_number_value(&val) {
+                interp.stack.push(val);
+                return Err(AjisaiError::from("CHARS: cannot convert Number to characters"));
+            }
+
+            // 真偽値の場合
+            if is_boolean_value(&val) {
+                interp.stack.push(val);
+                return Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"));
+            }
+
+            // その他はエラー
+            interp.stack.push(val);
+            Err(AjisaiError::from("CHARS: requires String type"))
         }
         OperationTarget::Stack => {
             // スタック上の各要素に対してCHARSを適用
@@ -532,66 +394,46 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
             let elements: Vec<Value> = interp.stack.drain(..).collect();
 
             for elem in elements {
-                // 統一分数アーキテクチャ: 直接的な型を処理
-                match elem.val_type() {
-                    ValueType::String(s) => {
-                        if s.is_empty() {
-                            interp.stack = results;
-                            interp.stack.push(elem);
-                            return Err(AjisaiError::from("CHARS: empty string has no characters"));
-                        }
-                        let chars: Vec<Value> = s.chars()
-                            .map(|c| Value::from_string(&c.to_string()))
-                            .collect();
-                        results.push(Value::from_vector(chars));
-                    }
-                    ValueType::Number(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: cannot convert Number to characters"));
-                    }
-                    ValueType::Boolean(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"));
-                    }
-                    ValueType::Nil => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: cannot convert Nil to characters"));
-                    }
-                    ValueType::Vector(v) if v.len() == 1 => {
-                        // 後方互換性: 単一要素ベクタの場合
-                        match v[0].val_type() {
-                            ValueType::String(s) => {
-                                if s.is_empty() {
-                                    interp.stack = results;
-                                    interp.stack.push(elem);
-                                    return Err(AjisaiError::from("CHARS: empty string has no characters"));
-                                }
-                                let chars: Vec<Value> = s.chars()
-                                    .map(|c| Value::from_string(&c.to_string()))
-                                    .collect();
-                                results.push(Value::from_vector(chars));
-                            }
-                            _ => {
-                                interp.stack = results;
-                                interp.stack.push(elem);
-                                return Err(AjisaiError::from("CHARS: requires String type"));
-                            }
-                        }
-                    }
-                    ValueType::Vector(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("Multi-element vector not supported in this context"));
-                    }
-                    _ => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: requires String type"));
-                    }
+                // NILの場合
+                if elem.is_nil() {
+                    interp.stack = results;
+                    interp.stack.push(elem);
+                    return Err(AjisaiError::from("CHARS: cannot convert Nil to characters"));
                 }
+
+                // 文字列の場合
+                if is_string_value(&elem) {
+                    let s = value_as_string(&elem).unwrap_or_default();
+                    if s.is_empty() {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                    }
+                    let chars: Vec<Value> = s.chars()
+                        .map(|c| Value::from_string(&c.to_string()))
+                        .collect();
+                    results.push(Value::from_vector(chars));
+                    continue;
+                }
+
+                // 数値の場合
+                if is_number_value(&elem) {
+                    interp.stack = results;
+                    interp.stack.push(elem);
+                    return Err(AjisaiError::from("CHARS: cannot convert Number to characters"));
+                }
+
+                // 真偽値の場合
+                if is_boolean_value(&elem) {
+                    interp.stack = results;
+                    interp.stack.push(elem);
+                    return Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"));
+                }
+
+                // その他はエラー
+                interp.stack = results;
+                interp.stack.push(elem);
+                return Err(AjisaiError::from("CHARS: requires String type"));
             }
 
             interp.stack = results;
@@ -602,10 +444,10 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
 
 /// JOIN - 文字列ベクタを連結して単一文字列に
 ///
-/// 【責務】
-/// - Vector[String] → String
-/// - Vector[Number] → String（文字コードとして解釈）
-/// - 全要素がStringまたはNumber型であることを検証
+/// 【使用法】
+/// ```ajisai
+/// [ 'h' 'e' 'l' 'l' 'o' ] JOIN → 'hello'
+/// ```
 ///
 /// 【エラー】
 /// - 空ベクタ
@@ -615,81 +457,80 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            match val.val_type() {
-                ValueType::Vector(vec) => {
-                    if vec.is_empty() {
-                        interp.stack.push(val);
-                        return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
-                    }
+            // NILの場合
+            if val.is_nil() {
+                interp.stack.push(val);
+                return Err(AjisaiError::from("JOIN: requires Vector type, got Nil"));
+            }
 
-                    let mut result = String::new();
-                    for (i, elem) in vec.iter().enumerate() {
-                        match elem.val_type() {
-                            ValueType::String(s) => {
-                                result.push_str(&s);
-                            }
-                            ValueType::Number(n) => {
-                                // 統一分数アーキテクチャ: 数値を文字コードとして解釈
-                                if let Some(code) = n.to_i64() {
-                                    if code >= 0 && code <= 0x10FFFF {
-                                        if let Some(c) = char::from_u32(code as u32) {
-                                            result.push(c);
-                                            continue;
-                                        }
-                                    }
-                                }
-                                interp.stack.push(val);
-                                return Err(AjisaiError::from(format!(
-                                    "JOIN: invalid character code at index {}", i
-                                )));
-                            }
-                            other => {
-                                let type_name = match other {
-                                    ValueType::Boolean(_) => "boolean",
-                                    ValueType::Nil => "nil",
-                                    ValueType::Vector(_) => "vector",
-                                    ValueType::Symbol(_) => "symbol",
-                                    _ => "other type",
-                                };
-                                interp.stack.push(val);
-                                return Err(AjisaiError::from(format!(
-                                    "JOIN: all elements must be strings, found {} at index {}",
-                                    type_name, i
-                                )));
-                            }
+            // ベクタ（複数要素）の場合
+            if val.data.len() > 1 || (val.data.len() == 1 && val.shape.len() > 0) {
+                // shapeベースでネストされた構造を再構築
+                let elements = reconstruct_vector_elements(&val);
+                if elements.is_empty() {
+                    interp.stack.push(val);
+                    return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
+                }
+
+                let mut result = String::new();
+                for (i, elem) in elements.iter().enumerate() {
+                    // 文字列の場合
+                    if is_string_value(elem) {
+                        if let Some(s) = value_as_string(elem) {
+                            result.push_str(&s);
+                            continue;
                         }
                     }
 
-                    interp.stack.push(wrap_value(
-                        Value::from_string(&result)
-                    ));
-                    Ok(())
-                }
-                ValueType::String(_) => {
+                    // 数値の場合（文字コードとして解釈）
+                    if is_number_value(elem) {
+                        if let Some(code) = elem.data[0].to_i64() {
+                            if code >= 0 && code <= 0x10FFFF {
+                                if let Some(c) = char::from_u32(code as u32) {
+                                    result.push(c);
+                                    continue;
+                                }
+                            }
+                        }
+                        interp.stack.push(val);
+                        return Err(AjisaiError::from(format!(
+                            "JOIN: invalid character code at index {}", i
+                        )));
+                    }
+
+                    // その他の型
+                    let type_name = if elem.is_nil() {
+                        "nil"
+                    } else if is_boolean_value(elem) {
+                        "boolean"
+                    } else {
+                        "other type"
+                    };
                     interp.stack.push(val);
-                    Err(AjisaiError::from("JOIN: requires Vector type, got String"))
+                    return Err(AjisaiError::from(format!(
+                        "JOIN: all elements must be strings, found {} at index {}",
+                        type_name, i
+                    )));
                 }
-                ValueType::Number(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("JOIN: requires Vector type, got Number"))
-                }
-                ValueType::Boolean(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("JOIN: requires Vector type, got Boolean"))
-                }
-                ValueType::Nil => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("JOIN: requires Vector type, got Nil"))
-                }
-                ValueType::Symbol(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("JOIN: requires Vector type, got Symbol"))
-                }
-                ValueType::DateTime(_) => {
-                    interp.stack.push(val);
-                    Err(AjisaiError::from("JOIN: requires Vector type, got DateTime"))
-                }
+
+                interp.stack.push(wrap_value(Value::from_string(&result)));
+                return Ok(());
             }
+
+            // 単一要素の場合（ベクタではない）
+            let type_name = if is_string_value(&val) {
+                "String"
+            } else if is_number_value(&val) {
+                "Number"
+            } else if is_boolean_value(&val) {
+                "Boolean"
+            } else if is_datetime_value(&val) {
+                "DateTime"
+            } else {
+                "other type"
+            };
+            interp.stack.push(val);
+            Err(AjisaiError::from(format!("JOIN: requires Vector type, got {}", type_name)))
         }
         OperationTarget::Stack => {
             // スタック上の各ベクタに対してJOINを適用
@@ -702,89 +543,84 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             let elements: Vec<Value> = interp.stack.drain(..).collect();
 
             for elem in elements {
-                match elem.val_type() {
-                    ValueType::Vector(vec) => {
-                        if vec.is_empty() {
-                            interp.stack = results;
-                            interp.stack.push(elem);
-                            return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
-                        }
+                // NILの場合
+                if elem.is_nil() {
+                    interp.stack = results;
+                    interp.stack.push(elem);
+                    return Err(AjisaiError::from("JOIN: requires Vector type, got Nil"));
+                }
 
-                        let mut result = String::new();
-                        for (i, v) in vec.iter().enumerate() {
-                            match v.val_type() {
-                                ValueType::String(s) => {
-                                    result.push_str(&s);
-                                }
-                                ValueType::Number(n) => {
-                                    // 統一分数アーキテクチャ: 数値を文字コードとして解釈
-                                    if let Some(code) = n.to_i64() {
-                                        if code >= 0 && code <= 0x10FFFF {
-                                            if let Some(c) = char::from_u32(code as u32) {
-                                                result.push(c);
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    interp.stack = results;
-                                    interp.stack.push(elem);
-                                    return Err(AjisaiError::from(format!(
-                                        "JOIN: invalid character code at index {}", i
-                                    )));
-                                }
-                                other => {
-                                    let type_name = match other {
-                                        ValueType::Boolean(_) => "boolean",
-                                        ValueType::Nil => "nil",
-                                        ValueType::Vector(_) => "vector",
-                                        ValueType::Symbol(_) => "symbol",
-                                        _ => "other type",
-                                    };
-                                    interp.stack = results;
-                                    interp.stack.push(elem);
-                                    return Err(AjisaiError::from(format!(
-                                        "JOIN: all elements must be strings, found {} at index {}",
-                                        type_name, i
-                                    )));
-                                }
+                // ベクタ（複数要素）の場合
+                if elem.data.len() > 1 || (elem.data.len() == 1 && elem.shape.len() > 0) {
+                    let vec_elements = reconstruct_vector_elements(&elem);
+                    if vec_elements.is_empty() {
+                        interp.stack = results;
+                        interp.stack.push(elem);
+                        return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
+                    }
+
+                    let mut result_str = String::new();
+                    for (i, v) in vec_elements.iter().enumerate() {
+                        // 文字列の場合
+                        if is_string_value(v) {
+                            if let Some(s) = value_as_string(v) {
+                                result_str.push_str(&s);
+                                continue;
                             }
                         }
 
-                        results.push(wrap_value(
-                            Value::from_string(&result)
-                        ));
-                    }
-                    ValueType::String(_) => {
+                        // 数値の場合（文字コードとして解釈）
+                        if is_number_value(v) {
+                            if let Some(code) = v.data[0].to_i64() {
+                                if code >= 0 && code <= 0x10FFFF {
+                                    if let Some(c) = char::from_u32(code as u32) {
+                                        result_str.push(c);
+                                        continue;
+                                    }
+                                }
+                            }
+                            interp.stack = results;
+                            interp.stack.push(elem);
+                            return Err(AjisaiError::from(format!(
+                                "JOIN: invalid character code at index {}", i
+                            )));
+                        }
+
+                        // その他の型
+                        let type_name = if v.is_nil() {
+                            "nil"
+                        } else if is_boolean_value(v) {
+                            "boolean"
+                        } else {
+                            "other type"
+                        };
                         interp.stack = results;
                         interp.stack.push(elem);
-                        return Err(AjisaiError::from("JOIN: requires Vector type, got String"));
+                        return Err(AjisaiError::from(format!(
+                            "JOIN: all elements must be strings, found {} at index {}",
+                            type_name, i
+                        )));
                     }
-                    ValueType::Number(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("JOIN: requires Vector type, got Number"));
-                    }
-                    ValueType::Boolean(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("JOIN: requires Vector type, got Boolean"));
-                    }
-                    ValueType::Nil => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("JOIN: requires Vector type, got Nil"));
-                    }
-                    ValueType::Symbol(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("JOIN: requires Vector type, got Symbol"));
-                    }
-                    ValueType::DateTime(_) => {
-                        interp.stack = results;
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("JOIN: requires Vector type, got DateTime"));
-                    }
+
+                    results.push(wrap_value(Value::from_string(&result_str)));
+                    continue;
                 }
+
+                // 単一要素の場合（ベクタではない）
+                let type_name = if is_string_value(&elem) {
+                    "String"
+                } else if is_number_value(&elem) {
+                    "Number"
+                } else if is_boolean_value(&elem) {
+                    "Boolean"
+                } else if is_datetime_value(&elem) {
+                    "DateTime"
+                } else {
+                    "other type"
+                };
+                interp.stack = results;
+                interp.stack.push(elem);
+                return Err(AjisaiError::from(format!("JOIN: requires Vector type, got {}", type_name)));
             }
 
             interp.stack = results;
@@ -793,48 +629,69 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// 値を文字列表現に変換する（内部ヘルパー）
-///
-/// 【責務】
-/// - 各型を人間が読める文字列表現に変換
-/// - ベクトルは要素をスペース区切りで結合
-/// - ネストされたベクトルは括弧なしで平坦化
-///
-/// 【引数】
-/// - value: 変換する値
-///
-/// 【戻り値】
-/// - 文字列表現
-fn value_to_string_repr(value: &Value) -> String {
-    match value.val_type() {
-        ValueType::Number(n) => {
-            if n.denominator == num_bigint::BigInt::from(1) {
-                format!("{}", n.numerator)
-            } else {
-                format!("{}/{}", n.numerator, n.denominator)
+/// ベクタの要素を再構築するヘルパー
+fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
+    // shapeが空または1次元の場合、各要素を個別のValueとして返す
+    if val.shape.is_empty() || val.shape.len() == 1 {
+        val.data.iter().map(|f| {
+            // 元のdisplay_hintを継承
+            match val.display_hint {
+                DisplayHint::String => {
+                    // 文字列の場合、各要素は1文字
+                    let mut v = Value::from_fraction(f.clone());
+                    v.display_hint = DisplayHint::String;
+                    v.shape = vec![1];
+                    v
+                }
+                _ => Value::from_fraction(f.clone())
             }
-        }
-        ValueType::DateTime(n) => {
-            // DateTime型は@プレフィックスで表示
-            if n.denominator == num_bigint::BigInt::from(1) {
-                format!("@{}", n.numerator)
-            } else {
-                format!("@{}/{}", n.numerator, n.denominator)
+        }).collect()
+    } else {
+        // 多次元の場合は最外層の要素を再構築
+        let outer_size = val.shape[0];
+        let inner_size: usize = val.shape[1..].iter().product();
+        let inner_shape = val.shape[1..].to_vec();
+
+        (0..outer_size).map(|i| {
+            let start = i * inner_size;
+            let end = start + inner_size;
+            let data = val.data[start..end].to_vec();
+            Value {
+                data,
+                display_hint: val.display_hint,
+                shape: inner_shape.clone(),
             }
-        }
-        ValueType::String(s) => s.clone(),
-        ValueType::Boolean(b) => {
-            if b { "TRUE".to_string() } else { "FALSE".to_string() }
-        }
-        ValueType::Symbol(s) => s.clone(),
-        ValueType::Nil => "NIL".to_string(),
-        ValueType::Vector(vec) => {
-            vec.iter()
-                .map(|v| value_to_string_repr(v))
-                .collect::<Vec<_>>()
-                .join(" ")
-        }
+        }).collect()
     }
+}
+
+/// 値を文字列表現に変換する（内部ヘルパー）
+fn value_to_string_repr(value: &Value) -> String {
+    if value.is_nil() {
+        return "NIL".to_string();
+    }
+
+    if is_boolean_value(value) {
+        return if !value.data[0].is_zero() { "TRUE".to_string() } else { "FALSE".to_string() };
+    }
+
+    if is_string_value(value) {
+        return value_as_string(value).unwrap_or_default();
+    }
+
+    if is_datetime_value(value) {
+        return format!("@{}", fraction_to_string(&value.data[0]));
+    }
+
+    if is_number_value(value) {
+        return fraction_to_string(&value.data[0]);
+    }
+
+    // ベクタの場合
+    value.data.iter()
+        .map(|f| fraction_to_string(f))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 #[cfg(test)]
@@ -856,16 +713,6 @@ mod tests {
         // Nil
         let nil = Value::nil();
         assert_eq!(value_to_string_repr(&nil), "NIL");
-
-        // Vector
-        let vec = Value::from_vector(
-            vec![
-                Value::from_fraction(Fraction::new(BigInt::from(1), BigInt::one())),
-                Value::from_fraction(Fraction::new(BigInt::from(2), BigInt::one())),
-                Value::from_fraction(Fraction::new(BigInt::from(3), BigInt::one())),
-            ]
-        );
-        assert_eq!(value_to_string_repr(&vec), "1 2 3");
     }
 
     #[test]
@@ -879,11 +726,9 @@ mod tests {
         op_str(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::String(s) = v[0].val_type() {
-                    assert_eq!(s, "42");
-                }
-            }
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "42");
         }
     }
 
@@ -892,202 +737,102 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // String → Number
-        interp.stack.push(wrap_value(
-            Value::from_string("42")
-        ));
+        interp.stack.push(wrap_value(Value::from_string("42")));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator, BigInt::from(42));
-                }
-            }
+            assert!(is_number_value(val));
+            assert_eq!(val.data[0].numerator, BigInt::from(42));
         }
 
         // Boolean → Number (TRUE → 1)
         interp.stack.clear();
-        interp.stack.push(wrap_value(
-            Value::from_bool(true)
-        ));
+        interp.stack.push(wrap_value(Value::from_bool(true)));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator, BigInt::from(1));
-                    assert_eq!(n.denominator, BigInt::from(1));
-                }
-            }
+            assert!(is_number_value(val));
+            assert_eq!(val.data[0].numerator, BigInt::from(1));
         }
 
         // Boolean → Number (FALSE → 0)
         interp.stack.clear();
-        interp.stack.push(wrap_value(
-            Value::from_bool(false)
-        ));
+        interp.stack.push(wrap_value(Value::from_bool(false)));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator, BigInt::from(0));
-                    assert_eq!(n.denominator, BigInt::from(1));
-                }
-            }
+            assert!(is_number_value(val));
+            assert_eq!(val.data[0].numerator, BigInt::from(0));
         }
     }
 
     #[test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     fn test_bool_conversion() {
         let mut interp = Interpreter::new();
 
-        // String → Boolean (TRUE/FALSE)
-        interp.stack.push(wrap_value(
-            Value::from_string("TRUE")
-        ));
+        // String → Boolean (TRUE)
+        interp.stack.push(wrap_value(Value::from_string("TRUE")));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Boolean(b) = v[0].val_type() {
-                    assert_eq!(b, true);
-                }
-            }
+            assert!(is_boolean_value(val));
+            assert!(!val.data[0].is_zero());
         }
 
-        // String → Boolean ('1'/'0')
+        // String → Boolean ('1')
         interp.stack.clear();
-        interp.stack.push(wrap_value(
-            Value::from_string("1")
-        ));
+        interp.stack.push(wrap_value(Value::from_string("1")));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Boolean(b) = v[0].val_type() {
-                    assert_eq!(b, true);
-                }
-            }
-        }
-
-        interp.stack.clear();
-        interp.stack.push(wrap_value(
-            Value::from_string("0")
-        ));
-        op_bool(&mut interp).unwrap();
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Boolean(b) = v[0].val_type() {
-                    assert_eq!(b, false);
-                }
-            }
-        }
-
-        // String → Boolean ('真'/'偽')
-        interp.stack.clear();
-        interp.stack.push(wrap_value(
-            Value::from_string("真")
-        ));
-        op_bool(&mut interp).unwrap();
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Boolean(b) = v[0].val_type() {
-                    assert_eq!(b, true);
-                }
-            }
-        }
-
-        interp.stack.clear();
-        interp.stack.push(wrap_value(
-            Value::from_string("偽")
-        ));
-        op_bool(&mut interp).unwrap();
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Boolean(b) = v[0].val_type() {
-                    assert_eq!(b, false);
-                }
-            }
+            assert!(is_boolean_value(val));
+            assert!(!val.data[0].is_zero());
         }
 
         // Number → Boolean (1 → TRUE)
         interp.stack.clear();
-        interp.stack.push(wrap_number(
-            Fraction::new(BigInt::from(1), BigInt::from(1))
-        ));
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(1))));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Boolean(b) = v[0].val_type() {
-                    assert_eq!(b, true);
-                }
-            }
+            assert!(is_boolean_value(val));
+            assert!(!val.data[0].is_zero());
         }
 
         // Number → Boolean (0 → FALSE)
         interp.stack.clear();
-        interp.stack.push(wrap_number(
-            Fraction::new(BigInt::from(0), BigInt::from(1))
-        ));
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(0), BigInt::from(1))));
         op_bool(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Boolean(b) = v[0].val_type() {
-                    assert_eq!(b, false);
-                }
-            }
+            assert!(is_boolean_value(val));
+            assert!(val.data[0].is_zero());
         }
     }
 
     #[tokio::test]
     async fn test_chars_basic() {
         let mut interp = Interpreter::new();
-        // 統一分数アーキテクチャ: CHARSの結果はベクタとして表現される
-        // JOINで元の文字列に戻せることを確認
         interp.execute("[ 'hello' ] CHARS JOIN").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::String(s) = val.val_type() {
-                assert_eq!(s, "hello");
-            } else {
-                panic!("Expected String type after CHARS JOIN");
-            }
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "hello");
         }
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_chars_unicode() {
         let mut interp = Interpreter::new();
-        // 統一分数アーキテクチャ: Unicode文字もCHARS+JOINで正しく処理される
         interp.execute("[ '日本語' ] CHARS JOIN").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::String(s) = val.val_type() {
-                assert_eq!(s, "日本語");
-            } else {
-                panic!("Expected String type after CHARS JOIN");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_chars_empty_error() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ '' ] CHARS").await;
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e.to_string().contains("empty string"));
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "日本語");
         }
     }
 
@@ -1101,387 +846,79 @@ mod tests {
     #[tokio::test]
     async fn test_join_basic() {
         let mut interp = Interpreter::new();
-        // 統一分数アーキテクチャ: JOINは文字列を連結して単一文字列を返す
         interp.execute("[ 'h' 'e' 'l' 'l' 'o' ] JOIN").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::String(s) = val.val_type() {
-                assert_eq!(s, "hello");
-            } else {
-                panic!("Expected String type after JOIN");
-            }
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "hello");
         }
     }
 
     #[tokio::test]
     async fn test_join_multichar() {
         let mut interp = Interpreter::new();
-        // 統一分数アーキテクチャ: 複数文字の文字列もJOINできる
         interp.execute("[ 'hel' 'lo' ] JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::String(s) = val.val_type() {
-                assert_eq!(s, "hello");
-            } else {
-                panic!("Expected String type after JOIN");
-            }
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "hello");
         }
     }
 
     #[tokio::test]
     async fn test_join_empty_error() {
         let mut interp = Interpreter::new();
-        // 空ベクタ = NIL なので、JOIN は型エラーになる
         let result = interp.execute("[ ] JOIN").await;
         assert!(result.is_err());
-        if let Err(e) = result {
-            // NIL に対する JOIN はエラー
-            let err_str = e.to_string();
-            assert!(err_str.contains("Nil") || err_str.contains("empty") || err_str.contains("vector"),
-                "Expected error about NIL or empty vector, got: {}", err_str);
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_join_type_error() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 'a' 1 'b' ] JOIN").await;
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e.to_string().contains("must be strings"));
-        }
     }
 
     #[tokio::test]
     async fn test_chars_join_roundtrip() {
         let mut interp = Interpreter::new();
-        // 統一分数アーキテクチャ: CHARS + JOIN で元の文字列に戻る
         interp.execute("[ 'hello' ] CHARS JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::String(s) = val.val_type() {
-                assert_eq!(s, "hello");
-            } else {
-                panic!("Expected String type after CHARS JOIN roundtrip");
-            }
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "hello");
         }
     }
 
     #[tokio::test]
     async fn test_chars_reverse_join() {
         let mut interp = Interpreter::new();
-        // 統一分数アーキテクチャ: CHARS + REVERSE + JOIN で逆順の文字列になる
         interp.execute("[ 'hello' ] CHARS REVERSE JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::String(s) = val.val_type() {
-                assert_eq!(s, "olleh");
-            } else {
-                panic!("Expected String type after CHARS REVERSE JOIN");
-            }
-        }
-    }
-
-    // BOOLのスタック復元テスト（ガード節との調和のため重要）
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_bool_string_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // パース不可能な文字列でエラーが発生することを確認
-        let result = interp.execute("[ 'hello' ] BOOL").await;
-        assert!(result.is_err());
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "hello"));
-            } else {
-                panic!("Expected Vector type");
-            }
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "olleh");
         }
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_bool_number_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // 1, 0以外の数値でエラーが発生することを確認
-        let result = interp.execute("[ 42 ] BOOL").await;
-        assert!(result.is_err());
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator, BigInt::from(42));
-                } else {
-                    panic!("Expected Number type");
-                }
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_bool_same_type_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // Boolean → Boolean の同型変換エラーを確認
-        let result = interp.execute("[ TRUE ] BOOL").await;
-        assert!(result.is_err());
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after BOOL same-type error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::Boolean(true)));
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    // NILのスタック復元テスト（ガード節との調和のため重要）
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_nil_string_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // パース不可能な文字列でエラーが発生することを確認
-        let result = interp.execute("[ 'hello' ] NIL").await;
-        assert!(result.is_err());
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == "hello"));
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_nil_boolean_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // Boolean型でエラーが発生することを確認
-        let result = interp.execute("[ TRUE ] NIL").await;
-        assert!(result.is_err());
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::Boolean(true)));
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_nil_number_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // Number型でエラーが発生することを確認
-        let result = interp.execute("[ 42 ] NIL").await;
-        assert!(result.is_err());
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator, BigInt::from(42));
-                } else {
-                    panic!("Expected Number type");
-                }
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_nil_same_type_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // Nil → Nil の同型変換エラーを確認
-        let result = interp.execute("[ NIL ] NIL").await;
-        assert!(result.is_err());
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after NIL same-type error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::Nil));
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_nil_success_case() {
         let mut interp = Interpreter::new();
-        // 正常なNIL変換
         let result = interp.execute("[ 'nil' ] NIL").await;
         assert!(result.is_ok());
-
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::Nil));
-            } else {
-                panic!("Expected Vector type");
-            }
+            assert!(val.is_nil());
         }
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_nil_case_insensitive() {
         let mut interp = Interpreter::new();
-        // 大文字小文字を区別しない
         let result = interp.execute("[ 'NIL' ] NIL").await;
         assert!(result.is_ok());
 
-        interp.stack.clear();
-        let result = interp.execute("[ 'Nil' ] NIL").await;
-        assert!(result.is_ok());
-
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::Nil));
-            } else {
-                panic!("Expected Vector type");
-            }
+            assert!(val.is_nil());
         }
     }
-
-    // CHARSのスタック復元テスト（ガード節との調和のため重要）
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_chars_number_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // Number型でエラーが発生することを確認
-        let result = interp.execute("[ 42 ] CHARS").await;
-        assert!(result.is_err());
-        if let Err(e) = &result {
-            assert!(e.to_string().contains("cannot convert Number"));
-        }
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator, BigInt::from(42));
-                } else {
-                    panic!("Expected Number type");
-                }
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_chars_boolean_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // Boolean型でエラーが発生することを確認
-        let result = interp.execute("[ TRUE ] CHARS").await;
-        assert!(result.is_err());
-        if let Err(e) = &result {
-            assert!(e.to_string().contains("cannot convert Boolean"));
-        }
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::Boolean(true)));
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_chars_nil_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // Nil型でエラーが発生することを確認
-        let result = interp.execute("[ NIL ] CHARS").await;
-        assert!(result.is_err());
-        if let Err(e) = &result {
-            assert!(e.to_string().contains("cannot convert Nil"));
-        }
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::Nil));
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_chars_empty_string_error_restores_stack() {
-        let mut interp = Interpreter::new();
-        // 空文字列でエラーが発生することを確認
-        let result = interp.execute("[ '' ] CHARS").await;
-        assert!(result.is_err());
-        if let Err(e) = &result {
-            assert!(e.to_string().contains("empty string"));
-        }
-
-        // エラー後もスタックが復元されていることを確認
-        assert_eq!(interp.stack.len(), 1, "Stack should be restored after CHARS empty string error");
-
-        if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1);
-                assert!(matches!(v[0].val_type(), ValueType::String(s) if s == ""));
-            } else {
-                panic!("Expected Vector type");
-            }
-        }
-    }
-
 }

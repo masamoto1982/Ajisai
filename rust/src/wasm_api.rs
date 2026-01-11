@@ -1,9 +1,14 @@
 // rust/src/wasm_api.rs
+//
+// 統一分数アーキテクチャ版のWebAssembly API
+//
+// すべての値は Vec<Fraction> として表現される。
+// DisplayHint は表示目的のみに使用される。
 
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
-use crate::types::{Value, ValueType, Token, ExecutionLine};
+use crate::types::{Value, DisplayHint, Token, ExecutionLine};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::str::FromStr;
@@ -11,6 +16,51 @@ use serde::{Deserialize, Serialize};
 use crate::interpreter;
 use crate::tokenizer;
 use crate::builtins;
+
+// ============================================================================
+// ヘルパー関数
+// ============================================================================
+
+/// 値が文字列として扱えるかチェック
+fn is_string_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::String && !val.data.is_empty()
+}
+
+/// 値が真偽値として扱えるかチェック
+fn is_boolean_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::Boolean && val.data.len() == 1
+}
+
+/// 値が数値として扱えるかチェック
+fn is_number_value(val: &Value) -> bool {
+    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto) && val.data.len() == 1
+}
+
+/// 値がDateTimeとして扱えるかチェック
+fn is_datetime_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::DateTime && val.data.len() == 1
+}
+
+/// 値がベクタ（複数要素）かチェック
+fn is_vector_value(val: &Value) -> bool {
+    val.data.len() > 1 || !val.shape.is_empty()
+}
+
+/// 値を文字列として解釈する
+fn value_as_string(val: &Value) -> String {
+    val.data.iter()
+        .filter_map(|f| {
+            f.to_i64().and_then(|n| {
+                if n >= 0 && n <= 0x10FFFF {
+                    char::from_u32(n as u32)
+                } else {
+                    None
+                }
+            })
+        })
+        .collect()
+}
+
 /// 形状ベクタからブラケット構造を生成
 /// shape: [dim1] → { } × dim1
 /// shape: [dim1, dim2] → { ( ) × dim2 } × dim1
@@ -101,36 +151,30 @@ impl AjisaiInterpreter {
                     }
                 }
 
-                // スタックトップから形状ベクタを取得
+                // スタックトップから形状ベクタを取得（統一分数アーキテクチャ）
                 let shape = if let Some(top) = self.interpreter.stack.last() {
-                    match &top.val_type() {
-                        ValueType::Vector(v) => {
-                            // ベクタ内の全要素が正の整数（1〜100）かチェック
-                            let mut dims = Vec::new();
-                            let mut valid = v.len() >= 1 && v.len() <= 3;
-                            if valid {
-                                for elem in v.iter() {
-                                    if let ValueType::Number(n) = &elem.val_type() {
-                                        if let Some(val) = n.as_usize() {
-                                            if val >= 1 && val <= 100 {
-                                                dims.push(val);
-                                            } else {
-                                                valid = false;
-                                                break;
-                                            }
-                                        } else {
-                                            valid = false;
-                                            break;
-                                        }
+                    if is_vector_value(top) && !top.is_nil() {
+                        // ベクタ内の全要素が正の整数（1〜100）かチェック
+                        let mut dims = Vec::new();
+                        let mut valid = top.data.len() >= 1 && top.data.len() <= 3;
+                        if valid {
+                            for f in &top.data {
+                                if let Some(val) = f.as_usize() {
+                                    if val >= 1 && val <= 100 {
+                                        dims.push(val);
                                     } else {
                                         valid = false;
                                         break;
                                     }
+                                } else {
+                                    valid = false;
+                                    break;
                                 }
                             }
-                            if valid { Some(dims) } else { None }
                         }
-                        _ => None
+                        if valid { Some(dims) } else { None }
+                    } else {
+                        None
                     }
                 } else {
                     None
@@ -180,17 +224,17 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn execute_step(&mut self, code: &str) -> JsValue {
         let obj = js_sys::Object::new();
-        
+
         if !self.step_mode || code != self.current_step_code {
             self.step_mode = true;
             self.step_position = 0;
             self.current_step_code = code.to_string();
-            
+
             let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
                 .filter(|(_, def)| !def.is_builtin)
                 .map(|(name, _)| name.clone())
                 .collect();
-                
+
             match tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
                 Ok(tokens) => { self.step_tokens = tokens; }
                 Err(e) => {
@@ -212,7 +256,7 @@ impl AjisaiInterpreter {
         }
 
         let token = self.step_tokens[self.step_position].clone();
-        
+
         // トークンを1つの行として実行
         let line = ExecutionLine {
             body_tokens: vec![token],
@@ -239,19 +283,19 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
             }
         }
-        
+
         obj.into()
     }
-    
+
     #[wasm_bindgen]
     pub fn reset(&mut self) -> JsValue {
         let obj = js_sys::Object::new();
-        
+
         self.step_mode = false;
         self.step_tokens.clear();
         self.step_position = 0;
         self.current_step_code.clear();
-        
+
         match self.interpreter.execute_reset() {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
@@ -267,7 +311,7 @@ impl AjisaiInterpreter {
         }
         obj.into()
     }
-    
+
     #[wasm_bindgen]
     pub fn get_stack(&self) -> JsValue {
         let js_array = js_sys::Array::new();
@@ -280,21 +324,21 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn get_custom_words_info(&self) -> JsValue {
         let js_array = js_sys::Array::new();
-        
+
         for (name, def) in self.interpreter.dictionary.iter() {
             if def.is_builtin { continue; }
-            
+
             let is_protected = self.interpreter.dependents.get(name)
                 .map_or(false, |deps| !deps.is_empty());
-            
+
             let item = js_sys::Array::new();
             item.push(&name.clone().into());
             item.push(&def.description.clone().map(JsValue::from).unwrap_or(JsValue::NULL));
             item.push(&is_protected.into());
-            
+
             js_array.push(&item);
         }
-        
+
         js_array.into()
     }
 
@@ -316,7 +360,7 @@ impl AjisaiInterpreter {
     pub fn get_builtin_words_info(&self) -> JsValue {
         to_value(&builtins::get_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
-    
+
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
         let upper_name = name.to_uppercase();
@@ -450,7 +494,7 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
 
             Ok(Value {
                 data,
-                display_hint: crate::types::DisplayHint::Auto,
+                display_hint: DisplayHint::Auto,
                 shape,
             })
         },
@@ -462,9 +506,10 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
 fn value_to_js_value(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
 
-    // 統一分数アーキテクチャ: shape情報を使って型を決定
+    // 統一分数アーキテクチャ: 直接データアクセス
+
     // NILチェック
-    if value.data.is_empty() {
+    if value.is_nil() {
         js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
         js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
         return obj.into();
@@ -498,53 +543,53 @@ fn value_to_js_value(value: &Value) -> JsValue {
         return obj.into();
     }
 
-    // 以下は従来のロジック（後方互換性のため）
-    let type_str = match &value.val_type() {
-        ValueType::Number(_) => "number",
-        ValueType::String(_) => "string",
-        ValueType::Boolean(_) => "boolean",
-        ValueType::Symbol(_) => "symbol",
-        ValueType::Vector(_) => "vector",
-        ValueType::Nil => "nil",
-        ValueType::DateTime(_) => "datetime",
+    // DisplayHintに基づいて型を決定
+    let type_str = if is_datetime_value(value) {
+        "datetime"
+    } else if is_boolean_value(value) {
+        "boolean"
+    } else if is_string_value(value) {
+        "string"
+    } else if is_number_value(value) {
+        "number"
+    } else if is_vector_value(value) {
+        "vector"
+    } else {
+        "number" // フォールバック
     };
 
     js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
 
-    match &value.val_type() {
-        ValueType::Number(n) => {
+    match type_str {
+        "number" | "datetime" => {
             let num_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&num_obj, &"numerator".into(), &n.numerator.to_string().into()).unwrap();
-            js_sys::Reflect::set(&num_obj, &"denominator".into(), &n.denominator.to_string().into()).unwrap();
+            js_sys::Reflect::set(&num_obj, &"numerator".into(), &value.data[0].numerator.to_string().into()).unwrap();
+            js_sys::Reflect::set(&num_obj, &"denominator".into(), &value.data[0].denominator.to_string().into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
         },
-        ValueType::String(s) => {
-            js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
+        "string" => {
+            let s = value_as_string(value);
+            js_sys::Reflect::set(&obj, &"value".into(), &s.into()).unwrap();
         },
-        ValueType::Boolean(b) => {
-            js_sys::Reflect::set(&obj, &"value".into(), &b.clone().into()).unwrap();
+        "boolean" => {
+            let b = !value.data[0].is_zero();
+            js_sys::Reflect::set(&obj, &"value".into(), &b.into()).unwrap();
         },
-        ValueType::Symbol(s) => {
-            js_sys::Reflect::set(&obj, &"value".into(), &s.clone().into()).unwrap();
-        },
-        ValueType::Vector(vec) => {
+        "vector" => {
+            // 1次元ベクタの場合、各要素を個別のValueとして返す
             let js_array = js_sys::Array::new();
-            for item in vec {
-                js_array.push(&value_to_js_value(item));
+            for frac in &value.data {
+                // 各要素のdisplay_hintを継承しつつ、単一要素のValueを作成
+                let elem = Value {
+                    data: vec![frac.clone()],
+                    display_hint: value.display_hint,
+                    shape: vec![],
+                };
+                js_array.push(&value_to_js_value(&elem));
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
-            // bracketType は表示層で深さから計算されるため、送信しない
         },
-        ValueType::Nil => {
-            js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
-        },
-        ValueType::DateTime(n) => {
-            // DateTime型は内部的にはFractionと同じ構造だが、type が "datetime" になる
-            let num_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&num_obj, &"numerator".into(), &n.numerator.to_string().into()).unwrap();
-            js_sys::Reflect::set(&num_obj, &"denominator".into(), &n.denominator.to_string().into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
-        },
+        _ => {}
     };
 
     obj.into()

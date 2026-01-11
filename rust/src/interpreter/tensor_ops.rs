@@ -1,16 +1,59 @@
 //! 行列演算ワード
 //!
-//! Vector指向型システムでの行列・配列操作を提供
-//! ブロードキャスト、形状操作、数学関数などを実装
+//! 統一分数アーキテクチャ版
+//! すべての値は Vec<Fraction> として表現される。
+//! 形状情報は shape フィールドで管理される。
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::interpreter::helpers::wrap_number;
-use crate::types::{Value, ValueType, MAX_VISIBLE_DIMENSIONS};
-use crate::types::tensor::{transpose, reshape, rank, infer_shape};
+use crate::types::{Value, DisplayHint, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
+
+// ============================================================================
+// ヘルパー関数
+// ============================================================================
+
+/// 値がベクタ（複数要素または shape あり）かチェック
+fn is_vector_value(val: &Value) -> bool {
+    val.data.len() > 1 || !val.shape.is_empty()
+}
+
+/// 値が数値（単一要素）かチェック
+fn is_number_value(val: &Value) -> bool {
+    val.data.len() == 1 && val.shape.is_empty()
+}
+
+/// 形状を推論する（統一分数アーキテクチャ版）
+fn infer_shape_from_value(val: &Value) -> Vec<usize> {
+    if val.data.is_empty() {
+        return vec![];
+    }
+
+    // shapeが設定されていればそれを使用
+    if !val.shape.is_empty() {
+        return val.shape.clone();
+    }
+
+    // 単一要素ならスカラー（空の形状）
+    if val.data.len() == 1 {
+        return vec![];
+    }
+
+    // 複数要素なら1次元配列
+    vec![val.data.len()]
+}
+
+/// 値からスカラー数値を抽出
+fn extract_scalar(val: &Value) -> Option<&Fraction> {
+    if val.data.len() == 1 {
+        Some(&val.data[0])
+    } else {
+        None
+    }
+}
 
 // ============================================================================
 // 形状操作ワード
@@ -20,7 +63,7 @@ use num_traits::{One, Zero};
 ///
 /// 使用法:
 ///   [ 1 2 3 ] SHAPE           → [ 1 2 3 ] [ 3 ]
-///   [ [ 1 2 ] [ 3 4 ] ] SHAPE → [ [ 1 2 ] [ 3 4 ] ] [ 2 2 ]
+///   [ { 1 2 } { 3 4 } ] SHAPE → [ { 1 2 } { 3 4 } ] [ 2 2 ]
 ///
 /// 形状は1次元Vectorとして返される
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
@@ -30,32 +73,33 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
-    let shape_vec = match &val.val_type() {
-        ValueType::Vector(v) => {
-            infer_shape(v).map_err(|e| AjisaiError::from(format!("Failed to get shape: {}", e)))?
-        }
-        _ => {
-            return Err(AjisaiError::from(format!(
-                "SHAPE requires vector, got {:?}",
-                val.val_type()
-            )));
-        }
-    };
+    // NILの場合
+    if val.is_nil() {
+        return Err(AjisaiError::from("SHAPE requires vector, got NIL"));
+    }
 
-    let shape_values: Vec<Value> = shape_vec
-        .iter()
-        .map(|&n| Value::from_number(Fraction::new(BigInt::from(n as i64), BigInt::one())))
-        .collect();
+    // ベクタの場合
+    if is_vector_value(val) {
+        let shape_vec = infer_shape_from_value(val);
 
-    interp.stack.push(Value::from_vector(shape_values));
-    Ok(())
+        let shape_values: Vec<Value> = shape_vec
+            .iter()
+            .map(|&n| Value::from_number(Fraction::new(BigInt::from(n as i64), BigInt::one())))
+            .collect();
+
+        interp.stack.push(Value::from_vector(shape_values));
+        return Ok(());
+    }
+
+    // スカラーの場合はエラー
+    Err(AjisaiError::from("SHAPE requires vector, got scalar"))
 }
 
 /// RANK - ベクタの次元数を取得
 ///
 /// 使用法:
 ///   [ 1 2 3 ] RANK           → [ 1 2 3 ] [ 1 ]
-///   [ [ 1 2 ] [ 3 4 ] ] RANK → [ [ 1 2 ] [ 3 4 ] ] [ 2 ]
+///   [ { 1 2 } { 3 4 } ] RANK → [ { 1 2 } { 3 4 } ] [ 2 ]
 pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target == OperationTarget::Stack {
         return Err(AjisaiError::from("RANK does not support Stack (..) mode"));
@@ -63,30 +107,31 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
-    let r = match &val.val_type() {
-        ValueType::Vector(v) => {
-            rank(v).map_err(|e| AjisaiError::from(format!("Failed to get rank: {}", e)))?
-        }
-        _ => {
-            return Err(AjisaiError::from(format!(
-                "RANK requires vector, got {:?}",
-                val.val_type()
-            )));
-        }
-    };
+    // NILの場合
+    if val.is_nil() {
+        return Err(AjisaiError::from("RANK requires vector, got NIL"));
+    }
 
-    let rank_frac = Fraction::new(BigInt::from(r as i64), BigInt::one());
-    interp.stack.push(wrap_number(rank_frac));
-    Ok(())
+    // ベクタの場合
+    if is_vector_value(val) {
+        let shape = infer_shape_from_value(val);
+        let r = shape.len();
+        let rank_frac = Fraction::new(BigInt::from(r as i64), BigInt::one());
+        interp.stack.push(wrap_number(rank_frac));
+        return Ok(());
+    }
+
+    // スカラーの場合はエラー
+    Err(AjisaiError::from("RANK requires vector, got scalar"))
 }
 
 /// RESHAPE - ベクタの形状を変更
 ///
 /// 使用法:
-///   [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → [ [ 1 2 3 ] [ 4 5 6 ] ]
-///   [ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE → [ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]
+///   [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → [ { 1 2 3 } { 4 5 6 } ]
+///   [ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE → [ { 1 2 } { 3 4 } { 5 6 } ]
 ///
-/// 注意: 4次元までに制限されています
+/// 注意: 3次元までに制限されています
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target == OperationTarget::Stack {
         return Err(AjisaiError::from("RESHAPE does not support Stack (..) mode"));
@@ -96,73 +141,69 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     let data_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 形状をベクタから抽出
-    let new_shape: Vec<usize> = match &shape_val.val_type() {
-        ValueType::Vector(v) => {
-            // 次元数チェック
-            let dim_count = v.len();
-            if dim_count > MAX_VISIBLE_DIMENSIONS {
+    if !is_vector_value(&shape_val) && !shape_val.is_nil() {
+        interp.stack.push(data_val);
+        interp.stack.push(shape_val);
+        return Err(AjisaiError::from("RESHAPE requires shape as vector"));
+    }
+
+    // 形状配列を構築
+    let dim_count = shape_val.data.len();
+    if dim_count > MAX_VISIBLE_DIMENSIONS {
+        interp.stack.push(data_val);
+        interp.stack.push(shape_val);
+        return Err(AjisaiError::from(format!(
+            "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+            dim_count
+        )));
+    }
+
+    let mut new_shape = Vec::with_capacity(dim_count);
+    for f in &shape_val.data {
+        let dim = match f.as_usize() {
+            Some(d) => d,
+            None => {
                 interp.stack.push(data_val);
                 interp.stack.push(shape_val);
-                return Err(AjisaiError::from(format!(
-                    "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
-                    dim_count
-                )));
+                return Err(AjisaiError::from("Shape dimensions must be positive integers"));
             }
-
-            let mut shape = Vec::with_capacity(v.len());
-            for elem in v {
-                if let ValueType::Number(n) = &elem.val_type() {
-                    let dim = match n.as_usize() {
-                        Some(d) => d,
-                        None => {
-                            interp.stack.push(data_val);
-                            interp.stack.push(shape_val);
-                            return Err(AjisaiError::from("Shape dimensions must be positive integers"));
-                        }
-                    };
-                    shape.push(dim);
-                } else {
-                    interp.stack.push(data_val);
-                    interp.stack.push(shape_val);
-                    return Err(AjisaiError::from("Shape must contain only numbers"));
-                }
-            }
-            shape
-        }
-        _ => {
-            interp.stack.push(data_val);
-            interp.stack.push(shape_val);
-            return Err(AjisaiError::from("RESHAPE requires shape as vector"));
-        }
-    };
+        };
+        new_shape.push(dim);
+    }
 
     // データをベクタから抽出
-    let data_val_type = data_val.val_type();
-    let data_vec = match &data_val_type {
-        ValueType::Vector(v) => v,
-        _ => {
-            interp.stack.push(data_val);
-            interp.stack.push(shape_val);
-            return Err(AjisaiError::from("RESHAPE requires data as vector"));
-        }
+    if data_val.is_nil() {
+        interp.stack.push(data_val);
+        interp.stack.push(shape_val);
+        return Err(AjisaiError::from("RESHAPE requires data as vector"));
+    }
+
+    // サイズチェック
+    let required_size: usize = new_shape.iter().product();
+    if data_val.data.len() != required_size {
+        interp.stack.push(data_val);
+        interp.stack.push(shape_val);
+        return Err(AjisaiError::from(format!(
+            "RESHAPE failed: data length {} doesn't match shape {:?} (requires {})",
+            data_val.data.len(), new_shape, required_size
+        )));
+    }
+
+    // 新しい値を作成
+    let result = Value {
+        data: data_val.data.clone(),
+        display_hint: data_val.display_hint,
+        shape: new_shape,
     };
 
-    let result = match reshape(data_vec, &new_shape) {
-        Ok(r) => r,
-        Err(e) => {
-            interp.stack.push(data_val);
-            interp.stack.push(shape_val);
-            return Err(AjisaiError::from(format!("RESHAPE failed: {}", e)));
-        }
-    };
-    interp.stack.push(Value::from_vector(result));
+    interp.stack.push(result);
     Ok(())
 }
 
 /// TRANSPOSE - 2次元ベクタの転置
 ///
 /// 使用法:
-///   [ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
+///   [ { 1 2 3 } { 4 5 6 } ] TRANSPOSE → [ { 1 4 } { 2 5 } { 3 6 } ]
 pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target == OperationTarget::Stack {
         return Err(AjisaiError::from("TRANSPOSE does not support Stack (..) mode"));
@@ -170,24 +211,14 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let val_type = val.val_type();
-    let data_vec = match &val_type {
-        ValueType::Vector(v) => v,
-        _ => {
-            interp.stack.push(val);
-            return Err(AjisaiError::from("TRANSPOSE requires vector"));
-        }
-    };
+    // NILの場合
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("TRANSPOSE requires vector"));
+    }
 
-    // Get shape to extract rows and cols
-    let shape = match infer_shape(data_vec) {
-        Ok(s) => s,
-        Err(e) => {
-            interp.stack.push(val);
-            return Err(AjisaiError::from(format!("TRANSPOSE failed to infer shape: {}", e)));
-        }
-    };
-
+    // 形状を取得
+    let shape = infer_shape_from_value(&val);
     if shape.len() != 2 {
         interp.stack.push(val);
         return Err(AjisaiError::from("TRANSPOSE requires 2D vector"));
@@ -196,14 +227,21 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     let rows = shape[0];
     let cols = shape[1];
 
-    let result = match transpose(data_vec, rows, cols) {
-        Ok(r) => r,
-        Err(e) => {
-            interp.stack.push(val);
-            return Err(AjisaiError::from(format!("TRANSPOSE failed: {}", e)));
+    // 転置を実行
+    let mut transposed_data = Vec::with_capacity(val.data.len());
+    for j in 0..cols {
+        for i in 0..rows {
+            transposed_data.push(val.data[i * cols + j].clone());
         }
+    }
+
+    let result = Value {
+        data: transposed_data,
+        display_hint: val.display_hint,
+        shape: vec![cols, rows],
     };
-    interp.stack.push(Value::from_vector(result));
+
+    interp.stack.push(result);
     Ok(())
 }
 
@@ -222,53 +260,33 @@ where
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    match &val.val_type() {
-        ValueType::Number(n) => {
-            // 単一数値の場合
-            let result = op(n);
-            interp.stack.push(wrap_number(result));
-            Ok(())
-        }
-        ValueType::Vector(v) => {
-            let result = match apply_unary_to_vector(v, &op) {
-                Ok(r) => r,
-                Err(e) => {
-                    // エラー時はスタックに引数を復元
-                    interp.stack.push(val);
-                    return Err(e);
-                }
-            };
-            interp.stack.push(Value::from_vector(result));
-            Ok(())
-        }
-        _ => {
-            interp.stack.push(val);
-            Err(AjisaiError::from(format!("{} requires number or vector", op_name)))
-        }
+    // NILの場合
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from(format!("{} requires number or vector", op_name)));
     }
-}
 
-/// ベクタに単項演算を再帰的に適用
-fn apply_unary_to_vector<F>(values: &[Value], op: &F) -> Result<Vec<Value>>
-where
-    F: Fn(&Fraction) -> Fraction,
-{
-    let mut result = Vec::with_capacity(values.len());
-    for val in values {
-        match &val.val_type() {
-            ValueType::Number(n) => {
-                result.push(Value::from_number(op(n)));
-            }
-            ValueType::Vector(inner) => {
-                let inner_result = apply_unary_to_vector(inner, op)?;
-                result.push(Value::from_vector(inner_result));
-            }
-            _ => {
-                return Err(AjisaiError::from("Cannot apply math operation to non-numeric value"));
-            }
-        }
+    // 単一数値の場合
+    if is_number_value(&val) {
+        let result = op(&val.data[0]);
+        interp.stack.push(wrap_number(result));
+        return Ok(());
     }
-    Ok(result)
+
+    // ベクタの場合
+    if is_vector_value(&val) {
+        let result_data: Vec<Fraction> = val.data.iter().map(|f| op(f)).collect();
+        let result = Value {
+            data: result_data,
+            display_hint: val.display_hint,
+            shape: val.shape.clone(),
+        };
+        interp.stack.push(result);
+        return Ok(());
+    }
+
+    interp.stack.push(val);
+    Err(AjisaiError::from(format!("{} requires number or vector", op_name)))
 }
 
 /// FLOOR - 切り捨て（負の無限大方向）
@@ -315,108 +333,82 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let a_val_type = a_val.val_type();
-    let a_vec = match &a_val_type {
-        ValueType::Vector(v) => v,
-        _ => {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
-            return Err(AjisaiError::from("MOD requires vectors"));
-        }
-    };
-
-    let b_val_type = b_val.val_type();
-    let b_vec = match &b_val_type {
-        ValueType::Vector(v) => v,
-        _ => {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
-            return Err(AjisaiError::from("MOD requires vectors"));
-        }
-    };
+    // NILチェック
+    if a_val.is_nil() || b_val.is_nil() {
+        interp.stack.push(a_val);
+        interp.stack.push(b_val);
+        return Err(AjisaiError::from("MOD requires vectors or numbers"));
+    }
 
     // ブロードキャスト対応の剰余演算
-    let result = match apply_binary_broadcast(a_vec, b_vec, |x, y| {
+    let result = apply_binary_broadcast(&a_val, &b_val, |x, y| {
         if y.numerator.is_zero() {
             Err(AjisaiError::from("Modulo by zero"))
         } else {
             Ok(x.modulo(y))
         }
-    }) {
-        Ok(r) => r,
+    });
+
+    match result {
+        Ok(r) => {
+            interp.stack.push(r);
+            Ok(())
+        }
         Err(e) => {
-            // エラー時はスタックに引数を復元
             interp.stack.push(a_val);
             interp.stack.push(b_val);
-            return Err(e);
+            Err(e)
         }
-    };
-
-    interp.stack.push(Value::from_vector(result));
-    Ok(())
+    }
 }
 
 /// ブロードキャスト付き二項演算
-fn apply_binary_broadcast<F>(a: &[Value], b: &[Value], op: F) -> Result<Vec<Value>>
+fn apply_binary_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
-    let a_len = a.len();
-    let b_len = b.len();
+    let a_len = a.data.len();
+    let b_len = b.data.len();
 
-    let mut result = Vec::new();
+    let mut result_data = Vec::new();
 
     if a_len > 1 && b_len == 1 {
         // aがベクタ、bがスカラー
-        let scalar = extract_single_number(&b[0])?;
-        for elem in a {
-            result.push(apply_binary_element(elem, &scalar, op)?);
+        let scalar = &b.data[0];
+        for elem in &a.data {
+            result_data.push(op(elem, scalar)?);
         }
+        Ok(Value {
+            data: result_data,
+            display_hint: DisplayHint::Number,
+            shape: a.shape.clone(),
+        })
     } else if a_len == 1 && b_len > 1 {
         // aがスカラー、bがベクタ
-        let scalar = extract_single_number(&a[0])?;
-        for elem in b {
-            let elem_num = extract_single_number(elem)?;
-            result.push(Value::from_number(op(&scalar, &elem_num)?));
+        let scalar = &a.data[0];
+        for elem in &b.data {
+            result_data.push(op(scalar, elem)?);
         }
+        Ok(Value {
+            data: result_data,
+            display_hint: DisplayHint::Number,
+            shape: b.shape.clone(),
+        })
     } else if a_len == b_len {
         // 同じ長さ
-        for (elem_a, elem_b) in a.iter().zip(b.iter()) {
-            let a_num = extract_single_number(elem_a)?;
-            let b_num = extract_single_number(elem_b)?;
-            result.push(Value::from_number(op(&a_num, &b_num)?));
+        for (elem_a, elem_b) in a.data.iter().zip(b.data.iter()) {
+            result_data.push(op(elem_a, elem_b)?);
         }
+        Ok(Value {
+            data: result_data,
+            display_hint: DisplayHint::Number,
+            shape: a.shape.clone(),
+        })
     } else {
-        return Err(AjisaiError::from(format!(
+        Err(AjisaiError::from(format!(
             "Cannot broadcast shapes [{} elements] and [{} elements]",
             a_len, b_len
-        )));
-    }
-
-    Ok(result)
-}
-
-fn extract_single_number(val: &Value) -> Result<Fraction> {
-    match &val.val_type() {
-        ValueType::Number(n) => Ok(n.clone()),
-        _ => Err(AjisaiError::from("Expected number")),
-    }
-}
-
-fn apply_binary_element<F>(elem: &Value, scalar: &Fraction, op: F) -> Result<Value>
-where
-    F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
-{
-    match &elem.val_type() {
-        ValueType::Number(n) => Ok(Value::from_number(op(n, scalar)?)),
-        ValueType::Vector(inner) => {
-            let result: Result<Vec<Value>> = inner
-                .iter()
-                .map(|e| apply_binary_element(e, scalar, op))
-                .collect();
-            Ok(Value::from_vector(result?))
-        }
-        _ => Err(AjisaiError::from("Expected number or vector")),
+        )))
     }
 }
 
@@ -427,7 +419,7 @@ where
 /// FILL - 任意値埋めベクタ生成
 ///
 /// 使用法:
-///   [ 2 3 5 ] FILL → [ [ 5 5 5 ] [ 5 5 5 ] ]
+///   [ 2 3 5 ] FILL → [ { 5 5 5 } { 5 5 5 } ]
 ///   [ 3 1/2 ] FILL → [ 1/2 1/2 1/2 ]
 ///
 /// 引数ベクタの最後の要素が埋める値、それより前が形状
@@ -440,77 +432,53 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     // 引数ベクタ [ shape... value ] を取得
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 引数から形状と埋める値を抽出
-    let (shape, fill_value) = match &args_val.val_type() {
-        ValueType::Vector(v) => {
-            if v.len() < 2 {
+    // NILチェック
+    if args_val.is_nil() {
+        interp.stack.push(args_val);
+        return Err(AjisaiError::from("FILL requires [shape... value] vector"));
+    }
+
+    // 最低2要素必要
+    if args_val.data.len() < 2 {
+        interp.stack.push(args_val);
+        return Err(AjisaiError::from("FILL requires [shape... value] (at least 2 elements)"));
+    }
+
+    // 最後の要素が埋める値
+    let fill_value = args_val.data.last().unwrap().clone();
+
+    // それより前の要素が形状
+    let shape_len = args_val.data.len() - 1;
+    if shape_len > MAX_VISIBLE_DIMENSIONS {
+        interp.stack.push(args_val);
+        return Err(AjisaiError::from(format!(
+            "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+            shape_len
+        )));
+    }
+
+    let mut shape = Vec::with_capacity(shape_len);
+    for i in 0..shape_len {
+        let dim = match args_val.data[i].as_usize() {
+            Some(d) if d > 0 => d,
+            _ => {
                 interp.stack.push(args_val);
-                return Err(AjisaiError::from("FILL requires [shape... value] (at least 2 elements)"));
+                return Err(AjisaiError::from("Shape dimensions must be positive integers"));
             }
+        };
+        shape.push(dim);
+    }
 
-            // 最後の要素が埋める値
-            let value_elem = &v[v.len() - 1];
-            let fill_value = match &value_elem.val_type() {
-                ValueType::Number(n) => n.clone(),
-                _ => {
-                    interp.stack.push(args_val);
-                    return Err(AjisaiError::from("FILL value (last element) must be a number"));
-                }
-            };
+    // データを生成
+    let total_size: usize = shape.iter().product();
+    let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
 
-            // それより前の要素が形状
-            let shape_len = v.len() - 1;
-            if shape_len > MAX_VISIBLE_DIMENSIONS {
-                interp.stack.push(args_val);
-                return Err(AjisaiError::from(format!(
-                    "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
-                    shape_len
-                )));
-            }
-
-            let mut shape = Vec::with_capacity(shape_len);
-            for i in 0..shape_len {
-                if let ValueType::Number(n) = &v[i].val_type() {
-                    let dim = match n.as_usize() {
-                        Some(d) if d > 0 => d,
-                        _ => {
-                            interp.stack.push(args_val);
-                            return Err(AjisaiError::from("Shape dimensions must be positive integers"));
-                        }
-                    };
-                    shape.push(dim);
-                } else {
-                    interp.stack.push(args_val);
-                    return Err(AjisaiError::from("Shape dimensions must be numbers"));
-                }
-            }
-
-            (shape, fill_value)
-        }
-        _ => {
-            interp.stack.push(args_val);
-            return Err(AjisaiError::from("FILL requires [shape... value] vector"));
-        }
+    let result = Value {
+        data,
+        display_hint: DisplayHint::Number,
+        shape,
     };
 
-    let result = build_filled_vector(&shape, &fill_value);
     interp.stack.push(result);
     Ok(())
-}
-
-/// 形状に基づいて値で埋めたネスト済みVectorを構築
-fn build_filled_vector(shape: &[usize], value: &Fraction) -> Value {
-    if shape.len() == 1 {
-        let values: Vec<Value> = (0..shape[0])
-            .map(|_| Value::from_number(value.clone()))
-            .collect();
-        Value::from_vector(values)
-    } else {
-        let outer_size = shape[0];
-        let inner_shape = &shape[1..];
-        let values: Vec<Value> = (0..outer_size)
-            .map(|_| build_filled_vector(inner_shape, value))
-            .collect();
-        Value::from_vector(values)
-    }
 }
