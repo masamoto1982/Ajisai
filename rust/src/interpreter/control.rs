@@ -68,9 +68,9 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
 
     // 文字列を取得（統一分数アーキテクチャ：直接データアクセス）
     let code_str = if is_string_value(&code_val) {
-        value_as_string(&code_val).ok_or_else(|| AjisaiError::type_error("string", "other type"))?
+        value_as_string(&code_val).ok_or_else(|| AjisaiError::structure_error("string", "other format"))?
     } else {
-        return Err(AjisaiError::type_error("string", "other type"));
+        return Err(AjisaiError::structure_error("string", "other format"));
     };
 
     // TIMES内のループでは「変化なしエラー」チェックを無効化

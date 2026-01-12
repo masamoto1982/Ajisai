@@ -76,10 +76,10 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    // 文字列の場合は同型変換エラー
+    // 既に文字列形式の場合は冗長な変換エラー
     if is_string_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("STR: same-type conversion (String → String) is not allowed"));
+        return Err(AjisaiError::from("STR: value is already in string format"));
     }
 
     // 真偽値の場合
@@ -172,15 +172,15 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    // 数値の場合は同型変換エラー
+    // 既に数値形式の場合は冗長な変換エラー
     if is_number_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NUM: same-type conversion (Number → Number) is not allowed"));
+        return Err(AjisaiError::from("NUM: value is already in number format"));
     }
 
     // その他はエラー
     interp.stack.push(val);
-    Err(AjisaiError::from("NUM: requires String or Boolean type"))
+    Err(AjisaiError::from("NUM: requires string or boolean format"))
 }
 
 /// BOOL - 文字列または数値を真偽値に変換
@@ -222,15 +222,15 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
         return convert_fraction_to_bool(&val.data[0], &val, interp);
     }
 
-    // 真偽値の場合は同型変換エラー
+    // 既に真偽値形式の場合は冗長な変換エラー
     if is_boolean_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("BOOL: same-type conversion (Boolean → Boolean) is not allowed"));
+        return Err(AjisaiError::from("BOOL: value is already in boolean format"));
     }
 
     // その他はエラー
     interp.stack.push(val);
-    Err(AjisaiError::from("BOOL: requires String or Number type"))
+    Err(AjisaiError::from("BOOL: requires string or number format"))
 }
 
 /// 文字列をBoolに変換するヘルパー
@@ -293,10 +293,10 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // NILの場合は同型変換エラー
+    // 既にNIL形式の場合は冗長な変換エラー
     if val.is_nil() {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NIL: same-type conversion (Nil → Nil) is not allowed"));
+        return Err(AjisaiError::from("NIL: value is already nil"));
     }
 
     // 文字列の場合
@@ -316,18 +316,18 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     // 真偽値の場合
     if is_boolean_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NIL: cannot convert Boolean to Nil"));
+        return Err(AjisaiError::from("NIL: cannot convert boolean format to nil"));
     }
 
     // 数値の場合
     if is_number_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NIL: cannot convert Number to Nil"));
+        return Err(AjisaiError::from("NIL: cannot convert number format to nil"));
     }
 
     // その他はエラー
     interp.stack.push(val);
-    Err(AjisaiError::from("NIL: requires String type"))
+    Err(AjisaiError::from("NIL: requires string format"))
 }
 
 /// CHARS - 文字列を文字ベクタに分解
@@ -381,7 +381,7 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
 
             // その他はエラー
             interp.stack.push(val);
-            Err(AjisaiError::from("CHARS: requires String type"))
+            Err(AjisaiError::from("CHARS: requires string format"))
         }
         OperationTarget::Stack => {
             // スタック上の各要素に対してCHARSを適用
@@ -433,7 +433,7 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                 // その他はエラー
                 interp.stack = results;
                 interp.stack.push(elem);
-                return Err(AjisaiError::from("CHARS: requires String type"));
+                return Err(AjisaiError::from("CHARS: requires string format"));
             }
 
             interp.stack = results;
@@ -460,7 +460,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             // NILの場合
             if val.is_nil() {
                 interp.stack.push(val);
-                return Err(AjisaiError::from("JOIN: requires Vector type, got Nil"));
+                return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
             }
 
             // ベクタ（複数要素）の場合
@@ -504,7 +504,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     } else if is_boolean_value(elem) {
                         "boolean"
                     } else {
-                        "other type"
+                        "other format"
                     };
                     interp.stack.push(val);
                     return Err(AjisaiError::from(format!(
@@ -527,10 +527,10 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             } else if is_datetime_value(&val) {
                 "DateTime"
             } else {
-                "other type"
+                "other format"
             };
             interp.stack.push(val);
-            Err(AjisaiError::from(format!("JOIN: requires Vector type, got {}", type_name)))
+            Err(AjisaiError::from(format!("JOIN: requires vector format, got {}", type_name)))
         }
         OperationTarget::Stack => {
             // スタック上の各ベクタに対してJOINを適用
@@ -547,7 +547,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 if elem.is_nil() {
                     interp.stack = results;
                     interp.stack.push(elem);
-                    return Err(AjisaiError::from("JOIN: requires Vector type, got Nil"));
+                    return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
                 }
 
                 // ベクタ（複数要素）の場合
@@ -592,7 +592,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         } else if is_boolean_value(v) {
                             "boolean"
                         } else {
-                            "other type"
+                            "other format"
                         };
                         interp.stack = results;
                         interp.stack.push(elem);
@@ -616,11 +616,11 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 } else if is_datetime_value(&elem) {
                     "DateTime"
                 } else {
-                    "other type"
+                    "other format"
                 };
                 interp.stack = results;
                 interp.stack.push(elem);
-                return Err(AjisaiError::from(format!("JOIN: requires Vector type, got {}", type_name)));
+                return Err(AjisaiError::from(format!("JOIN: requires vector format, got {}", type_name)));
             }
 
             interp.stack = results;
@@ -838,7 +838,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_chars_type_error() {
+    async fn test_chars_structure_error() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 42 ] CHARS").await;
         assert!(result.is_err());

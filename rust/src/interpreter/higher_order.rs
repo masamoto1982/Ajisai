@@ -74,7 +74,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 reconstruct_vector_elements(&target_val)
             } else {
                 interp.stack.push(target_val);
-                return Err(AjisaiError::type_error("vector", "other type"));
+                return Err(AjisaiError::structure_error("vector", "other format"));
             };
 
             // 空ベクタ/NILの場合はNILを返す
@@ -121,7 +121,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                                     interp.stack = original_stack_below;
                                     interp.stack.push(Value::from_vector(elements));
                                     interp.stack.push(word_val);
-                                    return Err(AjisaiError::type_error("vector result from MAP word", "other type"));
+                                    return Err(AjisaiError::structure_error("vector result from MAP word", "other format"));
                                 }
                             },
                             None => {
@@ -243,7 +243,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 reconstruct_vector_elements(&target_val)
             } else {
                 interp.stack.push(target_val);
-                return Err(AjisaiError::type_error("vector", "other type"));
+                return Err(AjisaiError::structure_error("vector", "other format"));
             };
 
             // 空ベクタ/NILの場合はNILを返す
@@ -287,7 +287,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                                 interp.stack = original_stack_below;
                                 interp.stack.push(Value::from_vector(elements));
                                 interp.stack.push(word_val);
-                                return Err(AjisaiError::type_error("boolean result from FILTER word", "other type"));
+                                return Err(AjisaiError::structure_error("boolean result from FILTER word", "other format"));
                             }
                         } else {
                             // エラー時にスタックを復元
@@ -296,7 +296,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             interp.stack = original_stack_below;
                             interp.stack.push(Value::from_vector(elements));
                             interp.stack.push(word_val);
-                            return Err(AjisaiError::type_error("boolean vector result from FILTER word", "other type"));
+                            return Err(AjisaiError::structure_error("boolean vector result from FILTER word", "other format"));
                         };
 
                         if is_true {
@@ -425,7 +425,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(target_val);
                 interp.stack.push(init_val);
                 interp.stack.push(word_val);
-                return Err(AjisaiError::type_error("vector", "other type"));
+                return Err(AjisaiError::structure_error("vector", "other format"));
             };
 
             // 初期値をアンラップ

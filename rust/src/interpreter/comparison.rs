@@ -33,7 +33,7 @@ where
             if a_val.data.len() != 1 || b_val.data.len() != 1 {
                 interp.stack.push(a_val);
                 interp.stack.push(b_val);
-                return Err(AjisaiError::type_error("single-element value", "multi-element or empty value"));
+                return Err(AjisaiError::structure_error("single-element value", "multi-element or empty value"));
             }
 
             let result = op(&a_val.data[0], &b_val.data[0]);
@@ -66,7 +66,7 @@ where
                 if items[i].data.len() != 1 || items[i + 1].data.len() != 1 {
                     interp.stack.extend(items);
                     interp.stack.push(count_val);
-                    return Err(AjisaiError::type_error("single-element value", "multi-element or empty value"));
+                    return Err(AjisaiError::structure_error("single-element value", "multi-element or empty value"));
                 }
 
                 if !op(&items[i].data[0], &items[i + 1].data[0]) {

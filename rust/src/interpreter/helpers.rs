@@ -34,12 +34,12 @@ use num_traits::{One, ToPrimitive};
 /// - i64範囲を超える場合
 pub fn get_integer_from_value(value: &Value) -> Result<i64> {
     if value.data.len() != 1 {
-        return Err(AjisaiError::type_error("single-element value with integer", "multi-element or empty value"));
+        return Err(AjisaiError::structure_error("single-element value with integer", "multi-element or empty value"));
     }
 
     let f = &value.data[0];
     if f.denominator != BigInt::one() {
-        return Err(AjisaiError::type_error("integer", "fraction"));
+        return Err(AjisaiError::structure_error("integer", "fraction"));
     }
 
     f.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
@@ -61,12 +61,12 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
 /// - 分数の場合
 pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
     if value.data.len() != 1 {
-        return Err(AjisaiError::type_error("single-element value with integer", "multi-element or empty value"));
+        return Err(AjisaiError::structure_error("single-element value with integer", "multi-element or empty value"));
     }
 
     let f = &value.data[0];
     if f.denominator != BigInt::one() {
-        return Err(AjisaiError::type_error("integer", "fraction"));
+        return Err(AjisaiError::structure_error("integer", "fraction"));
     }
 
     Ok(f.numerator.clone())
@@ -87,13 +87,14 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
 ///
 /// 【エラー】
 /// - 空の値の場合
+#[allow(dead_code)]
 pub fn extract_number(val: &Value) -> Result<&Fraction> {
     if val.data.len() == 1 {
         Ok(&val.data[0])
     } else if val.data.is_empty() {
         Err(AjisaiError::from("Cannot extract number from NIL"))
     } else {
-        Err(AjisaiError::type_error("single-element value", "multi-element value"))
+        Err(AjisaiError::structure_error("single-element value", "multi-element value"))
     }
 }
 

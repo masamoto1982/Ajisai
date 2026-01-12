@@ -241,7 +241,7 @@ mod num_tests {
     }
 
     #[tokio::test]
-    async fn test_num_same_type_error_stack_restoration() {
+    async fn test_num_same_structure_error_stack_restoration() {
         let mut interp = Interpreter::new();
         interp.execute("[ 42 ]").await.unwrap();
         let result = interp.execute("NUM").await;
