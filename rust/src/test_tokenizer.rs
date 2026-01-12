@@ -41,6 +41,28 @@ mod test_tokenizer {
     }
 
     #[test]
+    fn test_comment_adjacent_to_number() {
+        // スペースなしで数値の直後にコメントが来るケース
+        // #はis_special_char()でトークン境界となるため、正しく分離される
+        let custom_words = HashSet::new();
+        let result = tokenize_with_custom_words("123#comment", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::Number("123".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn test_comment_adjacent_to_fraction() {
+        // 分数リテラルの直後にコメントが来るケース
+        // 統一分数アーキテクチャとコメントシステムの調和を確認
+        let custom_words = HashSet::new();
+        let result = tokenize_with_custom_words("1/3#これはコメント", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::Number("1/3".to_string()),
+        ]);
+    }
+
+    #[test]
     fn test_comment_with_sharp_in_string() {
         let custom_words = HashSet::new();
         let result = tokenize_with_custom_words("'#not a comment' 1", &custom_words).unwrap();
