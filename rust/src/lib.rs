@@ -85,8 +85,9 @@ mod ceil_tests {
     #[tokio::test]
     async fn test_ceil_error_restores_stack() {
         let mut interp = Interpreter::new();
-        // CEILに非数値を渡すとエラーになる。エラー時にスタックが復元されることを確認
-        interp.execute("[ 'test' ]").await.unwrap();
+        // CEILにNILを渡すとエラーになる。エラー時にスタックが復元されることを確認
+        // 注: 統一分数アーキテクチャでは文字列は数値ベクタとして扱われるため、NILを使用
+        interp.execute("[ ]").await.unwrap();  // 空ベクタ = NIL
         let result = interp.execute("CEIL").await;
         assert!(result.is_err());
         // スタックが復元されているか確認
@@ -213,8 +214,9 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_error_restores_stack() {
         let mut interp = Interpreter::new();
-        // ROUNDに非数値を渡すとエラーになる。エラー時にスタックが復元されることを確認
-        interp.execute("[ 'test' ]").await.unwrap();
+        // ROUNDにNILを渡すとエラーになる。エラー時にスタックが復元されることを確認
+        // 注: 統一分数アーキテクチャでは文字列は数値ベクタとして扱われるため、NILを使用
+        interp.execute("[ ]").await.unwrap();  // 空ベクタ = NIL
         let result = interp.execute("ROUND").await;
         assert!(result.is_err());
         // スタックが復元されているか確認
