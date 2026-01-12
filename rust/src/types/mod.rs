@@ -77,6 +77,8 @@ pub struct Value {
     pub shape: Vec<usize>,
 }
 
+// 将来のワード実装で使用されるユーティリティメソッド群
+#[allow(dead_code)]
 impl Value {
     /// 空の値（NIL）を作成
     #[inline]

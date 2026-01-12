@@ -119,7 +119,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             } else {
                 interp.stack.push(target_val);
                 interp.stack.push(index_val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {
@@ -218,7 +218,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             } else {
                 interp.stack.push(vector_val);
                 interp.stack.push(args_val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {
@@ -310,7 +310,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             } else {
                 interp.stack.push(vector_val);
                 interp.stack.push(args_val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {
@@ -384,7 +384,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
             } else {
                 interp.stack.push(vector_val);
                 interp.stack.push(index_val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {
@@ -442,7 +442,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
                 len
             } else {
                 interp.stack.push(target_val);
-                return Err(AjisaiError::type_error("vector", "other type"));
+                return Err(AjisaiError::structure_error("vector", "other format"));
             }
         }
         OperationTarget::Stack => interp.stack.len(),
@@ -523,7 +523,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
             } else {
                 interp.stack.push(vector_val);
                 interp.stack.push(count_val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {
@@ -638,7 +638,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
             } else {
                 interp.stack.push(vector_val);
                 interp.stack.push(args_val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {
@@ -848,7 +848,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
                 Ok(())
             } else {
                 interp.stack.push(val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {

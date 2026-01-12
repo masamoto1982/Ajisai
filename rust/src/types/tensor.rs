@@ -4,6 +4,11 @@
 //!
 //! Vectorベースのデータに対する行列演算を提供する。
 //! 新しいアーキテクチャでは、すべてのデータは Vec<Fraction> として表現される。
+//!
+//! 注意: これらの関数は将来の行列演算ワード（TRANSPOSE, RESHAPE等）で使用予定。
+//! 現時点では未使用だが、アーキテクチャの一部として保持している。
+
+#![allow(dead_code)]
 
 use crate::types::fraction::Fraction;
 use crate::types::{Value, DisplayHint};

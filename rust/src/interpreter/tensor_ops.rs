@@ -47,6 +47,7 @@ fn infer_shape_from_value(val: &Value) -> Vec<usize> {
 }
 
 /// 値からスカラー数値を抽出
+#[allow(dead_code)]
 fn extract_scalar(val: &Value) -> Option<&Fraction> {
     if val.data.len() == 1 {
         Some(&val.data[0])

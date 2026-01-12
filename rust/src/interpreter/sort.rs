@@ -117,7 +117,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 Ok(())
             } else {
                 interp.stack.push(val);
-                Err(AjisaiError::type_error("vector", "other type"))
+                Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {
