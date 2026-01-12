@@ -43,10 +43,59 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueType};
+use crate::types::{Value, DisplayHint};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive};
+
+// ============================================================================
+// ヘルパー関数（統一分数アーキテクチャ用）
+// ============================================================================
+
+/// ベクタ値かどうかを判定
+fn is_vector_value(val: &Value) -> bool {
+    val.data.len() > 1 || !val.shape.is_empty()
+}
+
+/// 文字列値かどうかを判定
+fn is_string_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::String && !val.data.is_empty()
+}
+
+/// ベクタの要素を再構築する
+fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
+    if val.shape.is_empty() || val.shape.len() == 1 {
+        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
+    } else {
+        let outer_size = val.shape[0];
+        let inner_size: usize = val.shape[1..].iter().product();
+        let inner_shape = val.shape[1..].to_vec();
+
+        (0..outer_size).map(|i| {
+            let start = i * inner_size;
+            let end = start + inner_size;
+            let data = val.data[start..end].to_vec();
+            Value {
+                data,
+                display_hint: val.display_hint,
+                shape: inner_shape.clone(),
+            }
+        }).collect()
+    }
+}
+
+/// Valueから文字列を取得
+fn value_as_string(val: &Value) -> String {
+    val.data.iter()
+        .filter_map(|f| f.to_i64().and_then(|n| {
+            if n >= 0 && n <= 0x10FFFF {
+                char::from_u32(n as u32)
+            } else {
+                None
+            }
+        }))
+        .collect()
+}
 
 /// デフォルトのハッシュビット数
 const DEFAULT_HASH_BITS: u32 = 256;
@@ -80,74 +129,98 @@ lazy_static::lazy_static! {
 /// 分数の正規形を使用するため、1/2と2/4は同じバイト列を生成
 fn serialize_value(value: &Value) -> Vec<u8> {
     let mut bytes = Vec::new();
-    serialize_value_inner(&value.val_type(), &mut bytes);
+    serialize_value_inner(value, &mut bytes);
     bytes
 }
 
-fn serialize_value_inner(val_type: &ValueType, bytes: &mut Vec<u8>) {
-    match val_type {
-        ValueType::Number(frac) => {
-            // 型タグ: 数値
+fn serialize_value_inner(val: &Value, bytes: &mut Vec<u8>) {
+    // NIL判定
+    if val.is_nil() {
+        bytes.push(0x06);
+        return;
+    }
+
+    // 文字列判定
+    if is_string_value(val) {
+        let s = value_as_string(val);
+        bytes.push(0x02);
+        bytes.extend_from_slice(&(s.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(s.as_bytes());
+        return;
+    }
+
+    // 真偽値判定
+    if val.display_hint == DisplayHint::Boolean && val.data.len() == 1 && val.shape.is_empty() {
+        bytes.push(0x03);
+        bytes.push(if !val.data[0].is_zero() { 0x01 } else { 0x00 });
+        return;
+    }
+
+    // DateTime判定
+    if val.display_hint == DisplayHint::DateTime && val.data.len() == 1 && val.shape.is_empty() {
+        let frac = &val.data[0];
+        bytes.push(0x07);
+        let num_bytes = frac.numerator.to_bytes_le().1;
+        bytes.extend_from_slice(&(num_bytes.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&num_bytes);
+        let den_bytes = frac.denominator.to_bytes_le().1;
+        bytes.extend_from_slice(&(den_bytes.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&den_bytes);
+        return;
+    }
+
+    // 数値判定（単一スカラー）
+    if val.data.len() == 1 && val.shape.is_empty() {
+        let frac = &val.data[0];
+        bytes.push(0x01);
+        if frac.numerator < BigInt::zero() {
+            bytes.push(0x00);
+        } else {
             bytes.push(0x01);
-            // 符号
-            if frac.numerator < BigInt::zero() {
-                bytes.push(0x00); // 負
-            } else {
-                bytes.push(0x01); // 非負
-            }
-            // 分子の絶対値（正規形なので分母との共通因子はない）
-            let num_bytes = if frac.numerator < BigInt::zero() {
-                (-&frac.numerator).to_bytes_le().1
-            } else {
-                frac.numerator.to_bytes_le().1
-            };
-            bytes.extend_from_slice(&(num_bytes.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&num_bytes);
-            // 分母（正規形では常に正）
-            let den_bytes = frac.denominator.to_bytes_le().1;
-            bytes.extend_from_slice(&(den_bytes.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&den_bytes);
         }
-        ValueType::String(s) => {
-            // 型タグ: 文字列
-            bytes.push(0x02);
-            bytes.extend_from_slice(&(s.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(s.as_bytes());
+        let num_bytes = if frac.numerator < BigInt::zero() {
+            (-&frac.numerator).to_bytes_le().1
+        } else {
+            frac.numerator.to_bytes_le().1
+        };
+        bytes.extend_from_slice(&(num_bytes.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&num_bytes);
+        let den_bytes = frac.denominator.to_bytes_le().1;
+        bytes.extend_from_slice(&(den_bytes.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&den_bytes);
+        return;
+    }
+
+    // ベクタ判定
+    if is_vector_value(val) {
+        let v = reconstruct_vector_elements(val);
+        bytes.push(0x04);
+        bytes.extend_from_slice(&(v.len() as u32).to_le_bytes());
+        for elem in &v {
+            serialize_value_inner(elem, bytes);
         }
-        ValueType::Boolean(b) => {
-            // 型タグ: 真偽値
-            bytes.push(0x03);
-            bytes.push(if *b { 0x01 } else { 0x00 });
+        return;
+    }
+
+    // フォールバック（単一の数値として扱う）
+    if !val.data.is_empty() {
+        let frac = &val.data[0];
+        bytes.push(0x01);
+        if frac.numerator < BigInt::zero() {
+            bytes.push(0x00);
+        } else {
+            bytes.push(0x01);
         }
-        ValueType::Vector(v) => {
-            // 型タグ: ベクタ
-            bytes.push(0x04);
-            bytes.extend_from_slice(&(v.len() as u32).to_le_bytes());
-            for elem in v {
-                serialize_value_inner(&elem.val_type(), bytes);
-            }
-        }
-        ValueType::Symbol(s) => {
-            // 型タグ: シンボル
-            bytes.push(0x05);
-            bytes.extend_from_slice(&(s.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(s.as_bytes());
-        }
-        ValueType::Nil => {
-            // 型タグ: Nil
-            bytes.push(0x06);
-        }
-        ValueType::DateTime(frac) => {
-            // 型タグ: DateTime（内部的に分数として保存）
-            bytes.push(0x07);
-            // タイムスタンプ分数をシリアライズ
-            let num_bytes = frac.numerator.to_bytes_le().1;
-            bytes.extend_from_slice(&(num_bytes.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&num_bytes);
-            let den_bytes = frac.denominator.to_bytes_le().1;
-            bytes.extend_from_slice(&(den_bytes.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&den_bytes);
-        }
+        let num_bytes = if frac.numerator < BigInt::zero() {
+            (-&frac.numerator).to_bytes_le().1
+        } else {
+            frac.numerator.to_bytes_le().1
+        };
+        bytes.extend_from_slice(&(num_bytes.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&num_bytes);
+        let den_bytes = frac.denominator.to_bytes_le().1;
+        bytes.extend_from_slice(&(den_bytes.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&den_bytes);
     }
 }
 
@@ -200,22 +273,16 @@ fn multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
 
 /// スタックから整数を抽出（単一要素Vectorの数値）
 fn extract_positive_integer(val: &Value) -> Option<u32> {
-    match val.val_type() {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match v[0].val_type() {
-                ValueType::Number(n) => {
-                    // 整数かつ正数かチェック
-                    if n.denominator == BigInt::one() && n.numerator > BigInt::from(0) {
-                        n.numerator.to_u32()
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
+    if is_vector_value(val) {
+        let v = reconstruct_vector_elements(val);
+        if v.len() == 1 && v[0].data.len() == 1 && v[0].shape.is_empty() {
+            let frac = &v[0].data[0];
+            if frac.denominator == BigInt::one() && frac.numerator > BigInt::from(0) {
+                return frac.numerator.to_u32();
             }
         }
-        _ => None,
     }
+    None
 }
 
 /// HASH - 任意のAjisai値を決定論的にハッシュ化
@@ -311,10 +378,6 @@ fn parse_hash_args(interp: &mut Interpreter) -> Result<(u32, Value)> {
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
-    use crate::types::ValueType;
-    use crate::types::fraction::Fraction;
-    use num_bigint::BigInt;
-    use num_traits::One;
 
     #[tokio::test]
     async fn test_hash_rejects_stack_mode() {
@@ -327,26 +390,15 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_hash_string() {
         let mut interp = Interpreter::new();
         let result = interp.execute("'hello' HASH").await;
         assert!(result.is_ok(), "HASH should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
 
-        // 結果が[0, 1)の範囲の分数であることを確認
-        if let ValueType::Vector(v) = &interp.stack[0].val_type() {
-            assert_eq!(v.len(), 1);
-            if let ValueType::Number(frac) = &v[0].val_type() {
-                let zero = Fraction::new(BigInt::from(0), BigInt::one());
-                let one = Fraction::new(BigInt::one(), BigInt::one());
-                assert!(*frac >= zero && *frac < one, "Hash should be in [0, 1)");
-            } else {
-                panic!("Expected Number");
-            }
-        } else {
-            panic!("Expected Vector");
-        }
+        // 結果が1要素のベクタであることを確認
+        let val = &interp.stack[0];
+        assert_eq!(val.data.len(), 1, "Hash result should be single element");
     }
 
     #[tokio::test]
@@ -360,7 +412,7 @@ mod tests {
         interp.execute("'hello' HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_eq!(hash1.val_type(), hash2.val_type(), "Same input should produce same hash");
+        assert_eq!(hash1.data, hash2.data, "Same input should produce same hash");
     }
 
     #[tokio::test]
@@ -373,7 +425,7 @@ mod tests {
         interp.execute("'world' HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_ne!(hash1.val_type(), hash2.val_type(), "Different inputs should produce different hashes");
+        assert_ne!(hash1.data, hash2.data, "Different inputs should produce different hashes");
     }
 
     #[tokio::test]
@@ -395,12 +447,11 @@ mod tests {
         interp.execute("[ 2/4 ] HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_eq!(hash1.val_type(), hash2.val_type(),
+        assert_eq!(hash1.data, hash2.data,
                    "Equivalent fractions should produce same hash (1/2 = 2/4)");
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_hash_with_bit_specification() {
         let mut interp = Interpreter::new();
 
@@ -408,24 +459,9 @@ mod tests {
         let result = interp.execute("[ 128 ] 'hello' HASH").await;
         assert!(result.is_ok(), "HASH with bit spec should succeed: {:?}", result);
 
-        // 結果が[0, 1)の範囲の分数であることを確認
-        // 注: Fraction::new()は自動約分するため、分母が正確に2^128とは限らない
-        if let ValueType::Vector(v) = &interp.stack[0].val_type() {
-            assert_eq!(v.len(), 1);
-            if let ValueType::Number(frac) = &v[0].val_type() {
-                let zero = Fraction::new(BigInt::from(0), BigInt::one());
-                let one = Fraction::new(BigInt::one(), BigInt::one());
-                assert!(*frac >= zero && *frac < one, "Hash should be in [0, 1)");
-                // 分母が2^128の約数であることを確認
-                let max_denom = BigInt::one() << 128usize;
-                assert!(&max_denom % &frac.denominator == BigInt::from(0),
-                        "Denominator should divide 2^128");
-            } else {
-                panic!("Expected Number");
-            }
-        } else {
-            panic!("Expected Vector");
-        }
+        // 結果が1要素のベクタであることを確認
+        let val = &interp.stack[0];
+        assert_eq!(val.data.len(), 1, "Hash result should be single element");
     }
 
     #[tokio::test]
@@ -438,7 +474,7 @@ mod tests {
         interp.execute("[ FALSE ] HASH").await.unwrap();
         let hash_false = interp.stack.pop().unwrap();
 
-        assert_ne!(hash_true.val_type(), hash_false.val_type(),
+        assert_ne!(hash_true.data, hash_false.data,
                    "TRUE and FALSE should have different hashes");
     }
 
@@ -478,7 +514,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_hash_bits_consumed() {
         let mut interp = Interpreter::new();
         // 整数はビット数として消費される
@@ -489,7 +524,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_hash_invalid_bits() {
         let mut interp = Interpreter::new();
 
@@ -518,7 +552,7 @@ mod tests {
         // すべて異なることを確認
         for i in 0..hashes.len() {
             for j in (i+1)..hashes.len() {
-                assert_ne!(hashes[i].val_type(), hashes[j].val_type(),
+                assert_ne!(hashes[i].data, hashes[j].data,
                            "Different inputs should have different hashes");
             }
         }

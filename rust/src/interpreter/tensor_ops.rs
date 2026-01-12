@@ -180,12 +180,13 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
 
     // サイズチェック
     let required_size: usize = new_shape.iter().product();
-    if data_val.data.len() != required_size {
+    let data_len = data_val.data.len();
+    if data_len != required_size {
         interp.stack.push(data_val);
         interp.stack.push(shape_val);
         return Err(AjisaiError::from(format!(
             "RESHAPE failed: data length {} doesn't match shape {:?} (requires {})",
-            data_val.data.len(), new_shape, required_size
+            data_len, new_shape, required_size
         )));
     }
 
