@@ -21,11 +21,60 @@
 // - .. PLAY: スタック全体を再生（マルチトラック）
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueType};
+use crate::types::{Value, DisplayHint};
 use super::Interpreter;
 use super::OperationTarget;
 use num_traits::ToPrimitive;
 use serde::Serialize;
+
+// ============================================================================
+// ヘルパー関数（統一分数アーキテクチャ用）
+// ============================================================================
+
+/// ベクタ値かどうかを判定
+fn is_vector_value(val: &Value) -> bool {
+    val.data.len() > 1 || !val.shape.is_empty()
+}
+
+/// 文字列値かどうかを判定
+fn is_string_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::String && !val.data.is_empty()
+}
+
+/// ベクタの要素を再構築する
+fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
+    if val.shape.is_empty() || val.shape.len() == 1 {
+        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
+    } else {
+        let outer_size = val.shape[0];
+        let inner_size: usize = val.shape[1..].iter().product();
+        let inner_shape = val.shape[1..].to_vec();
+
+        (0..outer_size).map(|i| {
+            let start = i * inner_size;
+            let end = start + inner_size;
+            let data = val.data[start..end].to_vec();
+            Value {
+                data,
+                display_hint: val.display_hint,
+                shape: inner_shape.clone(),
+            }
+        }).collect()
+    }
+}
+
+/// Valueから文字列を取得
+fn value_as_string(val: &Value) -> String {
+    val.data.iter()
+        .filter_map(|f| f.to_i64().and_then(|n| {
+            if n >= 0 && n <= 0x10FFFF {
+                char::from_u32(n as u32)
+            } else {
+                None
+            }
+        }))
+        .collect()
+}
 
 // ============================================================================
 // PlayMode - 再生モード
@@ -152,63 +201,63 @@ fn build_audio_structure(
     mode: PlayMode,
     output: &mut String
 ) -> Result<AudioStructure> {
-    match &value.val_type() {
-        ValueType::Number(frac) => {
-            let freq = frac.numerator.to_f64()
-                .ok_or_else(|| AjisaiError::from("Frequency too large"))?;
-            let dur = frac.denominator.to_f64()
-                .ok_or_else(|| AjisaiError::from("Duration too large"))?;
+    // NIL判定
+    if value.is_nil() {
+        return Ok(AudioStructure::Rest { duration: 1.0 });
+    }
 
-            if dur <= 0.0 {
-                return Err(AjisaiError::from("Duration must be positive"));
-            }
+    // 文字列判定
+    if is_string_value(value) {
+        let s = value_as_string(value);
+        output.push_str(&s);
+        output.push(' ');
+        return Ok(AudioStructure::Seq { children: vec![] });
+    }
 
-            if freq == 0.0 {
-                // 休符
-                Ok(AudioStructure::Rest { duration: dur })
-            } else if freq > 0.0 {
-                // 可聴域チェック
-                check_audible_range(freq, output);
-                Ok(AudioStructure::Tone { frequency: freq, duration: dur })
-            } else {
-                Err(AjisaiError::from("Frequency must be non-negative"))
-            }
+    // ベクタ判定
+    if is_vector_value(value) {
+        let elements = reconstruct_vector_elements(value);
+        if elements.is_empty() {
+            return Err(AjisaiError::from("Empty vector not allowed"));
         }
-        ValueType::Nil => {
-            // NIL → 1スロット休符
-            Ok(AudioStructure::Rest { duration: 1.0 })
-        }
-        ValueType::String(s) => {
-            // 歌詞をOutputに出力
-            output.push_str(&s);
-            output.push(' ');
-            // 時間消費なしなので空のSeqを返す（後で除去）
-            Ok(AudioStructure::Seq { children: vec![] })
-        }
-        ValueType::Vector(elements) => {
-            if elements.is_empty() {
-                return Err(AjisaiError::from("Empty vector not allowed"));
-            }
 
-            // 各要素を順次再生として再帰的に構築
-            let children: Vec<AudioStructure> = elements.iter()
-                .map(|e| build_audio_structure(e, PlayMode::Sequential, output))
-                .collect::<Result<Vec<_>>>()?
-                .into_iter()
-                // 空のSeq（歌詞から生成）を除去
-                .filter(|s| !matches!(s, AudioStructure::Seq { children } if children.is_empty()))
-                .collect();
+        let children: Vec<AudioStructure> = elements.iter()
+            .map(|e| build_audio_structure(e, PlayMode::Sequential, output))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .filter(|s| !matches!(s, AudioStructure::Seq { children } if children.is_empty()))
+            .collect();
 
-            match mode {
-                PlayMode::Sequential => Ok(AudioStructure::Seq { children }),
-                PlayMode::Simultaneous => Ok(AudioStructure::Sim { children }),
-            }
+        return match mode {
+            PlayMode::Sequential => Ok(AudioStructure::Seq { children }),
+            PlayMode::Simultaneous => Ok(AudioStructure::Sim { children }),
+        };
+    }
+
+    // 数値判定（単一スカラー）
+    if value.data.len() == 1 && value.shape.is_empty() {
+        let frac = &value.data[0];
+        let freq = frac.numerator.to_f64()
+            .ok_or_else(|| AjisaiError::from("Frequency too large"))?;
+        let dur = frac.denominator.to_f64()
+            .ok_or_else(|| AjisaiError::from("Duration too large"))?;
+
+        if dur <= 0.0 {
+            return Err(AjisaiError::from("Duration must be positive"));
         }
-        _ => {
-            // Boolean等は無視（空のSeqとして返す）
-            Ok(AudioStructure::Seq { children: vec![] })
+
+        if freq == 0.0 {
+            return Ok(AudioStructure::Rest { duration: dur });
+        } else if freq > 0.0 {
+            check_audible_range(freq, output);
+            return Ok(AudioStructure::Tone { frequency: freq, duration: dur });
+        } else {
+            return Err(AjisaiError::from("Frequency must be non-negative"));
         }
     }
+
+    // Boolean等は無視（空のSeqとして返す）
+    Ok(AudioStructure::Seq { children: vec![] })
 }
 
 // ============================================================================

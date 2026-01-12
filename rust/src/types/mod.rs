@@ -172,6 +172,56 @@ impl Value {
         }
     }
 
+    /// 数値（単一の分数）から値を作成
+    #[inline]
+    pub fn from_number(f: Fraction) -> Self {
+        Self::from_fraction(f)
+    }
+
+    /// Value のベクタから値を作成
+    ///
+    /// 統一分数アーキテクチャ:
+    /// - 空ベクタ: NILを返す
+    /// - スカラー要素のみ: 1Dベクタを作成（shape = [n]）
+    /// - ベクタ要素: 次元を追加（shape = [n, inner_shape...]）
+    ///
+    /// スカラーは shape = [] として表現される。
+    /// これにより `[ 1 ]` → shape [1]、`[ [ 1 ] ]` → shape [1, 1] と区別できる。
+    pub fn from_vector(values: Vec<Value>) -> Self {
+        if values.is_empty() {
+            // 空ベクタ = NIL
+            return Self::nil();
+        }
+
+        // すべての要素をフラット化しつつ形状情報を計算
+        let inner_shape = values[0].shape.clone();
+        let data: Vec<Fraction> = values.iter()
+            .flat_map(|v| v.data.iter().cloned())
+            .collect();
+
+        // 空になった場合はNIL
+        if data.is_empty() {
+            return Self::nil();
+        }
+
+        // 新しい形状を計算: [要素数, 内部形状...]
+        let mut new_shape = vec![values.len()];
+        new_shape.extend(inner_shape);
+
+        // 表示ヒントを継承（単一要素の場合のみ）
+        let hint = if values.len() == 1 {
+            values[0].display_hint
+        } else {
+            DisplayHint::Auto
+        };
+
+        Self {
+            data,
+            display_hint: hint,
+            shape: new_shape,
+        }
+    }
+
     /// 表示ヒントを設定
     #[inline]
     pub fn with_hint(mut self, hint: DisplayHint) -> Self {
@@ -246,7 +296,7 @@ impl Value {
 }
 
 // ============================================================================
-// 後方互換性のための型定義
+// トークンとパーサー関連の型定義
 // ============================================================================
 
 /// トークン定義
@@ -325,137 +375,5 @@ pub struct WordDefinition {
 /// スタック型
 pub type Stack = Vec<Value>;
 
-/// 可視次元の最大値（後方互換性のため保持）
+/// 可視次元の最大値
 pub const MAX_VISIBLE_DIMENSIONS: usize = 3;
-
-// ============================================================================
-// 後方互換性のための ValueType（移行期間中のみ使用）
-// ============================================================================
-
-/// 後方互換性のためのValueType
-///
-/// 新しいコードではこの型を使用しないでください。
-/// すべての値は Vec<Fraction> として表現されます。
-#[derive(Debug, Clone, PartialEq)]
-pub enum ValueType {
-    Number(Fraction),
-    Vector(Vec<Value>),
-    String(String),
-    Boolean(bool),
-    Symbol(String),
-    Nil,
-    DateTime(Fraction),
-}
-
-impl Value {
-    // ============================================================================
-    // 後方互換性のためのメソッド（移行期間中のみ使用）
-    // ============================================================================
-
-    /// 後方互換性: val_type フィールドへのアクセス
-    ///
-    /// 新しいアーキテクチャでは data と display_hint を直接使用してください。
-    pub fn val_type(&self) -> ValueType {
-        if self.data.is_empty() {
-            return ValueType::Nil;
-        }
-
-        match self.display_hint {
-            DisplayHint::Boolean => {
-                if self.data.len() == 1 {
-                    ValueType::Boolean(!self.data[0].is_zero())
-                } else {
-                    // 複数要素の場合はベクタとして扱う
-                    ValueType::Vector(self.data.iter().map(|f| Value::from_fraction(f.clone())).collect())
-                }
-            }
-            DisplayHint::String => {
-                // 分数のベクタを文字列に変換
-                let chars: String = self.data.iter()
-                    .filter_map(|f| {
-                        f.to_i64().and_then(|n| {
-                            if n >= 0 && n <= 0x10FFFF {
-                                char::from_u32(n as u32)
-                            } else {
-                                None
-                            }
-                        })
-                    })
-                    .collect();
-                ValueType::String(chars)
-            }
-            DisplayHint::DateTime => {
-                if self.data.len() == 1 {
-                    ValueType::DateTime(self.data[0].clone())
-                } else {
-                    ValueType::Vector(self.data.iter().map(|f| Value::from_fraction(f.clone())).collect())
-                }
-            }
-            DisplayHint::Number | DisplayHint::Auto => {
-                if self.data.len() == 1 {
-                    ValueType::Number(self.data[0].clone())
-                } else {
-                    ValueType::Vector(self.data.iter().map(|f| Value::from_fraction(f.clone())).collect())
-                }
-            }
-        }
-    }
-
-    /// 後方互換性: from_number
-    #[inline]
-    pub fn from_number(f: Fraction) -> Self {
-        Self::from_fraction(f)
-    }
-
-    /// 後方互換性: from_vector
-    ///
-    /// 古いAPIとの互換性のため、Value のベクタを受け取ります。
-    ///
-    /// 統一分数アーキテクチャ:
-    /// - 空ベクタ: NILを返す
-    /// - スカラー要素のみ: 1Dベクタを作成（shape = [n]）
-    /// - ベクタ要素: 次元を追加（shape = [n, inner_shape...]）
-    ///
-    /// スカラーは shape = [] として表現される。
-    /// これにより `[ 1 ]` → shape [1]、`[ [ 1 ] ]` → shape [1, 1] と区別できる。
-    pub fn from_vector(values: Vec<Value>) -> Self {
-        if values.is_empty() {
-            // 空ベクタ = NIL
-            return Self::nil();
-        }
-
-        // すべての要素をフラット化しつつ形状情報を計算
-        let inner_shape = values[0].shape.clone();
-        let data: Vec<Fraction> = values.iter()
-            .flat_map(|v| v.data.iter().cloned())
-            .collect();
-
-        // 空になった場合はNIL
-        if data.is_empty() {
-            return Self::nil();
-        }
-
-        // 新しい形状を計算: [要素数, 内部形状...]
-        let mut new_shape = vec![values.len()];
-        new_shape.extend(inner_shape);
-
-        // 表示ヒントを継承（単一要素の場合のみ）
-        let hint = if values.len() == 1 {
-            values[0].display_hint
-        } else {
-            DisplayHint::Auto
-        };
-
-        Self {
-            data,
-            display_hint: hint,
-            shape: new_shape,
-        }
-    }
-
-    /// 後方互換性: from_datetime (Fraction版)
-    #[inline]
-    pub fn from_datetime_frac(f: Fraction) -> Self {
-        Self::from_datetime(f)
-    }
-}

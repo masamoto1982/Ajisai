@@ -6,6 +6,8 @@
 // DATETIME: タイムスタンプ（数値） → Vector（日付時刻）
 // TIMESTAMP: Vector（日付時刻） → タイムスタンプ（数値）
 //
+// 統一分数アーキテクチャ版
+//
 // ============================================================================
 // 【設計思想】タイムゾーン処理における設計選択
 // ============================================================================
@@ -16,122 +18,17 @@
 //
 // ## 原則1: タイムゾーンをデータ型ではなく変換パラメータとして扱う
 //
-// ### 背景：タイムスタンプとタイムゾーンの関係性
-//
-// タイムスタンプ（instant）は、ある特定の瞬間を表す数値であり、地球上の
-// すべての地点で同一の値を持つ。例えば Unix時刻 1732531200 は、東京でも
-// ニューヨークでも同じ瞬間を指す。
-//
-// 一方、この瞬間を人間が理解できる形式（年月日時分秒）で表現する際には、
-// どのタイムゾーンで表現するかによって異なる値になる：
-//   - UTC: 2024-11-25 05:00:00
-//   - Asia/Tokyo (UTC+9): 2024-11-25 14:00:00
-//   - America/New_York (UTC-5): 2024-11-25 00:00:00
-//
-// ### アプローチの比較
-//
-// **アプローチA: タイムゾーン情報をデータ型に含める**
-//   例: Java 8の ZonedDateTime, OffsetDateTime
-//   特性:
-//     - 各値がタイムゾーン情報を保持する
-//     - 同じ瞬間が複数の異なるオブジェクトとして表現可能
-//     - 例: ZonedDateTime("2024-11-25T14:00:00+09:00[Asia/Tokyo]")
-//          ZonedDateTime("2024-11-25T05:00:00Z[UTC]")
-//          → 両者は同じ瞬間だが異なるオブジェクト
-//   問題点:
-//     - 同一性の判定が複雑化（同じ瞬間なのに異なる表現）
-//     - タイムゾーン情報の伝播により、データ構造が肥大化
-//     - 瞬間（instant）の概念とタイムゾーンという表現方法が混在
-//   参考: https://qiita.com/twrcd1227/items/21864c0e7c8abc4c3ae4
-//   （記事では「瞬間は地球全体で普遍的であり、東京時間・ソウル時間という
-//     概念は存在しない」という指摘がある）
-//
-// **アプローチB: タイムゾーンを変換時のパラメータとして扱う**
-//   例: Ajisaiの設計、一部のデータベースシステム
-//   特性:
-//     - タイムスタンプは常に単一の数値（Unix時刻など）
-//     - タイムゾーンは、表示・入力時の変換パラメータとして指定
-//     - 例: timestamp = 1732531200
-//          to_datetime(timestamp, 'Asia/Tokyo') → [2024 11 25 14 0 0]
-//          to_datetime(timestamp, 'UTC') → [2024 11 25 5 0 0]
-//   利点:
-//     - 瞬間の概念とタイムゾーンの概念が分離され、責務が明確
-//     - データ構造がシンプル（数値のみ）
-//     - 同一性の判定が容易（数値の比較のみ）
-//
-// ### Ajisaiの設計選択
-//
 // AjisaiではアプローチBを採用：
 //   - タイムスタンプは常に単一の数値（Unix時刻）として保持
 //   - DATETIME/TIMESTAMPワードは変換パラメータとしてタイムゾーンを要求
 //   - データとしてタイムゾーン情報を保持しない
 //
-// この設計により、「瞬間」という普遍的な概念と「表現方法」という
-// ローカルな概念を明確に分離する。
-//
 // ## 原則2: タイムゾーン指定を必須とする
-//
-// ### 背景：オプショナル引数の問題
-//
-// タイムゾーン変換において、タイムゾーン指定を省略可能にするかどうかは
-// 重要な設計判断である。
-//
-// ### アプローチの比較
-//
-// **アプローチA: タイムゾーン指定を省略可能にする**
-//   例: BigQuery SQLの DATETIME(), TIMESTAMP() 関数
-//   特性:
-//     - タイムゾーンを指定しない場合、デフォルトタイムゾーンを使用
-//     - 例: DATETIME(timestamp) → セッションのタイムゾーンを使用
-//          DATETIME(timestamp, 'Asia/Tokyo') → 明示的に指定
-//   問題点:
-//     - デフォルト値への依存により、「どのタイムゾーンか」の意識が薄れる
-//     - 実行環境の設定に依存し、移植性が低下
-//     - コードレビュー時に意図が不明確（省略は意図的か、単なる見落としか）
-//   参考: https://zenn.dev/su_k/articles/69c62aa7fb70c3
-//   （記事では「省略可能なタイムゾーンパラメータがタイムゾーン意識を
-//     弱めてしまう」という課題が指摘されている）
-//
-// **アプローチB: タイムゾーン指定を必須にする**
-//   例: Ajisaiの設計
-//   特性:
-//     - すべての変換でタイムゾーンを明示的に指定
-//     - 例: [ timestamp ] 'LOCAL' DATETIME
-//          [ timestamp ] 'UTC' DATETIME （将来サポート予定）
-//     - 省略時はエラー
-//   利点:
-//     - 開発者が常に「どのタイムゾーンか」を意識する
-//     - コードの意図が明確
-//     - 実行環境に依存せず、動作が予測可能
-//
-// ### Ajisaiの設計選択
 //
 // AjisaiではアプローチBを採用：
 //   - DATETIME/TIMESTAMPワードは必ずタイムゾーン文字列を要求
 //   - タイムゾーンを省略するとスタックアンダーフローエラー
 //   - 毎回の変換で明示的にタイムゾーンを指定することを強制
-//
-// この設計により、タイムゾーン関連のバグを設計段階で防止する。
-//
-// ## 将来の拡張方針
-//
-// 現在はブラウザのローカルタイムゾーン ('LOCAL') のみをサポートしているが、
-// 将来的には以下のような拡張を想定している：
-//
-// 1. UTCタイムゾーンのサポート
-//    例: [ 1732531200 ] 'UTC' DATETIME
-//
-// 2. IANA タイムゾーンデータベースのサポート
-//    例: [ 1732531200 ] 'Asia/Tokyo' DATETIME
-//        [ 1732531200 ] 'America/New_York' DATETIME
-//
-// 3. オフセット指定のサポート
-//    例: [ 1732531200 ] '+09:00' DATETIME
-//        [ 1732531200 ] '-05:00' DATETIME
-//
-// これらの拡張を行う際も、タイムゾーンを必須とする設計原則は堅持すること。
-// タイムゾーン文字列のパース処理を拡張するだけで、基本的なアーキテクチャは
-// 変更不要である。
 //
 // ============================================================================
 // 【設計原則】実装詳細
@@ -146,25 +43,71 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::wrap_datetime;
-use crate::types::{Value, ValueType};
+use crate::types::{Value, DisplayHint};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{ToPrimitive, One, Zero};
 use wasm_bindgen::prelude::*;
 
+// ============================================================================
+// ヘルパー関数（統一分数アーキテクチャ用）
+// ============================================================================
+
+/// ベクタ値かどうかを判定
+fn is_vector_value(val: &Value) -> bool {
+    val.data.len() > 1 || !val.shape.is_empty()
+}
+
+/// 文字列値かどうかを判定
+fn is_string_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::String && !val.data.is_empty()
+}
+
+/// 数値値かどうかを判定
+fn is_number_value(val: &Value) -> bool {
+    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto | DisplayHint::DateTime) && val.data.len() == 1 && val.shape.is_empty()
+}
+
+/// Valueから文字列を取得
+fn value_as_string(val: &Value) -> Option<String> {
+    if val.data.is_empty() {
+        return None;
+    }
+    Some(val.data.iter()
+        .filter_map(|f| f.to_i64().and_then(|n| {
+            if n >= 0 && n <= 0x10FFFF {
+                char::from_u32(n as u32)
+            } else {
+                None
+            }
+        }))
+        .collect())
+}
+
+/// ベクタの要素を再構築する
+fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
+    if val.shape.is_empty() || val.shape.len() == 1 {
+        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
+    } else {
+        // 多次元の場合は最外層の要素を再構築
+        let outer_size = val.shape[0];
+        let inner_size: usize = val.shape[1..].iter().product();
+        let inner_shape = val.shape[1..].to_vec();
+
+        (0..outer_size).map(|i| {
+            let start = i * inner_size;
+            let end = start + inner_size;
+            let data = val.data[start..end].to_vec();
+            Value {
+                data,
+                display_hint: val.display_hint,
+                shape: inner_shape.clone(),
+            }
+        }).collect()
+    }
+}
+
 /// NOW - 現在のUnixタイムスタンプを取得
-///
-/// 【責務】
-/// - 現在時刻をUnixタイムスタンプ（秒単位の分数）として返す
-/// - ミリ秒精度で取得し、分数として表現
-///
-/// 【使用法】
-/// ```ajisai
-/// NOW → [ 1732531200 1/2 + ]  // 1732531200.5秒（ミリ秒精度）
-/// ```
-///
-/// 【戻り値】
-/// - Unixタイムスタンプ（分数）
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = Date, js_name = now)]
@@ -181,7 +124,6 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
     let now_ms = date_now();
 
     // ミリ秒を秒に変換して分数として表現
-    // now_ms / 1000 = now_ms / 1000 (分数として)
     let ms_bigint = BigInt::from(now_ms as i64);
     let thousand = BigInt::from(1000);
 
@@ -194,30 +136,6 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// DATETIME - タイムスタンプをローカル日付時刻Vectorに変換
-///
-/// 【責務】
-/// - Unixタイムスタンプ → 指定タイムゾーンの日付時刻Vector
-/// - サブ秒精度がある場合は7番目の要素として含める
-/// - タイムゾーン指定を必須とし、意識を強制する
-///
-/// 【使用法】
-/// ```ajisai
-/// [ 1732531200 ] 'LOCAL' DATETIME → [ [ 2024 11 25 14 0 0 ] ]
-/// [ 1732531200 1/2 + ] 'LOCAL' DATETIME → [ [ 2024 11 25 14 0 0 1/2 ] ]
-/// ```
-///
-/// 【引数】
-/// - タイムスタンプ（数値、分数可）
-/// - タイムゾーン（文字列）
-///   - 'LOCAL': ブラウザのローカルタイムゾーン
-///
-/// 【戻り値】
-/// - Vector: [年 月 日 時 分 秒] または [年 月 日 時 分 秒 サブ秒]
-///
-/// 【エラー】
-/// - スタックが空
-/// - 数値型でない
-/// - タイムゾーン文字列が不正
 #[wasm_bindgen]
 extern "C" {
     type Date;
@@ -255,20 +173,17 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
 
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let timezone = match &tz_val.val_type() {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type() {
-                ValueType::String(s) => s.clone(),
-                _ => {
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("DATETIME: timezone must be a String (e.g., 'LOCAL')"));
-                }
-            }
-        }
-        _ => {
+    let timezone = if is_vector_value(&tz_val) {
+        let v = reconstruct_vector_elements(&tz_val);
+        if v.len() == 1 && is_string_value(&v[0]) {
+            value_as_string(&v[0]).unwrap_or_default()
+        } else {
             interp.stack.push(tz_val);
             return Err(AjisaiError::from("DATETIME: timezone must be a String (e.g., 'LOCAL')"));
         }
+    } else {
+        interp.stack.push(tz_val);
+        return Err(AjisaiError::from("DATETIME: timezone must be a String (e.g., 'LOCAL')"));
     };
 
     // タイムゾーンの検証（現在はLOCALのみサポート）
@@ -283,22 +198,19 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから数値またはDateTime型を抽出
-    let timestamp = match &val.val_type() {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type() {
-                ValueType::Number(n) | ValueType::DateTime(n) => n.clone(),
-                _ => {
-                    interp.stack.push(val);
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
-                }
-            }
-        }
-        _ => {
+    let timestamp = if is_vector_value(&val) {
+        let v = reconstruct_vector_elements(&val);
+        if v.len() == 1 && is_number_value(&v[0]) {
+            v[0].data[0].clone()
+        } else {
             interp.stack.push(val);
             interp.stack.push(tz_val);
             return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
         }
+    } else {
+        interp.stack.push(val);
+        interp.stack.push(tz_val);
+        return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
     };
 
     // タイムスタンプを秒とサブ秒に分離
@@ -346,35 +258,6 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// TIMESTAMP - ローカル日付時刻Vectorをタイムスタンプに変換
-///
-/// 【責務】
-/// - 指定タイムゾーンの日付時刻Vector → Unixタイムスタンプ
-/// - 実在しない日時（2023-13-32など）はエラー
-/// - サブ秒精度をサポート
-/// - タイムゾーン指定を必須とし、意識を強制する
-///
-/// 【使用法】
-/// ```ajisai
-/// [ [ 2024 11 25 14 0 0 ] ] 'LOCAL' TIMESTAMP → [ 1732531200 ]
-/// [ [ 2024 11 25 14 0 0 1/2 ] ] 'LOCAL' TIMESTAMP → [ 1732531200 1/2 + ]
-/// [ [ 2023 13 32 0 0 0 ] ] 'LOCAL' TIMESTAMP → ERROR（実在しない日付）
-/// ```
-///
-/// 【引数】
-/// - Vector: [年 月 日 時 分 秒] または [年 月 日 時 分 秒 サブ秒]
-/// - タイムゾーン（文字列）
-///   - 'LOCAL': ブラウザのローカルタイムゾーン
-///
-/// 【戻り値】
-/// - タイムスタンプ（数値、分数）
-///
-/// 【エラー】
-/// - スタックが空
-/// - Vector型でない
-/// - 要素数が6または7でない
-/// - 各要素が整数でない（サブ秒を除く）
-/// - 実在しない日時
-/// - タイムゾーン文字列が不正
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(static_method_of = Date, js_name = UTC)]
@@ -398,20 +281,17 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let timezone = match &tz_val.val_type() {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type() {
-                ValueType::String(s) => s.clone(),
-                _ => {
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("TIMESTAMP: timezone must be a String (e.g., 'LOCAL')"));
-                }
-            }
-        }
-        _ => {
+    let timezone = if is_vector_value(&tz_val) {
+        let v = reconstruct_vector_elements(&tz_val);
+        if v.len() == 1 && is_string_value(&v[0]) {
+            value_as_string(&v[0]).unwrap_or_default()
+        } else {
             interp.stack.push(tz_val);
             return Err(AjisaiError::from("TIMESTAMP: timezone must be a String (e.g., 'LOCAL')"));
         }
+    } else {
+        interp.stack.push(tz_val);
+        return Err(AjisaiError::from("TIMESTAMP: timezone must be a String (e.g., 'LOCAL')"));
     };
 
     // タイムゾーンの検証（現在はLOCALのみサポート）
@@ -425,23 +305,20 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // 日付時刻Vectorを取得
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // Vectorから日付時刻成分を抽出
-    let components = match &val.val_type() {
-        ValueType::Vector(v) if v.len() == 1 => {
-            match &v[0].val_type() {
-                ValueType::Vector(inner) => inner.clone(),
-                _ => {
-                    interp.stack.push(val);
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
-                }
-            }
-        }
-        _ => {
+    // Vectorから日付時刻成分を抽出（[[year month day hour minute second]]形式）
+    let components = if is_vector_value(&val) {
+        let v = reconstruct_vector_elements(&val);
+        if v.len() == 1 && is_vector_value(&v[0]) {
+            reconstruct_vector_elements(&v[0])
+        } else {
             interp.stack.push(val);
             interp.stack.push(tz_val);
             return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
         }
+    } else {
+        interp.stack.push(val);
+        interp.stack.push(tz_val);
+        return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
     };
 
     // 要素数チェック（6または7）
@@ -456,28 +333,26 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // 各成分を整数として抽出（サブ秒を除く）
     let mut integers = Vec::new();
     for (i, component) in components.iter().take(6).enumerate() {
-        match &component.val_type() {
-            ValueType::Number(n) => {
-                if n.denominator != BigInt::one() {
-                    interp.stack.push(val);
-                    interp.stack.push(tz_val);
-                    return Err(AjisaiError::from(
-                        format!("TIMESTAMP: element {} must be an integer, got {}/{}",
-                            i, n.numerator, n.denominator)
-                    ));
-                }
-                let int_val = n.numerator.to_i32().ok_or_else(|| {
-                    AjisaiError::from(format!("TIMESTAMP: element {} too large", i))
-                })?;
-                integers.push(int_val);
-            }
-            _ => {
+        if is_number_value(component) {
+            let frac = &component.data[0];
+            if frac.denominator != BigInt::one() {
                 interp.stack.push(val);
                 interp.stack.push(tz_val);
                 return Err(AjisaiError::from(
-                    format!("TIMESTAMP: element {} must be a Number", i)
+                    format!("TIMESTAMP: element {} must be an integer, got {}/{}",
+                        i, frac.numerator, frac.denominator)
                 ));
             }
+            let int_val = frac.numerator.to_i32().ok_or_else(|| {
+                AjisaiError::from(format!("TIMESTAMP: element {} too large", i))
+            })?;
+            integers.push(int_val);
+        } else {
+            interp.stack.push(val);
+            interp.stack.push(tz_val);
+            return Err(AjisaiError::from(
+                format!("TIMESTAMP: element {} must be a Number", i)
+            ));
         }
     }
 
@@ -490,13 +365,12 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     // サブ秒成分を抽出（あれば）
     let subsec = if components.len() == 7 {
-        match &components[6].val_type() {
-            ValueType::Number(n) => Some(n.clone()),
-            _ => {
-                interp.stack.push(val);
-                interp.stack.push(tz_val);
-                return Err(AjisaiError::from("TIMESTAMP: subsecond must be a Number"));
-            }
+        if is_number_value(&components[6]) {
+            Some(components[6].data[0].clone())
+        } else {
+            interp.stack.push(val);
+            interp.stack.push(tz_val);
+            return Err(AjisaiError::from("TIMESTAMP: subsecond must be a Number"));
         }
     } else {
         None
