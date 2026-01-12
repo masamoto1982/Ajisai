@@ -391,19 +391,10 @@ mod tests {
         // スタックトップが [ 15 ] であることを確認（Vector）
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            match &val.val_type() {
-                crate::types::ValueType::Vector(v) => {
-                    assert_eq!(v.len(), 1, "Vector should have one element");
-                    if let crate::types::ValueType::Number(n) = &v[0].val_type() {
-                        // 15 は分数として 15/1 で表現される
-                        assert_eq!(n.numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", n.numerator);
-                        assert_eq!(n.denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
-                    } else {
-                        panic!("Expected Number type in vector");
-                    }
-                }
-                _ => panic!("Expected Vector type, got: {:?}", val.val_type()),
-            }
+            assert_eq!(val.data.len(), 1, "Result should have one element");
+            // 15 は分数として 15/1 で表現される
+            assert_eq!(val.data[0].numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", val.data[0].numerator);
+            assert_eq!(val.data[0].denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
         }
     }
 

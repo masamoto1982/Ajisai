@@ -20,9 +20,6 @@ pub mod audio;          // 音声再生
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
 
-// テストで後方互換性APIを使用するため、cfg(test)でのみインポート
-#[cfg(test)]
-use crate::types::ValueType;
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
@@ -781,16 +778,9 @@ mod tests {
         // [1] .. GET は [20] を取得してプッシュ、[20] = で比較して TRUE
         assert_eq!(interp.stack.len(), 4);
         // 最後の値が TRUE であることを確認
-        if let ValueType::Vector(v) = interp.stack[3].val_type() {
-            assert_eq!(v.len(), 1);
-            if let ValueType::Boolean(b) = v[0].val_type() {
-                assert!(b, "Expected TRUE from comparison");
-            } else {
-                panic!("Expected Boolean, got {:?}", v[0].val_type());
-            }
-        } else {
-            panic!("Expected Vector, got {:?}", interp.stack[3].val_type());
-        }
+        let val = &interp.stack[3];
+        assert_eq!(val.data.len(), 1, "Expected single element");
+        assert!(!val.data[0].is_zero(), "Expected TRUE from comparison");
     }
 
     #[tokio::test]
@@ -1036,12 +1026,8 @@ ADDTEST
         // Verify result
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1, "Result vector should have one element");
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator.to_string(), "8", "Result should be 8");
-                }
-            }
+            assert_eq!(val.data.len(), 1, "Result should have one element");
+            assert_eq!(val.data[0].numerator.to_string(), "8", "Result should be 8");
         }
     }
 
@@ -1080,12 +1066,8 @@ ADDTEST
         // Verify result: (1 + 2) * 3 = 9
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1, "Result vector should have one element");
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator.to_string(), "9", "Result should be 9");
-                }
-            }
+            assert_eq!(val.data.len(), 1, "Result should have one element");
+            assert_eq!(val.data[0].numerator.to_string(), "9", "Result should be 9");
         }
     }
 
@@ -1105,12 +1087,8 @@ ADDTEST
         // Verify result: (10 + 20) * 5 = 150
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1, "Result vector should have one element");
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator.to_string(), "150", "Result should be 150");
-                }
-            }
+            assert_eq!(val.data.len(), 1, "Result should have one element");
+            assert_eq!(val.data[0].numerator.to_string(), "150", "Result should be 150");
         }
     }
 
@@ -1131,12 +1109,8 @@ ADDTEST
         // Result should be [100] because 5 > 3 is true
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 1, "Result vector should have one element");
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator.to_string(), "100", "Result should be 100");
-                }
-            }
+            assert_eq!(val.data.len(), 1, "Result should have one element");
+            assert_eq!(val.data[0].numerator.to_string(), "100", "Result should be 100");
         }
 
         // Clear stack
@@ -1175,16 +1149,12 @@ ADDTEST
         // すべての条件がfalseなのでデフォルトの999
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let ValueType::Vector(v) = val.val_type() {
-                if let ValueType::Number(n) = v[0].val_type() {
-                    assert_eq!(n.numerator.to_string(), "999");
-                }
-            }
+            assert_eq!(val.data.len(), 1, "Result should have one element");
+            assert_eq!(val.data[0].numerator.to_string(), "999");
         }
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_map_no_change_allowed() {
         let mut interp = Interpreter::new();
         // identity関数をMAPで使用しても、エラーにならないことを確認
@@ -1194,9 +1164,7 @@ ADDTEST
         // 結果が [ 1 2 3 ] であることを確認
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let crate::types::ValueType::Vector(v) = val.val_type() {
-                assert_eq!(v.len(), 3);
-            }
+            assert_eq!(val.data.len(), 3, "Result should have 3 elements");
         }
     }
 
@@ -1223,8 +1191,7 @@ ADDTEST
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
             // 統一分数アーキテクチャでは、空の入れ子はすべてNILになる
-            assert!(matches!(val.val_type(), crate::types::ValueType::Nil),
-                "Expected NIL, got {:?}", val.val_type());
+            assert!(val.is_nil(), "Expected NIL, got {:?}", val);
         }
     }
 
@@ -1240,8 +1207,7 @@ ADDTEST
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
             // 統一分数アーキテクチャでは、空のネスト構造はNILになる
-            assert!(matches!(val.val_type(), crate::types::ValueType::Nil),
-                "Expected NIL, got {:?}", val.val_type());
+            assert!(val.is_nil(), "Expected NIL, got {:?}", val);
         }
     }
 }
