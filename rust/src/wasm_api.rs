@@ -47,18 +47,23 @@ fn is_vector_value(val: &Value) -> bool {
 }
 
 /// 値を文字列として解釈する
+///
+/// UTF-8バイト列として保存されたデータを文字列に復元する。
+/// 各Fractionは0-255のバイト値として解釈される。
 fn value_as_string(val: &Value) -> String {
-    val.data.iter()
+    let bytes: Vec<u8> = val.data.iter()
         .filter_map(|f| {
             f.to_i64().and_then(|n| {
-                if n >= 0 && n <= 0x10FFFF {
-                    char::from_u32(n as u32)
+                if n >= 0 && n <= 255 {
+                    Some(n as u8)
                 } else {
                     None
                 }
             })
         })
-        .collect()
+        .collect();
+
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 /// 形状ベクタからブラケット構造を生成
