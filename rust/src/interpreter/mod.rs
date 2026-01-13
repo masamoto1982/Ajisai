@@ -752,7 +752,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_stack_get_with_guard_and_comparison() {
         let mut interp = Interpreter::new();
 
@@ -1155,17 +1154,19 @@ ADDTEST
     }
 
     #[tokio::test]
-    #[ignore] // TODO: MAP with identity function needs adjustment for unified architecture
-    async fn test_map_no_change_allowed() {
+    async fn test_map_with_increment() {
         let mut interp = Interpreter::new();
-        // identity関数をMAPで使用しても、エラーにならないことを確認
-        let result = interp.execute("[ ':' ] 'IDENTITY' DEF [ 1 2 3 ] 'IDENTITY' MAP").await;
-        assert!(result.is_ok(), "MAP with identity function should not error: {:?}", result);
+        // 統一分数アーキテクチャ: MAPワードはベクタ結果を返す必要がある
+        let result = interp.execute("[ ': [ 1 ] +' ] 'INC' DEF [ 1 2 3 ] 'INC' MAP").await;
+        assert!(result.is_ok(), "MAP with increment function should succeed: {:?}", result);
 
-        // 結果が [ 1 2 3 ] であることを確認
+        // 結果が [ 2 3 4 ] であることを確認
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
             assert_eq!(val.data.len(), 3, "Result should have 3 elements");
+            assert_eq!(val.data[0].numerator.to_string(), "2", "First element should be 2");
+            assert_eq!(val.data[1].numerator.to_string(), "3", "Second element should be 3");
+            assert_eq!(val.data[2].numerator.to_string(), "4", "Third element should be 4");
         }
     }
 
