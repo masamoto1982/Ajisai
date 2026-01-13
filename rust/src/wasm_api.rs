@@ -520,6 +520,14 @@ fn value_to_js_value(value: &Value) -> JsValue {
         return obj.into();
     }
 
+    // 文字列は多次元配列でも文字列として処理（[ 'てすと' ] など）
+    if value.display_hint == DisplayHint::String && !value.data.is_empty() {
+        js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
+        let s = value_as_string(value);
+        js_sys::Reflect::set(&obj, &"value".into(), &s.into()).unwrap();
+        return obj.into();
+    }
+
     // 多次元配列（shape.len() > 1）の場合はtensorとして送信
     // これにより shape [2, 3, 1] などのネスト構造が保持される
     if value.shape.len() > 1 {
