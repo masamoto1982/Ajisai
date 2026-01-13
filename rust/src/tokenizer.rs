@@ -102,8 +102,9 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
 }
 
 /// 特殊文字（トークン境界となる文字）の判定
+/// ダブルクォートは特殊文字として扱わない（文字列内で使用可能にするため）
 fn is_special_char(c: char) -> bool {
-    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '"')
+    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'')
 }
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
@@ -131,7 +132,9 @@ fn parse_quote_string(chars: &[char]) -> QuoteParseResult {
     if chars.is_empty() { return QuoteParseResult::NotQuote; }
 
     let quote_char = chars[0];
-    if quote_char != '\'' && quote_char != '"' { return QuoteParseResult::NotQuote; }
+    // シングルクォートのみを文字列リテラルとして認識
+    // ダブルクォートは文字列リテラルとして使用しない
+    if quote_char != '\'' { return QuoteParseResult::NotQuote; }
 
     let mut string = String::new();
     let mut i = 1;

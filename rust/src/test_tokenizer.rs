@@ -94,29 +94,11 @@ mod test_tokenizer {
     }
 
     #[test]
-    fn test_flexible_quotes_double_with_double_inside() {
-        let custom_words = HashSet::new();
-        let result = tokenize_with_custom_words("\"He\"llo\"", &custom_words).unwrap();
-        assert_eq!(result, vec![
-            Token::String("He\"llo".to_string()),
-        ]);
-    }
-
-    #[test]
     fn test_flexible_quotes_single_with_double_inside() {
         let custom_words = HashSet::new();
         let result = tokenize_with_custom_words("'He\"llo'", &custom_words).unwrap();
         assert_eq!(result, vec![
             Token::String("He\"llo".to_string()),
-        ]);
-    }
-
-    #[test]
-    fn test_flexible_quotes_double_with_single_inside() {
-        let custom_words = HashSet::new();
-        let result = tokenize_with_custom_words("\"He'llo\"", &custom_words).unwrap();
-        assert_eq!(result, vec![
-            Token::String("He'llo".to_string()),
         ]);
     }
 
@@ -524,14 +506,6 @@ mod test_tokenizer {
         let result = tokenize_with_custom_words("'unclosed string", &custom_words);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unclosed string"));
-    }
-
-    #[test]
-    fn test_unclosed_double_quote_error() {
-        let custom_words = HashSet::new();
-
-        let result = tokenize_with_custom_words("\"unclosed", &custom_words);
-        assert!(result.is_err());
     }
 
     // === Dot operator テスト ===
