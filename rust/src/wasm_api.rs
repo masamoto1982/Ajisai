@@ -520,8 +520,9 @@ fn value_to_js_value(value: &Value) -> JsValue {
         return obj.into();
     }
 
-    // 文字列は多次元配列でも文字列として処理（[ 'てすと' ] など）
-    if value.display_hint == DisplayHint::String && !value.data.is_empty() {
+    // 文字列は1次元の場合のみ直接文字列として処理
+    // 多次元の場合（[ 'てすと' ] など）はtensorとして処理し、ネスト構造を保持
+    if value.display_hint == DisplayHint::String && !value.data.is_empty() && value.shape.len() <= 1 {
         js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
         let s = value_as_string(value);
         js_sys::Reflect::set(&obj, &"value".into(), &s.into()).unwrap();
@@ -551,6 +552,16 @@ fn value_to_js_value(value: &Value) -> JsValue {
             data_array.push(&num_obj);
         }
         js_sys::Reflect::set(&tensor_obj, &"data".into(), &data_array).unwrap();
+
+        // display_hintを追加（文字列の場合、JavaScript側で文字列として表示するため）
+        let hint_str = match value.display_hint {
+            DisplayHint::String => "string",
+            DisplayHint::Boolean => "boolean",
+            DisplayHint::DateTime => "datetime",
+            DisplayHint::Number => "number",
+            DisplayHint::Auto => "auto",
+        };
+        js_sys::Reflect::set(&tensor_obj, &"displayHint".into(), &hint_str.into()).unwrap();
 
         js_sys::Reflect::set(&obj, &"value".into(), &tensor_obj).unwrap();
         return obj.into();

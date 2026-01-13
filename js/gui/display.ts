@@ -91,7 +91,24 @@ const formatDateTime = (value: unknown): string => {
     }
 };
 
-const formatTensorRecursive = (shape: number[], data: unknown[], depth: number): string => {
+// バイト列（分数配列）をUTF-8文字列に変換
+const bytesToString = (data: unknown[]): string => {
+    const bytes = data.map(frac => {
+        if (!frac || typeof frac !== 'object') return 0;
+        const f = frac as Record<string, unknown>;
+        const num = parseInt(String(f.numerator || '0'), 10);
+        const den = parseInt(String(f.denominator || '1'), 10);
+        return den === 1 ? num : Math.floor(num / den);
+    }).filter(n => n >= 0 && n <= 255);
+
+    try {
+        return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+    } catch {
+        return bytes.map(b => String.fromCharCode(b)).join('');
+    }
+};
+
+const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, displayHint?: string): string => {
     const [open, close] = getBrackets(depth);
 
     if (shape.length === 0) {
@@ -99,8 +116,14 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number):
         return `${open} ${formatFraction(data[0])} ${close}`;
     }
 
+    // 最内層（shape.length === 1）で、displayHintが"string"の場合は文字列として表示
     if (shape.length === 1) {
         if (data.length === 0) return `${open}${close}`;
+        if (displayHint === 'string') {
+            // バイト列を文字列に変換して表示（括弧なし）
+            const str = bytesToString(data);
+            return `'${str}'`;
+        }
         const elements = data.map(frac => formatFraction(frac)).join(' ');
         return `${open} ${elements} ${close}`;
     }
@@ -112,7 +135,7 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number):
     const parts: string[] = [];
     for (let i = 0; i < outerSize; i++) {
         const innerData = data.slice(i * innerSize, (i + 1) * innerSize);
-        parts.push(formatTensorRecursive(innerShape, innerData, depth + 1));
+        parts.push(formatTensorRecursive(innerShape, innerData, depth + 1, displayHint));
     }
 
     return `${open} ${parts.join(' ')} ${close}`;
@@ -122,7 +145,8 @@ const formatTensor = (value: unknown, depth: number): string => {
     if (!value || typeof value !== 'object') return '?';
     const v = value as Record<string, unknown>;
     if (!('shape' in v) || !('data' in v)) return '?';
-    return formatTensorRecursive(v.shape as number[], v.data as unknown[], depth);
+    const displayHint = v.displayHint as string | undefined;
+    return formatTensorRecursive(v.shape as number[], v.data as unknown[], depth, displayHint);
 };
 
 const formatVector = (value: unknown, depth: number): string => {
