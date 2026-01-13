@@ -72,9 +72,11 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
   - 非常に大きな数値も処理可能
   - *All numbers internally treated as fractions - no rounding errors, capable of handling extremely large numbers*
 
-- **静的型付け（型宣言・型推論不要）**
-  - システムが認識するのは：ワード、Vector、真偽値、数値、文字列、Nil
-  - *Statically typed: words, vectors, booleans, numbers, strings, and Nil*
+- **統一分数アーキテクチャ（型なし設計）**
+  - すべての値は内部的に `Vec<Fraction>` として統一表現
+  - 数値、真偽値、文字、文字列の区別は表示時のみ（DisplayHint）
+  - 型チェックを完全に廃止し、FORTH精神を継承した自由な設計
+  - *Unified Fraction Architecture: All values internally represented as Vec<Fraction>. No type checking - distinction between numbers, booleans, and strings only at display time.*
 
 - **組み込みワードの保護**
   - 組み込みワードは削除や上書きが不可能
@@ -165,7 +167,7 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
 ### 高階関数 / Higher-Order Functions
 `MAP` `FILTER` `FOLD` `UNFOLD`
 
-### 型変換 / Type Conversion
+### 形式変換 / Format Conversion
 `STR` `NUM` `BOOL` `NIL` `CHARS` `JOIN`
 
 ### 日時操作 / DateTime
@@ -235,7 +237,7 @@ npx vite build
 
 ## 関連ドキュメント / Related Documentation
 
+- [UNIFIED_FRACTION_ARCHITECTURE.md](Documentation/UNIFIED_FRACTION_ARCHITECTURE.md) - 統一分数アーキテクチャの設計
 - [DIMENSION_MODEL.md](Documentation/DIMENSION_MODEL.md) - 次元モデルの詳細
 - [BROADCASTING.md](Documentation/BROADCASTING.md) - ブロードキャスティングの仕様
-- [TYPE_SYSTEM_OPTIMIZATION.md](Documentation/TYPE_SYSTEM_OPTIMIZATION.md) - 型システムの最適化
 - [THREE_VALUED_LOGIC.md](THREE_VALUED_LOGIC.md) - 三値論理について
