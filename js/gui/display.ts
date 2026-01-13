@@ -145,11 +145,9 @@ const formatValue = (item: Value, depth: number): string => {
     if (!item || !item.type) return 'unknown';
 
     switch (item.type) {
-        case 'number': {
-            // スカラー値も括弧で囲む（統一分数アーキテクチャ）
-            const [open, close] = getBrackets(depth);
-            return `${open} ${formatNumber(item.value)} ${close}`;
-        }
+        case 'number':
+            // スカラー値は括弧なしで表示（スタック自体がVector）
+            return formatNumber(item.value);
         case 'datetime':
             return formatDateTime(item.value);
         case 'tensor':

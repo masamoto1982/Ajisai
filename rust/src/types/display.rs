@@ -58,14 +58,19 @@ fn display_with_shape(data: &[Fraction], shape: &[usize], depth: usize) -> Strin
         return "NIL".to_string();
     }
 
+    // スカラー値（単一要素、形状なし）は括弧なしで表示
+    // スタック自体がVectorなので、スカラーに括弧を付けるのは冗長
+    if data.len() == 1 && shape.is_empty() {
+        return format_fraction(&data[0]);
+    }
+
     let bracket = BracketType::from_depth(depth);
     let open = bracket.opening_char();
     let close = bracket.closing_char();
 
-    // 形状が空、または1次元の場合
+    // 1次元ベクタの場合
     if shape.is_empty() || shape.len() == 1 {
         let inner: Vec<String> = data.iter().map(format_fraction).collect();
-        // 常にスペースあり表示で統一
         format!("{} {} {}", open, inner.join(" "), close)
     } else {
         // 多次元の場合: 再帰的に処理
