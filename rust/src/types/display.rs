@@ -97,23 +97,30 @@ fn format_fraction(f: &Fraction) -> String {
 }
 
 /// 文字列として表示
+///
+/// UTF-8バイト列として保存されたデータを文字列に復元する。
+/// 各Fractionは0-255のバイト値として解釈される。
 fn display_as_string(data: &[Fraction]) -> String {
     if data.is_empty() {
         return "''".to_string();
     }
 
-    let chars: String = data
+    // 各Fractionをバイトとして収集
+    let bytes: Vec<u8> = data
         .iter()
         .filter_map(|f| {
             f.to_i64().and_then(|n| {
-                if n >= 0 && n <= 0x10FFFF {
-                    char::from_u32(n as u32)
+                if n >= 0 && n <= 255 {
+                    Some(n as u8)
                 } else {
                     None
                 }
             })
         })
         .collect();
+
+    // UTF-8として復元
+    let chars = String::from_utf8_lossy(&bytes);
 
     format!("'{}'", chars)
 }
