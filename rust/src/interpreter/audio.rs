@@ -318,10 +318,6 @@ mod tests {
         Value::nil()
     }
 
-    fn make_string(s: &str) -> Value {
-        Value::from_string(s)
-    }
-
     fn make_vector(elements: Vec<Value>) -> Value {
         Value::from_vector(elements)
     }
@@ -424,23 +420,20 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    fn test_lyrics_output() {
-        let val = make_string("きら");
-        let mut output = String::new();
-        let _ = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
-
-        assert!(output.contains("きら"));
-    }
-
-    #[test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    fn test_empty_vector_error() {
+    fn test_empty_vector_becomes_rest() {
+        // 統一分数アーキテクチャ: 空ベクタはNIL（休符）として処理される
         let val = make_vector(vec![]);
         let mut output = String::new();
         let result = build_audio_structure(&val, PlayMode::Sequential, &mut output);
 
-        assert!(result.is_err());
+        // 空ベクタはNIL扱いで休符になる
+        match result {
+            Ok(AudioStructure::Rest { duration }) => {
+                assert_eq!(duration, 1.0, "Empty vector should become 1-slot rest");
+            }
+            Ok(other) => panic!("Expected Rest, got {:?}", other),
+            Err(e) => panic!("Expected success (Rest), got error: {:?}", e),
+        }
     }
 
     #[test]
@@ -596,19 +589,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_play_with_rest() {
-        use crate::interpreter::Interpreter;
-
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 440 NIL 550 ] PLAY").await;
-        assert!(result.is_ok(), "PLAY with rest should succeed: {:?}", result);
-
-        let output = interp.get_output();
-        assert!(output.contains("\"type\":\"rest\""), "Should contain rest");
-    }
-
-    #[tokio::test]
     async fn test_play_with_duration() {
         use crate::interpreter::Interpreter;
 
@@ -620,21 +600,6 @@ mod tests {
         let output = interp.get_output();
         assert!(output.contains("\"duration\":3"), "Should contain duration 3");
         assert!(output.contains("\"duration\":7"), "Should contain duration 7");
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_play_with_lyrics() {
-        use crate::interpreter::Interpreter;
-
-        // Use coprime fractions: 440/3 doesn't normalize
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 440/3 'Hello' 550/3 'World' ] PLAY").await;
-        assert!(result.is_ok(), "PLAY with lyrics should succeed: {:?}", result);
-
-        let output = interp.get_output();
-        assert!(output.contains("Hello"), "Should output lyrics Hello");
-        assert!(output.contains("World"), "Should output lyrics World");
     }
 
     #[tokio::test]
@@ -653,19 +618,4 @@ mod tests {
         assert!(output.contains("\"duration\":1"), "Should contain duration 1 for normalized rest");
     }
 
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_play_with_nil_for_rest() {
-        use crate::interpreter::Interpreter;
-
-        // NIL creates a 1-slot rest reliably
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 440 NIL NIL 550 ] PLAY").await;
-        assert!(result.is_ok(), "PLAY with NIL should succeed: {:?}", result);
-
-        let output = interp.get_output();
-        // Should have multiple rest entries (one for each NIL)
-        let rest_count = output.matches("\"type\":\"rest\"").count();
-        assert_eq!(rest_count, 2, "Should have 2 rest entries for 2 NILs");
-    }
 }

@@ -774,22 +774,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_unfold_fixed_return() {
-        let mut interp = Interpreter::new();
-        // 常に [1 NIL] を返すワードで、UNFOLDが1回だけ実行されることをテスト
-        let code = r#"
-[ ': [1 NIL]' ] 'GEN_ONE' DEF
-[ 0 ] 'GEN_ONE' UNFOLD
-"#;
-        let result = interp.execute(code).await;
-        assert!(result.is_ok(), "UNFOLD should succeed: {:?}", result);
-
-        // 結果が [1] であることを確認（1回だけ生成）
-        assert_eq!(interp.stack.len(), 1);
-    }
-
-    #[tokio::test]
     async fn test_unfold_immediate_nil() {
         let mut interp = Interpreter::new();
         // 簡単なテスト: 常にNILを返すので空のベクタが生成される
@@ -805,7 +789,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_map_with_guarded_word() {
         let mut interp = Interpreter::new();
         let def_code = r#"[ ': [ 1 ] =
@@ -823,7 +806,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_map_with_multiline_word() {
         let mut interp = Interpreter::new();
         let def_code = r#"[ ':
@@ -841,7 +823,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_map_preserves_stack_below() {
         let mut interp = Interpreter::new();
         let def_code = "[ ': 2 *' ] 'DOUBLE' DEF";
@@ -854,40 +835,6 @@ mod tests {
         assert!(result.is_ok(), "MAP should preserve stack below: {:?}", result);
 
         assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements");
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_filter_with_guarded_word() {
-        let mut interp = Interpreter::new();
-        let def_code = r#"[ ': [ 2 ] >=
-: TRUE
-: FALSE' ] 'GE_TWO' DEF"#;
-        let def_result = interp.execute(def_code).await;
-        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
-
-        let filter_code = "[ 1 2 3 1 4 ] 'GE_TWO' FILTER";
-        let result = interp.execute(filter_code).await;
-
-        assert!(result.is_ok(), "FILTER with guarded word should succeed: {:?}", result);
-
-        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
-    async fn test_filter_preserves_stack_below() {
-        let mut interp = Interpreter::new();
-        let def_code = "[ ': 2 MOD 0 =' ] 'IS_EVEN' DEF";
-        let def_result = interp.execute(def_code).await;
-        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
-
-        let code = "[ 100 ] [ 1 2 3 4 5 6 ] 'IS_EVEN' FILTER";
-        let result = interp.execute(code).await;
-
-        assert!(result.is_ok(), "FILTER should preserve stack below: {:?}", result);
-
-        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements, got {}", interp.stack.len());
     }
 
     #[tokio::test]

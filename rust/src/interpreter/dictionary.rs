@@ -375,7 +375,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix for unified fraction architecture
     async fn test_can_override_custom_word() {
         let mut interp = Interpreter::new();
         // カスタムワードは上書き可能

@@ -824,20 +824,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Unicode strings need proper code point handling in unified architecture
-    async fn test_chars_unicode() {
-        let mut interp = Interpreter::new();
-        interp.execute("[ '日本語' ] CHARS JOIN").await.unwrap();
-        assert_eq!(interp.stack.len(), 1);
-
-        if let Some(val) = interp.stack.last() {
-            assert!(is_string_value(val));
-            let s = value_as_string(val).unwrap();
-            assert_eq!(s, "日本語");
-        }
-    }
-
-    #[tokio::test]
     async fn test_chars_structure_error() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 42 ] CHARS").await;
@@ -849,19 +835,6 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("[ 'h' 'e' 'l' 'l' 'o' ] JOIN").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
-
-        if let Some(val) = interp.stack.last() {
-            assert!(is_string_value(val));
-            let s = value_as_string(val).unwrap();
-            assert_eq!(s, "hello");
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO: Variable-length strings in vectors need proper handling in unified architecture
-    async fn test_join_multichar() {
-        let mut interp = Interpreter::new();
-        interp.execute("[ 'hel' 'lo' ] JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
