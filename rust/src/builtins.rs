@@ -48,11 +48,15 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("RESHAPE", "テンソルの形状を変更｜[ 1 2 3 4 ] [ 2 2 ] RESHAPE → [ [ 1 2 ] [ 3 4 ] ]", "Tensor"),
         ("TRANSPOSE", "2次元テンソルの転置｜[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE → [ [ 1 3 ] [ 2 4 ] ]", "Tensor"),
 
+        // 定数（スタックに値をプッシュ）
+        ("TRUE", "真偽値TRUEをスタックにプッシュ｜TRUE → TRUE", "Constant"),
+        ("FALSE", "真偽値FALSEをスタックにプッシュ｜FALSE → FALSE", "Constant"),
+        ("NIL", "NIL（空ベクタ）をスタックにプッシュ｜NIL → NIL", "Constant"),
+
         // 型変換
-        ("STR", "任意の型を文字列に変換｜[ 42 ] STR → [ '42' ], [ TRUE ] STR → [ 'TRUE' ]", "Type Conversion"),
-        ("NUM", "文字列または真偽値を数値に変換｜[ '42' ] NUM → [ 42 ], [ TRUE ] NUM → [ 1 ]", "Type Conversion"),
-        ("BOOL", "文字列または数値を真偽値に変換｜[ 'TRUE' ] BOOL → [ TRUE ], [ '1' ] BOOL → [ TRUE ], [ 1 ] BOOL → [ TRUE ]", "Type Conversion"),
-        ("NIL", "文字列をNilに変換｜[ 'nil' ] NIL → [ nil ]", "Type Conversion"),
+        ("STR", "任意の型を文字列に変換｜[ 42 ] STR → [ '42' ], TRUE STR → 'TRUE'", "Type Conversion"),
+        ("NUM", "文字列または真偽値を数値に変換｜[ '42' ] NUM → [ 42 ], TRUE NUM → 1", "Type Conversion"),
+        ("BOOL", "文字列または数値を真偽値に変換｜[ 'TRUE' ] BOOL → TRUE, [ '1' ] BOOL → TRUE, [ 1 ] BOOL → TRUE", "Type Conversion"),
         ("CHARS", "文字列を文字ベクタに分解｜[ 'hello' ] CHARS → [ 'h' 'e' 'l' 'l' 'o' ]", "Type Conversion"),
         ("JOIN", "文字列ベクタを連結｜[ 'h' 'e' 'l' 'l' 'o' ] JOIN → [ 'hello' ]", "Type Conversion"),
         ("NOW", "現在時刻を取得（DateTime型）｜NOW → [ @2024-11-25 14:00:00.500 ]（内部は分数）", "DateTime"),

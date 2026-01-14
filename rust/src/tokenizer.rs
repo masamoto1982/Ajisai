@@ -165,17 +165,14 @@ fn is_delimiter(c: char) -> bool {
     c.is_whitespace() || is_special_char(c)
 }
 
-/// 文字列からキーワードを解析
+/// キーワード解析（ドット演算子のみ）
+/// TRUE/FALSE/NILは組み込みワードとして実装するため、ここでは解析しない
+/// すべてのシンボルは統一的に Symbol として扱われる
 fn try_parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
         "." => Some(Token::Symbol(".".to_string())),
         ".." => Some(Token::Symbol("..".to_string())),
-        _ => match s.to_uppercase().as_str() {
-            "TRUE" => Some(Token::Boolean(true)),
-            "FALSE" => Some(Token::Boolean(false)),
-            "NIL" => Some(Token::Nil),
-            _ => None,
-        }
+        _ => None,
     }
 }
 
