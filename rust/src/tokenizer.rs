@@ -102,8 +102,9 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
 }
 
 /// 特殊文字（トークン境界となる文字）の判定
+/// ダブルクォートは特殊文字として扱わない（文字列内で使用可能にするため）
 fn is_special_char(c: char) -> bool {
-    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '"')
+    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'')
 }
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
@@ -131,7 +132,9 @@ fn parse_quote_string(chars: &[char]) -> QuoteParseResult {
     if chars.is_empty() { return QuoteParseResult::NotQuote; }
 
     let quote_char = chars[0];
-    if quote_char != '\'' && quote_char != '"' { return QuoteParseResult::NotQuote; }
+    // シングルクォートのみを文字列リテラルとして認識
+    // ダブルクォートは文字列リテラルとして使用しない
+    if quote_char != '\'' { return QuoteParseResult::NotQuote; }
 
     let mut string = String::new();
     let mut i = 1;
@@ -162,17 +165,14 @@ fn is_delimiter(c: char) -> bool {
     c.is_whitespace() || is_special_char(c)
 }
 
-/// 文字列からキーワードを解析
+/// キーワード解析（ドット演算子のみ）
+/// TRUE/FALSE/NILは組み込みワードとして実装するため、ここでは解析しない
+/// すべてのシンボルは統一的に Symbol として扱われる
 fn try_parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
         "." => Some(Token::Symbol(".".to_string())),
         ".." => Some(Token::Symbol("..".to_string())),
-        _ => match s.to_uppercase().as_str() {
-            "TRUE" => Some(Token::Boolean(true)),
-            "FALSE" => Some(Token::Boolean(false)),
-            "NIL" => Some(Token::Nil),
-            _ => None,
-        }
+        _ => None,
     }
 }
 

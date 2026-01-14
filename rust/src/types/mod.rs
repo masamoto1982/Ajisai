@@ -304,18 +304,19 @@ impl Value {
 /// トークン定義
 ///
 /// パーサーが生成するトークンの種類を定義
+///
+/// TRUE/FALSE/NILは組み込みワードとして実装されるため、
+/// Symbolとして扱われ、インタープリタで処理される
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Number(String),
     String(String),
-    Boolean(bool),
-    Symbol(String),
+    Symbol(String),  // TRUE, FALSE, NIL もここに含まれる
     /// ベクタ開始 - [], {}, () 全てをこれで表現
     VectorStart,
     /// ベクタ終了
     VectorEnd,
     GuardSeparator,  // : または ;
-    Nil,
     LineBreak,
 }
 

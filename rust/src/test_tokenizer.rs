@@ -94,29 +94,11 @@ mod test_tokenizer {
     }
 
     #[test]
-    fn test_flexible_quotes_double_with_double_inside() {
-        let custom_words = HashSet::new();
-        let result = tokenize_with_custom_words("\"He\"llo\"", &custom_words).unwrap();
-        assert_eq!(result, vec![
-            Token::String("He\"llo".to_string()),
-        ]);
-    }
-
-    #[test]
     fn test_flexible_quotes_single_with_double_inside() {
         let custom_words = HashSet::new();
         let result = tokenize_with_custom_words("'He\"llo'", &custom_words).unwrap();
         assert_eq!(result, vec![
             Token::String("He\"llo".to_string()),
-        ]);
-    }
-
-    #[test]
-    fn test_flexible_quotes_double_with_single_inside() {
-        let custom_words = HashSet::new();
-        let result = tokenize_with_custom_words("\"He'llo\"", &custom_words).unwrap();
-        assert_eq!(result, vec![
-            Token::String("He'llo".to_string()),
         ]);
     }
 
@@ -277,24 +259,27 @@ mod test_tokenizer {
     }
 
     // === キーワードのテスト ===
+    // TRUE/FALSE/NIL は組み込みワードとして実装されるため、
+    // トークナイザーでは Symbol として認識される
 
     #[test]
     fn test_keywords() {
         let custom_words = HashSet::new();
 
+        // TRUE, FALSE, NIL は Symbol として認識される
         let result = tokenize_with_custom_words("TRUE FALSE NIL", &custom_words).unwrap();
         assert_eq!(result, vec![
-            Token::Boolean(true),
-            Token::Boolean(false),
-            Token::Nil,
+            Token::Symbol("TRUE".to_string()),
+            Token::Symbol("FALSE".to_string()),
+            Token::Symbol("NIL".to_string()),
         ]);
 
-        // 大文字小文字を区別しない
+        // 大文字小文字は保持される（インタープリタで大文字変換される）
         let result2 = tokenize_with_custom_words("true false nil", &custom_words).unwrap();
         assert_eq!(result2, vec![
-            Token::Boolean(true),
-            Token::Boolean(false),
-            Token::Nil,
+            Token::Symbol("true".to_string()),
+            Token::Symbol("false".to_string()),
+            Token::Symbol("nil".to_string()),
         ]);
     }
 
@@ -524,14 +509,6 @@ mod test_tokenizer {
         let result = tokenize_with_custom_words("'unclosed string", &custom_words);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unclosed string"));
-    }
-
-    #[test]
-    fn test_unclosed_double_quote_error() {
-        let custom_words = HashSet::new();
-
-        let result = tokenize_with_custom_words("\"unclosed", &custom_words);
-        assert!(result.is_err());
     }
 
     // === Dot operator テスト ===

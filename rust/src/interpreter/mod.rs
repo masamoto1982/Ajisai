@@ -141,16 +141,15 @@ impl Interpreter {
                     values.push(Value::from_string(s));
                     i += 1;
                 },
-                Token::Boolean(b) => {
-                    values.push(Value::from_bool(*b));
-                    i += 1;
-                },
-                Token::Nil => {
-                    values.push(Value::nil());
-                    i += 1;
-                },
                 Token::Symbol(s) => {
-                    values.push(Value::from_string(s));
+                    // TRUE/FALSE/NILは特別な値として処理
+                    let upper = s.to_uppercase();
+                    match upper.as_str() {
+                        "TRUE" => values.push(Value::from_bool(true)),
+                        "FALSE" => values.push(Value::from_bool(false)),
+                        "NIL" => values.push(Value::nil()),
+                        _ => values.push(Value::from_string(s)),
+                    }
                     i += 1;
                 },
                 _ => {
@@ -288,15 +287,8 @@ impl Interpreter {
                     let val = Value::from_string(s);
                     self.stack.push(wrap_value(val));
                 },
-                Token::Boolean(b) => {
-                    let val = Value::from_bool(*b);
-                    self.stack.push(wrap_value(val));
-                },
-                Token::Nil => {
-                    // ベクタ外のNILは型変換ワードとして実行
-                    cast::op_nil(self)?;
-                    self.operation_target = OperationTarget::StackTop;
-                },
+                // Token::Boolean と Token::Nil は削除
+                // TRUE/FALSE/NIL は Symbol として認識され、組み込みワードとして実行される
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
                     // 空ベクタ = NIL（空の存在を表す統一的な方法）
@@ -586,10 +578,29 @@ impl Interpreter {
                     "WAIT should be handled by execute_section_core, not execute_builtin"
                 ))
             },
+            // 定数（スタックに値をプッシュ）
+            "TRUE" => {
+                self.stack.push(Value::from_bool(true));
+                Ok(())
+            },
+            "FALSE" => {
+                self.stack.push(Value::from_bool(false));
+                Ok(())
+            },
+            "NIL" => {
+                // スタックが空なら定数としてNILをプッシュ
+                // スタックに値があればキャスト操作として処理
+                if self.stack.is_empty() {
+                    self.stack.push(Value::nil());
+                    Ok(())
+                } else {
+                    cast::op_nil(self)
+                }
+            },
+            // 型変換
             "STR" => cast::op_str(self),
             "NUM" => cast::op_num(self),
             "BOOL" => cast::op_bool(self),
-            "NIL" => cast::op_nil(self),
             "CHARS" => cast::op_chars(self),
             "JOIN" => cast::op_join(self),
             "NOW" => datetime::op_now(self),
@@ -613,10 +624,7 @@ impl Interpreter {
         match token {
             Token::Number(n) => n.clone(),
             Token::String(s) => format!("'{}'", s),
-            Token::Boolean(true) => "TRUE".to_string(),
-            Token::Boolean(false) => "FALSE".to_string(),
             Token::Symbol(s) => s.clone(),
-            Token::Nil => "NIL".to_string(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
             Token::GuardSeparator => ":".to_string(),
