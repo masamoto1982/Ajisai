@@ -420,16 +420,16 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_vector_becomes_rest() {
-        // 統一分数アーキテクチャ: 空ベクタはNIL（休符）として処理される
-        let val = make_vector(vec![]);
+    fn test_nil_becomes_rest() {
+        // NIL値は休符として処理される
+        let val = Value::nil();
         let mut output = String::new();
         let result = build_audio_structure(&val, PlayMode::Sequential, &mut output);
 
-        // 空ベクタはNIL扱いで休符になる
+        // NILは休符になる
         match result {
             Ok(AudioStructure::Rest { duration }) => {
-                assert_eq!(duration, 1.0, "Empty vector should become 1-slot rest");
+                assert_eq!(duration, 1.0, "NIL should become 1-slot rest");
             }
             Ok(other) => panic!("Expected Rest, got {:?}", other),
             Err(e) => panic!("Expected success (Rest), got error: {:?}", e),
