@@ -350,31 +350,34 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     // スタック表示の更新
+    // 「空のスタック = NIL」という設計思想に基づき、空の場合もNILを表示
     const updateStack = (stack: Value[]): void => {
         const display = elements.stackDisplay;
         clearElement(display);
-
-        if (!Array.isArray(stack) || stack.length === 0) {
-            display.textContent = '(empty)';
-            display.style.color = '#ccc';
-            return;
-        }
 
         display.style.color = '#333';
         const container = document.createElement('div');
         container.style.cssText = 'display:flex;flex-wrap:wrap-reverse;justify-content:flex-start;align-content:flex-end;flex-direction:row';
 
-        stack.forEach((item, index) => {
+        // 空のスタックはNILとして表示（通常はスタックにNILが積まれているはず）
+        if (!Array.isArray(stack) || stack.length === 0) {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
-            try {
-                elem.textContent = formatValue(item, 0);
-            } catch {
-                console.error(`Error formatting item ${index}`);
-                elem.textContent = 'ERROR';
-            }
+            elem.textContent = 'NIL';
             appendToElement(container, elem);
-        });
+        } else {
+            stack.forEach((item, index) => {
+                const elem = document.createElement('span');
+                elem.className = 'stack-item';
+                try {
+                    elem.textContent = formatValue(item, 0);
+                } catch {
+                    console.error(`Error formatting item ${index}`);
+                    elem.textContent = 'ERROR';
+                }
+                appendToElement(container, elem);
+            });
+        }
 
         appendToElement(display, container);
     };
