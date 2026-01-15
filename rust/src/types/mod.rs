@@ -195,11 +195,14 @@ impl Value {
     /// スカラーは shape = [] として表現される。
     /// これにより `[ 1 ]` → shape [1]、`[ [ 1 ] ]` → shape [1, 1] と区別できる。
     ///
-    /// # Panics
-    /// 空のベクタは許容されない。空のベクタを渡すとパニックする。
-    /// NIL値が必要な場合は `Value::nil()` を使用すること。
+    /// # 空のベクタの扱い
+    /// 空のベクタは自動的にNIL値として返される。
+    /// これは「空のスタック = NIL」という設計思想に基づく。
     pub fn from_vector(values: Vec<Value>) -> Self {
-        assert!(!values.is_empty(), "Empty vector is not allowed. Use Value::nil() for NIL.");
+        // 空のベクタはNILとして扱う（Stack -> Value変換などで安全になる）
+        if values.is_empty() {
+            return Self::nil();
+        }
 
         // 要素からデータを収集（NILは空のデータを持つ）
         let inner_shape = values[0].shape.clone();
@@ -476,5 +479,15 @@ mod tests {
         assert!(display.contains("65"));
         assert!(display.contains("66"));
         assert!(!display.contains("'"));  // 文字列クオートがないことを確認
+    }
+
+    #[test]
+    fn test_from_vector_empty_returns_nil() {
+        // 空のベクタはNILを返す（「空のスタック = NIL」）
+        let values: Vec<Value> = vec![];
+        let result = Value::from_vector(values);
+        assert!(result.is_nil(), "Empty vector should return NIL");
+        assert_eq!(result.display_hint, DisplayHint::Nil);
+        assert!(result.data.is_empty());
     }
 }

@@ -77,7 +77,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
-            stack: Vec::new(),
+            stack: Vec::new(),  // スタックは空で初期化（GUIでNILとして表示）
             dictionary: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
@@ -122,10 +122,7 @@ impl Interpreter {
             match &tokens[i] {
                 Token::VectorStart => {
                     let (nested_values, consumed) = self.collect_vector_with_depth(tokens, i, depth + 1)?;
-                    // 空のベクターは許容しない
-                    if nested_values.is_empty() {
-                        return Err(AjisaiError::from("Empty vector is not allowed. Use NIL for empty values."));
-                    }
+                    // 空のベクターはNILになる（from_vectorが自動変換）
                     values.push(Value::from_vector(nested_values));
                     i += consumed;
                 },
@@ -290,10 +287,7 @@ impl Interpreter {
                 // TRUE/FALSE/NIL は Symbol として認識され、組み込みワードとして実行される
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
-                    // 空のベクターは許容しない
-                    if values.is_empty() {
-                        return Err(AjisaiError::from("Empty vector is not allowed. Use NIL for empty values."));
-                    }
+                    // 空のベクターはNILになる（from_vectorが自動変換）
                     self.stack.push(Value::from_vector(values));
                     i += consumed;
                     continue;
@@ -644,7 +638,7 @@ impl Interpreter {
     }
     
     pub fn execute_reset(&mut self) -> Result<()> {
-        self.stack.clear();
+        self.stack.clear();  // RESETはスタックをクリア（GUIでNILとして表示）
         self.dictionary.clear();
         self.dependents.clear();
         self.output_buffer.clear();
@@ -1183,24 +1177,33 @@ ADDTEST
     }
 
     #[tokio::test]
-    async fn test_empty_vector_error() {
+    async fn test_empty_vector_becomes_nil() {
         let mut interp = Interpreter::new();
 
-        // 空のベクターは許容されない
-        // [ [ ] ] → エラー
+        // 空のベクターはNILになる（「空のスタック = NIL」）
+        // [ [ ] ] → [ NIL ]
         let result = interp.execute("[ [ ] ]").await;
-        assert!(result.is_err(), "Empty vector should be an error");
-        assert!(result.unwrap_err().to_string().contains("Empty vector"));
+        assert!(result.is_ok(), "Empty vector should become NIL: {:?}", result);
+
+        // スタックには作成されたベクター
+        assert_eq!(interp.stack.len(), 1);
+        // 最後のベクターの中身がNILであることを確認
+        let last = interp.stack.last().unwrap();
+        assert_eq!(last.shape, vec![1]); // 1要素のベクター
     }
 
     #[tokio::test]
-    async fn test_empty_brackets_error() {
+    async fn test_empty_brackets_becomes_nil() {
         let mut interp = Interpreter::new();
 
-        // 空の括弧は許容されない
+        // 空の括弧はNILになる
         let result = interp.execute("[ ]").await;
-        assert!(result.is_err(), "Empty brackets should be an error");
-        assert!(result.unwrap_err().to_string().contains("Empty vector"));
+        assert!(result.is_ok(), "Empty brackets should become NIL: {:?}", result);
+
+        // スタックにはNIL
+        assert_eq!(interp.stack.len(), 1);
+        let last = interp.stack.last().unwrap();
+        assert!(last.is_nil(), "Result should be NIL");
     }
 
     #[tokio::test]
@@ -1226,5 +1229,13 @@ ADDTEST
         assert!(result.is_ok(), "NIL in vector should work: {:?}", result);
 
         assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_initial_stack_is_empty() {
+        let interp = Interpreter::new();
+
+        // 初期スタックは空（GUIではNILとして表示される）
+        assert_eq!(interp.stack.len(), 0);
     }
 }
