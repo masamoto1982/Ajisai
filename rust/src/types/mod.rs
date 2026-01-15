@@ -44,6 +44,7 @@ use self::fraction::Fraction;
 /// 表示ヒント
 ///
 /// 演算には一切使用しない。表示時のみ参照される。
+/// 唯一の例外はNil: これはNIL値であることを示す特別なマーカー。
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum DisplayHint {
     /// 自動判定（デフォルト）
@@ -57,6 +58,8 @@ pub enum DisplayHint {
     Boolean,
     /// 日時として表示
     DateTime,
+    /// NIL（空値）を示す
+    Nil,
 }
 
 /// Ajisai の唯一の値型
@@ -80,12 +83,15 @@ pub struct Value {
 // 将来のワード実装で使用されるユーティリティメソッド群
 #[allow(dead_code)]
 impl Value {
-    /// 空の値（NIL）を作成
+    /// NIL値を作成
+    ///
+    /// NILは空のVectorとは異なる概念。
+    /// DisplayHint::Nilでマークされる特別な値。
     #[inline]
     pub fn nil() -> Self {
         Self {
             data: Vec::new(),
-            display_hint: DisplayHint::Auto,
+            display_hint: DisplayHint::Nil,
             shape: vec![],
         }
     }
@@ -183,35 +189,30 @@ impl Value {
     /// Value のベクタから値を作成
     ///
     /// 統一分数アーキテクチャ:
-    /// - 空ベクタ: NILを返す
     /// - スカラー要素のみ: 1Dベクタを作成（shape = [n]）
     /// - ベクタ要素: 次元を追加（shape = [n, inner_shape...]）
     ///
     /// スカラーは shape = [] として表現される。
     /// これにより `[ 1 ]` → shape [1]、`[ [ 1 ] ]` → shape [1, 1] と区別できる。
+    ///
+    /// # Panics
+    /// 空のベクタは許容されない。空のベクタを渡すとパニックする。
+    /// NIL値が必要な場合は `Value::nil()` を使用すること。
     pub fn from_vector(values: Vec<Value>) -> Self {
-        if values.is_empty() {
-            // 空ベクタ = NIL
-            return Self::nil();
-        }
+        assert!(!values.is_empty(), "Empty vector is not allowed. Use Value::nil() for NIL.");
 
-        // すべての要素をフラット化しつつ形状情報を計算
+        // 要素からデータを収集（NILは空のデータを持つ）
         let inner_shape = values[0].shape.clone();
         let data: Vec<Fraction> = values.iter()
             .flat_map(|v| v.data.iter().cloned())
             .collect();
 
-        // 空になった場合はNIL
-        if data.is_empty() {
-            return Self::nil();
-        }
-
         // 新しい形状を計算: [要素数, 内部形状...]
         let mut new_shape = vec![values.len()];
         new_shape.extend(inner_shape);
 
-        // 表示ヒントを継承（単一要素の場合のみ）
-        let hint = if values.len() == 1 {
+        // 表示ヒントを継承（単一要素の場合のみ、ただしNilは除く）
+        let hint = if values.len() == 1 && values[0].display_hint != DisplayHint::Nil {
             values[0].display_hint
         } else {
             DisplayHint::Auto
@@ -239,9 +240,12 @@ impl Value {
     }
 
     /// NIL かどうか
+    ///
+    /// DisplayHint::Nilでマークされた値のみがNIL。
+    /// 空のVectorは許容されない（作成時にエラー）。
     #[inline]
     pub fn is_nil(&self) -> bool {
-        self.data.is_empty()
+        self.display_hint == DisplayHint::Nil
     }
 
     /// 真偽値として評価（空 = false、全てゼロ = false、それ以外 = true）

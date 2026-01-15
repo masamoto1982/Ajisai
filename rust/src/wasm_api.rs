@@ -555,6 +555,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
 
         // display_hintを追加（文字列の場合、JavaScript側で文字列として表示するため）
         let hint_str = match value.display_hint {
+            DisplayHint::Nil => "nil",
             DisplayHint::String => "string",
             DisplayHint::Boolean => "boolean",
             DisplayHint::DateTime => "datetime",

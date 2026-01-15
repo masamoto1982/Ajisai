@@ -122,12 +122,11 @@ impl Interpreter {
             match &tokens[i] {
                 Token::VectorStart => {
                     let (nested_values, consumed) = self.collect_vector_with_depth(tokens, i, depth + 1)?;
-                    // 空のベクターはNILに置換（FRAMEの鋳型をそのまま実行可能にする）
+                    // 空のベクターは許容しない
                     if nested_values.is_empty() {
-                        values.push(Value::nil());
-                    } else {
-                        values.push(Value::from_vector(nested_values));
+                        return Err(AjisaiError::from("Empty vector is not allowed. Use NIL for empty values."));
                     }
+                    values.push(Value::from_vector(nested_values));
                     i += consumed;
                 },
                 Token::VectorEnd => {
@@ -291,12 +290,11 @@ impl Interpreter {
                 // TRUE/FALSE/NIL は Symbol として認識され、組み込みワードとして実行される
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
-                    // 空ベクタ = NIL（空の存在を表す統一的な方法）
+                    // 空のベクターは許容しない
                     if values.is_empty() {
-                        self.stack.push(Value::nil());
-                    } else {
-                        self.stack.push(Value::from_vector(values));
+                        return Err(AjisaiError::from("Empty vector is not allowed. Use NIL for empty values."));
                     }
+                    self.stack.push(Value::from_vector(values));
                     i += consumed;
                     continue;
                 },
@@ -588,14 +586,9 @@ impl Interpreter {
                 Ok(())
             },
             "NIL" => {
-                // スタックが空なら定数としてNILをプッシュ
-                // スタックに値があればキャスト操作として処理
-                if self.stack.is_empty() {
-                    self.stack.push(Value::nil());
-                    Ok(())
-                } else {
-                    cast::op_nil(self)
-                }
+                // NILは常に定数としてNILをプッシュ（TRUE/FALSEと同様）
+                self.stack.push(Value::nil());
+                Ok(())
             },
             // 型変換
             "STR" => cast::op_str(self),
@@ -1190,34 +1183,48 @@ ADDTEST
     }
 
     #[tokio::test]
-    async fn test_empty_nested_vector_becomes_nil() {
+    async fn test_empty_vector_error() {
         let mut interp = Interpreter::new();
 
-        // 統一分数アーキテクチャ: ネストした空ベクターはNILになる
-        // [ [ ] ] → [ NIL ] → フラット化されて NIL
+        // 空のベクターは許容されない
+        // [ [ ] ] → エラー
         let result = interp.execute("[ [ ] ]").await;
-        assert!(result.is_ok(), "Nested empty vector should be converted to NIL: {:?}", result);
+        assert!(result.is_err(), "Empty vector should be an error");
+        assert!(result.unwrap_err().to_string().contains("Empty vector"));
+    }
+
+    #[tokio::test]
+    async fn test_empty_brackets_error() {
+        let mut interp = Interpreter::new();
+
+        // 空の括弧は許容されない
+        let result = interp.execute("[ ]").await;
+        assert!(result.is_err(), "Empty brackets should be an error");
+        assert!(result.unwrap_err().to_string().contains("Empty vector"));
+    }
+
+    #[tokio::test]
+    async fn test_nil_keyword_works() {
+        let mut interp = Interpreter::new();
+
+        // NILキーワードを使用してNIL値を作成
+        let result = interp.execute("NIL").await;
+        assert!(result.is_ok(), "NIL keyword should work: {:?}", result);
 
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            // 統一分数アーキテクチャでは、空の入れ子はすべてNILになる
             assert!(val.is_nil(), "Expected NIL, got {:?}", val);
         }
     }
 
     #[tokio::test]
-    async fn test_frame_template_with_empty_brackets() {
+    async fn test_nil_in_vector() {
         let mut interp = Interpreter::new();
 
-        // 統一分数アーキテクチャ: 空の括弧はすべてNILに
-        // { ( [ ] [ ] ) ( [ ] [ ] ) } → フラット化されてNIL
-        let result = interp.execute("{ ( [ ] [ ] ) ( [ ] [ ] ) }").await;
-        assert!(result.is_ok(), "FRAME template should parse: {:?}", result);
+        // ベクター内のNILキーワード
+        let result = interp.execute("[ 1 NIL 2 ]").await;
+        assert!(result.is_ok(), "NIL in vector should work: {:?}", result);
 
         assert_eq!(interp.stack.len(), 1);
-        if let Some(val) = interp.stack.last() {
-            // 統一分数アーキテクチャでは、空のネスト構造はNILになる
-            assert!(val.is_nil(), "Expected NIL, got {:?}", val);
-        }
     }
 }

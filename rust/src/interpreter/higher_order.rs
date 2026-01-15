@@ -648,7 +648,12 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.push(Value::from_vector(results));
+            // 結果が空の場合はNILをプッシュ
+            if results.is_empty() {
+                interp.stack.push(Value::nil());
+            } else {
+                interp.stack.push(Value::from_vector(results));
+            }
             Ok(())
         }
         OperationTarget::Stack => {
@@ -762,12 +767,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fold_empty_vector_returns_initial() {
-        // 空ベクタ = NIL、FOLD は初期値をそのまま返す
+    async fn test_fold_nil_returns_initial() {
+        // NILに対するFOLDは初期値をそのまま返す
         let mut interp = Interpreter::new();
-        let code = r#"[ ] [ 42 ] '+' FOLD"#;
+        let code = r#"NIL [ 42 ] '+' FOLD"#;
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "FOLD on empty vector (NIL) should return initial value: {:?}", result);
+        assert!(result.is_ok(), "FOLD on NIL should return initial value: {:?}", result);
 
         // 結果は初期値 [42]
         assert_eq!(interp.stack.len(), 1);
@@ -776,16 +781,17 @@ mod tests {
     #[tokio::test]
     async fn test_unfold_immediate_nil() {
         let mut interp = Interpreter::new();
-        // 簡単なテスト: 常にNILを返すので空のベクタが生成される
+        // 簡単なテスト: 常にNILを返すのでNILが生成される
         let code = r#"
-[ ': [ NIL ]' ] 'STOPNOW' DEF
+[ ': NIL' ] 'STOPNOW' DEF
 [ 1 ] 'STOPNOW' UNFOLD
 "#;
         let result = interp.execute(code).await;
         assert!(result.is_ok(), "UNFOLD with immediate NIL should succeed: {:?}", result);
 
-        // 結果が空のベクタであることを確認
+        // 結果がNILであることを確認
         assert_eq!(interp.stack.len(), 1);
+        assert!(interp.stack.last().unwrap().is_nil(), "Result should be NIL");
     }
 
     #[tokio::test]

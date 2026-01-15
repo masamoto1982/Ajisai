@@ -495,11 +495,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hash_empty_vector_becomes_nil() {
-        // 空ベクタ = NIL として扱われる
+    async fn test_hash_nil() {
+        // NILはハッシュ可能
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ ] HASH").await;
-        assert!(result.is_ok(), "Empty vector (NIL) should be hashable: {:?}", result);
+        let result = interp.execute("NIL HASH").await;
+        assert!(result.is_ok(), "NIL should be hashable: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
     }
 

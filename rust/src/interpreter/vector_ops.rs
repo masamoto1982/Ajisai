@@ -379,7 +379,12 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                 };
 
                 v.remove(actual_index);
-                interp.stack.push(Value::from_vector(v));
+                // 空になった場合はNILをプッシュ
+                if v.is_empty() {
+                    interp.stack.push(Value::nil());
+                } else {
+                    interp.stack.push(Value::from_vector(v));
+                }
                 Ok(())
             } else {
                 interp.stack.push(vector_val);

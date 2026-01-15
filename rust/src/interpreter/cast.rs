@@ -875,9 +875,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_nil_success_case() {
+    async fn test_nil_pushes_constant() {
+        // NILは常に定数としてNILをプッシュする
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 'nil' ] NIL").await;
+        let result = interp.execute("NIL").await;
         assert!(result.is_ok());
         assert_eq!(interp.stack.len(), 1);
 
@@ -887,12 +888,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_nil_case_insensitive() {
+    async fn test_nil_multiple() {
+        // NILを複数回呼ぶと複数のNILがスタックに積まれる
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 'NIL' ] NIL").await;
+        let result = interp.execute("NIL NIL NIL").await;
         assert!(result.is_ok());
+        assert_eq!(interp.stack.len(), 3);
 
-        if let Some(val) = interp.stack.last() {
+        for val in interp.stack.iter() {
             assert!(val.is_nil());
         }
     }

@@ -13,6 +13,7 @@ use num_traits::One;
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.display_hint {
+            DisplayHint::Nil => write!(f, "NIL"),
             DisplayHint::Auto => write!(f, "{}", auto_display(&self.data, &self.shape)),
             DisplayHint::Number => write!(f, "{}", display_with_shape(&self.data, &self.shape, 0)),
             DisplayHint::String => write!(f, "{}", display_as_string(&self.data)),
