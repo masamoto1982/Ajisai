@@ -211,11 +211,24 @@ impl Value {
         let mut new_shape = vec![values.len()];
         new_shape.extend(inner_shape);
 
-        // 表示ヒントを継承（単一要素の場合のみ、ただしNilは除く）
-        let hint = if values.len() == 1 && values[0].display_hint != DisplayHint::Nil {
-            values[0].display_hint
-        } else {
-            DisplayHint::Auto
+        // 表示ヒントを継承（同種の要素からなるベクタの場合）
+        // 全ての要素が同じDisplayHintを持つ場合、そのヒントを継承
+        // ただし、Nil/Autoは継承対象外
+        let hint = {
+            let first_hint = values[0].display_hint;
+
+            // Nil や Auto は継承しない
+            if first_hint == DisplayHint::Nil || first_hint == DisplayHint::Auto {
+                DisplayHint::Auto
+            } else {
+                // 全ての要素が同じヒントを持つかチェック
+                let all_same_hint = values.iter().all(|v| v.display_hint == first_hint);
+                if all_same_hint {
+                    first_hint
+                } else {
+                    DisplayHint::Auto
+                }
+            }
         };
 
         Self {
@@ -384,3 +397,84 @@ pub type Stack = Vec<Value>;
 
 /// 可視次元の最大値
 pub const MAX_VISIBLE_DIMENSIONS: usize = 3;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_vector_preserves_number_hint() {
+        // 全てNumber要素からなるベクタはNumberヒントを継承
+        let values: Vec<Value> = vec![
+            Value::from_int(65),
+            Value::from_int(66),
+        ];
+        let result = Value::from_vector(values);
+        assert_eq!(result.display_hint, DisplayHint::Number);
+        assert_eq!(result.data.len(), 2);
+    }
+
+    #[test]
+    fn test_from_vector_preserves_boolean_hint() {
+        // 全てBoolean要素からなるベクタはBooleanヒントを継承
+        let values: Vec<Value> = vec![
+            Value::from_bool(true),
+            Value::from_bool(false),
+        ];
+        let result = Value::from_vector(values);
+        assert_eq!(result.display_hint, DisplayHint::Boolean);
+    }
+
+    #[test]
+    fn test_from_vector_preserves_string_hint() {
+        // 全てString要素からなるベクタはStringヒントを継承
+        let values: Vec<Value> = vec![
+            Value::from_string("a"),
+            Value::from_string("b"),
+        ];
+        let result = Value::from_vector(values);
+        assert_eq!(result.display_hint, DisplayHint::String);
+    }
+
+    #[test]
+    fn test_from_vector_mixed_hints_uses_auto() {
+        // 異なるヒントの要素が混在する場合はAutoになる
+        let values: Vec<Value> = vec![
+            Value::from_int(42),
+            Value::from_string("hello"),
+        ];
+        let result = Value::from_vector(values);
+        assert_eq!(result.display_hint, DisplayHint::Auto);
+    }
+
+    #[test]
+    fn test_from_vector_single_element_preserves_hint() {
+        // 単一要素の場合もヒントを継承
+        let values: Vec<Value> = vec![Value::from_int(42)];
+        let result = Value::from_vector(values);
+        assert_eq!(result.display_hint, DisplayHint::Number);
+    }
+
+    #[test]
+    fn test_from_vector_nil_elements_use_auto() {
+        // Nil要素を含む場合はAutoになる
+        let values: Vec<Value> = vec![Value::nil()];
+        let result = Value::from_vector(values);
+        assert_eq!(result.display_hint, DisplayHint::Auto);
+    }
+
+    #[test]
+    fn test_number_vector_displays_as_numbers() {
+        // 数値配列は数値として表示される（文字列化されない）
+        let values: Vec<Value> = vec![
+            Value::from_int(65),
+            Value::from_int(66),
+        ];
+        let result = Value::from_vector(values);
+        let display = format!("{}", result);
+        // 65, 66 は 'AB' ではなく数値として表示される
+        assert!(display.contains("65"));
+        assert!(display.contains("66"));
+        assert!(!display.contains("'"));  // 文字列クオートがないことを確認
+    }
+}
