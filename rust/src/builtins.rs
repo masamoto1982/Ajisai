@@ -17,111 +17,50 @@ pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
 
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
     vec![
+        // =====================================================================
+        // 最小構成: 三値論理対応の基本ワードセット
+        // =====================================================================
+
         // 操作対象指定
         (".", "操作対象をスタックトップに設定（デフォルト）｜. + → スタックトップに加算", "Target"),
         ("..", "操作対象をスタック全体に設定｜.. + [ 3 ] → スタック全要素に3を加算", "Target"),
 
-        // 入力支援
-        ("'", "シングルクォートを入力｜' → '", "Input Helper"),
-        ("FRAME", "形状指定でブラケット構造を入力｜[ 2 3 ] FRAME → { ( ) ( ) ( ) } { ( ) ( ) ( ) }", "Input Helper"),
+        // 定数（三値論理: TRUE, FALSE, NIL）
+        ("TRUE", "真偽値TRUEをスタックにプッシュ｜TRUE → [ 1 ]", "Constant"),
+        ("FALSE", "真偽値FALSEをスタックにプッシュ｜FALSE → [ 0 ]", "Constant"),
+        ("NIL", "NIL（不明/未定義）をスタックにプッシュ｜NIL → NIL", "Constant"),
 
-        // 位置指定操作(0オリジン)
-        ("GET", "指定位置の要素を取得（0オリジン）｜[ 10 20 30 ] [ 0 ] GET → [ 10 20 30 ] [ 10 ]", "Position"),
-        ("INSERT", "指定位置に要素を挿入｜[ 1 3 ] [ 1 2 ] INSERT → [ 1 2 3 ]", "Position"),
-        ("REPLACE", "指定位置の要素を置換｜[ 1 2 3 ] [ 0 9 ] REPLACE → [ 9 2 3 ]", "Position"),
-        ("REMOVE", "指定位置の要素を削除｜[ 1 2 3 ] [ 0 ] REMOVE → [ 2 3 ]", "Position"),
-
-        // 量指定操作(1オリジン)
-        ("LENGTH", "ベクタの長さを取得｜[ 1 2 3 4 5 ] LENGTH → [ 1 2 3 4 5 ] [ 5 ]", "Quantity"),
-        ("TAKE", "先頭または末尾からN個の要素を取得｜[ 1 2 3 4 5 ] [ 3 ] TAKE → [ 1 2 3 ]", "Quantity"),
-
-        // Vector構造操作
-        ("SPLIT", "ベクタを指定サイズで分割｜[ 1 2 3 4 5 6 ] [ 2 3 ] SPLIT → [ 1 2 ] [ 3 4 5 ] [ 6 ]", "Vector"),
-        ("CONCAT", "ベクタを連結｜[ 1 2 ] [ 3 4 ] CONCAT → [ 1 2 3 4 ]", "Vector"),
-        ("REVERSE", "ベクタの要素を反転｜[ 1 2 3 ] REVERSE → [ 3 2 1 ]", "Vector"),
-        ("RANGE", "数値範囲を生成｜[ 0 5 ] RANGE → [ 0 1 2 3 4 5 ]", "Vector"),
-        ("SORT", "ベクタの要素を昇順に並べ替える｜[ 3 1 2 ] SORT → [ 1 2 3 ]", "Sorting"),
-
-        // テンソル形状操作
-        ("SHAPE", "テンソルの形状を取得｜[ [ 1 2 ] [ 3 4 ] ] SHAPE → [ [ 1 2 ] [ 3 4 ] ] [ 2 2 ]", "Tensor"),
-        ("RANK", "テンソルの次元数を取得｜[ [ 1 2 ] [ 3 4 ] ] RANK → [ [ 1 2 ] [ 3 4 ] ] [ 2 ]", "Tensor"),
-        ("RESHAPE", "テンソルの形状を変更｜[ 1 2 3 4 ] [ 2 2 ] RESHAPE → [ [ 1 2 ] [ 3 4 ] ]", "Tensor"),
-        ("TRANSPOSE", "2次元テンソルの転置｜[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE → [ [ 1 3 ] [ 2 4 ] ]", "Tensor"),
-
-        // 定数（スタックに値をプッシュ）
-        ("TRUE", "真偽値TRUEをスタックにプッシュ｜TRUE → TRUE", "Constant"),
-        ("FALSE", "真偽値FALSEをスタックにプッシュ｜FALSE → FALSE", "Constant"),
-        ("NIL", "NIL（空ベクタ）をスタックにプッシュ｜NIL → NIL", "Constant"),
-
-        // 型変換
-        ("STR", "任意の型を文字列に変換｜[ 42 ] STR → [ '42' ], TRUE STR → 'TRUE'", "Type Conversion"),
-        ("NUM", "文字列または真偽値を数値に変換｜[ '42' ] NUM → [ 42 ], TRUE NUM → 1", "Type Conversion"),
-        ("BOOL", "文字列または数値を真偽値に変換｜[ 'TRUE' ] BOOL → TRUE, [ '1' ] BOOL → TRUE, [ 1 ] BOOL → TRUE", "Type Conversion"),
-        ("CHARS", "文字列を文字ベクタに分解｜[ 'hello' ] CHARS → [ 'h' 'e' 'l' 'l' 'o' ]", "Type Conversion"),
-        ("JOIN", "文字列ベクタを連結｜[ 'h' 'e' 'l' 'l' 'o' ] JOIN → [ 'hello' ]", "Type Conversion"),
-        ("NOW", "現在時刻を取得（DateTime型）｜NOW → [ @2024-11-25 14:00:00.500 ]（内部は分数）", "DateTime"),
-        ("DATETIME", "タイムスタンプを日付時刻Vectorに変換｜[ 1732531200 ] 'LOCAL' DATETIME → [ [ 2024 11 25 14 0 0 ] ]", "DateTime"),
-        ("TIMESTAMP", "日付時刻VectorをDateTime型に変換｜[ [ 2024 11 25 14 0 0 ] ] 'LOCAL' TIMESTAMP → [ @2024-11-25 14:00:00 ]", "DateTime"),
-
-        // 算術演算
-        ("+", "要素ごとの加算または集約｜[ 1 2 ] [ 3 4 ] + → [ 4 6 ]", "Arithmetic"),
-        ("-", "要素ごとの減算または集約｜[ 5 3 ] [ 2 1 ] - → [ 3 2 ]", "Arithmetic"),
-        ("*", "要素ごとの乗算または集約｜[ 2 3 ] [ 4 5 ] * → [ 8 15 ]", "Arithmetic"),
-        ("/", "要素ごとの除算または集約｜[ 10 20 ] [ 2 4 ] / → [ 5 5 ]", "Arithmetic"),
+        // 四則演算（NIL伝播）
+        ("+", "要素ごとの加算｜[ 1 2 ] [ 3 4 ] + → [ 4 6 ]｜NIL + x = NIL", "Arithmetic"),
+        ("-", "要素ごとの減算｜[ 5 3 ] [ 2 1 ] - → [ 3 2 ]｜NIL - x = NIL", "Arithmetic"),
+        ("*", "要素ごとの乗算｜[ 2 3 ] [ 4 5 ] * → [ 8 15 ]｜NIL * x = NIL", "Arithmetic"),
+        ("/", "要素ごとの除算｜[ 10 20 ] [ 2 4 ] / → [ 5 5 ]｜NIL / x = NIL", "Arithmetic"),
 
         // 比較演算
-        ("=", "ベクタが等しいか判定｜[ 1 2 ] [ 1 2 ] = → [ TRUE ]", "Comparison"),
-        ("<", "ベクタが小さいか判定｜[ 1 ] [ 2 ] < → [ TRUE ]", "Comparison"),
-        ("<=", "ベクタが小さいまたは等しいか判定｜[ 1 ] [ 1 ] <= → [ TRUE ]", "Comparison"),
-        (">", "ベクタが大きいか判定｜[ 3 ] [ 2 ] > → [ TRUE ]", "Comparison"),
-        (">=", "ベクタが大きいまたは等しいか判定｜[ 2 ] [ 2 ] >= → [ TRUE ]", "Comparison"),
+        ("=", "ベクタが等しいか判定｜[ 1 2 ] [ 1 2 ] = → TRUE", "Comparison"),
+        ("<", "ベクタが小さいか判定｜[ 1 ] [ 2 ] < → TRUE", "Comparison"),
+        ("<=", "ベクタが小さいまたは等しいか判定｜[ 1 ] [ 1 ] <= → TRUE", "Comparison"),
+        (">", "ベクタが大きいか判定｜[ 3 ] [ 2 ] > → TRUE", "Comparison"),
+        (">=", "ベクタが大きいまたは等しいか判定｜[ 2 ] [ 2 ] >= → TRUE", "Comparison"),
 
-        // 論理演算
-        ("AND", "ベクタの論理積｜[ TRUE FALSE ] [ TRUE TRUE ] AND → [ TRUE FALSE ]", "Logic"),
-        ("OR", "ベクタの論理和｜[ TRUE FALSE ] [ FALSE FALSE ] OR → [ TRUE FALSE ]", "Logic"),
-        ("NOT", "ベクタの論理否定｜[ TRUE FALSE ] NOT → [ FALSE TRUE ]", "Logic"),
+        // 論理演算（三値論理: Kleene logic）
+        ("AND", "論理積｜TRUE AND NIL = NIL, FALSE AND NIL = FALSE", "Logic"),
+        ("OR", "論理和｜TRUE OR NIL = TRUE, FALSE OR NIL = NIL", "Logic"),
+        ("NOT", "論理否定｜NOT NIL = NIL", "Logic"),
 
-        // 制御構造(ガード)
-        (":", "条件分岐のガード区切り｜条件 : 処理 : 条件 : 処理 : デフォルト処理", "Control"),
+        // 位置操作（1つだけ）
+        ("GET", "指定位置の要素を取得（0オリジン）｜[ 10 20 30 ] [ 1 ] GET → [ 20 ]", "Position"),
 
-        // 高階関数
-        ("MAP", "各要素にワードを適用｜[ 1 2 3 ] '2倍' MAP → [ 2 4 6 ]", "Higher-Order"),
-        ("FILTER", "条件に合う要素を抽出｜[ 1 2 3 4 ] '偶数?' FILTER → [ 2 4 ]", "Higher-Order"),
-        ("FOLD", "初期値付き畳み込み｜[ 1 2 3 4 ] [ 0 ] '+' FOLD → [ 10 ]", "Higher-Order"),
-        ("UNFOLD", "状態からベクタ生成｜[ 1 ] 'GEN' UNFOLD → [ ... ]", "Higher-Order"),
-
-        // 入出力
-        ("PRINT", "スタックトップを出力して削除｜[ 42 ] PRINT → （42を出力）", "I/O"),
-
-        // 音楽DSL
-        ("SEQ", "順次再生モードを設定｜[ 440 550 660 ] SEQ PLAY → 3音を順番に再生", "Music"),
-        ("SIM", "同時再生モードを設定｜[ 440 550 660 ] SIM PLAY → 3音を同時に再生（和音）", "Music"),
-        ("PLAY", "音声を再生｜[ 440/2 550 NIL 660 ] PLAY → 440Hzを2スロット再生→550Hzを1スロット→休符→660Hz", "Music"),
+        // 量操作（1つだけ）
+        ("LENGTH", "ベクタの長さを取得｜[ 1 2 3 ] LENGTH → [ 3 ]", "Quantity"),
 
         // カスタムワード管理
-        ("DEF", "カスタムワードを定義｜[ '[ 2 ] *' ] 'DOUBLE' DEF", "Word Management"),
-        ("DEL", "カスタムワードを削除｜'不要なワード' DEL", "Word Management"),
-        ("?", "ワード定義を表示｜'2倍' ?", "Word Management"),
+        ("DEF", "カスタムワードを定義｜[ ': [ 2 ] *' ] 'DOUBLE' DEF", "Word Management"),
+        ("DEL", "カスタムワードを削除｜'DOUBLE' DEL", "Word Management"),
+        ("?", "ワード定義を表示｜'DOUBLE' ?", "Word Management"),
 
-        // 制御フロー（TIMES/WAIT）
-        ("TIMES", "ワードをN回繰り返し実行｜'処理' [ 5 ] TIMES", "Control Flow"),
-        ("WAIT", "指定ミリ秒後にワードを実行｜'処理' [ 1000 ] WAIT", "Control Flow"),
-        ("!", "強制実行フラグ｜依存のあるワードのDEL/DEFを許可｜! 'WORD' DEL", "Control Flow"),
-
-        // 基本数学関数
-        ("MOD", "剰余（数学的）｜[ 7 ] [ 3 ] MOD → [ 1 ]", "Math"),
-        ("FLOOR", "切り捨て（負の無限大方向）｜[ 7/3 ] FLOOR → [ 2 ]", "Math"),
-        ("CEIL", "切り上げ（正の無限大方向）｜[ 7/3 ] CEIL → [ 3 ]", "Math"),
-        ("ROUND", "四捨五入（0から遠い方向）｜[ 5/2 ] ROUND → [ 3 ]", "Math"),
-
-        // テンソル生成
-        ("FILL", "任意値埋めテンソル生成｜[ 2 3 5 ] FILL → [ [ 5 5 5 ] [ 5 5 5 ] ]", "Tensor Generation"),
-
-        // 暗号論的乱数生成
-        ("CSPRNG", "暗号論的疑似乱数を生成｜[ 6 ] [ 1 ] CSPRNG → [ 0 ]〜[ 5/6 ]（自動約分）、[ 5 ] CSPRNG → 5個生成", "Random"),
-
-        // ハッシュ関数
-        ("HASH", "任意の値を決定論的にハッシュ化｜'hello' HASH → [ 0.xxx ]、[ 128 ] 'hello' HASH → 128ビット出力", "Hash"),
+        // 制御構造(ガード)
+        (":", "条件分岐のガード区切り｜条件 : 処理 : デフォルト処理", "Control"),
     ]
 }
 

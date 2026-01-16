@@ -85,14 +85,14 @@ pub struct Value {
 impl Value {
     /// NIL値を作成
     ///
-    /// NILは空のVectorとは異なる概念。
-    /// DisplayHint::Nilでマークされる特別な値。
+    /// NILは分数のセンチネル値（0/0）として表現される。
+    /// これにより、VectorにNILを格納可能。
     #[inline]
     pub fn nil() -> Self {
         Self {
-            data: Vec::new(),
+            data: vec![Fraction::nil()],
             display_hint: DisplayHint::Nil,
-            shape: vec![],
+            shape: vec![],  // スカラー
         }
     }
 
@@ -191,6 +191,7 @@ impl Value {
     /// 統一分数アーキテクチャ:
     /// - スカラー要素のみ: 1Dベクタを作成（shape = [n]）
     /// - ベクタ要素: 次元を追加（shape = [n, inner_shape...]）
+    /// - NILはセンチネル分数（0/0）として表現され、ベクタに格納可能
     ///
     /// スカラーは shape = [] として表現される。
     /// これにより `[ 1 ]` → shape [1]、`[ [ 1 ] ]` → shape [1, 1] と区別できる。
@@ -201,7 +202,7 @@ impl Value {
     pub fn from_vector(values: Vec<Value>) -> Self {
         assert!(!values.is_empty(), "Empty vector is not allowed. Use Value::nil() for NIL.");
 
-        // 要素からデータを収集（NILは空のデータを持つ）
+        // 要素からデータを収集（NILはFraction::nil()として1要素を持つ）
         let inner_shape = values[0].shape.clone();
         let data: Vec<Fraction> = values.iter()
             .flat_map(|v| v.data.iter().cloned())
@@ -241,17 +242,17 @@ impl Value {
 
     /// NIL かどうか
     ///
-    /// DisplayHint::Nilでマークされた値のみがNIL。
-    /// 空のVectorは許容されない（作成時にエラー）。
+    /// スカラーで唯一のFractionがNILセンチネルの場合にtrue。
     #[inline]
     pub fn is_nil(&self) -> bool {
-        self.display_hint == DisplayHint::Nil
+        self.shape.is_empty() && self.data.len() == 1 && self.data[0].is_nil()
     }
 
-    /// 真偽値として評価（空 = false、全てゼロ = false、それ以外 = true）
+    /// 真偽値として評価
+    /// NIL = false、全てゼロ = false、それ以外 = true
     #[inline]
     pub fn is_truthy(&self) -> bool {
-        !self.data.is_empty() && !self.data.iter().all(|f| f.is_zero())
+        !self.data.is_empty() && !self.data.iter().all(|f| f.is_zero() || f.is_nil())
     }
 
     /// 長さを取得
