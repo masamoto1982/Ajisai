@@ -122,7 +122,7 @@ pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
         result_vec.push(Value::from_number(frac));
     }
 
-    interp.stack.push(Value::from_vector(result_vec));
+    interp.stack_push(Value::from_vector(result_vec));
 
     Ok(())
 }
@@ -132,26 +132,26 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
     let default_denom = BigInt::from(1u64 << DEFAULT_DENOMINATOR_BITS);
 
     // スタックが空の場合：デフォルト分母で1個
-    if interp.stack.is_empty() {
+    if interp.stack_is_empty() {
         return Ok((default_denom, 1));
     }
 
     // スタックトップを確認
-    let top = interp.stack.last().unwrap();
+    let top = interp.stack_last().unwrap();
 
     // 整数でない場合：デフォルト分母で1個（スタックはそのまま）
-    let Some(first_int) = extract_positive_integer(top) else {
+    let Some(first_int) = extract_positive_integer(&top) else {
         return Ok((default_denom, 1));
     };
 
     // 1つ目の整数をpop
-    interp.stack.pop();
+    interp.stack_pop();
 
     // 次の要素も整数かチェック
-    if let Some(second) = interp.stack.last() {
-        if let Some(second_int) = extract_positive_integer(second) {
+    if let Some(second) = interp.stack_last() {
+        if let Some(second_int) = extract_positive_integer(&second) {
             // パターン3: [ denom ] [ count ]
-            interp.stack.pop();
+            interp.stack_pop();
             let count = first_int.to_usize()
                 .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
             return Ok((second_int, count));
@@ -184,9 +184,9 @@ mod tests {
         let mut interp = Interpreter::new();
         let result = interp.execute("CSPRNG").await;
         assert!(result.is_ok(), "CSPRNG should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
         // Check it's a vector with 1 element
-        let val = &interp.stack[0];
+        let val = &interp.stack_elements()[0];
         assert_eq!(val.data.len(), 1);
     }
 
@@ -195,9 +195,9 @@ mod tests {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 5 ] CSPRNG").await;
         assert!(result.is_ok(), "CSPRNG with count should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
         // Check it's a vector with 5 elements
-        let val = &interp.stack[0];
+        let val = &interp.stack_elements()[0];
         assert_eq!(val.data.len(), 5);
     }
 
@@ -207,9 +207,9 @@ mod tests {
         // 分母6で3個生成（サイコロのような用途）
         let result = interp.execute("[ 6 ] [ 3 ] CSPRNG").await;
         assert!(result.is_ok(), "CSPRNG with denominator should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
         // Check it's a vector with 3 elements
-        let val = &interp.stack[0];
+        let val = &interp.stack_elements()[0];
         assert_eq!(val.data.len(), 3);
     }
 
@@ -220,7 +220,7 @@ mod tests {
         let result = interp.execute("[ 1/2 ] CSPRNG").await;
         assert!(result.is_ok());
         // スタックには [ 1/2 ] と CSPRNG結果の2つがあるはず
-        assert_eq!(interp.stack.len(), 2);
+        assert_eq!(interp.stack_len(), 2);
     }
 
     #[tokio::test]
@@ -230,7 +230,7 @@ mod tests {
         let result = interp.execute("[ 2 ] [ 50 ] CSPRNG").await;
         assert!(result.is_ok());
         // Check it's a vector with 50 elements
-        let val = &interp.stack[0];
+        let val = &interp.stack_elements()[0];
         assert_eq!(val.data.len(), 50);
     }
 }

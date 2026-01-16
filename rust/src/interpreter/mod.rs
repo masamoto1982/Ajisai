@@ -18,7 +18,7 @@ pub mod hash;           // 分数ハッシュ関数
 pub mod audio;          // 音声再生
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
 
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
@@ -59,7 +59,9 @@ pub enum AsyncAction {
 }
 
 pub struct Interpreter {
-    pub(crate) stack: Stack,
+    /// スタック - 内部はVec<Value>、空の場合はNILと等価
+    /// 空のスタック = NIL という概念的等価性を維持
+    pub(crate) stack: Vec<Value>,
     pub(crate) dictionary: HashMap<String, WordDefinition>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
@@ -77,7 +79,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
-            stack: Vec::new(),  // スタックは空で初期化（GUIでNILとして表示）
+            stack: Vec::new(),  // 空のスタック = NIL
             dictionary: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
@@ -91,6 +93,76 @@ impl Interpreter {
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
+    }
+
+    // ========================================================================
+    // スタック操作メソッド
+    // 内部はVec<Value>、空の場合はNILと概念的に等価
+    // ========================================================================
+
+    /// スタックに値をプッシュ
+    #[inline]
+    pub fn stack_push(&mut self, value: Value) {
+        self.stack.push(value);
+    }
+
+    /// スタックから値をポップ
+    #[inline]
+    pub fn stack_pop(&mut self) -> Option<Value> {
+        self.stack.pop()
+    }
+
+    /// スタックの長さを取得
+    #[inline]
+    pub fn stack_len(&self) -> usize {
+        self.stack.len()
+    }
+
+    /// スタックが空かどうか（空 = NIL）
+    #[inline]
+    pub fn stack_is_empty(&self) -> bool {
+        self.stack.is_empty()
+    }
+
+    /// スタックの最後の要素を取得（クローン）
+    #[inline]
+    pub fn stack_last(&self) -> Option<Value> {
+        self.stack.last().cloned()
+    }
+
+    /// スタックの要素をVec<Value>として取得（クローン）
+    #[inline]
+    pub fn stack_elements(&self) -> Vec<Value> {
+        self.stack.clone()
+    }
+
+    /// スタックをクリア（空 = NIL）
+    #[inline]
+    pub fn stack_clear(&mut self) {
+        self.stack.clear();
+    }
+
+    /// スタック全体を消費してVec<Value>として返す
+    #[inline]
+    pub fn stack_drain(&mut self) -> Vec<Value> {
+        std::mem::take(&mut self.stack)
+    }
+
+    /// Vec<Value>からスタックを設定
+    #[inline]
+    pub fn stack_set(&mut self, values: Vec<Value>) {
+        self.stack = values;
+    }
+
+    /// スタックをValueとして取得（外部API用）
+    /// 空のスタックはNILを返す
+    #[inline]
+    pub fn stack_as_value(&self) -> Value {
+        if self.stack.is_empty() {
+            Value::nil()
+        } else {
+            Value::from_vector(self.stack.clone())
+        }
     }
 
     /// Vector収集メソッド
@@ -229,8 +301,8 @@ impl Interpreter {
             ));
         }
 
-        let delay_val = self.stack.pop().unwrap();
-        let name_val = self.stack.pop().unwrap();
+        let delay_val = self.stack_pop().unwrap();
+        let name_val = self.stack_pop().unwrap();
 
         // 遅延時間を取得（統一分数アーキテクチャ: 直接整数を抽出）
         let n = helpers::get_integer_from_value(&delay_val)?;
@@ -277,18 +349,18 @@ impl Interpreter {
             match &tokens[i] {
                 Token::Number(n) => {
                     let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
-                    self.stack.push(wrap_number(frac));
+                    self.stack_push(wrap_number(frac));
                 },
                 Token::String(s) => {
                     let val = Value::from_string(s);
-                    self.stack.push(wrap_value(val));
+                    self.stack_push(wrap_value(val));
                 },
                 // Token::Boolean と Token::Nil は削除
                 // TRUE/FALSE/NIL は Symbol として認識され、組み込みワードとして実行される
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
                     // 空のベクターはNILになる（from_vectorが自動変換）
-                    self.stack.push(Value::from_vector(values));
+                    self.stack_push(Value::from_vector(values));
                     i += consumed;
                     continue;
                 },
@@ -439,7 +511,7 @@ impl Interpreter {
             return Ok(false);
         }
 
-        let top = self.stack.pop().unwrap();
+        let top = self.stack_pop().unwrap();
         Ok(top.is_truthy())
     }
 
@@ -572,16 +644,16 @@ impl Interpreter {
             },
             // 定数（スタックに値をプッシュ）
             "TRUE" => {
-                self.stack.push(Value::from_bool(true));
+                self.stack_push(Value::from_bool(true));
                 Ok(())
             },
             "FALSE" => {
-                self.stack.push(Value::from_bool(false));
+                self.stack_push(Value::from_bool(false));
                 Ok(())
             },
             "NIL" => {
                 // NILは常に定数としてNILをプッシュ（TRUE/FALSEと同様）
-                self.stack.push(Value::nil());
+                self.stack_push(Value::nil());
                 Ok(())
             },
             // 型変換
@@ -638,7 +710,7 @@ impl Interpreter {
     }
     
     pub fn execute_reset(&mut self) -> Result<()> {
-        self.stack.clear();  // RESETはスタックをクリア（GUIでNILとして表示）
+        self.stack.clear();  // RESETはスタックをクリア（空 = NIL）
         self.dictionary.clear();
         self.dependents.clear();
         self.output_buffer.clear();
@@ -668,16 +740,18 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn get_output(&mut self) -> String { 
-        std::mem::take(&mut self.output_buffer) 
+    pub fn get_output(&mut self) -> String {
+        std::mem::take(&mut self.output_buffer)
     }
-    
-    pub fn get_stack(&self) -> &Stack { 
-        &self.stack 
+
+    /// スタックの要素をVec<Value>として返す（WASM API互換性のため）
+    pub fn get_stack(&self) -> Vec<Value> {
+        self.stack.clone()
     }
-    
-    pub fn set_stack(&mut self, stack: Stack) { 
-        self.stack = stack; 
+
+    /// Vec<Value>からスタックを設定（WASM API互換性のため）
+    pub fn set_stack(&mut self, stack: Vec<Value>) {
+        self.stack = stack;
     }
 
     pub fn rebuild_dependencies(&mut self) -> Result<()> {
@@ -735,15 +809,15 @@ mod tests {
         println!("\n=== Basic .. GET Test ===");
         let result = interp.execute(code).await;
         println!("Result: {:?}", result);
-        println!("Final stack length: {}", interp.stack.len());
+        println!("Final stack length: {}", interp.stack_len());
         println!("Final stack contents:");
-        for (i, val) in interp.stack.iter().enumerate() {
+        for (i, val) in interp.stack_elements().iter().enumerate() {
             println!("  [{}]: {:?}", i, val);
         }
 
         assert!(result.is_ok());
         // スタックには [5] と [5] が含まれるはず (元の値と取得した値)
-        assert_eq!(interp.stack.len(), 2);
+        assert_eq!(interp.stack_len(), 2);
     }
 
     #[tokio::test]
@@ -761,18 +835,18 @@ mod tests {
         println!("\n=== Stack GET with Comparison Test ===");
         let result = interp.execute(code).await;
         println!("Result: {:?}", result);
-        println!("Final stack length: {}", interp.stack.len());
+        println!("Final stack length: {}", interp.stack_len());
         println!("Final stack contents:");
-        for (i, val) in interp.stack.iter().enumerate() {
+        for (i, val) in interp.stack_elements().iter().enumerate() {
             println!("  [{}]: {:?}", i, val);
         }
 
         assert!(result.is_ok());
         // スタックには [10], [20], [30], [TRUE] が含まれるはず
         // [1] .. GET は [20] を取得してプッシュ、[20] = で比較して TRUE
-        assert_eq!(interp.stack.len(), 4);
+        assert_eq!(interp.stack_len(), 4);
         // 最後の値が TRUE であることを確認
-        let val = &interp.stack[3];
+        let val = &interp.stack_elements()[3];
         assert_eq!(val.data.len(), 1, "Expected single element");
         assert!(!val.data[0].is_zero(), "Expected TRUE from comparison");
     }
@@ -790,7 +864,7 @@ mod tests {
         assert!(result.is_ok(), "Simple addition should succeed: {:?}", result);
 
         // Verify result
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
     }
 
     #[tokio::test]
@@ -927,7 +1001,7 @@ ADDTEST
             println!("Error calling ANSWER: {:?}", e);
         }
         assert!(call_result.is_ok(), "Calling ANSWER should succeed");
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
     }
 
     #[tokio::test]
@@ -953,7 +1027,7 @@ ADDTEST
         let call_code = ": SMALL";
         let call_result = interp.execute(call_code).await;
         assert!(call_result.is_ok(), "Calling SMALL should succeed: {:?}", call_result.err());
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
     }
 
     #[tokio::test]
@@ -1018,8 +1092,8 @@ ADDTEST
         assert!(result.is_ok(), "Default line without colon should succeed: {:?}", result);
 
         // Verify result
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-        if let Some(val) = interp.stack.last() {
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack_last() {
             assert_eq!(val.data.len(), 1, "Result should have one element");
             assert_eq!(val.data[0].numerator.to_string(), "8", "Result should be 8");
         }
@@ -1041,7 +1115,7 @@ ADDTEST
         // Call ANSWER
         let call_result = interp.execute("ANSWER").await;
         assert!(call_result.is_ok(), "Calling ANSWER should succeed");
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
     }
 
     #[tokio::test]
@@ -1058,8 +1132,8 @@ ADDTEST
         assert!(result.is_ok(), "Multiple lines without colon should succeed: {:?}", result);
 
         // Verify result: (1 + 2) * 3 = 9
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-        if let Some(val) = interp.stack.last() {
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack_last() {
             assert_eq!(val.data.len(), 1, "Result should have one element");
             assert_eq!(val.data[0].numerator.to_string(), "9", "Result should be 9");
         }
@@ -1079,8 +1153,8 @@ ADDTEST
         assert!(result.is_ok(), "Mixed colon lines should succeed: {:?}", result);
 
         // Verify result: (10 + 20) * 5 = 150
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-        if let Some(val) = interp.stack.last() {
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack_last() {
             assert_eq!(val.data.len(), 1, "Result should have one element");
             assert_eq!(val.data[0].numerator.to_string(), "150", "Result should be 150");
         }
@@ -1101,14 +1175,14 @@ ADDTEST
         assert!(result.is_ok(), "Guard clause should succeed: {:?}", result);
 
         // Result should be [100] because 5 > 3 is true
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-        if let Some(val) = interp.stack.last() {
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack_last() {
             assert_eq!(val.data.len(), 1, "Result should have one element");
             assert_eq!(val.data[0].numerator.to_string(), "100", "Result should be 100");
         }
 
         // Clear stack
-        interp.stack.clear();
+        interp.stack_clear();
 
         // Test: Same logic but without colons (all lines executed)
         let default_code = r#"
@@ -1121,7 +1195,7 @@ ADDTEST
         assert!(result.is_ok(), "Default lines should succeed: {:?}", result);
 
         // All lines executed, so we should have 3 items on stack
-        assert_eq!(interp.stack.len(), 3, "Stack should have three elements");
+        assert_eq!(interp.stack_len(), 3, "Stack should have three elements");
     }
 
     #[tokio::test]
@@ -1141,8 +1215,8 @@ ADDTEST
         assert!(result.is_ok(), "Guard with 5 lines should succeed: {:?}", result);
 
         // すべての条件がfalseなのでデフォルトの999
-        assert_eq!(interp.stack.len(), 1);
-        if let Some(val) = interp.stack.last() {
+        assert_eq!(interp.stack_len(), 1);
+        if let Some(val) = interp.stack_last() {
             assert_eq!(val.data.len(), 1, "Result should have one element");
             assert_eq!(val.data[0].numerator.to_string(), "999");
         }
@@ -1156,8 +1230,8 @@ ADDTEST
         assert!(result.is_ok(), "MAP with increment function should succeed: {:?}", result);
 
         // 結果が [ 2 3 4 ] であることを確認
-        assert_eq!(interp.stack.len(), 1);
-        if let Some(val) = interp.stack.last() {
+        assert_eq!(interp.stack_len(), 1);
+        if let Some(val) = interp.stack_last() {
             assert_eq!(val.data.len(), 3, "Result should have 3 elements");
             assert_eq!(val.data[0].numerator.to_string(), "2", "First element should be 2");
             assert_eq!(val.data[1].numerator.to_string(), "3", "Second element should be 3");
@@ -1173,7 +1247,7 @@ ADDTEST
         assert!(result.is_ok(), "MAP in Stack mode should work: {:?}", result);
 
         // スタックに3つの要素があること
-        assert_eq!(interp.stack.len(), 3);
+        assert_eq!(interp.stack_len(), 3);
     }
 
     #[tokio::test]
@@ -1186,9 +1260,9 @@ ADDTEST
         assert!(result.is_ok(), "Empty vector should become NIL: {:?}", result);
 
         // スタックには作成されたベクター
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
         // 最後のベクターの中身がNILであることを確認
-        let last = interp.stack.last().unwrap();
+        let last = interp.stack_last().unwrap();
         assert_eq!(last.shape, vec![1]); // 1要素のベクター
     }
 
@@ -1201,8 +1275,8 @@ ADDTEST
         assert!(result.is_ok(), "Empty brackets should become NIL: {:?}", result);
 
         // スタックにはNIL
-        assert_eq!(interp.stack.len(), 1);
-        let last = interp.stack.last().unwrap();
+        assert_eq!(interp.stack_len(), 1);
+        let last = interp.stack_last().unwrap();
         assert!(last.is_nil(), "Result should be NIL");
     }
 
@@ -1214,8 +1288,8 @@ ADDTEST
         let result = interp.execute("NIL").await;
         assert!(result.is_ok(), "NIL keyword should work: {:?}", result);
 
-        assert_eq!(interp.stack.len(), 1);
-        if let Some(val) = interp.stack.last() {
+        assert_eq!(interp.stack_len(), 1);
+        if let Some(val) = interp.stack_last() {
             assert!(val.is_nil(), "Expected NIL, got {:?}", val);
         }
     }
@@ -1228,7 +1302,7 @@ ADDTEST
         let result = interp.execute("[ 1 NIL 2 ]").await;
         assert!(result.is_ok(), "NIL in vector should work: {:?}", result);
 
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
     }
 
     #[tokio::test]
@@ -1236,6 +1310,6 @@ ADDTEST
         let interp = Interpreter::new();
 
         // 初期スタックは空（GUIではNILとして表示される）
-        assert_eq!(interp.stack.len(), 0);
+        assert_eq!(interp.stack_len(), 0);
     }
 }

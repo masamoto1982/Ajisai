@@ -26,7 +26,7 @@ use crate::error::{AjisaiError, Result};
 /// 【エラー】
 /// - スタックが空の場合
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     interp.output_buffer.push_str(&format!("{} ", val));
     Ok(())
 }

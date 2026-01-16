@@ -63,14 +63,14 @@ fn introsort_fractions(values: &mut [(usize, Fraction)]) {
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
             if is_vector_value(&val) {
                 let v = reconstruct_vector_elements(&val);
 
                 if v.is_empty() {
                     // 空ベクタはNILとして返す
-                    interp.stack.push(Value::nil());
+                    interp.stack_push(Value::nil());
                     return Ok(());
                 }
 
@@ -80,7 +80,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                     match extract_fraction(elem) {
                         Some(f) => indexed_fractions.push((i, f)),
                         None => {
-                            interp.stack.push(Value::from_vector(v));
+                            interp.stack_push(Value::from_vector(v));
                             return Err(AjisaiError::from(
                                 "SORT requires all elements to be numbers"
                             ));
@@ -100,34 +100,35 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 // "No change is an error" チェック
                 if !interp.disable_no_change_check {
                     if v.len() < 2 {
-                        interp.stack.push(Value::from_vector(sorted_v));
+                        interp.stack_push(Value::from_vector(sorted_v));
                         return Err(AjisaiError::from(
                             "SORT resulted in no change on a vector with less than 2 elements"
                         ));
                     }
                     if sorted_v == v {
-                        interp.stack.push(Value::from_vector(sorted_v));
+                        interp.stack_push(Value::from_vector(sorted_v));
                         return Err(AjisaiError::from(
                             "SORT resulted in no change (vector is already sorted)"
                         ));
                     }
                 }
 
-                interp.stack.push(Value::from_vector(sorted_v));
+                interp.stack_push(Value::from_vector(sorted_v));
                 Ok(())
             } else {
-                interp.stack.push(val);
+                interp.stack_push(val);
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
         OperationTarget::Stack => {
-            if interp.stack.is_empty() {
+            if interp.stack_is_empty() {
                 return Ok(());
             }
 
             // スタックの全要素からFractionを抽出
-            let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(interp.stack.len());
-            for (i, elem) in interp.stack.iter().enumerate() {
+            let original_stack = interp.stack_elements();
+            let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(original_stack.len());
+            for (i, elem) in original_stack.iter().enumerate() {
                 match extract_fraction(elem) {
                     Some(f) => indexed_fractions.push((i, f)),
                     None => {
@@ -142,7 +143,6 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             introsort_fractions(&mut indexed_fractions);
 
             // ソート結果からスタックを再構築
-            let original_stack = interp.stack.clone();
             let sorted_stack: Vec<Value> = indexed_fractions
                 .iter()
                 .map(|(orig_idx, _)| original_stack[*orig_idx].clone())
@@ -155,17 +155,14 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                         "SORT resulted in no change on a stack with less than 2 elements"
                     ));
                 }
-                if sorted_stack == original_stack.as_slice() {
+                if sorted_stack == original_stack {
                     return Err(AjisaiError::from(
                         "SORT resulted in no change (stack is already sorted)"
                     ));
                 }
             }
 
-            interp.stack.clear();
-            for val in sorted_stack {
-                interp.stack.push(val);
-            }
+            interp.stack_set(sorted_stack);
             Ok(())
         }
     }

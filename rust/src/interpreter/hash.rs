@@ -318,7 +318,7 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("HASH does not support Stack mode (..)"));
     }
 
-    if interp.stack.is_empty() {
+    if interp.stack_is_empty() {
         return Err(AjisaiError::from("HASH requires a value to hash"));
     }
 
@@ -345,7 +345,7 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
     let result_fraction = Fraction::new(hash_value, denominator);
 
     // 結果をスタックにプッシュ
-    interp.stack.push(Value::from_vector(vec![
+    interp.stack_push(Value::from_vector(vec![
         Value::from_number(result_fraction)
     ]));
 
@@ -355,18 +355,18 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
 /// HASHの引数を解析
 fn parse_hash_args(interp: &mut Interpreter) -> Result<(u32, Value)> {
     // スタックトップを確認
-    let target = interp.stack.pop().unwrap();
+    let target = interp.stack_pop().unwrap();
 
     // スタックが空なら、targetがハッシュ対象
-    if interp.stack.is_empty() {
+    if interp.stack_is_empty() {
         return Ok((DEFAULT_HASH_BITS, target));
     }
 
     // 次の要素が整数（ビット数指定）かチェック
-    if let Some(bits_val) = interp.stack.last() {
-        if let Some(bits) = extract_positive_integer(bits_val) {
+    if let Some(bits_val) = interp.stack_last() {
+        if let Some(bits) = extract_positive_integer(&bits_val) {
             // ビット数指定あり
-            interp.stack.pop();
+            interp.stack_pop();
             return Ok((bits, target));
         }
     }
@@ -394,10 +394,10 @@ mod tests {
         let mut interp = Interpreter::new();
         let result = interp.execute("'hello' HASH").await;
         assert!(result.is_ok(), "HASH should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
 
         // 結果が1要素のベクタであることを確認
-        let val = &interp.stack[0];
+        let val = &interp.stack_elements()[0];
         assert_eq!(val.data.len(), 1, "Hash result should be single element");
     }
 
@@ -407,10 +407,10 @@ mod tests {
 
         // 同じ入力は同じハッシュを生成
         interp.execute("'hello' HASH").await.unwrap();
-        let hash1 = interp.stack.pop().unwrap();
+        let hash1 = interp.stack_pop().unwrap();
 
         interp.execute("'hello' HASH").await.unwrap();
-        let hash2 = interp.stack.pop().unwrap();
+        let hash2 = interp.stack_pop().unwrap();
 
         assert_eq!(hash1.data, hash2.data, "Same input should produce same hash");
     }
@@ -420,10 +420,10 @@ mod tests {
         let mut interp = Interpreter::new();
 
         interp.execute("'hello' HASH").await.unwrap();
-        let hash1 = interp.stack.pop().unwrap();
+        let hash1 = interp.stack_pop().unwrap();
 
         interp.execute("'world' HASH").await.unwrap();
-        let hash2 = interp.stack.pop().unwrap();
+        let hash2 = interp.stack_pop().unwrap();
 
         assert_ne!(hash1.data, hash2.data, "Different inputs should produce different hashes");
     }
@@ -433,7 +433,7 @@ mod tests {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1 2 3 ] HASH").await;
         assert!(result.is_ok(), "HASH on vector should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
     }
 
     #[tokio::test]
@@ -442,10 +442,10 @@ mod tests {
 
         // 1/2 と 2/4 は同じ正規形なので同じハッシュ
         interp.execute("[ 1/2 ] HASH").await.unwrap();
-        let hash1 = interp.stack.pop().unwrap();
+        let hash1 = interp.stack_pop().unwrap();
 
         interp.execute("[ 2/4 ] HASH").await.unwrap();
-        let hash2 = interp.stack.pop().unwrap();
+        let hash2 = interp.stack_pop().unwrap();
 
         assert_eq!(hash1.data, hash2.data,
                    "Equivalent fractions should produce same hash (1/2 = 2/4)");
@@ -460,7 +460,7 @@ mod tests {
         assert!(result.is_ok(), "HASH with bit spec should succeed: {:?}", result);
 
         // 結果が1要素のベクタであることを確認
-        let val = &interp.stack[0];
+        let val = &interp.stack_elements()[0];
         assert_eq!(val.data.len(), 1, "Hash result should be single element");
     }
 
@@ -469,10 +469,10 @@ mod tests {
         let mut interp = Interpreter::new();
 
         interp.execute("[ TRUE ] HASH").await.unwrap();
-        let hash_true = interp.stack.pop().unwrap();
+        let hash_true = interp.stack_pop().unwrap();
 
         interp.execute("[ FALSE ] HASH").await.unwrap();
-        let hash_false = interp.stack.pop().unwrap();
+        let hash_false = interp.stack_pop().unwrap();
 
         assert_ne!(hash_true.data, hash_false.data,
                    "TRUE and FALSE should have different hashes");
@@ -483,7 +483,7 @@ mod tests {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ [ 1 2 ] [ 3 4 ] ] HASH").await;
         assert!(result.is_ok(), "HASH on nested vector should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
     }
 
     #[tokio::test]
@@ -491,7 +491,7 @@ mod tests {
         let mut interp = Interpreter::new();
         let result = interp.execute("'' HASH").await;
         assert!(result.is_ok(), "HASH on empty string should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
     }
 
     #[tokio::test]
@@ -500,7 +500,7 @@ mod tests {
         let mut interp = Interpreter::new();
         let result = interp.execute("NIL HASH").await;
         assert!(result.is_ok(), "NIL should be hashable: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
     }
 
     #[tokio::test]
@@ -510,7 +510,7 @@ mod tests {
         interp.execute("[ 1/2 ] 'hello' HASH").await.unwrap();
 
         // スタックには [1/2] と ハッシュ結果 の2つ
-        assert_eq!(interp.stack.len(), 2);
+        assert_eq!(interp.stack_len(), 2);
     }
 
     #[tokio::test]
@@ -520,7 +520,7 @@ mod tests {
         interp.execute("[ 128 ] 'hello' HASH").await.unwrap();
 
         // スタックにはハッシュ結果のみ（[128]は消費された）
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
     }
 
     #[tokio::test]
@@ -546,7 +546,7 @@ mod tests {
 
         for input in inputs {
             interp.execute(&format!("'{}' HASH", input)).await.unwrap();
-            hashes.push(interp.stack.pop().unwrap());
+            hashes.push(interp.stack_pop().unwrap());
         }
 
         // すべて異なることを確認

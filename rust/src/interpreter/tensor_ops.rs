@@ -72,7 +72,7 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("SHAPE does not support Stack (..) mode"));
     }
 
-    let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_last().ok_or(AjisaiError::StackUnderflow)?;
 
     // NILの場合
     if val.is_nil() {
@@ -80,15 +80,15 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     }
 
     // ベクタの場合
-    if is_vector_value(val) {
-        let shape_vec = infer_shape_from_value(val);
+    if is_vector_value(&val) {
+        let shape_vec = infer_shape_from_value(&val);
 
         let shape_values: Vec<Value> = shape_vec
             .iter()
             .map(|&n| Value::from_number(Fraction::new(BigInt::from(n as i64), BigInt::one())))
             .collect();
 
-        interp.stack.push(Value::from_vector(shape_values));
+        interp.stack_push(Value::from_vector(shape_values));
         return Ok(());
     }
 
@@ -106,7 +106,7 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("RANK does not support Stack (..) mode"));
     }
 
-    let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_last().ok_or(AjisaiError::StackUnderflow)?;
 
     // NILの場合
     if val.is_nil() {
@@ -114,11 +114,11 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     }
 
     // ベクタの場合
-    if is_vector_value(val) {
-        let shape = infer_shape_from_value(val);
+    if is_vector_value(&val) {
+        let shape = infer_shape_from_value(&val);
         let r = shape.len();
         let rank_frac = Fraction::new(BigInt::from(r as i64), BigInt::one());
-        interp.stack.push(wrap_number(rank_frac));
+        interp.stack_push(wrap_number(rank_frac));
         return Ok(());
     }
 
@@ -138,21 +138,21 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("RESHAPE does not support Stack (..) mode"));
     }
 
-    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let data_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let shape_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+    let data_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 形状をベクタから抽出
     if !is_vector_value(&shape_val) && !shape_val.is_nil() {
-        interp.stack.push(data_val);
-        interp.stack.push(shape_val);
+        interp.stack_push(data_val);
+        interp.stack_push(shape_val);
         return Err(AjisaiError::from("RESHAPE requires shape as vector"));
     }
 
     // 形状配列を構築
     let dim_count = shape_val.data.len();
     if dim_count > MAX_VISIBLE_DIMENSIONS {
-        interp.stack.push(data_val);
-        interp.stack.push(shape_val);
+        interp.stack_push(data_val);
+        interp.stack_push(shape_val);
         return Err(AjisaiError::from(format!(
             "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
             dim_count
@@ -164,8 +164,8 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         let dim = match f.as_usize() {
             Some(d) => d,
             None => {
-                interp.stack.push(data_val);
-                interp.stack.push(shape_val);
+                interp.stack_push(data_val);
+                interp.stack_push(shape_val);
                 return Err(AjisaiError::from("Shape dimensions must be positive integers"));
             }
         };
@@ -174,8 +174,8 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
 
     // データをベクタから抽出
     if data_val.is_nil() {
-        interp.stack.push(data_val);
-        interp.stack.push(shape_val);
+        interp.stack_push(data_val);
+        interp.stack_push(shape_val);
         return Err(AjisaiError::from("RESHAPE requires data as vector"));
     }
 
@@ -183,8 +183,8 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     let required_size: usize = new_shape.iter().product();
     let data_len = data_val.data.len();
     if data_len != required_size {
-        interp.stack.push(data_val);
-        interp.stack.push(shape_val);
+        interp.stack_push(data_val);
+        interp.stack_push(shape_val);
         return Err(AjisaiError::from(format!(
             "RESHAPE failed: data length {} doesn't match shape {:?} (requires {})",
             data_len, new_shape, required_size
@@ -198,7 +198,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         shape: new_shape,
     };
 
-    interp.stack.push(result);
+    interp.stack_push(result);
     Ok(())
 }
 
@@ -211,18 +211,18 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("TRANSPOSE does not support Stack (..) mode"));
     }
 
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // NILの場合
     if val.is_nil() {
-        interp.stack.push(val);
+        interp.stack_push(val);
         return Err(AjisaiError::from("TRANSPOSE requires vector"));
     }
 
     // 形状を取得
     let shape = infer_shape_from_value(&val);
     if shape.len() != 2 {
-        interp.stack.push(val);
+        interp.stack_push(val);
         return Err(AjisaiError::from("TRANSPOSE requires 2D vector"));
     }
 
@@ -243,7 +243,7 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
         shape: vec![cols, rows],
     };
 
-    interp.stack.push(result);
+    interp.stack_push(result);
     Ok(())
 }
 
@@ -260,18 +260,18 @@ where
         return Err(AjisaiError::from(format!("{} does not support Stack (..) mode", op_name)));
     }
 
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // NILの場合
     if val.is_nil() {
-        interp.stack.push(val);
+        interp.stack_push(val);
         return Err(AjisaiError::from(format!("{} requires number or vector", op_name)));
     }
 
     // 単一数値の場合
     if is_number_value(&val) {
         let result = op(&val.data[0]);
-        interp.stack.push(wrap_number(result));
+        interp.stack_push(wrap_number(result));
         return Ok(());
     }
 
@@ -283,11 +283,11 @@ where
             display_hint: val.display_hint,
             shape: val.shape.clone(),
         };
-        interp.stack.push(result);
+        interp.stack_push(result);
         return Ok(());
     }
 
-    interp.stack.push(val);
+    interp.stack_push(val);
     Err(AjisaiError::from(format!("{} requires number or vector", op_name)))
 }
 
@@ -332,13 +332,13 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("MOD does not support Stack (..) mode"));
     }
 
-    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let b_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // NILチェック
     if a_val.is_nil() || b_val.is_nil() {
-        interp.stack.push(a_val);
-        interp.stack.push(b_val);
+        interp.stack_push(a_val);
+        interp.stack_push(b_val);
         return Err(AjisaiError::from("MOD requires vectors or numbers"));
     }
 
@@ -353,12 +353,12 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
 
     match result {
         Ok(r) => {
-            interp.stack.push(r);
+            interp.stack_push(r);
             Ok(())
         }
         Err(e) => {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
+            interp.stack_push(a_val);
+            interp.stack_push(b_val);
             Err(e)
         }
     }
@@ -432,17 +432,17 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 引数ベクタ [ shape... value ] を取得
-    let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let args_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // NILチェック
     if args_val.is_nil() {
-        interp.stack.push(args_val);
+        interp.stack_push(args_val);
         return Err(AjisaiError::from("FILL requires [shape... value] vector"));
     }
 
     // 最低2要素必要
     if args_val.data.len() < 2 {
-        interp.stack.push(args_val);
+        interp.stack_push(args_val);
         return Err(AjisaiError::from("FILL requires [shape... value] (at least 2 elements)"));
     }
 
@@ -452,7 +452,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     // それより前の要素が形状
     let shape_len = args_val.data.len() - 1;
     if shape_len > MAX_VISIBLE_DIMENSIONS {
-        interp.stack.push(args_val);
+        interp.stack_push(args_val);
         return Err(AjisaiError::from(format!(
             "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
             shape_len
@@ -464,7 +464,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         let dim = match args_val.data[i].as_usize() {
             Some(d) if d > 0 => d,
             _ => {
-                interp.stack.push(args_val);
+                interp.stack_push(args_val);
                 return Err(AjisaiError::from("Shape dimensions must be positive integers"));
             }
         };
@@ -481,6 +481,6 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         shape,
     };
 
-    interp.stack.push(result);
+    interp.stack_push(result);
     Ok(())
 }

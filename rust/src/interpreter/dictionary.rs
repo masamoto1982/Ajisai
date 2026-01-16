@@ -60,7 +60,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("DEF does not support Stack mode (..)"));
     }
 
-    if interp.stack.len() < 2 {
+    if interp.stack_len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
 
@@ -69,19 +69,14 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // 説明なしの場合: [ベクタ] ['NAME']
     let mut description = None;
 
-    let has_description = if interp.stack.len() >= 3 {
+    let has_description = if interp.stack_len() >= 3 {
         // トップ2つが文字列的な値の場合のみ、説明ありと判定
-        if let Some(top_val) = interp.stack.last() {
-            if is_string_like(top_val) {
-                // 次（2番目）も文字列的かチェック
-                if let Some(second_val) = interp.stack.get(interp.stack.len() - 2) {
-                    is_string_like(second_val)
-                } else {
-                    false
-                }
-            } else {
-                false
-            }
+        let elements = interp.stack_elements();
+        let len = elements.len();
+        if len >= 2 {
+            let top_val = &elements[len - 1];
+            let second_val = &elements[len - 2];
+            is_string_like(top_val) && is_string_like(second_val)
         } else {
             false
         }
@@ -90,7 +85,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     };
 
     if has_description {
-        if let Some(desc_val) = interp.stack.pop() {
+        if let Some(desc_val) = interp.stack_pop() {
             // 文字列を取得（統一分数アーキテクチャ: 直接変換）
             if let Ok(s) = value_to_string(&desc_val) {
                 description = Some(s);
@@ -99,11 +94,11 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     }
 
     // スタックから名前を取得
-    let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let name_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     let name_str = get_word_name_from_value(&name_val)?;
 
     // 定義本体を取得
-    let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let def_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 定義本体を文字列として取得（統一分数アーキテクチャ）
     let definition_str = value_to_string(&def_val)?;
@@ -253,7 +248,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("DEL does not support Stack mode (..)"));
     }
 
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 統一分数アーキテクチャ: 値を文字列として解釈
     let name = get_word_name_from_value(&val)?;
@@ -324,7 +319,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     }
 
     // LOOKUP (?) は 'NAME' を期待する
-    let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let name_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 統一分数アーキテクチャ: 値を文字列として解釈
     let name_str = get_word_name_from_value(&name_val)?;
@@ -388,8 +383,8 @@ mod tests {
         assert!(result3.is_ok(), "Executing redefined word should succeed");
 
         // スタックトップが [ 15 ] であることを確認（Vector）
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
-        if let Some(val) = interp.stack.last() {
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
+        if let Some(val) = interp.stack_last() {
             assert_eq!(val.data.len(), 1, "Result should have one element");
             // 15 は分数として 15/1 で表現される
             assert_eq!(val.data[0].numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", val.data[0].numerator);

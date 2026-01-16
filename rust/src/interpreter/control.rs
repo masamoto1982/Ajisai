@@ -57,12 +57,12 @@ fn is_string_value(val: &crate::types::Value) -> bool {
 /// - ビルトインワードを指定した場合
 /// - カウントが整数でない場合
 pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
-    if interp.stack.len() < 2 {
+    if interp.stack_len() < 2 {
         return Err(AjisaiError::from("TIMES requires word/code and count. Usage: 'WORD' [ n ] TIMES or '[ 1 ] +' [ n ] TIMES"));
     }
 
-    let count_val = interp.stack.pop().unwrap();
-    let code_val = interp.stack.pop().unwrap();
+    let count_val = interp.stack_pop().unwrap();
+    let code_val = interp.stack_pop().unwrap();
 
     let count = get_integer_from_value(&count_val)?;
 
@@ -136,10 +136,10 @@ mod tests {
         let result = interp.execute("[ 0 ] 'INC' [ 5 ] TIMES").await;
 
         assert!(result.is_ok(), "TIMES should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
 
         // Check the value is 5
-        if let Some(val) = interp.stack.last() {
+        if let Some(val) = interp.stack_last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("5"), "Result should be 5");
         }
@@ -156,9 +156,9 @@ mod tests {
         let result = interp.execute("[ 10 ] 'INC' [ 0 ] TIMES").await;
 
         assert!(result.is_ok(), "TIMES with 0 count should succeed");
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
 
-        if let Some(val) = interp.stack.last() {
+        if let Some(val) = interp.stack_last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("10"), "Result should be 10");
         }
@@ -201,7 +201,7 @@ mod tests {
 
         assert!(result.is_ok(), "TIMES with multiline word should succeed: {:?}", result);
 
-        if let Some(val) = interp.stack.last() {
+        if let Some(val) = interp.stack_last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("4"), "Result should be 4, got: {}", debug_str);
         }
@@ -220,9 +220,9 @@ mod tests {
         let result = interp.execute("[ 1 ] [ 2 ] [ 3 ] 'SUM2' [ 2 ] TIMES").await;
 
         assert!(result.is_ok(), "TIMES with operation target should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
 
-        if let Some(val) = interp.stack.last() {
+        if let Some(val) = interp.stack_last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("6"), "Result should be 6, got: {}", debug_str);
         }
@@ -237,9 +237,9 @@ mod tests {
         let result = interp.execute("[ 0 ] '[ 1 ] +' [ 5 ] TIMES").await;
 
         assert!(result.is_ok(), "TIMES with inline code should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
 
-        if let Some(val) = interp.stack.last() {
+        if let Some(val) = interp.stack_last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("5"), "Result should be 5, got: {}", debug_str);
         }
@@ -254,9 +254,9 @@ mod tests {
         let result = interp.execute("[ 1 ] '[ 2 ] *' [ 4 ] TIMES").await;
 
         assert!(result.is_ok(), "TIMES with inline multiplication should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+        assert_eq!(interp.stack_len(), 1, "Stack should have one element");
 
-        if let Some(val) = interp.stack.last() {
+        if let Some(val) = interp.stack_last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("16"), "Result should be 16, got: {}", debug_str);
         }
@@ -274,7 +274,7 @@ mod tests {
 
         assert!(result.is_ok(), "Should succeed: {:?}", result);
 
-        if let Some(val) = interp.stack.last() {
+        if let Some(val) = interp.stack_last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("5"), "Result should be 5, got: {}", debug_str);
         }
@@ -294,7 +294,7 @@ mod tests {
 
         assert!(result.is_ok(), "Should succeed: {:?}", result);
 
-        if let Some(val) = interp.stack.last() {
+        if let Some(val) = interp.stack_last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("5"), "Result should be 5, got: {}", debug_str);
         }

@@ -130,7 +130,7 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
     let timestamp = Fraction::new(ms_bigint, thousand);
 
     // DateTime結果を単一要素Vectorとして返す
-    interp.stack.push(wrap_datetime(timestamp));
+    interp.stack_push(wrap_datetime(timestamp));
 
     Ok(())
 }
@@ -172,30 +172,30 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     }
 
     // タイムゾーン文字列を取得
-    let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let tz_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     let timezone = if is_vector_value(&tz_val) {
         let v = reconstruct_vector_elements(&tz_val);
         if v.len() == 1 && is_string_value(&v[0]) {
             value_as_string(&v[0]).unwrap_or_default()
         } else {
-            interp.stack.push(tz_val);
+            interp.stack_push(tz_val);
             return Err(AjisaiError::from("DATETIME: timezone must be a String (e.g., 'LOCAL')"));
         }
     } else {
-        interp.stack.push(tz_val);
+        interp.stack_push(tz_val);
         return Err(AjisaiError::from("DATETIME: timezone must be a String (e.g., 'LOCAL')"));
     };
 
     // タイムゾーンの検証（現在はLOCALのみサポート）
     if timezone.to_uppercase() != "LOCAL" {
-        interp.stack.push(tz_val);
+        interp.stack_push(tz_val);
         return Err(AjisaiError::from(
             format!("DATETIME: unsupported timezone '{}'. Currently only 'LOCAL' is supported", timezone)
         ));
     }
 
     // タイムスタンプを取得
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから数値またはDateTime型を抽出
     let timestamp = if is_vector_value(&val) {
@@ -203,13 +203,13 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
         if v.len() == 1 && is_number_value(&v[0]) {
             v[0].data[0].clone()
         } else {
-            interp.stack.push(val);
-            interp.stack.push(tz_val);
+            interp.stack_push(val);
+            interp.stack_push(tz_val);
             return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
         }
     } else {
-        interp.stack.push(val);
-        interp.stack.push(tz_val);
+        interp.stack_push(val);
+        interp.stack_push(tz_val);
         return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
     };
 
@@ -252,7 +252,7 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 日付時刻成分をVectorとして返す
-    interp.stack.push(Value::from_vector(values));
+    interp.stack_push(Value::from_vector(values));
 
     Ok(())
 }
@@ -280,30 +280,30 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     }
 
     // タイムゾーン文字列を取得
-    let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let tz_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     let timezone = if is_vector_value(&tz_val) {
         let v = reconstruct_vector_elements(&tz_val);
         if v.len() == 1 && is_string_value(&v[0]) {
             value_as_string(&v[0]).unwrap_or_default()
         } else {
-            interp.stack.push(tz_val);
+            interp.stack_push(tz_val);
             return Err(AjisaiError::from("TIMESTAMP: timezone must be a String (e.g., 'LOCAL')"));
         }
     } else {
-        interp.stack.push(tz_val);
+        interp.stack_push(tz_val);
         return Err(AjisaiError::from("TIMESTAMP: timezone must be a String (e.g., 'LOCAL')"));
     };
 
     // タイムゾーンの検証（現在はLOCALのみサポート）
     if timezone.to_uppercase() != "LOCAL" {
-        interp.stack.push(tz_val);
+        interp.stack_push(tz_val);
         return Err(AjisaiError::from(
             format!("TIMESTAMP: unsupported timezone '{}'. Currently only 'LOCAL' is supported", timezone)
         ));
     }
 
     // 日付時刻Vectorを取得
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // Vectorから日付時刻成分を抽出（[[year month day hour minute second]]形式）
     let components = if is_vector_value(&val) {
@@ -311,20 +311,20 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
         if v.len() == 1 && is_vector_value(&v[0]) {
             reconstruct_vector_elements(&v[0])
         } else {
-            interp.stack.push(val);
-            interp.stack.push(tz_val);
+            interp.stack_push(val);
+            interp.stack_push(tz_val);
             return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
         }
     } else {
-        interp.stack.push(val);
-        interp.stack.push(tz_val);
+        interp.stack_push(val);
+        interp.stack_push(tz_val);
         return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
     };
 
     // 要素数チェック（6または7）
     if components.len() != 6 && components.len() != 7 {
-        interp.stack.push(val);
-        interp.stack.push(tz_val);
+        interp.stack_push(val);
+        interp.stack_push(tz_val);
         return Err(AjisaiError::from(
             "TIMESTAMP: Vector must have 6 or 7 elements [year month day hour minute second (subsec)]"
         ));
@@ -336,8 +336,8 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
         if is_number_value(component) {
             let frac = &component.data[0];
             if frac.denominator != BigInt::one() {
-                interp.stack.push(val);
-                interp.stack.push(tz_val);
+                interp.stack_push(val);
+                interp.stack_push(tz_val);
                 return Err(AjisaiError::from(
                     format!("TIMESTAMP: element {} must be an integer, got {}/{}",
                         i, frac.numerator, frac.denominator)
@@ -348,8 +348,8 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
             })?;
             integers.push(int_val);
         } else {
-            interp.stack.push(val);
-            interp.stack.push(tz_val);
+            interp.stack_push(val);
+            interp.stack_push(tz_val);
             return Err(AjisaiError::from(
                 format!("TIMESTAMP: element {} must be a Number", i)
             ));
@@ -368,8 +368,8 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
         if is_number_value(&components[6]) {
             Some(components[6].data[0].clone())
         } else {
-            interp.stack.push(val);
-            interp.stack.push(tz_val);
+            interp.stack_push(val);
+            interp.stack_push(tz_val);
             return Err(AjisaiError::from("TIMESTAMP: subsecond must be a Number"));
         }
     } else {
@@ -389,8 +389,8 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     if created_year != year || created_month != month || created_day != day ||
        created_hour != hour || created_minute != minute || created_second != second {
-        interp.stack.push(val);
-        interp.stack.push(tz_val);
+        interp.stack_push(val);
+        interp.stack_push(tz_val);
         return Err(AjisaiError::from(
             format!("TIMESTAMP: invalid date/time [{} {} {} {} {} {}]",
                 year, month, day, hour, minute, second)
@@ -411,7 +411,7 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     }
 
     // DateTime結果を単一要素Vectorとして返す
-    interp.stack.push(wrap_datetime(timestamp));
+    interp.stack_push(wrap_datetime(timestamp));
 
     Ok(())
 }

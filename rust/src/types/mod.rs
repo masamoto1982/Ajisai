@@ -315,6 +315,120 @@ impl Value {
     pub fn as_usize(&self) -> Option<usize> {
         self.as_scalar().and_then(|f| f.as_usize())
     }
+
+    // ========================================================================
+    // スタック操作用メソッド
+    // 「スタック = Value（Vector）」という統一モデルのためのヘルパー
+    // ========================================================================
+
+    /// スタックとしての要素数を取得
+    ///
+    /// NILの場合は0、それ以外はshapeの最初の要素（または1）を返す
+    #[inline]
+    pub fn stack_len(&self) -> usize {
+        if self.is_nil() {
+            0
+        } else if self.shape.is_empty() {
+            // スカラーは1要素
+            1
+        } else {
+            self.shape[0]
+        }
+    }
+
+    /// スタックの要素をVec<Value>として再構築
+    ///
+    /// 内部のデータを個別のValueとして取り出す。
+    /// NILの場合は空のVecを返す。
+    pub fn to_stack_elements(&self) -> Vec<Value> {
+        if self.is_nil() {
+            return Vec::new();
+        }
+
+        if self.shape.is_empty() {
+            // スカラーは1要素のベクタとして扱う
+            vec![self.clone()]
+        } else if self.shape.len() == 1 {
+            let outer_size = self.shape[0];
+
+            // 1次元でdataが空の場合、outer_size個のNILを返す
+            // （NILを含むベクタを正しく再構築）
+            if self.data.is_empty() {
+                return (0..outer_size).map(|_| Value::nil()).collect();
+            }
+
+            // 1次元: 各分数を個別のValueとして返す
+            self.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
+        } else {
+            // 多次元: 最外層の要素を再構築
+            let outer_size = self.shape[0];
+            let inner_size: usize = self.shape[1..].iter().product();
+            let inner_shape = self.shape[1..].to_vec();
+
+            // 内部要素がNIL（inner_size = 0またはdata不足）の場合
+            if inner_size == 0 || self.data.is_empty() {
+                return (0..outer_size).map(|_| Value::nil()).collect();
+            }
+
+            (0..outer_size).map(|i| {
+                let start = i * inner_size;
+                let end = start + inner_size;
+                // データ範囲外の場合はNILを返す
+                if end > self.data.len() {
+                    return Value::nil();
+                }
+                let data = self.data[start..end].to_vec();
+                Value {
+                    data,
+                    display_hint: self.display_hint,
+                    shape: inner_shape.clone(),
+                }
+            }).collect()
+        }
+    }
+
+    /// スタックの最後の要素を取得（参照）
+    ///
+    /// NILまたは空の場合はNoneを返す
+    pub fn stack_last(&self) -> Option<Value> {
+        if self.is_nil() {
+            return None;
+        }
+
+        let elements = self.to_stack_elements();
+        elements.last().cloned()
+    }
+
+    /// スタックに要素を追加した新しいValueを作成
+    ///
+    /// 現在のスタック（self）に新しい要素を追加した結果を返す。
+    /// selfは変更されない（イミュータブル操作）。
+    pub fn stack_with_push(&self, value: Value) -> Value {
+        if self.is_nil() {
+            // 空スタックへの追加 → 新しい値を含む1要素のVector
+            Value::from_vector(vec![value])
+        } else {
+            // 既存の要素と新しい値を結合
+            let mut elements = self.to_stack_elements();
+            elements.push(value);
+            Value::from_vector(elements)
+        }
+    }
+
+    /// スタックから最後の要素を取り除いた新しいValueと、取り除いた要素を返す
+    ///
+    /// NILまたは空の場合は(self.clone(), None)を返す。
+    /// selfは変更されない（イミュータブル操作）。
+    pub fn stack_with_pop(&self) -> (Value, Option<Value>) {
+        if self.is_nil() {
+            return (self.clone(), None);
+        }
+
+        let mut elements = self.to_stack_elements();
+        let popped = elements.pop();
+        let new_stack = Value::from_vector(elements); // 空ならNILになる
+        (new_stack, popped)
+    }
 }
 
 // ============================================================================

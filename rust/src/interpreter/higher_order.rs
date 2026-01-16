@@ -55,17 +55,17 @@ fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
 
 /// MAP - 各要素に関数を適用して変換する
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
-    let word_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let word_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     let word_name = get_word_name_from_value(&word_val)?;
 
     if !interp.dictionary.contains_key(&word_name) {
-        interp.stack.push(word_val);
+        interp.stack_push(word_val);
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let target_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = if target_val.is_nil() {
@@ -73,13 +73,13 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             } else if is_vector_value(&target_val) {
                 reconstruct_vector_elements(&target_val)
             } else {
-                interp.stack.push(target_val);
+                interp.stack_push(target_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));
             };
 
             // 空ベクタ/NILの場合はNILを返す
             if elements.is_empty() {
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
                 return Ok(());
             }
 
@@ -97,14 +97,14 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
             for elem in &elements {
                 // スタックをクリアして単一要素を処理（Stackモードと同様）
-                interp.stack.clear();
+                interp.stack_clear();
                 // 各要素を単一要素Vectorでラップしてプッシュ
-                interp.stack.push(wrap_value(elem.clone()));
+                interp.stack_push(wrap_value(elem.clone()));
                 // ワードを実行
                 match interp.execute_word_core(&word_name) {
                     Ok(_) => {
                         // 結果を取得
-                        match interp.stack.pop() {
+                        match interp.stack_pop() {
                             Some(result_vec) => {
                                 // 単一要素ベクタの場合はアンラップ
                                 if is_vector_value(&result_vec) {
@@ -119,8 +119,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                                     interp.operation_target = saved_target;
                                     interp.disable_no_change_check = saved_no_change_check;
                                     interp.stack = original_stack_below;
-                                    interp.stack.push(Value::from_vector(elements));
-                                    interp.stack.push(word_val);
+                                    interp.stack_push(Value::from_vector(elements));
+                                    interp.stack_push(word_val);
                                     return Err(AjisaiError::structure_error("vector result from MAP word", "other format"));
                                 }
                             },
@@ -129,8 +129,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                                 interp.operation_target = saved_target;
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
-                                interp.stack.push(Value::from_vector(elements));
-                                interp.stack.push(word_val);
+                                interp.stack_push(Value::from_vector(elements));
+                                interp.stack_push(word_val);
                                 return Err(AjisaiError::from("MAP word must return a value"));
                             }
                         }
@@ -140,8 +140,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
-                        interp.stack.push(Value::from_vector(elements));
-                        interp.stack.push(word_val);
+                        interp.stack_push(Value::from_vector(elements));
+                        interp.stack_push(word_val);
                         return Err(e);
                     }
                 }
@@ -153,24 +153,27 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.stack = original_stack_below;
 
             // 結果をVectorとして返す
-            interp.stack.push(Value::from_vector(results));
+            interp.stack_push(Value::from_vector(results));
         },
         OperationTarget::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = match get_integer_from_value(&count_val) {
                 Ok(v) => v as usize,
                 Err(e) => {
-                    interp.stack.push(count_val);
+                    interp.stack_push(count_val);
                     return Err(e);
                 }
             };
 
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
+            if interp.stack_len() < count {
+                interp.stack_push(count_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let stack_elements = interp.stack_elements();
+            let targets: Vec<Value> = stack_elements[stack_elements.len() - count..].to_vec();
+            let remaining: Vec<Value> = stack_elements[..stack_elements.len() - count].to_vec();
+            interp.stack_set(remaining);
             let original_stack_below = interp.stack.clone();
 
             // operation_target を一時的に StackTop に設定
@@ -183,19 +186,21 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             let mut results = Vec::new();
             for item in &targets {
                 // スタックをクリアして単一要素を処理
-                interp.stack.clear();
-                interp.stack.push(item.clone());
+                interp.stack_clear();
+                interp.stack_push(item.clone());
                 match interp.execute_word_core(&word_name) {
                     Ok(_) => {
-                        match interp.stack.pop() {
+                        match interp.stack_pop() {
                             Some(result) => results.push(result),
                             None => {
                                 // エラー時にスタックを復元
                                 interp.operation_target = saved_target;
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
+                                for t in targets {
+                                    interp.stack_push(t);
+                                }
+                                interp.stack_push(count_val);
                                 return Err(AjisaiError::from("MAP word must return a value"));
                             }
                         }
@@ -205,8 +210,10 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
-                        interp.stack.extend(targets);
-                        interp.stack.push(count_val);
+                        for t in targets {
+                            interp.stack_push(t);
+                        }
+                        interp.stack_push(count_val);
                         return Err(e);
                     }
                 }
@@ -216,7 +223,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.extend(results);
+            for r in results {
+                interp.stack_push(r);
+            }
         }
     }
     Ok(())
@@ -224,17 +233,17 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
 /// FILTER - 条件に合う要素のみを抽出する
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
-    let word_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let word_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     let word_name = get_word_name_from_value(&word_val)?;
 
     if !interp.dictionary.contains_key(&word_name) {
-        interp.stack.push(word_val);
+        interp.stack_push(word_val);
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let target_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = if target_val.is_nil() {
@@ -242,13 +251,13 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             } else if is_vector_value(&target_val) {
                 reconstruct_vector_elements(&target_val)
             } else {
-                interp.stack.push(target_val);
+                interp.stack_push(target_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));
             };
 
             // 空ベクタ/NILの場合はNILを返す
             if elements.is_empty() {
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
                 return Ok(());
             }
 
@@ -265,14 +274,14 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
             for elem in &elements {
                 // スタックをクリアして単一要素を処理（MAPと同様）
-                interp.stack.clear();
+                interp.stack_clear();
                 // 各要素を単一要素Vectorでラップしてプッシュ
-                interp.stack.push(wrap_value(elem.clone()));
+                interp.stack_push(wrap_value(elem.clone()));
                 // ワードを実行
                 match interp.execute_word_core(&word_name) {
                     Ok(_) => {
                         // 条件判定結果を取得
-                        let condition_result = interp.stack.pop()
+                        let condition_result = interp.stack_pop()
                             .ok_or_else(|| AjisaiError::from("FILTER word must return a boolean value"))?;
 
                         // VectorからBoolean値を抽出
@@ -285,8 +294,8 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                                 interp.operation_target = saved_target;
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
-                                interp.stack.push(Value::from_vector(elements));
-                                interp.stack.push(word_val);
+                                interp.stack_push(Value::from_vector(elements));
+                                interp.stack_push(word_val);
                                 return Err(AjisaiError::structure_error("boolean result from FILTER word", "other format"));
                             }
                         } else {
@@ -294,8 +303,8 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             interp.operation_target = saved_target;
                             interp.disable_no_change_check = saved_no_change_check;
                             interp.stack = original_stack_below;
-                            interp.stack.push(Value::from_vector(elements));
-                            interp.stack.push(word_val);
+                            interp.stack_push(Value::from_vector(elements));
+                            interp.stack_push(word_val);
                             return Err(AjisaiError::structure_error("boolean vector result from FILTER word", "other format"));
                         };
 
@@ -308,8 +317,8 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
-                        interp.stack.push(Value::from_vector(elements));
-                        interp.stack.push(word_val);
+                        interp.stack_push(Value::from_vector(elements));
+                        interp.stack_push(word_val);
                         return Err(e);
                     }
                 }
@@ -322,27 +331,30 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
             // 結果が空の場合はNILを返す（空ベクタ禁止ルール）
             if results.is_empty() {
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
             } else {
-                interp.stack.push(Value::from_vector(results));
+                interp.stack_push(Value::from_vector(results));
             }
         },
         OperationTarget::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = match get_integer_from_value(&count_val) {
                 Ok(v) => v as usize,
                 Err(e) => {
-                    interp.stack.push(count_val);
+                    interp.stack_push(count_val);
                     return Err(e);
                 }
             };
 
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
+            if interp.stack_len() < count {
+                interp.stack_push(count_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let stack_elements = interp.stack_elements();
+            let targets: Vec<Value> = stack_elements[stack_elements.len() - count..].to_vec();
+            let remaining: Vec<Value> = stack_elements[..stack_elements.len() - count].to_vec();
+            interp.stack_set(remaining);
             let original_stack_below = interp.stack.clone();
 
             // operation_target と no_change_check を一時的に設定
@@ -354,20 +366,22 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             let mut results = Vec::new();
             for item in &targets {
                 // スタックをクリアして単一要素を処理
-                interp.stack.clear();
-                interp.stack.push(item.clone());
+                interp.stack_clear();
+                interp.stack_push(item.clone());
                 match interp.execute_word_core(&word_name) {
                     Ok(_) => {
                         // 条件判定結果を取得
-                        let condition_result = match interp.stack.pop() {
+                        let condition_result = match interp.stack_pop() {
                             Some(result) => result,
                             None => {
                                 // エラー時にスタックを復元
                                 interp.operation_target = saved_target;
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
+                                for t in targets {
+                                    interp.stack_push(t);
+                                }
+                                interp.stack_push(count_val);
                                 return Err(AjisaiError::from("FILTER word must return a boolean value"));
                             }
                         };
@@ -384,8 +398,10 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
-                        interp.stack.extend(targets);
-                        interp.stack.push(count_val);
+                        for t in targets {
+                            interp.stack_push(t);
+                        }
+                        interp.stack_push(count_val);
                         return Err(e);
                     }
                 }
@@ -395,7 +411,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.extend(results);
+            for r in results {
+                interp.stack_push(r);
+            }
         }
     }
     Ok(())
@@ -403,18 +421,18 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
 /// FOLD - 初期値付き畳み込み
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
-    let word_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let word_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     let word_name = get_word_name_from_value(&word_val)?;
 
     if !interp.dictionary.contains_key(&word_name) {
-        interp.stack.push(word_val);
+        interp.stack_push(word_val);
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let init_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let init_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+            let target_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = if target_val.is_nil() {
@@ -422,9 +440,9 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             } else if is_vector_value(&target_val) {
                 reconstruct_vector_elements(&target_val)
             } else {
-                interp.stack.push(target_val);
-                interp.stack.push(init_val);
-                interp.stack.push(word_val);
+                interp.stack_push(target_val);
+                interp.stack_push(init_val);
+                interp.stack_push(word_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));
             };
 
@@ -433,7 +451,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             if elements.is_empty() {
                 // 空ベクタ/NIL: 初期値をそのまま返す
-                interp.stack.push(wrap_value(accumulator));
+                interp.stack_push(wrap_value(accumulator));
                 return Ok(());
             }
 
@@ -448,21 +466,21 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             for elem in &elements {
                 // スタックをクリアして処理（MAPと同様）
-                interp.stack.clear();
-                interp.stack.push(wrap_value(accumulator.clone()));
-                interp.stack.push(wrap_value(elem.clone()));
+                interp.stack_clear();
+                interp.stack_push(wrap_value(accumulator.clone()));
+                interp.stack_push(wrap_value(elem.clone()));
 
                 match interp.execute_word_core(&word_name) {
                     Ok(_) => {
-                        let result = interp.stack.pop()
+                        let result = interp.stack_pop()
                             .ok_or_else(|| {
                                 // エラー時にスタックを復元
                                 interp.operation_target = saved_target;
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below.clone();
-                                interp.stack.push(Value::from_vector(elements.clone()));
-                                interp.stack.push(wrap_value(accumulator.clone()));
-                                interp.stack.push(word_val.clone());
+                                interp.stack_push(Value::from_vector(elements.clone()));
+                                interp.stack_push(wrap_value(accumulator.clone()));
+                                interp.stack_push(word_val.clone());
                                 AjisaiError::from("FOLD: word must return a value")
                             })?;
                         accumulator = unwrap_single_element(result);
@@ -472,9 +490,9 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
-                        interp.stack.push(Value::from_vector(elements));
-                        interp.stack.push(wrap_value(accumulator));
-                        interp.stack.push(word_val);
+                        interp.stack_push(Value::from_vector(elements));
+                        interp.stack_push(wrap_value(accumulator));
+                        interp.stack_push(word_val);
                         return Err(e);
                     }
                 }
@@ -484,24 +502,27 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.push(wrap_value(accumulator));
+            interp.stack_push(wrap_value(accumulator));
             Ok(())
         }
         OperationTarget::Stack => {
             // Stack モードの実装
             // [要素...] [個数] [初期値] 'ワード名' .. FOLD
-            let init_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let init_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                interp.stack.push(init_val);
-                interp.stack.push(word_val);
+            if interp.stack_len() < count {
+                interp.stack_push(count_val);
+                interp.stack_push(init_val);
+                interp.stack_push(word_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let stack_elements = interp.stack_elements();
+            let targets: Vec<Value> = stack_elements[stack_elements.len() - count..].to_vec();
+            let remaining: Vec<Value> = stack_elements[..stack_elements.len() - count].to_vec();
+            interp.stack_set(remaining);
             let original_stack_below = interp.stack.clone();
 
             let mut accumulator = unwrap_single_element(init_val);
@@ -512,13 +533,13 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             for item in targets {
-                interp.stack.clear();
-                interp.stack.push(wrap_value(accumulator));
-                interp.stack.push(item);
+                interp.stack_clear();
+                interp.stack_push(wrap_value(accumulator));
+                interp.stack_push(item);
 
                 match interp.execute_word_core(&word_name) {
                     Ok(_) => {
-                        let result = interp.stack.pop()
+                        let result = interp.stack_pop()
                             .ok_or_else(|| AjisaiError::from("FOLD: word must return a value"))?;
                         accumulator = unwrap_single_element(result);
                     }
@@ -534,7 +555,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.push(wrap_value(accumulator));
+            interp.stack_push(wrap_value(accumulator));
             Ok(())
         }
     }
@@ -544,18 +565,18 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
     const MAX_ITERATIONS: usize = 10000;
 
-    let word_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let word_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     let word_name = get_word_name_from_value(&word_val)?;
 
     if !interp.dictionary.contains_key(&word_name) {
-        interp.stack.push(word_val);
+        interp.stack_push(word_val);
         return Err(AjisaiError::UnknownWord(word_name));
     }
 
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let init_state = interp.stack.pop().ok_or_else(|| {
-                interp.stack.push(word_val.clone());
+            let init_state = interp.stack_pop().ok_or_else(|| {
+                interp.stack_push(word_val.clone());
                 AjisaiError::StackUnderflow
             })?;
 
@@ -577,8 +598,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                     interp.operation_target = saved_target;
                     interp.disable_no_change_check = saved_no_change_check;
                     interp.stack = original_stack_below;
-                    interp.stack.push(init_state);
-                    interp.stack.push(word_val);
+                    interp.stack_push(init_state);
+                    interp.stack_push(word_val);
                     return Err(AjisaiError::from(
                         "UNFOLD: maximum iterations (10000) exceeded - possible infinite loop"
                     ));
@@ -586,28 +607,28 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 iteration_count += 1;
 
                 // スタックをクリアして処理（MAPと同様）
-                interp.stack.clear();
-                interp.stack.push(state.clone());
+                interp.stack_clear();
+                interp.stack_push(state.clone());
 
                 if let Err(e) = interp.execute_word_core(&word_name) {
                     // エラー時にスタックを復元
                     interp.operation_target = saved_target;
                     interp.disable_no_change_check = saved_no_change_check;
                     interp.stack = original_stack_below;
-                    interp.stack.push(init_state);
-                    interp.stack.push(word_val);
+                    interp.stack_push(init_state);
+                    interp.stack_push(word_val);
                     return Err(e);
                 }
 
                 // ワードは入力と出力の両方をスタックに残すので、両方ポップする
-                let result = interp.stack.pop()
+                let result = interp.stack_pop()
                     .ok_or_else(|| {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below.clone();
                         AjisaiError::from("UNFOLD: word must return a value")
                     })?;
-                let _input = interp.stack.pop(); // 入力状態を破棄
+                let _input = interp.stack_pop(); // 入力状態を破棄
 
                 // 単一要素ベクタの場合はアンラップ
                 let unwrapped = unwrap_single_element(result);
@@ -637,8 +658,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 interp.disable_no_change_check = saved_no_change_check;
                 // エラー時にスタックを復元
                 interp.stack = original_stack_below;
-                interp.stack.push(init_state);
-                interp.stack.push(word_val);
+                interp.stack_push(init_state);
+                interp.stack_push(word_val);
                 return Err(AjisaiError::from(
                     "UNFOLD: word must return [element, next_state] or NIL"
                 ));
@@ -650,16 +671,16 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             interp.stack = original_stack_below;
             // 結果が空の場合はNILをプッシュ
             if results.is_empty() {
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
             } else {
-                interp.stack.push(Value::from_vector(results));
+                interp.stack_push(Value::from_vector(results));
             }
             Ok(())
         }
         OperationTarget::Stack => {
             // Stackモード: 結果をスタックに直接展開
-            let init_state = interp.stack.pop().ok_or_else(|| {
-                interp.stack.push(word_val.clone());
+            let init_state = interp.stack_pop().ok_or_else(|| {
+                interp.stack_push(word_val.clone());
                 AjisaiError::StackUnderflow
             })?;
 
@@ -679,23 +700,23 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                     interp.operation_target = saved_target;
                     interp.disable_no_change_check = saved_no_change_check;
                     interp.stack = original_stack;
-                    interp.stack.push(init_state);
-                    interp.stack.push(word_val);
+                    interp.stack_push(init_state);
+                    interp.stack_push(word_val);
                     return Err(AjisaiError::from(
                         "UNFOLD: maximum iterations (10000) exceeded - possible infinite loop"
                     ));
                 }
                 iteration_count += 1;
 
-                interp.stack.clear();
-                interp.stack.push(state.clone());
+                interp.stack_clear();
+                interp.stack_push(state.clone());
 
                 match interp.execute_word_core(&word_name) {
                     Ok(_) => {
                         // ワードは入力と出力の両方をスタックに残すので、両方ポップする
-                        let result = interp.stack.pop()
+                        let result = interp.stack_pop()
                             .ok_or_else(|| AjisaiError::from("UNFOLD: word must return a value"))?;
-                        let _input = interp.stack.pop(); // 入力状態を破棄
+                        let _input = interp.stack_pop(); // 入力状態を破棄
 
                         // 単一要素ベクタの場合はアンラップ
                         let unwrapped = unwrap_single_element(result);
@@ -725,8 +746,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack;
-                        interp.stack.push(init_state);
-                        interp.stack.push(word_val);
+                        interp.stack_push(init_state);
+                        interp.stack_push(word_val);
                         return Err(AjisaiError::from(
                             "UNFOLD: word must return [element, next_state] or NIL"
                         ));
@@ -735,8 +756,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack;
-                        interp.stack.push(init_state);
-                        interp.stack.push(word_val);
+                        interp.stack_push(init_state);
+                        interp.stack_push(word_val);
                         return Err(e);
                     }
                 }
@@ -745,7 +766,9 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack;
-            interp.stack.extend(results);
+            for r in results {
+                interp.stack_push(r);
+            }
             Ok(())
         }
     }
@@ -763,7 +786,7 @@ mod tests {
         assert!(result.is_ok(), "FOLD should succeed: {:?}", result);
 
         // 結果が [10] であることを確認
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
     }
 
     #[tokio::test]
@@ -775,7 +798,7 @@ mod tests {
         assert!(result.is_ok(), "FOLD on NIL should return initial value: {:?}", result);
 
         // 結果は初期値 [42]
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack_len(), 1);
     }
 
     #[tokio::test]
@@ -790,8 +813,8 @@ mod tests {
         assert!(result.is_ok(), "UNFOLD with immediate NIL should succeed: {:?}", result);
 
         // 結果がNILであることを確認
-        assert_eq!(interp.stack.len(), 1);
-        assert!(interp.stack.last().unwrap().is_nil(), "Result should be NIL");
+        assert_eq!(interp.stack_len(), 1);
+        assert!(interp.stack_last().unwrap().is_nil(), "Result should be NIL");
     }
 
     #[tokio::test]
@@ -808,7 +831,7 @@ mod tests {
 
         assert!(result.is_ok(), "MAP with guarded word should succeed: {:?}", result);
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        assert_eq!(interp.stack_len(), 1, "Stack should have exactly 1 element, got {}", interp.stack_len());
     }
 
     #[tokio::test]
@@ -825,7 +848,7 @@ mod tests {
 
         assert!(result.is_ok(), "MAP with multiline word should succeed: {:?}", result);
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        assert_eq!(interp.stack_len(), 1, "Stack should have exactly 1 element, got {}", interp.stack_len());
     }
 
     #[tokio::test]
@@ -840,7 +863,7 @@ mod tests {
 
         assert!(result.is_ok(), "MAP should preserve stack below: {:?}", result);
 
-        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements");
+        assert_eq!(interp.stack_len(), 2, "Stack should have 2 elements");
     }
 
     #[tokio::test]
@@ -851,7 +874,7 @@ mod tests {
 
         assert!(result.is_ok(), "FOLD should preserve stack below: {:?}", result);
 
-        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements, got {}", interp.stack.len());
+        assert_eq!(interp.stack_len(), 2, "Stack should have 2 elements, got {}", interp.stack_len());
     }
 
     #[tokio::test]
@@ -866,6 +889,6 @@ mod tests {
 
         assert!(result.is_ok(), "FOLD with custom word should succeed: {:?}", result);
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        assert_eq!(interp.stack_len(), 1, "Stack should have exactly 1 element, got {}", interp.stack_len());
     }
 }

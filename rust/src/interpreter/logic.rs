@@ -22,11 +22,11 @@ use crate::types::fraction::Fraction;
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // NIL（空）の場合はNILを返す（Kleene三値論理: NOT NIL = NIL）
             if val.data.is_empty() {
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
                 return Ok(());
             }
 
@@ -42,7 +42,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                 .collect();
 
             let len = result_data.len();
-            interp.stack.push(Value {
+            interp.stack_push(Value {
                 data: result_data,
                 display_hint: DisplayHint::Boolean,
                 shape: vec![len],
@@ -66,8 +66,8 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let b_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+            let a_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
             let a_is_nil = a_val.data.is_empty();
             let b_is_nil = b_val.data.is_empty();
@@ -75,24 +75,24 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             // Kleene三値論理でのAND処理
             if a_is_nil && b_is_nil {
                 // NIL AND NIL = NIL
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
                 return Ok(());
             } else if a_is_nil {
                 // NIL AND b: bがfalsy（全て0）ならFALSE、それ以外はNIL
                 let b_has_any_truthy = b_val.data.iter().any(|f| !f.is_zero());
                 if b_has_any_truthy {
-                    interp.stack.push(Value::nil());
+                    interp.stack_push(Value::nil());
                 } else {
-                    interp.stack.push(Value::from_bool(false));
+                    interp.stack_push(Value::from_bool(false));
                 }
                 return Ok(());
             } else if b_is_nil {
                 // a AND NIL: aがfalsy（全て0）ならFALSE、それ以外はNIL
                 let a_has_any_truthy = a_val.data.iter().any(|f| !f.is_zero());
                 if a_has_any_truthy {
-                    interp.stack.push(Value::nil());
+                    interp.stack_push(Value::nil());
                 } else {
-                    interp.stack.push(Value::from_bool(false));
+                    interp.stack_push(Value::from_bool(false));
                 }
                 return Ok(());
             }
@@ -119,8 +119,8 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                     })
                     .collect()
             } else if a_len != b_len {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
             } else {
                 // 要素ごと演算
@@ -133,7 +133,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             };
 
             let len = result_data.len();
-            interp.stack.push(Value {
+            interp.stack_push(Value {
                 data: result_data,
                 display_hint: DisplayHint::Boolean,
                 shape: vec![len],
@@ -142,20 +142,23 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
         },
 
         OperationTarget::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
             if count == 0 || count == 1 {
-                interp.stack.push(count_val);
+                interp.stack_push(count_val);
                 return Err(AjisaiError::from("STACK operation with count 0 or 1 results in no change"));
             }
 
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
+            if interp.stack_len() < count {
+                interp.stack_push(count_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let elements = interp.stack_elements();
+            let items: Vec<Value> = elements[elements.len() - count..].to_vec();
+            let remaining: Vec<Value> = elements[..elements.len() - count].to_vec();
+            interp.stack_set(remaining);
 
             // Kleene三値論理でのSTACKモードAND:
             // - どれかがNILでどれかがtruthyなら NIL
@@ -166,13 +169,13 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             let all_truthy = items.iter().all(|v| v.is_truthy());
 
             if has_falsy_non_nil {
-                interp.stack.push(Value::from_bool(false));
+                interp.stack_push(Value::from_bool(false));
             } else if has_nil {
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
             } else if all_truthy {
-                interp.stack.push(Value::from_bool(true));
+                interp.stack_push(Value::from_bool(true));
             } else {
-                interp.stack.push(Value::from_bool(false));
+                interp.stack_push(Value::from_bool(false));
             }
             Ok(())
         }
@@ -189,8 +192,8 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
-            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let b_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+            let a_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
             let a_is_nil = a_val.data.is_empty();
             let b_is_nil = b_val.data.is_empty();
@@ -198,24 +201,24 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             // Kleene三値論理でのOR処理
             if a_is_nil && b_is_nil {
                 // NIL OR NIL = NIL
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
                 return Ok(());
             } else if a_is_nil {
                 // NIL OR b: bがtruthy（どれか非0）ならTRUE、それ以外はNIL
                 let b_has_any_truthy = b_val.data.iter().any(|f| !f.is_zero());
                 if b_has_any_truthy {
-                    interp.stack.push(Value::from_bool(true));
+                    interp.stack_push(Value::from_bool(true));
                 } else {
-                    interp.stack.push(Value::nil());
+                    interp.stack_push(Value::nil());
                 }
                 return Ok(());
             } else if b_is_nil {
                 // a OR NIL: aがtruthy（どれか非0）ならTRUE、それ以外はNIL
                 let a_has_any_truthy = a_val.data.iter().any(|f| !f.is_zero());
                 if a_has_any_truthy {
-                    interp.stack.push(Value::from_bool(true));
+                    interp.stack_push(Value::from_bool(true));
                 } else {
-                    interp.stack.push(Value::nil());
+                    interp.stack_push(Value::nil());
                 }
                 return Ok(());
             }
@@ -242,8 +245,8 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                     })
                     .collect()
             } else if a_len != b_len {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
             } else {
                 // 要素ごと演算
@@ -256,7 +259,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             };
 
             let len = result_data.len();
-            interp.stack.push(Value {
+            interp.stack_push(Value {
                 data: result_data,
                 display_hint: DisplayHint::Boolean,
                 shape: vec![len],
@@ -265,20 +268,23 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
         },
 
         OperationTarget::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
             if count == 0 || count == 1 {
-                interp.stack.push(count_val);
+                interp.stack_push(count_val);
                 return Err(AjisaiError::from("STACK operation with count 0 or 1 results in no change"));
             }
 
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
+            if interp.stack_len() < count {
+                interp.stack_push(count_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let elements = interp.stack_elements();
+            let items: Vec<Value> = elements[elements.len() - count..].to_vec();
+            let remaining: Vec<Value> = elements[..elements.len() - count].to_vec();
+            interp.stack_set(remaining);
 
             // Kleene三値論理でのSTACKモードOR:
             // - どれかがtruthy（非NILで非0要素あり）なら TRUE
@@ -288,11 +294,11 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             let has_truthy = items.iter().any(|v| v.is_truthy());
 
             if has_truthy {
-                interp.stack.push(Value::from_bool(true));
+                interp.stack_push(Value::from_bool(true));
             } else if has_nil {
-                interp.stack.push(Value::nil());
+                interp.stack_push(Value::nil());
             } else {
-                interp.stack.push(Value::from_bool(false));
+                interp.stack_push(Value::from_bool(false));
             }
             Ok(())
         }

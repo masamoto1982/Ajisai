@@ -13,8 +13,8 @@ use crate::types::fraction::Fraction;
 
 /// CONCAT - 連結（文字列でも配列でも同じ）
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
-    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let b_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+    let a_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let mut result = a_val.data.clone();
     result.extend(b_val.data.iter().cloned());
@@ -28,13 +28,13 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     };
 
     let len = result.len();
-    interp.stack.push(Value { data: result, display_hint: hint, shape: vec![len] });
+    interp.stack_push(Value { data: result, display_hint: hint, shape: vec![len] });
     Ok(())
 }
 
 /// UPPER - 大文字変換
 pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let result: Vec<Fraction> = val.data.iter().map(|f| {
         if let Some(n) = f.to_i64() {
@@ -50,7 +50,7 @@ pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
     }).collect();
 
     let len = result.len();
-    interp.stack.push(Value {
+    interp.stack_push(Value {
         data: result,
         display_hint: DisplayHint::String,
         shape: vec![len],
@@ -60,7 +60,7 @@ pub fn op_upper(interp: &mut Interpreter) -> Result<()> {
 
 /// LOWER - 小文字変換
 pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let result: Vec<Fraction> = val.data.iter().map(|f| {
         if let Some(n) = f.to_i64() {
@@ -76,7 +76,7 @@ pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
     }).collect();
 
     let len = result.len();
-    interp.stack.push(Value {
+    interp.stack_push(Value {
         data: result,
         display_hint: DisplayHint::String,
         shape: vec![len],
@@ -86,37 +86,37 @@ pub fn op_lower(interp: &mut Interpreter) -> Result<()> {
 
 /// AS-STR - 文字列として表示するヒントを設定
 pub fn op_as_str(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    interp.stack.push(val.with_hint(DisplayHint::String));
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+    interp.stack_push(val.with_hint(DisplayHint::String));
     Ok(())
 }
 
 /// AS-NUM - 数値として表示するヒントを設定
 pub fn op_as_num(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    interp.stack.push(val.with_hint(DisplayHint::Number));
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+    interp.stack_push(val.with_hint(DisplayHint::Number));
     Ok(())
 }
 
 /// AS-BOOL - 真偽値として表示するヒントを設定
 pub fn op_as_bool(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    interp.stack.push(val.with_hint(DisplayHint::Boolean));
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+    interp.stack_push(val.with_hint(DisplayHint::Boolean));
     Ok(())
 }
 
 /// CHARS - 文字列を文字コードのベクタに変換（ヒントをNumberに設定）
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     // データはそのまま、ヒントだけ変更
-    interp.stack.push(val.with_hint(DisplayHint::Number));
+    interp.stack_push(val.with_hint(DisplayHint::Number));
     Ok(())
 }
 
 /// JOIN - 文字コードのベクタを文字列として解釈（ヒントをStringに設定）
 pub fn op_join(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
     // データはそのまま、ヒントだけ変更
-    interp.stack.push(val.with_hint(DisplayHint::String));
+    interp.stack_push(val.with_hint(DisplayHint::String));
     Ok(())
 }

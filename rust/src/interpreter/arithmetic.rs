@@ -61,27 +61,27 @@ where
     match interp.operation_target {
         // StackTopモード: ベクタ間の要素ごと演算
         OperationTarget::StackTop => {
-            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let b_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
+            let a_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
 
             let result_data = match broadcast_binary_op(&a_val.data, &b_val.data, op) {
                 Ok(data) => data,
                 Err(e) => {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
+                    interp.stack_push(a_val);
+                    interp.stack_push(b_val);
                     return Err(e);
                 }
             };
 
             // "No change is an error" 原則のチェック（REDUCE等では無効化）
             if !interp.disable_no_change_check && (result_data == a_val.data || result_data == b_val.data) {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
             }
 
             let len = result_data.len();
-            interp.stack.push(Value {
+            interp.stack_push(Value {
                 data: result_data,
                 display_hint: DisplayHint::Auto,
                 shape: vec![len],
@@ -90,32 +90,37 @@ where
 
         // Stackモード: N個の要素を畳み込む
         OperationTarget::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count_val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
             // カウント0はエラー（"No change is an error"原則）
             if count == 0 {
-                interp.stack.push(count_val);
+                interp.stack_push(count_val);
                 return Err(AjisaiError::from("STACK operation with count 0 results in no change"));
             }
 
             // カウント1もエラー（1要素の畳み込みは変化なし）
             if count == 1 {
-                interp.stack.push(count_val);
+                interp.stack_push(count_val);
                 return Err(AjisaiError::from("STACK operation with count 1 results in no change"));
             }
 
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
+            if interp.stack_len() < count {
+                interp.stack_push(count_val);
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count ..).collect();
+            let elements = interp.stack_elements();
+            let items: Vec<Value> = elements[elements.len() - count..].to_vec();
+            let remaining: Vec<Value> = elements[..elements.len() - count].to_vec();
+            interp.stack_set(remaining);
 
             // 各要素がスカラーであることを確認
             if items.iter().any(|v| v.data.len() != 1) {
-                interp.stack.extend(items);
-                interp.stack.push(count_val);
+                for item in items {
+                    interp.stack_push(item);
+                }
+                interp.stack_push(count_val);
                 return Err(AjisaiError::from("STACK mode requires single-element values"));
             }
 
@@ -128,12 +133,14 @@ where
 
             // "No change is an error" 原則のチェック（REDUCE等では無効化）
             if !interp.disable_no_change_check && acc == original_first {
-                interp.stack.extend(items);
-                interp.stack.push(count_val);
+                for item in items {
+                    interp.stack_push(item);
+                }
+                interp.stack_push(count_val);
                 return Err(AjisaiError::from("STACK operation resulted in no change"));
             }
 
-            interp.stack.push(Value::from_fraction(acc));
+            interp.stack_push(Value::from_fraction(acc));
         }
     }
     Ok(())
@@ -157,14 +164,14 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
     // StackTopモードでブロードキャストの場合、整数スカラー最適化を試みる
     if interp.operation_target == OperationTarget::StackTop {
-        if let (Some(b_val), Some(a_val)) = (interp.stack.pop(), interp.stack.pop()) {
+        if let (Some(b_val), Some(a_val)) = (interp.stack_pop(), interp.stack_pop()) {
             let a_data = &a_val.data;
             let b_data = &b_val.data;
 
             // NILチェック
             if a_data.is_empty() || b_data.is_empty() {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::from("Cannot operate with NIL"));
             }
 
@@ -198,8 +205,8 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
                     }
                 }
             } else if a_len != b_len {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
             } else {
                 // 要素ごと演算
@@ -210,13 +217,13 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 
             // "No change is an error" 原則のチェック
             if !interp.disable_no_change_check && (result_vec == *a_data || result_vec == *b_data) {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
             }
 
             let len = result_vec.len();
-            interp.stack.push(Value {
+            interp.stack_push(Value {
                 data: result_vec,
                 display_hint: DisplayHint::Auto,
                 shape: vec![len],
@@ -235,14 +242,14 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
     // StackTopモードでブロードキャストの場合、整数スカラー最適化を試みる
     if interp.operation_target == OperationTarget::StackTop {
-        if let (Some(b_val), Some(a_val)) = (interp.stack.pop(), interp.stack.pop()) {
+        if let (Some(b_val), Some(a_val)) = (interp.stack_pop(), interp.stack_pop()) {
             let a_data = &a_val.data;
             let b_data = &b_val.data;
 
             // NILチェック
             if a_data.is_empty() || b_data.is_empty() {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::from("Cannot operate with NIL"));
             }
 
@@ -255,8 +262,8 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
                 // bがスカラー（除数）: 整数の場合は最適化
                 let scalar = &b_data[0];
                 if scalar.is_zero() {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
+                    interp.stack_push(a_val);
+                    interp.stack_push(b_val);
                     return Err(AjisaiError::DivisionByZero);
                 }
                 if scalar.is_integer() {
@@ -273,22 +280,22 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
                 let scalar = &a_data[0];
                 for elem in b_data {
                     if elem.is_zero() {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
+                        interp.stack_push(a_val);
+                        interp.stack_push(b_val);
                         return Err(AjisaiError::DivisionByZero);
                     }
                     result_vec.push(scalar.div(elem));
                 }
             } else if a_len != b_len {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
             } else {
                 // 要素ごと演算
                 for (a, b) in a_data.iter().zip(b_data.iter()) {
                     if b.is_zero() {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
+                        interp.stack_push(a_val);
+                        interp.stack_push(b_val);
                         return Err(AjisaiError::DivisionByZero);
                     }
                     result_vec.push(a.div(b));
@@ -297,13 +304,13 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
 
             // "No change is an error" 原則のチェック
             if !interp.disable_no_change_check && (result_vec == *a_data || result_vec == *b_data) {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+                interp.stack_push(a_val);
+                interp.stack_push(b_val);
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
             }
 
             let len = result_vec.len();
-            interp.stack.push(Value {
+            interp.stack_push(Value {
                 data: result_vec,
                 display_hint: DisplayHint::Auto,
                 shape: vec![len],

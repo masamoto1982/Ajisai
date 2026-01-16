@@ -158,13 +158,13 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
     match target {
         OperationTarget::StackTop => {
             // スタックトップのベクタを処理
-            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let val = interp.stack_pop().ok_or(AjisaiError::StackUnderflow)?;
             let structure = build_audio_structure(&val, mode, &mut interp.output_buffer)?;
             output_play_command(&structure, &mut interp.output_buffer);
         }
         OperationTarget::Stack => {
             // スタック全体の各要素を処理
-            let values: Vec<Value> = interp.stack.drain(..).collect();
+            let values: Vec<Value> = interp.stack_drain();
             if values.is_empty() {
                 return Err(AjisaiError::StackUnderflow);
             }

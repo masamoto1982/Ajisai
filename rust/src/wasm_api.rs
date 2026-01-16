@@ -157,8 +157,8 @@ impl AjisaiInterpreter {
                 }
 
                 // スタックトップから形状ベクタを取得（統一分数アーキテクチャ）
-                let shape = if let Some(top) = self.interpreter.stack.last() {
-                    if is_vector_value(top) && !top.is_nil() {
+                let shape = if let Some(top) = self.interpreter.stack_last() {
+                    if is_vector_value(&top) && !top.is_nil() {
                         // ベクタ内の全要素が正の整数（1〜100）かチェック
                         let mut dims = Vec::new();
                         let mut valid = top.data.len() >= 1 && top.data.len() <= 3;
@@ -187,7 +187,7 @@ impl AjisaiInterpreter {
 
                 // 形状ベクタが指定されていた場合、スタックから消費してブラケット構造を生成
                 if let Some(shape_vec) = shape {
-                    self.interpreter.stack.pop();
+                    self.interpreter.stack_pop();
                     let helper_text = generate_bracket_structure_from_shape(&shape_vec);
                     js_sys::Reflect::set(&obj, &"inputHelper".into(), &helper_text.into()).unwrap();
                     js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
@@ -321,7 +321,7 @@ impl AjisaiInterpreter {
     pub fn get_stack(&self) -> JsValue {
         let js_array = js_sys::Array::new();
         for value in self.interpreter.get_stack() {
-            js_array.push(&value_to_js_value(value));
+            js_array.push(&value_to_js_value(&value));
         }
         js_array.into()
     }
