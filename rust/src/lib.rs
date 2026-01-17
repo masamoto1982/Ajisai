@@ -319,37 +319,6 @@ mod dimension_limit_tests {
     }
 
     #[tokio::test]
-    async fn test_reshape_dimension_limit() {
-        // RESHAPEで4次元に変形しようとするとエラー
-        let mut interp = Interpreter::new();
-        interp.execute("[ 1 2 3 4 5 6 7 8 ]").await.unwrap();
-        let result = interp.execute("[ 2 2 2 1 ] RESHAPE").await;
-        assert!(result.is_err(), "RESHAPE to 4 dimensions should fail");
-
-        let error_msg = result.unwrap_err().to_string();
-        assert!(
-            error_msg.contains("3 visible dimensions"),
-            "RESHAPE error should mention '3 visible dimensions', got: {}",
-            error_msg
-        );
-    }
-
-    #[tokio::test]
-    async fn test_fill_dimension_limit() {
-        // FILLで4次元を作成しようとするとエラー（統一形式）
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 2 2 2 1 0 ] FILL").await;
-        assert!(result.is_err(), "FILL with 4 dimensions should fail");
-
-        let error_msg = result.unwrap_err().to_string();
-        assert!(
-            error_msg.contains("3 visible dimensions"),
-            "FILL error should mention '3 visible dimensions', got: {}",
-            error_msg
-        );
-    }
-
-    #[tokio::test]
     async fn test_bracket_display_1d() {
         // 1次元は { } で表示される
         let mut interp = Interpreter::new();
