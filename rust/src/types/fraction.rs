@@ -45,6 +45,22 @@ pub struct Fraction {
 }
 
 impl Fraction {
+    /// NILセンチネル値を作成（三値論理用）
+    /// 分母が0の分数としてNILを表現
+    #[inline]
+    pub fn nil() -> Self {
+        Fraction {
+            numerator: BigInt::zero(),
+            denominator: BigInt::zero(),
+        }
+    }
+
+    /// NILかどうかを判定
+    #[inline]
+    pub fn is_nil(&self) -> bool {
+        self.denominator.is_zero()
+    }
+
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
         if denominator.is_zero() { panic!("Division by zero"); }
         let common = numerator.gcd(&denominator);
@@ -225,7 +241,12 @@ impl Fraction {
 
     /// 加算: (a/b) + (c/d)
     /// 共通分母の場合は通分をスキップして高速化
+    /// NILは伝播する（三値論理）
     pub fn add(&self, other: &Fraction) -> Fraction {
+        // NIL伝播: NIL + x = NIL, x + NIL = NIL
+        if self.is_nil() || other.is_nil() {
+            return Self::nil();
+        }
         // 小整数の場合: ネイティブ演算で高速化
         if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
             // (a/b) + (c/d) = (a*d + c*b) / (b*d)
@@ -261,7 +282,12 @@ impl Fraction {
 
     /// 減算: (a/b) - (c/d)
     /// 共通分母の場合は通分をスキップして高速化
+    /// NILは伝播する（三値論理）
     pub fn sub(&self, other: &Fraction) -> Fraction {
+        // NIL伝播: NIL - x = NIL, x - NIL = NIL
+        if self.is_nil() || other.is_nil() {
+            return Self::nil();
+        }
         // 小整数の場合: ネイティブ演算で高速化
         if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
             // (a/b) - (c/d) = (a*d - c*b) / (b*d)
@@ -299,7 +325,12 @@ impl Fraction {
     /// 交差簡約（Cross-Cancellation）により、乗算前に約分して高速化
     /// g1 = gcd(a, d), g2 = gcd(c, b) を先に計算し、
     /// (a/g1 × c/g2) / (b/g2 × d/g1) とすることで最終GCDを削減
+    /// NILは伝播する（三値論理）
     pub fn mul(&self, other: &Fraction) -> Fraction {
+        // NIL伝播: NIL * x = NIL, x * NIL = NIL
+        if self.is_nil() || other.is_nil() {
+            return Self::nil();
+        }
         // 小整数の場合: ネイティブ演算で高速化
         if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
             // i128で乗算して交差簡約
@@ -363,7 +394,12 @@ impl Fraction {
 
     /// 除算: (a/b) ÷ (c/d) = (a/b) × (d/c)
     /// 交差簡約により高速化
+    /// NILは伝播する（三値論理）
     pub fn div(&self, other: &Fraction) -> Fraction {
+        // NIL伝播: NIL / x = NIL, x / NIL = NIL
+        if self.is_nil() || other.is_nil() {
+            return Self::nil();
+        }
         if other.numerator.is_zero() {
             panic!("Division by zero");
         }

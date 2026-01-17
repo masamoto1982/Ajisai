@@ -1226,5 +1226,38 @@ ADDTEST
         assert!(result.is_ok(), "NIL in vector should work: {:?}", result);
 
         assert_eq!(interp.stack.len(), 1);
+
+        // Vectorは3要素を持つ（NILも1要素としてカウント）
+        let vec_val = &interp.stack[0];
+        assert_eq!(vec_val.shape, vec![3], "Vector should have 3 elements including NIL");
+        assert_eq!(vec_val.data.len(), 3, "Data should have 3 fractions");
+
+        // 2番目の要素がNIL（センチネル分数）
+        assert!(vec_val.data[1].is_nil(), "Second element should be NIL sentinel");
+    }
+
+    #[tokio::test]
+    async fn test_nil_is_value() {
+        use crate::types::Value;
+
+        // NILはスカラー値
+        let nil = Value::nil();
+        assert!(nil.is_nil(), "Value::nil() should be NIL");
+        assert!(nil.shape.is_empty(), "NIL should be scalar (empty shape)");
+        assert_eq!(nil.data.len(), 1, "NIL should have one sentinel fraction");
+        assert!(nil.data[0].is_nil(), "NIL's fraction should be NIL sentinel");
+    }
+
+    #[tokio::test]
+    async fn test_nil_arithmetic_propagation() {
+        // NIL + x = NIL
+        let nil = crate::types::fraction::Fraction::nil();
+        let one = crate::types::fraction::Fraction::from(1);
+        let result = nil.add(&one);
+        assert!(result.is_nil(), "NIL + 1 should be NIL");
+
+        // x * NIL = NIL
+        let result = one.mul(&nil);
+        assert!(result.is_nil(), "1 * NIL should be NIL");
     }
 }
