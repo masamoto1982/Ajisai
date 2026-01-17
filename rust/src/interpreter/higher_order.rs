@@ -779,22 +779,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_unfold_immediate_nil() {
-        let mut interp = Interpreter::new();
-        // 簡単なテスト: 常にNILを返すのでNILが生成される
-        let code = r#"
-[ ': NIL' ] 'STOPNOW' DEF
-[ 1 ] 'STOPNOW' UNFOLD
-"#;
-        let result = interp.execute(code).await;
-        assert!(result.is_ok(), "UNFOLD with immediate NIL should succeed: {:?}", result);
-
-        // 結果がNILであることを確認
-        assert_eq!(interp.stack.len(), 1);
-        assert!(interp.stack.last().unwrap().is_nil(), "Result should be NIL");
-    }
-
-    #[tokio::test]
     async fn test_map_with_guarded_word() {
         let mut interp = Interpreter::new();
         let def_code = r#"[ ': [ 1 ] =

@@ -536,17 +536,11 @@ impl Interpreter {
             "REVERSE" => vector_ops::op_reverse(self),
             "RANGE" => vector_ops::op_range(self),
             "SORT" => sort::op_sort(self),
-            "SHAPE" => tensor_ops::op_shape(self),
-            "RANK" => tensor_ops::op_rank(self),
-            "RESHAPE" => tensor_ops::op_reshape(self),
-            "TRANSPOSE" => tensor_ops::op_transpose(self),
             // 基本数学関数
             "FLOOR" => tensor_ops::op_floor(self),
             "CEIL" => tensor_ops::op_ceil(self),
             "ROUND" => tensor_ops::op_round(self),
             "MOD" => tensor_ops::op_mod(self),
-            // テンソル生成関数
-            "FILL" => tensor_ops::op_fill(self),
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),
@@ -567,7 +561,6 @@ impl Interpreter {
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
             "FOLD" => higher_order::op_fold(self),
-            "UNFOLD" => higher_order::op_unfold(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => {
                 // WAITは execute_section_core で AsyncAction として処理されるべき
