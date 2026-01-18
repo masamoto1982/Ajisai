@@ -1253,4 +1253,53 @@ ADDTEST
         let result = one.mul(&nil);
         assert!(result.is_nil(), "1 * NIL should be NIL");
     }
+
+    #[tokio::test]
+    async fn test_nil_and_true_returns_nil() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("NIL TRUE AND").await;
+        assert!(result.is_ok(), "NIL AND TRUE should work: {:?}", result);
+        let val = interp.stack.pop().unwrap();
+        assert!(val.is_nil(), "NIL AND TRUE should return NIL, got {:?}", val);
+    }
+
+    #[tokio::test]
+    async fn test_nil_or_false_returns_nil() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("NIL FALSE OR").await;
+        assert!(result.is_ok(), "NIL OR FALSE should work: {:?}", result);
+        let val = interp.stack.pop().unwrap();
+        assert!(val.is_nil(), "NIL OR FALSE should return NIL, got {:?}", val);
+    }
+
+    #[tokio::test]
+    async fn test_not_nil_returns_nil() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("NIL NOT").await;
+        assert!(result.is_ok(), "NOT NIL should work: {:?}", result);
+        let val = interp.stack.pop().unwrap();
+        assert!(val.is_nil(), "NOT NIL should return NIL, got {:?}", val);
+    }
+
+    #[tokio::test]
+    async fn test_false_and_nil_returns_false() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("FALSE NIL AND").await;
+        assert!(result.is_ok(), "FALSE AND NIL should work: {:?}", result);
+        let val = interp.stack.pop().unwrap();
+        // FALSE AND NIL = FALSE (FALSEが確定的に偽)
+        assert!(!val.is_nil(), "FALSE AND NIL should return FALSE, not NIL");
+        assert!(!val.is_truthy(), "FALSE AND NIL should be falsy");
+    }
+
+    #[tokio::test]
+    async fn test_true_or_nil_returns_true() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("TRUE NIL OR").await;
+        assert!(result.is_ok(), "TRUE OR NIL should work: {:?}", result);
+        let val = interp.stack.pop().unwrap();
+        // TRUE OR NIL = TRUE (TRUEが確定的に真)
+        assert!(!val.is_nil(), "TRUE OR NIL should return TRUE, not NIL");
+        assert!(val.is_truthy(), "TRUE OR NIL should be truthy");
+    }
 }
