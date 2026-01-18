@@ -18,14 +18,14 @@ use crate::types::fraction::Fraction;
 ///
 /// Kleene三値論理:
 /// - ゼロなら 1、非ゼロなら 0
-/// - NIL（空Vector）なら NIL を返す（不明の否定は不明）
+/// - NIL なら NIL を返す（不明の否定は不明）
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target {
         OperationTarget::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // NIL（空）の場合はNILを返す（Kleene三値論理: NOT NIL = NIL）
-            if val.data.is_empty() {
+            // NILの場合はNILを返す（Kleene三値論理: NOT NIL = NIL）
+            if val.is_nil() {
                 interp.stack.push(Value::nil());
                 return Ok(());
             }
@@ -69,8 +69,8 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let a_is_nil = a_val.data.is_empty();
-            let b_is_nil = b_val.data.is_empty();
+            let a_is_nil = a_val.is_nil();
+            let b_is_nil = b_val.is_nil();
 
             // Kleene三値論理でのAND処理
             if a_is_nil && b_is_nil {
@@ -161,8 +161,8 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             // - どれかがNILでどれかがtruthyなら NIL
             // - どれかがfalsy（非NILで全て0）なら FALSE
             // - 全てがtruthyなら TRUE
-            let has_nil = items.iter().any(|v| v.data.is_empty());
-            let has_falsy_non_nil = items.iter().any(|v| !v.data.is_empty() && !v.is_truthy());
+            let has_nil = items.iter().any(|v| v.is_nil());
+            let has_falsy_non_nil = items.iter().any(|v| !v.is_nil() && !v.is_truthy());
             let all_truthy = items.iter().all(|v| v.is_truthy());
 
             if has_falsy_non_nil {
@@ -192,8 +192,8 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let a_is_nil = a_val.data.is_empty();
-            let b_is_nil = b_val.data.is_empty();
+            let a_is_nil = a_val.is_nil();
+            let b_is_nil = b_val.is_nil();
 
             // Kleene三値論理でのOR処理
             if a_is_nil && b_is_nil {
@@ -284,7 +284,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             // - どれかがtruthy（非NILで非0要素あり）なら TRUE
             // - どれかがNILで残りがfalsy（全て0）なら NIL
             // - 全てがfalsy（非NILで全て0）なら FALSE
-            let has_nil = items.iter().any(|v| v.data.is_empty());
+            let has_nil = items.iter().any(|v| v.is_nil());
             let has_truthy = items.iter().any(|v| v.is_truthy());
 
             if has_truthy {

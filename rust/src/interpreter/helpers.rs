@@ -89,10 +89,10 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
 /// - 空の値の場合
 #[allow(dead_code)]
 pub fn extract_number(val: &Value) -> Result<&Fraction> {
-    if val.data.len() == 1 {
-        Ok(&val.data[0])
-    } else if val.data.is_empty() {
+    if val.is_nil() {
         Err(AjisaiError::from("Cannot extract number from NIL"))
+    } else if val.data.len() == 1 {
+        Ok(&val.data[0])
     } else {
         Err(AjisaiError::structure_error("single-element value", "multi-element value"))
     }
@@ -111,7 +111,7 @@ pub fn extract_number(val: &Value) -> Result<&Fraction> {
 /// 【エラー】
 /// - 空の値の場合
 pub fn get_word_name_from_value(value: &Value) -> Result<String> {
-    if value.data.is_empty() {
+    if value.is_nil() {
         return Err(AjisaiError::from("Cannot get word name from NIL"));
     }
 

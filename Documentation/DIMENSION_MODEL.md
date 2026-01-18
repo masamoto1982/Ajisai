@@ -48,25 +48,29 @@ Dimension limit exceeded: Ajisai supports up to 3 visible dimensions
 
 入力時は `[]`, `{}`, `()` のいずれも同等に扱われ、表示時に深さに応じて変換される。
 
-## 空ベクタとNIL
+## NILの扱い
 
-空のベクタ `[ ]` は **NIL** として扱われる。
+**空ブラケット `[ ]` はエラーになります。** NILが必要な場合は `NIL` キーワードを使用してください。
 
 ```ajisai
-[ ]                    # → NIL
-[ [ ] ]                # → [ NIL ]
-{ ( [ ] ) }            # → { ( NIL ) }
+[ ]                    # → エラー: Empty vector is not allowed
+NIL                    # → NIL（センチネル値 0/0）
+[ 1 NIL 3 ]            # → NILを要素として持つVector
 ```
-
-これにより：
-- 「空の存在」を表す方法が統一される
-- FRAMEが生成するテンプレート `{ ( [ ] ) }` をそのまま実行可能
-- 値を入れなかった箇所は NIL として解釈される
 
 NILに対する操作：
 - `NIL LENGTH` → `[ 0 ]` （長さ0）
-- `NIL 'WORD' MAP` → `NIL` （空をマップしても空）
+- `NIL 'WORD' MAP` → `NIL` （NILをマップしてもNIL）
 - `NIL [ 42 ] '+' FOLD` → `[ 42 ]` （初期値がそのまま返る）
+
+### NILの内部表現
+
+NILはセンチネル分数（0/0）を持つスカラー値として表現されます：
+- `data: [Fraction(0/0)]`
+- `shape: []`（スカラー）
+- `display_hint: DisplayHint::Nil`
+
+これにより、Vector内にNILを要素として格納することが可能です。
 
 ## 基本概念
 
