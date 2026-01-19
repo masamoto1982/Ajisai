@@ -10,42 +10,43 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, unwrap_single_element, wrap_value};
-use crate::types::{Value, DisplayHint};
+use crate::types::{Value, ValueData, DisplayHint};
 
 // ============================================================================
-// ヘルパー関数（統一分数アーキテクチャ用）
+// ヘルパー関数（統一Value宇宙アーキテクチャ用）
 // ============================================================================
 
 /// ベクタ値かどうかを判定
 fn is_vector_value(val: &Value) -> bool {
-    val.data.len() > 1 || !val.shape.is_empty()
+    matches!(&val.data, ValueData::Vector(_))
 }
 
 /// 真偽値として解釈
 fn is_boolean_true(val: &Value) -> bool {
-    val.display_hint == DisplayHint::Boolean && val.data.len() == 1 && !val.data[0].is_zero()
+    if val.display_hint == DisplayHint::Boolean {
+        if let Some(f) = val.as_scalar() {
+            return !f.is_zero();
+        }
+    }
+    false
 }
 
-/// ベクタの要素を再構築する
-fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    if val.shape.is_empty() || val.shape.len() == 1 {
-        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
+/// ベクタの子要素を取得
+fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
+    if let ValueData::Vector(children) = &val.data {
+        Some(children)
     } else {
-        // 多次元の場合は最外層の要素を再構築
-        let outer_size = val.shape[0];
-        let inner_size: usize = val.shape[1..].iter().product();
-        let inner_shape = val.shape[1..].to_vec();
+        None
+    }
+}
 
-        (0..outer_size).map(|i| {
-            let start = i * inner_size;
-            let end = start + inner_size;
-            let data = val.data[start..end].to_vec();
-            Value {
-                data,
-                display_hint: val.display_hint,
-                shape: inner_shape.clone(),
-            }
-        }).collect()
+/// ベクタの要素を再構築する（新しい再帰的Value用）
+fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
+    if let Some(children) = get_vector_children(val) {
+        children.clone()
+    } else {
+        // スカラーの場合は単一要素として返す
+        vec![val.clone()]
     }
 }
 
@@ -105,23 +106,19 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     Ok(_) => {
                         // 結果を取得
                         match interp.stack.pop() {
-                            Some(result_vec) => {
-                                // 単一要素ベクタの場合はアンラップ
-                                if is_vector_value(&result_vec) {
-                                    let v = reconstruct_vector_elements(&result_vec);
+                            Some(result_val) => {
+                                // 結果の処理：スカラーもベクタも受け入れる
+                                if is_vector_value(&result_val) {
+                                    // ベクタの場合
+                                    let v = reconstruct_vector_elements(&result_val);
                                     if v.len() == 1 {
                                         results.push(v[0].clone());
                                     } else {
                                         results.push(Value::from_vector(v));
                                     }
                                 } else {
-                                    // エラー時にスタックを復元
-                                    interp.operation_target = saved_target;
-                                    interp.disable_no_change_check = saved_no_change_check;
-                                    interp.stack = original_stack_below;
-                                    interp.stack.push(Value::from_vector(elements));
-                                    interp.stack.push(word_val);
-                                    return Err(AjisaiError::structure_error("vector result from MAP word", "other format"));
+                                    // スカラーやNILの場合はそのまま追加
+                                    results.push(result_val);
                                 }
                             },
                             None => {

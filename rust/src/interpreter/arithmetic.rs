@@ -1,51 +1,84 @@
 // rust/src/interpreter/arithmetic.rs
 //
-// 統一分数アーキテクチャ版の算術演算
+// 統一Value宇宙アーキテクチャ版の算術演算
 //
 // 型チェックは存在しない。すべて分数演算として実行する。
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, DisplayHint};
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
+
+// ============================================================================
+// ヘルパー関数
+// ============================================================================
+
+/// 値から単一スカラーを抽出（スカラーまたは単一要素ベクタから）
+fn extract_single_scalar(val: &Value) -> Option<&Fraction> {
+    match &val.data {
+        ValueData::Scalar(f) => Some(f),
+        ValueData::Vector(children) if children.len() == 1 => {
+            extract_single_scalar(&children[0])
+        }
+        _ => None
+    }
+}
+
+/// 値が単一スカラーとして扱えるかチェック
+fn is_single_scalar(val: &Value) -> bool {
+    extract_single_scalar(val).is_some()
+}
 
 // ============================================================================
 // ブロードキャスト付き二項演算
 // ============================================================================
 
-/// ブロードキャスト付き二項演算
-fn broadcast_binary_op<F>(
-    a: &[Fraction],
-    b: &[Fraction],
-    op: F,
-) -> Result<Vec<Fraction>>
+/// ブロードキャスト付き二項演算（再帰的Value構造対応）
+fn broadcast_binary_op<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
-    F: Fn(&Fraction, &Fraction) -> Result<Fraction>,
+    F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
-    match (a.len(), b.len()) {
-        // 両方空
-        (0, 0) => Ok(Vec::new()),
+    match (&a.data, &b.data) {
+        // 両方NIL
+        (ValueData::Nil, ValueData::Nil) => Ok(Value::nil()),
 
-        // 片方が空（NILとの演算）
-        (0, _) | (_, 0) => Err(AjisaiError::from("Cannot operate with NIL")),
-
-        // 両方スカラー
-        (1, 1) => Ok(vec![op(&a[0], &b[0])?]),
-
-        // aがスカラー、bがベクター（ブロードキャスト）
-        (1, _) => b.iter().map(|bi| op(&a[0], bi)).collect(),
-
-        // aがベクター、bがスカラー（ブロードキャスト）
-        (_, 1) => a.iter().map(|ai| op(ai, &b[0])).collect(),
-
-        // 両方同じ長さ
-        (la, lb) if la == lb => {
-            a.iter().zip(b.iter()).map(|(ai, bi)| op(ai, bi)).collect()
+        // 片方がNIL
+        (ValueData::Nil, _) | (_, ValueData::Nil) => {
+            Err(AjisaiError::from("Cannot operate with NIL"))
         }
 
-        // 長さ不一致
-        (la, lb) => Err(AjisaiError::VectorLengthMismatch { len1: la, len2: lb }),
+        // 両方スカラー
+        (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
+            Ok(Value::from_fraction(op(fa, fb)?))
+        }
+
+        // aがスカラー、bがベクター（ブロードキャスト）
+        (ValueData::Scalar(fa), ValueData::Vector(vb)) => {
+            let result: Result<Vec<Value>> = vb.iter()
+                .map(|bi| broadcast_binary_op(&Value::from_fraction(fa.clone()), bi, op))
+                .collect();
+            Ok(Value::from_children(result?))
+        }
+
+        // aがベクター、bがスカラー（ブロードキャスト）
+        (ValueData::Vector(va), ValueData::Scalar(fb)) => {
+            let result: Result<Vec<Value>> = va.iter()
+                .map(|ai| broadcast_binary_op(ai, &Value::from_fraction(fb.clone()), op))
+                .collect();
+            Ok(Value::from_children(result?))
+        }
+
+        // 両方ベクター
+        (ValueData::Vector(va), ValueData::Vector(vb)) => {
+            if va.len() != vb.len() {
+                return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
+            }
+            let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
+                .map(|(ai, bi)| broadcast_binary_op(ai, bi, op))
+                .collect();
+            Ok(Value::from_children(result?))
+        }
     }
 }
 
@@ -64,8 +97,8 @@ where
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            let result_data = match broadcast_binary_op(&a_val.data, &b_val.data, op) {
-                Ok(data) => data,
+            let result = match broadcast_binary_op(&a_val, &b_val, op) {
+                Ok(r) => r,
                 Err(e) => {
                     interp.stack.push(a_val);
                     interp.stack.push(b_val);
@@ -74,18 +107,13 @@ where
             };
 
             // "No change is an error" 原則のチェック（REDUCE等では無効化）
-            if !interp.disable_no_change_check && (result_data == a_val.data || result_data == b_val.data) {
+            if !interp.disable_no_change_check && (result == a_val || result == b_val) {
                 interp.stack.push(a_val);
                 interp.stack.push(b_val);
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
             }
 
-            let len = result_data.len();
-            interp.stack.push(Value {
-                data: result_data,
-                display_hint: DisplayHint::Auto,
-                shape: vec![len],
-            });
+            interp.stack.push(result);
         },
 
         // Stackモード: N個の要素を畳み込む
@@ -112,18 +140,21 @@ where
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count ..).collect();
 
-            // 各要素がスカラーであることを確認
-            if items.iter().any(|v| v.data.len() != 1) {
+            // 各要素が単一スカラーとして扱えることを確認（単一要素ベクタも許容）
+            if items.iter().any(|v| !is_single_scalar(v)) {
                 interp.stack.extend(items);
                 interp.stack.push(count_val);
                 return Err(AjisaiError::from("STACK mode requires single-element values"));
             }
 
-            let mut acc = items[0].data[0].clone();
+            let first_scalar = extract_single_scalar(&items[0]).unwrap().clone();
+            let mut acc = first_scalar.clone();
             let original_first = acc.clone();
 
             for item in items.iter().skip(1) {
-                acc = op(&acc, &item.data[0])?;
+                if let Some(f) = extract_single_scalar(item) {
+                    acc = op(&acc, f)?;
+                }
             }
 
             // "No change is an error" 原則のチェック（REDUCE等では無効化）
@@ -155,73 +186,36 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 
 /// * 演算子 - 乗算（型チェックなし）
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
-    // StackTopモードでブロードキャストの場合、整数スカラー最適化を試みる
+    // StackTopモードでスカラー×ベクター の場合、整数スカラー最適化を試みる
     if interp.operation_target == OperationTarget::StackTop {
         if let (Some(b_val), Some(a_val)) = (interp.stack.pop(), interp.stack.pop()) {
-            let a_data = &a_val.data;
-            let b_data = &b_val.data;
-
             // NILチェック
-            if a_data.is_empty() || b_data.is_empty() {
+            if a_val.is_nil() || b_val.is_nil() {
                 interp.stack.push(a_val);
                 interp.stack.push(b_val);
                 return Err(AjisaiError::from("Cannot operate with NIL"));
             }
 
-            let a_len = a_data.len();
-            let b_len = b_data.len();
-            let mut result_vec = Vec::with_capacity(a_len.max(b_len));
+            // 整数スカラー最適化の適用を試みる
+            let result = apply_optimized_mul(&a_val, &b_val);
 
-            // ブロードキャスト判定と整数スカラー最適化
-            if a_len > 1 && b_len == 1 {
-                // bがスカラー: 整数の場合は最適化
-                let scalar = &b_data[0];
-                if scalar.is_integer() {
-                    for elem in a_data {
-                        result_vec.push(elem.mul_by_integer(scalar));
+            match result {
+                Ok(r) => {
+                    // "No change is an error" 原則のチェック
+                    if !interp.disable_no_change_check && (r == a_val || r == b_val) {
+                        interp.stack.push(a_val);
+                        interp.stack.push(b_val);
+                        return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
                     }
-                } else {
-                    for elem in a_data {
-                        result_vec.push(elem.mul(scalar));
-                    }
+                    interp.stack.push(r);
+                    return Ok(());
                 }
-            } else if a_len == 1 && b_len > 1 {
-                // aがスカラー: 整数の場合は最適化
-                let scalar = &a_data[0];
-                if scalar.is_integer() {
-                    for elem in b_data {
-                        result_vec.push(elem.mul_by_integer(scalar));
-                    }
-                } else {
-                    for elem in b_data {
-                        result_vec.push(scalar.mul(elem));
-                    }
-                }
-            } else if a_len != b_len {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
-            } else {
-                // 要素ごと演算
-                for (a, b) in a_data.iter().zip(b_data.iter()) {
-                    result_vec.push(a.mul(b));
+                Err(e) => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(e);
                 }
             }
-
-            // "No change is an error" 原則のチェック
-            if !interp.disable_no_change_check && (result_vec == *a_data || result_vec == *b_data) {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
-            }
-
-            let len = result_vec.len();
-            interp.stack.push(Value {
-                data: result_vec,
-                display_hint: DisplayHint::Auto,
-                shape: vec![len],
-            });
-            return Ok(());
         } else {
             return Err(AjisaiError::StackUnderflow);
         }
@@ -231,84 +225,96 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
     binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)))
 }
 
+/// 整数スカラー最適化を適用した乗算
+fn apply_optimized_mul(a: &Value, b: &Value) -> Result<Value> {
+    match (&a.data, &b.data) {
+        (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
+            Ok(Value::from_fraction(fa.mul(fb)))
+        }
+        (ValueData::Scalar(scalar), ValueData::Vector(vec)) => {
+            if scalar.is_integer() {
+                let result: Vec<Value> = vec.iter()
+                    .map(|v| apply_scalar_mul_to_value(scalar, v))
+                    .collect();
+                Ok(Value::from_children(result))
+            } else {
+                broadcast_binary_op(a, b, |x, y| Ok(x.mul(y)))
+            }
+        }
+        (ValueData::Vector(vec), ValueData::Scalar(scalar)) => {
+            if scalar.is_integer() {
+                let result: Vec<Value> = vec.iter()
+                    .map(|v| apply_scalar_mul_to_value(scalar, v))
+                    .collect();
+                Ok(Value::from_children(result))
+            } else {
+                broadcast_binary_op(a, b, |x, y| Ok(x.mul(y)))
+            }
+        }
+        (ValueData::Vector(va), ValueData::Vector(vb)) => {
+            if va.len() != vb.len() {
+                return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
+            }
+            let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
+                .map(|(ai, bi)| apply_optimized_mul(ai, bi))
+                .collect();
+            Ok(Value::from_children(result?))
+        }
+        _ => Err(AjisaiError::from("Cannot multiply NIL")),
+    }
+}
+
+/// スカラーを再帰的に値に乗算（整数最適化）
+fn apply_scalar_mul_to_value(scalar: &Fraction, val: &Value) -> Value {
+    match &val.data {
+        ValueData::Scalar(f) => {
+            if scalar.is_integer() {
+                Value::from_fraction(f.mul_by_integer(scalar))
+            } else {
+                Value::from_fraction(f.mul(scalar))
+            }
+        }
+        ValueData::Vector(children) => {
+            let new_children: Vec<Value> = children.iter()
+                .map(|c| apply_scalar_mul_to_value(scalar, c))
+                .collect();
+            Value::from_children(new_children)
+        }
+        ValueData::Nil => val.clone(),
+    }
+}
+
 /// / 演算子 - 除算（型チェックなし）
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    // StackTopモードでブロードキャストの場合、整数スカラー最適化を試みる
+    // StackTopモードで整数スカラーによる除算の最適化
     if interp.operation_target == OperationTarget::StackTop {
         if let (Some(b_val), Some(a_val)) = (interp.stack.pop(), interp.stack.pop()) {
-            let a_data = &a_val.data;
-            let b_data = &b_val.data;
-
             // NILチェック
-            if a_data.is_empty() || b_data.is_empty() {
+            if a_val.is_nil() || b_val.is_nil() {
                 interp.stack.push(a_val);
                 interp.stack.push(b_val);
                 return Err(AjisaiError::from("Cannot operate with NIL"));
             }
 
-            let a_len = a_data.len();
-            let b_len = b_data.len();
-            let mut result_vec = Vec::with_capacity(a_len.max(b_len));
+            let result = apply_optimized_div(&a_val, &b_val);
 
-            // ブロードキャスト判定と整数スカラー最適化
-            if a_len > 1 && b_len == 1 {
-                // bがスカラー（除数）: 整数の場合は最適化
-                let scalar = &b_data[0];
-                if scalar.is_zero() {
+            match result {
+                Ok(r) => {
+                    // "No change is an error" 原則のチェック
+                    if !interp.disable_no_change_check && (r == a_val || r == b_val) {
+                        interp.stack.push(a_val);
+                        interp.stack.push(b_val);
+                        return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+                    }
+                    interp.stack.push(r);
+                    return Ok(());
+                }
+                Err(e) => {
                     interp.stack.push(a_val);
                     interp.stack.push(b_val);
-                    return Err(AjisaiError::DivisionByZero);
-                }
-                if scalar.is_integer() {
-                    for elem in a_data {
-                        result_vec.push(elem.div_by_integer(scalar));
-                    }
-                } else {
-                    for elem in a_data {
-                        result_vec.push(elem.div(scalar));
-                    }
-                }
-            } else if a_len == 1 && b_len > 1 {
-                // aがスカラー（被除数）: bの各要素で割る
-                let scalar = &a_data[0];
-                for elem in b_data {
-                    if elem.is_zero() {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
-                        return Err(AjisaiError::DivisionByZero);
-                    }
-                    result_vec.push(scalar.div(elem));
-                }
-            } else if a_len != b_len {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
-            } else {
-                // 要素ごと演算
-                for (a, b) in a_data.iter().zip(b_data.iter()) {
-                    if b.is_zero() {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
-                        return Err(AjisaiError::DivisionByZero);
-                    }
-                    result_vec.push(a.div(b));
+                    return Err(e);
                 }
             }
-
-            // "No change is an error" 原則のチェック
-            if !interp.disable_no_change_check && (result_vec == *a_data || result_vec == *b_data) {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
-            }
-
-            let len = result_vec.len();
-            interp.stack.push(Value {
-                data: result_vec,
-                display_hint: DisplayHint::Auto,
-                shape: vec![len],
-            });
-            return Ok(());
         } else {
             return Err(AjisaiError::StackUnderflow);
         }
@@ -322,4 +328,88 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
             Ok(a.div(b))
         }
     })
+}
+
+/// 整数スカラー最適化を適用した除算
+fn apply_optimized_div(a: &Value, b: &Value) -> Result<Value> {
+    match (&a.data, &b.data) {
+        (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
+            if fb.is_zero() {
+                return Err(AjisaiError::DivisionByZero);
+            }
+            Ok(Value::from_fraction(fa.div(fb)))
+        }
+        (ValueData::Vector(vec), ValueData::Scalar(scalar)) => {
+            // ベクター ÷ スカラー
+            if scalar.is_zero() {
+                return Err(AjisaiError::DivisionByZero);
+            }
+            if scalar.is_integer() {
+                let result: Result<Vec<Value>> = vec.iter()
+                    .map(|v| apply_scalar_div_to_value(v, scalar))
+                    .collect();
+                Ok(Value::from_children(result?))
+            } else {
+                broadcast_binary_op(a, b, |x, y| {
+                    if y.is_zero() { Err(AjisaiError::DivisionByZero) } else { Ok(x.div(y)) }
+                })
+            }
+        }
+        (ValueData::Scalar(scalar), ValueData::Vector(vec)) => {
+            // スカラー ÷ ベクター
+            let result: Result<Vec<Value>> = vec.iter()
+                .map(|v| apply_div_scalar_by_value(scalar, v))
+                .collect();
+            Ok(Value::from_children(result?))
+        }
+        (ValueData::Vector(va), ValueData::Vector(vb)) => {
+            if va.len() != vb.len() {
+                return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
+            }
+            let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
+                .map(|(ai, bi)| apply_optimized_div(ai, bi))
+                .collect();
+            Ok(Value::from_children(result?))
+        }
+        _ => Err(AjisaiError::from("Cannot divide NIL")),
+    }
+}
+
+/// スカラーで値を除算（整数最適化）
+fn apply_scalar_div_to_value(val: &Value, scalar: &Fraction) -> Result<Value> {
+    match &val.data {
+        ValueData::Scalar(f) => {
+            if scalar.is_integer() {
+                Ok(Value::from_fraction(f.div_by_integer(scalar)))
+            } else {
+                Ok(Value::from_fraction(f.div(scalar)))
+            }
+        }
+        ValueData::Vector(children) => {
+            let new_children: Result<Vec<Value>> = children.iter()
+                .map(|c| apply_scalar_div_to_value(c, scalar))
+                .collect();
+            Ok(Value::from_children(new_children?))
+        }
+        ValueData::Nil => Ok(val.clone()),
+    }
+}
+
+/// スカラーを値で除算
+fn apply_div_scalar_by_value(scalar: &Fraction, val: &Value) -> Result<Value> {
+    match &val.data {
+        ValueData::Scalar(f) => {
+            if f.is_zero() {
+                return Err(AjisaiError::DivisionByZero);
+            }
+            Ok(Value::from_fraction(scalar.div(f)))
+        }
+        ValueData::Vector(children) => {
+            let new_children: Result<Vec<Value>> = children.iter()
+                .map(|c| apply_div_scalar_by_value(scalar, c))
+                .collect();
+            Ok(Value::from_children(new_children?))
+        }
+        ValueData::Nil => Ok(val.clone()),
+    }
 }

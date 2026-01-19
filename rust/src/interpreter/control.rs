@@ -9,31 +9,40 @@
 use crate::interpreter::Interpreter;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::DisplayHint;
+use crate::types::{Value, ValueData, DisplayHint};
 use std::collections::HashSet;
 
 /// 値を文字列として解釈する（内部ヘルパー）
-fn value_as_string(val: &crate::types::Value) -> Option<String> {
-    if val.data.is_empty() {
-        return None;
+fn value_as_string(val: &Value) -> Option<String> {
+    fn collect_chars(val: &Value) -> Vec<char> {
+        match &val.data {
+            ValueData::Nil => vec![],
+            ValueData::Scalar(f) => {
+                f.to_i64().and_then(|n| {
+                    if n >= 0 && n <= 0x10FFFF {
+                        char::from_u32(n as u32)
+                    } else {
+                        None
+                    }
+                }).map(|c| vec![c]).unwrap_or_default()
+            }
+            ValueData::Vector(children) => {
+                children.iter().flat_map(|c| collect_chars(c)).collect()
+            }
+        }
     }
 
-    Some(val.data.iter()
-        .filter_map(|f| {
-            f.to_i64().and_then(|n| {
-                if n >= 0 && n <= 0x10FFFF {
-                    char::from_u32(n as u32)
-                } else {
-                    None
-                }
-            })
-        })
-        .collect())
+    let chars = collect_chars(val);
+    if chars.is_empty() {
+        None
+    } else {
+        Some(chars.into_iter().collect())
+    }
 }
 
 /// 値が文字列として扱えるかチェック
-fn is_string_value(val: &crate::types::Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.data.is_empty()
+fn is_string_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::String && !val.is_nil()
 }
 
 /// TIMES - ワードまたはコード片をN回繰り返し実行する

@@ -1,23 +1,23 @@
 // rust/src/types/mod.rs
 //
-// 統一分数アーキテクチャ（Unified Fraction Architecture）
+// Ajisai 統一Value宇宙アーキテクチャ
 //
-// すべての値は Vec<Fraction> として表現される。
-// 型チェックは存在しない。表示時のみ DisplayHint を参照する。
+// 公理1: 全てはValueである
+// 公理2: Valueは他のValueを含むことができる
+// 公理3: 操作は常に「現在のコンテキスト」に対して行われる
+// 公理4: コンテキストの外側は存在しない
 //
 // ============================================================================
 // 設計思想
 // ============================================================================
 //
-// この設計が革命的なのは：
-// 「型」という概念を言語レベルから除去した
+// LISP: 全てはS式である
+// Ajisai: 全てはValueである
 //
-// 従来の言語：データ → 型 → 演算可否の判定 → 演算
-// Ajisai：データ → 演算（型チェックなし）→ 表示時に解釈
+// LISP: (1 2 (3 4) 5)
+// Ajisai: { 1 2 { 3 4 } 5 }
 //
-// すべてが分数。演算は常に成功する（数学的に意味があるかはユーザー次第）。
-// これは自由と責任をユーザーに委ねる設計。
-// FORTHの精神を、型システムという最も根本的なレベルで実現した。
+// スタックもValueである。この公理から、全ての設計が導出される。
 //
 // ============================================================================
 // 内部表現
@@ -25,19 +25,18 @@
 //
 // | ユーザー入力     | 内部表現                              | 表示         |
 // |------------------|---------------------------------------|--------------|
-// | 42               | [42/1]                                | [ 42 ]       |
-// | 1/3              | [1/3]                                 | [ 1/3 ]      |
-// | TRUE             | [1/1]                                 | TRUE         |
-// | FALSE            | [0/1]                                 | FALSE        |
-// | 'A'              | [65/1]                                | 'A'          |
-// | 'Hello'          | [72/1, 101/1, 108/1, 108/1, 111/1]    | 'Hello'      |
-// | [ 1 2 3 ]        | [1/1, 2/1, 3/1]                       | [ 1 2 3 ]    |
-// | NIL              | [0/0] (センチネル値)                   | NIL          |
-// | [ ]              | エラー                                 | -            |
+// | 42               | Scalar(42/1)                          | 42           |
+// | 1/3              | Scalar(1/3)                           | 1/3          |
+// | TRUE             | Scalar(1/1) with Boolean hint         | TRUE         |
+// | FALSE            | Scalar(0/1) with Boolean hint         | FALSE        |
+// | NIL              | Nil                                   | NIL          |
+// | 'Hello'          | Vector([72, 101, 108, 108, 111])      | 'Hello'      |
+// | [ 1 2 3 ]        | Vector([Scalar(1), Scalar(2), ...])   | { 1 2 3 }    |
+// | [ 1 [ 2 3 ] 4 ]  | Vector([Scalar(1), Vector(...), ...]) | { 1 { 2 3 } 4 } |
 
 pub mod fraction;
 pub mod display;
-pub mod tensor;  // 行列演算ユーティリティ（Vectorベースで動作）
+pub mod tensor;  // 行列演算ユーティリティ
 
 use std::collections::HashSet;
 use self::fraction::Fraction;
@@ -45,7 +44,6 @@ use self::fraction::Fraction;
 /// 表示ヒント
 ///
 /// 演算には一切使用しない。表示時のみ参照される。
-/// 唯一の例外はNil: これはNIL値であることを示す特別なマーカー。
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum DisplayHint {
     /// 自動判定（デフォルト）
@@ -63,37 +61,41 @@ pub enum DisplayHint {
     Nil,
 }
 
-/// Ajisai の唯一の値型
+/// Valueのデータ本体（再帰的定義）
 ///
-/// すべてのデータはこの構造体で表現される。
-/// 数値、真偽値、文字列、配列、NIL の区別は内部的には存在しない。
+/// LISPのcons cellに対応する構造。
+/// これにより、任意の深さのネスト構造を自然に表現できる。
 #[derive(Debug, Clone, PartialEq)]
-pub struct Value {
-    /// データ本体（純粋な分数の配列）
-    pub data: Vec<Fraction>,
-
-    /// 表示ヒント（演算には使用しない）
-    pub display_hint: DisplayHint,
-
-    /// 形状情報（多次元配列の構造を保持）
-    /// 例: [2, 3] は 2x3 の行列を表す
-    /// 空の場合はスカラーまたは1次元配列
-    pub shape: Vec<usize>,
+pub enum ValueData {
+    /// スカラー値（単一の分数）
+    Scalar(Fraction),
+    /// ベクター値（Valueの配列）- 再帰的にValueを含む
+    Vector(Vec<Value>),
+    /// NIL（空）
+    Nil,
 }
 
-// 将来のワード実装で使用されるユーティリティメソッド群
-#[allow(dead_code)]
+/// Ajisai の唯一の値型（再帰的定義）
+///
+/// すべてのデータはこの構造体で表現される。
+/// スタックもValueであり、ネストしたValueも表現できる。
+#[derive(Debug, Clone, PartialEq)]
+pub struct Value {
+    /// データ本体
+    pub data: ValueData,
+    /// 表示ヒント（演算には使用しない）
+    pub display_hint: DisplayHint,
+}
+
 impl Value {
+    // === コンストラクタ ===
+
     /// NIL値を作成
-    ///
-    /// NILは分数のセンチネル値（0/0）として表現される。
-    /// これにより、VectorにNILを格納可能。
     #[inline]
     pub fn nil() -> Self {
         Self {
-            data: vec![Fraction::nil()],
+            data: ValueData::Nil,
             display_hint: DisplayHint::Nil,
-            shape: vec![],  // スカラー
         }
     }
 
@@ -101,9 +103,8 @@ impl Value {
     #[inline]
     pub fn from_fraction(f: Fraction) -> Self {
         Self {
-            data: vec![f],
+            data: ValueData::Scalar(f),
             display_hint: DisplayHint::Number,
-            shape: vec![],  // スカラーは空の形状
         }
     }
 
@@ -111,9 +112,8 @@ impl Value {
     #[inline]
     pub fn from_int(n: i64) -> Self {
         Self {
-            data: vec![Fraction::from(n)],
+            data: ValueData::Scalar(Fraction::from(n)),
             display_hint: DisplayHint::Number,
-            shape: vec![],  // スカラーは空の形状
         }
     }
 
@@ -121,109 +121,84 @@ impl Value {
     #[inline]
     pub fn from_bool(b: bool) -> Self {
         Self {
-            data: vec![Fraction::from(if b { 1 } else { 0 })],
+            data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
             display_hint: DisplayHint::Boolean,
-            shape: vec![],  // スカラーは空の形状
         }
     }
 
-    /// 文字列から値を作成
+    /// 文字列から値を作成（各文字をスカラーとして持つVector）
     pub fn from_string(s: &str) -> Self {
-        let data: Vec<Fraction> = s.bytes().map(|b| Fraction::from(b as i64)).collect();
-        let len = data.len();
+        let children: Vec<Value> = s.bytes()
+            .map(|b| Value::from_int(b as i64))
+            .collect();
+
+        if children.is_empty() {
+            return Self {
+                data: ValueData::Nil,
+                display_hint: DisplayHint::String,
+            };
+        }
+
         Self {
-            data,
+            data: ValueData::Vector(children),
             display_hint: DisplayHint::String,
-            shape: vec![len],
         }
     }
 
     /// シンボルから値を作成（文字列として格納）
     pub fn from_symbol(s: &str) -> Self {
-        let data: Vec<Fraction> = s.bytes().map(|b| Fraction::from(b as i64)).collect();
-        let len = data.len();
-        Self {
-            data,
-            display_hint: DisplayHint::String,
-            shape: vec![len],
-        }
+        Self::from_string(s)
     }
 
-    /// 分数の配列から値を作成
+    /// 空のベクターを作成
     #[inline]
-    pub fn from_vec(v: Vec<Fraction>) -> Self {
-        let len = v.len();
+    pub fn empty_vector() -> Self {
         Self {
-            data: v,
+            data: ValueData::Vector(Vec::new()),
             display_hint: DisplayHint::Auto,
-            shape: vec![len],
         }
     }
 
-    /// 分数の配列から値を作成（数値ヒント付き）
+    /// 子Valueの配列からValueを作成
     #[inline]
-    pub fn from_numbers(v: Vec<Fraction>) -> Self {
-        let len = v.len();
+    pub fn from_children(children: Vec<Value>) -> Self {
         Self {
-            data: v,
-            display_hint: DisplayHint::Number,
-            shape: vec![len],
+            data: ValueData::Vector(children),
+            display_hint: DisplayHint::Auto,
         }
     }
 
-    /// DateTimeとして値を作成（Unixタイムスタンプ、スカラー）
-    #[inline]
-    pub fn from_datetime(f: Fraction) -> Self {
-        Self {
-            data: vec![f],
-            display_hint: DisplayHint::DateTime,
-            shape: vec![],  // スカラーは空の形状
-        }
-    }
-
-    /// 数値（単一の分数）から値を作成
-    #[inline]
-    pub fn from_number(f: Fraction) -> Self {
-        Self::from_fraction(f)
-    }
-
-    /// Value のベクタから値を作成
-    ///
-    /// 統一分数アーキテクチャ:
-    /// - スカラー要素のみ: 1Dベクタを作成（shape = [n]）
-    /// - ベクタ要素: 次元を追加（shape = [n, inner_shape...]）
-    /// - NILはセンチネル分数（0/0）として表現され、ベクタに格納可能
-    ///
-    /// スカラーは shape = [] として表現される。
-    /// これにより `[ 1 ]` → shape [1]、`[ [ 1 ] ]` → shape [1, 1] と区別できる。
-    ///
-    /// # Panics
-    /// 空のベクタは許容されない。空のベクタを渡すとパニックする。
-    /// NIL値が必要な場合は `Value::nil()` を使用すること。
+    /// Value のベクタから値を作成（from_vectorのエイリアス）
     pub fn from_vector(values: Vec<Value>) -> Self {
-        assert!(!values.is_empty(), "Empty vector is not allowed. Use Value::nil() for NIL.");
+        if values.is_empty() {
+            return Self::nil();
+        }
 
-        // 要素からデータを収集（NILはFraction::nil()として1要素を持つ）
-        let inner_shape = values[0].shape.clone();
-        let data: Vec<Fraction> = values.iter()
-            .flat_map(|v| v.data.iter().cloned())
-            .collect();
-
-        // 新しい形状を計算: [要素数, 内部形状...]
-        let mut new_shape = vec![values.len()];
-        new_shape.extend(inner_shape);
-
-        // 表示ヒントを継承（単一要素の場合のみ、ただしNilは除く）
-        let hint = if values.len() == 1 && values[0].display_hint != DisplayHint::Nil {
+        // 単一要素の場合、display_hintを継承
+        let hint = if values.len() == 1 {
             values[0].display_hint
         } else {
             DisplayHint::Auto
         };
 
         Self {
-            data,
+            data: ValueData::Vector(values),
             display_hint: hint,
-            shape: new_shape,
+        }
+    }
+
+    /// 数値（単一の分数）から値を作成（from_fractionのエイリアス）
+    #[inline]
+    pub fn from_number(f: Fraction) -> Self {
+        Self::from_fraction(f)
+    }
+
+    /// DateTimeとして値を作成（Unixタイムスタンプ、スカラー）
+    #[inline]
+    pub fn from_datetime(f: Fraction) -> Self {
+        Self {
+            data: ValueData::Scalar(f),
+            display_hint: DisplayHint::DateTime,
         }
     }
 
@@ -234,59 +209,171 @@ impl Value {
         self
     }
 
-    /// 形状を設定
-    #[inline]
-    pub fn with_shape(mut self, shape: Vec<usize>) -> Self {
-        self.shape = shape;
-        self
-    }
+    // === 判定メソッド ===
 
     /// NIL かどうか
-    ///
-    /// スカラーで唯一のFractionがNILセンチネルの場合にtrue。
     #[inline]
     pub fn is_nil(&self) -> bool {
-        self.shape.is_empty() && self.data.len() == 1 && self.data[0].is_nil()
+        matches!(self.data, ValueData::Nil)
+    }
+
+    /// スカラー値かどうか
+    #[inline]
+    pub fn is_scalar(&self) -> bool {
+        matches!(self.data, ValueData::Scalar(_))
+    }
+
+    /// ベクター値かどうか
+    #[inline]
+    pub fn is_vector(&self) -> bool {
+        matches!(self.data, ValueData::Vector(_))
+    }
+
+    /// 単一要素の値かどうか（スカラーの場合true）
+    #[inline]
+    pub fn is_single(&self) -> bool {
+        self.is_scalar()
     }
 
     /// 真偽値として評価
-    /// NIL = false、全てゼロ = false、それ以外 = true
+    /// NIL = false、ゼロ = false、空Vector = false、それ以外 = true
     #[inline]
     pub fn is_truthy(&self) -> bool {
-        !self.data.is_empty() && !self.data.iter().all(|f| f.is_zero() || f.is_nil())
+        match &self.data {
+            ValueData::Nil => false,
+            ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
+            ValueData::Vector(v) => !v.is_empty() && !v.iter().all(|c| !c.is_truthy()),
+        }
     }
 
+    // === 長さ・アクセス ===
+
     /// 長さを取得
+    /// - Nil: 0
+    /// - Scalar: 1
+    /// - Vector: 子の数
     #[inline]
     pub fn len(&self) -> usize {
-        self.data.len()
+        match &self.data {
+            ValueData::Nil => 0,
+            ValueData::Scalar(_) => 1,
+            ValueData::Vector(v) => v.len(),
+        }
     }
 
     /// 空かどうか
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
+        self.len() == 0
     }
 
-    /// 最初の要素を取得
+    /// 子Valueを取得
+    pub fn get_child(&self, index: usize) -> Option<&Value> {
+        match &self.data {
+            ValueData::Vector(v) => v.get(index),
+            ValueData::Scalar(_) if index == 0 => Some(self),
+            _ => None,
+        }
+    }
+
+    /// 子Valueを可変で取得
+    pub fn get_child_mut(&mut self, index: usize) -> Option<&mut Value> {
+        match &mut self.data {
+            ValueData::Vector(v) => v.get_mut(index),
+            _ => None,
+        }
+    }
+
+    /// 最初の子を取得
     #[inline]
-    pub fn first(&self) -> Option<&Fraction> {
-        self.data.first()
+    pub fn first(&self) -> Option<&Value> {
+        self.get_child(0)
     }
 
-    /// 単一要素の値かどうか
+    /// 最後の子を取得
     #[inline]
-    pub fn is_scalar(&self) -> bool {
-        self.data.len() == 1
+    pub fn last(&self) -> Option<&Value> {
+        match &self.data {
+            ValueData::Vector(v) => v.last(),
+            ValueData::Scalar(_) => Some(self),
+            ValueData::Nil => None,
+        }
     }
 
-    /// 単一の分数として取得（単一要素の場合のみ）
+    // === 操作メソッド ===
+
+    /// 子を末尾に追加
+    pub fn push_child(&mut self, child: Value) {
+        match &mut self.data {
+            ValueData::Vector(v) => v.push(child),
+            ValueData::Nil => {
+                // NIL を Vector に昇格
+                self.data = ValueData::Vector(vec![child]);
+                self.display_hint = DisplayHint::Auto;
+            }
+            ValueData::Scalar(f) => {
+                // Scalar を Vector に昇格
+                let old = Value::from_fraction(f.clone());
+                self.data = ValueData::Vector(vec![old, child]);
+                self.display_hint = DisplayHint::Auto;
+            }
+        }
+    }
+
+    /// 末尾の子を取り出し
+    pub fn pop_child(&mut self) -> Option<Value> {
+        match &mut self.data {
+            ValueData::Vector(v) => v.pop(),
+            _ => None,
+        }
+    }
+
+    /// 指定位置に子を挿入
+    pub fn insert_child(&mut self, index: usize, child: Value) {
+        if let ValueData::Vector(v) = &mut self.data {
+            if index <= v.len() {
+                v.insert(index, child);
+            }
+        }
+    }
+
+    /// 指定位置の子を削除
+    pub fn remove_child(&mut self, index: usize) -> Option<Value> {
+        if let ValueData::Vector(v) = &mut self.data {
+            if index < v.len() {
+                return Some(v.remove(index));
+            }
+        }
+        None
+    }
+
+    /// 指定位置の子を置換
+    pub fn replace_child(&mut self, index: usize, child: Value) -> Option<Value> {
+        if let ValueData::Vector(v) = &mut self.data {
+            if index < v.len() {
+                return Some(std::mem::replace(&mut v[index], child));
+            }
+        }
+        None
+    }
+
+    // === スカラー値へのアクセス ===
+
+    /// スカラー値を取得
     #[inline]
     pub fn as_scalar(&self) -> Option<&Fraction> {
-        if self.data.len() == 1 {
-            Some(&self.data[0])
-        } else {
-            None
+        match &self.data {
+            ValueData::Scalar(f) => Some(f),
+            _ => None,
+        }
+    }
+
+    /// スカラー値を可変で取得
+    #[inline]
+    pub fn as_scalar_mut(&mut self) -> Option<&mut Fraction> {
+        match &mut self.data {
+            ValueData::Scalar(f) => Some(f),
+            _ => None,
         }
     }
 
@@ -300,6 +387,146 @@ impl Value {
     #[inline]
     pub fn as_usize(&self) -> Option<usize> {
         self.as_scalar().and_then(|f| f.as_usize())
+    }
+
+    // === ベクターへのアクセス ===
+
+    /// 子のベクターを取得
+    #[inline]
+    pub fn as_vector(&self) -> Option<&Vec<Value>> {
+        match &self.data {
+            ValueData::Vector(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// 子のベクターを可変で取得
+    #[inline]
+    pub fn as_vector_mut(&mut self) -> Option<&mut Vec<Value>> {
+        match &mut self.data {
+            ValueData::Vector(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// イテレータを取得（子Valueを走査）
+    pub fn iter(&self) -> ValueIter<'_> {
+        ValueIter {
+            value: self,
+            index: 0,
+        }
+    }
+
+    // === 互換性のためのメソッド ===
+
+    /// 全ての分数を平坦化して取得（互換性のため）
+    pub fn flatten_fractions(&self) -> Vec<Fraction> {
+        match &self.data {
+            ValueData::Nil => vec![Fraction::nil()],
+            ValueData::Scalar(f) => vec![f.clone()],
+            ValueData::Vector(v) => {
+                v.iter().flat_map(|c| c.flatten_fractions()).collect()
+            }
+        }
+    }
+
+    /// 形状情報を取得（互換性のため）
+    pub fn shape(&self) -> Vec<usize> {
+        match &self.data {
+            ValueData::Nil => vec![],
+            ValueData::Scalar(_) => vec![],
+            ValueData::Vector(v) => {
+                if v.is_empty() {
+                    vec![0]
+                } else {
+                    // 同質なベクターの場合のみ形状を計算
+                    let first_shape = v[0].shape();
+                    let all_same = v.iter().skip(1).all(|c| c.shape() == first_shape);
+                    if all_same && !first_shape.is_empty() {
+                        let mut shape = vec![v.len()];
+                        shape.extend(first_shape);
+                        shape
+                    } else {
+                        vec![v.len()]
+                    }
+                }
+            }
+        }
+    }
+
+    /// 分数配列とヒントから作成（互換性のため）
+    #[allow(dead_code)]
+    pub fn from_fractions_with_shape(data: Vec<Fraction>, _shape: Vec<usize>, hint: DisplayHint) -> Self {
+        if data.is_empty() {
+            return Self::nil();
+        }
+        if data.len() == 1 {
+            if data[0].is_nil() && hint == DisplayHint::Nil {
+                return Self::nil();
+            }
+            return Self {
+                data: ValueData::Scalar(data[0].clone()),
+                display_hint: hint,
+            };
+        }
+        Self {
+            data: ValueData::Vector(data.into_iter().map(Value::from_fraction).collect()),
+            display_hint: hint,
+        }
+    }
+
+    /// 分数の配列から値を作成（数値ヒント付き）
+    #[inline]
+    pub fn from_numbers(v: Vec<Fraction>) -> Self {
+        if v.is_empty() {
+            return Self::nil();
+        }
+        if v.len() == 1 {
+            return Self {
+                data: ValueData::Scalar(v[0].clone()),
+                display_hint: DisplayHint::Number,
+            };
+        }
+        Self {
+            data: ValueData::Vector(v.into_iter().map(Value::from_fraction).collect()),
+            display_hint: DisplayHint::Number,
+        }
+    }
+
+    /// 分数の配列から値を作成
+    #[inline]
+    pub fn from_vec(v: Vec<Fraction>) -> Self {
+        if v.is_empty() {
+            return Self::nil();
+        }
+        if v.len() == 1 {
+            return Self {
+                data: ValueData::Scalar(v[0].clone()),
+                display_hint: DisplayHint::Auto,
+            };
+        }
+        Self {
+            data: ValueData::Vector(v.into_iter().map(Value::from_fraction).collect()),
+            display_hint: DisplayHint::Auto,
+        }
+    }
+}
+
+/// Value のイテレータ
+pub struct ValueIter<'a> {
+    value: &'a Value,
+    index: usize,
+}
+
+impl<'a> Iterator for ValueIter<'a> {
+    type Item = &'a Value;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = self.value.get_child(self.index);
+        if result.is_some() {
+            self.index += 1;
+        }
+        result
     }
 }
 
@@ -381,7 +608,7 @@ pub struct WordDefinition {
     pub original_source: Option<String>,
 }
 
-/// スタック型
+/// スタック型（旧型との互換性のため残す）
 pub type Stack = Vec<Value>;
 
 /// 可視次元の最大値

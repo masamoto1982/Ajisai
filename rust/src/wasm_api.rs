@@ -1,14 +1,14 @@
 // rust/src/wasm_api.rs
 //
-// 統一分数アーキテクチャ版のWebAssembly API
+// 統一Value宇宙アーキテクチャ版のWebAssembly API
 //
-// すべての値は Vec<Fraction> として表現される。
+// 全てはValueである。スタックもValueである。
 // DisplayHint は表示目的のみに使用される。
 
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
-use crate::types::{Value, DisplayHint, Token, ExecutionLine};
+use crate::types::{Value, ValueData, DisplayHint, Token, ExecutionLine};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::str::FromStr;
@@ -23,35 +23,36 @@ use crate::builtins;
 
 /// 値が文字列として扱えるかチェック
 fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.data.is_empty()
+    val.display_hint == DisplayHint::String && val.is_vector()
 }
 
 /// 値が真偽値として扱えるかチェック
 fn is_boolean_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::Boolean && val.data.len() == 1
+    val.display_hint == DisplayHint::Boolean && val.is_scalar()
 }
 
 /// 値が数値として扱えるかチェック
 fn is_number_value(val: &Value) -> bool {
-    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto) && val.data.len() == 1
+    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto) && val.is_scalar()
 }
 
 /// 値がDateTimeとして扱えるかチェック
 fn is_datetime_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::DateTime && val.data.len() == 1
+    val.display_hint == DisplayHint::DateTime && val.is_scalar()
 }
 
 /// 値がベクタ（複数要素）かチェック
 fn is_vector_value(val: &Value) -> bool {
-    val.data.len() > 1 || !val.shape.is_empty()
+    val.is_vector()
 }
 
 /// 値を文字列として解釈する
 ///
 /// UTF-8バイト列として保存されたデータを文字列に復元する。
-/// 各Fractionは0-255のバイト値として解釈される。
+/// 各スカラーは0-255のバイト値として解釈される。
 fn value_as_string(val: &Value) -> String {
-    let bytes: Vec<u8> = val.data.iter()
+    let fractions = val.flatten_fractions();
+    let bytes: Vec<u8> = fractions.iter()
         .filter_map(|f| {
             f.to_i64().and_then(|n| {
                 if n >= 0 && n <= 255 {
@@ -156,25 +157,29 @@ impl AjisaiInterpreter {
                     }
                 }
 
-                // スタックトップから形状ベクタを取得（統一分数アーキテクチャ）
+                // スタックトップから形状ベクタを取得
                 let shape = if let Some(top) = self.interpreter.stack.last() {
                     if is_vector_value(top) && !top.is_nil() {
                         // ベクタ内の全要素が正の整数（1〜100）かチェック
                         let mut dims = Vec::new();
-                        let mut valid = top.data.len() >= 1 && top.data.len() <= 3;
+                        let mut valid = top.len() >= 1 && top.len() <= 3;
                         if valid {
-                            for f in &top.data {
-                                if let Some(val) = f.as_usize() {
-                                    if val >= 1 && val <= 100 {
-                                        dims.push(val);
+                            if let ValueData::Vector(children) = &top.data {
+                                for child in children {
+                                    if let Some(val) = child.as_usize() {
+                                        if val >= 1 && val <= 100 {
+                                            dims.push(val);
+                                        } else {
+                                            valid = false;
+                                            break;
+                                        }
                                     } else {
                                         valid = false;
                                         break;
                                     }
-                                } else {
-                                    valid = false;
-                                    break;
                                 }
+                            } else {
+                                valid = false;
                             }
                         }
                         if valid { Some(dims) } else { None }
@@ -465,23 +470,14 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
         },
         "tensor" => {
             // 多次元配列: shape と data から Value を復元
+            // 新しいアーキテクチャでは、再帰的Value構造で表現
             let tensor_obj = js_sys::Object::from(value_js);
-
-            // shape を取得
-            let shape_js = js_sys::Reflect::get(&tensor_obj, &"shape".into())
-                .map_err(|_| "No shape in tensor".to_string())?;
-            let shape_array = js_sys::Array::from(&shape_js);
-            let mut shape = Vec::new();
-            for i in 0..shape_array.length() {
-                let dim = shape_array.get(i).as_f64().ok_or("Shape element not number")? as usize;
-                shape.push(dim);
-            }
 
             // data を取得
             let data_js = js_sys::Reflect::get(&tensor_obj, &"data".into())
                 .map_err(|_| "No data in tensor".to_string())?;
             let data_array = js_sys::Array::from(&data_js);
-            let mut data = Vec::new();
+            let mut fractions = Vec::new();
             for i in 0..data_array.length() {
                 let frac_obj = js_sys::Object::from(data_array.get(i));
                 let num_str = js_sys::Reflect::get(&frac_obj, &"numerator".into())
@@ -494,14 +490,15 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                     BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
                     BigInt::from_str(&den_str).map_err(|e| e.to_string())?
                 );
-                data.push(fraction);
+                fractions.push(fraction);
             }
 
-            Ok(Value {
-                data,
-                display_hint: DisplayHint::Auto,
-                shape,
-            })
+            // 分数をValueに変換
+            let children: Vec<Value> = fractions.into_iter()
+                .map(Value::from_fraction)
+                .collect();
+
+            Ok(Value::from_children(children))
         },
         "nil" => Ok(Value::nil()),
         _ => Err(format!("Unknown type: {}", type_str)),
@@ -511,8 +508,6 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
 fn value_to_js_value(value: &Value) -> JsValue {
     let obj = js_sys::Object::new();
 
-    // 統一分数アーキテクチャ: 直接データアクセス
-
     // NILチェック
     if value.is_nil() {
         js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
@@ -520,51 +515,11 @@ fn value_to_js_value(value: &Value) -> JsValue {
         return obj.into();
     }
 
-    // 文字列は1次元の場合のみ直接文字列として処理
-    // 多次元の場合（[ 'てすと' ] など）はtensorとして処理し、ネスト構造を保持
-    if value.display_hint == DisplayHint::String && !value.data.is_empty() && value.shape.len() <= 1 {
+    // 文字列は直接文字列として処理
+    if value.display_hint == DisplayHint::String && value.is_vector() {
         js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
         let s = value_as_string(value);
         js_sys::Reflect::set(&obj, &"value".into(), &s.into()).unwrap();
-        return obj.into();
-    }
-
-    // 多次元配列（shape.len() > 1）の場合はtensorとして送信
-    // これにより shape [2, 3, 1] などのネスト構造が保持される
-    if value.shape.len() > 1 {
-        js_sys::Reflect::set(&obj, &"type".into(), &"tensor".into()).unwrap();
-
-        let tensor_obj = js_sys::Object::new();
-
-        // shape配列を作成
-        let shape_array = js_sys::Array::new();
-        for &dim in &value.shape {
-            shape_array.push(&(dim as u32).into());
-        }
-        js_sys::Reflect::set(&tensor_obj, &"shape".into(), &shape_array).unwrap();
-
-        // data配列を作成（各分数をオブジェクトとして）
-        let data_array = js_sys::Array::new();
-        for frac in &value.data {
-            let num_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&num_obj, &"numerator".into(), &frac.numerator.to_string().into()).unwrap();
-            js_sys::Reflect::set(&num_obj, &"denominator".into(), &frac.denominator.to_string().into()).unwrap();
-            data_array.push(&num_obj);
-        }
-        js_sys::Reflect::set(&tensor_obj, &"data".into(), &data_array).unwrap();
-
-        // display_hintを追加（文字列の場合、JavaScript側で文字列として表示するため）
-        let hint_str = match value.display_hint {
-            DisplayHint::Nil => "nil",
-            DisplayHint::String => "string",
-            DisplayHint::Boolean => "boolean",
-            DisplayHint::DateTime => "datetime",
-            DisplayHint::Number => "number",
-            DisplayHint::Auto => "auto",
-        };
-        js_sys::Reflect::set(&tensor_obj, &"displayHint".into(), &hint_str.into()).unwrap();
-
-        js_sys::Reflect::set(&obj, &"value".into(), &tensor_obj).unwrap();
         return obj.into();
     }
 
@@ -579,38 +534,39 @@ fn value_to_js_value(value: &Value) -> JsValue {
         "number"
     } else if is_vector_value(value) {
         "vector"
+    } else if value.is_scalar() {
+        "number"
     } else {
-        "number" // フォールバック
+        "nil"
     };
 
     js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
 
     match type_str {
         "number" | "datetime" => {
-            let num_obj = js_sys::Object::new();
-            js_sys::Reflect::set(&num_obj, &"numerator".into(), &value.data[0].numerator.to_string().into()).unwrap();
-            js_sys::Reflect::set(&num_obj, &"denominator".into(), &value.data[0].denominator.to_string().into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
+            if let Some(f) = value.as_scalar() {
+                let num_obj = js_sys::Object::new();
+                js_sys::Reflect::set(&num_obj, &"numerator".into(), &f.numerator.to_string().into()).unwrap();
+                js_sys::Reflect::set(&num_obj, &"denominator".into(), &f.denominator.to_string().into()).unwrap();
+                js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
+            }
         },
         "string" => {
             let s = value_as_string(value);
             js_sys::Reflect::set(&obj, &"value".into(), &s.into()).unwrap();
         },
         "boolean" => {
-            let b = !value.data[0].is_zero();
-            js_sys::Reflect::set(&obj, &"value".into(), &b.into()).unwrap();
+            if let Some(f) = value.as_scalar() {
+                let b = !f.is_zero();
+                js_sys::Reflect::set(&obj, &"value".into(), &b.into()).unwrap();
+            }
         },
         "vector" => {
-            // 1次元ベクタの場合、各要素を個別のValueとして返す
             let js_array = js_sys::Array::new();
-            for frac in &value.data {
-                // 各要素のdisplay_hintを継承しつつ、単一要素のValueを作成
-                let elem = Value {
-                    data: vec![frac.clone()],
-                    display_hint: value.display_hint,
-                    shape: vec![],
-                };
-                js_array.push(&value_to_js_value(&elem));
+            if let ValueData::Vector(children) = &value.data {
+                for child in children {
+                    js_array.push(&value_to_js_value(child));
+                }
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
         },

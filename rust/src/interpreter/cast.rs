@@ -1,35 +1,44 @@
 // rust/src/interpreter/cast.rs
 //
-// 統一分数アーキテクチャ版の型変換ワード群
+// 統一Value宇宙アーキテクチャ版の型変換ワード群
 //
 // 【設計原則】
-// すべての値は Vec<Fraction> として表現される。
+// すべての値は ValueData (Scalar/Vector/Nil) として表現される。
 // DisplayHint は表示目的のみに使用し、演算には使用しない。
 // 「型変換」は実質的に DisplayHint の変更と、表示形式の変換である。
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{wrap_value, wrap_number};
-use crate::types::{Value, DisplayHint};
+use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::fraction::Fraction;
 
 /// 値を文字列として解釈する（内部ヘルパー）
 fn value_as_string(val: &Value) -> Option<String> {
-    if val.data.is_empty() {
-        return None;
+    fn collect_chars(val: &Value) -> Vec<char> {
+        match &val.data {
+            ValueData::Nil => vec![],
+            ValueData::Scalar(f) => {
+                f.to_i64().and_then(|n| {
+                    if n >= 0 && n <= 0x10FFFF {
+                        char::from_u32(n as u32)
+                    } else {
+                        None
+                    }
+                }).map(|c| vec![c]).unwrap_or_default()
+            }
+            ValueData::Vector(children) => {
+                children.iter().flat_map(|c| collect_chars(c)).collect()
+            }
+        }
     }
 
-    Some(val.data.iter()
-        .filter_map(|f| {
-            f.to_i64().and_then(|n| {
-                if n >= 0 && n <= 0x10FFFF {
-                    char::from_u32(n as u32)
-                } else {
-                    None
-                }
-            })
-        })
-        .collect())
+    let chars = collect_chars(val);
+    if chars.is_empty() {
+        None
+    } else {
+        Some(chars.into_iter().collect())
+    }
 }
 
 /// 値が文字列として扱えるかチェック
@@ -39,17 +48,17 @@ fn is_string_value(val: &Value) -> bool {
 
 /// 値が真偽値として扱えるかチェック
 fn is_boolean_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::Boolean && val.data.len() == 1
+    val.display_hint == DisplayHint::Boolean && val.is_scalar()
 }
 
 /// 値が数値として扱えるかチェック
 fn is_number_value(val: &Value) -> bool {
-    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto) && val.data.len() == 1
+    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto) && val.is_scalar()
 }
 
 /// 値がDateTimeとして扱えるかチェック
 fn is_datetime_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::DateTime && val.data.len() == 1
+    val.display_hint == DisplayHint::DateTime && val.is_scalar()
 }
 
 /// STR - 任意の型を文字列に変換
@@ -84,23 +93,29 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
 
     // 真偽値の場合
     if is_boolean_value(&val) {
-        let string_repr = if !val.data[0].is_zero() { "TRUE" } else { "FALSE" };
-        interp.stack.push(wrap_value(Value::from_string(string_repr)));
-        return Ok(());
+        if let Some(f) = val.as_scalar() {
+            let string_repr = if !f.is_zero() { "TRUE" } else { "FALSE" };
+            interp.stack.push(wrap_value(Value::from_string(string_repr)));
+            return Ok(());
+        }
     }
 
     // DateTimeの場合
     if is_datetime_value(&val) {
-        let string_repr = fraction_to_string(&val.data[0]);
-        interp.stack.push(wrap_value(Value::from_string(&string_repr)));
-        return Ok(());
+        if let Some(f) = val.as_scalar() {
+            let string_repr = fraction_to_string(f);
+            interp.stack.push(wrap_value(Value::from_string(&string_repr)));
+            return Ok(());
+        }
     }
 
     // 数値の場合
     if is_number_value(&val) {
-        let string_repr = fraction_to_string(&val.data[0]);
-        interp.stack.push(wrap_value(Value::from_string(&string_repr)));
-        return Ok(());
+        if let Some(f) = val.as_scalar() {
+            let string_repr = fraction_to_string(f);
+            interp.stack.push(wrap_value(Value::from_string(&string_repr)));
+            return Ok(());
+        }
     }
 
     // ベクタの場合（複数要素）
@@ -165,11 +180,13 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 
     // 真偽値の場合
     if is_boolean_value(&val) {
-        use num_bigint::BigInt;
-        use num_traits::One;
-        let num = if !val.data[0].is_zero() { BigInt::one() } else { BigInt::from(0) };
-        interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
-        return Ok(());
+        if let Some(f) = val.as_scalar() {
+            use num_bigint::BigInt;
+            use num_traits::One;
+            let num = if !f.is_zero() { BigInt::one() } else { BigInt::from(0) };
+            interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
+            return Ok(());
+        }
     }
 
     // 既に数値形式の場合は冗長な変換エラー
@@ -219,7 +236,9 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 
     // 数値の場合
     if is_number_value(&val) {
-        return convert_fraction_to_bool(&val.data[0], &val, interp);
+        if let Some(f) = val.as_scalar() {
+            return convert_fraction_to_bool(f, &val, interp);
+        }
     }
 
     // 既に真偽値形式の場合は冗長な変換エラー
@@ -463,17 +482,15 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
             }
 
-            // ベクタ（複数要素）の場合
-            if val.data.len() > 1 || (val.data.len() == 1 && val.shape.len() > 0) {
-                // shapeベースでネストされた構造を再構築
-                let elements = reconstruct_vector_elements(&val);
-                if elements.is_empty() {
+            // ベクタの場合
+            if let ValueData::Vector(children) = &val.data {
+                if children.is_empty() {
                     interp.stack.push(val);
                     return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
                 }
 
                 let mut result = String::new();
-                for (i, elem) in elements.iter().enumerate() {
+                for (i, elem) in children.iter().enumerate() {
                     // 文字列の場合
                     if is_string_value(elem) {
                         if let Some(s) = value_as_string(elem) {
@@ -484,11 +501,13 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 
                     // 数値の場合（文字コードとして解釈）
                     if is_number_value(elem) {
-                        if let Some(code) = elem.data[0].to_i64() {
-                            if code >= 0 && code <= 0x10FFFF {
-                                if let Some(c) = char::from_u32(code as u32) {
-                                    result.push(c);
-                                    continue;
+                        if let Some(f) = elem.as_scalar() {
+                            if let Some(code) = f.to_i64() {
+                                if code >= 0 && code <= 0x10FFFF {
+                                    if let Some(c) = char::from_u32(code as u32) {
+                                        result.push(c);
+                                        continue;
+                                    }
                                 }
                             }
                         }
@@ -550,17 +569,16 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
                 }
 
-                // ベクタ（複数要素）の場合
-                if elem.data.len() > 1 || (elem.data.len() == 1 && elem.shape.len() > 0) {
-                    let vec_elements = reconstruct_vector_elements(&elem);
-                    if vec_elements.is_empty() {
+                // ベクタの場合
+                if let ValueData::Vector(children) = &elem.data {
+                    if children.is_empty() {
                         interp.stack = results;
                         interp.stack.push(elem);
                         return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
                     }
 
                     let mut result_str = String::new();
-                    for (i, v) in vec_elements.iter().enumerate() {
+                    for (i, v) in children.iter().enumerate() {
                         // 文字列の場合
                         if is_string_value(v) {
                             if let Some(s) = value_as_string(v) {
@@ -571,11 +589,13 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 
                         // 数値の場合（文字コードとして解釈）
                         if is_number_value(v) {
-                            if let Some(code) = v.data[0].to_i64() {
-                                if code >= 0 && code <= 0x10FFFF {
-                                    if let Some(c) = char::from_u32(code as u32) {
-                                        result_str.push(c);
-                                        continue;
+                            if let Some(f) = v.as_scalar() {
+                                if let Some(code) = f.to_i64() {
+                                    if code >= 0 && code <= 0x10FFFF {
+                                        if let Some(c) = char::from_u32(code as u32) {
+                                            result_str.push(c);
+                                            continue;
+                                        }
                                     }
                                 }
                             }
@@ -629,42 +649,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// ベクタの要素を再構築するヘルパー
-fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    // shapeが空または1次元の場合、各要素を個別のValueとして返す
-    if val.shape.is_empty() || val.shape.len() == 1 {
-        val.data.iter().map(|f| {
-            // 元のdisplay_hintを継承
-            match val.display_hint {
-                DisplayHint::String => {
-                    // 文字列の場合、各要素は1文字
-                    let mut v = Value::from_fraction(f.clone());
-                    v.display_hint = DisplayHint::String;
-                    v.shape = vec![1];
-                    v
-                }
-                _ => Value::from_fraction(f.clone())
-            }
-        }).collect()
-    } else {
-        // 多次元の場合は最外層の要素を再構築
-        let outer_size = val.shape[0];
-        let inner_size: usize = val.shape[1..].iter().product();
-        let inner_shape = val.shape[1..].to_vec();
-
-        (0..outer_size).map(|i| {
-            let start = i * inner_size;
-            let end = start + inner_size;
-            let data = val.data[start..end].to_vec();
-            Value {
-                data,
-                display_hint: val.display_hint,
-                shape: inner_shape.clone(),
-            }
-        }).collect()
-    }
-}
-
 /// 値を文字列表現に変換する（内部ヘルパー）
 fn value_to_string_repr(value: &Value) -> String {
     if value.is_nil() {
@@ -672,7 +656,9 @@ fn value_to_string_repr(value: &Value) -> String {
     }
 
     if is_boolean_value(value) {
-        return if !value.data[0].is_zero() { "TRUE".to_string() } else { "FALSE".to_string() };
+        if let Some(f) = value.as_scalar() {
+            return if !f.is_zero() { "TRUE".to_string() } else { "FALSE".to_string() };
+        }
     }
 
     if is_string_value(value) {
@@ -680,18 +666,29 @@ fn value_to_string_repr(value: &Value) -> String {
     }
 
     if is_datetime_value(value) {
-        return format!("@{}", fraction_to_string(&value.data[0]));
+        if let Some(f) = value.as_scalar() {
+            return format!("@{}", fraction_to_string(f));
+        }
     }
 
     if is_number_value(value) {
-        return fraction_to_string(&value.data[0]);
+        if let Some(f) = value.as_scalar() {
+            return fraction_to_string(f);
+        }
     }
 
     // ベクタの場合
-    value.data.iter()
-        .map(|f| fraction_to_string(f))
-        .collect::<Vec<_>>()
-        .join(" ")
+    fn collect_fractions(val: &Value) -> Vec<String> {
+        match &val.data {
+            ValueData::Nil => vec!["NIL".to_string()],
+            ValueData::Scalar(f) => vec![fraction_to_string(f)],
+            ValueData::Vector(children) => {
+                children.iter().flat_map(|c| collect_fractions(c)).collect()
+            }
+        }
+    }
+
+    collect_fractions(value).join(" ")
 }
 
 #[cfg(test)]
@@ -742,7 +739,9 @@ mod tests {
 
         if let Some(val) = interp.stack.last() {
             assert!(is_number_value(val));
-            assert_eq!(val.data[0].numerator, BigInt::from(42));
+            if let Some(f) = val.as_scalar() {
+                assert_eq!(f.numerator, BigInt::from(42));
+            }
         }
 
         // Boolean → Number (TRUE → 1)
@@ -752,7 +751,9 @@ mod tests {
 
         if let Some(val) = interp.stack.last() {
             assert!(is_number_value(val));
-            assert_eq!(val.data[0].numerator, BigInt::from(1));
+            if let Some(f) = val.as_scalar() {
+                assert_eq!(f.numerator, BigInt::from(1));
+            }
         }
 
         // Boolean → Number (FALSE → 0)
@@ -762,7 +763,9 @@ mod tests {
 
         if let Some(val) = interp.stack.last() {
             assert!(is_number_value(val));
-            assert_eq!(val.data[0].numerator, BigInt::from(0));
+            if let Some(f) = val.as_scalar() {
+                assert_eq!(f.numerator, BigInt::from(0));
+            }
         }
     }
 
@@ -776,7 +779,9 @@ mod tests {
 
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
-            assert!(!val.data[0].is_zero());
+            if let Some(f) = val.as_scalar() {
+                assert!(!f.is_zero());
+            }
         }
 
         // String → Boolean ('1')
@@ -786,7 +791,9 @@ mod tests {
 
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
-            assert!(!val.data[0].is_zero());
+            if let Some(f) = val.as_scalar() {
+                assert!(!f.is_zero());
+            }
         }
 
         // Number → Boolean (1 → TRUE)
@@ -796,7 +803,9 @@ mod tests {
 
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
-            assert!(!val.data[0].is_zero());
+            if let Some(f) = val.as_scalar() {
+                assert!(!f.is_zero());
+            }
         }
 
         // Number → Boolean (0 → FALSE)
@@ -806,7 +815,9 @@ mod tests {
 
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
-            assert!(val.data[0].is_zero());
+            if let Some(f) = val.as_scalar() {
+                assert!(f.is_zero());
+            }
         }
     }
 

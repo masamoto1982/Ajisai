@@ -6,47 +6,31 @@
 // 1オリジンの量指定操作（LENGTH/TAKE/SPLIT）、
 // およびベクタ構造操作（CONCAT/REVERSE/LEVEL）を提供する。
 //
-// 統一分数アーキテクチャ版
+// 統一Value宇宙アーキテクチャ版
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index, wrap_value, wrap_number};
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
 // ============================================================================
-// ヘルパー関数（統一分数アーキテクチャ用）
+// ヘルパー関数（統一Value宇宙アーキテクチャ用）
 // ============================================================================
 
 /// ベクタ値かどうかを判定
-/// shape情報を使って判定（空でない要素を持つ場合はベクタ）
 fn is_vector_value(val: &Value) -> bool {
-    val.data.len() > 1 || !val.shape.is_empty()
+    val.is_vector()
 }
 
-/// ベクタの要素を再構築する
-/// shapeが空または1次元の場合、各分数を個別のValueとして返す
+/// ベクタの要素を再構築する（子Valueのリストを返す）
 fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    if val.shape.is_empty() || val.shape.len() == 1 {
-        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
-    } else {
-        // 多次元の場合は最外層の要素を再構築
-        let outer_size = val.shape[0];
-        let inner_size: usize = val.shape[1..].iter().product();
-        let inner_shape = val.shape[1..].to_vec();
-
-        (0..outer_size).map(|i| {
-            let start = i * inner_size;
-            let end = start + inner_size;
-            let data = val.data[start..end].to_vec();
-            Value {
-                data,
-                display_hint: val.display_hint,
-                shape: inner_shape.clone(),
-            }
-        }).collect()
+    match &val.data {
+        ValueData::Vector(children) => children.clone(),
+        ValueData::Scalar(_) => vec![val.clone()],
+        ValueData::Nil => vec![],
     }
 }
 

@@ -1,14 +1,116 @@
 // rust/src/interpreter/logic.rs
 //
-// 統一分数アーキテクチャ版の論理演算
+// 統一Value宇宙アーキテクチャ版の論理演算
 //
 // 論理演算（0 = false、非0 = true）
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, DisplayHint};
+use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::fraction::Fraction;
+
+// ============================================================================
+// ヘルパー関数
+// ============================================================================
+
+/// Valueが「truthy」かどうかを判定（再帰的に任意の非ゼロ要素があるか）
+fn value_has_any_truthy(val: &Value) -> bool {
+    match &val.data {
+        ValueData::Nil => false,
+        ValueData::Scalar(f) => !f.is_zero(),
+        ValueData::Vector(children) => children.iter().any(|c| value_has_any_truthy(c)),
+    }
+}
+
+/// Valueの全要素にNOT演算を適用（再帰的）
+fn apply_not_to_value(val: &Value) -> Value {
+    match &val.data {
+        ValueData::Nil => Value::nil(),
+        ValueData::Scalar(f) => {
+            let result = if f.is_zero() {
+                Fraction::from(1)
+            } else {
+                Fraction::from(0)
+            };
+            Value {
+                data: ValueData::Scalar(result),
+                display_hint: DisplayHint::Boolean,
+            }
+        }
+        ValueData::Vector(children) => {
+            let new_children: Vec<Value> = children.iter()
+                .map(|c| apply_not_to_value(c))
+                .collect();
+            Value {
+                data: ValueData::Vector(new_children),
+                display_hint: DisplayHint::Boolean,
+            }
+        }
+    }
+}
+
+/// 二項論理演算をブロードキャスト付きで適用（再帰的）
+fn apply_binary_logic<F>(a: &Value, b: &Value, op: F) -> Result<Value>
+where
+    F: Fn(bool, bool) -> bool + Copy,
+{
+    match (&a.data, &b.data) {
+        // NIL処理は呼び出し元で処理済み
+        (ValueData::Nil, _) | (_, ValueData::Nil) => {
+            Err(AjisaiError::from("Cannot apply logic operation with NIL"))
+        }
+
+        // 両方スカラー
+        (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
+            let a_truthy = !fa.is_zero();
+            let b_truthy = !fb.is_zero();
+            let result = op(a_truthy, b_truthy);
+            Ok(Value {
+                data: ValueData::Scalar(Fraction::from(if result { 1 } else { 0 })),
+                display_hint: DisplayHint::Boolean,
+            })
+        }
+
+        // スカラー対ベクター（ブロードキャスト）
+        (ValueData::Scalar(fa), ValueData::Vector(vb)) => {
+            let a_truthy = !fa.is_zero();
+            let new_children: Result<Vec<Value>> = vb.iter()
+                .map(|bi| apply_binary_logic(&Value::from_bool(a_truthy), bi, op))
+                .collect();
+            Ok(Value {
+                data: ValueData::Vector(new_children?),
+                display_hint: DisplayHint::Boolean,
+            })
+        }
+
+        // ベクター対スカラー（ブロードキャスト）
+        (ValueData::Vector(va), ValueData::Scalar(fb)) => {
+            let b_truthy = !fb.is_zero();
+            let new_children: Result<Vec<Value>> = va.iter()
+                .map(|ai| apply_binary_logic(ai, &Value::from_bool(b_truthy), op))
+                .collect();
+            Ok(Value {
+                data: ValueData::Vector(new_children?),
+                display_hint: DisplayHint::Boolean,
+            })
+        }
+
+        // 両方ベクター
+        (ValueData::Vector(va), ValueData::Vector(vb)) => {
+            if va.len() != vb.len() {
+                return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
+            }
+            let new_children: Result<Vec<Value>> = va.iter().zip(vb.iter())
+                .map(|(ai, bi)| apply_binary_logic(ai, bi, op))
+                .collect();
+            Ok(Value {
+                data: ValueData::Vector(new_children?),
+                display_hint: DisplayHint::Boolean,
+            })
+        }
+    }
+}
 
 // ============================================================================
 // 論理演算子
@@ -30,23 +132,9 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            // 各要素を反転
-            let result_data: Vec<Fraction> = val.data.iter()
-                .map(|f| {
-                    if f.is_zero() {
-                        Fraction::from(1)
-                    } else {
-                        Fraction::from(0)
-                    }
-                })
-                .collect();
-
-            let len = result_data.len();
-            interp.stack.push(Value {
-                data: result_data,
-                display_hint: DisplayHint::Boolean,
-                shape: vec![len],
-            });
+            // 再帰的にNOT演算を適用
+            let result = apply_not_to_value(&val);
+            interp.stack.push(result);
             Ok(())
         },
         OperationTarget::Stack => {
@@ -79,7 +167,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             } else if a_is_nil {
                 // NIL AND b: bがfalsy（全て0）ならFALSE、それ以外はNIL
-                let b_has_any_truthy = b_val.data.iter().any(|f| !f.is_zero());
+                let b_has_any_truthy = value_has_any_truthy(&b_val);
                 if b_has_any_truthy {
                     interp.stack.push(Value::nil());
                 } else {
@@ -88,7 +176,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             } else if b_is_nil {
                 // a AND NIL: aがfalsy（全て0）ならFALSE、それ以外はNIL
-                let a_has_any_truthy = a_val.data.iter().any(|f| !f.is_zero());
+                let a_has_any_truthy = value_has_any_truthy(&a_val);
                 if a_has_any_truthy {
                     interp.stack.push(Value::nil());
                 } else {
@@ -97,47 +185,9 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let a_len = a_val.data.len();
-            let b_len = b_val.data.len();
-
-            let result_data: Vec<Fraction> = if a_len > 1 && b_len == 1 {
-                // aがベクタ、bがスカラー: bを各要素にブロードキャスト
-                let b_truthy = !b_val.data[0].is_zero();
-                a_val.data.iter()
-                    .map(|a| {
-                        let a_truthy = !a.is_zero();
-                        Fraction::from(if a_truthy && b_truthy { 1 } else { 0 })
-                    })
-                    .collect()
-            } else if a_len == 1 && b_len > 1 {
-                // aがスカラー、bがベクタ: aを各要素にブロードキャスト
-                let a_truthy = !a_val.data[0].is_zero();
-                b_val.data.iter()
-                    .map(|b| {
-                        let b_truthy = !b.is_zero();
-                        Fraction::from(if a_truthy && b_truthy { 1 } else { 0 })
-                    })
-                    .collect()
-            } else if a_len != b_len {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
-            } else {
-                // 要素ごと演算
-                a_val.data.iter().zip(b_val.data.iter())
-                    .map(|(a, b)| {
-                        let result = !a.is_zero() && !b.is_zero();
-                        Fraction::from(if result { 1 } else { 0 })
-                    })
-                    .collect()
-            };
-
-            let len = result_data.len();
-            interp.stack.push(Value {
-                data: result_data,
-                display_hint: DisplayHint::Boolean,
-                shape: vec![len],
-            });
+            // 両方がNILでない場合は通常のAND演算
+            let result = apply_binary_logic(&a_val, &b_val, |a, b| a && b)?;
+            interp.stack.push(result);
             Ok(())
         },
 
@@ -202,7 +252,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             } else if a_is_nil {
                 // NIL OR b: bがtruthy（どれか非0）ならTRUE、それ以外はNIL
-                let b_has_any_truthy = b_val.data.iter().any(|f| !f.is_zero());
+                let b_has_any_truthy = value_has_any_truthy(&b_val);
                 if b_has_any_truthy {
                     interp.stack.push(Value::from_bool(true));
                 } else {
@@ -211,7 +261,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             } else if b_is_nil {
                 // a OR NIL: aがtruthy（どれか非0）ならTRUE、それ以外はNIL
-                let a_has_any_truthy = a_val.data.iter().any(|f| !f.is_zero());
+                let a_has_any_truthy = value_has_any_truthy(&a_val);
                 if a_has_any_truthy {
                     interp.stack.push(Value::from_bool(true));
                 } else {
@@ -220,47 +270,9 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let a_len = a_val.data.len();
-            let b_len = b_val.data.len();
-
-            let result_data: Vec<Fraction> = if a_len > 1 && b_len == 1 {
-                // aがベクタ、bがスカラー: bを各要素にブロードキャスト
-                let b_truthy = !b_val.data[0].is_zero();
-                a_val.data.iter()
-                    .map(|a| {
-                        let a_truthy = !a.is_zero();
-                        Fraction::from(if a_truthy || b_truthy { 1 } else { 0 })
-                    })
-                    .collect()
-            } else if a_len == 1 && b_len > 1 {
-                // aがスカラー、bがベクタ: aを各要素にブロードキャスト
-                let a_truthy = !a_val.data[0].is_zero();
-                b_val.data.iter()
-                    .map(|b| {
-                        let b_truthy = !b.is_zero();
-                        Fraction::from(if a_truthy || b_truthy { 1 } else { 0 })
-                    })
-                    .collect()
-            } else if a_len != b_len {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::VectorLengthMismatch { len1: a_len, len2: b_len });
-            } else {
-                // 要素ごと演算
-                a_val.data.iter().zip(b_val.data.iter())
-                    .map(|(a, b)| {
-                        let result = !a.is_zero() || !b.is_zero();
-                        Fraction::from(if result { 1 } else { 0 })
-                    })
-                    .collect()
-            };
-
-            let len = result_data.len();
-            interp.stack.push(Value {
-                data: result_data,
-                display_hint: DisplayHint::Boolean,
-                shape: vec![len],
-            });
+            // 両方がNILでない場合は通常のOR演算
+            let result = apply_binary_logic(&a_val, &b_val, |a, b| a || b)?;
+            interp.stack.push(result);
             Ok(())
         },
 

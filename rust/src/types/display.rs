@@ -3,19 +3,24 @@
 // 値の表示ロジック
 //
 // DisplayHint に基づいて、または自動判定で適切な形式に変換する。
-// 形状情報に基づいて深さに応じた括弧を使用する。
+// 深さに応じた括弧を使用する。
 
-use super::{Value, DisplayHint, BracketType};
+use super::{Value, ValueData, DisplayHint, BracketType};
 use super::fraction::Fraction;
 use std::fmt;
-use num_traits::One;
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.display_hint {
-            DisplayHint::Nil => write!(f, "NIL"),
-            DisplayHint::Auto => write!(f, "{}", auto_display(&self.data, &self.shape)),
-            DisplayHint::Number => write!(f, "{}", display_with_shape(&self.data, &self.shape, 0)),
+            DisplayHint::Nil => {
+                if matches!(self.data, ValueData::Nil) {
+                    write!(f, "NIL")
+                } else {
+                    write!(f, "{}", display_value(&self.data, 0))
+                }
+            }
+            DisplayHint::Auto => write!(f, "{}", auto_display(&self.data)),
+            DisplayHint::Number => write!(f, "{}", display_value(&self.data, 0)),
             DisplayHint::String => write!(f, "{}", display_as_string(&self.data)),
             DisplayHint::Boolean => write!(f, "{}", display_as_boolean(&self.data)),
             DisplayHint::DateTime => write!(f, "{}", display_as_datetime(&self.data)),
@@ -24,78 +29,69 @@ impl fmt::Display for Value {
 }
 
 /// 自動判定による表示
-fn auto_display(data: &[Fraction], shape: &[usize]) -> String {
-    // 空なら NIL
-    if data.is_empty() {
-        return "NIL".to_string();
+fn auto_display(data: &ValueData) -> String {
+    match data {
+        ValueData::Nil => "NIL".to_string(),
+        ValueData::Scalar(f) => format_fraction(f),
+        ValueData::Vector(v) => {
+            // すべてが印字可能な ASCII スカラーなら文字列として表示
+            if v.len() > 1 && looks_like_string(v) {
+                return display_as_string(data);
+            }
+            // それ以外は数値として表示
+            display_value(data, 0)
+        }
     }
-
-    // すべてが印字可能な ASCII 文字なら文字列として表示
-    if data.len() > 1 && looks_like_string(data) {
-        return display_as_string(data);
-    }
-
-    // それ以外は数値として表示（形状情報付き）
-    display_with_shape(data, shape, 0)
 }
 
 /// 文字列っぽいかどうかを判定
-fn looks_like_string(data: &[Fraction]) -> bool {
-    data.iter().all(|f| {
-        f.is_integer() && {
-            if let Some(n) = f.to_i64() {
-                // 印字可能 ASCII または一般的な制御文字
-                (n >= 32 && n < 127) || n == 10 || n == 13 || n == 9
-            } else {
-                false
+fn looks_like_string(values: &[Value]) -> bool {
+    values.iter().all(|v| {
+        if let ValueData::Scalar(f) = &v.data {
+            f.is_integer() && {
+                if let Some(n) = f.to_i64() {
+                    // 印字可能 ASCII または一般的な制御文字
+                    (n >= 32 && n < 127) || n == 10 || n == 13 || n == 9
+                } else {
+                    false
+                }
             }
+        } else {
+            false
         }
     })
 }
 
-/// 形状情報を使用した表示（深さに応じた括弧）
-fn display_with_shape(data: &[Fraction], shape: &[usize], depth: usize) -> String {
-    if data.is_empty() {
-        return "NIL".to_string();
-    }
-
-    // スカラー値（単一要素、形状なし）は括弧なしで表示
-    // スタック自体がVectorなので、スカラーに括弧を付けるのは冗長
-    if data.len() == 1 && shape.is_empty() {
-        return format_fraction(&data[0]);
-    }
-
-    let bracket = BracketType::from_depth(depth);
-    let open = bracket.opening_char();
-    let close = bracket.closing_char();
-
-    // 1次元ベクタの場合
-    if shape.is_empty() || shape.len() == 1 {
-        let inner: Vec<String> = data.iter().map(format_fraction).collect();
-        format!("{} {} {}", open, inner.join(" "), close)
-    } else {
-        // 多次元の場合: 再帰的に処理
-        let outer_size = shape[0];
-        let inner_shape = &shape[1..];
-        let inner_size: usize = inner_shape.iter().product();
-
-        let mut parts = Vec::new();
-        for i in 0..outer_size {
-            let start = i * inner_size;
-            let end = start + inner_size;
-            if end <= data.len() {
-                let slice = &data[start..end];
-                parts.push(display_with_shape(slice, inner_shape, depth + 1));
+/// 再帰的にValueを表示（深さに応じた括弧）
+fn display_value(data: &ValueData, depth: usize) -> String {
+    match data {
+        ValueData::Nil => "NIL".to_string(),
+        ValueData::Scalar(f) => format_fraction(f),
+        ValueData::Vector(v) => {
+            if v.is_empty() {
+                let bracket = BracketType::from_depth(depth);
+                return format!("{} {}", bracket.opening_char(), bracket.closing_char());
             }
-        }
 
-        format!("{} {} {}", open, parts.join(" "), close)
+            let bracket = BracketType::from_depth(depth);
+            let open = bracket.opening_char();
+            let close = bracket.closing_char();
+
+            let inner: Vec<String> = v.iter()
+                .map(|child| display_value(&child.data, depth + 1))
+                .collect();
+
+            format!("{} {} {}", open, inner.join(" "), close)
+        }
     }
 }
 
 /// Fractionを表示用にフォーマット
 fn format_fraction(f: &Fraction) -> String {
-    if f.denominator.is_one() {
+    if f.is_nil() {
+        return "NIL".to_string();
+    }
+    if f.is_integer() {
         f.numerator.to_string()
     } else {
         format!("{}/{}", f.numerator, f.denominator)
@@ -106,65 +102,111 @@ fn format_fraction(f: &Fraction) -> String {
 ///
 /// UTF-8バイト列として保存されたデータを文字列に復元する。
 /// 各Fractionは0-255のバイト値として解釈される。
-fn display_as_string(data: &[Fraction]) -> String {
-    if data.is_empty() {
-        return "''".to_string();
-    }
-
-    // 各Fractionをバイトとして収集
-    let bytes: Vec<u8> = data
-        .iter()
-        .filter_map(|f| {
-            f.to_i64().and_then(|n| {
+fn display_as_string(data: &ValueData) -> String {
+    match data {
+        ValueData::Nil => "''".to_string(),
+        ValueData::Scalar(f) => {
+            // 単一文字
+            if let Some(n) = f.to_i64() {
                 if n >= 0 && n <= 255 {
-                    Some(n as u8)
-                } else {
-                    None
+                    let c = n as u8 as char;
+                    return format!("'{}'", c);
                 }
-            })
-        })
-        .collect();
+            }
+            format!("'{}'", format_fraction(f))
+        }
+        ValueData::Vector(v) => {
+            if v.is_empty() {
+                return "''".to_string();
+            }
 
-    // UTF-8として復元
-    let chars = String::from_utf8_lossy(&bytes);
+            // 各Valueをバイトとして収集
+            let bytes: Vec<u8> = v.iter()
+                .filter_map(|child| {
+                    if let ValueData::Scalar(f) = &child.data {
+                        f.to_i64().and_then(|n| {
+                            if n >= 0 && n <= 255 {
+                                Some(n as u8)
+                            } else {
+                                None
+                            }
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
 
-    format!("'{}'", chars)
+            // UTF-8として復元
+            let chars = String::from_utf8_lossy(&bytes);
+            format!("'{}'", chars)
+        }
+    }
 }
 
 /// 真偽値として表示
-fn display_as_boolean(data: &[Fraction]) -> String {
-    if data.is_empty() {
-        return "FALSE".to_string();
-    }
-
-    // 単一要素の場合
-    if data.len() == 1 {
-        if data[0].is_zero() {
-            "FALSE".to_string()
-        } else {
-            "TRUE".to_string()
+fn display_as_boolean(data: &ValueData) -> String {
+    match data {
+        ValueData::Nil => "NIL".to_string(),
+        ValueData::Scalar(f) => {
+            if f.is_nil() {
+                "NIL".to_string()
+            } else if f.is_zero() {
+                "FALSE".to_string()
+            } else {
+                "TRUE".to_string()
+            }
         }
-    } else {
-        // 複数要素の場合は各要素を真偽値として
-        let inner: Vec<&str> = data
-            .iter()
-            .map(|f| if f.is_zero() { "FALSE" } else { "TRUE" })
-            .collect();
-        format!("{{ {} }}", inner.join(" "))
+        ValueData::Vector(v) => {
+            if v.is_empty() {
+                return "FALSE".to_string();
+            }
+
+            // 複数要素の場合は各要素を真偽値として
+            let inner: Vec<&str> = v.iter()
+                .map(|child| {
+                    match &child.data {
+                        ValueData::Nil => "NIL",
+                        ValueData::Scalar(f) => {
+                            if f.is_nil() {
+                                "NIL"
+                            } else if f.is_zero() {
+                                "FALSE"
+                            } else {
+                                "TRUE"
+                            }
+                        }
+                        ValueData::Vector(inner) => {
+                            if inner.is_empty() {
+                                "FALSE"
+                            } else {
+                                "TRUE"
+                            }
+                        }
+                    }
+                })
+                .collect();
+            format!("{{ {} }}", inner.join(" "))
+        }
     }
 }
 
 /// 日時として表示
-fn display_as_datetime(data: &[Fraction]) -> String {
-    if data.is_empty() || data.len() != 1 {
-        return display_with_shape(data, &[data.len()], 0);
-    }
-
-    // Unix タイムスタンプとして解釈
-    // @プレフィックスで表示（JavaScript側で詳細な日時フォーマットを行う）
-    if data[0].denominator.is_one() {
-        format!("@{}", data[0].numerator)
-    } else {
-        format!("@{}/{}", data[0].numerator, data[0].denominator)
+fn display_as_datetime(data: &ValueData) -> String {
+    match data {
+        ValueData::Nil => display_value(data, 0),
+        ValueData::Scalar(f) => {
+            // Unix タイムスタンプとして解釈
+            // @プレフィックスで表示（JavaScript側で詳細な日時フォーマットを行う）
+            if f.is_integer() {
+                format!("@{}", f.numerator)
+            } else {
+                format!("@{}/{}", f.numerator, f.denominator)
+            }
+        }
+        ValueData::Vector(_) => {
+            // ベクターの場合は通常表示
+            display_value(data, 0)
+        }
     }
 }
