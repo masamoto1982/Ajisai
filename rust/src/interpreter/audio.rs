@@ -21,59 +21,55 @@
 // - .. PLAY: スタック全体を再生（マルチトラック）
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, DisplayHint};
+use crate::types::{Value, ValueData, DisplayHint};
 use super::Interpreter;
 use super::OperationTarget;
 use num_traits::ToPrimitive;
 use serde::Serialize;
 
 // ============================================================================
-// ヘルパー関数（統一分数アーキテクチャ用）
+// ヘルパー関数（統一Value宇宙アーキテクチャ用）
 // ============================================================================
 
 /// ベクタ値かどうかを判定
 fn is_vector_value(val: &Value) -> bool {
-    val.data.len() > 1 || !val.shape.is_empty()
+    matches!(&val.data, ValueData::Vector(_))
 }
 
 /// 文字列値かどうかを判定
 fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.data.is_empty()
-}
-
-/// ベクタの要素を再構築する
-fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    if val.shape.is_empty() || val.shape.len() == 1 {
-        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
-    } else {
-        let outer_size = val.shape[0];
-        let inner_size: usize = val.shape[1..].iter().product();
-        let inner_shape = val.shape[1..].to_vec();
-
-        (0..outer_size).map(|i| {
-            let start = i * inner_size;
-            let end = start + inner_size;
-            let data = val.data[start..end].to_vec();
-            Value {
-                data,
-                display_hint: val.display_hint,
-                shape: inner_shape.clone(),
-            }
-        }).collect()
-    }
+    val.display_hint == DisplayHint::String && !val.is_nil()
 }
 
 /// Valueから文字列を取得
 fn value_as_string(val: &Value) -> String {
-    val.data.iter()
-        .filter_map(|f| f.to_i64().and_then(|n| {
-            if n >= 0 && n <= 0x10FFFF {
-                char::from_u32(n as u32)
-            } else {
-                None
+    fn collect_chars(val: &Value) -> Vec<char> {
+        match &val.data {
+            ValueData::Nil => vec![],
+            ValueData::Scalar(f) => {
+                f.to_i64().and_then(|n| {
+                    if n >= 0 && n <= 0x10FFFF {
+                        char::from_u32(n as u32)
+                    } else {
+                        None
+                    }
+                }).map(|c| vec![c]).unwrap_or_default()
             }
-        }))
-        .collect()
+            ValueData::Vector(children) => {
+                children.iter().flat_map(|c| collect_chars(c)).collect()
+            }
+        }
+    }
+    collect_chars(val).into_iter().collect()
+}
+
+/// ベクタの子要素を取得
+fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
+    if let ValueData::Vector(children) = &val.data {
+        Some(children)
+    } else {
+        None
+    }
 }
 
 // ============================================================================
@@ -216,27 +212,27 @@ fn build_audio_structure(
 
     // ベクタ判定
     if is_vector_value(value) {
-        let elements = reconstruct_vector_elements(value);
-        if elements.is_empty() {
-            return Err(AjisaiError::from("Empty vector not allowed"));
+        if let Some(children) = get_vector_children(value) {
+            if children.is_empty() {
+                return Err(AjisaiError::from("Empty vector not allowed"));
+            }
+
+            let audio_children: Vec<AudioStructure> = children.iter()
+                .map(|e| build_audio_structure(e, PlayMode::Sequential, output))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
+                .filter(|s| !matches!(s, AudioStructure::Seq { children } if children.is_empty()))
+                .collect();
+
+            return match mode {
+                PlayMode::Sequential => Ok(AudioStructure::Seq { children: audio_children }),
+                PlayMode::Simultaneous => Ok(AudioStructure::Sim { children: audio_children }),
+            };
         }
-
-        let children: Vec<AudioStructure> = elements.iter()
-            .map(|e| build_audio_structure(e, PlayMode::Sequential, output))
-            .collect::<Result<Vec<_>>>()?
-            .into_iter()
-            .filter(|s| !matches!(s, AudioStructure::Seq { children } if children.is_empty()))
-            .collect();
-
-        return match mode {
-            PlayMode::Sequential => Ok(AudioStructure::Seq { children }),
-            PlayMode::Simultaneous => Ok(AudioStructure::Sim { children }),
-        };
     }
 
     // 数値判定（単一スカラー）
-    if value.data.len() == 1 && value.shape.is_empty() {
-        let frac = &value.data[0];
+    if let Some(frac) = value.as_scalar() {
         let freq = frac.numerator.to_f64()
             .ok_or_else(|| AjisaiError::from("Frequency too large"))?;
         let dur = frac.denominator.to_f64()

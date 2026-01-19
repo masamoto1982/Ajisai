@@ -1,13 +1,13 @@
 // rust/src/interpreter/comparison.rs
 //
-// 統一分数アーキテクチャ版の比較演算
+// 統一Value宇宙アーキテクチャ版の比較演算
 //
 // 比較演算の結果は Boolean ヒント付きの値として返す
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
 // ============================================================================
@@ -29,14 +29,25 @@ where
             let b_val = interp.stack.pop().unwrap();
             let a_val = interp.stack.pop().unwrap();
 
-            // 単一要素であることを確認
-            if a_val.data.len() != 1 || b_val.data.len() != 1 {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::structure_error("single-element value", "multi-element or empty value"));
-            }
+            // スカラーであることを確認
+            let a_scalar = match &a_val.data {
+                ValueData::Scalar(f) => f,
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
+                }
+            };
+            let b_scalar = match &b_val.data {
+                ValueData::Scalar(f) => f,
+                _ => {
+                    interp.stack.push(a_val);
+                    interp.stack.push(b_val);
+                    return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
+                }
+            };
 
-            let result = op(&a_val.data[0], &b_val.data[0]);
+            let result = op(a_scalar, b_scalar);
             interp.stack.push(Value::from_bool(result));
             Ok(())
         },
@@ -62,14 +73,25 @@ where
             // 全ての隣接ペアをチェック
             let mut all_true = true;
             for i in 0..items.len() - 1 {
-                // 単一要素であることを確認
-                if items[i].data.len() != 1 || items[i + 1].data.len() != 1 {
-                    interp.stack.extend(items);
-                    interp.stack.push(count_val);
-                    return Err(AjisaiError::structure_error("single-element value", "multi-element or empty value"));
-                }
+                // スカラーであることを確認
+                let a_scalar = match &items[i].data {
+                    ValueData::Scalar(f) => f,
+                    _ => {
+                        interp.stack.extend(items);
+                        interp.stack.push(count_val);
+                        return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
+                    }
+                };
+                let b_scalar = match &items[i + 1].data {
+                    ValueData::Scalar(f) => f,
+                    _ => {
+                        interp.stack.extend(items);
+                        interp.stack.push(count_val);
+                        return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
+                    }
+                };
 
-                if !op(&items[i].data[0], &items[i + 1].data[0]) {
+                if !op(a_scalar, b_scalar) {
                     all_true = false;
                     break;
                 }

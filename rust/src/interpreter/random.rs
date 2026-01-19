@@ -4,7 +4,7 @@
 // 暗号論的疑似乱数生成ワードを実装する。
 // CSPRNG: 暗号論的に安全な乱数を生成
 //
-// 統一分数アーキテクチャ版
+// 統一Value宇宙アーキテクチャ版
 //
 // ============================================================================
 // 【設計思想】分数システムを活用した効率的な乱数生成
@@ -23,7 +23,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, One};
@@ -32,35 +32,8 @@ use num_traits::{ToPrimitive, One};
 const DEFAULT_DENOMINATOR_BITS: u32 = 32;
 
 // ============================================================================
-// ヘルパー関数（統一分数アーキテクチャ用）
+// ヘルパー関数（統一Value宇宙アーキテクチャ用）
 // ============================================================================
-
-/// ベクタ値かどうかを判定
-fn is_vector_value(val: &Value) -> bool {
-    val.data.len() > 1 || !val.shape.is_empty()
-}
-
-/// ベクタの要素を再構築する
-fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    if val.shape.is_empty() || val.shape.len() == 1 {
-        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
-    } else {
-        let outer_size = val.shape[0];
-        let inner_size: usize = val.shape[1..].iter().product();
-        let inner_shape = val.shape[1..].to_vec();
-
-        (0..outer_size).map(|i| {
-            let start = i * inner_size;
-            let end = start + inner_size;
-            let data = val.data[start..end].to_vec();
-            Value {
-                data,
-                display_hint: val.display_hint,
-                shape: inner_shape.clone(),
-            }
-        }).collect()
-    }
-}
 
 /// 0以上denominator未満の一様乱数を生成（リジェクションサンプリング）
 fn generate_uniform(denominator: &BigInt) -> Result<BigInt> {
@@ -89,13 +62,14 @@ fn generate_uniform(denominator: &BigInt) -> Result<BigInt> {
 
 /// スタックから正の整数を抽出（単一要素Vectorの数値）
 fn extract_positive_integer(val: &Value) -> Option<BigInt> {
-    if is_vector_value(val) {
-        let v = reconstruct_vector_elements(val);
-        if v.len() == 1 && v[0].data.len() == 1 && v[0].shape.is_empty() {
-            let frac = &v[0].data[0];
-            // 整数かつ正数かチェック
-            if frac.denominator == BigInt::one() && frac.numerator > BigInt::from(0) {
-                return Some(frac.numerator.clone());
+    // Vectorの場合、最初の要素をチェック
+    if let ValueData::Vector(children) = &val.data {
+        if children.len() == 1 {
+            if let Some(frac) = children[0].as_scalar() {
+                // 整数かつ正数かチェック
+                if frac.denominator == BigInt::one() && frac.numerator > BigInt::from(0) {
+                    return Some(frac.numerator.clone());
+                }
             }
         }
     }
@@ -168,6 +142,7 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
+    use crate::types::ValueData;
 
     #[tokio::test]
     async fn test_csprng_rejects_stack_mode() {
@@ -187,7 +162,11 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
         // Check it's a vector with 1 element
         let val = &interp.stack[0];
-        assert_eq!(val.data.len(), 1);
+        if let ValueData::Vector(children) = &val.data {
+            assert_eq!(children.len(), 1);
+        } else {
+            panic!("Expected Vector");
+        }
     }
 
     #[tokio::test]
@@ -198,7 +177,11 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
         // Check it's a vector with 5 elements
         let val = &interp.stack[0];
-        assert_eq!(val.data.len(), 5);
+        if let ValueData::Vector(children) = &val.data {
+            assert_eq!(children.len(), 5);
+        } else {
+            panic!("Expected Vector");
+        }
     }
 
     #[tokio::test]
@@ -210,7 +193,11 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
         // Check it's a vector with 3 elements
         let val = &interp.stack[0];
-        assert_eq!(val.data.len(), 3);
+        if let ValueData::Vector(children) = &val.data {
+            assert_eq!(children.len(), 3);
+        } else {
+            panic!("Expected Vector");
+        }
     }
 
     #[tokio::test]
@@ -231,6 +218,10 @@ mod tests {
         assert!(result.is_ok());
         // Check it's a vector with 50 elements
         let val = &interp.stack[0];
-        assert_eq!(val.data.len(), 50);
+        if let ValueData::Vector(children) = &val.data {
+            assert_eq!(children.len(), 50);
+        } else {
+            panic!("Expected Vector");
+        }
     }
 }

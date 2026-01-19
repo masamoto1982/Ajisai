@@ -5,52 +5,34 @@
 // Introsortアルゴリズムを使用し、分数比較には除算を避けて
 // クロス乗算（a/b < c/d ⟺ a*d < b*c）を使用する。
 //
-// 統一分数アーキテクチャ版
+// 統一Value宇宙アーキテクチャ版
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
 // ============================================================================
-// ヘルパー関数（統一分数アーキテクチャ用）
+// ヘルパー関数（統一Value宇宙アーキテクチャ用）
 // ============================================================================
 
 /// ベクタ値かどうかを判定
 fn is_vector_value(val: &Value) -> bool {
-    val.data.len() > 1 || !val.shape.is_empty()
+    matches!(&val.data, ValueData::Vector(_))
 }
 
 /// 値から数値（Fraction）を抽出する
-/// スカラー値（data.len() == 1 && shape.is_empty()）の場合にFractionを返す
+/// スカラー値の場合にFractionを返す
 fn extract_fraction(val: &Value) -> Option<Fraction> {
-    if val.data.len() == 1 && val.shape.is_empty() {
-        Some(val.data[0].clone())
-    } else {
-        None
-    }
+    val.as_scalar().cloned()
 }
 
-/// ベクタの要素を再構築する
-fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    if val.shape.is_empty() || val.shape.len() == 1 {
-        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
+/// ベクタの子要素を取得
+fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
+    if let ValueData::Vector(children) = &val.data {
+        Some(children)
     } else {
-        // 多次元の場合は最外層の要素を再構築
-        let outer_size = val.shape[0];
-        let inner_size: usize = val.shape[1..].iter().product();
-        let inner_shape = val.shape[1..].to_vec();
-
-        (0..outer_size).map(|i| {
-            let start = i * inner_size;
-            let end = start + inner_size;
-            let data = val.data[start..end].to_vec();
-            Value {
-                data,
-                display_hint: val.display_hint,
-                shape: inner_shape.clone(),
-            }
-        }).collect()
+        None
     }
 }
 
@@ -66,59 +48,58 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             if is_vector_value(&val) {
-                let v = reconstruct_vector_elements(&val);
+                if let Some(children) = get_vector_children(&val) {
+                    if children.is_empty() {
+                        // 空ベクタはNILとして返す
+                        interp.stack.push(Value::nil());
+                        return Ok(());
+                    }
 
-                if v.is_empty() {
-                    // 空ベクタはNILとして返す
-                    interp.stack.push(Value::nil());
-                    return Ok(());
-                }
+                    // 各要素からFractionを抽出
+                    let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(children.len());
+                    for (i, elem) in children.iter().enumerate() {
+                        match extract_fraction(elem) {
+                            Some(f) => indexed_fractions.push((i, f)),
+                            None => {
+                                interp.stack.push(val);
+                                return Err(AjisaiError::from(
+                                    "SORT requires all elements to be numbers"
+                                ));
+                            }
+                        }
+                    }
 
-                // 各要素からFractionを抽出
-                let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(v.len());
-                for (i, elem) in v.iter().enumerate() {
-                    match extract_fraction(elem) {
-                        Some(f) => indexed_fractions.push((i, f)),
-                        None => {
-                            interp.stack.push(Value::from_vector(v));
+                    // Introsortでソート
+                    introsort_fractions(&mut indexed_fractions);
+
+                    // ソート結果から新しいベクタを構築
+                    let sorted_v: Vec<Value> = indexed_fractions
+                        .iter()
+                        .map(|(orig_idx, _)| children[*orig_idx].clone())
+                        .collect();
+
+                    // "No change is an error" チェック
+                    if !interp.disable_no_change_check {
+                        if children.len() < 2 {
+                            interp.stack.push(Value::from_vector(sorted_v));
                             return Err(AjisaiError::from(
-                                "SORT requires all elements to be numbers"
+                                "SORT resulted in no change on a vector with less than 2 elements"
+                            ));
+                        }
+                        if sorted_v == *children {
+                            interp.stack.push(Value::from_vector(sorted_v));
+                            return Err(AjisaiError::from(
+                                "SORT resulted in no change (vector is already sorted)"
                             ));
                         }
                     }
+
+                    interp.stack.push(Value::from_vector(sorted_v));
+                    return Ok(());
                 }
-
-                // Introsortでソート
-                introsort_fractions(&mut indexed_fractions);
-
-                // ソート結果から新しいベクタを構築
-                let sorted_v: Vec<Value> = indexed_fractions
-                    .iter()
-                    .map(|(orig_idx, _)| v[*orig_idx].clone())
-                    .collect();
-
-                // "No change is an error" チェック
-                if !interp.disable_no_change_check {
-                    if v.len() < 2 {
-                        interp.stack.push(Value::from_vector(sorted_v));
-                        return Err(AjisaiError::from(
-                            "SORT resulted in no change on a vector with less than 2 elements"
-                        ));
-                    }
-                    if sorted_v == v {
-                        interp.stack.push(Value::from_vector(sorted_v));
-                        return Err(AjisaiError::from(
-                            "SORT resulted in no change (vector is already sorted)"
-                        ));
-                    }
-                }
-
-                interp.stack.push(Value::from_vector(sorted_v));
-                Ok(())
-            } else {
-                interp.stack.push(val);
-                Err(AjisaiError::structure_error("vector", "other format"))
             }
+            interp.stack.push(val);
+            Err(AjisaiError::structure_error("vector", "other format"))
         }
         OperationTarget::Stack => {
             if interp.stack.is_empty() {

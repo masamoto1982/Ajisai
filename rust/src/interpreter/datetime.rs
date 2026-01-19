@@ -6,7 +6,7 @@
 // DATETIME: タイムスタンプ（数値） → Vector（日付時刻）
 // TIMESTAMP: Vector（日付時刻） → タイムスタンプ（数値）
 //
-// 統一分数アーキテクチャ版
+// 統一Value宇宙アーキテクチャ版
 //
 // ============================================================================
 // 【設計思想】タイムゾーン処理における設計選択
@@ -43,67 +43,65 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::wrap_datetime;
-use crate::types::{Value, DisplayHint};
+use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{ToPrimitive, One, Zero};
 use wasm_bindgen::prelude::*;
 
 // ============================================================================
-// ヘルパー関数（統一分数アーキテクチャ用）
+// ヘルパー関数（統一Value宇宙アーキテクチャ用）
 // ============================================================================
 
 /// ベクタ値かどうかを判定
 fn is_vector_value(val: &Value) -> bool {
-    val.data.len() > 1 || !val.shape.is_empty()
+    matches!(&val.data, ValueData::Vector(_))
 }
 
 /// 文字列値かどうかを判定
 fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.data.is_empty()
+    val.display_hint == DisplayHint::String && !val.is_nil()
 }
 
 /// 数値値かどうかを判定
 fn is_number_value(val: &Value) -> bool {
-    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto | DisplayHint::DateTime) && val.data.len() == 1 && val.shape.is_empty()
+    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto | DisplayHint::DateTime) && val.is_scalar()
 }
 
 /// Valueから文字列を取得
 fn value_as_string(val: &Value) -> Option<String> {
-    if val.data.is_empty() {
-        return None;
-    }
-    Some(val.data.iter()
-        .filter_map(|f| f.to_i64().and_then(|n| {
-            if n >= 0 && n <= 0x10FFFF {
-                char::from_u32(n as u32)
-            } else {
-                None
+    fn collect_chars(val: &Value) -> Vec<char> {
+        match &val.data {
+            ValueData::Nil => vec![],
+            ValueData::Scalar(f) => {
+                f.to_i64().and_then(|n| {
+                    if n >= 0 && n <= 0x10FFFF {
+                        char::from_u32(n as u32)
+                    } else {
+                        None
+                    }
+                }).map(|c| vec![c]).unwrap_or_default()
             }
-        }))
-        .collect())
+            ValueData::Vector(children) => {
+                children.iter().flat_map(|c| collect_chars(c)).collect()
+            }
+        }
+    }
+
+    let chars = collect_chars(val);
+    if chars.is_empty() {
+        None
+    } else {
+        Some(chars.into_iter().collect())
+    }
 }
 
-/// ベクタの要素を再構築する
-fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    if val.shape.is_empty() || val.shape.len() == 1 {
-        val.data.iter().map(|f| Value::from_fraction(f.clone())).collect()
+/// ベクタの子要素を取得
+fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
+    if let ValueData::Vector(children) = &val.data {
+        Some(children)
     } else {
-        // 多次元の場合は最外層の要素を再構築
-        let outer_size = val.shape[0];
-        let inner_size: usize = val.shape[1..].iter().product();
-        let inner_shape = val.shape[1..].to_vec();
-
-        (0..outer_size).map(|i| {
-            let start = i * inner_size;
-            let end = start + inner_size;
-            let data = val.data[start..end].to_vec();
-            Value {
-                data,
-                display_hint: val.display_hint,
-                shape: inner_shape.clone(),
-            }
-        }).collect()
+        None
     }
 }
 
@@ -174,9 +172,13 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let timezone = if is_vector_value(&tz_val) {
-        let v = reconstruct_vector_elements(&tz_val);
-        if v.len() == 1 && is_string_value(&v[0]) {
-            value_as_string(&v[0]).unwrap_or_default()
+        if let Some(children) = get_vector_children(&tz_val) {
+            if children.len() == 1 && is_string_value(&children[0]) {
+                value_as_string(&children[0]).unwrap_or_default()
+            } else {
+                interp.stack.push(tz_val);
+                return Err(AjisaiError::from("DATETIME: timezone must be a String (e.g., 'LOCAL')"));
+            }
         } else {
             interp.stack.push(tz_val);
             return Err(AjisaiError::from("DATETIME: timezone must be a String (e.g., 'LOCAL')"));
@@ -199,9 +201,20 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
 
     // Vectorから数値またはDateTime型を抽出
     let timestamp = if is_vector_value(&val) {
-        let v = reconstruct_vector_elements(&val);
-        if v.len() == 1 && is_number_value(&v[0]) {
-            v[0].data[0].clone()
+        if let Some(children) = get_vector_children(&val) {
+            if children.len() == 1 && is_number_value(&children[0]) {
+                if let Some(f) = children[0].as_scalar() {
+                    f.clone()
+                } else {
+                    interp.stack.push(val);
+                    interp.stack.push(tz_val);
+                    return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
+                }
+            } else {
+                interp.stack.push(val);
+                interp.stack.push(tz_val);
+                return Err(AjisaiError::from("DATETIME: requires Number or DateTime type for timestamp"));
+            }
         } else {
             interp.stack.push(val);
             interp.stack.push(tz_val);
@@ -282,9 +295,13 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let timezone = if is_vector_value(&tz_val) {
-        let v = reconstruct_vector_elements(&tz_val);
-        if v.len() == 1 && is_string_value(&v[0]) {
-            value_as_string(&v[0]).unwrap_or_default()
+        if let Some(children) = get_vector_children(&tz_val) {
+            if children.len() == 1 && is_string_value(&children[0]) {
+                value_as_string(&children[0]).unwrap_or_default()
+            } else {
+                interp.stack.push(tz_val);
+                return Err(AjisaiError::from("TIMESTAMP: timezone must be a String (e.g., 'LOCAL')"));
+            }
         } else {
             interp.stack.push(tz_val);
             return Err(AjisaiError::from("TIMESTAMP: timezone must be a String (e.g., 'LOCAL')"));
@@ -307,9 +324,20 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     // Vectorから日付時刻成分を抽出（[[year month day hour minute second]]形式）
     let components = if is_vector_value(&val) {
-        let v = reconstruct_vector_elements(&val);
-        if v.len() == 1 && is_vector_value(&v[0]) {
-            reconstruct_vector_elements(&v[0])
+        if let Some(children) = get_vector_children(&val) {
+            if children.len() == 1 && is_vector_value(&children[0]) {
+                if let Some(inner_children) = get_vector_children(&children[0]) {
+                    inner_children.clone()
+                } else {
+                    interp.stack.push(val);
+                    interp.stack.push(tz_val);
+                    return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
+                }
+            } else {
+                interp.stack.push(val);
+                interp.stack.push(tz_val);
+                return Err(AjisaiError::from("TIMESTAMP: requires Vector type for datetime"));
+            }
         } else {
             interp.stack.push(val);
             interp.stack.push(tz_val);
@@ -334,19 +362,26 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     let mut integers = Vec::new();
     for (i, component) in components.iter().take(6).enumerate() {
         if is_number_value(component) {
-            let frac = &component.data[0];
-            if frac.denominator != BigInt::one() {
+            if let Some(frac) = component.as_scalar() {
+                if frac.denominator != BigInt::one() {
+                    interp.stack.push(val);
+                    interp.stack.push(tz_val);
+                    return Err(AjisaiError::from(
+                        format!("TIMESTAMP: element {} must be an integer, got {}/{}",
+                            i, frac.numerator, frac.denominator)
+                    ));
+                }
+                let int_val = frac.numerator.to_i32().ok_or_else(|| {
+                    AjisaiError::from(format!("TIMESTAMP: element {} too large", i))
+                })?;
+                integers.push(int_val);
+            } else {
                 interp.stack.push(val);
                 interp.stack.push(tz_val);
                 return Err(AjisaiError::from(
-                    format!("TIMESTAMP: element {} must be an integer, got {}/{}",
-                        i, frac.numerator, frac.denominator)
+                    format!("TIMESTAMP: element {} must be a Number", i)
                 ));
             }
-            let int_val = frac.numerator.to_i32().ok_or_else(|| {
-                AjisaiError::from(format!("TIMESTAMP: element {} too large", i))
-            })?;
-            integers.push(int_val);
         } else {
             interp.stack.push(val);
             interp.stack.push(tz_val);
@@ -366,7 +401,13 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // サブ秒成分を抽出（あれば）
     let subsec = if components.len() == 7 {
         if is_number_value(&components[6]) {
-            Some(components[6].data[0].clone())
+            if let Some(f) = components[6].as_scalar() {
+                Some(f.clone())
+            } else {
+                interp.stack.push(val);
+                interp.stack.push(tz_val);
+                return Err(AjisaiError::from("TIMESTAMP: subsecond must be a Number"));
+            }
         } else {
             interp.stack.push(val);
             interp.stack.push(tz_val);

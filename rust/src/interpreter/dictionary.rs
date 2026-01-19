@@ -8,38 +8,44 @@
 use crate::interpreter::{Interpreter, WordDefinition, OperationTarget};
 use crate::interpreter::helpers::get_word_name_from_value;
 use crate::error::{AjisaiError, Result};
-use crate::types::{Token, ExecutionLine, DisplayHint};
+use crate::types::{Token, ExecutionLine, DisplayHint, Value, ValueData};
 use std::collections::HashSet;
 
 /// 値を文字列として解釈する
 ///
-/// 統一分数アーキテクチャ: すべての値は分数のベクタなので、
-/// 各分数をコードポイントとして文字列に変換する。
-fn value_to_string(val: &crate::types::Value) -> Result<String> {
-    if val.data.is_empty() {
+/// 統一Value宇宙アーキテクチャ: 再帰的にValue構造を走査して文字列を構築
+fn value_to_string(val: &Value) -> Result<String> {
+    fn collect_chars(val: &Value) -> Vec<char> {
+        match &val.data {
+            ValueData::Nil => vec![],
+            ValueData::Scalar(f) => {
+                f.to_i64().and_then(|n| {
+                    if n >= 0 && n <= 0x10FFFF {
+                        char::from_u32(n as u32)
+                    } else {
+                        None
+                    }
+                }).map(|c| vec![c]).unwrap_or_default()
+            }
+            ValueData::Vector(children) => {
+                children.iter().flat_map(|c| collect_chars(c)).collect()
+            }
+        }
+    }
+
+    let chars = collect_chars(val);
+    if chars.is_empty() {
         return Err(AjisaiError::from("Cannot convert NIL to string"));
     }
 
-    let chars: String = val.data.iter()
-        .filter_map(|f| {
-            f.to_i64().and_then(|n| {
-                if n >= 0 && n <= 0x10FFFF {
-                    char::from_u32(n as u32)
-                } else {
-                    None
-                }
-            })
-        })
-        .collect();
-
-    Ok(chars)
+    Ok(chars.into_iter().collect())
 }
 
 /// 値が文字列として解釈可能かチェック
 ///
 /// DisplayHint が String の場合、または有効なコードポイントの範囲内にある場合
-fn is_string_like(val: &crate::types::Value) -> bool {
-    if val.data.is_empty() {
+fn is_string_like(val: &Value) -> bool {
+    if val.is_nil() {
         return false;
     }
 
@@ -48,10 +54,20 @@ fn is_string_like(val: &crate::types::Value) -> bool {
         return true;
     }
 
-    // すべての要素が有効なコードポイント範囲にあるかチェック
-    val.data.iter().all(|f| {
-        f.to_i64().map(|n| n >= 0 && n <= 0x10FFFF).unwrap_or(false)
-    })
+    // 再帰的にすべての要素が有効なコードポイント範囲にあるかチェック
+    fn check_codepoints(val: &Value) -> bool {
+        match &val.data {
+            ValueData::Nil => false,
+            ValueData::Scalar(f) => {
+                f.to_i64().map(|n| n >= 0 && n <= 0x10FFFF).unwrap_or(false)
+            }
+            ValueData::Vector(children) => {
+                children.iter().all(|c| check_codepoints(c))
+            }
+        }
+    }
+
+    check_codepoints(val)
 }
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
@@ -390,10 +406,15 @@ mod tests {
         // スタックトップが [ 15 ] であることを確認（Vector）
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.data.len(), 1, "Result should have one element");
-            // 15 は分数として 15/1 で表現される
-            assert_eq!(val.data[0].numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", val.data[0].numerator);
-            assert_eq!(val.data[0].denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
+            // 新しいValue構造では、Vectorは1要素のベクタ
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                // 15 は分数として 15/1 で表現される
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", f.numerator);
+                    assert_eq!(f.denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
+                }
+            }
         }
     }
 

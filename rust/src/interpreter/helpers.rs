@@ -5,10 +5,10 @@
 // 型変換、値の抽出、エラーハンドリングなどの定型処理を一元化し、
 // コードの重複を排除して保守性を向上させる。
 //
-// 統一分数アーキテクチャ対応版
+// 統一Value宇宙アーキテクチャ対応版
 
 use crate::error::{AjisaiError, Result};
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
@@ -20,7 +20,7 @@ use num_traits::{One, ToPrimitive};
 /// 単一要素の値から整数値（i64）を抽出する
 ///
 /// 【責務】
-/// - 値が単一要素であることを検証
+/// - 値がスカラーであることを検証
 /// - 内部の数値が整数（分母が1）であることを検証
 /// - i64範囲内に収まることを検証
 ///
@@ -29,26 +29,30 @@ use num_traits::{One, ToPrimitive};
 /// - 整数パラメータの取得
 ///
 /// 【エラー】
-/// - 単一要素でない場合
+/// - スカラーでない場合
 /// - 分数の場合
 /// - i64範囲を超える場合
 pub fn get_integer_from_value(value: &Value) -> Result<i64> {
-    if value.data.len() != 1 {
-        return Err(AjisaiError::structure_error("single-element value with integer", "multi-element or empty value"));
+    match &value.data {
+        ValueData::Scalar(f) => {
+            if f.denominator != BigInt::one() {
+                return Err(AjisaiError::structure_error("integer", "fraction"));
+            }
+            f.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
+        }
+        ValueData::Nil => {
+            Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
+        }
+        ValueData::Vector(_) => {
+            Err(AjisaiError::structure_error("single-element value with integer", "vector"))
+        }
     }
-
-    let f = &value.data[0];
-    if f.denominator != BigInt::one() {
-        return Err(AjisaiError::structure_error("integer", "fraction"));
-    }
-
-    f.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
 }
 
 /// 単一要素の値からBigInt整数値を抽出する
 ///
 /// 【責務】
-/// - 値が単一要素であることを検証
+/// - 値がスカラーであることを検証
 /// - 内部の数値が整数（分母が1）であることを検証
 /// - BigIntとして返す（サイズ制限なし）
 ///
@@ -57,19 +61,23 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
 /// - 大きな整数値の取得
 ///
 /// 【エラー】
-/// - 単一要素でない場合
+/// - スカラーでない場合
 /// - 分数の場合
 pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
-    if value.data.len() != 1 {
-        return Err(AjisaiError::structure_error("single-element value with integer", "multi-element or empty value"));
+    match &value.data {
+        ValueData::Scalar(f) => {
+            if f.denominator != BigInt::one() {
+                return Err(AjisaiError::structure_error("integer", "fraction"));
+            }
+            Ok(f.numerator.clone())
+        }
+        ValueData::Nil => {
+            Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
+        }
+        ValueData::Vector(_) => {
+            Err(AjisaiError::structure_error("single-element value with integer", "vector"))
+        }
     }
-
-    let f = &value.data[0];
-    if f.denominator != BigInt::one() {
-        return Err(AjisaiError::structure_error("integer", "fraction"));
-    }
-
-    Ok(f.numerator.clone())
 }
 
 // ============================================================================
@@ -79,22 +87,20 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
 /// 値から数値（Fraction）への参照を抽出する
 ///
 /// 【責務】
-/// - 単一要素の値の場合はその要素を返す
+/// - スカラー値の場合はその要素を返す
 ///
 /// 【用途】
 /// - 算術演算での数値取得
 /// - 数値が必要な演算全般
 ///
 /// 【エラー】
-/// - 空の値の場合
+/// - スカラーでない場合
 #[allow(dead_code)]
 pub fn extract_number(val: &Value) -> Result<&Fraction> {
-    if val.is_nil() {
-        Err(AjisaiError::from("Cannot extract number from NIL"))
-    } else if val.data.len() == 1 {
-        Ok(&val.data[0])
-    } else {
-        Err(AjisaiError::structure_error("single-element value", "multi-element value"))
+    match &val.data {
+        ValueData::Scalar(f) => Ok(f),
+        ValueData::Nil => Err(AjisaiError::from("Cannot extract number from NIL")),
+        ValueData::Vector(_) => Err(AjisaiError::structure_error("scalar value", "vector")),
     }
 }
 
@@ -109,14 +115,15 @@ pub fn extract_number(val: &Value) -> Result<&Fraction> {
 /// - 文字列パラメータの取得
 ///
 /// 【エラー】
-/// - 空の値の場合
+/// - NILの場合
 pub fn get_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
         return Err(AjisaiError::from("Cannot get word name from NIL"));
     }
 
     // 分数の配列を文字列として解釈
-    let chars: String = value.data.iter()
+    let fractions = value.flatten_fractions();
+    let chars: String = fractions.iter()
         .filter_map(|f| {
             f.to_i64().and_then(|n| {
                 if n >= 0 && n <= 0x10FFFF {
@@ -188,7 +195,7 @@ pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
 /// - fraction: ラップする数値
 ///
 /// 【戻り値】
-/// - 単一要素の数値Value
+/// - スカラーの数値Value
 pub fn wrap_number(fraction: Fraction) -> Value {
     Value::from_fraction(fraction)
 }
@@ -203,7 +210,7 @@ pub fn wrap_number(fraction: Fraction) -> Value {
 /// - fraction: ラップするタイムスタンプ（Unixタイムスタンプ）
 ///
 /// 【戻り値】
-/// - DateTime ヒント付きの単一要素Value
+/// - DateTime ヒント付きのスカラーValue
 pub fn wrap_datetime(fraction: Fraction) -> Value {
     Value::from_datetime(fraction)
 }
@@ -219,7 +226,7 @@ pub fn wrap_value(value: Value) -> Value {
 
 /// 後方互換性: 単一要素の値を取り出す
 ///
-/// 統一分数アーキテクチャでは、この関数は値をそのまま返します。
+/// 統一Value宇宙アーキテクチャでは、この関数は値をそのまま返します。
 /// 旧アーキテクチャとの互換性のために残されています。
 pub fn unwrap_single_element(value: Value) -> Value {
     value
@@ -251,8 +258,8 @@ mod tests {
     fn test_wrap_number() {
         let frac = Fraction::new(BigInt::from(42), BigInt::one());
         let wrapped = wrap_number(frac.clone());
-        assert_eq!(wrapped.data.len(), 1);
-        assert_eq!(wrapped.data[0], frac);
+        assert!(wrapped.is_scalar());
+        assert_eq!(wrapped.as_scalar(), Some(&frac));
     }
 
     #[test]
