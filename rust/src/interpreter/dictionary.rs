@@ -378,6 +378,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
+    use crate::types::ValueData;
 
     #[tokio::test]
     async fn test_cannot_override_builtin_word() {

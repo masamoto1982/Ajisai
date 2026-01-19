@@ -721,6 +721,7 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::ValueData;
 
     #[tokio::test]
     async fn test_stack_get_basic() {
@@ -772,8 +773,8 @@ mod tests {
         assert_eq!(interp.stack.len(), 4);
         // 最後の値が TRUE であることを確認
         let val = &interp.stack[3];
-        assert_eq!(val.data.len(), 1, "Expected single element");
-        assert!(!val.data[0].is_zero(), "Expected TRUE from comparison");
+        assert_eq!(val.len(), 1, "Expected single element");
+        assert!(!val.as_scalar().expect("Expected scalar").is_zero(), "Expected TRUE from comparison");
     }
 
     #[tokio::test]
@@ -1019,8 +1020,8 @@ ADDTEST
         // Verify result
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.data.len(), 1, "Result should have one element");
-            assert_eq!(val.data[0].numerator.to_string(), "8", "Result should be 8");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "8", "Result should be 8");
         }
     }
 
@@ -1059,8 +1060,8 @@ ADDTEST
         // Verify result: (1 + 2) * 3 = 9
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.data.len(), 1, "Result should have one element");
-            assert_eq!(val.data[0].numerator.to_string(), "9", "Result should be 9");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "9", "Result should be 9");
         }
     }
 
@@ -1080,8 +1081,8 @@ ADDTEST
         // Verify result: (10 + 20) * 5 = 150
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.data.len(), 1, "Result should have one element");
-            assert_eq!(val.data[0].numerator.to_string(), "150", "Result should be 150");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "150", "Result should be 150");
         }
     }
 
@@ -1102,8 +1103,8 @@ ADDTEST
         // Result should be [100] because 5 > 3 is true
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.data.len(), 1, "Result should have one element");
-            assert_eq!(val.data[0].numerator.to_string(), "100", "Result should be 100");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "100", "Result should be 100");
         }
 
         // Clear stack
@@ -1142,8 +1143,8 @@ ADDTEST
         // すべての条件がfalseなのでデフォルトの999
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.data.len(), 1, "Result should have one element");
-            assert_eq!(val.data[0].numerator.to_string(), "999");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "999");
         }
     }
 
@@ -1157,10 +1158,14 @@ ADDTEST
         // 結果が [ 2 3 4 ] であることを確認
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.data.len(), 3, "Result should have 3 elements");
-            assert_eq!(val.data[0].numerator.to_string(), "2", "First element should be 2");
-            assert_eq!(val.data[1].numerator.to_string(), "3", "Second element should be 3");
-            assert_eq!(val.data[2].numerator.to_string(), "4", "Third element should be 4");
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 3, "Result should have 3 elements");
+                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "2", "First element should be 2");
+                assert_eq!(children[1].as_scalar().expect("Expected scalar").numerator.to_string(), "3", "Second element should be 3");
+                assert_eq!(children[2].as_scalar().expect("Expected scalar").numerator.to_string(), "4", "Third element should be 4");
+            } else {
+                panic!("Expected vector result");
+            }
         }
     }
 
@@ -1222,23 +1227,26 @@ ADDTEST
 
         // Vectorは3要素を持つ（NILも1要素としてカウント）
         let vec_val = &interp.stack[0];
-        assert_eq!(vec_val.shape, vec![3], "Vector should have 3 elements including NIL");
-        assert_eq!(vec_val.data.len(), 3, "Data should have 3 fractions");
-
-        // 2番目の要素がNIL（センチネル分数）
-        assert!(vec_val.data[1].is_nil(), "Second element should be NIL sentinel");
+        assert_eq!(vec_val.shape(), vec![3], "Vector should have 3 elements including NIL");
+        if let ValueData::Vector(children) = &vec_val.data {
+            assert_eq!(children.len(), 3, "Data should have 3 elements");
+            // 2番目の要素がNIL
+            assert!(children[1].is_nil(), "Second element should be NIL");
+        } else {
+            panic!("Expected vector");
+        }
     }
 
     #[tokio::test]
     async fn test_nil_is_value() {
         use crate::types::Value;
 
-        // NILはスカラー値
+        // NILはValueData::Nil
         let nil = Value::nil();
         assert!(nil.is_nil(), "Value::nil() should be NIL");
-        assert!(nil.shape.is_empty(), "NIL should be scalar (empty shape)");
-        assert_eq!(nil.data.len(), 1, "NIL should have one sentinel fraction");
-        assert!(nil.data[0].is_nil(), "NIL's fraction should be NIL sentinel");
+        assert!(nil.shape().is_empty(), "NIL should be scalar (empty shape)");
+        // 新アーキテクチャでは ValueData::Nil なので直接確認
+        assert!(matches!(nil.data, ValueData::Nil), "NIL should be ValueData::Nil");
     }
 
     #[tokio::test]

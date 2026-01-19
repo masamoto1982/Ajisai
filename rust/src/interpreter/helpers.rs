@@ -20,7 +20,7 @@ use num_traits::{One, ToPrimitive};
 /// 単一要素の値から整数値（i64）を抽出する
 ///
 /// 【責務】
-/// - 値がスカラーであることを検証
+/// - 値がスカラーまたは単一要素ベクタであることを検証
 /// - 内部の数値が整数（分母が1）であることを検証
 /// - i64範囲内に収まることを検証
 ///
@@ -29,7 +29,7 @@ use num_traits::{One, ToPrimitive};
 /// - 整数パラメータの取得
 ///
 /// 【エラー】
-/// - スカラーでない場合
+/// - 複数要素ベクタの場合
 /// - 分数の場合
 /// - i64範囲を超える場合
 pub fn get_integer_from_value(value: &Value) -> Result<i64> {
@@ -43,8 +43,12 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
         ValueData::Nil => {
             Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
         }
+        ValueData::Vector(children) if children.len() == 1 => {
+            // 単一要素ベクタの場合、再帰的に処理
+            get_integer_from_value(&children[0])
+        }
         ValueData::Vector(_) => {
-            Err(AjisaiError::structure_error("single-element value with integer", "vector"))
+            Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
         }
     }
 }
@@ -52,7 +56,7 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
 /// 単一要素の値からBigInt整数値を抽出する
 ///
 /// 【責務】
-/// - 値がスカラーであることを検証
+/// - 値がスカラーまたは単一要素ベクタであることを検証
 /// - 内部の数値が整数（分母が1）であることを検証
 /// - BigIntとして返す（サイズ制限なし）
 ///
@@ -61,7 +65,7 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
 /// - 大きな整数値の取得
 ///
 /// 【エラー】
-/// - スカラーでない場合
+/// - 複数要素ベクタの場合
 /// - 分数の場合
 pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
     match &value.data {
@@ -74,8 +78,12 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
         ValueData::Nil => {
             Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
         }
+        ValueData::Vector(children) if children.len() == 1 => {
+            // 単一要素ベクタの場合、再帰的に処理
+            get_bigint_from_value(&children[0])
+        }
         ValueData::Vector(_) => {
-            Err(AjisaiError::structure_error("single-element value with integer", "vector"))
+            Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
         }
     }
 }

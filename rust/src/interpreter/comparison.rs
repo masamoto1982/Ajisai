@@ -11,6 +11,25 @@ use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
 // ============================================================================
+// ヘルパー関数
+// ============================================================================
+
+/// 値からスカラー（Fraction）を抽出
+/// - Scalar: そのままFractionを返す
+/// - 単一要素Vector: 内部のスカラーを抽出
+/// - それ以外: None
+fn extract_scalar_for_comparison(val: &Value) -> Option<&Fraction> {
+    match &val.data {
+        ValueData::Scalar(f) => Some(f),
+        ValueData::Vector(children) if children.len() == 1 => {
+            // 単一要素ベクタの場合、その中のスカラーを取り出す
+            extract_scalar_for_comparison(&children[0])
+        },
+        _ => None
+    }
+}
+
+// ============================================================================
 // 比較演算子
 // ============================================================================
 
@@ -29,18 +48,18 @@ where
             let b_val = interp.stack.pop().unwrap();
             let a_val = interp.stack.pop().unwrap();
 
-            // スカラーであることを確認
-            let a_scalar = match &a_val.data {
-                ValueData::Scalar(f) => f,
-                _ => {
+            // スカラーを抽出（単一要素ベクタも許容）
+            let a_scalar = match extract_scalar_for_comparison(&a_val) {
+                Some(f) => f,
+                None => {
                     interp.stack.push(a_val);
                     interp.stack.push(b_val);
                     return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
                 }
             };
-            let b_scalar = match &b_val.data {
-                ValueData::Scalar(f) => f,
-                _ => {
+            let b_scalar = match extract_scalar_for_comparison(&b_val) {
+                Some(f) => f,
+                None => {
                     interp.stack.push(a_val);
                     interp.stack.push(b_val);
                     return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
@@ -73,18 +92,18 @@ where
             // 全ての隣接ペアをチェック
             let mut all_true = true;
             for i in 0..items.len() - 1 {
-                // スカラーであることを確認
-                let a_scalar = match &items[i].data {
-                    ValueData::Scalar(f) => f,
-                    _ => {
+                // スカラーを抽出（単一要素ベクタも許容）
+                let a_scalar = match extract_scalar_for_comparison(&items[i]) {
+                    Some(f) => f,
+                    None => {
                         interp.stack.extend(items);
                         interp.stack.push(count_val);
                         return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
                     }
                 };
-                let b_scalar = match &items[i + 1].data {
-                    ValueData::Scalar(f) => f,
-                    _ => {
+                let b_scalar = match extract_scalar_for_comparison(&items[i + 1]) {
+                    Some(f) => f,
+                    None => {
                         interp.stack.extend(items);
                         interp.stack.push(count_val);
                         return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
