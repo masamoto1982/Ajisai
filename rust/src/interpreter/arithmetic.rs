@@ -11,6 +11,26 @@ use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
 // ============================================================================
+// ヘルパー関数
+// ============================================================================
+
+/// 値から単一スカラーを抽出（スカラーまたは単一要素ベクタから）
+fn extract_single_scalar(val: &Value) -> Option<&Fraction> {
+    match &val.data {
+        ValueData::Scalar(f) => Some(f),
+        ValueData::Vector(children) if children.len() == 1 => {
+            extract_single_scalar(&children[0])
+        }
+        _ => None
+    }
+}
+
+/// 値が単一スカラーとして扱えるかチェック
+fn is_single_scalar(val: &Value) -> bool {
+    extract_single_scalar(val).is_some()
+}
+
+// ============================================================================
 // ブロードキャスト付き二項演算
 // ============================================================================
 
@@ -120,19 +140,19 @@ where
 
             let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count ..).collect();
 
-            // 各要素がスカラーであることを確認
-            if items.iter().any(|v| !v.is_scalar()) {
+            // 各要素が単一スカラーとして扱えることを確認（単一要素ベクタも許容）
+            if items.iter().any(|v| !is_single_scalar(v)) {
                 interp.stack.extend(items);
                 interp.stack.push(count_val);
                 return Err(AjisaiError::from("STACK mode requires single-element values"));
             }
 
-            let first_scalar = items[0].as_scalar().unwrap().clone();
+            let first_scalar = extract_single_scalar(&items[0]).unwrap().clone();
             let mut acc = first_scalar.clone();
             let original_first = acc.clone();
 
             for item in items.iter().skip(1) {
-                if let Some(f) = item.as_scalar() {
+                if let Some(f) = extract_single_scalar(item) {
                     acc = op(&acc, f)?;
                 }
             }

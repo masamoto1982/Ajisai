@@ -1020,8 +1020,13 @@ ADDTEST
         // Verify result
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.len(), 1, "Result should have one element");
-            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "8", "Result should be 8");
+            // 結果は [ 8 ] というベクタ（単一要素ベクタ）
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "8", "Result should be 8");
+            } else {
+                panic!("Expected vector result from addition");
+            }
         }
     }
 
@@ -1060,8 +1065,12 @@ ADDTEST
         // Verify result: (1 + 2) * 3 = 9
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.len(), 1, "Result should have one element");
-            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "9", "Result should be 9");
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "9", "Result should be 9");
+            } else {
+                panic!("Expected vector result");
+            }
         }
     }
 
@@ -1081,8 +1090,12 @@ ADDTEST
         // Verify result: (10 + 20) * 5 = 150
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.len(), 1, "Result should have one element");
-            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "150", "Result should be 150");
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "150", "Result should be 150");
+            } else {
+                panic!("Expected vector result");
+            }
         }
     }
 
@@ -1103,8 +1116,12 @@ ADDTEST
         // Result should be [100] because 5 > 3 is true
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.len(), 1, "Result should have one element");
-            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "100", "Result should be 100");
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "100", "Result should be 100");
+            } else {
+                panic!("Expected vector result");
+            }
         }
 
         // Clear stack
@@ -1143,8 +1160,12 @@ ADDTEST
         // すべての条件がfalseなのでデフォルトの999
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            assert_eq!(val.len(), 1, "Result should have one element");
-            assert_eq!(val.as_scalar().expect("Expected scalar").numerator.to_string(), "999");
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "999");
+            } else {
+                panic!("Expected vector result");
+            }
         }
     }
 

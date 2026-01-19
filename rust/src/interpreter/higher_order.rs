@@ -106,23 +106,19 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     Ok(_) => {
                         // 結果を取得
                         match interp.stack.pop() {
-                            Some(result_vec) => {
-                                // 単一要素ベクタの場合はアンラップ
-                                if is_vector_value(&result_vec) {
-                                    let v = reconstruct_vector_elements(&result_vec);
+                            Some(result_val) => {
+                                // 結果の処理：スカラーもベクタも受け入れる
+                                if is_vector_value(&result_val) {
+                                    // ベクタの場合
+                                    let v = reconstruct_vector_elements(&result_val);
                                     if v.len() == 1 {
                                         results.push(v[0].clone());
                                     } else {
                                         results.push(Value::from_vector(v));
                                     }
                                 } else {
-                                    // エラー時にスタックを復元
-                                    interp.operation_target = saved_target;
-                                    interp.disable_no_change_check = saved_no_change_check;
-                                    interp.stack = original_stack_below;
-                                    interp.stack.push(Value::from_vector(elements));
-                                    interp.stack.push(word_val);
-                                    return Err(AjisaiError::structure_error("vector result from MAP word", "other format"));
+                                    // スカラーやNILの場合はそのまま追加
+                                    results.push(result_val);
                                 }
                             },
                             None => {
