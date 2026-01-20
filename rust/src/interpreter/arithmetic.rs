@@ -79,6 +79,11 @@ where
                 .collect();
             Ok(Value::from_children(result?))
         }
+
+        // Block関連
+        (ValueData::Block(_), _) | (_, ValueData::Block(_)) => {
+            Err(AjisaiError::from("Cannot perform arithmetic on Block"))
+        }
     }
 }
 
@@ -281,6 +286,7 @@ fn apply_scalar_mul_to_value(scalar: &Fraction, val: &Value) -> Value {
             Value::from_children(new_children)
         }
         ValueData::Nil => val.clone(),
+        ValueData::Block(_) => val.clone(),
     }
 }
 
@@ -392,6 +398,7 @@ fn apply_scalar_div_to_value(val: &Value, scalar: &Fraction) -> Result<Value> {
             Ok(Value::from_children(new_children?))
         }
         ValueData::Nil => Ok(val.clone()),
+        ValueData::Block(_) => Ok(val.clone()),
     }
 }
 
@@ -411,5 +418,6 @@ fn apply_div_scalar_by_value(scalar: &Fraction, val: &Value) -> Result<Value> {
             Ok(Value::from_children(new_children?))
         }
         ValueData::Nil => Ok(val.clone()),
+        ValueData::Block(_) => Ok(val.clone()),
     }
 }

@@ -187,6 +187,11 @@ const formatValue = (item: Value, depth: number): string => {
             return formatVector(item.value, depth);
         case 'nil':
             return 'NIL';
+        case 'block': {
+            // "source" 形式で表示
+            const source = (item as unknown as { source: string }).source || '';
+            return `"${source}"`;
+        }
         default:
             return JSON.stringify(item.value);
     }

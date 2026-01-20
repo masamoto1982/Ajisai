@@ -20,6 +20,7 @@ fn value_has_any_truthy(val: &Value) -> bool {
         ValueData::Nil => false,
         ValueData::Scalar(f) => !f.is_zero(),
         ValueData::Vector(children) => children.iter().any(|c| value_has_any_truthy(c)),
+        ValueData::Block(_) => true,
     }
 }
 
@@ -47,6 +48,10 @@ fn apply_not_to_value(val: &Value) -> Value {
                 display_hint: DisplayHint::Boolean,
             }
         }
+        ValueData::Block(_) => {
+            // Block is always truthy, so NOT Block = FALSE
+            Value::from_bool(false)
+        }
     }
 }
 
@@ -59,6 +64,14 @@ where
         // NIL処理は呼び出し元で処理済み
         (ValueData::Nil, _) | (_, ValueData::Nil) => {
             Err(AjisaiError::from("Cannot apply logic operation with NIL"))
+        }
+
+        // Block関連（Blockは常にtruthy）
+        (ValueData::Block(_), _) => {
+            apply_binary_logic(&Value::from_bool(true), b, op)
+        }
+        (_, ValueData::Block(_)) => {
+            apply_binary_logic(a, &Value::from_bool(true), op)
         }
 
         // 両方スカラー

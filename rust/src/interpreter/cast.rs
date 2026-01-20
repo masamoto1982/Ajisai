@@ -30,6 +30,7 @@ fn value_as_string(val: &Value) -> Option<String> {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
+            ValueData::Block(_) => vec![],
         }
     }
 
@@ -685,6 +686,7 @@ fn value_to_string_repr(value: &Value) -> String {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_fractions(c)).collect()
             }
+            ValueData::Block(block) => vec![format!("\"{}\"", block.source)],
         }
     }
 

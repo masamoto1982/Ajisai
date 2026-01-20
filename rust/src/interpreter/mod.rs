@@ -18,7 +18,7 @@ pub mod hash;           // 分数ハッシュ関数
 pub mod audio;          // 音声再生
 
 use std::collections::{HashMap, HashSet};
-use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS, Block};
 
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
@@ -149,6 +149,10 @@ impl Interpreter {
                         "NIL" => values.push(Value::nil()),
                         _ => values.push(Value::from_string(s)),
                     }
+                    i += 1;
+                },
+                Token::Block(block) => {
+                    values.push(Value::from_block(block.clone()));
                     i += 1;
                 },
                 _ => {
@@ -328,6 +332,10 @@ impl Interpreter {
                         }
                     }
                 },
+                Token::Block(block) => {
+                    // BlockをValueとしてスタックにプッシュ
+                    self.stack.push(Value::from_block(block.clone()));
+                },
                 Token::GuardSeparator | Token::LineBreak => {
                     // スキップ
                 },
@@ -339,6 +347,15 @@ impl Interpreter {
         }
 
         Ok((i, None))
+    }
+
+    /// Blockを実行する（TIMESやMAP等から呼び出される）
+    pub fn execute_block(&mut self, block: &Block) -> Result<()> {
+        let (_, action) = self.execute_section_core(&block.tokens, 0)?;
+        if action.is_some() {
+            return Err(AjisaiError::from("WAIT is not supported inside block execution"));
+        }
+        Ok(())
     }
 
     /// セクション実行（非同期版）
@@ -615,6 +632,7 @@ impl Interpreter {
             Token::VectorEnd => "]".to_string(),
             Token::GuardSeparator => ":".to_string(),
             Token::LineBreak => "\n".to_string(),
+            Token::Block(b) => format!("\"{}\"", b.source),
         }
     }
     
