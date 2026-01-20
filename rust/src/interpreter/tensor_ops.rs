@@ -42,6 +42,7 @@ fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
         ValueData::Vector(children) => children.clone(),
         ValueData::Scalar(_) => vec![val.clone()],
         ValueData::Nil => vec![],
+        ValueData::Block(_) => vec![val.clone()], // Blockは単一要素として扱う
     }
 }
 
@@ -344,6 +345,7 @@ where
             }
         }
         ValueData::Nil => val.clone(),
+        ValueData::Block(_) => val.clone(), // Blockは変更しない
     }
 }
 
@@ -486,6 +488,7 @@ where
             })
         }
         ValueData::Nil => Ok(val.clone()),
+        ValueData::Block(_) => Ok(val.clone()), // Blockは変更しない
     }
 }
 
@@ -524,6 +527,7 @@ where
             })
         }
         ValueData::Nil => Ok(val.clone()),
+        ValueData::Block(_) => Ok(val.clone()), // Blockは変更しない
     }
 }
 

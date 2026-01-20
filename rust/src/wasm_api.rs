@@ -8,7 +8,7 @@
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
 use crate::interpreter::Interpreter;
-use crate::types::{Value, ValueData, DisplayHint, Token, ExecutionLine};
+use crate::types::{Value, ValueData, DisplayHint, Token, ExecutionLine, Block};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::str::FromStr;
@@ -501,6 +501,16 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             Ok(Value::from_children(children))
         },
         "nil" => Ok(Value::nil()),
+        "block" => {
+            // Block型の復元: sourceからトークナイズして復元
+            let source = js_sys::Reflect::get(&obj, &"source".into())
+                .map_err(|_| "No source in block".to_string())?
+                .as_string().ok_or("Source not string")?;
+            let tokens = tokenizer::tokenize_with_custom_words(&source, &std::collections::HashSet::new())
+                .map_err(|e| format!("Failed to tokenize block: {}", e))?;
+            let block = Block::new(tokens, source);
+            Ok(Value::from_block(block))
+        },
         _ => Err(format!("Unknown type: {}", type_str)),
     }
 }
@@ -512,6 +522,13 @@ fn value_to_js_value(value: &Value) -> JsValue {
     if value.is_nil() {
         js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
         js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        return obj.into();
+    }
+
+    // Blockチェック
+    if let ValueData::Block(block) = &value.data {
+        js_sys::Reflect::set(&obj, &"type".into(), &"block".into()).unwrap();
+        js_sys::Reflect::set(&obj, &"source".into(), &block.source.clone().into()).unwrap();
         return obj.into();
     }
 

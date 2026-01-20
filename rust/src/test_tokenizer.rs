@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod test_tokenizer {
     use crate::tokenizer::tokenize_with_custom_words;
-    use crate::types::Token;
+    use crate::types::{Token, Block};
     use std::collections::HashSet;
 
     // === コメント処理のテスト ===
@@ -508,7 +508,7 @@ mod test_tokenizer {
 
         let result = tokenize_with_custom_words("'unclosed string", &custom_words);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unclosed string"));
+        assert!(result.unwrap_err().contains("Unclosed literal"));
     }
 
     // === Dot operator テスト ===
@@ -610,5 +610,116 @@ mod test_tokenizer {
             Token::Number("4".to_string()),
             Token::VectorEnd,
         ]);
+    }
+
+    // === Block リテラルのテスト ===
+
+    #[test]
+    fn test_block_literal_basic() {
+        let custom_words = HashSet::new();
+
+        let result = tokenize_with_custom_words("\"[ 1 ] +\"", &custom_words).unwrap();
+        assert_eq!(result.len(), 1);
+
+        if let Token::Block(block) = &result[0] {
+            assert_eq!(block.source, "[ 1 ] +");
+            assert_eq!(block.tokens.len(), 4); // VectorStart, Number, VectorEnd, Symbol
+        } else {
+            panic!("Expected Token::Block");
+        }
+    }
+
+    #[test]
+    fn test_block_literal_with_string() {
+        let custom_words = HashSet::new();
+
+        // ブロック内に文字列を含む
+        let result = tokenize_with_custom_words("\"'hello' PRINT\"", &custom_words).unwrap();
+        assert_eq!(result.len(), 1);
+
+        if let Token::Block(block) = &result[0] {
+            assert_eq!(block.tokens.len(), 2); // String, Symbol
+        } else {
+            panic!("Expected Token::Block");
+        }
+    }
+
+    #[test]
+    fn test_string_with_double_quote() {
+        let custom_words = HashSet::new();
+
+        // 文字列内にダブルクォートを含む
+        let result = tokenize_with_custom_words("'He said \"Hello\"'", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::String("He said \"Hello\"".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn test_string_with_single_quote() {
+        let custom_words = HashSet::new();
+
+        // 文字列内にシングルクォートを含む
+        let result = tokenize_with_custom_words("'It's fine'", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::String("It's fine".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn test_block_syntax_error() {
+        let custom_words = HashSet::new();
+
+        // ブロック内の構文エラー（閉じ括弧なし）
+        let result = tokenize_with_custom_words("\"[ 1 2\"", &custom_words);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_mixed_string_and_block() {
+        let custom_words = HashSet::new();
+
+        let result = tokenize_with_custom_words("'hello' \"[ 1 ] +\" 'world'", &custom_words).unwrap();
+        assert_eq!(result.len(), 3);
+        assert!(matches!(&result[0], Token::String(s) if s == "hello"));
+        assert!(matches!(&result[1], Token::Block(_)));
+        assert!(matches!(&result[2], Token::String(s) if s == "world"));
+    }
+
+    #[test]
+    fn test_block_in_vector() {
+        let custom_words = HashSet::new();
+
+        // ベクター内にブロックを含む
+        let result = tokenize_with_custom_words("[ \"[ 1 ] +\" ]", &custom_words).unwrap();
+        assert_eq!(result.len(), 3); // VectorStart, Block, VectorEnd
+        assert!(matches!(&result[0], Token::VectorStart));
+        assert!(matches!(&result[1], Token::Block(_)));
+        assert!(matches!(&result[2], Token::VectorEnd));
+    }
+
+    #[test]
+    fn test_unclosed_block_error() {
+        let custom_words = HashSet::new();
+
+        let result = tokenize_with_custom_words("\"unclosed block", &custom_words);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unclosed literal"));
+    }
+
+    #[test]
+    fn test_block_with_dup_star() {
+        let custom_words = HashSet::new();
+
+        // 基本的なブロック
+        let result = tokenize_with_custom_words("\"DUP *\"", &custom_words).unwrap();
+        assert_eq!(result.len(), 1);
+
+        if let Token::Block(block) = &result[0] {
+            assert_eq!(block.source, "DUP *");
+            assert_eq!(block.tokens.len(), 2); // Symbol, Symbol
+        } else {
+            panic!("Expected Token::Block");
+        }
     }
 }

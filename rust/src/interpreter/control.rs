@@ -9,7 +9,7 @@
 use crate::interpreter::Interpreter;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, ValueData, DisplayHint};
+use crate::types::{Value, ValueData, DisplayHint, Block};
 use std::collections::HashSet;
 
 /// 値を文字列として解釈する（内部ヘルパー）
@@ -29,6 +29,7 @@ fn value_as_string(val: &Value) -> Option<String> {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
+            ValueData::Block(_) => vec![],
         }
     }
 
@@ -45,19 +46,19 @@ fn is_string_value(val: &Value) -> bool {
     val.display_hint == DisplayHint::String && !val.is_nil()
 }
 
-/// TIMES - ワードまたはコード片をN回繰り返し実行する
+/// TIMES - Blockまたはワード名をN回繰り返し実行する
 ///
 /// 【責務】
-/// - 指定されたカスタムワードまたはコード片を指定回数繰り返し実行
+/// - 指定されたBlockまたはカスタムワード名を指定回数繰り返し実行
 /// - ビルトインワードには使用不可
 ///
 /// 【使用法】
-/// - `'MYWORD' [5] TIMES` → MYWORDを5回実行（ワード名）
-/// - `'[ 1 ] +' [5] TIMES` → [ 1 ] + を5回実行（コード片）
+/// - `"[ 1 ] +" [5] TIMES` → Block を5回実行（推奨）
+/// - `'MYWORD' [5] TIMES` → カスタムワードを5回実行（ワード名）
 ///
 /// 【引数スタック】
 /// - [count]: 実行回数（単一要素ベクタの整数）
-/// - ['name'または'code']: ワード名またはコード片（単一要素ベクタの文字列）
+/// - "block" または 'word_name': Block または ワード名
 ///
 /// 【戻り値スタック】
 /// - なし（実行結果がスタックに残る）
@@ -67,61 +68,82 @@ fn is_string_value(val: &Value) -> bool {
 /// - カウントが整数でない場合
 pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
-        return Err(AjisaiError::from("TIMES requires word/code and count. Usage: 'WORD' [ n ] TIMES or '[ 1 ] +' [ n ] TIMES"));
+        return Err(AjisaiError::from(
+            "TIMES requires block and count. Usage: \"code\" [ n ] TIMES"
+        ));
     }
 
     let count_val = interp.stack.pop().unwrap();
-    let code_val = interp.stack.pop().unwrap();
+    let block_val = interp.stack.pop().unwrap();
 
     let count = get_integer_from_value(&count_val)?;
-
-    // 文字列を取得（統一分数アーキテクチャ：直接データアクセス）
-    let code_str = if is_string_value(&code_val) {
-        value_as_string(&code_val).ok_or_else(|| AjisaiError::structure_error("string", "other format"))?
-    } else {
-        return Err(AjisaiError::structure_error("string", "other format"));
-    };
 
     // TIMES内のループでは「変化なしエラー」チェックを無効化
     let saved_no_change_check = interp.disable_no_change_check;
     interp.disable_no_change_check = true;
 
-    // ワード名として辞書を検索（大文字で）
-    let upper_code_str = code_str.to_uppercase();
-    let result = if let Some(def) = interp.dictionary.get(&upper_code_str) {
-        // ワード名として辞書に存在する場合
-        if def.is_builtin {
-            interp.disable_no_change_check = saved_no_change_check;
-            return Err(AjisaiError::from("TIMES can only be used with custom words"));
-        }
-
-        // カスタムワードを繰り返し実行
-        (|| {
-            for _ in 0..count {
-                interp.execute_word_core(&upper_code_str)?;
-            }
-            Ok(())
-        })()
-    } else {
-        // 辞書にない場合はコード片として直接実行
-        let custom_word_names: HashSet<String> = interp.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-
-        let tokens = crate::tokenizer::tokenize_with_custom_words(&code_str, &custom_word_names)
-            .map_err(|e| AjisaiError::from(format!("Tokenization error in TIMES: {}", e)))?;
-
-        // コード片を繰り返し実行
-        (|| {
-            for _ in 0..count {
-                let (_, action) = interp.execute_section_core(&tokens, 0)?;
-                if action.is_some() {
-                    return Err(AjisaiError::from("WAIT is not supported inside TIMES"));
+    // Block または文字列（ワード名）を取得
+    let result = match &block_val.data {
+        ValueData::Block(block) => {
+            // Blockを繰り返し実行
+            let block = block.clone();
+            (|| {
+                for _ in 0..count {
+                    interp.execute_block(&block)?;
                 }
+                Ok(())
+            })()
+        }
+        _ if is_string_value(&block_val) => {
+            // 文字列の場合はワード名として扱う（後方互換性）
+            let word_name = value_as_string(&block_val)
+                .ok_or_else(|| AjisaiError::structure_error("block or word name", "other format"))?;
+            let upper_word_name = word_name.to_uppercase();
+
+            // ワード名として辞書を検索
+            if let Some(def) = interp.dictionary.get(&upper_word_name) {
+                if def.is_builtin {
+                    interp.disable_no_change_check = saved_no_change_check;
+                    return Err(AjisaiError::from("TIMES can only be used with custom words, not builtin words"));
+                }
+
+                // カスタムワードを繰り返し実行
+                (|| {
+                    for _ in 0..count {
+                        interp.execute_word_core(&upper_word_name)?;
+                    }
+                    Ok(())
+                })()
+            } else {
+                // 辞書にない場合はコード片として直接実行（後方互換性）
+                let custom_word_names: HashSet<String> = interp.dictionary.iter()
+                    .filter(|(_, def)| !def.is_builtin)
+                    .map(|(name, _)| name.clone())
+                    .collect();
+
+                let tokens = crate::tokenizer::tokenize_with_custom_words(&word_name, &custom_word_names)
+                    .map_err(|e| AjisaiError::from(format!("Tokenization error in TIMES: {}", e)))?;
+
+                // コード片を繰り返し実行
+                (|| {
+                    for _ in 0..count {
+                        let (_, action) = interp.execute_section_core(&tokens, 0)?;
+                        if action.is_some() {
+                            return Err(AjisaiError::from("WAIT is not supported inside TIMES"));
+                        }
+                    }
+                    Ok(())
+                })()
             }
-            Ok(())
-        })()
+        }
+        _ => {
+            interp.disable_no_change_check = saved_no_change_check;
+            interp.stack.push(block_val);
+            interp.stack.push(count_val);
+            return Err(AjisaiError::from(
+                "TIMES requires a block. Usage: \"code\" [ n ] TIMES"
+            ));
+        }
     };
 
     // フラグを復元
@@ -133,6 +155,7 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
+    use crate::types::ValueData;
 
     #[tokio::test]
     async fn test_times_basic() {
@@ -241,7 +264,7 @@ mod tests {
     async fn test_times_with_inline_code() {
         let mut interp = Interpreter::new();
 
-        // Execute inline code directly without defining a word
+        // Execute inline code directly without defining a word (backward compatibility)
         // [ 0 ] '[ 1 ] +' [ 5 ] TIMES -> [ 5 ]
         let result = interp.execute("[ 0 ] '[ 1 ] +' [ 5 ] TIMES").await;
 
@@ -275,7 +298,7 @@ mod tests {
     async fn test_times_in_custom_word() {
         let mut interp = Interpreter::new();
 
-        // Test TIMES with a simple inline operation
+        // Test TIMES with a simple inline operation (backward compatibility)
         // Use TIMES to increment a counter 5 times
         let result = interp.execute("[ 0 ] '[ 1 ] +' [ 5 ] TIMES").await;
         println!("Result: {:?}", result);
@@ -306,6 +329,59 @@ mod tests {
         if let Some(val) = interp.stack.last() {
             let debug_str = format!("{:?}", val);
             assert!(debug_str.contains("5"), "Result should be 5, got: {}", debug_str);
+        }
+    }
+
+    // === Block型を使用したTIMESのテスト ===
+
+    #[tokio::test]
+    async fn test_times_with_block() {
+        let mut interp = Interpreter::new();
+
+        // Block型を使ったTIMES（推奨構文）
+        let result = interp.execute("[ 0 ] \"[ 1 ] +\" [ 5 ] TIMES").await;
+
+        assert!(result.is_ok(), "TIMES with block should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            // 結果はVector [ 5 ] の形式
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1);
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 5);
+                } else {
+                    panic!("Expected scalar in vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_times_with_block_complex() {
+        let mut interp = Interpreter::new();
+
+        // より複雑なBlock: [ 2 ] * (2倍)
+        // [ 1 ] "[ 2 ] *" [ 4 ] TIMES -> [ 16 ] (1 * 2 * 2 * 2 * 2 = 16)
+        let result = interp.execute("[ 1 ] \"[ 2 ] *\" [ 4 ] TIMES").await;
+
+        assert!(result.is_ok(), "TIMES with block multiplication should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+
+        if let Some(val) = interp.stack.last() {
+            // 結果はVector [ 16 ] の形式
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1);
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 16);
+                } else {
+                    panic!("Expected scalar in vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
         }
     }
 }

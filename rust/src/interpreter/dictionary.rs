@@ -30,6 +30,7 @@ fn value_to_string(val: &Value) -> Result<String> {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
+            ValueData::Block(_) => vec![],
         }
     }
 
@@ -64,6 +65,7 @@ fn is_string_like(val: &Value) -> bool {
             ValueData::Vector(children) => {
                 children.iter().all(|c| check_codepoints(c))
             }
+            ValueData::Block(_) => false,
         }
     }
 
