@@ -174,16 +174,12 @@ impl Value {
             return Self::nil();
         }
 
-        // 単一要素の場合、display_hintを継承
-        let hint = if values.len() == 1 {
-            values[0].display_hint
-        } else {
-            DisplayHint::Auto
-        };
-
+        // ベクターは常に Auto として扱う
+        // 内部要素の display_hint は保持されるため、
+        // 表示時に適切に処理される
         Self {
             data: ValueData::Vector(values),
-            display_hint: hint,
+            display_hint: DisplayHint::Auto,
         }
     }
 

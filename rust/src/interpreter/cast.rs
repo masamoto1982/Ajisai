@@ -824,7 +824,8 @@ mod tests {
     #[tokio::test]
     async fn test_chars_basic() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 'hello' ] CHARS JOIN").await.unwrap();
+        // 直接文字列を使用（'hello' は文字列、[ 'hello' ] はベクター）
+        interp.execute("'hello' CHARS JOIN").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
@@ -864,7 +865,8 @@ mod tests {
     #[tokio::test]
     async fn test_chars_join_roundtrip() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 'hello' ] CHARS JOIN").await.unwrap();
+        // 直接文字列を使用（'hello' は文字列、[ 'hello' ] はベクター）
+        interp.execute("'hello' CHARS JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -876,7 +878,8 @@ mod tests {
     #[tokio::test]
     async fn test_chars_reverse_join() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 'hello' ] CHARS REVERSE JOIN").await.unwrap();
+        // 直接文字列を使用（'hello' は文字列、[ 'hello' ] はベクター）
+        interp.execute("'hello' CHARS REVERSE JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
