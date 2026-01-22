@@ -123,6 +123,36 @@ impl AjisaiInterpreter {
         }
     }
 
+    /// Markdownドキュメントを実行
+    ///
+    /// Markdownを解析し、見出しを辞書に登録、無名ブロック/mainを実行する
+    #[wasm_bindgen]
+    pub async fn execute_markdown(&mut self, markdown: &str) -> Result<JsValue, JsValue> {
+        self.interpreter.definition_to_load = None;
+        let obj = js_sys::Object::new();
+
+        match self.interpreter.execute_markdown(markdown).await {
+            Ok(()) => {
+                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                let output = self.interpreter.get_output();
+                js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
+
+                if let Some(def_str) = self.interpreter.definition_to_load.take() {
+                    js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into()).unwrap();
+                }
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"message".into(), &error_msg.into()).unwrap();
+                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+            }
+        }
+        Ok(obj.into())
+    }
+
     #[wasm_bindgen]
     pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
         self.interpreter.definition_to_load = None;
