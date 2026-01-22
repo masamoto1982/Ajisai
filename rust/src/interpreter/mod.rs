@@ -675,12 +675,103 @@ impl Interpreter {
             .map(|(name, _)| name.clone())
             .collect();
         let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
-        
+
         // トークンを行に分割
         let lines = self.tokens_to_lines(&tokens)?;
 
         // 行の配列としてガード構造を処理
         self.execute_guard_structure(&lines).await?;
+
+        Ok(())
+    }
+
+    /// Markdownドキュメントを実行
+    ///
+    /// Markdownを解析し、見出しを辞書に登録、無名ブロック/mainを実行する
+    pub async fn execute_markdown(&mut self, markdown: &str) -> Result<()> {
+        use crate::markdown::{parse_markdown, convert_to_ajisai};
+
+        // Markdownをパース
+        let parse_result = parse_markdown(markdown)
+            .map_err(|e| AjisaiError::from(format!("Markdown parse error: {}", e)))?;
+
+        // MVL ASTをAjisaiコードに変換
+        let conversion = convert_to_ajisai(&parse_result.document)
+            .map_err(|e| AjisaiError::from(format!("Conversion error: {}", e)))?;
+
+        // 警告を出力バッファに追加
+        for warning in &conversion.warnings {
+            self.output_buffer.push_str(&format!("Warning: {}\n", warning));
+        }
+
+        // 定義を辞書に登録
+        for def in &conversion.definitions {
+            self.register_markdown_definition(&def.name, &def.code, def.description.as_deref())?;
+        }
+
+        // メインコードを実行
+        if let Some(main_code) = &conversion.main_code {
+            if !main_code.is_empty() {
+                self.execute(main_code).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Markdown定義を辞書に登録
+    fn register_markdown_definition(&mut self, name: &str, code: &str, description: Option<&str>) -> Result<()> {
+        let custom_word_names: HashSet<String> = self.dictionary.iter()
+            .filter(|(_, def)| !def.is_builtin)
+            .map(|(name, _)| name.clone())
+            .collect();
+
+        // コードをトークン化
+        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
+
+        // 行に分割
+        let lines = self.tokens_to_lines(&tokens)?;
+
+        // 依存関係を解析
+        let mut dependencies = HashSet::new();
+        for line in &lines {
+            for token in &line.body_tokens {
+                if let Token::Symbol(s) = token {
+                    let upper = s.to_uppercase();
+                    if let Some(def) = self.dictionary.get(&upper) {
+                        if !def.is_builtin {
+                            dependencies.insert(upper);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 辞書に登録
+        let word_name = name.to_uppercase();
+        let word_def = WordDefinition {
+            lines,
+            is_builtin: false,
+            description: description.map(String::from),
+            dependencies,
+            original_source: Some(code.to_string()),
+        };
+
+        // 既存の定義がある場合は依存関係をチェック
+        if self.dictionary.contains_key(&word_name) {
+            let dependents = self.get_dependents(&word_name);
+            if !dependents.is_empty() && !self.force_flag {
+                return Err(AjisaiError::from(format!(
+                    "Cannot redefine '{}': it is used by {:?}. Use ! to force.",
+                    word_name, dependents
+                )));
+            }
+        }
+
+        self.dictionary.insert(word_name.clone(), word_def);
+
+        // 依存関係を更新
+        self.rebuild_dependencies()?;
 
         Ok(())
     }

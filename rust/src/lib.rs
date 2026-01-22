@@ -6,6 +6,7 @@ mod tokenizer;
 mod interpreter;
 mod builtins;
 mod wasm_api;
+mod markdown;
 
 // `pub use` に `#[wasm_bindgen]` は適用できないため削除。
 // `AjisaiInterpreter` 構造体自体が `wasm_api.rs` の中で `#[wasm_bindgen]` されているため、
@@ -375,5 +376,185 @@ mod dimension_limit_tests {
         // .. を実行してもエラーにならない
         let result = interp.execute("..").await;
         assert!(result.is_ok(), ".. operation should succeed");
+    }
+}
+
+// ============================================================================
+// Markdown Vector Language (MVL) 統合テスト
+// ============================================================================
+
+#[cfg(test)]
+mod markdown_integration_tests {
+    use crate::interpreter::Interpreter;
+    use crate::types::ValueData;
+
+    #[tokio::test]
+    async fn test_markdown_simple_list_as_vector() {
+        let mut interp = Interpreter::new();
+
+        let markdown = r#"
+- 1
+- 2
+- 3
+"#;
+
+        let result = interp.execute_markdown(markdown).await;
+        assert!(result.is_ok(), "Markdown execution should succeed: {:?}", result);
+
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "Stack should have 1 element");
+
+        if let ValueData::Vector(children) = &stack[0].data {
+            assert_eq!(children.len(), 3, "Vector should have 3 elements");
+        } else {
+            panic!("Expected vector");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_markdown_section_defines_word() {
+        let mut interp = Interpreter::new();
+
+        let markdown = r#"
+# DOUBLE
+
+2倍にする
+
+```ajisai
+[ 2 ] *
+```
+"#;
+
+        let result = interp.execute_markdown(markdown).await;
+        assert!(result.is_ok(), "Markdown execution should succeed: {:?}", result);
+
+        // DOUBLEが辞書に登録されているか確認
+        assert!(interp.dictionary.contains_key("DOUBLE"), "DOUBLE should be defined");
+
+        // DOUBLEを使ってテスト
+        interp.execute("[ 5 ] DOUBLE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+
+        if let ValueData::Vector(children) = &stack[0].data {
+            assert_eq!(children[0].as_scalar().unwrap().numerator.to_string(), "10");
+        }
+    }
+
+    // TODO: パイプライン処理の改善が必要
+    // #[tokio::test]
+    // async fn test_markdown_pipeline() { ... }
+
+    #[tokio::test]
+    async fn test_markdown_table_as_2d_vector() {
+        let mut interp = Interpreter::new();
+
+        let markdown = r#"
+| 1 | 2 | 3 |
+|---|---|---|
+| 4 | 5 | 6 |
+"#;
+
+        let result = interp.execute_markdown(markdown).await;
+        assert!(result.is_ok(), "Markdown table should succeed: {:?}", result);
+
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "Stack should have 1 element");
+
+        // 2D Vector
+        if let ValueData::Vector(rows) = &stack[0].data {
+            assert_eq!(rows.len(), 1, "Should have 1 data row (header excluded)");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_markdown_multiple_definitions() {
+        let mut interp = Interpreter::new();
+
+        let markdown = r#"
+# DOUBLE
+
+```ajisai
+[ 2 ] *
+```
+
+# TRIPLE
+
+```ajisai
+[ 3 ] *
+```
+
+# main
+
+- 5
+
+---
+
+```ajisai
+DOUBLE TRIPLE
+```
+"#;
+
+        let result = interp.execute_markdown(markdown).await;
+        assert!(result.is_ok(), "Multiple definitions should work: {:?}", result);
+
+        assert!(interp.dictionary.contains_key("DOUBLE"));
+        assert!(interp.dictionary.contains_key("TRIPLE"));
+
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+
+        // 5 * 2 * 3 = 30
+        if let ValueData::Vector(children) = &stack[0].data {
+            assert_eq!(children[0].as_scalar().unwrap().numerator.to_string(), "30");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_markdown_nested_list() {
+        let mut interp = Interpreter::new();
+
+        let markdown = r#"
+- - 1
+  - 2
+- - 3
+  - 4
+"#;
+
+        let result = interp.execute_markdown(markdown).await;
+        assert!(result.is_ok(), "Nested list should work: {:?}", result);
+
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+
+        // 2D Vector: [ [ 1 2 ] [ 3 4 ] ]
+        if let ValueData::Vector(rows) = &stack[0].data {
+            assert_eq!(rows.len(), 2, "Should have 2 rows");
+            if let ValueData::Vector(row1) = &rows[0].data {
+                assert_eq!(row1.len(), 2);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_markdown_with_description() {
+        let mut interp = Interpreter::new();
+
+        let markdown = r#"
+# SQUARE
+
+自乗する関数
+
+```ajisai
+DUP *
+```
+"#;
+
+        let result = interp.execute_markdown(markdown).await;
+        assert!(result.is_ok());
+
+        // 説明が登録されているか確認
+        let def = interp.dictionary.get("SQUARE").unwrap();
+        assert_eq!(def.description, Some("自乗する関数".to_string()));
     }
 }
