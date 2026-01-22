@@ -7,9 +7,9 @@
 
 # Ajisai
 
-**FORTHにインスパイアされた、スタックベースのプログラミング言語**
+**マークダウンベースのスタック指向プログラミング言語**
 
-*A stack-based programming language inspired by FORTH*
+*A markdown-based stack-oriented programming language*
 
 **Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
 
@@ -29,66 +29,63 @@
 
 ## 概要 / Overview
 
-Ajisaiは、WebAssembly上で動作するスタックベースのインタープリタと、Webベースの対話的なGUIを提供するプログラミング言語です。
+Ajisaiは、**Markdown Vector Language (MVL)** を採用したマークダウンベースのプログラミング言語です。
+標準的なマークダウン記法を使用して、データ構造とプログラムロジックを自然に表現できます。
+WebAssembly上で動作するインタープリタと、Webベースの対話的なGUIを提供します。
 
-*Ajisai provides a stack-based interpreter running on WebAssembly and an interactive web-based GUI.*
+*Ajisai is a markdown-based programming language that uses **Markdown Vector Language (MVL)**.*
+*Using standard markdown notation, you can naturally express data structures and program logic.*
+*It provides an interpreter running on WebAssembly and an interactive web-based GUI.*
 
-「Ajisai（紫陽花）」という名前は、小さなワードが集まって機能を形成するFORTHの特徴を、小さな花が集まって一つの花房を形作る紫陽花に例えています。（※紫陽花の花びらに見える部分は、実際には萼（がく）です）
+「Ajisai（紫陽花）」という名前は、小さな要素が集まって構造を形成する特徴を、小さな花が集まって一つの花房を形作る紫陽花に例えています。
 
-*The name "Ajisai" (hydrangea) metaphorically represents FORTH's characteristic of small words coming together to form functionality, like how small flowers come together to form a hydrangea cluster. (Note: What appears to be petals are actually sepals.)*
+*The name "Ajisai" (hydrangea) metaphorically represents how small elements come together to form a structure, like how small flowers form a hydrangea cluster.*
 
 ---
 
 ## 特徴 / Features
 
+### MVL（Markdown Vector Language）
+
+マークダウンの記法がそのままプログラミング言語の構文になります：
+
+| マークダウン | Ajisai構造 | 説明 |
+|:---|:---|:---|
+| リスト `-` | Vector | 1次元以上のベクター |
+| テーブル `\|` | 2D Vector | 2次元ベクター（行列） |
+| コードブロック ` ``` ` | RPN式 | 逆ポーランド記法のコード |
+| 見出し `#` | ワード定義 | カスタムワードの定義 |
+| 水平線 `---` | パイプライン | 処理の連結 |
+
 ### 言語設計 / Language Design
 
+- **マークダウンネイティブ**
+  - 標準的なマークダウン記法をそのまま使用
+  - ドキュメントとコードが一体化
+  - *Native markdown syntax - documentation and code unified*
+
 - **スタックベース・逆ポーランド記法（RPN）**
-  - FORTHスタイルのスタック操作
-  - *Stack-based with Reverse Polish Notation, FORTH-style*
+  - コードブロック内はRPN形式
+  - *Stack-based with Reverse Polish Notation in code blocks*
 
 - **Vectorベースのフラクタル構造**
-  - 全てのコンテナデータはネスト可能なVectorで表現（LISPのリスト構造に通ずる設計思想）
-  - 括弧 `[ ]` のネストで多次元を表現し、テンソル的な操作（SHAPE, RESHAPE等）をサポート
-  - **異種データ混在可能**: `[ 1 'hello' TRUE [ 2 3 ] ]` のように、数値・文字列・真偽値・Vectorを自由に組み合わせ可能
+  - 全てのコンテナデータはネスト可能なVectorで表現
   - NumPy/APLスタイルのブロードキャスティング
-  - *All container data is represented as nestable Vectors (similar to LISP's list structure). Bracket `[ ]` nesting expresses dimensions, with tensor-like operations (SHAPE, RESHAPE, etc.) supported. Heterogeneous data mixing is allowed.*
-
-- **0次元を含めて4次元までの次元制限**
-  - 0次元：スタック（不可視、GUIの枠）
-  - 1〜3次元：可視のネスト
-  - 4次元以上のネストはエラーとなる
-  - *Dimension limit: 0-3 dimensions visible (dimension 0 is the stack). Nesting beyond 3 visible dimensions results in an error.*
-
-| 次元 / Dim | 括弧 / Bracket | 可視性 / Visibility | 構造 / Structure |
-|:---:|:---:|:---:|:---|
-| 0次元 | — | 不可視 | スタック（暗黙の最外殻） |
-| 1次元 | `{ }` | 可視 | `{ 1 2 3 }` |
-| 2次元 | `( )` | 可視 | `{ ( 1 2 ) ( 3 4 ) }` |
-| 3次元 | `[ ]` | 可視 | `{ ( [ 1 ] [ 2 ] ) }` |
+  - **異種データ混在可能**: 数値・文字列・真偽値・Vectorを自由に組み合わせ可能
+  - *All container data is nestable Vectors with broadcasting support*
 
 - **完全精度の有理数演算**
-  - すべての数値は内部的に分数（Fraction）として扱われ、丸め誤差なし
-  - 非常に大きな数値も処理可能
-  - *All numbers internally treated as fractions - no rounding errors, capable of handling extremely large numbers*
+  - すべての数値は内部的に分数として扱われ、丸め誤差なし
+  - *All numbers internally treated as fractions - no rounding errors*
 
-- **統一分数アーキテクチャ（型なし設計）**
-  - すべての値は内部的に `Vec<Fraction>` として統一表現
-  - 数値、真偽値、文字、文字列の区別は表示時のみ（DisplayHint）
-  - 型チェックを完全に廃止し、FORTH精神を継承した自由な設計
-  - *Unified Fraction Architecture: All values internally represented as Vec<Fraction>. No type checking - distinction between numbers, booleans, and strings only at display time.*
+### 次元モデル / Dimension Model
 
-- **組み込みワードの保護**
-  - 組み込みワードは削除や上書きが不可能
-  - *Built-in words cannot be deleted or overwritten*
-
-### 可視化機能 / Visualization
-
-- **深度別ブラケット表示**: `[ ]` → `{ }` → `( )` → `[ ]` ...（3レベルごとに循環）
-- *Depth-based bracket styles for visual clarity*
-
-- **リアルタイム状態表示**: スタック、辞書、メモリ使用量をGUIで確認可能
-- *Real-time state display: stack, dictionary, memory usage in GUI*
+| 次元 / Dim | 括弧 / Bracket | 構造 / Structure |
+|:---:|:---:|:---|
+| 0次元 | — | スタック（暗黙の最外殻） |
+| 1次元 | `{ }` | `{ 1 2 3 }` |
+| 2次元 | `( )` | `{ ( 1 2 ) ( 3 4 ) }` |
+| 3次元 | `[ ]` | `{ ( [ 1 ] [ 2 ] ) }` |
 
 ### テクノロジースタック / Technology Stack
 
@@ -104,49 +101,88 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
 
 ## コード例 / Code Examples
 
-### Vector演算 / Vector Operations
+### 基本的なVector / Basic Vector
 
-```ajisai
-# Vectorの作成 / Creating vectors
-[ 1 2 3 ]               # 1次元Vector / 1D vector: shape [3]
-[ [ 1 2 ] [ 3 4 ] ]     # ネストされたVector（行列的構造） / Nested vector (matrix-like): shape [2, 2]
-
-# 異種データ混在 / Heterogeneous data
-[ 1 'hello' TRUE [ 2 3 ] ]   # 数値、文字列、真偽値、Vectorを混在可能
-
-# ブロードキャスティング算術演算 / Broadcasting arithmetic
-[ 5 ] [ 1 2 3 ] +       # → [ 6 7 8 ]
-[ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +
-# → [ [ 11 22 33 ] [ 14 25 36 ] ]
-
-# 形状操作（テンソル的操作） / Shape manipulation (tensor-like operations)
-[ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE      # → [ 2 3 ]
-[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE    # → [ [ 1 2 3 ] [ 4 5 6 ] ]
-[ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE  # → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
+```markdown
+- 1
+- 2
+- 3
 ```
 
-### カスタムワード定義 / Custom Word Definition
+これは `{ 1 2 3 }` に変換されます。
 
-```ajisai
-# 2倍にするワードを定義 / Define a word that doubles a value
-[ '[ 2 ] *' ] 'DOUBLE' DEF
+### 2次元Vector（テーブル） / 2D Vector (Table)
 
-# 使用例 / Usage
-[ 5 ] DOUBLE    # → [ 10 ]
-
-# 高階関数との組み合わせ / Combine with higher-order functions
-[ 1 2 3 4 5 ] 'DOUBLE' MAP    # → [ 2 4 6 8 10 ]
+```markdown
+| 1 | 2 | 3 |
+|---|---|---|
+| 4 | 5 | 6 |
+| 7 | 8 | 9 |
 ```
 
-### 制御構造（ガード） / Control Structure (Guards)
+### ワード定義 / Word Definition
 
-```ajisai
-# 条件分岐：偶数ならTRUE、奇数ならFALSE / Conditional: TRUE if even, FALSE if odd
-[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+```markdown
+# DOUBLE
 
-[ 4 ] EVEN?    # → [ TRUE ]
-[ 7 ] EVEN?    # → [ FALSE ]
+値を2倍にする
+
+\`\`\`ajisai
+[ 2 ] *
+\`\`\`
 ```
+
+### データ処理パイプライン / Data Processing Pipeline
+
+```markdown
+- 1
+- 2
+- 3
+- 4
+- 5
+
+---
+
+\`\`\`ajisai
+'[ 2 ] *' MAP
+\`\`\`
+
+---
+
+\`\`\`ajisai
+REVERSE
+\`\`\`
+```
+
+結果: `{ 10 8 6 4 2 }`
+
+### 完全なプログラム例 / Complete Program Example
+
+```markdown
+# SQUARE
+
+自乗する
+
+\`\`\`ajisai
+DUP *
+\`\`\`
+
+# main
+
+- 1
+- 2
+- 3
+- 4
+- 5
+
+---
+
+\`\`\`ajisai
+'SQUARE' MAP
+\`\`\`
+```
+
+結果: `{ 1 4 9 16 25 }`
 
 ---
 
@@ -155,7 +191,7 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
 ### 算術演算 / Arithmetic
 `+` `-` `*` `/` `MOD` `FLOOR` `CEIL` `ROUND`
 
-### 形状操作（テンソル的操作） / Shape Manipulation (Tensor-like Operations)
+### 形状操作 / Shape Manipulation
 `SHAPE` `RANK` `RESHAPE` `TRANSPOSE` `FILL`
 
 ### Vector操作 / Vector Operations
@@ -184,9 +220,6 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
 
 ### 操作対象指定 / Target Specification
 `.` `..`
-
-### 入力ヘルパー / Input Helpers
-`'` `FRAME`
 
 ---
 
@@ -237,6 +270,7 @@ npx vite build
 
 ## 関連ドキュメント / Related Documentation
 
+- [MVL_REFERENCE.md](Documentation/MVL_REFERENCE.md) - Markdown Vector Language リファレンス
 - [UNIFIED_FRACTION_ARCHITECTURE.md](Documentation/UNIFIED_FRACTION_ARCHITECTURE.md) - 統一分数アーキテクチャの設計
 - [DIMENSION_MODEL.md](Documentation/DIMENSION_MODEL.md) - 次元モデルの詳細
 - [BROADCASTING.md](Documentation/BROADCASTING.md) - ブロードキャスティングの仕様
