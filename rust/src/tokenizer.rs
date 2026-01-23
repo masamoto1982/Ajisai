@@ -1,6 +1,6 @@
 // rust/src/tokenizer.rs (空白区切りベース - 伝統的なFORTHスタイル)
 
-use crate::types::{Token, Block};
+use crate::types::Token;
 use std::collections::HashSet;
 
 #[allow(unused_variables)]
@@ -46,14 +46,9 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
             continue;
         }
 
-        // 4. 引用文字列またはブロック
-        match parse_quote(&chars[i..], _custom_words) {
+        // 4. 引用文字列
+        match parse_quote(&chars[i..]) {
             QuoteParseResult::StringSuccess(token, consumed) => {
-                tokens.push(token);
-                i += consumed;
-                continue;
-            }
-            QuoteParseResult::BlockSuccess(token, consumed) => {
                 tokens.push(token);
                 i += consumed;
                 continue;
@@ -61,9 +56,6 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
             QuoteParseResult::Unclosed => {
                 let quote_char = chars[i];
                 return Err(format!("Unclosed literal starting with {}", quote_char));
-            }
-            QuoteParseResult::BlockError(e) => {
-                return Err(format!("Error in block literal: {}", e));
             }
             QuoteParseResult::NotQuote => {
                 // 引用リテラルではない、次の処理へ
@@ -110,9 +102,9 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
 }
 
 /// 特殊文字（トークン境界となる文字）の判定
-/// シングルクォートは文字列リテラル、ダブルクォートはコードブロック用
+/// シングルクォートは文字列リテラル用
 fn is_special_char(c: char) -> bool {
-    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '"')
+    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'')
 }
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
@@ -130,24 +122,19 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
 enum QuoteParseResult {
     /// 文字列として正常にパースできた (トークン, 消費文字数)
     StringSuccess(Token, usize),
-    /// ブロックとして正常にパースできた (トークン, 消費文字数)
-    BlockSuccess(Token, usize),
     /// 閉じ引用符がない
     Unclosed,
     /// 引用文字列ではない
     NotQuote,
-    /// ブロック内のトークナイズエラー
-    BlockError(String),
 }
 
-fn parse_quote(chars: &[char], custom_words: &HashSet<String>) -> QuoteParseResult {
+fn parse_quote(chars: &[char]) -> QuoteParseResult {
     if chars.is_empty() { return QuoteParseResult::NotQuote; }
 
     let quote_char = chars[0];
 
     match quote_char {
         '\'' => parse_string_literal(chars),
-        '"'  => parse_block_literal(chars, custom_words),
         _    => QuoteParseResult::NotQuote,
     }
 }
@@ -180,76 +167,6 @@ fn parse_string_literal(chars: &[char]) -> QuoteParseResult {
 
     // 閉じ引用符が見つからなかった
     QuoteParseResult::Unclosed
-}
-
-/// ダブルクォートコードブロックのパース（新規）
-fn parse_block_literal(chars: &[char], custom_words: &HashSet<String>) -> QuoteParseResult {
-    if chars.is_empty() || chars[0] != '"' {
-        return QuoteParseResult::NotQuote;
-    }
-
-    let mut content = String::new();
-    let mut i = 1;
-
-    // 閉じダブルクォートを探す（区切り文字が後続する場合のみ終了）
-    while i < chars.len() {
-        if chars[i] == '"' {
-            // 次の文字が区切り文字（または EOF）かチェック
-            if i + 1 >= chars.len() || is_delimiter(chars[i + 1]) {
-                // ブロック内容をトークナイズ
-                match tokenize_with_custom_words(&content, custom_words) {
-                    Ok(tokens) => {
-                        // ブラケットのバランスをチェック
-                        if let Err(e) = validate_bracket_balance(&tokens) {
-                            return QuoteParseResult::BlockError(e);
-                        }
-                        let block = Block::new(tokens, content);
-                        return QuoteParseResult::BlockSuccess(
-                            Token::Block(block),
-                            i + 1
-                        );
-                    }
-                    Err(e) => {
-                        return QuoteParseResult::BlockError(e);
-                    }
-                }
-            } else {
-                // 区切り文字ではないので、ダブルクォートを内容に含める
-                content.push(chars[i]);
-                i += 1;
-            }
-        } else {
-            content.push(chars[i]);
-            i += 1;
-        }
-    }
-
-    QuoteParseResult::Unclosed
-}
-
-/// ブラケットのバランスをチェック
-fn validate_bracket_balance(tokens: &[Token]) -> Result<(), String> {
-    let mut depth = 0i32;
-    for token in tokens {
-        match token {
-            Token::VectorStart => depth += 1,
-            Token::VectorEnd => {
-                depth -= 1;
-                if depth < 0 {
-                    return Err("Unmatched closing bracket".to_string());
-                }
-            }
-            Token::Block(block) => {
-                // 再帰的にブロック内のトークンもチェック
-                validate_bracket_balance(&block.tokens)?;
-            }
-            _ => {}
-        }
-    }
-    if depth != 0 {
-        return Err("Unclosed bracket in block".to_string());
-    }
-    Ok(())
 }
 
 /// クォート文字の後の文字が区切り文字かどうかを判定

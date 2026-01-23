@@ -1,12 +1,14 @@
 // rust/src/interpreter/dictionary.rs
 //
 // 統一分数アーキテクチャ版の辞書操作
+// Vectorの二重性（Vector Duality）対応
 //
 // すべての値は Vec<Fraction> として表現される。
 // 文字列は分数のベクタ（各要素がコードポイント）として格納される。
 
 use crate::interpreter::{Interpreter, WordDefinition, OperationTarget};
 use crate::interpreter::helpers::get_word_name_from_value;
+use crate::interpreter::vector_exec::vector_to_source;
 use crate::error::{AjisaiError, Result};
 use crate::types::{Token, ExecutionLine, DisplayHint, Value, ValueData};
 use std::collections::HashSet;
@@ -30,7 +32,6 @@ fn value_to_string(val: &Value) -> Result<String> {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
-            ValueData::Block(_) => vec![],
         }
     }
 
@@ -65,7 +66,6 @@ fn is_string_like(val: &Value) -> bool {
             ValueData::Vector(children) => {
                 children.iter().all(|c| check_codepoints(c))
             }
-            ValueData::Block(_) => false,
         }
     }
 
@@ -123,15 +123,24 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // 定義本体を取得
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 定義本体を文字列として取得（統一分数アーキテクチャ）
-    let definition_str = value_to_string(&def_val)?;
+    // 定義本体をソースコードに変換
+    // Vector Duality: Vectorをコードとして解釈する
+    let definition_str = match &def_val.data {
+        ValueData::Vector(_) => {
+            // VectorをAjisaiソースコードに変換
+            vector_to_source(&def_val)?
+        }
+        _ => {
+            return Err(AjisaiError::from("DEF requires a vector as definition body"));
+        }
+    };
 
     // 定義本体をトークン化
     let custom_word_names: HashSet<String> = interp.dictionary.iter()
         .filter(|(_, def)| !def.is_builtin)
         .map(|(name, _)| name.clone())
         .collect();
-    
+
     let tokens = crate::tokenizer::tokenize_with_custom_words(&definition_str, &custom_word_names)
         .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
 
@@ -348,25 +357,26 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     let name_str = get_word_name_from_value(&name_val)?;
 
     let upper_name = name_str.to_uppercase();
-    
+
     if let Some(def) = interp.dictionary.get(&upper_name) {
         if def.is_builtin {
             let detailed_info = crate::builtins::get_builtin_detail(&upper_name);
             interp.definition_to_load = Some(detailed_info);
             return Ok(());
         }
-        
+
         if let Some(original_source) = &def.original_source {
             interp.definition_to_load = Some(original_source.clone());
         } else {
             let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
+            // 新構文: [ [ code ] ] 'NAME' DEF の形式で表示
             let full_definition = if definition.is_empty() {
-                format!("[ '' ] '{}' DEF", name_str)
+                format!("[ NIL ] '{}' DEF", name_str)
             } else {
                 if let Some(desc) = &def.description {
-                    format!("[ '{}' ] '{}' '{}' DEF", definition, name_str, desc)
+                    format!("[ {} ] '{}' '{}' DEF", definition, name_str, desc)
                 } else {
-                    format!("[ '{}' ] '{}' DEF", definition, name_str)
+                    format!("[ {} ] '{}' DEF", definition, name_str)
                 }
             };
             interp.definition_to_load = Some(full_definition);
@@ -385,8 +395,8 @@ mod tests {
     #[tokio::test]
     async fn test_cannot_override_builtin_word() {
         let mut interp = Interpreter::new();
-        // 組み込みワードGETを上書きしようとする
-        let result = interp.execute("[ '[ 1 ] +' ] 'GET' DEF").await;
+        // 組み込みワードGETを上書きしようとする（新構文: Vectorをコードとして使用）
+        let result = interp.execute("[ [ [ 1 ] + ] ] 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Cannot redefine built-in word"),
@@ -396,27 +406,28 @@ mod tests {
     #[tokio::test]
     async fn test_can_override_custom_word() {
         let mut interp = Interpreter::new();
-        // カスタムワードは上書き可能
-        let result1 = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await;
+        // カスタムワードは上書き可能（新構文）
+        let result1 = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
 
-        let result2 = interp.execute("[ '[ 3 ] *' ] 'DOUBLE' DEF").await;
+        let result2 = interp.execute("[ [ 3 ] * ] 'DOUBLE' DEF").await;
         assert!(result2.is_ok(), "Overriding custom word should succeed");
 
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
         assert!(result3.is_ok(), "Executing redefined word should succeed");
 
-        // スタックトップが [ 15 ] であることを確認（Vector）
+        // スタックトップが [ 15 ] であることを確認（Vector containing scalar 15）
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            // 新しいValue構造では、Vectorは1要素のベクタ
             if let ValueData::Vector(children) = &val.data {
                 assert_eq!(children.len(), 1, "Result should have one element");
-                // 15 は分数として 15/1 で表現される
                 if let Some(f) = children[0].as_scalar() {
-                    assert_eq!(f.numerator, num_bigint::BigInt::from(15), "Expected 15, got {}", f.numerator);
-                    assert_eq!(f.denominator, num_bigint::BigInt::from(1), "Expected denominator 1");
+                    assert_eq!(f.to_i64().unwrap(), 15, "Result should be 15");
+                } else {
+                    panic!("Expected scalar inside vector");
                 }
+            } else {
+                panic!("Expected vector result");
             }
         }
     }
@@ -425,11 +436,11 @@ mod tests {
     async fn test_cannot_override_other_builtin_words() {
         let mut interp = Interpreter::new();
 
-        // 複数の組み込みワードを上書きしようとする
+        // 複数の組み込みワードを上書きしようとする（新構文）
         let builtin_words = vec!["INSERT", "REPLACE", "MAP", "FILTER", "PRINT"];
 
         for word in builtin_words {
-            let code = format!("[ '[ 1 ] +' ] '{}' DEF", word);
+            let code = format!("[ [ 1 ] + ] '{}' DEF", word);
             let result = interp.execute(&code).await;
             assert!(result.is_err(), "Should not be able to override builtin word: {}", word);
             let err_msg = result.unwrap_err().to_string();
@@ -442,8 +453,8 @@ mod tests {
     async fn test_def_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        // Stackモード（..）でDEFを呼び出した場合はエラー
-        let result = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' .. DEF").await;
+        // Stackモード（..）でDEFを呼び出した場合はエラー（新構文）
+        let result = interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' .. DEF").await;
         assert!(result.is_err(), "DEF should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("DEF") && err_msg.contains("Stack mode"),
@@ -454,8 +465,8 @@ mod tests {
     async fn test_del_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        // まず定義
-        interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+        // まず定義（新構文）
+        interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF").await.unwrap();
 
         // Stackモード（..）でDELを呼び出した場合はエラー
         let result = interp.execute("'DOUBLE' .. DEL").await;
@@ -469,8 +480,8 @@ mod tests {
     async fn test_lookup_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        // まず定義
-        interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+        // まず定義（新構文）
+        interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF").await.unwrap();
 
         // Stackモード（..）で?を呼び出した場合はエラー
         let result = interp.execute("'DOUBLE' .. ?").await;
@@ -478,5 +489,34 @@ mod tests {
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("?") && err_msg.contains("Stack mode"),
                 "Expected Stack mode error for ?, got: {}", err_msg);
+    }
+
+    #[tokio::test]
+    async fn test_def_with_vector_duality() {
+        let mut interp = Interpreter::new();
+
+        // Vector Duality: Vectorをコードとして定義
+        // [ [ 2 ] * ] は「2を掛ける」という意味
+        let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
+        assert!(result.is_ok(), "DEF with vector should succeed: {:?}", result);
+
+        // 定義したワードを実行
+        let result = interp.execute("[ 5 ] DOUBLE").await;
+        assert!(result.is_ok(), "Executing DOUBLE should succeed: {:?}", result);
+
+        // 結果が [ 10 ] であることを確認 (Vector containing scalar 10)
+        assert_eq!(interp.stack.len(), 1, "Stack should have 1 element");
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 10, "Result should be 10");
+                } else {
+                    panic!("Expected scalar inside vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
     }
 }

@@ -50,9 +50,6 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
         ValueData::Vector(_) => {
             Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
         }
-        ValueData::Block(_) => {
-            Err(AjisaiError::structure_error("single-element value with integer", "block"))
-        }
     }
 }
 
@@ -88,9 +85,6 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
         ValueData::Vector(_) => {
             Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
         }
-        ValueData::Block(_) => {
-            Err(AjisaiError::structure_error("single-element value with integer", "block"))
-        }
     }
 }
 
@@ -115,7 +109,6 @@ pub fn extract_number(val: &Value) -> Result<&Fraction> {
         ValueData::Scalar(f) => Ok(f),
         ValueData::Nil => Err(AjisaiError::from("Cannot extract number from NIL")),
         ValueData::Vector(_) => Err(AjisaiError::structure_error("scalar value", "vector")),
-        ValueData::Block(_) => Err(AjisaiError::structure_error("scalar value", "block")),
     }
 }
 

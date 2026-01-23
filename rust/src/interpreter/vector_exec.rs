@@ -1,0 +1,148 @@
+// rust/src/interpreter/vector_exec.rs
+//
+// Vectorの二重性（Vector Duality）を実現するためのモジュール
+//
+// VectorをAjisaiコードとして解釈し、実行する機能を提供する。
+// これにより、[ DUP * ] のようなVectorをコードブロックとして扱える。
+
+use crate::interpreter::Interpreter;
+use crate::types::{Value, ValueData, DisplayHint};
+use crate::error::{AjisaiError, Result};
+use std::collections::HashSet;
+
+/// VectorをAjisaiソースコード文字列に変換
+///
+/// # Examples
+/// - `[ DUP * ]` → `"DUP *"`
+/// - `[ [ 2 ] * ]` → `"[ 2 ] *"`
+/// - `[ 1 2 3 ]` → `"1 2 3"`
+pub fn vector_to_source(val: &Value) -> Result<String> {
+    fn value_to_code(val: &Value, depth: usize) -> Result<String> {
+        match &val.data {
+            ValueData::Nil => Ok("NIL".to_string()),
+
+            ValueData::Scalar(f) => {
+                // 数値として出力
+                if f.is_integer() {
+                    Ok(f.numerator.to_string())
+                } else {
+                    Ok(format!("{}/{}", f.numerator, f.denominator))
+                }
+            }
+
+            ValueData::Vector(children) => {
+                // DisplayHint::String の場合はシンボルとして出力
+                if val.display_hint == DisplayHint::String {
+                    // 文字列をシンボル名として解釈
+                    let chars: String = children.iter()
+                        .filter_map(|c| {
+                            c.as_scalar()
+                                .and_then(|f| f.to_i64())
+                                .and_then(|n| char::from_u32(n as u32))
+                        })
+                        .collect();
+                    return Ok(chars);
+                }
+
+                // 通常のVector: 再帰的に処理
+                // depth > 0 の場合は括弧で囲む
+                let inner: Vec<String> = children.iter()
+                    .map(|c| value_to_code(c, depth + 1))
+                    .collect::<Result<Vec<_>>>()?;
+
+                let joined = inner.join(" ");
+
+                if depth > 0 {
+                    Ok(format!("[ {} ]", joined))
+                } else {
+                    Ok(joined)
+                }
+            }
+        }
+    }
+
+    value_to_code(val, 0)
+}
+
+/// Vectorをトークン列に変換して実行
+///
+/// 高階ワード（MAP, FILTER, FOLD, TIMES）からVectorをコードとして実行する際に使用する。
+pub fn execute_vector_as_code(interp: &mut Interpreter, val: &Value) -> Result<()> {
+    let source = vector_to_source(val)?;
+
+    let custom_word_names: HashSet<String> = interp.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
+
+    let tokens = crate::tokenizer::tokenize_with_custom_words(&source, &custom_word_names)
+        .map_err(|e| AjisaiError::from(format!("Tokenization error: {}", e)))?;
+
+    let (_, action) = interp.execute_section_core(&tokens, 0)?;
+
+    if action.is_some() {
+        return Err(AjisaiError::from("Async operations not supported in vector execution"));
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::Value;
+
+    #[test]
+    fn test_vector_to_source_simple() {
+        // [ 1 2 3 ] → "1 2 3"
+        let val = Value::from_vector(vec![
+            Value::from_int(1),
+            Value::from_int(2),
+            Value::from_int(3),
+        ]);
+        let source = vector_to_source(&val).unwrap();
+        assert_eq!(source, "1 2 3");
+    }
+
+    #[test]
+    fn test_vector_to_source_with_nested() {
+        // [ [ 2 ] * ] → "[ 2 ] *"
+        let val = Value::from_vector(vec![
+            Value::from_vector(vec![Value::from_int(2)]),
+            Value::from_string("*"),
+        ]);
+        let source = vector_to_source(&val).unwrap();
+        assert_eq!(source, "[ 2 ] *");
+    }
+
+    #[test]
+    fn test_vector_to_source_symbols() {
+        // [ DUP * ] → "DUP *"
+        let val = Value::from_vector(vec![
+            Value::from_string("DUP"),
+            Value::from_string("*"),
+        ]);
+        let source = vector_to_source(&val).unwrap();
+        assert_eq!(source, "DUP *");
+    }
+
+    #[test]
+    fn test_vector_to_source_nil() {
+        // NIL → "NIL"
+        let val = Value::nil();
+        let source = vector_to_source(&val).unwrap();
+        assert_eq!(source, "NIL");
+    }
+
+    #[test]
+    fn test_vector_to_source_fraction() {
+        // [ 1/3 ] → "1/3"
+        use crate::types::fraction::Fraction;
+        use num_bigint::BigInt;
+        let val = Value::from_vector(vec![
+            Value::from_fraction(Fraction::new(BigInt::from(1), BigInt::from(3))),
+        ]);
+        let source = vector_to_source(&val).unwrap();
+        assert_eq!(source, "1/3");
+    }
+}

@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod test_tokenizer {
     use crate::tokenizer::tokenize_with_custom_words;
-    use crate::types::{Token, Block};
+    use crate::types::Token;
     use std::collections::HashSet;
 
     // === コメント処理のテスト ===
@@ -612,37 +612,7 @@ mod test_tokenizer {
         ]);
     }
 
-    // === Block リテラルのテスト ===
-
-    #[test]
-    fn test_block_literal_basic() {
-        let custom_words = HashSet::new();
-
-        let result = tokenize_with_custom_words("\"[ 1 ] +\"", &custom_words).unwrap();
-        assert_eq!(result.len(), 1);
-
-        if let Token::Block(block) = &result[0] {
-            assert_eq!(block.source, "[ 1 ] +");
-            assert_eq!(block.tokens.len(), 4); // VectorStart, Number, VectorEnd, Symbol
-        } else {
-            panic!("Expected Token::Block");
-        }
-    }
-
-    #[test]
-    fn test_block_literal_with_string() {
-        let custom_words = HashSet::new();
-
-        // ブロック内に文字列を含む
-        let result = tokenize_with_custom_words("\"'hello' PRINT\"", &custom_words).unwrap();
-        assert_eq!(result.len(), 1);
-
-        if let Token::Block(block) = &result[0] {
-            assert_eq!(block.tokens.len(), 2); // String, Symbol
-        } else {
-            panic!("Expected Token::Block");
-        }
-    }
+    // === 文字列リテラルのテスト ===
 
     #[test]
     fn test_string_with_double_quote() {
@@ -666,60 +636,33 @@ mod test_tokenizer {
         ]);
     }
 
-    #[test]
-    fn test_block_syntax_error() {
-        let custom_words = HashSet::new();
-
-        // ブロック内の構文エラー（閉じ括弧なし）
-        let result = tokenize_with_custom_words("\"[ 1 2\"", &custom_words);
-        assert!(result.is_err());
-    }
+    // === Vector Duality - Vectorをコードとして使用するテスト ===
 
     #[test]
-    fn test_mixed_string_and_block() {
+    fn test_vector_as_code_syntax() {
         let custom_words = HashSet::new();
 
-        let result = tokenize_with_custom_words("'hello' \"[ 1 ] +\" 'world'", &custom_words).unwrap();
-        assert_eq!(result.len(), 3);
-        assert!(matches!(&result[0], Token::String(s) if s == "hello"));
-        assert!(matches!(&result[1], Token::Block(_)));
-        assert!(matches!(&result[2], Token::String(s) if s == "world"));
-    }
-
-    #[test]
-    fn test_block_in_vector() {
-        let custom_words = HashSet::new();
-
-        // ベクター内にブロックを含む
-        let result = tokenize_with_custom_words("[ \"[ 1 ] +\" ]", &custom_words).unwrap();
-        assert_eq!(result.len(), 3); // VectorStart, Block, VectorEnd
+        // Vectorをコードとして記述（新構文）
+        let result = tokenize_with_custom_words("[ [ 1 ] + ]", &custom_words).unwrap();
+        // VectorStart, VectorStart, Number, VectorEnd, Symbol, VectorEnd
+        assert_eq!(result.len(), 6);
         assert!(matches!(&result[0], Token::VectorStart));
-        assert!(matches!(&result[1], Token::Block(_)));
-        assert!(matches!(&result[2], Token::VectorEnd));
+        assert!(matches!(&result[1], Token::VectorStart));
+        assert!(matches!(&result[2], Token::Number(n) if n == "1"));
+        assert!(matches!(&result[3], Token::VectorEnd));
+        assert!(matches!(&result[4], Token::Symbol(s) if s == "+"));
+        assert!(matches!(&result[5], Token::VectorEnd));
     }
 
     #[test]
-    fn test_unclosed_block_error() {
+    fn test_def_with_vector_code() {
         let custom_words = HashSet::new();
 
-        let result = tokenize_with_custom_words("\"unclosed block", &custom_words);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unclosed literal"));
-    }
-
-    #[test]
-    fn test_block_with_dup_star() {
-        let custom_words = HashSet::new();
-
-        // 基本的なブロック
-        let result = tokenize_with_custom_words("\"DUP *\"", &custom_words).unwrap();
-        assert_eq!(result.len(), 1);
-
-        if let Token::Block(block) = &result[0] {
-            assert_eq!(block.source, "DUP *");
-            assert_eq!(block.tokens.len(), 2); // Symbol, Symbol
-        } else {
-            panic!("Expected Token::Block");
-        }
+        // DEFでVectorをコードとして使用
+        let result = tokenize_with_custom_words("[ [ 2 ] * ] 'DOUBLE' DEF", &custom_words).unwrap();
+        // VectorStart, VectorStart, Number, VectorEnd, Symbol, VectorEnd, String, Symbol
+        assert_eq!(result.len(), 8);
+        assert!(matches!(&result[6], Token::String(s) if s == "DOUBLE"));
+        assert!(matches!(&result[7], Token::Symbol(s) if s == "DEF"));
     }
 }
