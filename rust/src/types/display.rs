@@ -5,7 +5,7 @@
 // DisplayHint に基づいて、または自動判定で適切な形式に変換する。
 // 深さに応じた括弧を使用する。
 
-use super::{Value, ValueData, DisplayHint, BracketType, Block};
+use super::{Value, ValueData, DisplayHint, BracketType};
 use super::fraction::Fraction;
 use std::fmt;
 
@@ -24,7 +24,6 @@ impl fmt::Display for Value {
             DisplayHint::String => write!(f, "{}", display_as_string(&self.data)),
             DisplayHint::Boolean => write!(f, "{}", display_as_boolean(&self.data)),
             DisplayHint::DateTime => write!(f, "{}", display_as_datetime(&self.data)),
-            DisplayHint::Block => write!(f, "{}", display_as_block(&self.data)),
         }
     }
 }
@@ -42,7 +41,6 @@ fn auto_display(data: &ValueData) -> String {
             // それ以外は数値として表示
             display_value(data, 0)
         }
-        ValueData::Block(block) => display_block(block),
     }
 }
 
@@ -85,7 +83,6 @@ fn display_value(data: &ValueData, depth: usize) -> String {
 
             format!("{} {} {}", open, inner.join(" "), close)
         }
-        ValueData::Block(block) => display_block(block),
     }
 }
 
@@ -144,7 +141,6 @@ fn display_as_string(data: &ValueData) -> String {
             let chars = String::from_utf8_lossy(&bytes);
             format!("'{}'", chars)
         }
-        ValueData::Block(block) => display_block(block),
     }
 }
 
@@ -187,13 +183,11 @@ fn display_as_boolean(data: &ValueData) -> String {
                                 "TRUE"
                             }
                         }
-                        ValueData::Block(_) => "TRUE",
                     }
                 })
                 .collect();
             format!("{{ {} }}", inner.join(" "))
         }
-        ValueData::Block(_) => "TRUE".to_string(),
     }
 }
 
@@ -214,19 +208,5 @@ fn display_as_datetime(data: &ValueData) -> String {
             // ベクターの場合は通常表示
             display_value(data, 0)
         }
-        ValueData::Block(block) => display_block(block),
-    }
-}
-
-/// Blockを表示
-fn display_block(block: &Block) -> String {
-    format!("\"{}\"", block.source)
-}
-
-/// Block型として表示
-fn display_as_block(data: &ValueData) -> String {
-    match data {
-        ValueData::Block(block) => display_block(block),
-        _ => display_value(data, 0),
     }
 }

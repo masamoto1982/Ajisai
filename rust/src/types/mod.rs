@@ -59,8 +59,6 @@ pub enum DisplayHint {
     DateTime,
     /// NIL（空値）を示す
     Nil,
-    /// コードブロックとして表示
-    Block,
 }
 
 /// Valueのデータ本体（再帰的定義）
@@ -75,8 +73,6 @@ pub enum ValueData {
     Vector(Vec<Value>),
     /// NIL（空）
     Nil,
-    /// コードブロック（高階ワード用）
-    Block(Block),
 }
 
 /// Ajisai の唯一の値型（再帰的定義）
@@ -209,14 +205,6 @@ impl Value {
         self
     }
 
-    /// Blockから値を作成
-    pub fn from_block(block: Block) -> Self {
-        Value {
-            data: ValueData::Block(block),
-            display_hint: DisplayHint::Block,
-        }
-    }
-
     // === 判定メソッド ===
 
     /// NIL かどうか
@@ -237,12 +225,6 @@ impl Value {
         matches!(self.data, ValueData::Vector(_))
     }
 
-    /// Blockかどうかを判定
-    #[inline]
-    pub fn is_block(&self) -> bool {
-        matches!(self.data, ValueData::Block(_))
-    }
-
     /// 単一要素の値かどうか（スカラーの場合true）
     #[inline]
     pub fn is_single(&self) -> bool {
@@ -257,7 +239,6 @@ impl Value {
             ValueData::Nil => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
             ValueData::Vector(v) => !v.is_empty() && !v.iter().all(|c| !c.is_truthy()),
-            ValueData::Block(_) => true, // Blockは常にtruthy
         }
     }
 
@@ -273,7 +254,6 @@ impl Value {
             ValueData::Nil => 0,
             ValueData::Scalar(_) => 1,
             ValueData::Vector(v) => v.len(),
-            ValueData::Block(_) => 1, // Blockは単一要素として扱う
         }
     }
 
@@ -312,7 +292,6 @@ impl Value {
         match &self.data {
             ValueData::Vector(v) => v.last(),
             ValueData::Scalar(_) => Some(self),
-            ValueData::Block(_) => Some(self),
             ValueData::Nil => None,
         }
     }
@@ -333,9 +312,6 @@ impl Value {
                 let old = Value::from_fraction(f.clone());
                 self.data = ValueData::Vector(vec![old, child]);
                 self.display_hint = DisplayHint::Auto;
-            }
-            ValueData::Block(_) => {
-                // Block に子を追加することは意味を持たない（何もしない）
             }
         }
     }
@@ -429,16 +405,6 @@ impl Value {
         }
     }
 
-    /// Blockへの参照を取得
-    #[inline]
-    pub fn as_block(&self) -> Option<&Block> {
-        if let ValueData::Block(b) = &self.data {
-            Some(b)
-        } else {
-            None
-        }
-    }
-
     /// イテレータを取得（子Valueを走査）
     pub fn iter(&self) -> ValueIter<'_> {
         ValueIter {
@@ -457,7 +423,6 @@ impl Value {
             ValueData::Vector(v) => {
                 v.iter().flat_map(|c| c.flatten_fractions()).collect()
             }
-            ValueData::Block(_) => vec![], // Blockは分数を持たない
         }
     }
 
@@ -482,7 +447,6 @@ impl Value {
                     }
                 }
             }
-            ValueData::Block(_) => vec![], // Blockは形状を持たない
         }
     }
 
@@ -566,25 +530,6 @@ impl<'a> Iterator for ValueIter<'a> {
 // トークンとパーサー関連の型定義
 // ============================================================================
 
-/// コードブロック（パース済みトークン列）
-///
-/// 高階ワード（TIMES, MAP, FILTER, FOLD, UNFOLD）に渡される
-/// 実行可能なコード片を表す。文字列ではなくトークン列を保持することで
-/// 実行時のパースオーバーヘッドを排除する。
-#[derive(Debug, Clone, PartialEq)]
-pub struct Block {
-    /// パース済みトークン列
-    pub tokens: Vec<Token>,
-    /// 元のソースコード（デバッグ/表示用）
-    pub source: String,
-}
-
-impl Block {
-    pub fn new(tokens: Vec<Token>, source: String) -> Self {
-        Block { tokens, source }
-    }
-}
-
 /// トークン定義
 ///
 /// パーサーが生成するトークンの種類を定義
@@ -602,8 +547,6 @@ pub enum Token {
     VectorEnd,
     GuardSeparator,  // : または ;
     LineBreak,
-    /// パース済みコードブロック（高階ワード用）
-    Block(Block),
 }
 
 /// ブラケットタイプ（表示専用）

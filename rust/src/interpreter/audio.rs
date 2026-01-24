@@ -58,7 +58,6 @@ fn value_as_string(val: &Value) -> String {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
-            ValueData::Block(_) => vec![],
         }
     }
     collect_chars(val).into_iter().collect()
