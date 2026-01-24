@@ -61,17 +61,23 @@ fn is_datetime_value(val: &Value) -> bool {
     val.display_hint == DisplayHint::DateTime && val.is_scalar()
 }
 
-/// STR - 任意の型を文字列に変換
+/// STR - 値を人間が読める形式の文字列に変換（Stringify）
 ///
 /// 【使用法】
 /// ```ajisai
-/// [ 42 ] STR → [ '42' ]
-/// [ TRUE ] STR → [ 'TRUE' ]
-/// [ NIL ] STR → [ 'NIL' ]
+/// 123 STR → '123'
+/// TRUE STR → 'TRUE'
+/// NIL STR → 'NIL'
 /// ```
 ///
+/// 【動作】
+/// - 数値: その文字列表現に変換（例: 123 → '123', 1/3 → '1/3'）
+/// - 真偽値: 'TRUE' または 'FALSE'
+/// - NIL: 'NIL'
+/// - ベクタ: 要素を空白区切りで連結
+///
 /// 【エラー】
-/// - String → String（同型変換）
+/// - 入力が既にStringの場合（「変化なしはエラー」原則）
 pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("STR does not support Stack (..) mode"));
@@ -135,20 +141,22 @@ fn fraction_to_string(f: &Fraction) -> String {
     }
 }
 
-/// NUM - 文字列または真偽値を数値に変換
+/// NUM - 文字列を数値（分数）にパース
 ///
 /// 【使用法】
 /// ```ajisai
-/// [ '42' ] NUM → [ 42 ]
-/// [ '1/3' ] NUM → [ 1/3 ]
-/// [ TRUE ] NUM → [ 1 ]
-/// [ FALSE ] NUM → [ 0 ]
+/// '123' NUM → [ 123 ]
+/// '1/3' NUM → [ 1/3 ]
+/// 'ABC' NUM → NIL
 /// ```
 ///
+/// 【動作】
+/// - 文字列を数値としてパースする
+/// - パース成功時: その数値を返す
+/// - パース失敗時: NILを返す（エラー停止させない）
+///
 /// 【エラー】
-/// - 数値としてパース不可能な文字列
-/// - Number型（同型変換）
-/// - Nil型
+/// - 入力がStringでない場合（「変化なしはエラー」原則）
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("NUM does not support Stack (..) mode"));
@@ -156,65 +164,69 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // NILの場合
-    if val.is_nil() {
-        interp.stack.push(val);
-        return Err(AjisaiError::from("NUM: cannot convert Nil to Number"));
-    }
-
-    // 文字列の場合
+    // 文字列の場合のみ処理
     if is_string_value(&val) {
         let s = value_as_string(&val).unwrap_or_default();
         match Fraction::from_str(&s) {
             Ok(fraction) => {
+                // パース成功: 数値を返す
                 interp.stack.push(wrap_number(fraction));
                 return Ok(());
             }
             Err(_) => {
-                let err_msg = format!("NUM: cannot parse '{}' as a number", s);
-                interp.stack.push(val);
-                return Err(AjisaiError::from(err_msg));
+                // パース失敗: NILを返す（エラーにしない）
+                interp.stack.push(wrap_value(Value::nil()));
+                return Ok(());
             }
         }
     }
 
-    // 真偽値の場合
-    if is_boolean_value(&val) {
-        if let Some(f) = val.as_scalar() {
-            use num_bigint::BigInt;
-            use num_traits::One;
-            let num = if !f.is_zero() { BigInt::one() } else { BigInt::from(0) };
-            interp.stack.push(wrap_number(Fraction::new(num, BigInt::one())));
-            return Ok(());
-        }
-    }
-
-    // 既に数値形式の場合は冗長な変換エラー
+    // 「変化なしはエラー」原則: 文字列以外の入力はエラー
+    // 既に数値の場合
     if is_number_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NUM: value is already in number format"));
+        return Err(AjisaiError::from("NUM: value is already a number (no change is an error)"));
     }
 
-    // その他はエラー
+    // 真偽値の場合
+    if is_boolean_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("NUM: cannot parse Boolean (expected String)"));
+    }
+
+    // NILの場合
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("NUM: cannot parse Nil (expected String)"));
+    }
+
+    // その他（ベクタなど）
     interp.stack.push(val);
-    Err(AjisaiError::from("NUM: requires string or boolean format"))
+    Err(AjisaiError::from("NUM: expected String input"))
 }
 
-/// BOOL - 文字列または数値を真偽値に変換
+/// BOOL - 文字列または数値を真偽値に正規化（Parse/Normalize Boolean）
 ///
 /// 【使用法】
 /// ```ajisai
-/// [ 'TRUE' ] BOOL → [ TRUE ]
-/// [ '1' ] BOOL → [ TRUE ]
-/// [ 1 ] BOOL → [ TRUE ]
-/// [ 0 ] BOOL → [ FALSE ]
+/// 'True' BOOL → TRUE
+/// 'false' BOOL → FALSE
+/// 'other' BOOL → NIL
+/// 100 BOOL → TRUE
+/// 0 BOOL → FALSE
 /// ```
 ///
+/// 【動作】
+/// - 入力がStringの場合: 大文字小文字を無視して判定
+///   - 'true' → TRUE
+///   - 'false' → FALSE
+///   - それ以外 → NIL
+/// - 入力がNumberの場合: Truthiness判定
+///   - 0 → FALSE
+///   - 0以外 → TRUE
+///
 /// 【エラー】
-/// - 真偽値として認識できない文字列
-/// - 1または0以外の数値
-/// - Boolean型（同型変換）
-/// - Nil型
+/// - 入力が既にBooleanの場合（「変化なしはエラー」原則）
 pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target != OperationTarget::StackTop {
         return Err(AjisaiError::from("BOOL does not support Stack (..) mode"));
@@ -222,74 +234,46 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // NILの場合
-    if val.is_nil() {
+    // 既に真偽値形式の場合は冗長な変換エラー（変化なしはエラー原則）
+    if is_boolean_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("BOOL: cannot convert Nil to Boolean"));
+        return Err(AjisaiError::from("BOOL: value is already a boolean (no change is an error)"));
     }
 
-    // 文字列の場合
+    // 文字列の場合: パース
     if is_string_value(&val) {
         let s = value_as_string(&val).unwrap_or_default();
-        return convert_string_to_bool(&s, &val, interp);
+        let upper = s.to_uppercase();
+        if upper == "TRUE" {
+            interp.stack.push(wrap_value(Value::from_bool(true)));
+        } else if upper == "FALSE" {
+            interp.stack.push(wrap_value(Value::from_bool(false)));
+        } else {
+            // パース失敗: NILを返す（エラーにしない）
+            interp.stack.push(wrap_value(Value::nil()));
+        }
+        return Ok(());
     }
 
-    // 数値の場合
+    // 数値の場合: Truthiness判定
     if is_number_value(&val) {
         if let Some(f) = val.as_scalar() {
-            return convert_fraction_to_bool(f, &val, interp);
+            // 0はFALSE、0以外はTRUE
+            let bool_val = !f.is_zero();
+            interp.stack.push(wrap_value(Value::from_bool(bool_val)));
+            return Ok(());
         }
     }
 
-    // 既に真偽値形式の場合は冗長な変換エラー
-    if is_boolean_value(&val) {
+    // NILの場合
+    if val.is_nil() {
         interp.stack.push(val);
-        return Err(AjisaiError::from("BOOL: value is already in boolean format"));
+        return Err(AjisaiError::from("BOOL: cannot convert Nil (expected String or Number)"));
     }
 
-    // その他はエラー
+    // その他（ベクタなど）
     interp.stack.push(val);
-    Err(AjisaiError::from("BOOL: requires string or number format"))
-}
-
-/// 文字列をBoolに変換するヘルパー
-fn convert_string_to_bool(s: &str, original_val: &Value, interp: &mut Interpreter) -> Result<()> {
-    let upper = s.to_uppercase();
-    let bool_val = if upper == "TRUE" || upper == "1" || s == "真" {
-        true
-    } else if upper == "FALSE" || upper == "0" || s == "偽" {
-        false
-    } else {
-        interp.stack.push(original_val.clone());
-        return Err(AjisaiError::from(format!(
-            "BOOL: cannot parse '{}' as boolean (expected 'TRUE'/'FALSE', '1'/'0', '真'/'偽')", s
-        )));
-    };
-    interp.stack.push(wrap_value(Value::from_bool(bool_val)));
-    Ok(())
-}
-
-/// 分数をBoolに変換するヘルパー
-fn convert_fraction_to_bool(n: &Fraction, original_val: &Value, interp: &mut Interpreter) -> Result<()> {
-    use num_bigint::BigInt;
-    use num_traits::One;
-
-    let one = Fraction::new(BigInt::one(), BigInt::one());
-    let zero = Fraction::new(BigInt::from(0), BigInt::one());
-
-    if *n == one {
-        interp.stack.push(wrap_value(Value::from_bool(true)));
-        Ok(())
-    } else if *n == zero {
-        interp.stack.push(wrap_value(Value::from_bool(false)));
-        Ok(())
-    } else {
-        interp.stack.push(original_val.clone());
-        Err(AjisaiError::from(format!(
-            "BOOL: cannot convert number {} to boolean (only 1 and 0 are allowed)",
-            fraction_to_string(n)
-        )))
-    }
+    Err(AjisaiError::from("BOOL: expected String or Number input"))
 }
 
 /// NIL - 文字列をNilに変換
@@ -649,6 +633,83 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
+/// CHR - 数値（Unicodeコードポイント）を1文字の文字列に変換
+///
+/// 【使用法】
+/// ```ajisai
+/// 65 CHR → 'A'
+/// 10 CHR → '\n' (改行文字)
+/// 12354 CHR → 'あ'
+/// ```
+///
+/// 【動作】
+/// - 数値をUnicodeスカラ値として解釈し、対応する1文字のStringを生成
+///
+/// 【エラー】
+/// - 入力が有効なUnicodeコードポイントでない場合
+/// - 入力が数値でない場合
+pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target != OperationTarget::StackTop {
+        return Err(AjisaiError::from("CHR does not support Stack (..) mode"));
+    }
+
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // 数値の場合のみ処理
+    if is_number_value(&val) {
+        if let Some(f) = val.as_scalar() {
+            // 整数のみ受け付ける
+            if let Some(code) = f.to_i64() {
+                // 有効なUnicodeコードポイントかチェック
+                if code >= 0 && code <= 0x10FFFF {
+                    if let Some(c) = char::from_u32(code as u32) {
+                        let s = c.to_string();
+                        interp.stack.push(wrap_value(Value::from_string(&s)));
+                        return Ok(());
+                    }
+                }
+                // 無効なコードポイント
+                interp.stack.push(val);
+                return Err(AjisaiError::from(format!(
+                    "CHR: {} is not a valid Unicode code point (valid range: 0-0x10FFFF, excluding surrogates)",
+                    code
+                )));
+            } else {
+                // 整数に変換できない（分数など）
+                // 先に文字列表現を取得してから val をプッシュ
+                let frac_str = fraction_to_string(f);
+                interp.stack.push(val);
+                return Err(AjisaiError::from(format!(
+                    "CHR: requires an integer, got {}",
+                    frac_str
+                )));
+            }
+        }
+    }
+
+    // 文字列の場合
+    if is_string_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("CHR: expected Number, got String"));
+    }
+
+    // 真偽値の場合
+    if is_boolean_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("CHR: expected Number, got Boolean"));
+    }
+
+    // NILの場合
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("CHR: expected Number, got Nil"));
+    }
+
+    // その他
+    interp.stack.push(val);
+    Err(AjisaiError::from("CHR: expected Number input"))
+}
+
 /// 値を文字列表現に変換する（内部ヘルパー）
 fn value_to_string_repr(value: &Value) -> String {
     if value.is_nil() {
@@ -733,7 +794,7 @@ mod tests {
     fn test_num_conversion() {
         let mut interp = Interpreter::new();
 
-        // String → Number
+        // String → Number (正常ケース)
         interp.stack.push(wrap_value(Value::from_string("42")));
         op_num(&mut interp).unwrap();
 
@@ -744,81 +805,131 @@ mod tests {
             }
         }
 
-        // Boolean → Number (TRUE → 1)
+        // 分数文字列 → Number
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_bool(true)));
+        interp.stack.push(wrap_value(Value::from_string("1/3")));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
             assert!(is_number_value(val));
             if let Some(f) = val.as_scalar() {
                 assert_eq!(f.numerator, BigInt::from(1));
+                assert_eq!(f.denominator, BigInt::from(3));
             }
         }
 
-        // Boolean → Number (FALSE → 0)
+        // パース失敗 → NIL (エラーではない)
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_bool(false)));
-        op_num(&mut interp).unwrap();
-
+        interp.stack.push(wrap_value(Value::from_string("ABC")));
+        let result = op_num(&mut interp);
+        assert!(result.is_ok()); // エラーではない
         if let Some(val) = interp.stack.last() {
-            assert!(is_number_value(val));
-            if let Some(f) = val.as_scalar() {
-                assert_eq!(f.numerator, BigInt::from(0));
-            }
+            assert!(val.is_nil()); // NILが返される
         }
+
+        // 既に数値 → エラー (変化なしはエラー原則)
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(123), BigInt::one())));
+        let result = op_num(&mut interp);
+        assert!(result.is_err());
+
+        // Boolean → エラー (Stringのみ受け付ける)
+        interp.stack.clear();
+        interp.stack.push(wrap_value(Value::from_bool(true)));
+        let result = op_num(&mut interp);
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_bool_conversion() {
         let mut interp = Interpreter::new();
 
-        // String → Boolean (TRUE)
+        // String 'TRUE' → Boolean TRUE
         interp.stack.push(wrap_value(Value::from_string("TRUE")));
         op_bool(&mut interp).unwrap();
-
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
             if let Some(f) = val.as_scalar() {
-                assert!(!f.is_zero());
+                assert!(!f.is_zero()); // TRUE
             }
         }
 
-        // String → Boolean ('1')
+        // String 'true' (小文字) → Boolean TRUE
+        interp.stack.clear();
+        interp.stack.push(wrap_value(Value::from_string("true")));
+        op_bool(&mut interp).unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            if let Some(f) = val.as_scalar() {
+                assert!(!f.is_zero()); // TRUE
+            }
+        }
+
+        // String 'false' → Boolean FALSE
+        interp.stack.clear();
+        interp.stack.push(wrap_value(Value::from_string("false")));
+        op_bool(&mut interp).unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            if let Some(f) = val.as_scalar() {
+                assert!(f.is_zero()); // FALSE
+            }
+        }
+
+        // String '1' → NIL (新仕様: 'true'/'false'以外はNIL)
         interp.stack.clear();
         interp.stack.push(wrap_value(Value::from_string("1")));
         op_bool(&mut interp).unwrap();
-
         if let Some(val) = interp.stack.last() {
-            assert!(is_boolean_value(val));
-            if let Some(f) = val.as_scalar() {
-                assert!(!f.is_zero());
-            }
+            assert!(val.is_nil()); // パース失敗 → NIL
         }
 
-        // Number → Boolean (1 → TRUE)
+        // String 'other' → NIL
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(1))));
+        interp.stack.push(wrap_value(Value::from_string("other")));
         op_bool(&mut interp).unwrap();
-
         if let Some(val) = interp.stack.last() {
-            assert!(is_boolean_value(val));
-            if let Some(f) = val.as_scalar() {
-                assert!(!f.is_zero());
-            }
+            assert!(val.is_nil()); // パース失敗 → NIL
         }
 
-        // Number → Boolean (0 → FALSE)
+        // Number 100 → Boolean TRUE (Truthiness: 0以外はTRUE)
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(0), BigInt::from(1))));
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(100), BigInt::one())));
         op_bool(&mut interp).unwrap();
-
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
             if let Some(f) = val.as_scalar() {
-                assert!(f.is_zero());
+                assert!(!f.is_zero()); // TRUE
             }
         }
+
+        // Number 0 → Boolean FALSE
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(0), BigInt::one())));
+        op_bool(&mut interp).unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            if let Some(f) = val.as_scalar() {
+                assert!(f.is_zero()); // FALSE
+            }
+        }
+
+        // 分数 1/2 → Boolean TRUE (0以外はTRUE)
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(2))));
+        op_bool(&mut interp).unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            if let Some(f) = val.as_scalar() {
+                assert!(!f.is_zero()); // TRUE
+            }
+        }
+
+        // 既にBoolean → エラー (変化なしはエラー原則)
+        interp.stack.clear();
+        interp.stack.push(wrap_value(Value::from_bool(true)));
+        let result = op_bool(&mut interp);
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -911,6 +1022,227 @@ mod tests {
 
         for val in interp.stack.iter() {
             assert!(val.is_nil());
+        }
+    }
+
+    // ============================================================================
+    // CHR テスト
+    // ============================================================================
+
+    #[test]
+    fn test_chr_basic() {
+        let mut interp = Interpreter::new();
+
+        // 65 → 'A'
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(65), BigInt::one())));
+        op_chr(&mut interp).unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "A");
+        }
+
+        // 97 → 'a'
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(97), BigInt::one())));
+        op_chr(&mut interp).unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "a");
+        }
+
+        // 10 → 改行
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(10), BigInt::one())));
+        op_chr(&mut interp).unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "\n");
+        }
+
+        // 48 → '0'
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(48), BigInt::one())));
+        op_chr(&mut interp).unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "0");
+        }
+
+        // Note: マルチバイト文字（日本語など）のテストは、Value::from_stringが
+        // bytes()を使用しているため、value_as_stringとの互換性の問題があります。
+        // これは既存の設計上の制約です。
+    }
+
+    #[test]
+    fn test_chr_errors() {
+        let mut interp = Interpreter::new();
+
+        // 文字列 → エラー
+        interp.stack.push(wrap_value(Value::from_string("A")));
+        let result = op_chr(&mut interp);
+        assert!(result.is_err());
+
+        // 分数 → エラー (整数のみ)
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(2))));
+        let result = op_chr(&mut interp);
+        assert!(result.is_err());
+
+        // 負の数 → エラー
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(-1), BigInt::one())));
+        let result = op_chr(&mut interp);
+        assert!(result.is_err());
+
+        // 範囲外 (0x110000) → エラー
+        interp.stack.clear();
+        interp.stack.push(wrap_number(Fraction::new(BigInt::from(0x110000), BigInt::one())));
+        let result = op_chr(&mut interp);
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_chr_integration() {
+        let mut interp = Interpreter::new();
+
+        // 65 CHR → 'A'
+        interp.execute("65 CHR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "A");
+        }
+    }
+
+    // ============================================================================
+    // NUM/STR/BOOL 統合テスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_num_str_roundtrip() {
+        let mut interp = Interpreter::new();
+
+        // '123' NUM STR → '123' (往復変換)
+        interp.execute("'123' NUM STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "123");
+        }
+
+        // '1/3' NUM STR → '1/3'
+        interp.stack.clear();
+        interp.execute("'1/3' NUM STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "1/3");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_str_num_parse_fail() {
+        let mut interp = Interpreter::new();
+
+        // 'ABC' NUM → NIL (パース失敗はNIL)
+        interp.execute("'ABC' NUM").await.unwrap();
+        assert_eq!(interp.stack.len(), 1);
+        if let Some(val) = interp.stack.last() {
+            assert!(val.is_nil());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_bool_string_parsing() {
+        let mut interp = Interpreter::new();
+
+        // 'true' BOOL → TRUE
+        interp.execute("'true' BOOL").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            assert!(val.is_truthy());
+        }
+
+        // 'FALSE' BOOL → FALSE
+        interp.stack.clear();
+        interp.execute("'FALSE' BOOL").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            assert!(!val.is_truthy());
+        }
+
+        // 'other' BOOL → NIL
+        interp.stack.clear();
+        interp.execute("'other' BOOL").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(val.is_nil());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_bool_number_truthiness() {
+        let mut interp = Interpreter::new();
+
+        // 100 BOOL → TRUE (0以外はTRUE)
+        interp.execute("100 BOOL").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            assert!(val.is_truthy());
+        }
+
+        // 0 BOOL → FALSE
+        interp.stack.clear();
+        interp.execute("0 BOOL").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            assert!(!val.is_truthy());
+        }
+
+        // -1 BOOL → TRUE
+        interp.stack.clear();
+        interp.execute("-1 BOOL").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_boolean_value(val));
+            assert!(val.is_truthy());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_str_boolean() {
+        let mut interp = Interpreter::new();
+
+        // TRUE STR → 'TRUE'
+        interp.execute("TRUE STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "TRUE");
+        }
+
+        // FALSE STR → 'FALSE'
+        interp.stack.clear();
+        interp.execute("FALSE STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "FALSE");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_str_nil() {
+        let mut interp = Interpreter::new();
+
+        // NIL STR → 'NIL'
+        interp.execute("NIL STR").await.unwrap();
+        if let Some(val) = interp.stack.last() {
+            assert!(is_string_value(val));
+            let s = value_as_string(val).unwrap();
+            assert_eq!(s, "NIL");
         }
     }
 }

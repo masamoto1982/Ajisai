@@ -584,10 +584,11 @@ impl Interpreter {
                 self.stack.push(Value::nil());
                 Ok(())
             },
-            // 型変換
+            // 型変換・パース
             "STR" => cast::op_str(self),
             "NUM" => cast::op_num(self),
             "BOOL" => cast::op_bool(self),
+            "CHR" => cast::op_chr(self),
             "CHARS" => cast::op_chars(self),
             "JOIN" => cast::op_join(self),
             "NOW" => datetime::op_now(self),
