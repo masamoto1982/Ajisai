@@ -21,6 +21,9 @@ pub mod vector_exec;    // Vectorをコードとして実行
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
 
+/// 最大呼び出し深度（次元制限と同じ）
+pub const MAX_CALL_DEPTH: usize = 3;
+
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
@@ -73,6 +76,8 @@ pub struct Interpreter {
     pub(crate) pending_token_index: usize,
     // 追加: 音楽DSL用の再生モード
     pub(crate) play_mode: audio::PlayMode,
+    /// 呼び出しスタック（再帰深度追跡用）
+    pub(crate) call_stack: Vec<String>,
 }
 
 impl Interpreter {
@@ -89,6 +94,7 @@ impl Interpreter {
             pending_tokens: None,
             pending_token_index: 0,
             play_mode: audio::PlayMode::default(),
+            call_stack: Vec::new(),
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -492,8 +498,23 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
+        // 深度チェック（カスタムワードのみ）
+        if self.call_stack.len() >= MAX_CALL_DEPTH {
+            let stack_trace = self.call_stack.join(" -> ");
+            return Err(AjisaiError::from(format!(
+                "Call depth limit ({}) exceeded: {} -> {}",
+                MAX_CALL_DEPTH, stack_trace, name
+            )));
+        }
+
+        self.call_stack.push(name.to_string());
+
         // ガード構造をコアロジックで処理
-        let action = self.execute_guard_structure_core(&def.lines)?;
+        let action = self.execute_guard_structure_core(&def.lines);
+
+        self.call_stack.pop();
+
+        let action = action?;
 
         if action.is_some() {
             // 非同期アクションが発生した場合はエラー（同期コンテキスト）
@@ -516,7 +537,20 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
-        self.execute_guard_structure(&def.lines).await
+        // 深度チェック（カスタムワードのみ）
+        if self.call_stack.len() >= MAX_CALL_DEPTH {
+            let stack_trace = self.call_stack.join(" -> ");
+            return Err(AjisaiError::from(format!(
+                "Call depth limit ({}) exceeded: {} -> {}",
+                MAX_CALL_DEPTH, stack_trace, name
+            )));
+        }
+
+        self.call_stack.push(name.to_string());
+        let result = self.execute_guard_structure(&def.lines).await;
+        self.call_stack.pop();
+
+        result
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
@@ -649,6 +683,7 @@ impl Interpreter {
         self.pending_tokens = None;
         self.pending_token_index = 0;
         self.play_mode = audio::PlayMode::default();
+        self.call_stack.clear();
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
@@ -1332,5 +1367,81 @@ ADDTEST
         // TRUE OR NIL = TRUE (TRUEが確定的に真)
         assert!(!val.is_nil(), "TRUE OR NIL should return TRUE, not NIL");
         assert!(val.is_truthy(), "TRUE OR NIL should be truthy");
+    }
+
+    // === 呼び出し深度制限テスト ===
+
+    #[tokio::test]
+    async fn test_call_depth_3_ok() {
+        let mut interp = Interpreter::new();
+        // A -> B -> C = 深度3、OK
+        interp.execute("[ ': C' ] 'B' DEF").await.unwrap();
+        interp.execute("[ ': B' ] 'A' DEF").await.unwrap();
+        interp.execute("[ ': [ 1 ]' ] 'C' DEF").await.unwrap();
+
+        let result = interp.execute("A").await;
+        assert!(result.is_ok(), "Call depth 3 should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_call_depth_4_exceeds() {
+        let mut interp = Interpreter::new();
+        // A -> B -> C -> D = 深度4、エラー
+        interp.execute("[ ': B' ] 'A' DEF").await.unwrap();
+        interp.execute("[ ': C' ] 'B' DEF").await.unwrap();
+        interp.execute("[ ': D' ] 'C' DEF").await.unwrap();
+        interp.execute("[ ': [ 1 ]' ] 'D' DEF").await.unwrap();
+
+        let result = interp.execute("A").await;
+        assert!(result.is_err(), "Call depth 4 should fail");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Call depth limit"), "Error message should mention call depth limit: {}", err_msg);
+    }
+
+    #[tokio::test]
+    async fn test_direct_recursion_limited() {
+        let mut interp = Interpreter::new();
+        // REC -> REC -> REC -> REC で深度超過
+        // シンプルな再帰ワード：常に自分自身を呼び出す
+        interp.execute("[ ': REC' ] 'REC' DEF").await.unwrap();
+
+        let result = interp.execute("REC").await;
+        assert!(result.is_err(), "Direct recursion should hit depth limit");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Call depth limit"), "Error message should mention call depth limit: {}", err_msg);
+    }
+
+    #[tokio::test]
+    async fn test_call_depth_resets_after_completion() {
+        let mut interp = Interpreter::new();
+        // 深度2の呼び出しを2回実行しても問題ない
+        interp.execute("[ ': B' ] 'A' DEF").await.unwrap();
+        interp.execute("[ ': [ 1 ]' ] 'B' DEF").await.unwrap();
+
+        // 1回目の呼び出し
+        let result1 = interp.execute("A").await;
+        assert!(result1.is_ok(), "First call should succeed");
+
+        // 2回目の呼び出し（call_stackがリセットされていることを確認）
+        let result2 = interp.execute("A").await;
+        assert!(result2.is_ok(), "Second call should succeed (call_stack should reset)");
+    }
+
+    #[tokio::test]
+    async fn test_call_depth_error_shows_trace() {
+        let mut interp = Interpreter::new();
+        // A -> B -> C -> D でエラーメッセージにスタックトレースが含まれることを確認
+        interp.execute("[ ': B' ] 'A' DEF").await.unwrap();
+        interp.execute("[ ': C' ] 'B' DEF").await.unwrap();
+        interp.execute("[ ': D' ] 'C' DEF").await.unwrap();
+        interp.execute("[ ': [ 1 ]' ] 'D' DEF").await.unwrap();
+
+        let result = interp.execute("A").await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        // エラーメッセージにスタックトレースが含まれる
+        assert!(err_msg.contains("A") && err_msg.contains("B") && err_msg.contains("C"),
+            "Error message should show call trace: {}", err_msg);
     }
 }

@@ -54,11 +54,11 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
   - NumPy/APLスタイルのブロードキャスティング
   - *All container data is represented as nestable Vectors (similar to LISP's list structure). Bracket `[ ]` nesting expresses dimensions, with tensor-like operations (SHAPE, RESHAPE, etc.) supported. Heterogeneous data mixing is allowed.*
 
-- **0次元を含めて4次元までの次元制限**
+- **「3」の原則：次元と呼び出し深度の制限**
   - 0次元：スタック（不可視、GUIの枠）
-  - 1〜3次元：可視のネスト
-  - 4次元以上のネストはエラーとなる
-  - *Dimension limit: 0-3 dimensions visible (dimension 0 is the stack). Nesting beyond 3 visible dimensions results in an error.*
+  - 1〜3次元：可視のネスト（4次元以上のネストはエラー）
+  - 呼び出し深度：最大3（`A -> B -> C` まで）
+  - *The "Rule of 3": 0-3 dimensions visible, call depth limit of 3*
 
 | 次元 / Dim | 括弧 / Bracket | 可視性 / Visibility | 構造 / Structure |
 |:---:|:---:|:---:|:---|
