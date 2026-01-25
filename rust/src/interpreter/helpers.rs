@@ -92,26 +92,6 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
 // 値抽出・アンラップ関数
 // ============================================================================
 
-/// 値から数値（Fraction）への参照を抽出する
-///
-/// 【責務】
-/// - スカラー値の場合はその要素を返す
-///
-/// 【用途】
-/// - 算術演算での数値取得
-/// - 数値が必要な演算全般
-///
-/// 【エラー】
-/// - スカラーでない場合
-#[allow(dead_code)]
-pub fn extract_number(val: &Value) -> Result<&Fraction> {
-    match &val.data {
-        ValueData::Scalar(f) => Ok(f),
-        ValueData::Nil => Err(AjisaiError::from("Cannot extract number from NIL")),
-        ValueData::Vector(_) => Err(AjisaiError::structure_error("scalar value", "vector")),
-    }
-}
-
 /// 単一要素の値から文字列を抽出する（文字列ヒント付きの値から）
 ///
 /// 【責務】
@@ -223,23 +203,6 @@ pub fn wrap_datetime(fraction: Fraction) -> Value {
     Value::from_datetime(fraction)
 }
 
-/// 値を作成するための互換性関数
-///
-/// 【注意】
-/// この関数は後方互換性のために残されています。
-/// 新しいコードでは直接 Value のコンストラクタを使用してください。
-pub fn wrap_value(value: Value) -> Value {
-    value
-}
-
-/// 後方互換性: 単一要素の値を取り出す
-///
-/// 統一Value宇宙アーキテクチャでは、この関数は値をそのまま返します。
-/// 旧アーキテクチャとの互換性のために残されています。
-pub fn unwrap_single_element(value: Value) -> Value {
-    value
-}
-
 // ============================================================================
 // テストモジュール
 // ============================================================================
@@ -268,14 +231,6 @@ mod tests {
         let wrapped = wrap_number(frac.clone());
         assert!(wrapped.is_scalar());
         assert_eq!(wrapped.as_scalar(), Some(&frac));
-    }
-
-    #[test]
-    fn test_extract_number() {
-        let frac = Fraction::new(BigInt::from(42), BigInt::one());
-        let wrapped = wrap_number(frac.clone());
-        let extracted = extract_number(&wrapped).unwrap();
-        assert_eq!(extracted, &frac);
     }
 
     #[test]

@@ -10,7 +10,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index, wrap_value, wrap_number};
+use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index, wrap_number};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
@@ -97,8 +97,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 
                 let result_elem = v[actual_index].clone();
                 interp.stack.push(target_val);
-                // 結果を単一要素Vectorでラップ
-                interp.stack.push(wrap_value(result_elem));
+                interp.stack.push(result_elem);
                 Ok(())
             } else {
                 interp.stack.push(target_val);

@@ -7,141 +7,118 @@
 
 # Ajisai
 
-**FORTHにインスパイアされた、スタックベースのプログラミング言語**
-
-*A stack-based programming language inspired by FORTH*
+**A stack-based programming language inspired by FORTH**
 
 **Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
 
 ---
 
-## AI駆動開発について / About AI-Driven Development
+## About AI-Driven Development
 
-> **このプロジェクトの実装の大半はAI（Claude）によって行われています。**
-> 設計方針の決定から、Rust/TypeScriptのコード実装、テストケースの作成、ドキュメント整備まで、
-> 人間とAIの協働によって開発が進められています。
->
-> *The majority of this project's implementation was done by AI (Claude).*
-> *From design decisions to Rust/TypeScript code implementation, test case creation, and documentation,*
-> *this project is developed through human-AI collaboration.*
+> The majority of this project's implementation was done by AI (Claude).
+> From design decisions to Rust/TypeScript code implementation, test case creation, and documentation,
+> this project is developed through human-AI collaboration.
 
 ---
 
-## 概要 / Overview
+## Overview
 
-Ajisaiは、WebAssembly上で動作するスタックベースのインタープリタと、Webベースの対話的なGUIを提供するプログラミング言語です。
+Ajisai provides a stack-based interpreter running on WebAssembly and an interactive web-based GUI.
 
-*Ajisai provides a stack-based interpreter running on WebAssembly and an interactive web-based GUI.*
-
-「Ajisai（紫陽花）」という名前は、小さなワードが集まって機能を形成するFORTHの特徴を、小さな花が集まって一つの花房を形作る紫陽花に例えています。（※紫陽花の花びらに見える部分は、実際には萼（がく）です）
-
-*The name "Ajisai" (hydrangea) metaphorically represents FORTH's characteristic of small words coming together to form functionality, like how small flowers come together to form a hydrangea cluster. (Note: What appears to be petals are actually sepals.)*
+The name "Ajisai" (hydrangea in Japanese) metaphorically represents FORTH's characteristic of small words coming together to form functionality, like how small flowers come together to form a hydrangea cluster. (Note: What appears to be petals are actually sepals.)
 
 ---
 
-## 特徴 / Features
+## Features
 
-### 言語設計 / Language Design
+### Language Design
 
-- **スタックベース・逆ポーランド記法（RPN）**
-  - FORTHスタイルのスタック操作
-  - *Stack-based with Reverse Polish Notation, FORTH-style*
+- **Stack-based with Reverse Polish Notation (RPN)**
+  - FORTH-style stack operations
 
-- **Vectorベースのフラクタル構造**
-  - 全てのコンテナデータはネスト可能なVectorで表現（LISPのリスト構造に通ずる設計思想）
-  - 括弧 `[ ]` のネストで多次元を表現し、テンソル的な操作（SHAPE, RESHAPE等）をサポート
-  - **異種データ混在可能**: `[ 1 'hello' TRUE [ 2 3 ] ]` のように、数値・文字列・真偽値・Vectorを自由に組み合わせ可能
-  - NumPy/APLスタイルのブロードキャスティング
-  - *All container data is represented as nestable Vectors (similar to LISP's list structure). Bracket `[ ]` nesting expresses dimensions, with tensor-like operations (SHAPE, RESHAPE, etc.) supported. Heterogeneous data mixing is allowed.*
+- **Vector-based Fractal Structure**
+  - All container data is represented as nestable Vectors (similar to LISP's list structure)
+  - Bracket `[ ]` nesting expresses dimensions, with tensor-like operations (SHAPE, RESHAPE, etc.) supported
+  - **Heterogeneous data mixing**: Numbers, strings, booleans, and Vectors can be freely combined, e.g., `[ 1 'hello' TRUE [ 2 3 ] ]`
+  - NumPy/APL-style broadcasting
 
-- **「3」の原則：次元と呼び出し深度の制限**
-  - 0次元：スタック（不可視、GUIの枠）
-  - 1〜3次元：可視のネスト（4次元以上のネストはエラー）
-  - 呼び出し深度：最大3（`A -> B -> C` まで）
-  - *The "Rule of 3": 0-3 dimensions visible, call depth limit of 3*
+- **The "Rule of 3": Dimension and Call Depth Limits**
+  - Dimension 0: Stack (invisible, GUI frame)
+  - Dimensions 1-3: Visible nesting (nesting beyond 3 dimensions causes an error)
+  - Call depth: Maximum 3 (`A -> B -> C`)
 
-| 次元 / Dim | 括弧 / Bracket | 可視性 / Visibility | 構造 / Structure |
+| Dim | Bracket | Visibility | Structure |
 |:---:|:---:|:---:|:---|
-| 0次元 | — | 不可視 | スタック（暗黙の最外殻） |
-| 1次元 | `{ }` | 可視 | `{ 1 2 3 }` |
-| 2次元 | `( )` | 可視 | `{ ( 1 2 ) ( 3 4 ) }` |
-| 3次元 | `[ ]` | 可視 | `{ ( [ 1 ] [ 2 ] ) }` |
+| 0 | — | Invisible | Stack (implicit outermost shell) |
+| 1 | `{ }` | Visible | `{ 1 2 3 }` |
+| 2 | `( )` | Visible | `{ ( 1 2 ) ( 3 4 ) }` |
+| 3 | `[ ]` | Visible | `{ ( [ 1 ] [ 2 ] ) }` |
 
-- **完全精度の有理数演算**
-  - すべての数値は内部的に分数（Fraction）として扱われ、丸め誤差なし
-  - 非常に大きな数値も処理可能
-  - *All numbers internally treated as fractions - no rounding errors, capable of handling extremely large numbers*
+- **Exact Fraction Arithmetic**
+  - All numbers are internally treated as fractions - no rounding errors
+  - Capable of handling extremely large numbers
 
-- **統一分数アーキテクチャ（型なし設計）**
-  - すべての値は内部的に `Vec<Fraction>` として統一表現
-  - 数値、真偽値、文字、文字列の区別は表示時のみ（DisplayHint）
-  - 型チェックを完全に廃止し、FORTH精神を継承した自由な設計
-  - *Unified Fraction Architecture: All values internally represented as Vec<Fraction>. No type checking - distinction between numbers, booleans, and strings only at display time.*
+- **Unified Fraction Architecture (Typeless Design)**
+  - All values are internally represented as `Vec<Fraction>`
+  - Distinction between numbers, booleans, and strings only at display time (DisplayHint)
+  - No type checking - inheriting FORTH's spirit of freedom
 
-- **組み込みワードの保護**
-  - 組み込みワードは削除や上書きが不可能
-  - *Built-in words cannot be deleted or overwritten*
+- **Built-in Word Protection**
+  - Built-in words cannot be deleted or overwritten
 
-### 可視化機能 / Visualization
+### Visualization
 
-- **深度別ブラケット表示**: `[ ]` → `{ }` → `( )` → `[ ]` ...（3レベルごとに循環）
-- *Depth-based bracket styles for visual clarity*
+- **Depth-based bracket styles**: `[ ]` → `{ }` → `( )` → `[ ]` ... (cycles every 3 levels)
 
-- **リアルタイム状態表示**: スタック、辞書、メモリ使用量をGUIで確認可能
-- *Real-time state display: stack, dictionary, memory usage in GUI*
+- **Real-time state display**: Stack, dictionary, memory usage visible in GUI
 
-### テクノロジースタック / Technology Stack
+### Technology Stack
 
-| コンポーネント / Component | 技術 / Technology |
+| Component | Technology |
 |:---|:---|
-| コアインタープリタ / Core Interpreter | Rust |
-| ランタイム / Runtime | WebAssembly |
-| フロントエンド / Frontend | TypeScript |
-| ビルドツール / Build Tool | Vite |
+| Core Interpreter | Rust |
+| Runtime | WebAssembly |
+| Frontend | TypeScript |
+| Build Tool | Vite |
 | CI/CD | GitHub Actions |
 
 ---
 
-## コード例 / Code Examples
+## Code Examples
 
-### Vector演算 / Vector Operations
+### Vector Operations
 
 ```ajisai
-# Vectorの作成 / Creating vectors
-[ 1 2 3 ]               # 1次元Vector / 1D vector: shape [3]
-[ [ 1 2 ] [ 3 4 ] ]     # ネストされたVector（行列的構造） / Nested vector (matrix-like): shape [2, 2]
+# Creating vectors
+[ 1 2 3 ]               # 1D vector: shape [3]
+[ [ 1 2 ] [ 3 4 ] ]     # Nested vector (matrix-like): shape [2, 2]
 
-# 異種データ混在 / Heterogeneous data
-[ 1 'hello' TRUE [ 2 3 ] ]   # 数値、文字列、真偽値、Vectorを混在可能
+# Heterogeneous data
+[ 1 'hello' TRUE [ 2 3 ] ]   # Numbers, strings, booleans, Vectors can be mixed
 
-# ブロードキャスティング算術演算 / Broadcasting arithmetic
+# Broadcasting arithmetic
 [ 5 ] [ 1 2 3 ] +       # → [ 6 7 8 ]
 [ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +
 # → [ [ 11 22 33 ] [ 14 25 36 ] ]
-
-# 形状操作（テンソル的操作） / Shape manipulation (tensor-like operations)
-[ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE      # → [ 2 3 ]
-[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE    # → [ [ 1 2 3 ] [ 4 5 6 ] ]
-[ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE  # → [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
 ```
 
-### カスタムワード定義 / Custom Word Definition
+### Custom Word Definition
 
 ```ajisai
-# 2倍にするワードを定義 / Define a word that doubles a value
+# Define a word that doubles a value
 [ '[ 2 ] *' ] 'DOUBLE' DEF
 
-# 使用例 / Usage
+# Usage
 [ 5 ] DOUBLE    # → [ 10 ]
 
-# 高階関数との組み合わせ / Combine with higher-order functions
+# Combine with higher-order functions
 [ 1 2 3 4 5 ] 'DOUBLE' MAP    # → [ 2 4 6 8 10 ]
 ```
 
-### 制御構造（ガード） / Control Structure (Guards)
+### Control Structure (Guards)
 
 ```ajisai
-# 条件分岐：偶数ならTRUE、奇数ならFALSE / Conditional: TRUE if even, FALSE if odd
+# Conditional: TRUE if even, FALSE if odd
 [ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
 
 [ 4 ] EVEN?    # → [ TRUE ]
@@ -150,94 +127,106 @@ Ajisaiは、WebAssembly上で動作するスタックベースのインタープ
 
 ---
 
-## 組み込みワード一覧 / Built-in Words
+## Built-in Words
 
-### 算術演算 / Arithmetic
-`+` `-` `*` `/` `MOD` `FLOOR` `CEIL` `ROUND`
-
-### 形状操作（テンソル的操作） / Shape Manipulation (Tensor-like Operations)
-`SHAPE` `RANK` `RESHAPE` `TRANSPOSE` `FILL`
-
-### Vector操作 / Vector Operations
-`GET` `INSERT` `REPLACE` `REMOVE` `LENGTH` `TAKE` `SPLIT` `CONCAT` `REVERSE` `RANGE`
-
-### 比較・論理演算 / Comparison & Logic
-`=` `<` `<=` `>` `>=` `AND` `OR` `NOT`
-
-### 高階関数 / Higher-Order Functions
-`MAP` `FILTER` `FOLD` `UNFOLD`
-
-### 形式変換 / Format Conversion
-`STR` `NUM` `BOOL` `NIL` `CHARS` `JOIN`
-
-### 日時操作 / DateTime
-`NOW` `DATETIME` `TIMESTAMP`
-
-### ワード管理 / Word Management
-`DEF` `DEL` `?`
-
-### 制御フロー / Control Flow
-`TIMES` `WAIT` `:` `!`
-
-### 入出力 / I/O
-`PRINT`
-
-### 操作対象指定 / Target Specification
+### Target Specification
 `.` `..`
 
-### 入力ヘルパー / Input Helpers
+### Input Helpers
 `'` `FRAME`
+
+### Position Operations (0-indexed)
+`GET` `INSERT` `REPLACE` `REMOVE`
+
+### Quantity Operations
+`LENGTH` `TAKE`
+
+### Vector Operations
+`SPLIT` `CONCAT` `REVERSE` `RANGE` `SORT`
+
+### Constants
+`TRUE` `FALSE` `NIL`
+
+### String Operations
+`CHARS` `JOIN`
+
+### Parse/Convert
+`NUM` `STR` `BOOL` `CHR`
+
+### DateTime
+`NOW` `DATETIME` `TIMESTAMP`
+
+### Arithmetic
+`+` `-` `*` `/` `MOD` `FLOOR` `CEIL` `ROUND`
+
+### Comparison
+`=` `<` `<=` `>` `>=`
+
+### Logic
+`AND` `OR` `NOT`
+
+### Higher-Order Functions
+`MAP` `FILTER` `FOLD`
+
+### I/O
+`PRINT`
+
+### Music
+`SEQ` `SIM` `PLAY`
+
+### Word Management
+`DEF` `DEL` `?`
+
+### Control Flow
+`TIMES` `WAIT` `:` `!`
+
+### Random
+`CSPRNG`
+
+### Hash
+`HASH`
 
 ---
 
-## ローカル開発 / Local Development
+## Local Development
 
-### 必要条件 / Prerequisites
+### Prerequisites
 
 - [Rust](https://www.rust-lang.org/tools/install)
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
-- [Node.js](https://nodejs.org/) (v20以上推奨 / v20+ recommended)
+- [Node.js](https://nodejs.org/) (v20+ recommended)
 
-### セットアップ / Setup
+### Setup
 
 ```bash
-# リポジトリのクローン / Clone the repository
+# Clone the repository
 git clone https://github.com/masamoto1982/Ajisai.git
 cd Ajisai
 
-# 依存関係のインストール / Install dependencies
+# Install dependencies
 npm install
 
-# WASMビルド / Build WASM
+# Build WASM
 cd rust
 wasm-pack build --target web --out-dir ../js/pkg
 cd ..
 
-# TypeScriptビルド / Build TypeScript
+# Build TypeScript
 npm run build
 
-# 開発サーバー起動 / Start development server
+# Start development server
 npx vite
 ```
 
-### ビルド / Build
+### Build
 
 ```bash
-# プロダクションビルド / Production build
+# Production build
 npx vite build
 ```
 
 ---
 
-## ライセンス / License
+## License
 
 [MIT License](LICENSE)
-
----
-
-## 関連ドキュメント / Related Documentation
-
-- [UNIFIED_FRACTION_ARCHITECTURE.md](Documentation/UNIFIED_FRACTION_ARCHITECTURE.md) - 統一分数アーキテクチャの設計
-- [DIMENSION_MODEL.md](Documentation/DIMENSION_MODEL.md) - 次元モデルの詳細
-- [BROADCASTING.md](Documentation/BROADCASTING.md) - ブロードキャスティングの仕様
-- [THREE_VALUED_LOGIC.md](THREE_VALUED_LOGIC.md) - 三値論理について

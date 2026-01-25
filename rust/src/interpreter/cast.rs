@@ -9,7 +9,7 @@
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{wrap_value, wrap_number};
+use crate::interpreter::helpers::wrap_number;
 use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::fraction::Fraction;
 
@@ -87,7 +87,7 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
 
     // NILの場合
     if val.is_nil() {
-        interp.stack.push(wrap_value(Value::from_string("NIL")));
+        interp.stack.push(Value::from_string("NIL"));
         return Ok(());
     }
 
@@ -101,7 +101,7 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     if is_boolean_value(&val) {
         if let Some(f) = val.as_scalar() {
             let string_repr = if !f.is_zero() { "TRUE" } else { "FALSE" };
-            interp.stack.push(wrap_value(Value::from_string(string_repr)));
+            interp.stack.push(Value::from_string(string_repr));
             return Ok(());
         }
     }
@@ -110,7 +110,7 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     if is_datetime_value(&val) {
         if let Some(f) = val.as_scalar() {
             let string_repr = fraction_to_string(f);
-            interp.stack.push(wrap_value(Value::from_string(&string_repr)));
+            interp.stack.push(Value::from_string(&string_repr));
             return Ok(());
         }
     }
@@ -119,14 +119,14 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     if is_number_value(&val) {
         if let Some(f) = val.as_scalar() {
             let string_repr = fraction_to_string(f);
-            interp.stack.push(wrap_value(Value::from_string(&string_repr)));
+            interp.stack.push(Value::from_string(&string_repr));
             return Ok(());
         }
     }
 
     // ベクタの場合（複数要素）
     let string_repr = value_to_string_repr(&val);
-    interp.stack.push(wrap_value(Value::from_string(&string_repr)));
+    interp.stack.push(Value::from_string(&string_repr));
     Ok(())
 }
 
@@ -175,7 +175,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
             }
             Err(_) => {
                 // パース失敗: NILを返す（エラーにしない）
-                interp.stack.push(wrap_value(Value::nil()));
+                interp.stack.push(Value::nil());
                 return Ok(());
             }
         }
@@ -245,12 +245,12 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
         let s = value_as_string(&val).unwrap_or_default();
         let upper = s.to_uppercase();
         if upper == "TRUE" {
-            interp.stack.push(wrap_value(Value::from_bool(true)));
+            interp.stack.push(Value::from_bool(true));
         } else if upper == "FALSE" {
-            interp.stack.push(wrap_value(Value::from_bool(false)));
+            interp.stack.push(Value::from_bool(false));
         } else {
             // パース失敗: NILを返す（エラーにしない）
-            interp.stack.push(wrap_value(Value::nil()));
+            interp.stack.push(Value::nil());
         }
         return Ok(());
     }
@@ -260,7 +260,7 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
         if let Some(f) = val.as_scalar() {
             // 0はFALSE、0以外はTRUE
             let bool_val = !f.is_zero();
-            interp.stack.push(wrap_value(Value::from_bool(bool_val)));
+            interp.stack.push(Value::from_bool(bool_val));
             return Ok(());
         }
     }
@@ -307,7 +307,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
         let s = value_as_string(&val).unwrap_or_default();
         let upper = s.to_uppercase();
         if upper == "NIL" {
-            interp.stack.push(wrap_value(Value::nil()));
+            interp.stack.push(Value::nil());
             return Ok(());
         } else {
             let err_msg = format!("NIL: cannot parse '{}' as nil (expected 'nil')", s);
@@ -516,7 +516,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     )));
                 }
 
-                interp.stack.push(wrap_value(Value::from_string(&result)));
+                interp.stack.push(Value::from_string(&result));
                 return Ok(());
             }
 
@@ -606,7 +606,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         )));
                     }
 
-                    results.push(wrap_value(Value::from_string(&result_str)));
+                    results.push(Value::from_string(&result_str));
                     continue;
                 }
 
@@ -664,7 +664,7 @@ pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
                 if code >= 0 && code <= 0x10FFFF {
                     if let Some(c) = char::from_u32(code as u32) {
                         let s = c.to_string();
-                        interp.stack.push(wrap_value(Value::from_string(&s)));
+                        interp.stack.push(Value::from_string(&s));
                         return Ok(());
                     }
                 }
@@ -795,7 +795,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // String → Number (正常ケース)
-        interp.stack.push(wrap_value(Value::from_string("42")));
+        interp.stack.push(Value::from_string("42"));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
@@ -807,7 +807,7 @@ mod tests {
 
         // 分数文字列 → Number
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_string("1/3")));
+        interp.stack.push(Value::from_string("1/3"));
         op_num(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
@@ -820,7 +820,7 @@ mod tests {
 
         // パース失敗 → NIL (エラーではない)
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_string("ABC")));
+        interp.stack.push(Value::from_string("ABC"));
         let result = op_num(&mut interp);
         assert!(result.is_ok()); // エラーではない
         if let Some(val) = interp.stack.last() {
@@ -835,7 +835,7 @@ mod tests {
 
         // Boolean → エラー (Stringのみ受け付ける)
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_bool(true)));
+        interp.stack.push(Value::from_bool(true));
         let result = op_num(&mut interp);
         assert!(result.is_err());
     }
@@ -845,7 +845,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // String 'TRUE' → Boolean TRUE
-        interp.stack.push(wrap_value(Value::from_string("TRUE")));
+        interp.stack.push(Value::from_string("TRUE"));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
@@ -856,7 +856,7 @@ mod tests {
 
         // String 'true' (小文字) → Boolean TRUE
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_string("true")));
+        interp.stack.push(Value::from_string("true"));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
@@ -867,7 +867,7 @@ mod tests {
 
         // String 'false' → Boolean FALSE
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_string("false")));
+        interp.stack.push(Value::from_string("false"));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_boolean_value(val));
@@ -878,7 +878,7 @@ mod tests {
 
         // String '1' → NIL (新仕様: 'true'/'false'以外はNIL)
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_string("1")));
+        interp.stack.push(Value::from_string("1"));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(val.is_nil()); // パース失敗 → NIL
@@ -886,7 +886,7 @@ mod tests {
 
         // String 'other' → NIL
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_string("other")));
+        interp.stack.push(Value::from_string("other"));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(val.is_nil()); // パース失敗 → NIL
@@ -927,7 +927,7 @@ mod tests {
 
         // 既にBoolean → エラー (変化なしはエラー原則)
         interp.stack.clear();
-        interp.stack.push(wrap_value(Value::from_bool(true)));
+        interp.stack.push(Value::from_bool(true));
         let result = op_bool(&mut interp);
         assert!(result.is_err());
     }
@@ -1082,7 +1082,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // 文字列 → エラー
-        interp.stack.push(wrap_value(Value::from_string("A")));
+        interp.stack.push(Value::from_string("A"));
         let result = op_chr(&mut interp);
         assert!(result.is_err());
 

@@ -36,7 +36,6 @@
 
 pub mod fraction;
 pub mod display;
-pub mod tensor;  // 行列演算ユーティリティ
 
 use std::collections::HashSet;
 use self::fraction::Fraction;
@@ -150,15 +149,6 @@ impl Value {
         Self::from_string(s)
     }
 
-    /// 空のベクターを作成
-    #[inline]
-    pub fn empty_vector() -> Self {
-        Self {
-            data: ValueData::Vector(Vec::new()),
-            display_hint: DisplayHint::Auto,
-        }
-    }
-
     /// 子Valueの配列からValueを作成
     #[inline]
     pub fn from_children(children: Vec<Value>) -> Self {
@@ -223,12 +213,6 @@ impl Value {
     #[inline]
     pub fn is_vector(&self) -> bool {
         matches!(self.data, ValueData::Vector(_))
-    }
-
-    /// 単一要素の値かどうか（スカラーの場合true）
-    #[inline]
-    pub fn is_single(&self) -> bool {
-        self.is_scalar()
     }
 
     /// 真偽値として評価
@@ -405,14 +389,6 @@ impl Value {
         }
     }
 
-    /// イテレータを取得（子Valueを走査）
-    pub fn iter(&self) -> ValueIter<'_> {
-        ValueIter {
-            value: self,
-            index: 0,
-        }
-    }
-
     // === 互換性のためのメソッド ===
 
     /// 全ての分数を平坦化して取得（互換性のため）
@@ -450,27 +426,6 @@ impl Value {
         }
     }
 
-    /// 分数配列とヒントから作成（互換性のため）
-    #[allow(dead_code)]
-    pub fn from_fractions_with_shape(data: Vec<Fraction>, _shape: Vec<usize>, hint: DisplayHint) -> Self {
-        if data.is_empty() {
-            return Self::nil();
-        }
-        if data.len() == 1 {
-            if data[0].is_nil() && hint == DisplayHint::Nil {
-                return Self::nil();
-            }
-            return Self {
-                data: ValueData::Scalar(data[0].clone()),
-                display_hint: hint,
-            };
-        }
-        Self {
-            data: ValueData::Vector(data.into_iter().map(Value::from_fraction).collect()),
-            display_hint: hint,
-        }
-    }
-
     /// 分数の配列から値を作成（数値ヒント付き）
     #[inline]
     pub fn from_numbers(v: Vec<Fraction>) -> Self {
@@ -505,24 +460,6 @@ impl Value {
             data: ValueData::Vector(v.into_iter().map(Value::from_fraction).collect()),
             display_hint: DisplayHint::Auto,
         }
-    }
-}
-
-/// Value のイテレータ
-pub struct ValueIter<'a> {
-    value: &'a Value,
-    index: usize,
-}
-
-impl<'a> Iterator for ValueIter<'a> {
-    type Item = &'a Value;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let result = self.value.get_child(self.index);
-        if result.is_some() {
-            self.index += 1;
-        }
-        result
     }
 }
 

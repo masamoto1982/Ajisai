@@ -10,7 +10,7 @@
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::interpreter::vector_exec::execute_vector_as_code;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, unwrap_single_element, wrap_value};
+use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
 use crate::types::{Value, ValueData, DisplayHint};
 
 // ============================================================================
@@ -148,7 +148,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 // スタックをクリアして単一要素を処理（Stackモードと同様）
                 interp.stack.clear();
                 // 各要素を単一要素Vectorでラップしてプッシュ
-                interp.stack.push(wrap_value(elem.clone()));
+                interp.stack.push(elem.clone());
                 // 実行可能コードを実行
                 match execute_code(interp, &executable) {
                     Ok(_) => {
@@ -336,7 +336,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 // スタックをクリアして単一要素を処理（MAPと同様）
                 interp.stack.clear();
                 // 各要素を単一要素Vectorでラップしてプッシュ
-                interp.stack.push(wrap_value(elem.clone()));
+                interp.stack.push(elem.clone());
                 // 実行可能コードを実行
                 match execute_code(interp, &executable) {
                     Ok(_) => {
@@ -521,11 +521,11 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             };
 
             // 初期値をアンラップ
-            let mut accumulator = unwrap_single_element(init_val);
+            let mut accumulator = init_val;
 
             if elements.is_empty() {
                 // 空ベクタ/NIL: 初期値をそのまま返す
-                interp.stack.push(wrap_value(accumulator));
+                interp.stack.push(accumulator);
                 return Ok(());
             }
 
@@ -541,8 +541,8 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             for elem in &elements {
                 // スタックをクリアして処理（MAPと同様）
                 interp.stack.clear();
-                interp.stack.push(wrap_value(accumulator.clone()));
-                interp.stack.push(wrap_value(elem.clone()));
+                interp.stack.push(accumulator.clone());
+                interp.stack.push(elem.clone());
 
                 match execute_code(interp, &executable) {
                     Ok(_) => {
@@ -553,11 +553,11 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below.clone();
                                 interp.stack.push(Value::from_vector(elements.clone()));
-                                interp.stack.push(wrap_value(accumulator.clone()));
+                                interp.stack.push(accumulator.clone());
                                 interp.stack.push(code_val.clone());
                                 AjisaiError::from("FOLD: code must return a value")
                             })?;
-                        accumulator = unwrap_single_element(result);
+                        accumulator = result;
                     }
                     Err(e) => {
                         // エラー時にスタックを復元
@@ -565,7 +565,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
                         interp.stack.push(Value::from_vector(elements));
-                        interp.stack.push(wrap_value(accumulator));
+                        interp.stack.push(accumulator);
                         interp.stack.push(code_val);
                         return Err(e);
                     }
@@ -576,7 +576,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.push(wrap_value(accumulator));
+            interp.stack.push(accumulator);
             Ok(())
         }
         OperationTarget::Stack => {
@@ -596,7 +596,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
             let original_stack_below = interp.stack.clone();
 
-            let mut accumulator = unwrap_single_element(init_val);
+            let mut accumulator = init_val;
 
             let saved_target = interp.operation_target;
             let saved_no_change_check = interp.disable_no_change_check;
@@ -605,14 +605,14 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             for item in targets {
                 interp.stack.clear();
-                interp.stack.push(wrap_value(accumulator));
+                interp.stack.push(accumulator);
                 interp.stack.push(item);
 
                 match execute_code(interp, &executable) {
                     Ok(_) => {
                         let result = interp.stack.pop()
                             .ok_or_else(|| AjisaiError::from("FOLD: code must return a value"))?;
-                        accumulator = unwrap_single_element(result);
+                        accumulator = result;
                     }
                     Err(e) => {
                         interp.operation_target = saved_target;
@@ -626,7 +626,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
-            interp.stack.push(wrap_value(accumulator));
+            interp.stack.push(accumulator);
             Ok(())
         }
     }
@@ -721,7 +721,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 let _input = interp.stack.pop(); // 入力状態を破棄
 
                 // 単一要素ベクタの場合はアンラップ
-                let unwrapped = unwrap_single_element(result);
+                let unwrapped = result;
 
                 // NILの場合は終了
                 if unwrapped.is_nil() {
@@ -809,7 +809,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         let _input = interp.stack.pop(); // 入力状態を破棄
 
                         // 単一要素ベクタの場合はアンラップ
-                        let unwrapped = unwrap_single_element(result);
+                        let unwrapped = result;
 
                         // NILの場合は終了
                         if unwrapped.is_nil() {
@@ -821,7 +821,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                             let v = reconstruct_vector_elements(&unwrapped);
                             if v.len() == 2 {
                                 // 結果をVectorでラップ
-                                results.push(wrap_value(v[0].clone()));
+                                results.push(v[0].clone());
 
                                 // 次の状態がNILの場合は終了
                                 if v[1].is_nil() {
