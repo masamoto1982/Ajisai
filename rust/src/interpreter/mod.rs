@@ -27,7 +27,7 @@ pub const MAX_CALL_DEPTH: usize = 3;
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use async_recursion::async_recursion;
-use self::helpers::{wrap_value, wrap_number};
+use self::helpers::wrap_number;
 use gloo_timers::future::sleep;
 use std::time::Duration;
 
@@ -290,8 +290,7 @@ impl Interpreter {
                     self.stack.push(wrap_number(frac));
                 },
                 Token::String(s) => {
-                    let val = Value::from_string(s);
-                    self.stack.push(wrap_value(val));
+                    self.stack.push(Value::from_string(s));
                 },
                 // Token::Boolean と Token::Nil は削除
                 // TRUE/FALSE/NIL は Symbol として認識され、組み込みワードとして実行される

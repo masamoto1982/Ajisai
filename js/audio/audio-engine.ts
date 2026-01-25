@@ -1,10 +1,9 @@
 // js/audio/audio-engine.ts
 //
-// 【責務】
-// 音楽DSLのフロントエンド再生エンジン。
-// SEQ/SIM構造を再帰的に処理し、Web Audio APIで音声を再生する。
+// Audio playback engine for Ajisai's music DSL.
+// Recursively processes SEQ/SIM structures and plays audio via Web Audio API.
 //
-// 【AudioStructure形式】
+// AudioStructure format:
 // - tone: { type: 'tone', frequency: number, duration: number }
 // - rest: { type: 'rest', duration: number }
 // - seq: { type: 'seq', children: AudioStructure[] }
@@ -21,27 +20,6 @@ interface PlayCommand {
     type: 'play';
     structure: AudioStructure;
 }
-
-// Legacy format support (for backwards compatibility)
-interface LegacyAudioNote {
-    type: 'single' | 'chord' | 'rest' | 'duration_marker';
-    frequency?: number;
-    frequencies?: number[];
-    duration: 'short' | 'normal' | 'long';
-    long?: boolean;
-}
-
-interface LegacyAudioTrack {
-    track: number;
-    notes: LegacyAudioNote[];
-}
-
-interface LegacyAudioCommand {
-    type: 'sound';
-    tracks: LegacyAudioTrack[];
-}
-
-type AudioCommand = PlayCommand | LegacyAudioCommand;
 
 export class AudioEngine {
     private audioContext: AudioContext | null = null;
@@ -60,7 +38,7 @@ export class AudioEngine {
         }
     }
 
-    async playAudioCommand(command: AudioCommand): Promise<void> {
+    async playAudioCommand(command: PlayCommand): Promise<void> {
         if (!this.audioContext) {
             await this.init();
         }
@@ -75,21 +53,9 @@ export class AudioEngine {
             await this.audioContext.resume();
         }
 
-        // Check command type
-        if (command.type === 'play') {
-            // New format: play with AudioStructure
-            const startTime = this.audioContext.currentTime;
-            await this.playStructure(command.structure, startTime);
-        } else if (command.type === 'sound') {
-            // Legacy format: play all tracks simultaneously
-            const promises = command.tracks.map(track => this.playLegacyTrack(track));
-            await Promise.all(promises);
-        }
+        const startTime = this.audioContext.currentTime;
+        await this.playStructure(command.structure, startTime);
     }
-
-    // ============================================================================
-    // New AudioStructure playback
-    // ============================================================================
 
     private async playStructure(structure: AudioStructure, startTime: number): Promise<number> {
         if (!this.audioContext) return startTime;
@@ -127,54 +93,8 @@ export class AudioEngine {
         }
     }
 
-    // ============================================================================
-    // Legacy track playback (backwards compatibility)
-    // ============================================================================
-
-    private async playLegacyTrack(track: LegacyAudioTrack): Promise<void> {
-        if (!this.audioContext) return;
-
-        console.log(`Playing legacy track ${track.track} with ${track.notes.length} notes`);
-
-        const stepDuration = this.slotDuration;
-        let currentTime = this.audioContext.currentTime;
-
-        for (const note of track.notes) {
-            const duration = this.getLegacyNoteDuration(note.duration, stepDuration);
-
-            console.log('Processing note:', note);
-
-            if (note.type === 'single' && note.frequency) {
-                console.log(`Playing single tone: ${note.frequency}Hz for ${duration}s at time ${currentTime}`);
-                this.playTone(note.frequency, currentTime, duration);
-            } else if (note.type === 'chord' && note.frequencies) {
-                console.log(`Playing chord: ${note.frequencies.join(', ')}Hz for ${duration}s at time ${currentTime}`);
-                for (const freq of note.frequencies) {
-                    this.playTone(freq, currentTime, duration);
-                }
-            }
-
-            currentTime += stepDuration;
-        }
-    }
-
-    private getLegacyNoteDuration(duration: string, stepDuration: number): number {
-        switch (duration) {
-            case 'short': return stepDuration * 0.5;
-            case 'long': return stepDuration * 2;
-            case 'normal':
-            default: return stepDuration;
-        }
-    }
-
-    // ============================================================================
-    // Core tone generation
-    // ============================================================================
-
     private playTone(frequency: number, startTime: number, duration: number): void {
         if (!this.audioContext) return;
-
-        console.log(`Creating oscillator: ${frequency}Hz, start: ${startTime}, duration: ${duration}`);
 
         const oscillator = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
@@ -192,13 +112,7 @@ export class AudioEngine {
 
         oscillator.start(startTime);
         oscillator.stop(startTime + duration);
-
-        console.log(`Oscillator started for ${frequency}Hz`);
     }
-
-    // ============================================================================
-    // Configuration
-    // ============================================================================
 
     setSlotDuration(seconds: number): void {
         this.slotDuration = seconds;

@@ -147,25 +147,6 @@ impl Fraction {
         )
     }
 
-    /// i64から直接Fractionを作成（簡約付き、高速）
-    /// 将来の最適化で使用予定
-    #[inline]
-    #[allow(dead_code)]
-    fn new_from_i64(num: i64, den: i64) -> Self {
-        debug_assert!(den != 0);
-        let g = gcd_i64(num, den);
-        let mut n = num / g;
-        let mut d = den / g;
-        if d < 0 {
-            n = -n;
-            d = -d;
-        }
-        Fraction {
-            numerator: BigInt::from(n),
-            denominator: BigInt::from(d),
-        }
-    }
-
     /// i128から直接Fractionを作成（簡約付き）
     #[inline]
     fn new_from_i128(num: i128, den: i128) -> Self {
