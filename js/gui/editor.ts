@@ -1,8 +1,4 @@
-// js/gui/editor.ts - エディタ管理（関数型スタイル）
-
-// ============================================================
-// 型定義
-// ============================================================
+// js/gui/editor.ts
 
 export interface EditorCallbacks {
     readonly onContentChange?: (content: string) => void;
@@ -19,13 +15,6 @@ export interface Editor {
     readonly setOnContentChange: (callback: (content: string) => void) => void;
 }
 
-// ============================================================
-// 純粋関数: テキスト操作
-// ============================================================
-
-/**
- * テキストの指定位置に文字列を挿入した結果を返す
- */
 const insertAt = (
     text: string,
     start: number,
@@ -33,17 +22,11 @@ const insertAt = (
     insertion: string
 ): string => text.substring(0, start) + insertion + text.substring(end);
 
-/**
- * 最も内側の "[ ]" の位置を探す
- */
 const findInnerBracketPosition = (text: string): number | null => {
     const pos = text.lastIndexOf('[ ]');
-    return pos !== -1 ? pos + 2 : null; // "[ " の後の位置
+    return pos !== -1 ? pos + 2 : null;
 };
 
-/**
- * 新しいカーソル位置を計算
- */
 const calculateCursorPosition = (
     basePosition: number,
     insertedText: string,
@@ -57,10 +40,6 @@ const calculateCursorPosition = (
     }
     return basePosition + insertedText.length;
 };
-
-// ============================================================
-// 副作用関数: DOM操作
-// ============================================================
 
 const setElementValue = (element: HTMLTextAreaElement, value: string): void => {
     element.value = value;
@@ -84,19 +63,13 @@ const getSelectionRange = (element: HTMLTextAreaElement): { start: number; end: 
     end: element.selectionEnd
 });
 
-// ============================================================
-// ファクトリ関数: Editor作成
-// ============================================================
-
 export const createEditor = (
     element: HTMLTextAreaElement,
     callbacks: EditorCallbacks = {}
 ): Editor => {
-    // コールバック（クロージャで保持）
     let onContentChangeCallback = callbacks.onContentChange;
     const switchToInputMode = callbacks.onSwitchToInputMode ?? (() => {});
 
-    // イベントリスナーの設定
     const setupEventListeners = (): void => {
         element.addEventListener('focus', switchToInputMode);
 
@@ -107,22 +80,18 @@ export const createEditor = (
         });
     };
 
-    // 初期化
     if (element.value.trim() === '') {
         setElementValue(element, '');
     }
     setupEventListeners();
 
-    // 値の取得
     const getValue = (): string => element.value.trim();
 
-    // 値の設定
     const setValue = (value: string): void => {
         setElementValue(element, value);
         switchToInputMode();
     };
 
-    // クリア
     const clear = (switchView = true): void => {
         setElementValue(element, '');
         focusElement(element);
@@ -131,7 +100,6 @@ export const createEditor = (
         }
     };
 
-    // ワードの挿入（カーソル位置に）
     const insertWord = (word: string): void => {
         const { start, end } = getSelectionRange(element);
         const newText = insertAt(element.value, start, end, word);
@@ -145,7 +113,6 @@ export const createEditor = (
         switchToInputMode();
     };
 
-    // 入力支援テキストの挿入（最も内側の [ ] にカーソル配置）
     const insertText = (text: string): void => {
         const { start, end } = getSelectionRange(element);
         const newText = insertAt(element.value, start, end, text);
@@ -159,13 +126,11 @@ export const createEditor = (
         switchToInputMode();
     };
 
-    // フォーカス
     const focus = (): void => {
         focusElement(element);
         switchToInputMode();
     };
 
-    // コールバックの設定
     const setOnContentChange = (callback: (content: string) => void): void => {
         onContentChangeCallback = callback;
     };
@@ -181,7 +146,6 @@ export const createEditor = (
     };
 };
 
-// 純粋関数をエクスポート（テスト用）
 export const editorUtils = {
     insertAt,
     findInnerBracketPosition,

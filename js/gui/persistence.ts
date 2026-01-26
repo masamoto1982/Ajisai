@@ -1,13 +1,9 @@
-// js/gui/persistence.ts - 永続化管理（関数型スタイル）
+// js/gui/persistence.ts
 
 import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-types';
 import type DB from '../db';
 import { SAMPLE_CUSTOM_WORDS } from './sample-words';
 import { Result, ok, err } from './fp-utils';
-
-// ============================================================
-// 型定義
-// ============================================================
 
 export interface InterpreterState {
     readonly stack: Value[];
@@ -36,13 +32,6 @@ declare global {
     }
 }
 
-// ============================================================
-// 純粋関数: データ変換
-// ============================================================
-
-/**
- * カスタムワード情報を CustomWord 型に変換
- */
 const toCustomWord = (
     wordData: [string, string | null, boolean],
     getDefinition: (name: string) => string | null
@@ -52,9 +41,6 @@ const toCustomWord = (
     definition: getDefinition(wordData[0])
 });
 
-/**
- * インタープリタの現在の状態を取得
- */
 const getCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
     const customWordsInfo = interpreter.get_custom_words_info();
     const customWords: CustomWord[] = customWordsInfo.map(wordData =>
@@ -67,9 +53,6 @@ const getCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
     };
 };
 
-/**
- * エクスポート用のカスタムワードデータを作成
- */
 const createExportData = (interpreter: AjisaiInterpreter): CustomWord[] => {
     const customWordsInfo = interpreter.get_custom_words_info();
     return customWordsInfo.map(wordData => ({
@@ -79,21 +62,11 @@ const createExportData = (interpreter: AjisaiInterpreter): CustomWord[] => {
     }));
 };
 
-/**
- * ファイル名を生成（タイムスタンプ付き）
- */
 const generateExportFilename = (): string => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     return `ajisai_words_${timestamp}.json`;
 };
 
-// ============================================================
-// 副作用関数: ファイル操作
-// ============================================================
-
-/**
- * JSONファイルをダウンロード
- */
 const downloadJson = (data: unknown, filename: string): void => {
     const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -108,9 +81,6 @@ const downloadJson = (data: unknown, filename: string): void => {
     URL.revokeObjectURL(url);
 };
 
-/**
- * ファイル選択ダイアログを開く
- */
 const openFileDialog = (
     accept: string,
     onFileSelected: (file: File) => void
@@ -129,9 +99,6 @@ const openFileDialog = (
     input.click();
 };
 
-/**
- * ファイルをテキストとして読み込む
- */
 const readFileAsText = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -147,9 +114,6 @@ const readFileAsText = (file: File): Promise<string> =>
         reader.readAsText(file);
     });
 
-/**
- * JSONをパースしてカスタムワード配列として検証
- */
 const parseCustomWords = (jsonString: string): Result<CustomWord[], Error> => {
     try {
         const parsed = JSON.parse(jsonString);
@@ -162,14 +126,9 @@ const parseCustomWords = (jsonString: string): Result<CustomWord[], Error> => {
     }
 };
 
-// ============================================================
-// ファクトリ関数: Persistence作成
-// ============================================================
-
 export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
     const { showError, updateDisplays, showInfo } = callbacks;
 
-    // データベース初期化
     const init = async (): Promise<void> => {
         try {
             await window.AjisaiDB.open();
@@ -179,7 +138,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         }
     };
 
-    // 現在の状態を保存
     const saveCurrentState = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
 
@@ -192,14 +150,12 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         }
     };
 
-    // サンプルワードを読み込む
     const loadSampleWords = async (): Promise<void> => {
         try {
             await window.ajisaiInterpreter.restore_custom_words(SAMPLE_CUSTOM_WORDS);
             await saveCurrentState();
             console.log('Sample custom words loaded.');
 
-            // サンプルワード読み込み完了メッセージを表示
             const wordNames = SAMPLE_CUSTOM_WORDS.map(w => w.name).join(', ');
             showInfo?.(`Sample words loaded: ${wordNames}`, false);
         } catch (error) {
@@ -207,7 +163,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         }
     };
 
-    // データベースからデータを読み込む
     const loadDatabaseData = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
 
@@ -234,7 +189,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         }
     };
 
-    // カスタムワードをエクスポート
     const exportCustomWords = (): void => {
         if (!window.ajisaiInterpreter) {
             showError?.(new Error('Interpreter not available'));
@@ -248,7 +202,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         showInfo?.(`Custom words exported as ${filename}`, true);
     };
 
-    // カスタムワードをインポート
     const importCustomWords = (): void => {
         openFileDialog('.json', async (file) => {
             try {
@@ -273,16 +226,11 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         });
     };
 
-    // 完全リセット（IndexedDBクリア + サンプルワード再読み込み）
     const fullReset = async (): Promise<void> => {
         try {
-            // IndexedDBをクリア
             await window.AjisaiDB.clearAll();
             console.log('IndexedDB cleared.');
-
-            // サンプルワードを読み込む
             await loadSampleWords();
-
             updateDisplays?.();
         } catch (error) {
             console.error('Failed to perform full reset:', error);
@@ -300,7 +248,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
     };
 };
 
-// 純粋関数をエクスポート（テスト用）
 export const persistenceUtils = {
     toCustomWord,
     getCurrentState,

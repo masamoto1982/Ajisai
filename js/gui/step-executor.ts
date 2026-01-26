@@ -1,11 +1,7 @@
-// js/gui/step-executor.ts - ステップ実行管理（関数型スタイル）
+// js/gui/step-executor.ts
 
 import { WORKER_MANAGER } from '../workers/worker-manager';
 import type { AjisaiInterpreter, CustomWord, ExecuteResult } from '../wasm-types';
-
-// ============================================================
-// 型定義
-// ============================================================
 
 export interface StepState {
     readonly active: boolean;
@@ -30,45 +26,26 @@ export interface StepExecutor {
     readonly getState: () => StepState;
 }
 
-// ============================================================
-// 純粋関数
-// ============================================================
-
-/**
- * 初期状態を生成
- */
 const createInitialState = (): StepState => ({
     active: false,
     tokens: [],
     currentIndex: 0
 });
 
-/**
- * コードをトークンに分割
- */
 const tokenize = (code: string): string[] =>
     code.split(/\s+/).filter(token => token.length > 0);
 
-/**
- * ステップモード開始時の状態を生成
- */
 const createActiveState = (tokens: string[]): StepState => ({
     active: true,
     tokens,
     currentIndex: 0
 });
 
-/**
- * 次のトークンへ進んだ状態を生成
- */
 const advanceState = (state: StepState): StepState => ({
     ...state,
     currentIndex: state.currentIndex + 1
 });
 
-/**
- * ステップ情報のメッセージを生成
- */
 const formatStepMessage = (
     currentIndex: number,
     totalTokens: number,
@@ -78,9 +55,6 @@ const formatStepMessage = (
     return `[>] Step ${currentIndex + 1}/${totalTokens}: "${token}" (${remaining} remaining)`;
 };
 
-/**
- * カスタムワードを取得
- */
 const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     const customWordsInfo = interpreter.get_custom_words_info();
     return customWordsInfo.map(wordData => ({
@@ -90,9 +64,6 @@ const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     }));
 };
 
-/**
- * 実行状態をインタープリタに反映
- */
 const syncInterpreterState = (
     interpreter: AjisaiInterpreter,
     result: ExecuteResult
@@ -108,10 +79,6 @@ const syncInterpreterState = (
     }
 };
 
-// ============================================================
-// ファクトリ関数: StepExecutor作成
-// ============================================================
-
 export const createStepExecutor = (
     interpreter: AjisaiInterpreter,
     callbacks: StepExecutorCallbacks
@@ -125,18 +92,14 @@ export const createStepExecutor = (
         saveState
     } = callbacks;
 
-    // 状態（クロージャで保持）
     let state = createInitialState();
 
-    // アクティブかどうか
     const isActive = (): boolean => state.active;
 
-    // リセット
     const reset = (): void => {
         state = createInitialState();
     };
 
-    // 中断
     const abort = (): void => {
         if (state.active) {
             reset();
@@ -144,10 +107,8 @@ export const createStepExecutor = (
         }
     };
 
-    // 状態取得
     const getState = (): StepState => ({ ...state });
 
-    // ステップモード開始
     const startStepMode = async (): Promise<void> => {
         const code = getEditorValue();
         if (!code) return;
@@ -166,7 +127,6 @@ export const createStepExecutor = (
         await executeNextToken();
     };
 
-    // 次のトークンを実行
     const executeNextToken = async (): Promise<void> => {
         if (state.currentIndex >= state.tokens.length) {
             showInfo('[DONE] Step mode completed', true);
@@ -227,7 +187,6 @@ export const createStepExecutor = (
         await saveState();
     };
 
-    // ステップ実行（開始または続行）
     const executeStep = async (): Promise<void> => {
         if (!state.active) {
             await startStepMode();
@@ -245,7 +204,6 @@ export const createStepExecutor = (
     };
 };
 
-// 純粋関数をエクスポート（テスト用）
 export const stepExecutorUtils = {
     createInitialState,
     tokenize,

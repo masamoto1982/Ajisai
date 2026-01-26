@@ -1,8 +1,4 @@
-// js/gui/dictionary.ts - 辞書管理（関数型スタイル）
-
-// ============================================================
-// 型定義
-// ============================================================
+// js/gui/dictionary.ts
 
 export interface WordInfo {
     readonly name: string;
@@ -27,10 +23,6 @@ export interface Dictionary {
     readonly updateCustomWords: (customWordsInfo: Array<[string, string | null, boolean]>) => void;
 }
 
-// ============================================================
-// 定数: シンボルマップ
-// ============================================================
-
 const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
     'VSTART': '[', 'VEND': ']', 'BSTART': '{', 'BEND': '}',
     'NIL': 'nil', 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/',
@@ -38,17 +30,8 @@ const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
     'AND': 'and', 'OR': 'or', 'NOT': 'not',
 });
 
-// ============================================================
-// 純粋関数: ワード名のデコード
-// ============================================================
-
-/**
- * エンコードされたワード名を人間が読みやすい形式にデコード
- */
 const decodeWordName = (name: string): string | null => {
-    // W_XXXX 形式は無視
     if (name.match(/^W_[0-9A-F]+$/)) return null;
-    // アンダースコアを含まない場合はデコード不要
     if (!name.includes('_')) return null;
 
     const decoded = name.split('_').map(part => {
@@ -61,18 +44,12 @@ const decodeWordName = (name: string): string | null => {
     return `≈ ${decoded}`;
 };
 
-/**
- * ワード情報の配列を WordInfo 型に変換
- */
 const toWordInfo = (wordData: [string, string | null, boolean]): WordInfo => ({
     name: wordData[0],
     description: wordData[1] || decodeWordName(wordData[0]) || wordData[0],
     protected: wordData[2] || false
 });
 
-/**
- * 組み込みワードをカテゴリ別にグループ化
- */
 const groupByCategory = (
     builtinWords: unknown[][]
 ): Record<string, unknown[][]> => {
@@ -92,10 +69,6 @@ const groupByCategory = (
 
     return groups;
 };
-
-// ============================================================
-// 副作用関数: DOM操作
-// ============================================================
 
 const clearElement = (element: HTMLElement): void => {
     element.innerHTML = '';
@@ -130,17 +103,12 @@ const createButtonWithContextMenu = (
     return button;
 };
 
-// ============================================================
-// ファクトリ関数: Dictionary作成
-// ============================================================
-
 export const createDictionary = (
     elements: DictionaryElements,
     callbacks: DictionaryCallbacks
 ): Dictionary => {
     const { onWordClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
 
-    // ワード削除の確認と実行
     const confirmAndDeleteWord = async (wordName: string): Promise<void> => {
         if (!confirm(`Delete word '${wordName}'?`)) return;
 
@@ -158,7 +126,6 @@ export const createDictionary = (
         }
     };
 
-    // 組み込みワードのグループ別レンダリング
     const renderBuiltinWordsWithGroups = (
         container: HTMLElement,
         builtinWords: unknown[][]
@@ -192,7 +159,6 @@ export const createDictionary = (
         });
     };
 
-    // カスタムワードボタンのレンダリング
     const renderCustomWordButtons = (
         container: HTMLElement,
         words: WordInfo[]
@@ -216,7 +182,6 @@ export const createDictionary = (
         });
     };
 
-    // 組み込みワードのレンダリング
     const renderBuiltinWords = (): void => {
         if (!window.ajisaiInterpreter) return;
 
@@ -228,7 +193,6 @@ export const createDictionary = (
         }
     };
 
-    // カスタムワードの更新
     const updateCustomWords = (
         customWordsInfo: Array<[string, string | null, boolean]>
     ): void => {
@@ -242,7 +206,6 @@ export const createDictionary = (
     };
 };
 
-// 純粋関数をエクスポート（テスト用）
 export const dictionaryUtils = {
     decodeWordName,
     toWordInfo,
