@@ -1,8 +1,8 @@
 // rust/src/interpreter/mod.rs
 
-pub mod helpers;        // 共通ヘルパー関数
+pub mod helpers;
 pub mod vector_ops;
-pub mod tensor_ops;     // テンソル演算とブロードキャスト
+pub mod tensor_ops;
 pub mod arithmetic;
 pub mod comparison;
 pub mod logic;
@@ -12,16 +12,15 @@ pub mod io;
 pub mod higher_order;
 pub mod cast;
 pub mod datetime;
-pub mod sort;           // 分数ソートアルゴリズム
-pub mod random;         // 暗号論的疑似乱数生成
-pub mod hash;           // 分数ハッシュ関数
-pub mod audio;          // 音声再生
-pub mod vector_exec;    // Vectorをコードとして実行
+pub mod sort;
+pub mod random;
+pub mod hash;
+pub mod audio;
+pub mod vector_exec;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
 
-/// 最大呼び出し深度（次元制限と同じ）
 pub const MAX_CALL_DEPTH: usize = 3;
 
 use crate::types::fraction::Fraction;
@@ -31,31 +30,18 @@ use self::helpers::wrap_number;
 use gloo_timers::future::sleep;
 use std::time::Duration;
 
-/// 操作対象を指定する列挙型
-///
-/// Ajisaiでは、操作を「スタック全体」または「スタックトップの要素」に
-/// 対して実行できる。この列挙型は現在の操作スコープを表す。
-///
-/// - `Stack`: スタック全体を操作対象とする（例: .. GET）
-/// - `StackTop`: スタックトップの要素を操作対象とする（デフォルト）
-///
-/// 各単語の実行後、自動的に StackTop にリセットされる。
+/// Operation target selector. Resets to StackTop after each word execution.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTarget {
-    /// スタック全体を操作対象とする
+    /// Operate on the entire stack (activated by `..`)
     Stack,
-    /// スタックトップの要素を操作対象とする（デフォルト）
+    /// Operate on the top element (default)
     StackTop,
 }
 
-/// 非同期アクションを表す列挙型
-///
-/// コアロジック実行中に非同期操作が必要になった場合に返される。
-/// 同期コンテキストではエラーとして処理し、
-/// 非同期コンテキストでは実際に非同期処理を実行する。
+/// Async action returned when async operation is needed during execution.
 #[derive(Debug, Clone)]
 pub enum AsyncAction {
-    /// WAIT ワード: 指定ミリ秒後にワードを実行
     Wait {
         duration_ms: u64,
         word_name: String,
@@ -69,14 +55,11 @@ pub struct Interpreter {
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
     pub(crate) operation_target: OperationTarget,
-    pub(crate) force_flag: bool,  // 強制実行フラグ（DEL/DEFで依存関係がある場合に使用）
-    pub(crate) disable_no_change_check: bool,  // "No change is an error"チェックを無効化（REDUCE等で使用）
-    // 追加: 継続実行用の状態
+    pub(crate) force_flag: bool,
+    pub(crate) disable_no_change_check: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
-    // 追加: 音楽DSL用の再生モード
     pub(crate) play_mode: audio::PlayMode,
-    /// 呼び出しスタック（再帰深度追跡用）
     pub(crate) call_stack: Vec<String>,
 }
 
@@ -100,17 +83,11 @@ impl Interpreter {
         interpreter
     }
 
-    /// Vector収集メソッド
-    ///
-    /// [], {}, () いずれの形式でもVectorとして収集する
-    /// 4次元を超えるネストはエラーとなる
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
         self.collect_vector_with_depth(tokens, start_index, 1)
     }
 
-    /// 深度追跡付きVector収集メソッド（内部関数）
     fn collect_vector_with_depth(&self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
-        // 次元数チェック
         if depth > MAX_VISIBLE_DIMENSIONS {
             return Err(AjisaiError::from(format!(
                 "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
@@ -166,7 +143,6 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
-    /// ガード構造実行（同期版）
     pub(crate) fn execute_guard_structure_sync(
         &mut self,
         lines: &[ExecutionLine]
@@ -183,7 +159,6 @@ impl Interpreter {
         Ok(())
     }
 
-    /// ガード構造実行（非同期版）
     #[async_recursion(?Send)]
     pub(crate) async fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         if lines.is_empty() {
@@ -231,7 +206,6 @@ impl Interpreter {
         Ok(())
     }
 
-    /// WAIT ワードの引数を取得し、AsyncAction を構築する
     fn prepare_wait_action(&mut self) -> Result<AsyncAction> {
         if self.stack.len() < 2 {
             return Err(AjisaiError::from(
@@ -242,7 +216,6 @@ impl Interpreter {
         let delay_val = self.stack.pop().unwrap();
         let name_val = self.stack.pop().unwrap();
 
-        // 遅延時間を取得（統一分数アーキテクチャ: 直接整数を抽出）
         let n = helpers::get_integer_from_value(&delay_val)?;
         let duration_ms = if n < 0 {
             return Err(AjisaiError::from("Delay must be non-negative"));
@@ -250,10 +223,8 @@ impl Interpreter {
             n as u64
         };
 
-        // ワード名を取得
         let word_name = helpers::get_word_name_from_value(&name_val)?;
 
-        // ワードの存在確認
         if let Some(def) = self.dictionary.get(&word_name) {
             if def.is_builtin {
                 return Err(AjisaiError::from(
@@ -267,15 +238,7 @@ impl Interpreter {
         Ok(AsyncAction::Wait { duration_ms, word_name })
     }
 
-    /// セクション内のトークンを実行（コアロジック）
-    ///
-    /// 非同期操作に遭遇した場合は AsyncAction を返し、処理を中断する。
-    /// 呼び出し元は AsyncAction を処理した後、継続実行する責任を持つ。
-    ///
-    /// # 戻り値
-    /// - `Ok((next_index, None))`: 正常完了
-    /// - `Ok((next_index, Some(AsyncAction)))`: 非同期操作が必要
-    /// - `Err(_)`: エラー発生
+    /// Returns (next_index, Option<AsyncAction>).
     pub(crate) fn execute_section_core(
         &mut self,
         tokens: &[Token],
@@ -292,8 +255,7 @@ impl Interpreter {
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
                 },
-                // Token::Boolean と Token::Nil は削除
-                // TRUE/FALSE/NIL は Symbol として認識され、組み込みワードとして実行される
+                // TRUE/FALSE/NIL are recognized as Symbols and executed as builtin words
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
                     // 空のベクターは許容しない
@@ -305,7 +267,6 @@ impl Interpreter {
                     continue;
                 },
                 Token::Symbol(s) => {
-                    // . と .. は大文字変換せずにチェック
                     match s.as_str() {
                         ".." => {
                             self.operation_target = OperationTarget::Stack;
@@ -314,18 +275,15 @@ impl Interpreter {
                             self.operation_target = OperationTarget::StackTop;
                         },
                         _ => {
-                            // その他のシンボルは大文字変換してチェック
                             let upper = s.to_uppercase();
                             match upper.as_str() {
                                         "WAIT" => {
-                                    // WAIT の引数を準備し、AsyncAction を返す
                                     let action = self.prepare_wait_action()?;
                                     return Ok((i + 1, Some(action)));
                                 },
                                 _ => {
-                                    // 通常のワード実行（同期）
                                     self.execute_word_core(&upper)?;
-                                    // SEQ/SIM は操作対象を保持する（PLAYで使用するため）
+                                    // SEQ/SIM preserve operation_target for PLAY
                                     if upper != "SEQ" && upper != "SIM" {
                                         self.operation_target = OperationTarget::StackTop;
                                     }
@@ -334,9 +292,7 @@ impl Interpreter {
                         }
                     }
                 },
-                Token::GuardSeparator | Token::LineBreak => {
-                    // スキップ
-                },
+                Token::GuardSeparator | Token::LineBreak => {},
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
                 },
@@ -347,7 +303,6 @@ impl Interpreter {
         Ok((i, None))
     }
 
-    /// セクション実行（非同期版）
     #[async_recursion(?Send)]
     async fn execute_section(&mut self, tokens: &[Token]) -> Result<()> {
         let mut current_index = 0;
@@ -368,10 +323,6 @@ impl Interpreter {
         Ok(())
     }
 
-    /// ガード構造実行のコアロジック
-    ///
-    /// 行の配列を受け取り、ガード節として処理する。
-    /// 非同期操作に遭遇した場合は AsyncAction を返す。
     fn execute_guard_structure_core(
         &mut self,
         lines: &[ExecutionLine]
@@ -380,12 +331,10 @@ impl Interpreter {
             return Ok(None);
         }
 
-        // すべての行が : で始まっているかチェック
         let all_lines_have_colon = lines.iter().all(|line| {
             line.body_tokens.first() == Some(&Token::GuardSeparator)
         });
 
-        // : で始まらない行がある場合、すべてをデフォルト行として順次実行
         if !all_lines_have_colon {
             for line in lines {
                 let tokens = if line.body_tokens.first() == Some(&Token::GuardSeparator) {
@@ -402,22 +351,18 @@ impl Interpreter {
             return Ok(None);
         }
 
-        // すべての行が : で始まる場合、ガード節として処理
         let mut i = 0;
         while i < lines.len() {
             let line = &lines[i];
-            let content_tokens = &line.body_tokens[1..]; // : を除く
+            let content_tokens = &line.body_tokens[1..];
 
             if i + 1 < lines.len() {
-                // 条件行の可能性
                 let (_, action) = self.execute_section_core(content_tokens, 0)?;
                 if action.is_some() {
                     return Ok(action);
                 }
 
-                // 条件を評価
                 if self.is_condition_true()? {
-                    // 真の場合：次の行（処理行）を実行
                     i += 1;
                     let action_line = &lines[i];
                     let action_tokens = &action_line.body_tokens[1..];
@@ -428,10 +373,8 @@ impl Interpreter {
                     }
                     return Ok(None);
                 }
-                // 偽の場合：次の条件へ
                 i += 2;
             } else {
-                // 最後の行 → デフォルト処理
                 let (_, action) = self.execute_section_core(content_tokens, 0)?;
                 return Ok(action);
             }
@@ -440,12 +383,7 @@ impl Interpreter {
         Ok(None)
     }
 
-    /// ガード節の条件評価
-    ///
-    /// 統一分数アーキテクチャ:
-    /// - 空Vector（NIL）= false
-    /// - 全てゼロのVector = false
-    /// - それ以外 = true
+    /// NIL and all-zero vectors are falsy; everything else is truthy.
     fn is_condition_true(&mut self) -> Result<bool> {
         if self.stack.is_empty() {
             return Ok(false);
@@ -455,7 +393,6 @@ impl Interpreter {
         Ok(top.is_truthy())
     }
 
-    // トークンを行に分割
     fn tokens_to_lines(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
@@ -485,10 +422,6 @@ impl Interpreter {
         Ok(lines)
     }
 
-    /// ワード実行のコアロジック（同期）
-    ///
-    /// 組み込みワードまたはカスタムワードを実行する。
-    /// WAITワードはこの関数では処理せず、呼び出し元で AsyncAction として処理する。
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
         let def = self.dictionary.get(name).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
@@ -497,7 +430,6 @@ impl Interpreter {
             return self.execute_builtin(name);
         }
 
-        // 深度チェック（カスタムワードのみ）
         if self.call_stack.len() >= MAX_CALL_DEPTH {
             let stack_trace = self.call_stack.join(" -> ");
             return Err(AjisaiError::from(format!(
@@ -508,7 +440,6 @@ impl Interpreter {
 
         self.call_stack.push(name.to_string());
 
-        // ガード構造をコアロジックで処理
         let action = self.execute_guard_structure_core(&def.lines);
 
         self.call_stack.pop();
@@ -516,7 +447,6 @@ impl Interpreter {
         let action = action?;
 
         if action.is_some() {
-            // 非同期アクションが発生した場合はエラー（同期コンテキスト）
             return Err(AjisaiError::from(
                 "WAIT requires async execution context. Use execute() instead of execute_sync()."
             ));
@@ -525,18 +455,15 @@ impl Interpreter {
         Ok(())
     }
 
-    /// ワード実行（非同期版）
     #[async_recursion(?Send)]
     pub(crate) async fn execute_word_async(&mut self, name: &str) -> Result<()> {
         let def = self.dictionary.get(name).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         if def.is_builtin {
-            // WAITは既に execute_section で処理済み
             return self.execute_builtin(name);
         }
 
-        // 深度チェック（カスタムワードのみ）
         if self.call_stack.len() >= MAX_CALL_DEPTH {
             let stack_trace = self.call_stack.join(" -> ");
             return Err(AjisaiError::from(format!(
@@ -553,7 +480,6 @@ impl Interpreter {
     }
 
     fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        // DEL, DEF, ! 以外はフラグをリセット
         if name != "DEL" && name != "DEF" && name != "!" {
             self.force_flag = false;
         }
@@ -571,7 +497,6 @@ impl Interpreter {
             "RANGE" => vector_ops::op_range(self),
             "REORDER" => vector_ops::op_reorder(self),
             "SORT" => sort::op_sort(self),
-            // 基本数学関数
             "FLOOR" => tensor_ops::op_floor(self),
             "CEIL" => tensor_ops::op_ceil(self),
             "ROUND" => tensor_ops::op_round(self),
@@ -598,13 +523,10 @@ impl Interpreter {
             "FOLD" => higher_order::op_fold(self),
             "TIMES" => control::execute_times(self),
             "WAIT" => {
-                // WAITは execute_section_core で AsyncAction として処理されるべき
-                // ここに到達した場合はエラー
                 Err(AjisaiError::from(
                     "WAIT should be handled by execute_section_core, not execute_builtin"
                 ))
             },
-            // 定数（スタックに値をプッシュ）
             "TRUE" => {
                 self.stack.push(Value::from_bool(true));
                 Ok(())
@@ -614,11 +536,9 @@ impl Interpreter {
                 Ok(())
             },
             "NIL" => {
-                // NILは常に定数としてNILをプッシュ（TRUE/FALSEと同様）
                 self.stack.push(Value::nil());
                 Ok(())
             },
-            // 型変換・パース
             "STR" => cast::op_str(self),
             "NUM" => cast::op_num(self),
             "BOOL" => cast::op_bool(self),
@@ -630,7 +550,6 @@ impl Interpreter {
             "TIMESTAMP" => datetime::op_timestamp(self),
             "CSPRNG" => random::op_csprng(self),
             "HASH" => hash::op_hash(self),
-            // 音楽DSL
             "SEQ" => audio::op_seq(self),
             "SIM" => audio::op_sim(self),
             "PLAY" => audio::op_play(self),
