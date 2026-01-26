@@ -29,6 +29,7 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("CONCAT", "Concatenate vectors | [ 1 2 ] [ 3 4 ] CONCAT → [ 1 2 3 4 ]", "Vector"),
         ("REVERSE", "Reverse vector elements | [ 1 2 3 ] REVERSE → [ 3 2 1 ]", "Vector"),
         ("RANGE", "Generate numeric range | [ 0 5 ] RANGE → [ 0 1 2 3 4 5 ]", "Vector"),
+        ("REORDER", "Reorder elements by index list | [ a b c ] [ 2 0 1 ] REORDER → [ c a b ]", "Vector"),
         ("SORT", "Sort vector elements ascending | [ 3 1 2 ] SORT → [ 1 2 3 ]", "Sorting"),
 
         // Constants

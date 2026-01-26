@@ -569,6 +569,7 @@ impl Interpreter {
             "CONCAT" => vector_ops::op_concat(self),
             "REVERSE" => vector_ops::op_reverse(self),
             "RANGE" => vector_ops::op_range(self),
+            "REORDER" => vector_ops::op_reorder(self),
             "SORT" => sort::op_sort(self),
             // 基本数学関数
             "FLOOR" => tensor_ops::op_floor(self),
