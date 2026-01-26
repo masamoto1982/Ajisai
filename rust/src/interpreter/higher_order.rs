@@ -1,11 +1,7 @@
 // rust/src/interpreter/higher_order.rs
 //
-// 【責務】
-// 高階関数（MAP、FILTER）を実装する。
-// これらの関数はカスタムワードまたはVectorをコードとして受け取り、
-// ベクタまたはスタック上の各要素に適用する。
-//
-// 統一分数アーキテクチャ版 - Vectorの二重性（Vector Duality）対応
+// Higher-order functions: MAP, FILTER, FOLD, UNFOLD.
+// Supports Vector Duality: vectors can be code or data.
 
 use crate::interpreter::{Interpreter, OperationTarget};
 use crate::interpreter::vector_exec::execute_vector_as_code;
@@ -13,43 +9,27 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
 use crate::types::{Value, ValueData, DisplayHint};
 
-// ============================================================================
-// ヘルパー関数（統一Value宇宙アーキテクチャ用）
-// ============================================================================
-
-/// 実行可能なコードを表す列挙型（Vectorの二重性対応）
 enum ExecutableCode {
-    /// ワード名（文字列として渡された場合）
     WordName(String),
-    /// Vector（コードとして解釈）
     Vector(Value),
 }
 
-/// Value から 実行可能なコードを抽出する
-///
-/// - 文字列 → ワード名
-/// - 通常のVector → コードとして扱う
 fn get_executable_code(val: &Value) -> Result<ExecutableCode> {
     match &val.data {
-        // 文字列 → ワード名
         ValueData::Vector(_) if val.display_hint == DisplayHint::String => {
             get_word_name_from_value(val).map(ExecutableCode::WordName)
         }
-        // 通常のVector → コードとして扱う
         ValueData::Vector(_) => {
             Ok(ExecutableCode::Vector(val.clone()))
         }
-        // スカラーやNILはコードとして無効
         _ => Err(AjisaiError::from("Expected vector (as code) or word name"))
     }
 }
 
-/// ベクタ値かどうかを判定
 fn is_vector_value(val: &Value) -> bool {
     matches!(&val.data, ValueData::Vector(_))
 }
 
-/// 真偽値として解釈
 fn is_boolean_true(val: &Value) -> bool {
     if val.display_hint == DisplayHint::Boolean {
         if let Some(f) = val.as_scalar() {
@@ -59,7 +39,6 @@ fn is_boolean_true(val: &Value) -> bool {
     false
 }
 
-/// ベクタの子要素を取得
 fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
     if let ValueData::Vector(children) = &val.data {
         Some(children)
@@ -68,25 +47,17 @@ fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
     }
 }
 
-/// ベクタの要素を再構築する（新しい再帰的Value用）
 fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
     if let Some(children) = get_vector_children(val) {
         children.clone()
     } else {
-        // スカラーの場合は単一要素として返す
         vec![val.clone()]
     }
 }
 
-// ============================================================================
-// 高階関数の実装
-// ============================================================================
-
-/// MAP - 各要素に関数を適用して変換する
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 実行可能コードを取得（Vector または ワード名）
     let executable = match get_executable_code(&code_val) {
         Ok(exec) => exec,
         Err(e) => {
@@ -95,7 +66,6 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    // ワード名の場合は辞書の存在確認
     if let ExecutableCode::WordName(ref word_name) = executable {
         if !interp.dictionary.contains_key(word_name) {
             interp.stack.push(code_val);
@@ -103,7 +73,6 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    /// 実行可能コードを実行するヘルパー
     fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
         match exec {
             ExecutableCode::Vector(val) => execute_vector_as_code(interp, val),
@@ -271,11 +240,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// FILTER - 条件に合う要素のみを抽出する
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 実行可能コードを取得（Vector または ワード名）
     let executable = match get_executable_code(&code_val) {
         Ok(exec) => exec,
         Err(e) => {
@@ -284,7 +251,6 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    // ワード名の場合は辞書の存在確認
     if let ExecutableCode::WordName(ref word_name) = executable {
         if !interp.dictionary.contains_key(word_name) {
             interp.stack.push(code_val);
@@ -292,7 +258,6 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    /// 実行可能コードを実行するヘルパー
     fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
         match exec {
             ExecutableCode::Vector(val) => execute_vector_as_code(interp, val),
@@ -474,11 +439,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// FOLD - 初期値付き畳み込み
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 実行可能コードを取得（Vector または ワード名）
     let executable = match get_executable_code(&code_val) {
         Ok(exec) => exec,
         Err(e) => {
@@ -487,7 +450,6 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    // ワード名の場合は辞書の存在確認
     if let ExecutableCode::WordName(ref word_name) = executable {
         if !interp.dictionary.contains_key(word_name) {
             interp.stack.push(code_val);
@@ -495,7 +457,6 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    /// 実行可能コードを実行するヘルパー
     fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
         match exec {
             ExecutableCode::Vector(val) => execute_vector_as_code(interp, val),
@@ -632,13 +593,11 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// UNFOLD - 状態からベクタを生成
 pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
     const MAX_ITERATIONS: usize = 10000;
 
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 実行可能コードを取得（Vector または ワード名）
     let executable = match get_executable_code(&code_val) {
         Ok(exec) => exec,
         Err(e) => {
@@ -647,7 +606,6 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    // ワード名の場合は辞書の存在確認
     if let ExecutableCode::WordName(ref word_name) = executable {
         if !interp.dictionary.contains_key(word_name) {
             interp.stack.push(code_val);
@@ -655,7 +613,6 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    /// 実行可能コードを実行するヘルパー
     fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
         match exec {
             ExecutableCode::Vector(val) => execute_vector_as_code(interp, val),
