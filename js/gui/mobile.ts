@@ -1,8 +1,4 @@
-// js/gui/mobile.ts - モバイル対応（関数型スタイル）
-
-// ============================================================
-// 型定義
-// ============================================================
+// js/gui/mobile.ts
 
 export interface MobileElements {
     readonly inputArea: HTMLElement;
@@ -19,25 +15,11 @@ export interface MobileHandler {
     readonly updateView: (mode: ViewMode) => void;
 }
 
-// ============================================================
-// 定数
-// ============================================================
-
 const MOBILE_BREAKPOINT = 768;
 const SWIPE_THRESHOLD = 50;
 
-// ============================================================
-// 純粋関数
-// ============================================================
-
-/**
- * 現在のウィンドウ幅がモバイルかどうかを判定
- */
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 
-/**
- * スワイプの方向を判定
- */
 const detectSwipeDirection = (
     startX: number,
     startY: number,
@@ -47,7 +29,6 @@ const detectSwipeDirection = (
     const deltaX = endX - startX;
     const deltaY = endY - startY;
 
-    // 横方向のスワイプが縦方向より大きい場合のみ
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
         return deltaX > 0 ? 'right' : 'left';
     }
@@ -59,15 +40,9 @@ const detectSwipeDirection = (
     return null;
 };
 
-/**
- * モードを切り替える（トグル）
- */
 const toggleMode = (currentMode: ViewMode): ViewMode =>
     currentMode === 'input' ? 'execution' : 'input';
 
-/**
- * 入力モード時の表示設定を生成
- */
 const getInputModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'block',
     outputArea: 'none',
@@ -75,9 +50,6 @@ const getInputModeStyles = (): Record<keyof MobileElements, string> => ({
     dictionaryArea: 'block'
 });
 
-/**
- * 実行モード時の表示設定を生成
- */
 const getExecutionModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'block',
@@ -85,15 +57,8 @@ const getExecutionModeStyles = (): Record<keyof MobileElements, string> => ({
     dictionaryArea: 'none'
 });
 
-/**
- * モードに応じた表示設定を取得
- */
 const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> =>
     mode === 'input' ? getInputModeStyles() : getExecutionModeStyles();
-
-// ============================================================
-// 副作用関数: DOM操作
-// ============================================================
 
 const setElementDisplay = (element: HTMLElement, display: string): void => {
     element.style.display = display;
@@ -120,17 +85,11 @@ const resetAllStyles = (elements: MobileElements): void => {
     });
 };
 
-// ============================================================
-// ファクトリ関数: MobileHandler作成
-// ============================================================
-
 export const createMobileHandler = (elements: MobileElements): MobileHandler => {
-    // 状態（クロージャで保持）
     let currentMode: ViewMode = 'input';
     let touchStartX = 0;
     let touchStartY = 0;
 
-    // スワイプジェスチャーのハンドラ
     const handleSwipeGesture = (endX: number, endY: number): void => {
         const direction = detectSwipeDirection(touchStartX, touchStartY, endX, endY);
 
@@ -140,7 +99,6 @@ export const createMobileHandler = (elements: MobileElements): MobileHandler => 
         }
     };
 
-    // スワイプジェスチャーの設定
     const setupSwipeGestures = (): void => {
         if (!checkIsMobile()) return;
 
@@ -162,19 +120,13 @@ export const createMobileHandler = (elements: MobileElements): MobileHandler => 
         }, { passive: true });
     };
 
-    // 初期化
     setupSwipeGestures();
 
-    // モバイル判定
     const isMobile = (): boolean => checkIsMobile();
-
-    // 現在のモード取得
     const getCurrentMode = (): ViewMode => currentMode;
 
-    // ビュー更新
     const updateView = (mode: ViewMode): void => {
         if (!checkIsMobile()) {
-            // デスクトップモードでは全て表示
             resetAllStyles(elements);
             return;
         }
@@ -191,7 +143,6 @@ export const createMobileHandler = (elements: MobileElements): MobileHandler => 
     };
 };
 
-// 純粋関数をエクスポート（テスト用）
 export const mobileUtils = {
     checkIsMobile,
     detectSwipeDirection,

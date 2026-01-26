@@ -1,12 +1,8 @@
-// js/gui/execution-controller.ts - 実行制御（関数型スタイル）
+// js/gui/execution-controller.ts
 
 import { WORKER_MANAGER } from '../workers/worker-manager';
 import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-types';
 import { createStepExecutor, StepExecutor } from './step-executor';
-
-// ============================================================
-// 型定義
-// ============================================================
 
 export interface ExecutionCallbacks {
     readonly getEditorValue: () => string;
@@ -30,13 +26,6 @@ export interface ExecutionController {
     readonly abortExecution: () => void;
 }
 
-// ============================================================
-// 純粋関数
-// ============================================================
-
-/**
- * カスタムワードを取得
- */
 const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     const customWordsInfo = interpreter.get_custom_words_info();
     return customWordsInfo.map(wordData => ({
@@ -46,9 +35,6 @@ const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     }));
 };
 
-/**
- * 実行状態をインタープリタに反映
- */
 const syncInterpreterState = (
     interpreter: AjisaiInterpreter,
     result: ExecuteResult
@@ -64,21 +50,11 @@ const syncInterpreterState = (
     }
 };
 
-/**
- * コードがRESETコマンドかどうか判定
- */
 const isResetCommand = (code: string): boolean =>
     code.trim().toUpperCase() === 'RESET';
 
-/**
- * エラーがユーザーによる中断かどうか判定
- */
 const isAbortError = (error: Error): boolean =>
     error.message.includes('aborted');
-
-// ============================================================
-// ファクトリ関数: ExecutionController作成
-// ============================================================
 
 export const createExecutionController = (
     interpreter: AjisaiInterpreter,
@@ -98,7 +74,6 @@ export const createExecutionController = (
         updateView
     } = callbacks;
 
-    // StepExecutorの作成
     const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
         getEditorValue,
         showInfo,
@@ -108,7 +83,6 @@ export const createExecutionController = (
         saveState
     });
 
-    // 実行結果の処理
     const handleResult = (result: ExecuteResult, code: string): void => {
         if (result.inputHelper) {
             clearEditor(false);
@@ -128,7 +102,6 @@ export const createExecutionController = (
         }
     };
 
-    // コード実行
     const runCode = async (code: string): Promise<void> => {
         if (!code) return;
 
@@ -172,20 +145,15 @@ export const createExecutionController = (
         await saveState();
     };
 
-    // リセット実行（完全リセット: IndexedDBクリア + サンプルワード再読み込み）
     const executeReset = async (): Promise<void> => {
         try {
             console.log('[ExecController] Executing full reset');
             stepExecutor.reset();
             await WORKER_MANAGER.resetAllWorkers();
-
-            // インタープリターをリセット
             const result = interpreter.reset();
 
             if (result.status === 'OK' && !result.error) {
                 clearEditor(true);
-
-                // IndexedDBをクリアしてサンプルワードを再読み込み
                 await fullReset();
 
                 updateView('input');
@@ -198,15 +166,12 @@ export const createExecutionController = (
         }
     };
 
-    // ステップ実行
     const executeStep = async (): Promise<void> => {
         await stepExecutor.executeStep();
     };
 
-    // ステップモードがアクティブか
     const isStepModeActive = (): boolean => stepExecutor.isActive();
 
-    // 実行中断
     const abortExecution = (): void => {
         stepExecutor.abort();
     };
@@ -220,7 +185,6 @@ export const createExecutionController = (
     };
 };
 
-// 純粋関数をエクスポート（テスト用）
 export const executionControllerUtils = {
     getCustomWords,
     syncInterpreterState,

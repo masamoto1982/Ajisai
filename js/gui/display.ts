@@ -1,13 +1,9 @@
-// js/gui/display.ts - 表示管理（関数型スタイル）
+// js/gui/display.ts
 
 import type { Value, ExecuteResult } from '../wasm-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { formatFractionScientific } from './value-formatter';
 import { pipe } from './fp-utils';
-
-// ============================================================
-// 型定義
-// ============================================================
 
 export interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -29,15 +25,8 @@ export interface Display {
     readonly getState: () => DisplayState;
 }
 
-// ============================================================
-// 純粋関数: 値のフォーマット
-// ============================================================
-
+// Bracket cycling: depth 0 → {}, depth 1 → (), depth 2 → []
 const getBrackets = (depth: number): [string, string] => {
-    // Rust側のBracketType::from_depthと一致させる
-    // depth 0: { } (最外殻)
-    // depth 1: ( ) (2番目の次元)
-    // depth 2: [ ] (3番目の次元、サイクル)
     switch (depth % 3) {
         case 0: return ['{', '}'];
         case 1: return ['(', ')'];
@@ -91,7 +80,6 @@ const formatDateTime = (value: unknown): string => {
     }
 };
 
-// バイト列（分数配列）をUTF-8文字列に変換
 const bytesToString = (data: unknown[]): string => {
     const bytes = data.map(frac => {
         if (!frac || typeof frac !== 'object') return 0;
@@ -116,11 +104,9 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, 
         return `${open} ${formatFraction(data[0])} ${close}`;
     }
 
-    // 最内層（shape.length === 1）で、displayHintが"string"の場合は文字列として表示
     if (shape.length === 1) {
         if (data.length === 0) return `${open}${close}`;
         if (displayHint === 'string') {
-            // バイト列を文字列に変換して表示（括弧なし）
             const str = bytesToString(data);
             return `'${str}'`;
         }
@@ -164,18 +150,15 @@ const formatVector = (value: unknown, depth: number): string => {
     return `${open}${close}`;
 };
 
-// 再帰的な値フォーマット（純粋関数）
 const formatValue = (item: Value, depth: number): string => {
     if (!item || !item.type) return 'unknown';
 
     switch (item.type) {
         case 'number':
-            // スカラー値は括弧なしで表示（スタック自体がVector）
             return formatNumber(item.value);
         case 'datetime':
             return formatDateTime(item.value);
         case 'tensor':
-            // tensorはdepth=0から開始し、formatTensorRecursive内でdepthを増加
             return formatTensor(item.value, depth);
         case 'string':
             return `'${item.value}'`;
@@ -188,7 +171,6 @@ const formatValue = (item: Value, depth: number): string => {
         case 'nil':
             return 'NIL';
         case 'block': {
-            // "source" 形式で表示
             const source = (item as unknown as { source: string }).source || '';
             return `"${source}"`;
         }
@@ -196,10 +178,6 @@ const formatValue = (item: Value, depth: number): string => {
             return JSON.stringify(item.value);
     }
 };
-
-// ============================================================
-// 純粋関数: Audio処理
-// ============================================================
 
 const extractAudioCommands = (output: string): string[] =>
     output.split('\n')
@@ -210,10 +188,6 @@ const filterAudioCommands = (output: string): string =>
     output.split('\n')
         .filter(line => !line.startsWith('AUDIO:'))
         .join('\n');
-
-// ============================================================
-// 純粋関数: 出力整形
-// ============================================================
 
 const formatExecutionOutput = (result: ExecuteResult): { debug: string; program: string } => ({
     debug: (result.debugOutput || '').trim(),
@@ -227,10 +201,6 @@ const formatErrorMessage = (error: Error | { message?: string } | string): strin
     typeof error === 'string'
         ? `Error: ${error}`
         : `Error: ${(error as Error).message || error}`;
-
-// ============================================================
-// 副作用関数: DOM操作
-// ============================================================
 
 const createSpan = (text: string, color: string): HTMLSpanElement => {
     const span = document.createElement('span');
@@ -247,10 +217,6 @@ const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
     parent.appendChild(child);
 };
 
-// ============================================================
-// 副作用関数: Audio再生
-// ============================================================
-
 const processAudioCommands = (output: string): void => {
     extractAudioCommands(output).forEach(commandStr => {
         try {
@@ -262,32 +228,22 @@ const processAudioCommands = (output: string): void => {
     });
 };
 
-// ============================================================
-// ファクトリ関数: Display作成
-// ============================================================
-
 export const createDisplay = (elements: DisplayElements): Display => {
-    // 状態（クロージャで保持）
     let mainOutput = '';
 
-    // 初期化
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
         AUDIO_ENGINE.init().catch(console.error);
     };
 
-    // 共通のspan追加
     const appendSpan = (text: string, color: string): HTMLSpanElement => {
         const span = createSpan(text.replace(/\\n/g, '\n'), color);
         appendToElement(elements.outputDisplay, span);
         return span;
     };
 
-    // 実行結果の表示
     const showExecutionResult = (result: ExecuteResult): void => {
         const { debug, program } = formatExecutionOutput(result);
-
-        // Audio処理
         processAudioCommands(result.output || '');
 
         mainOutput = `${debug}\n${program}`;
@@ -310,7 +266,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
-    // 実行結果の追記
     const appendExecutionResult = (result: ExecuteResult): void => {
         const programOutput = (result.output || '').trim();
         processAudioCommands(programOutput);
@@ -321,7 +276,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
-    // 出力表示
     const showOutput = (text: string): void => {
         processAudioCommands(text);
         const filteredText = filterAudioCommands(text);
@@ -331,7 +285,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         appendSpan(filteredText, '#4DC4FF');
     };
 
-    // エラー表示
     const showError = (error: Error | { message?: string } | string): void => {
         const errorMessage = formatErrorMessage(error);
 
@@ -354,7 +307,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
-    // スタック表示の更新
     const updateStack = (stack: Value[]): void => {
         const display = elements.stackDisplay;
         clearElement(display);
@@ -384,7 +336,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         appendToElement(display, container);
     };
 
-    // 状態取得
     const getState = (): DisplayState => ({ mainOutput });
 
     return {
@@ -399,7 +350,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 };
 
-// 純粋関数をエクスポート（テスト用）
 export const displayUtils = {
     formatValue,
     formatNumber,

@@ -69,7 +69,6 @@ export class WorkerManager {
             task?.reject(new Error(`Worker error: ${error.message}`));
         }
         this.completeTask(instance);
-        // ワーカーを再作成
         const index = this.workers.indexOf(instance);
         if (index > -1) this.workers.splice(index, 1);
         this.createWorker();
@@ -130,7 +129,6 @@ export class WorkerManager {
 
     async resetAllWorkers(): Promise<void> {
         this.abortAll();
-        // ワーカーをすべて終了させて再作成
         this.workers.forEach(w => w.worker.terminate());
         await this.init();
     }
