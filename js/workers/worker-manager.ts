@@ -24,7 +24,6 @@ export class WorkerManager {
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
     private maxWorkers = navigator.hardwareConcurrency || 4;
-    private taskIdCounter = 0;
 
     async init(): Promise<void> {
         console.log('[WorkerManager] Initializing worker pool...');
@@ -104,10 +103,19 @@ export class WorkerManager {
         });
     }
 
+    private generateTaskId(): string {
+        // crypto.randomUUID()が利用可能な場合はそれを使用、そうでなければフォールバック
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        // フォールバック: タイムスタンプ + ランダム値
+        return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    }
+
     execute(code: string, state: { stack: Value[], customWords: CustomWord[] }): Promise<ExecuteResult> {
         return new Promise((resolve, reject) => {
             const task: WorkerTask = {
-                id: `task_${++this.taskIdCounter}`,
+                id: this.generateTaskId(),
                 code,
                 state,
                 resolve,
@@ -120,10 +128,20 @@ export class WorkerManager {
 
     abortAll(): void {
         console.log('[WorkerManager] Aborting all tasks...');
+
+        // キュー内のタスクのPromiseをrejectしてからクリア
+        const abortError = new Error('Execution aborted');
+        for (const task of this.taskQueue) {
+            task.reject(abortError);
+        }
         this.taskQueue = [];
+
+        // 実行中のタスクにabortメッセージを送信
         for (const id of this.activeTasks.keys()) {
             const worker = this.workers.find(w => w.currentTaskId === id)?.worker;
-            worker?.postMessage({ type: 'abort', id });
+            if (worker) {
+                worker.postMessage({ type: 'abort', id });
+            }
         }
     }
 
