@@ -7,25 +7,67 @@
 
 # Ajisai
 
+> **"Ajisai is a vessel of water."**
+
 **A stack-based programming language inspired by FORTH**
 
 **Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
 
 ---
 
-## About AI-Driven Development
+## Design Philosophy: The Vessel of Water
 
-> The majority of this project's implementation was done by AI (Claude).
-> From design decisions to Rust/TypeScript code implementation, test case creation, and documentation,
-> this project is developed through human-AI collaboration.
+The botanical name for hydrangea (Ajisai in Japanese) is *Hydrangea*, derived from the Greek words *hydor* (water) and *angos* (vessel) — literally meaning "vessel of water."
+
+This etymology perfectly captures the essence of Ajisai's architecture.
+
+### The Metaphor
+
+Imagine a vessel filled with water. The substance within is singular — just water. Yet upon its surface, countless ripples can form, each creating different patterns of light and shadow.
+
+In Ajisai:
+
+| Concept | Metaphor | Technical Reality |
+|:--------|:---------|:------------------|
+| **Data** | Water | `Vec<Fraction>` — the sole truth |
+| **Type** | Ripple | `DisplayHint` — interpretation for display only |
+| **Shape** | Vessel | `shape: Vec<usize>` — dimensional structure |
+
+Just as water conforms to its container while remaining fundamentally unchanged, Ajisai's data adapts its interpretation to context while maintaining a unified internal representation.
 
 ---
 
-## Overview
+## Unified Fraction Architecture
 
-Ajisai provides a stack-based interpreter running on WebAssembly and an interactive web-based GUI.
+Ajisai abolishes traditional type systems. All values exist as a single substance: **fractions**.
 
-The name "Ajisai" (hydrangea in Japanese) metaphorically represents FORTH's characteristic of small words coming together to form functionality, like how small flowers come together to form a hydrangea cluster. (Note: What appears to be petals are actually sepals.)
+```rust
+pub struct Value {
+    pub data: Vec<Fraction>,       // The water (sole truth)
+    pub display_hint: DisplayHint, // The ripple (display interpretation)
+    pub shape: Vec<usize>,         // The vessel (dimensional shape)
+}
+```
+
+### Data Duality
+
+What users see as "types" are merely ripples on the surface:
+
+| Appearance (Ripple) | Reality (Water) | Explanation |
+|:--------------------|:----------------|:------------|
+| `42` | `[42/1]` | Integers are fractions |
+| `TRUE` | `[1/1]` | 1 is true, 0 is false |
+| `'A'` | `[65/1]` | Character code (ASCII/Unicode) |
+| `'Hello'` | `[72/1, 101/1, ...]` | Array of character codes |
+| `NIL` | `[0/0]` | Sentinel value |
+
+### Design Implications
+
+- **No type errors**: Any data can mix with any other — they are all water
+- **Structural validation**: Shape and length mismatches are caught, not "types"
+- **Display freedom**: Words like `STR` and `NUM` only change the ripple pattern, not the water itself
+
+This inherits FORTH's spirit: **trust the programmer**.
 
 ---
 
@@ -36,46 +78,38 @@ The name "Ajisai" (hydrangea in Japanese) metaphorically represents FORTH's char
 - **Stack-based with Reverse Polish Notation (RPN)**
   - FORTH-style stack operations
 
+- **Exact Fraction Arithmetic**
+  - All numbers internally represented as fractions — no rounding errors
+  - Arbitrary precision through `num-bigint`
+
 - **Vector-based Fractal Structure**
-  - All container data is represented as nestable Vectors (similar to LISP's list structure)
-  - Bracket `[ ]` nesting expresses dimensions, with tensor-like operations (SHAPE, RESHAPE, etc.) supported
-  - **Heterogeneous data mixing**: Numbers, strings, booleans, and Vectors can be freely combined, e.g., `[ 1 'hello' TRUE [ 2 3 ] ]`
+  - All container data represented as nestable Vectors
+  - Bracket `[ ]` nesting expresses dimensions
+  - Tensor-like operations (SHAPE, RESHAPE, etc.)
+  - **Heterogeneous mixing**: `[ 1 'hello' TRUE [ 2 3 ] ]`
   - NumPy/APL-style broadcasting
 
-- **The "Rule of 3": Dimension and Call Depth Limits**
-  - Dimension 0: Stack (invisible, GUI frame)
-  - Dimensions 1-3: Visible nesting (nesting beyond 3 dimensions causes an error)
-  - Call depth: Maximum 3 (`A -> B -> C`)
+- **The Rule of 3: Dimension and Call Depth Limits**
 
-| Dim | Bracket | Visibility | Structure |
-|:---:|:---:|:---:|:---|
-| 0 | — | Invisible | Stack (implicit outermost shell) |
+| Dim | Bracket | Visibility | Example |
+|:---:|:-------:|:----------:|:--------|
+| 0 | — | Invisible | Stack (implicit frame) |
 | 1 | `{ }` | Visible | `{ 1 2 3 }` |
 | 2 | `( )` | Visible | `{ ( 1 2 ) ( 3 4 ) }` |
 | 3 | `[ ]` | Visible | `{ ( [ 1 ] [ 2 ] ) }` |
-
-- **Exact Fraction Arithmetic**
-  - All numbers are internally treated as fractions - no rounding errors
-  - Capable of handling extremely large numbers
-
-- **Unified Fraction Architecture (Typeless Design)**
-  - All values are internally represented as `Vec<Fraction>`
-  - Distinction between numbers, booleans, and strings only at display time (DisplayHint)
-  - No type checking - inheriting FORTH's spirit of freedom
 
 - **Built-in Word Protection**
   - Built-in words cannot be deleted or overwritten
 
 ### Visualization
 
-- **Depth-based bracket styles**: `[ ]` → `{ }` → `( )` → `[ ]` ... (cycles every 3 levels)
-
-- **Real-time state display**: Stack, dictionary, memory usage visible in GUI
+- **Depth-based bracket styles**: `[ ]` → `{ }` → `( )` → `[ ]` (cycles every 3 levels)
+- **Real-time state display**: Stack, dictionary, memory visible in GUI
 
 ### Technology Stack
 
 | Component | Technology |
-|:---|:---|
+|:----------|:-----------|
 | Core Interpreter | Rust |
 | Runtime | WebAssembly |
 | Frontend | TypeScript |
@@ -91,10 +125,10 @@ The name "Ajisai" (hydrangea in Japanese) metaphorically represents FORTH's char
 ```ajisai
 # Creating vectors
 [ 1 2 3 ]               # 1D vector: shape [3]
-[ [ 1 2 ] [ 3 4 ] ]     # Nested vector (matrix-like): shape [2, 2]
+[ [ 1 2 ] [ 3 4 ] ]     # Nested vector: shape [2, 2]
 
 # Heterogeneous data
-[ 1 'hello' TRUE [ 2 3 ] ]   # Numbers, strings, booleans, Vectors can be mixed
+[ 1 'hello' TRUE [ 2 3 ] ]
 
 # Broadcasting arithmetic
 [ 5 ] [ 1 2 3 ] +       # → [ 6 7 8 ]
@@ -115,7 +149,7 @@ The name "Ajisai" (hydrangea in Japanese) metaphorically represents FORTH's char
 [ 1 2 3 4 5 ] 'DOUBLE' MAP    # → [ 2 4 6 8 10 ]
 ```
 
-### Control Structure (Guards)
+### Control Structure
 
 ```ajisai
 # Conditional: TRUE if even, FALSE if odd
@@ -224,6 +258,14 @@ npx vite
 # Production build
 npx vite build
 ```
+
+---
+
+## About AI-Driven Development
+
+> The majority of this project's implementation was done by AI (Claude).
+> From design decisions to Rust/TypeScript code implementation, test case creation, and documentation,
+> this project is developed through human-AI collaboration.
 
 ---
 
