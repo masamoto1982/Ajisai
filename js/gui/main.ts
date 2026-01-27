@@ -26,6 +26,7 @@ export interface GUIElements {
     readonly stackDisplay: HTMLElement;
     readonly builtinWordsDisplay: HTMLElement;
     readonly customWordsDisplay: HTMLElement;
+    readonly wordSearch: HTMLInputElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
@@ -55,6 +56,7 @@ const cacheElements = (): GUIElements => ({
     stackDisplay: document.getElementById('stack-display')!,
     builtinWordsDisplay: document.getElementById('builtin-words-display')!,
     customWordsDisplay: document.getElementById('custom-words-display')!,
+    wordSearch: document.getElementById('word-search') as HTMLInputElement,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
@@ -126,9 +128,33 @@ export const createGUI = (): GUI => {
         }
     };
 
+    // デバウンス用ユーティリティ
+    const debounce = <T extends (...args: unknown[]) => void>(
+        fn: T,
+        delay: number
+    ): ((...args: Parameters<T>) => void) => {
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        return (...args: Parameters<T>) => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => fn(...args), delay);
+        };
+    };
+
     const setupEventListeners = (): void => {
         elements.runBtn.addEventListener('click', () => {
             executionController.runCode(editor.getValue());
+        });
+
+        // 辞書検索: デバウンス付きでフィルタリング
+        const handleSearchInput = debounce(() => {
+            dictionary.setSearchFilter(elements.wordSearch.value);
+        }, 150);
+
+        elements.wordSearch.addEventListener('input', handleSearchInput);
+
+        // 検索窓をクリアしたとき（×ボタン）も即座に反映
+        elements.wordSearch.addEventListener('search', () => {
+            dictionary.setSearchFilter(elements.wordSearch.value);
         });
 
         elements.clearBtn.addEventListener('click', () => editor.clear());

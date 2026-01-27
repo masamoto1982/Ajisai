@@ -112,6 +112,51 @@
     width: 100%;
 }
 
+/* 辞書ヘッダー（タイトル＋検索窓） */
+.dictionary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--color-secondary);
+}
+
+.dictionary-header h2 {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+#word-search {
+    padding: 0.25rem 0.5rem;
+    border: var(--border-main);
+    border-radius: var(--radius-main);
+    font-size: 0.8rem;
+    font-family: var(--font-stack-mono);
+    background-color: rgba(255, 255, 255, 0.7);
+    color: var(--color-text);
+    min-width: 120px;
+    max-width: 200px;
+}
+
+#word-search:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+#word-search::placeholder {
+    color: var(--color-text-light);
+}
+
+/* 検索結果なしメッセージ */
+.no-results-message {
+    color: var(--color-text-light);
+    font-style: italic;
+    padding: 0.5rem;
+    text-align: center;
+}
+
 .dictionary-container {
     display: flex;
     flex-direction: column;

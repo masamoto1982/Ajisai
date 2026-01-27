@@ -21,6 +21,7 @@ export interface DictionaryCallbacks {
 export interface Dictionary {
     readonly renderBuiltinWords: () => void;
     readonly updateCustomWords: (customWordsInfo: Array<[string, string | null, boolean]>) => void;
+    readonly setSearchFilter: (filter: string) => void;
 }
 
 const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
@@ -103,11 +104,27 @@ const createButtonWithContextMenu = (
     return button;
 };
 
+const matchesFilter = (wordName: string, filter: string): boolean => {
+    if (!filter) return true;
+    return wordName.toLowerCase().includes(filter.toLowerCase());
+};
+
+const createNoResultsMessage = (): HTMLElement => {
+    const message = document.createElement('div');
+    message.className = 'no-results-message';
+    message.textContent = 'No matching words found';
+    return message;
+};
+
 export const createDictionary = (
     elements: DictionaryElements,
     callbacks: DictionaryCallbacks
 ): Dictionary => {
     const { onWordClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
+
+    // 検索フィルターとカスタムワードのキャッシュ
+    let searchFilter = '';
+    let cachedCustomWords: Array<[string, string | null, boolean]> = [];
 
     const confirmAndDeleteWord = async (wordName: string): Promise<void> => {
         if (!confirm(`Delete word '${wordName}'?`)) return;
@@ -133,30 +150,47 @@ export const createDictionary = (
         clearElement(container);
 
         const groups = groupByCategory(builtinWords);
+        let totalMatches = 0;
 
         Object.keys(groups).sort().forEach(category => {
+            const categoryWords = groups[category];
+            if (!categoryWords) return;
+
+            // フィルタリング: マッチするワードのみ抽出
+            const filteredWords = categoryWords.filter(wordData => {
+                const name = wordData[0] as string;
+                return matchesFilter(name, searchFilter);
+            });
+
+            // カテゴリ内にマッチするワードがなければスキップ
+            if (filteredWords.length === 0) return;
+
+            totalMatches += filteredWords.length;
+
             const groupContainer = document.createElement('span');
             groupContainer.className = 'builtin-category-group';
 
-            const categoryWords = groups[category];
-            if (categoryWords) {
-                categoryWords.forEach(wordData => {
-                    const name = wordData[0] as string;
-                    const description = (wordData[1] as string) || name;
+            filteredWords.forEach(wordData => {
+                const name = wordData[0] as string;
+                const description = (wordData[1] as string) || name;
 
-                    const button = createButton(
-                        name,
-                        description,
-                        'word-button builtin',
-                        () => onWordClick(name)
-                    );
+                const button = createButton(
+                    name,
+                    description,
+                    'word-button builtin',
+                    () => onWordClick(name)
+                );
 
-                    groupContainer.appendChild(button);
-                });
-            }
+                groupContainer.appendChild(button);
+            });
 
             container.appendChild(groupContainer);
         });
+
+        // フィルターが設定されているが結果がない場合
+        if (searchFilter && totalMatches === 0) {
+            container.appendChild(createNoResultsMessage());
+        }
     };
 
     const renderCustomWordButtons = (
@@ -165,7 +199,12 @@ export const createDictionary = (
     ): void => {
         clearElement(container);
 
-        words.forEach(wordInfo => {
+        // フィルタリング: マッチするワードのみ抽出
+        const filteredWords = words.filter(wordInfo =>
+            matchesFilter(wordInfo.name, searchFilter)
+        );
+
+        filteredWords.forEach(wordInfo => {
             const className = wordInfo.protected
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
@@ -180,6 +219,12 @@ export const createDictionary = (
 
             container.appendChild(button);
         });
+
+        // フィルターが設定されているが結果がない場合
+        // (ただし、元のワードリストが空の場合は表示しない)
+        if (searchFilter && words.length > 0 && filteredWords.length === 0) {
+            container.appendChild(createNoResultsMessage());
+        }
     };
 
     const renderBuiltinWords = (): void => {
@@ -196,13 +241,24 @@ export const createDictionary = (
     const updateCustomWords = (
         customWordsInfo: Array<[string, string | null, boolean]>
     ): void => {
-        const words = (customWordsInfo || []).map(toWordInfo);
+        // キャッシュを更新
+        cachedCustomWords = customWordsInfo || [];
+        const words = cachedCustomWords.map(toWordInfo);
+        renderCustomWordButtons(elements.customWordsDisplay, words);
+    };
+
+    const setSearchFilter = (filter: string): void => {
+        searchFilter = filter.trim();
+        // 両方のワードリストを再レンダリング
+        renderBuiltinWords();
+        const words = cachedCustomWords.map(toWordInfo);
         renderCustomWordButtons(elements.customWordsDisplay, words);
     };
 
     return {
         renderBuiltinWords,
-        updateCustomWords
+        updateCustomWords,
+        setSearchFilter
     };
 };
 
