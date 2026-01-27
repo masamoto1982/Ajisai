@@ -26,6 +26,8 @@ export interface GUIElements {
     readonly stackDisplay: HTMLElement;
     readonly builtinWordsDisplay: HTMLElement;
     readonly customWordsDisplay: HTMLElement;
+    readonly builtinWordInfo: HTMLElement;
+    readonly customWordInfo: HTMLElement;
     readonly wordSearch: HTMLInputElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
@@ -56,6 +58,8 @@ const cacheElements = (): GUIElements => ({
     stackDisplay: document.getElementById('stack-display')!,
     builtinWordsDisplay: document.getElementById('builtin-words-display')!,
     customWordsDisplay: document.getElementById('custom-words-display')!,
+    builtinWordInfo: document.getElementById('builtin-word-info')!,
+    customWordInfo: document.getElementById('custom-word-info')!,
     wordSearch: document.getElementById('word-search') as HTMLInputElement,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
@@ -70,7 +74,9 @@ const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
 
 const extractDictionaryElements = (elements: GUIElements): DictionaryElements => ({
     builtinWordsDisplay: elements.builtinWordsDisplay,
-    customWordsDisplay: elements.customWordsDisplay
+    customWordsDisplay: elements.customWordsDisplay,
+    builtinWordInfo: elements.builtinWordInfo,
+    customWordInfo: elements.customWordInfo
 });
 
 const extractMobileElements = (elements: GUIElements): MobileElements => ({

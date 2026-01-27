@@ -9,6 +9,8 @@ export interface WordInfo {
 export interface DictionaryElements {
     readonly builtinWordsDisplay: HTMLElement;
     readonly customWordsDisplay: HTMLElement;
+    readonly builtinWordInfo: HTMLElement;
+    readonly customWordInfo: HTMLElement;
 }
 
 export interface DictionaryCallbacks {
@@ -79,13 +81,21 @@ const createButton = (
     text: string,
     title: string,
     className: string,
-    onClick: () => void
+    onClick: () => void,
+    onHover?: () => void,
+    onLeave?: () => void
 ): HTMLButtonElement => {
     const button = document.createElement('button');
     button.textContent = text;
     button.className = className;
     button.title = title;
     button.addEventListener('click', onClick);
+    if (onHover) {
+        button.addEventListener('mouseenter', onHover);
+    }
+    if (onLeave) {
+        button.addEventListener('mouseleave', onLeave);
+    }
     return button;
 };
 
@@ -94,9 +104,11 @@ const createButtonWithContextMenu = (
     title: string,
     className: string,
     onClick: () => void,
-    onContextMenu: () => void
+    onContextMenu: () => void,
+    onHover?: () => void,
+    onLeave?: () => void
 ): HTMLButtonElement => {
-    const button = createButton(text, title, className, onClick);
+    const button = createButton(text, title, className, onClick, onHover, onLeave);
     button.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         onContextMenu();
@@ -178,7 +190,9 @@ export const createDictionary = (
                     name,
                     description,
                     'word-button builtin',
-                    () => onWordClick(name)
+                    () => onWordClick(name),
+                    () => { elements.builtinWordInfo.textContent = description; },
+                    () => { elements.builtinWordInfo.textContent = ''; }
                 );
 
                 groupContainer.appendChild(button);
@@ -214,7 +228,9 @@ export const createDictionary = (
                 wordInfo.description || '',
                 className,
                 () => onWordClick(wordInfo.name),
-                () => confirmAndDeleteWord(wordInfo.name)
+                () => confirmAndDeleteWord(wordInfo.name),
+                () => { elements.customWordInfo.textContent = wordInfo.description || ''; },
+                () => { elements.customWordInfo.textContent = ''; }
             );
 
             container.appendChild(button);
