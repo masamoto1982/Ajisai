@@ -47,6 +47,17 @@ const decodeWordName = (name: string): string | null => {
     return `≈ ${decoded}`;
 };
 
+/**
+ * Extract syntax example from description.
+ * Description format: "Short description | syntax example"
+ * Returns the part after '|' if present, otherwise empty string.
+ */
+const extractSyntaxExample = (description: string): string => {
+    const pipeIndex = description.indexOf('|');
+    if (pipeIndex === -1) return '';
+    return description.substring(pipeIndex + 1).trim();
+};
+
 const toWordInfo = (wordData: [string, string | null, boolean]): WordInfo => ({
     name: wordData[0],
     description: wordData[1] || decodeWordName(wordData[0]) || wordData[0],
@@ -185,13 +196,14 @@ export const createDictionary = (
             filteredWords.forEach(wordData => {
                 const name = wordData[0] as string;
                 const description = (wordData[1] as string) || name;
+                const syntaxExample = extractSyntaxExample(description);
 
                 const button = createButton(
                     name,
                     description,
                     'word-button builtin',
                     () => onWordClick(name),
-                    () => { elements.builtinWordInfo.textContent = description; },
+                    () => { elements.builtinWordInfo.textContent = syntaxExample; },
                     () => { elements.builtinWordInfo.textContent = ''; }
                 );
 
@@ -222,6 +234,9 @@ export const createDictionary = (
             const className = wordInfo.protected
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
+            const syntaxExample = wordInfo.description
+                ? extractSyntaxExample(wordInfo.description)
+                : '';
 
             const button = createButtonWithContextMenu(
                 wordInfo.name,
@@ -229,7 +244,7 @@ export const createDictionary = (
                 className,
                 () => onWordClick(wordInfo.name),
                 () => confirmAndDeleteWord(wordInfo.name),
-                () => { elements.customWordInfo.textContent = wordInfo.description || ''; },
+                () => { elements.customWordInfo.textContent = syntaxExample; },
                 () => { elements.customWordInfo.textContent = ''; }
             );
 
