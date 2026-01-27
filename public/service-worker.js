@@ -73,9 +73,9 @@ self.addEventListener('fetch', (event) => {
           // 有効なレスポンスをキャッシュに保存
           if (response && response.status === 200) {
             const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, responseToCache);
-            });
+            caches.open(CACHE_NAME)
+              .then(cache => cache.put(event.request, responseToCache))
+              .catch(err => console.warn('[SW] Failed to cache response:', err));
           }
           return response;
         })
@@ -107,9 +107,9 @@ self.addEventListener('fetch', (event) => {
               event.request.url.includes('.js') ||
               event.request.url.includes('.css')) {
             const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, responseToCache);
-            });
+            caches.open(CACHE_NAME)
+              .then(cache => cache.put(event.request, responseToCache))
+              .catch(err => console.warn('[SW] Failed to cache response:', err));
           }
 
           return response;

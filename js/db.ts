@@ -25,34 +25,51 @@ class AjisaiDB {
     private storeName = 'tables';
     private stateStoreName = 'interpreter_state';
     private db: IDBDatabase | null = null;
+    private openPromise: Promise<IDBDatabase> | null = null;
 
     async open(): Promise<IDBDatabase> {
+        // 既に開いている場合はそのまま返す
+        if (this.db) {
+            return this.db;
+        }
+
+        // 初期化中の場合は同じPromiseを返す（競合防止）
+        if (this.openPromise) {
+            return this.openPromise;
+        }
+
         if (!window.indexedDB) {
             throw new Error('IndexedDB is not supported in this browser');
         }
-        
-        return new Promise((resolve, reject) => {
+
+        this.openPromise = new Promise<IDBDatabase>((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.version);
-            
-            request.onerror = () => reject(request.error);
-            
+
+            request.onerror = () => {
+                this.openPromise = null;
+                reject(request.error);
+            };
+
             request.onsuccess = () => {
                 this.db = request.result;
+                this.openPromise = null;
                 resolve(this.db);
             };
-            
+
             request.onupgradeneeded = (event) => {
                 const db = (event.target as IDBOpenDBRequest).result;
-                
+
                 if (!db.objectStoreNames.contains(this.storeName)) {
                     db.createObjectStore(this.storeName, { keyPath: 'name' });
                 }
-                
+
                 if (!db.objectStoreNames.contains(this.stateStoreName)) {
                     db.createObjectStore(this.stateStoreName, { keyPath: 'key' });
                 }
             };
         });
+
+        return this.openPromise;
     }
 
     async saveTable(name: string, schema: any, records: any): Promise<void> {

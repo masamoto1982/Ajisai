@@ -5,28 +5,57 @@ import type { WasmModule, AjisaiInterpreter, ExecuteResult } from '../wasm-types
 let interpreter: AjisaiInterpreter | null = null;
 let isAborted = false;
 let currentTaskId: string | null = null;
+let initAttempts = 0;
+let isInitializing = false;
+const MAX_INIT_ATTEMPTS = 3;
+const INIT_RETRY_DELAY_MS = 500;
 
-async function init() {
-    if (interpreter) return;
-    try {
-        const wasmModule = await import('../pkg/ajisai_core.js') as unknown as WasmModule;
-        if (wasmModule.default) {
-            await wasmModule.default();
-        } else if (wasmModule.init) {
-            await wasmModule.init();
+const sleep = (ms: number): Promise<void> =>
+    new Promise(resolve => setTimeout(resolve, ms));
+
+async function init(): Promise<boolean> {
+    if (interpreter) return true;
+    if (isInitializing) {
+        // 初期化中の場合は完了を待つ
+        while (isInitializing) {
+            await sleep(50);
         }
-        interpreter = new wasmModule.AjisaiInterpreter();
-        console.log('[Worker] WASM Interpreter Initialized');
-    } catch (e) {
-        console.error('[Worker] Failed to initialize WASM', e);
-        // 初期化失敗をメインスレッドに通知
-        self.postMessage({ type: 'error', id: 'init', data: 'Worker WASM initialization failed' });
+        return interpreter !== null;
     }
+
+    isInitializing = true;
+
+    while (initAttempts < MAX_INIT_ATTEMPTS) {
+        initAttempts++;
+        try {
+            const wasmModule = await import('../pkg/ajisai_core.js') as unknown as WasmModule;
+            if (wasmModule.default) {
+                await wasmModule.default();
+            } else if (wasmModule.init) {
+                await wasmModule.init();
+            }
+            interpreter = new wasmModule.AjisaiInterpreter();
+            console.log('[Worker] WASM Interpreter Initialized');
+            isInitializing = false;
+            return true;
+        } catch (e) {
+            console.error(`[Worker] Failed to initialize WASM (attempt ${initAttempts}/${MAX_INIT_ATTEMPTS})`, e);
+            if (initAttempts < MAX_INIT_ATTEMPTS) {
+                await sleep(INIT_RETRY_DELAY_MS * initAttempts);
+            }
+        }
+    }
+
+    // すべてのリトライが失敗
+    isInitializing = false;
+    console.error('[Worker] WASM initialization failed after all retries');
+    self.postMessage({ type: 'error', id: 'init', data: 'Worker WASM initialization failed after all retries' });
+    return false;
 }
 
 self.onmessage = async (event: MessageEvent) => {
     const { type, id, code, state } = event.data;
-    
+
     if (type === 'abort') {
         if (id === currentTaskId || id === '*') {
             isAborted = true;
@@ -36,9 +65,9 @@ self.onmessage = async (event: MessageEvent) => {
 
     if (type !== 'execute') return;
 
-    await init();
-    if (!interpreter) {
-        self.postMessage({ type: 'error', id, data: 'Interpreter not initialized' });
+    const initSuccess = await init();
+    if (!initSuccess || !interpreter) {
+        self.postMessage({ type: 'error', id, data: 'Interpreter not initialized after all retries' });
         return;
     }
 

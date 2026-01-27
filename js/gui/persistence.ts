@@ -128,18 +128,38 @@ const parseCustomWords = (jsonString: string): Result<CustomWord[], Error> => {
 
 export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
     const { showError, updateDisplays, showInfo } = callbacks;
+    let dbInitialized = false;
+    const MAX_RETRY_COUNT = 3;
+    const RETRY_DELAY_MS = 1000;
+
+    const sleep = (ms: number): Promise<void> =>
+        new Promise(resolve => setTimeout(resolve, ms));
 
     const init = async (): Promise<void> => {
-        try {
-            await window.AjisaiDB.open();
-            console.log('Database initialized successfully for Persistence.');
-        } catch (error) {
-            console.error('Failed to initialize persistence database:', error);
+        for (let attempt = 1; attempt <= MAX_RETRY_COUNT; attempt++) {
+            try {
+                await window.AjisaiDB.open();
+                dbInitialized = true;
+                console.log('Database initialized successfully for Persistence.');
+                return;
+            } catch (error) {
+                console.error(`Failed to initialize persistence database (attempt ${attempt}/${MAX_RETRY_COUNT}):`, error);
+                if (attempt < MAX_RETRY_COUNT) {
+                    await sleep(RETRY_DELAY_MS * attempt);
+                }
+            }
         }
+        // すべてのリトライが失敗した場合
+        console.warn('Persistence database initialization failed after all retries. Data will not be persisted.');
+        showError?.(new Error('Failed to initialize database. Changes will not be saved.'));
     };
 
     const saveCurrentState = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
+        if (!dbInitialized) {
+            console.warn('Database not initialized, skipping state save.');
+            return;
+        }
 
         try {
             const state = getCurrentState(window.ajisaiInterpreter);
@@ -165,6 +185,11 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
     const loadDatabaseData = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
+        if (!dbInitialized) {
+            console.warn('Database not initialized, loading sample words instead.');
+            await loadSampleWords();
+            return;
+        }
 
         try {
             const state = await window.AjisaiDB.loadInterpreterState();
@@ -228,8 +253,12 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
     const fullReset = async (): Promise<void> => {
         try {
-            await window.AjisaiDB.clearAll();
-            console.log('IndexedDB cleared.');
+            if (dbInitialized) {
+                await window.AjisaiDB.clearAll();
+                console.log('IndexedDB cleared.');
+            } else {
+                console.warn('Database not initialized, skipping clear operation.');
+            }
             await loadSampleWords();
             updateDisplays?.();
         } catch (error) {
