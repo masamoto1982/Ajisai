@@ -9,7 +9,9 @@
 
 > **"Ajisai is a vessel of water."**
 
-**A stack-based programming language inspired by FORTH**
+**A stack-based programming language inspired by FORTH and LISP**
+
+Ajisai inherits **postfix notation** and the **dictionary system** from FORTH, and **fractal data structures** from LISP.
 
 **Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
 
@@ -39,7 +41,7 @@ Just as water conforms to its container while remaining fundamentally unchanged,
 
 ## Unified Fraction Architecture
 
-Ajisai abolishes traditional type systems. All values exist as a single substance: **fractions**.
+In Ajisai, all values exist as a single substance: **fractions**. There is no type system.
 
 ```rust
 pub struct Value {
@@ -263,9 +265,9 @@ npx vite build
 
 ## About AI-Driven Development
 
-> The majority of this project's implementation was done by AI (Claude).
+> This project is developed through human-AI collaboration using generative AI.
 > From design decisions to Rust/TypeScript code implementation, test case creation, and documentation,
-> this project is developed through human-AI collaboration.
+> AI assistance is utilized throughout the development process.
 
 ---
 
