@@ -131,7 +131,7 @@
 #word-search {
     padding: 0.25rem 0.5rem;
     border: none;
-    border-radius: var(--radius-main);
+    border-radius: 0;
     font-size: 0.85rem;
     font-family: var(--font-stack-mono);
     background-color: var(--code-bg);
