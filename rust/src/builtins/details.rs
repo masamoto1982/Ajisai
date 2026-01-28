@@ -1691,10 +1691,10 @@ CSPRNG
         _ => {
             // 既存の定義情報にフォールバック
             let definitions = get_builtin_definitions();
-            for (word_name, description, category) in definitions {
+            for (word_name, description, syntax_example, category) in definitions {
                 if word_name == name {
-                    return format!("# {} - {}\n\nCategory: {}\n\n## 説明\n{}\n\n詳細な説明は未実装です。",
-                        name, description, category, description);
+                    return format!("# {} - {}\n\nCategory: {}\n\n## 説明\n{}\n\n## 構文例\n{}\n\n詳細な説明は未実装です。",
+                        name, description, category, description, syntax_example);
                 }
             }
             format!("ワード '{}' の詳細情報はありません。", name)
