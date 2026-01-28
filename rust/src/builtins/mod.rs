@@ -17,7 +17,7 @@ use crate::types::WordDefinition;
 
 /// Registers all built-in words into the dictionary.
 pub fn register_builtins(dictionary: &mut HashMap<String, WordDefinition>) {
-    for (name, description, _) in get_builtin_definitions() {
+    for (name, description, _, _) in get_builtin_definitions() {
         dictionary.insert(name.to_string(), WordDefinition {
             lines: vec![],
             is_builtin: true,
