@@ -21,7 +21,7 @@
 // - .. PLAY: スタック全体を再生（マルチトラック）
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData, DisplayHint};
+use crate::types::{Value, ValueData, DisplayHint, AudioHint, Envelope, WaveformType};
 use super::Interpreter;
 use super::OperationTarget;
 use num_traits::ToPrimitive;
@@ -96,6 +96,10 @@ pub enum AudioStructure {
     Tone {
         frequency: f64,
         duration: f64,  // スロット数
+        #[serde(skip_serializing_if = "Option::is_none")]
+        envelope: Option<Envelope>,
+        #[serde(skip_serializing_if = "is_default_waveform")]
+        waveform: WaveformType,
     },
     #[serde(rename = "rest")]
     Rest {
@@ -104,11 +108,24 @@ pub enum AudioStructure {
     #[serde(rename = "seq")]
     Seq {
         children: Vec<AudioStructure>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        envelope: Option<Envelope>,
+        #[serde(skip_serializing_if = "is_default_waveform")]
+        waveform: WaveformType,
     },
     #[serde(rename = "sim")]
     Sim {
         children: Vec<AudioStructure>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        envelope: Option<Envelope>,
+        #[serde(skip_serializing_if = "is_default_waveform")]
+        waveform: WaveformType,
     },
+}
+
+/// デフォルト波形（Sine）かどうかを判定（シリアライズ用）
+fn is_default_waveform(wf: &WaveformType) -> bool {
+    *wf == WaveformType::Sine
 }
 
 // ============================================================================
@@ -143,6 +160,147 @@ pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
 }
 
 // ============================================================================
+// CHORD ワード実装
+// ============================================================================
+
+/// CHORD ワード - ベクタを同時再生（和音）としてマーク
+pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // ベクタでなければエラー
+    if !val.is_vector() {
+        return Err(AjisaiError::from("CHORD requires a vector"));
+    }
+
+    // AudioHintを設定（既存のヒントがあればchordフラグを追加）
+    let mut new_val = val;
+    let hint = new_val.audio_hint.get_or_insert(AudioHint::default());
+    hint.chord = true;
+
+    interp.stack.push(new_val);
+    Ok(())
+}
+
+// ============================================================================
+// ADSR ワード実装
+// ============================================================================
+
+/// ADSR ワード - ADSRエンベロープを設定
+/// スタック: [ target ] [ attack decay sustain release ] -- [ target ]'
+/// 対象ベクタにADSRエンベロープを適用
+pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
+    // ADSRパラメータを取得
+    let params = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // 対象ベクタを取得
+    let target = interp.stack.pop().ok_or_else(|| {
+        // パラメータをスタックに戻してからエラー
+        interp.stack.push(params.clone());
+        AjisaiError::StackUnderflow
+    })?;
+
+    // パラメータがベクタでなければエラー
+    let param_children = match &params.data {
+        ValueData::Vector(v) => v,
+        _ => {
+            interp.stack.push(target);
+            interp.stack.push(params);
+            return Err(AjisaiError::from("ADSR parameters must be a vector"));
+        }
+    };
+
+    // 4要素でなければエラー
+    if param_children.len() != 4 {
+        interp.stack.push(target);
+        interp.stack.push(params);
+        return Err(AjisaiError::from("ADSR requires exactly 4 values: [attack decay sustain release]"));
+    }
+
+    // 対象がベクタでなければエラー
+    if !target.is_vector() {
+        interp.stack.push(target);
+        interp.stack.push(params);
+        return Err(AjisaiError::from("ADSR target must be a vector"));
+    }
+
+    // 各値を取得
+    let attack = param_children[0].as_scalar()
+        .and_then(|f| f.to_f64())
+        .ok_or_else(|| AjisaiError::from("ADSR attack must be a number"))?;
+    let decay = param_children[1].as_scalar()
+        .and_then(|f| f.to_f64())
+        .ok_or_else(|| AjisaiError::from("ADSR decay must be a number"))?;
+    let sustain = param_children[2].as_scalar()
+        .and_then(|f| f.to_f64())
+        .ok_or_else(|| AjisaiError::from("ADSR sustain must be a number"))?;
+    let release = param_children[3].as_scalar()
+        .and_then(|f| f.to_f64())
+        .ok_or_else(|| AjisaiError::from("ADSR release must be a number"))?;
+
+    // 値の検証
+    if attack < 0.0 || decay < 0.0 || release < 0.0 {
+        interp.stack.push(target);
+        interp.stack.push(params);
+        return Err(AjisaiError::from("ADSR times must be non-negative"));
+    }
+    if sustain < 0.0 || sustain > 1.0 {
+        interp.stack.push(target);
+        interp.stack.push(params);
+        return Err(AjisaiError::from("ADSR sustain must be between 0.0 and 1.0"));
+    }
+
+    // AudioHintを設定（対象ベクタに適用）
+    let mut new_val = target;
+    let hint = new_val.audio_hint.get_or_insert(AudioHint::default());
+    hint.envelope = Some(Envelope { attack, decay, sustain, release });
+
+    interp.stack.push(new_val);
+    Ok(())
+}
+
+// ============================================================================
+// 波形ワード実装
+// ============================================================================
+
+/// SINE ワード - 正弦波を設定
+pub fn op_sine(interp: &mut Interpreter) -> Result<()> {
+    set_waveform(interp, WaveformType::Sine)
+}
+
+/// SQUARE ワード - 矩形波を設定
+pub fn op_square(interp: &mut Interpreter) -> Result<()> {
+    set_waveform(interp, WaveformType::Square)
+}
+
+/// SAW ワード - のこぎり波を設定
+pub fn op_saw(interp: &mut Interpreter) -> Result<()> {
+    set_waveform(interp, WaveformType::Sawtooth)
+}
+
+/// TRI ワード - 三角波を設定
+pub fn op_tri(interp: &mut Interpreter) -> Result<()> {
+    set_waveform(interp, WaveformType::Triangle)
+}
+
+/// 波形を設定するヘルパー関数
+fn set_waveform(interp: &mut Interpreter, waveform: WaveformType) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // ベクタでなければエラー
+    if !val.is_vector() {
+        return Err(AjisaiError::from("Waveform word requires a vector"));
+    }
+
+    // AudioHintを設定
+    let mut new_val = val;
+    let hint = new_val.audio_hint.get_or_insert(AudioHint::default());
+    hint.waveform = waveform;
+
+    interp.stack.push(new_val);
+    Ok(())
+}
+
+// ============================================================================
 // PLAY ワード実装
 // ============================================================================
 
@@ -172,8 +330,16 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
 
             // モードに応じて結合
             let combined = match mode {
-                PlayMode::Sequential => AudioStructure::Seq { children: structures },
-                PlayMode::Simultaneous => AudioStructure::Sim { children: structures },
+                PlayMode::Sequential => AudioStructure::Seq {
+                    children: structures,
+                    envelope: None,
+                    waveform: WaveformType::Sine,
+                },
+                PlayMode::Simultaneous => AudioStructure::Sim {
+                    children: structures,
+                    envelope: None,
+                    waveform: WaveformType::Sine,
+                },
             };
 
             output_play_command(&combined, &mut interp.output_buffer);
@@ -197,6 +363,12 @@ fn build_audio_structure(
     mode: PlayMode,
     output: &mut String
 ) -> Result<AudioStructure> {
+    // AudioHintを取得
+    let audio_hint = value.get_audio_hint();
+    let envelope = audio_hint.and_then(|h| h.envelope);
+    let waveform = audio_hint.map(|h| h.waveform).unwrap_or_default();
+    let is_chord = audio_hint.map(|h| h.chord).unwrap_or(false);
+
     // NIL判定
     if value.is_nil() {
         return Ok(AudioStructure::Rest { duration: 1.0 });
@@ -207,7 +379,7 @@ fn build_audio_structure(
         let s = value_as_string(value);
         output.push_str(&s);
         output.push(' ');
-        return Ok(AudioStructure::Seq { children: vec![] });
+        return Ok(AudioStructure::Seq { children: vec![], envelope: None, waveform: WaveformType::Sine });
     }
 
     // ベクタ判定
@@ -221,12 +393,27 @@ fn build_audio_structure(
                 .map(|e| build_audio_structure(e, PlayMode::Sequential, output))
                 .collect::<Result<Vec<_>>>()?
                 .into_iter()
-                .filter(|s| !matches!(s, AudioStructure::Seq { children } if children.is_empty()))
+                .filter(|s| !matches!(s, AudioStructure::Seq { children, .. } if children.is_empty()))
                 .collect();
 
-            return match mode {
-                PlayMode::Sequential => Ok(AudioStructure::Seq { children: audio_children }),
-                PlayMode::Simultaneous => Ok(AudioStructure::Sim { children: audio_children }),
+            // CHORDフラグがあれば同時再生、なければモードに従う
+            let effective_mode = if is_chord {
+                PlayMode::Simultaneous
+            } else {
+                mode
+            };
+
+            return match effective_mode {
+                PlayMode::Sequential => Ok(AudioStructure::Seq {
+                    children: audio_children,
+                    envelope,
+                    waveform,
+                }),
+                PlayMode::Simultaneous => Ok(AudioStructure::Sim {
+                    children: audio_children,
+                    envelope,
+                    waveform,
+                }),
             };
         }
     }
@@ -246,14 +433,19 @@ fn build_audio_structure(
             return Ok(AudioStructure::Rest { duration: dur });
         } else if freq > 0.0 {
             check_audible_range(freq, output);
-            return Ok(AudioStructure::Tone { frequency: freq, duration: dur });
+            return Ok(AudioStructure::Tone {
+                frequency: freq,
+                duration: dur,
+                envelope,
+                waveform,
+            });
         } else {
             return Err(AjisaiError::from("Frequency must be non-negative"));
         }
     }
 
     // Boolean等は無視（空のSeqとして返す）
-    Ok(AudioStructure::Seq { children: vec![] })
+    Ok(AudioStructure::Seq { children: vec![], envelope: None, waveform: WaveformType::Sine })
 }
 
 // ============================================================================
@@ -326,7 +518,7 @@ mod tests {
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
         match structure {
-            AudioStructure::Tone { frequency, duration } => {
+            AudioStructure::Tone { frequency, duration, .. } => {
                 assert_eq!(frequency, 440.0);
                 assert_eq!(duration, 1.0);
             }
@@ -342,7 +534,7 @@ mod tests {
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
         match structure {
-            AudioStructure::Tone { frequency, duration } => {
+            AudioStructure::Tone { frequency, duration, .. } => {
                 assert_eq!(frequency, 440.0);
                 assert_eq!(duration, 3.0);
             }
@@ -359,7 +551,7 @@ mod tests {
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
         match structure {
-            AudioStructure::Tone { frequency, duration } => {
+            AudioStructure::Tone { frequency, duration, .. } => {
                 // Fraction(440, 2) normalizes to Fraction(220, 1)
                 assert_eq!(frequency, 220.0);
                 assert_eq!(duration, 1.0);
@@ -441,7 +633,7 @@ mod tests {
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
         match structure {
-            AudioStructure::Seq { children } => {
+            AudioStructure::Seq { children, .. } => {
                 assert_eq!(children.len(), 2);
             }
             _ => panic!("Expected Seq"),
@@ -457,7 +649,7 @@ mod tests {
         let structure = build_audio_structure(&val, PlayMode::Simultaneous, &mut output).unwrap();
 
         match structure {
-            AudioStructure::Sim { children } => {
+            AudioStructure::Sim { children, .. } => {
                 assert_eq!(children.len(), 2);
             }
             _ => panic!("Expected Sim"),
@@ -612,6 +804,147 @@ mod tests {
         assert!(output.contains("\"type\":\"rest\""), "Should contain rest");
         // 0/2 normalizes to 0/1, so duration is 1, not 2
         assert!(output.contains("\"duration\":1"), "Should contain duration 1 for normalized rest");
+    }
+
+    // ============================================================================
+    // 新機能テスト: CHORD, ADSR, SINE, SQUARE, SAW, TRI
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_chord_marks_as_simultaneous() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 550 660 ] CHORD PLAY").await;
+        assert!(result.is_ok(), "CHORD PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"type\":\"sim\""), "CHORD should produce sim structure");
+    }
+
+    #[tokio::test]
+    async fn test_chord_requires_vector() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("440 CHORD").await;
+        assert!(result.is_err(), "CHORD on non-vector should fail");
+    }
+
+    #[tokio::test]
+    async fn test_adsr_sets_envelope() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        // ADSR takes two arguments: target vector and ADSR params
+        let result = interp.execute("[ 440 ] [ 0.05 0.1 0.8 0.2 ] ADSR PLAY").await;
+        assert!(result.is_ok(), "ADSR PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"envelope\""), "Should contain envelope");
+        assert!(output.contains("\"attack\":0.05"), "Should contain attack value");
+        assert!(output.contains("\"sustain\":0.8"), "Should contain sustain value");
+    }
+
+    #[tokio::test]
+    async fn test_adsr_requires_4_elements() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        // ADSR needs target + params
+        let result = interp.execute("[ 440 ] [ 0.1 0.2 0.3 ] ADSR").await;
+        assert!(result.is_err(), "ADSR with 3 elements should fail");
+    }
+
+    #[tokio::test]
+    async fn test_adsr_sustain_validation() {
+        use crate::interpreter::Interpreter;
+
+        // Sustain > 1.0 should fail
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 ] [ 0.1 0.1 1.5 0.1 ] ADSR").await;
+        assert!(result.is_err(), "ADSR with sustain > 1.0 should fail");
+    }
+
+    #[tokio::test]
+    async fn test_square_waveform() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 ] SQUARE PLAY").await;
+        assert!(result.is_ok(), "SQUARE PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"waveform\":\"square\""), "Should contain square waveform");
+    }
+
+    #[tokio::test]
+    async fn test_saw_waveform() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 ] SAW PLAY").await;
+        assert!(result.is_ok(), "SAW PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"waveform\":\"sawtooth\""), "Should contain sawtooth waveform");
+    }
+
+    #[tokio::test]
+    async fn test_tri_waveform() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 ] TRI PLAY").await;
+        assert!(result.is_ok(), "TRI PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"waveform\":\"triangle\""), "Should contain triangle waveform");
+    }
+
+    #[tokio::test]
+    async fn test_sine_is_default_not_serialized() {
+        use crate::interpreter::Interpreter;
+
+        // SINE is the default, so it shouldn't be serialized
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 ] SINE PLAY").await;
+        assert!(result.is_ok(), "SINE PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        // Default sine should not appear in output (skip_serializing_if)
+        assert!(!output.contains("\"waveform\":\"sine\""), "Sine waveform should not be serialized as it's default");
+    }
+
+    #[tokio::test]
+    async fn test_combined_chord_adsr_waveform() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440 550 660 ] CHORD [ 0.01 0.1 0.7 0.3 ] ADSR SQUARE PLAY").await;
+        assert!(result.is_ok(), "Combined CHORD ADSR SQUARE PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"type\":\"sim\""), "Should be chord (sim)");
+        assert!(output.contains("\"envelope\""), "Should have envelope");
+        assert!(output.contains("\"waveform\":\"square\""), "Should be square wave");
+    }
+
+    #[tokio::test]
+    async fn test_chord_can_be_defined_and_reused() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        // Define a chord
+        let result = interp.execute("[ [ 440 550 660 ] CHORD ] 'C_MAJOR' DEF").await;
+        assert!(result.is_ok(), "DEF should succeed: {:?}", result);
+
+        // Use it
+        let result = interp.execute("C_MAJOR PLAY").await;
+        assert!(result.is_ok(), "C_MAJOR PLAY should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"type\":\"sim\""), "Defined chord should produce sim");
     }
 
 }

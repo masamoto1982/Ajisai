@@ -36,6 +36,7 @@ fn apply_not_to_value(val: &Value) -> Value {
             Value {
                 data: ValueData::Scalar(result),
                 display_hint: DisplayHint::Boolean,
+                audio_hint: None,
             }
         }
         ValueData::Vector(children) => {
@@ -45,6 +46,7 @@ fn apply_not_to_value(val: &Value) -> Value {
             Value {
                 data: ValueData::Vector(new_children),
                 display_hint: DisplayHint::Boolean,
+                audio_hint: None,
             }
         }
     }
@@ -69,6 +71,7 @@ where
             Ok(Value {
                 data: ValueData::Scalar(Fraction::from(if result { 1 } else { 0 })),
                 display_hint: DisplayHint::Boolean,
+                audio_hint: None,
             })
         }
 
@@ -81,6 +84,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Boolean,
+                audio_hint: None,
             })
         }
 
@@ -93,6 +97,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Boolean,
+                audio_hint: None,
             })
         }
 
@@ -107,6 +112,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Boolean,
+                audio_hint: None,
             })
         }
     }

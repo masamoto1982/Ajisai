@@ -553,6 +553,12 @@ impl Interpreter {
             "SEQ" => audio::op_seq(self),
             "SIM" => audio::op_sim(self),
             "PLAY" => audio::op_play(self),
+            "CHORD" => audio::op_chord(self),
+            "ADSR" => audio::op_adsr(self),
+            "SINE" => audio::op_sine(self),
+            "SQUARE" => audio::op_square(self),
+            "SAW" => audio::op_saw(self),
+            "TRI" => audio::op_tri(self),
             "!" => {
                 self.force_flag = true;
                 Ok(())
