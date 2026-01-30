@@ -1129,6 +1129,59 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
+/// COLLECT - スタックからN個の値を収集してベクタを作成する
+///
+/// 【責務】
+/// - スタックの先頭からN個の値を取り出し、1つのベクタにまとめる
+/// - 値はフラット化せずにそのまま保持（CONCATとの違い）
+/// - DEFで定義したカスタムワードの結果をベクタに収集する用途に最適
+///
+/// 【使用法】
+/// - `VOWEL_A VOWEL_I 2 COLLECT` → `[ [VOWEL_Aの結果] [VOWEL_Iの結果] ]`
+/// - `1 2 3 3 COLLECT` → `[ 1 2 3 ]`
+/// - `[ a ] [ b ] [ c ] 3 COLLECT` → `[ [ a ] [ b ] [ c ] ]`
+///
+/// 【引数スタック】
+/// - count: 収集する値の数（整数）
+/// - value_n ... value_1: 収集する値（N個）
+///
+/// 【戻り値スタック】
+/// - 収集されたベクタ（要素がそのまま保持される）
+///
+/// 【エラー】
+/// - countが負数または0の場合
+/// - countがスタック長を超える場合
+pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
+    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let count_bigint = match get_bigint_from_value(&count_val) {
+        Ok(bi) => bi,
+        Err(_) => {
+            interp.stack.push(count_val);
+            return Err(AjisaiError::structure_error("integer", "other format"));
+        }
+    };
+
+    let count: usize = match count_bigint.to_usize() {
+        Some(c) if c > 0 => c,
+        _ => {
+            interp.stack.push(count_val);
+            return Err(AjisaiError::from("COLLECT count must be a positive integer"));
+        }
+    };
+
+    if interp.stack.len() < count {
+        interp.stack.push(count_val);
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    // スタックの末尾からcount個の要素を取得
+    let collected: Vec<Value> = interp.stack.split_off(interp.stack.len() - count);
+
+    interp.stack.push(Value::from_vector(collected));
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
@@ -1369,5 +1422,82 @@ mod tests {
         // 結果は単一要素
         let val = &interp.stack[0];
         assert_eq!(val.shape(), vec![1], "Result should have 1 element");
+    }
+
+    // ============================================================================
+    // COLLECT テスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_collect_basic() {
+        let mut interp = Interpreter::new();
+
+        // 基本的なCOLLECT: スタックから3つの値を収集
+        let result = interp.execute("1 2 3 3 COLLECT").await;
+        assert!(result.is_ok(), "COLLECT should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+
+        let val = &interp.stack[0];
+        assert_eq!(val.shape(), vec![3], "Result should have 3 elements");
+    }
+
+    #[tokio::test]
+    async fn test_collect_vectors_without_flattening() {
+        let mut interp = Interpreter::new();
+
+        // ベクタをフラット化せずに収集（CONCATとの違い）
+        let result = interp.execute("[ 1 2 ] [ 3 4 ] 2 COLLECT").await;
+        assert!(result.is_ok(), "COLLECT vectors should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+
+        // 結果は [ [ 1 2 ] [ 3 4 ] ] - ネストされたベクタ
+        // shape()はネスト構造を反映するので[2, 2]になる
+        let val = &interp.stack[0];
+        assert!(val.is_vector(), "Result should be a vector");
+    }
+
+    #[tokio::test]
+    async fn test_collect_for_formant_synthesis() {
+        let mut interp = Interpreter::new();
+
+        // フォルマント合成の用途: カスタムワードの結果を収集
+        // VOWEL_A, VOWEL_I の代わりにSIM（同時再生マーク付きベクタ）を使用
+        let result = interp.execute("[ 800 1200 ] CHORD [ 300 2500 ] CHORD 2 COLLECT").await;
+        assert!(result.is_ok(), "COLLECT for formant should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+
+        // 結果は2つの母音（各々がCHORDマーク付き）を含むベクタ
+        let val = &interp.stack[0];
+        assert!(val.is_vector(), "Result should be a vector");
+    }
+
+    #[tokio::test]
+    async fn test_collect_error_underflow() {
+        let mut interp = Interpreter::new();
+
+        // スタックに足りない場合はエラー
+        let result = interp.execute("1 2 5 COLLECT").await;
+        assert!(result.is_err(), "COLLECT with insufficient stack should fail");
+
+        // エラー時にcount引数が復元される
+        assert_eq!(interp.stack.len(), 3, "Stack should have count pushed back");
+    }
+
+    #[tokio::test]
+    async fn test_collect_error_zero_count() {
+        let mut interp = Interpreter::new();
+
+        // count=0 はエラー
+        let result = interp.execute("1 2 3 0 COLLECT").await;
+        assert!(result.is_err(), "COLLECT with zero count should fail");
+    }
+
+    #[tokio::test]
+    async fn test_collect_error_negative_count() {
+        let mut interp = Interpreter::new();
+
+        // 負数のcountはエラー
+        let result = interp.execute("1 2 3 -2 COLLECT").await;
+        assert!(result.is_err(), "COLLECT with negative count should fail");
     }
 }
