@@ -132,15 +132,8 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
     binary_comparison_op(interp, |a, b| a.le(b))
 }
 
-/// > 演算子 - 大なり
-pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
-    binary_comparison_op(interp, |a, b| a.gt(b))
-}
-
-/// >= 演算子 - 大なりイコール
-pub fn op_ge(interp: &mut Interpreter) -> Result<()> {
-    binary_comparison_op(interp, |a, b| a.ge(b))
-}
+// > と >= は廃止されました
+// 代わりに < NOT または オペランドを逆にして < を使用してください
 
 /// = 演算子 - 等価比較
 ///

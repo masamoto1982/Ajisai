@@ -566,7 +566,14 @@ pub enum Token {
     VectorStart,
     /// ベクタ終了
     VectorEnd,
-    GuardSeparator,  // : または ;
+    /// コードブロック開始 - :
+    CodeBlockStart,
+    /// コードブロック終了 - ;
+    CodeBlockEnd,
+    /// シェブロン分岐（条件/アクション） - >>
+    ChevronBranch,
+    /// シェブロン分岐（デフォルト） - >>>
+    ChevronDefault,
     LineBreak,
 }
 

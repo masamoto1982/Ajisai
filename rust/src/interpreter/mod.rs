@@ -165,44 +165,75 @@ impl Interpreter {
             return Ok(());
         }
 
-        let all_lines_have_colon = lines.iter().all(|line| {
-            line.body_tokens.first() == Some(&Token::GuardSeparator)
+        // シェブロン分岐かどうかをチェック
+        let is_chevron_structure = lines.iter().all(|line| {
+            matches!(
+                line.body_tokens.first(),
+                Some(Token::ChevronBranch) | Some(Token::ChevronDefault)
+            )
         });
 
-        if !all_lines_have_colon {
+        if !is_chevron_structure {
+            // 通常の逐次実行
             for line in lines {
-                let tokens = if line.body_tokens.first() == Some(&Token::GuardSeparator) {
-                    &line.body_tokens[1..]
-                } else {
-                    &line.body_tokens[..]
-                };
-                self.execute_section(tokens).await?;
+                self.execute_section(&line.body_tokens).await?;
             }
             return Ok(());
         }
 
+        // シェブロン分岐の処理
+        // 最後の行が >>> であることを検証
+        let last_line = lines.last().unwrap();
+        if last_line.body_tokens.first() != Some(&Token::ChevronDefault) {
+            return Err(AjisaiError::from(
+                "Chevron branch must end with >>> (default branch)"
+            ));
+        }
+
         let mut i = 0;
-        while i < lines.len() {
+        while i < lines.len() - 1 {  // 最後の行（デフォルト）は別処理
             let line = &lines[i];
+
+            if line.body_tokens.first() != Some(&Token::ChevronBranch) {
+                return Err(AjisaiError::from("Expected >> at line start"));
+            }
+
             let content_tokens = &line.body_tokens[1..];
 
-            if i + 1 < lines.len() {
+            if i + 1 < lines.len() - 1 {
+                // 条件行
                 self.execute_section(content_tokens).await?;
 
                 if self.is_condition_true()? {
+                    // 次の行はアクション行
                     i += 1;
                     let action_line = &lines[i];
+                    if action_line.body_tokens.first() != Some(&Token::ChevronBranch) {
+                        return Err(AjisaiError::from("Expected >> for action line"));
+                    }
                     let action_tokens = &action_line.body_tokens[1..];
                     self.execute_section(action_tokens).await?;
                     return Ok(());
                 }
                 i += 2;
             } else {
+                // 最後の条件行の後にデフォルトがある
                 self.execute_section(content_tokens).await?;
-                return Ok(());
+
+                if self.is_condition_true()? {
+                    // デフォルト行を実行
+                    let default_tokens = &lines[lines.len() - 1].body_tokens[1..];
+                    self.execute_section(default_tokens).await?;
+                    return Ok(());
+                }
+                i += 1;
             }
         }
 
+        // デフォルト行を実行
+        let default_line = &lines[lines.len() - 1];
+        let default_tokens = &default_line.body_tokens[1..];
+        self.execute_section(default_tokens).await?;
         Ok(())
     }
 
@@ -292,7 +323,7 @@ impl Interpreter {
                         }
                     }
                 },
-                Token::GuardSeparator | Token::LineBreak => {},
+                Token::CodeBlockStart | Token::CodeBlockEnd | Token::ChevronBranch | Token::ChevronDefault | Token::LineBreak => {},
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
                 },
@@ -331,19 +362,18 @@ impl Interpreter {
             return Ok(None);
         }
 
-        let all_lines_have_colon = lines.iter().all(|line| {
-            line.body_tokens.first() == Some(&Token::GuardSeparator)
+        // シェブロン分岐かどうかをチェック
+        let is_chevron_structure = lines.iter().all(|line| {
+            matches!(
+                line.body_tokens.first(),
+                Some(Token::ChevronBranch) | Some(Token::ChevronDefault)
+            )
         });
 
-        if !all_lines_have_colon {
+        if !is_chevron_structure {
+            // 通常の逐次実行
             for line in lines {
-                let tokens = if line.body_tokens.first() == Some(&Token::GuardSeparator) {
-                    &line.body_tokens[1..]
-                } else {
-                    &line.body_tokens[..]
-                };
-
-                let (_, action) = self.execute_section_core(tokens, 0)?;
+                let (_, action) = self.execute_section_core(&line.body_tokens, 0)?;
                 if action.is_some() {
                     return Ok(action);
                 }
@@ -351,36 +381,66 @@ impl Interpreter {
             return Ok(None);
         }
 
+        // シェブロン分岐の処理
+        // 最後の行が >>> であることを検証
+        let last_line = lines.last().unwrap();
+        if last_line.body_tokens.first() != Some(&Token::ChevronDefault) {
+            return Err(AjisaiError::from(
+                "Chevron branch must end with >>> (default branch)"
+            ));
+        }
+
         let mut i = 0;
-        while i < lines.len() {
+        while i < lines.len() - 1 {  // 最後の行（デフォルト）は別処理
             let line = &lines[i];
+
+            if line.body_tokens.first() != Some(&Token::ChevronBranch) {
+                return Err(AjisaiError::from("Expected >> at line start"));
+            }
+
             let content_tokens = &line.body_tokens[1..];
 
-            if i + 1 < lines.len() {
+            if i + 1 < lines.len() - 1 {
+                // 条件行
                 let (_, action) = self.execute_section_core(content_tokens, 0)?;
                 if action.is_some() {
                     return Ok(action);
                 }
 
                 if self.is_condition_true()? {
+                    // 次の行はアクション行
                     i += 1;
                     let action_line = &lines[i];
-                    let action_tokens = &action_line.body_tokens[1..];
-
-                    let (_, action) = self.execute_section_core(action_tokens, 0)?;
-                    if action.is_some() {
-                        return Ok(action);
+                    if action_line.body_tokens.first() != Some(&Token::ChevronBranch) {
+                        return Err(AjisaiError::from("Expected >> for action line"));
                     }
-                    return Ok(None);
+                    let action_tokens = &action_line.body_tokens[1..];
+                    let (_, action) = self.execute_section_core(action_tokens, 0)?;
+                    return Ok(action);
                 }
                 i += 2;
             } else {
+                // 最後の条件行の後にデフォルトがある
                 let (_, action) = self.execute_section_core(content_tokens, 0)?;
-                return Ok(action);
+                if action.is_some() {
+                    return Ok(action);
+                }
+
+                if self.is_condition_true()? {
+                    // デフォルト行を実行
+                    let default_tokens = &lines[lines.len() - 1].body_tokens[1..];
+                    let (_, action) = self.execute_section_core(default_tokens, 0)?;
+                    return Ok(action);
+                }
+                i += 1;
             }
         }
 
-        Ok(None)
+        // デフォルト行を実行
+        let default_line = &lines[lines.len() - 1];
+        let default_tokens = &default_line.body_tokens[1..];
+        let (_, action) = self.execute_section_core(default_tokens, 0)?;
+        Ok(action)
     }
 
     /// NIL and all-zero vectors are falsy; everything else is truthy.
@@ -509,8 +569,6 @@ impl Interpreter {
             "=" => comparison::op_eq(self),
             "<" => comparison::op_lt(self),
             "<=" => comparison::op_le(self),
-            ">" => comparison::op_gt(self),
-            ">=" => comparison::op_ge(self),
             "AND" => logic::op_and(self),
             "OR" => logic::op_or(self),
             "NOT" => logic::op_not(self),
@@ -575,7 +633,10 @@ impl Interpreter {
             Token::Symbol(s) => s.clone(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::GuardSeparator => ":".to_string(),
+            Token::CodeBlockStart => ":".to_string(),
+            Token::CodeBlockEnd => ";".to_string(),
+            Token::ChevronBranch => ">>".to_string(),
+            Token::ChevronDefault => ">>>".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }
@@ -854,19 +915,19 @@ ADDTEST
     }
 
     #[tokio::test]
-    async fn test_guard_with_def_true_case() {
+    async fn test_chevron_with_def_true_case() {
         let mut interp = Interpreter::new();
 
-        // Test: Define a custom word inside guard clause (true case)
-        // 5 > 3 is true, so ANSWER should be defined
+        // Test: Define a custom word inside chevron branch (true case)
+        // [ 3 ] [ 5 ] < is true, so ANSWER should be defined
         let code = r#"
-: [5] [3] >
-: [ ': [ 42 ]' ] 'ANSWER' DEF
-: [ ': [ 0 ]' ] 'ZERO' DEF
+>> [ 3 ] [ 5 ] <
+>> [ ': [ 42 ]' ] 'ANSWER' DEF
+>>> [ ': [ 0 ]' ] 'ZERO' DEF
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Guard with DEF should succeed: {:?}", result);
+        assert!(result.is_ok(), "Chevron with DEF should succeed: {:?}", result);
 
         // Verify ANSWER is defined
         assert!(interp.dictionary.contains_key("ANSWER"), "ANSWER should be defined");
@@ -884,7 +945,7 @@ ADDTEST
         }
 
         // Call ANSWER and verify result
-        let call_code = ": ANSWER";
+        let call_code = "ANSWER";
         let call_result = interp.execute(call_code).await;
         if let Err(ref e) = call_result {
             println!("Error calling ANSWER: {:?}", e);
@@ -894,78 +955,78 @@ ADDTEST
     }
 
     #[tokio::test]
-    async fn test_guard_with_def_false_case() {
+    async fn test_chevron_with_def_false_case() {
         let mut interp = Interpreter::new();
 
-        // Test: Define a custom word inside guard clause (false case)
-        // 3 > 5 is false, so SMALL should be defined
+        // Test: Define a custom word inside chevron branch (false case)
+        // [ 5 ] [ 3 ] < is false, so SMALL should be defined (default)
         let code = r#"
-: [3] [5] >
-: [ ': [ 100 ]' ] 'BIG' DEF
-: [ ': [ -1 ]' ] 'SMALL' DEF
+>> [ 5 ] [ 3 ] <
+>> [ ': [ 100 ]' ] 'BIG' DEF
+>>> [ ': [ -1 ]' ] 'SMALL' DEF
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Guard with DEF (false case) should succeed: {:?}", result);
+        assert!(result.is_ok(), "Chevron with DEF (false case) should succeed: {:?}", result);
 
         // Verify SMALL is defined
         assert!(!interp.dictionary.contains_key("BIG"), "BIG should not be defined");
         assert!(interp.dictionary.contains_key("SMALL"), "SMALL should be defined");
 
         // Call SMALL and verify result
-        let call_code = ": SMALL";
+        let call_code = "SMALL";
         let call_result = interp.execute(call_code).await;
         assert!(call_result.is_ok(), "Calling SMALL should succeed: {:?}", call_result.err());
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
     }
 
     #[tokio::test]
-    async fn test_guard_default_clause_with_def() {
+    async fn test_chevron_default_clause_with_def() {
         let mut interp = Interpreter::new();
 
-        // Test: Default clause in guard structure defines a word
+        // Test: Default clause in chevron structure defines a word
         let code = r#"
-: [FALSE]
-: [ ': [ 100 ]' ] 'HUNDRED' DEF
-: [ ': [ 999 ]' ] 'DEFAULT' DEF
+>> FALSE
+>> [ ': [ 100 ]' ] 'HUNDRED' DEF
+>>> [ ': [ 999 ]' ] 'DEFAULT' DEF
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Guard default clause with DEF should succeed: {:?}", result);
+        assert!(result.is_ok(), "Chevron default clause with DEF should succeed: {:?}", result);
 
         // Verify DEFAULT is defined
         assert!(!interp.dictionary.contains_key("HUNDRED"), "HUNDRED should not be defined");
         assert!(interp.dictionary.contains_key("DEFAULT"), "DEFAULT should be defined");
 
         // Call DEFAULT and verify result
-        let call_code = ": DEFAULT";
+        let call_code = "DEFAULT";
         let call_result = interp.execute(call_code).await;
         assert!(call_result.is_ok(), "Calling DEFAULT should succeed: {:?}", call_result.err());
     }
 
     #[tokio::test]
-    async fn test_def_with_guard_using_existing_custom_word() {
+    async fn test_def_with_chevron_using_existing_custom_word() {
         let mut interp = Interpreter::new();
 
-        // Test: Define a word inside guard that uses an existing custom word
-        let def_code = ": [ ': [ 2 ] *' ] 'DOUBLE' DEF";
+        // Test: Define a word inside chevron that uses an existing custom word
+        let def_code = "[ ': [ 2 ] *' ] 'DOUBLE' DEF";
         let result = interp.execute(def_code).await;
         assert!(result.is_ok(), "DOUBLE definition should succeed: {:?}", result);
 
-        let guard_code = r#"
-: [10] [5] >
-: [ ': [ 3 ] DOUBLE' ] 'PROCESS' DEF
-: [ ': [ 0 ]' ] 'NOPROCESS' DEF
+        let chevron_code = r#"
+>> [ 5 ] [ 10 ] <
+>> [ ': [ 3 ] DOUBLE' ] 'PROCESS' DEF
+>>> [ ': [ 0 ]' ] 'NOPROCESS' DEF
 "#;
-        let result = interp.execute(guard_code).await;
-        assert!(result.is_ok(), "DEF with guard using existing word should succeed: {:?}", result);
+        let result = interp.execute(chevron_code).await;
+        assert!(result.is_ok(), "DEF with chevron using existing word should succeed: {:?}", result);
 
         // Verify PROCESS is defined
         assert!(interp.dictionary.contains_key("PROCESS"), "PROCESS should be defined");
         assert!(interp.dictionary.contains_key("DOUBLE"), "DOUBLE should exist");
 
         // Call PROCESS and verify result
-        let call_code = ": PROCESS";
+        let call_code = "PROCESS";
         let call_result = interp.execute(call_code).await;
         assert!(call_result.is_ok(), "Calling PROCESS should succeed: {:?}", call_result.err());
     }
@@ -1038,17 +1099,17 @@ ADDTEST
     }
 
     #[tokio::test]
-    async fn test_mixed_colon_and_no_colon() {
+    async fn test_sequential_execution() {
         let mut interp = Interpreter::new();
 
-        // Test: Mix of lines with and without colons (treated as default lines)
+        // Test: Multiple lines without chevrons (executed sequentially)
         let code = r#"
 [10] [20] +
-: [5] *
+[5] *
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Mixed colon lines should succeed: {:?}", result);
+        assert!(result.is_ok(), "Sequential lines should succeed: {:?}", result);
 
         // Verify result: (10 + 20) * 5 = 150
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
@@ -1063,20 +1124,20 @@ ADDTEST
     }
 
     #[tokio::test]
-    async fn test_guard_with_colon_vs_default_without_colon() {
+    async fn test_chevron_vs_sequential() {
         let mut interp = Interpreter::new();
 
-        // Test: Guard clause with colons (conditional execution)
-        let guard_code = r#"
-: [5] [3] >
-: [100]
-: [0]
+        // Test: Chevron branch (conditional execution)
+        let chevron_code = r#"
+>> [ 3 ] [ 5 ] <
+>> [100]
+>>> [0]
 "#;
 
-        let result = interp.execute(guard_code).await;
-        assert!(result.is_ok(), "Guard clause should succeed: {:?}", result);
+        let result = interp.execute(chevron_code).await;
+        assert!(result.is_ok(), "Chevron branch should succeed: {:?}", result);
 
-        // Result should be [100] because 5 > 3 is true
+        // Result should be [100] because 3 < 5 is true
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
@@ -1090,35 +1151,35 @@ ADDTEST
         // Clear stack
         interp.stack.clear();
 
-        // Test: Same logic but without colons (all lines executed)
-        let default_code = r#"
-[5] [3] >
+        // Test: Same logic but sequential (all lines executed)
+        let sequential_code = r#"
+[ 3 ] [ 5 ] <
 [100]
 [0]
 "#;
 
-        let result = interp.execute(default_code).await;
-        assert!(result.is_ok(), "Default lines should succeed: {:?}", result);
+        let result = interp.execute(sequential_code).await;
+        assert!(result.is_ok(), "Sequential lines should succeed: {:?}", result);
 
         // All lines executed, so we should have 3 items on stack
         assert_eq!(interp.stack.len(), 3, "Stack should have three elements");
     }
 
     #[tokio::test]
-    async fn test_guard_five_lines_ok() {
+    async fn test_chevron_five_lines_ok() {
         let mut interp = Interpreter::new();
 
-        // 5行（奇数）：正常
+        // 5行：2つの条件、2つのアクション、1つのデフォルト
         let code = r#"
-: [FALSE]
-: [100]
-: [FALSE]
-: [200]
-: [999]
+>> FALSE
+>> [100]
+>> FALSE
+>> [200]
+>>> [999]
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Guard with 5 lines should succeed: {:?}", result);
+        assert!(result.is_ok(), "Chevron with 5 lines should succeed: {:?}", result);
 
         // すべての条件がfalseなのでデフォルトの999
         assert_eq!(interp.stack.len(), 1);
