@@ -142,7 +142,7 @@ This inherits FORTH's spirit: **trust the programmer**.
 
 ```ajisai
 # Define a word that doubles a value
-[ '[ 2 ] *' ] 'DOUBLE' DEF
+: [ 2 ] * ; 'DOUBLE' DEF
 
 # Usage
 [ 5 ] DOUBLE    # → [ 10 ]
@@ -151,14 +151,27 @@ This inherits FORTH's spirit: **trust the programmer**.
 [ 1 2 3 4 5 ] 'DOUBLE' MAP    # → [ 2 4 6 8 10 ]
 ```
 
-### Control Structure
+### Control Structure (Guards with Chevron Branching)
 
 ```ajisai
 # Conditional: TRUE if even, FALSE if odd
-[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+: [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
 
 [ 4 ] EVEN?    # → [ TRUE ]
 [ 7 ] EVEN?    # → [ FALSE ]
+
+# Multi-branch guard (>> for conditions, >>> for default)
+:
+  >> [ 0 ] <
+  >> [ -1 ]
+  >> [ 0 ] =
+  >> [ 0 ]
+  >>> [ 1 ]
+; 'SIGN' DEF
+
+[ -5 ] SIGN    # → [ -1 ]
+[ 0 ] SIGN     # → [ 0 ]
+[ 10 ] SIGN    # → [ 1 ]
 ```
 
 ---
@@ -196,7 +209,7 @@ This inherits FORTH's spirit: **trust the programmer**.
 `+` `-` `*` `/` `MOD` `FLOOR` `CEIL` `ROUND`
 
 ### Comparison
-`=` `<` `<=` `>` `>=`
+`=` `<` `<=`
 
 ### Logic
 `AND` `OR` `NOT`
@@ -214,7 +227,7 @@ This inherits FORTH's spirit: **trust the programmer**.
 `DEF` `DEL` `?`
 
 ### Control Flow
-`TIMES` `WAIT` `:` `!`
+`TIMES` `WAIT` `>>` `>>>` `!`
 
 ### Random
 `CSPRNG`

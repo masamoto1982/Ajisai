@@ -70,18 +70,19 @@
 
         <section>
           <h3>Lesson 3: Defining Words</h3>
+          <p>Use code block syntax <code>: ... ;</code> to define words:</p>
 <pre><code># Define a word
-[ '[ 2 ] *' ] 'DOUBLE' DEF
+: [ 2 ] * ; 'DOUBLE' DEF
 
 # Use it
 [ 5 ] DOUBLE                 # Result: [ 10 ]
 [ 3 ] DOUBLE                 # Result: [ 6 ]
 
 # More examples
-[ 'DUP *' ] 'SQUARE' DEF
+: DUP * ; 'SQUARE' DEF
 [ 4 ] SQUARE                 # Result: [ 16 ]
 
-[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+: [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
 [ 4 ] EVEN?                  # Result: [ TRUE ]</code></pre>
         </section>
 
@@ -105,24 +106,28 @@
 
         <section>
           <h3>Lesson 5: Conditionals</h3>
+          <p>Use chevron branching with <code>&gt;&gt;</code> for condition-action pairs and <code>&gt;&gt;&gt;</code> for default:</p>
 <pre><code># Guard syntax
-condition : action : condition : action : default
+>> condition >> action >> condition >> action >>> default
 
 # Absolute value
-[
-  '[ 0 ] <' : '[ -1 ] *' :
-  ''
-] 'ABS' DEF
+:
+  >> [ 0 ] <
+  >> [ -1 ] *
+  >>>
+; 'ABS' DEF
 
 [ -5 ] ABS    # Result: [ 5 ]
 [ 3 ] ABS     # Result: [ 3 ]
 
 # Sign function
-[
-  '[ 0 ] <' : '[ -1 ]' :
-  '[ 0 ] >' : '[ 1 ]' :
-  '[ 0 ]'
-] 'SIGN' DEF</code></pre>
+:
+  >> [ 0 ] <
+  >> [ -1 ]
+  >> [ 0 ] =
+  >> [ 0 ]
+  >>> [ 1 ]
+; 'SIGN' DEF</code></pre>
         </section>
 
         <section>
@@ -143,7 +148,7 @@ condition : action : condition : action : default
           <p>Define AVERAGE for a vector.</p>
           <details>
             <summary>Solution</summary>
-<pre><code>[ 'DUP [ 0 ] '+' FOLD SWAP LENGTH /' ] 'AVERAGE' DEF
+<pre><code>: DUP [ 0 ] '+' FOLD SWAP LENGTH / ; 'AVERAGE' DEF
 [ 2 4 6 8 10 ] AVERAGE    # Result: [ 6 ]</code></pre>
           </details>
 
@@ -158,7 +163,7 @@ condition : action : condition : action : default
           <p>Sum numbers 1-20 divisible by 3.</p>
           <details>
             <summary>Solution</summary>
-<pre><code>[ '[ 3 ] MOD [ 0 ] =' ] 'DIV3?' DEF
+<pre><code>: [ 3 ] MOD [ 0 ] = ; 'DIV3?' DEF
 [ 1 ] [ 20 ] RANGE
   'DIV3?' FILTER
   [ 0 ] '+' FOLD    # Result: [ 63 ]</code></pre>

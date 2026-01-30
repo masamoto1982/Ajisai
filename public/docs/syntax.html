@@ -85,14 +85,15 @@ nil</code></pre>
 
         <section>
           <h3>Defining Words</h3>
+          <p>Use code block syntax <code>: ... ;</code> to define words:</p>
 <pre><code># Define a word
-[ '[ 2 ] *' ] 'DOUBLE' DEF
+: [ 2 ] * ; 'DOUBLE' DEF
 
 # Use it
 [ 5 ] DOUBLE    # Result: [ 10 ]
 
 # Check if even
-[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+: [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
 [ 4 ] EVEN?     # Result: [ TRUE ]</code></pre>
         </section>
 
@@ -108,15 +109,20 @@ a b c .. REVERSE    # Result: c b a</code></pre>
 
         <section>
           <h3>Guards (Conditionals)</h3>
-<pre><code># Syntax: condition : action : condition : action : default
+          <p>Guards use chevron branching with <code>&gt;&gt;</code> for condition-action pairs and <code>&gt;&gt;&gt;</code> for default:</p>
+<pre><code># Syntax: >> condition >> action >> condition >> action >>> default
 
-[
-  '[ 0 ] <' : '[ -1 ]' :
-  '[ 0 ] >' : '[ 1 ]' :
-  '[ 0 ]'
-] 'SIGN' DEF
+:
+  >> [ 0 ] <
+  >> [ -1 ]
+  >> [ 0 ] =
+  >> [ 0 ]
+  >>> [ 1 ]
+; 'SIGN' DEF
 
-[ -5 ] SIGN    # Result: [ -1 ]</code></pre>
+[ -5 ] SIGN    # Result: [ -1 ]
+[ 0 ] SIGN     # Result: [ 0 ]
+[ 10 ] SIGN    # Result: [ 1 ]</code></pre>
         </section>
 
         <section>

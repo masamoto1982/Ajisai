@@ -40,11 +40,11 @@
 <pre><code>[ elements ] 'word_name' MAP</code></pre>
 
           <h4>Examples</h4>
-<pre><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
+<pre><code>: [ 2 ] * ; 'DOUBLE' DEF
 [ 1 2 3 4 5 ] 'DOUBLE' MAP    # Result: [ 2 4 6 8 10 ]
 
 # Square each
-[ 'DUP *' ] 'SQUARE' DEF
+: DUP * ; 'SQUARE' DEF
 [ 1 2 3 4 ] 'SQUARE' MAP      # Result: [ 1 4 9 16 ]
 
 # Convert types
@@ -57,10 +57,11 @@
 <pre><code>[ elements ] 'predicate' FILTER</code></pre>
 
           <h4>Examples</h4>
-<pre><code>[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+<pre><code>: [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
 [ 1 2 3 4 5 6 7 8 ] 'EVEN?' FILTER    # Result: [ 2 4 6 8 ]
 
-[ '[ 0 ] >' ] 'POSITIVE?' DEF
+# Check if positive (not less than or equal to 0)
+: [ 0 ] <= NOT ; 'POSITIVE?' DEF
 [ -2 -1 0 1 2 3 ] 'POSITIVE?' FILTER  # Result: [ 1 2 3 ]</code></pre>
         </section>
 
@@ -100,10 +101,11 @@
           </ul>
 
           <h4>Example: Range Generator</h4>
-<pre><code>[
-  '[ 5 ] >' : '[ ]' :
-  'DUP [ 1 ] +'
-] 'RANGE_GEN' DEF
+<pre><code>:
+  >> [ 5 ] <= NOT
+  >> [ ]
+  >>> DUP [ 1 ] +
+; 'RANGE_GEN' DEF
 
 [ 1 ] 'RANGE_GEN' UNFOLD    # Result: [ 1 2 3 4 5 ]</code></pre>
         </section>

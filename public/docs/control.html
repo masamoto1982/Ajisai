@@ -36,25 +36,28 @@
 
         <section>
           <h3>Guards (Conditional Branching)</h3>
-          <p>Guards use <code>:</code> to create conditionals:</p>
-<pre><code>condition1 : action1 : condition2 : action2 : default</code></pre>
+          <p>Guards use chevron branching with <code>&gt;&gt;</code> for condition-action pairs and <code>&gt;&gt;&gt;</code> for default:</p>
+<pre><code>>> condition1 >> action1 >> condition2 >> action2 >>> default</code></pre>
 
           <h4>Example: Sign Classification</h4>
-<pre><code>[
-  '[ 0 ] <' : '[ -1 ]' :
-  '[ 0 ] >' : '[ 1 ]' :
-  '[ 0 ]'
-] 'SIGN' DEF
+<pre><code>:
+  >> [ 0 ] <
+  >> [ -1 ]
+  >> [ 0 ] =
+  >> [ 0 ]
+  >>> [ 1 ]
+; 'SIGN' DEF
 
 [ -5 ] SIGN    # Result: [ -1 ]
-[ 10 ] SIGN    # Result: [ 1 ]
-[ 0 ] SIGN     # Result: [ 0 ]</code></pre>
+[ 0 ] SIGN     # Result: [ 0 ]
+[ 10 ] SIGN    # Result: [ 1 ]</code></pre>
 
           <h4>Example: Absolute Value</h4>
-<pre><code>[
-  '[ 0 ] <' : '[ -1 ] *' :
-  ''
-] 'ABS' DEF
+<pre><code>:
+  >> [ 0 ] <
+  >> [ -1 ] *
+  >>>
+; 'ABS' DEF
 
 [ -5 ] ABS    # Result: [ 5 ]
 [ 3 ] ABS     # Result: [ 3 ]</code></pre>
@@ -66,11 +69,11 @@
 
           <h4>Examples</h4>
 <pre><code># Double 3 times (multiply by 8)
-[ '[ 2 ] *' ] 'DOUBLE' DEF
+: [ 2 ] * ; 'DOUBLE' DEF
 [ 5 ] 'DOUBLE' [ 3 ] TIMES    # Result: [ 40 ]
 
 # Build a sequence
-[ '[ 1 ] CONCAT' ] 'ADD_ONE' DEF
+: [ 1 ] CONCAT ; 'ADD_ONE' DEF
 [ ] 'ADD_ONE' [ 5 ] TIMES     # Result: [ 1 1 1 1 1 ]</code></pre>
         </section>
 
@@ -80,7 +83,7 @@
 
           <h4>Examples</h4>
 <pre><code># Execute after 1 second
-[ '[ 'Done!' ] PRINT' ] 'NOTIFY' DEF
+: [ 'Done!' ] PRINT ; 'NOTIFY' DEF
 'NOTIFY' [ 1000 ] WAIT</code></pre>
 
           <p>Use cases:</p>
@@ -95,8 +98,8 @@
           <h3>Force Execution (!)</h3>
           <p>Allows DEL/DEF of dependent words:</p>
 <pre><code># Define dependent words
-[ 'HELPER' ] 'MAIN' DEF
-[ '[ 1 ]' ] 'HELPER' DEF
+: HELPER ; 'MAIN' DEF
+: [ 1 ] ; 'HELPER' DEF
 
 # Cannot delete HELPER normally
 'HELPER' DEL    # Error!
@@ -110,10 +113,11 @@
           <p>Recursive patterns via word definitions:</p>
 
           <h4>Factorial</h4>
-<pre><code>[
-  '[ 1 ] <=' : '[ 1 ]' :
-  '[ 1 ] - FACTORIAL *'
-] 'FACTORIAL' DEF
+<pre><code>:
+  >> [ 1 ] <=
+  >> [ 1 ]
+  >>> [ 1 ] - FACTORIAL *
+; 'FACTORIAL' DEF
 
 [ 5 ] FACTORIAL    # Result: [ 120 ]</code></pre>
 

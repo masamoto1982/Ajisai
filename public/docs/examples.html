@@ -58,22 +58,23 @@
         <section>
           <h3>Defining Words</h3>
 <pre><code># Double a number
-[ '[ 2 ] *' ] 'DOUBLE' DEF
+: [ 2 ] * ; 'DOUBLE' DEF
 [ 5 ] DOUBLE                 # Result: [ 10 ]
 
 # Square
-[ 'DUP *' ] 'SQUARE' DEF
+: DUP * ; 'SQUARE' DEF
 [ 4 ] SQUARE                 # Result: [ 16 ]
 
 # Even check
-[ '[ 2 ] MOD [ 0 ] =' ] 'EVEN?' DEF
+: [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
 [ 6 ] EVEN?                  # Result: [ TRUE ]
 
-# Absolute value
-[
-  '[ 0 ] <' : '[ -1 ] *' :
-  ''
-] 'ABS' DEF
+# Absolute value (with guard)
+:
+  >> [ 0 ] <
+  >> [ -1 ] *
+  >>>
+; 'ABS' DEF
 [ -5 ] ABS                   # Result: [ 5 ]</code></pre>
         </section>
 
@@ -137,7 +138,7 @@
 [ 'hello' ] CHARS LENGTH         # Result: [ 5 ]
 
 # Palindrome check
-[ 'CHARS DUP REVERSE =' ] 'PALINDROME?' DEF
+: CHARS DUP REVERSE = ; 'PALINDROME?' DEF
 [ 'radar' ] PALINDROME?          # Result: [ TRUE ]</code></pre>
         </section>
 
@@ -176,11 +177,12 @@ a b c d e .. CONCAT      # Result: [ a b c d e ]</code></pre>
 <pre><code># Using FOLD
 [ 1 ] [ 5 ] RANGE [ 1 ] '*' FOLD    # 5! = [ 120 ]
 
-# Using recursion
-[
-  '[ 1 ] <=' : '[ 1 ]' :
-  '[ 1 ] - FACTORIAL *'
-] 'FACTORIAL' DEF
+# Using recursion (with guard)
+:
+  >> [ 1 ] <=
+  >> [ 1 ]
+  >>> [ 1 ] - FACTORIAL *
+; 'FACTORIAL' DEF
 [ 5 ] FACTORIAL                      # Result: [ 120 ]</code></pre>
         </section>
       </article>
