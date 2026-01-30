@@ -849,9 +849,12 @@ mod tests {
     #[tokio::test]
     async fn test_map_with_guarded_word() {
         let mut interp = Interpreter::new();
-        let def_code = r#"[ ': [ 1 ] =
-: [ 10 ]
-: [ 20 ]' ] 'CHECK_ONE' DEF"#;
+        // Use chevron branching instead of old guard syntax
+        let def_code = r#":
+>> [ 1 ] =
+>> [ 10 ]
+>>> [ 20 ]
+; 'CHECK_ONE' DEF"#;
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 
@@ -866,9 +869,10 @@ mod tests {
     #[tokio::test]
     async fn test_map_with_multiline_word() {
         let mut interp = Interpreter::new();
-        let def_code = r#"[ ':
+        let def_code = r#":
 [ 2 ] *
-[ 1 ] +' ] 'DOUBLE_PLUS_ONE' DEF"#;
+[ 1 ] +
+; 'DOUBLE_PLUS_ONE' DEF"#;
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 
@@ -883,7 +887,7 @@ mod tests {
     #[tokio::test]
     async fn test_map_preserves_stack_below() {
         let mut interp = Interpreter::new();
-        let def_code = "[ ': 2 *' ] 'DOUBLE' DEF";
+        let def_code = ": [ 2 ] * ; 'DOUBLE' DEF";
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 
@@ -909,7 +913,7 @@ mod tests {
     #[tokio::test]
     async fn test_fold_with_custom_word() {
         let mut interp = Interpreter::new();
-        let def_code = "[ ': +' ] 'MYSUM' DEF";
+        let def_code = ": + ; 'MYSUM' DEF";
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 

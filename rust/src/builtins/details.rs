@@ -1533,17 +1533,17 @@ Inputエリアにシングルクォート(')を挿入します。
 
 ## 使用法
 ! 'WORDNAME' DEL     # 強制削除
-! [ ': ...' ] 'WORDNAME' DEF  # 強制再定義
+! : ... ; 'WORDNAME' DEF  # 強制再定義
 
 ## 使用例
-[ ': [ 2 ] *' ] 'DOUBLE' DEF
-[ ': DOUBLE DOUBLE' ] 'QUAD' DEF
+: [ 2 ] * ; 'DOUBLE' DEF
+: DOUBLE DOUBLE ; 'QUAD' DEF
 
 'DOUBLE' DEL           # Error: referenced by QUAD
 ! 'DOUBLE' DEL         # OK（警告付きで削除）
 
-[ ': [ 3 ] *' ] 'DOUBLE' DEF     # Error: referenced by QUAD
-! [ ': [ 3 ] *' ] 'DOUBLE' DEF   # OK（警告付きで再定義）
+: [ 3 ] * ; 'DOUBLE' DEF     # Error: referenced by QUAD
+! : [ 3 ] * ; 'DOUBLE' DEF   # OK（警告付きで再定義）
 
 ## 注意
 - 組み込みワードには効果がありません（常にエラー）
