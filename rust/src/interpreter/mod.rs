@@ -87,6 +87,46 @@ impl Interpreter {
         self.collect_vector_with_depth(tokens, start_index, 1)
     }
 
+    /// Collect tokens between : and ; to form a code block
+    /// Returns (code_string, consumed_count)
+    fn collect_code_block(&self, tokens: &[Token], start_index: usize) -> Result<(String, usize)> {
+        if !matches!(&tokens[start_index], Token::CodeBlockStart) {
+            return Err(AjisaiError::from("Expected code block start (:)"));
+        }
+
+        let mut code_parts = Vec::new();
+        let mut i = start_index + 1;
+        let mut depth = 1; // Track nested code blocks
+
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::CodeBlockStart => {
+                    depth += 1;
+                    code_parts.push(":".to_string());
+                },
+                Token::CodeBlockEnd => {
+                    depth -= 1;
+                    if depth == 0 {
+                        // End of code block
+                        let code = code_parts.join(" ");
+                        return Ok((code, i - start_index + 1));
+                    }
+                    code_parts.push(";".to_string());
+                },
+                Token::Number(n) => code_parts.push(n.clone()),
+                Token::String(s) => code_parts.push(format!("'{}'", s)),
+                Token::Symbol(s) => code_parts.push(s.clone()),
+                Token::VectorStart => code_parts.push("[".to_string()),
+                Token::VectorEnd => code_parts.push("]".to_string()),
+                Token::ChevronBranch => code_parts.push(">>".to_string()),
+                Token::ChevronDefault => code_parts.push(">>>".to_string()),
+                Token::LineBreak => code_parts.push("\n".to_string()),
+            }
+            i += 1;
+        }
+        Err(AjisaiError::from("Unclosed code block (missing ;)"))
+    }
+
     fn collect_vector_with_depth(&self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
         if depth > MAX_VISIBLE_DIMENSIONS {
             return Err(AjisaiError::from(format!(
@@ -323,6 +363,8 @@ impl Interpreter {
                         }
                     }
                 },
+                // CodeBlockStart and CodeBlockEnd are handled by tokens_to_lines
+                // They should not appear in the token stream at this point
                 Token::CodeBlockStart | Token::CodeBlockEnd | Token::ChevronBranch | Token::ChevronDefault | Token::LineBreak => {},
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
@@ -456,9 +498,10 @@ impl Interpreter {
     fn tokens_to_lines(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
-        
-        for token in tokens {
-            match token {
+        let mut i = 0;
+
+        while i < tokens.len() {
+            match &tokens[i] {
                 Token::LineBreak => {
                     if !current_line.is_empty() {
                         lines.push(ExecutionLine {
@@ -466,19 +509,30 @@ impl Interpreter {
                         });
                         current_line.clear();
                     }
+                    i += 1;
+                },
+                Token::CodeBlockStart => {
+                    // Collect entire code block as a single token sequence
+                    let (code_string, consumed) = self.collect_code_block(tokens, i)?;
+                    // Create a vector containing the code string (matches : ... ; to [ 'code' ] format)
+                    current_line.push(Token::VectorStart);
+                    current_line.push(Token::String(code_string));
+                    current_line.push(Token::VectorEnd);
+                    i += consumed;
                 },
                 _ => {
-                    current_line.push(token.clone());
+                    current_line.push(tokens[i].clone());
+                    i += 1;
                 }
             }
         }
-        
+
         if !current_line.is_empty() {
             lines.push(ExecutionLine {
                 body_tokens: current_line,
             });
         }
-        
+
         Ok(lines)
     }
 
@@ -752,9 +806,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Test basic .. GET behavior
-        let code = r#"
-: [5] [0] .. GET
-"#;
+        let code = "[5] [0] .. GET";
 
         println!("\n=== Basic .. GET Test ===");
         let result = interp.execute(code).await;
@@ -778,9 +830,7 @@ mod tests {
         // スタックモードでGETした値を比較できることを確認
         // 修正後: [1] .. GET は [20] を返す（二重ラップなし）
         // 修正前: [1] .. GET は [[20]] を返していた（二重ラップ）
-        let code = r#"
-: [10] [20] [30] [1] .. GET [20] =
-"#;
+        let code = "[10] [20] [30] [1] .. GET [20] =";
 
         println!("\n=== Stack GET with Comparison Test ===");
         let result = interp.execute(code).await;
@@ -806,9 +856,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Simple test: add two numbers
-        let code = r#"
-: [2] [3] +
-"#;
+        let code = "[2] [3] +";
 
         let result = interp.execute(code).await;
         assert!(result.is_ok(), "Simple addition should succeed: {:?}", result);
@@ -821,9 +869,9 @@ mod tests {
     async fn test_definition_and_call() {
         let mut interp = Interpreter::new();
 
-        // Test defining a word and calling it
+        // Test defining a word and calling it (new syntax: : CODE ; 'NAME' DEF)
         let code = r#"
-[ ': [2] [3] +' ] 'ADDTEST' DEF
+: [2] [3] + ; 'ADDTEST' DEF
 ADDTEST
 "#;
 
@@ -836,7 +884,7 @@ ADDTEST
     #[tokio::test]
     async fn test_force_flag_del_without_dependents() {
         let mut interp = Interpreter::new();
-        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
+        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
 
         // 依存なしなら ! 不要で削除可能
         let result = interp.execute("'DOUBLE' DEL").await;
@@ -847,8 +895,8 @@ ADDTEST
     #[tokio::test]
     async fn test_force_flag_del_with_dependents_error() {
         let mut interp = Interpreter::new();
-        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
-        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
 
         // 依存ありで ! なしはエラー
         let result = interp.execute("'DOUBLE' DEL").await;
@@ -859,8 +907,8 @@ ADDTEST
     #[tokio::test]
     async fn test_force_flag_del_with_dependents_forced() {
         let mut interp = Interpreter::new();
-        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
-        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
 
         // ! 付きなら削除可能
         let result = interp.execute("! 'DOUBLE' DEL").await;
@@ -872,22 +920,22 @@ ADDTEST
     #[tokio::test]
     async fn test_force_flag_def_with_dependents_error() {
         let mut interp = Interpreter::new();
-        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
-        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
 
         // 依存ありで ! なしの再定義はエラー
-        let result = interp.execute("[ ': [ 3 ] *' ] 'DOUBLE' DEF").await;
+        let result = interp.execute(": [ 3 ] * ; 'DOUBLE' DEF").await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_force_flag_def_with_dependents_forced() {
         let mut interp = Interpreter::new();
-        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
-        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
 
         // ! 付きなら再定義可能
-        let result = interp.execute("! [ ': [ 3 ] *' ] 'DOUBLE' DEF").await;
+        let result = interp.execute("! : [ 3 ] * ; 'DOUBLE' DEF").await;
         assert!(result.is_ok());
         assert!(interp.output_buffer.contains("Warning"));
     }
@@ -904,8 +952,8 @@ ADDTEST
     #[tokio::test]
     async fn test_force_flag_reset_after_other_word() {
         let mut interp = Interpreter::new();
-        interp.execute("[ ': [ 2 ] *' ] 'DOUBLE' DEF").await.unwrap();
-        interp.execute("[ ': DOUBLE DOUBLE' ] 'QUAD' DEF").await.unwrap();
+        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
 
         // ! の後に別のワードを実行するとフラグがリセットされる
         interp.execute("!").await.unwrap();
@@ -922,8 +970,8 @@ ADDTEST
         // [ 3 ] [ 5 ] < is true, so ANSWER should be defined
         let code = r#"
 >> [ 3 ] [ 5 ] <
->> [ ': [ 42 ]' ] 'ANSWER' DEF
->>> [ ': [ 0 ]' ] 'ZERO' DEF
+>> : [ 42 ] ; 'ANSWER' DEF
+>>> : [ 0 ] ; 'ZERO' DEF
 "#;
 
         let result = interp.execute(code).await;
@@ -962,8 +1010,8 @@ ADDTEST
         // [ 5 ] [ 3 ] < is false, so SMALL should be defined (default)
         let code = r#"
 >> [ 5 ] [ 3 ] <
->> [ ': [ 100 ]' ] 'BIG' DEF
->>> [ ': [ -1 ]' ] 'SMALL' DEF
+>> : [ 100 ] ; 'BIG' DEF
+>>> : [ -1 ] ; 'SMALL' DEF
 "#;
 
         let result = interp.execute(code).await;
@@ -987,8 +1035,8 @@ ADDTEST
         // Test: Default clause in chevron structure defines a word
         let code = r#"
 >> FALSE
->> [ ': [ 100 ]' ] 'HUNDRED' DEF
->>> [ ': [ 999 ]' ] 'DEFAULT' DEF
+>> : [ 100 ] ; 'HUNDRED' DEF
+>>> : [ 999 ] ; 'DEFAULT' DEF
 "#;
 
         let result = interp.execute(code).await;
@@ -1009,14 +1057,14 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         // Test: Define a word inside chevron that uses an existing custom word
-        let def_code = "[ ': [ 2 ] *' ] 'DOUBLE' DEF";
+        let def_code = ": [ 2 ] * ; 'DOUBLE' DEF";
         let result = interp.execute(def_code).await;
         assert!(result.is_ok(), "DOUBLE definition should succeed: {:?}", result);
 
         let chevron_code = r#"
 >> [ 5 ] [ 10 ] <
->> [ ': [ 3 ] DOUBLE' ] 'PROCESS' DEF
->>> [ ': [ 0 ]' ] 'NOPROCESS' DEF
+>> : [ 3 ] DOUBLE ; 'PROCESS' DEF
+>>> : [ 0 ] ; 'NOPROCESS' DEF
 "#;
         let result = interp.execute(chevron_code).await;
         assert!(result.is_ok(), "DEF with chevron using existing word should succeed: {:?}", result);
@@ -1055,14 +1103,14 @@ ADDTEST
     }
 
     #[tokio::test]
-    async fn test_def_without_colon() {
+    async fn test_def_with_new_syntax() {
         let mut interp = Interpreter::new();
 
-        // Test: Define a word without colon prefix
-        let code = "[ ': [ 42 ]' ] 'ANSWER' DEF";
+        // Test: Define a word with new code block syntax : ... ;
+        let code = ": [ 42 ] ; 'ANSWER' DEF";
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "DEF without colon should succeed: {:?}", result);
+        assert!(result.is_ok(), "DEF with new syntax should succeed: {:?}", result);
 
         // Verify ANSWER is defined
         assert!(interp.dictionary.contains_key("ANSWER"), "ANSWER should be defined");
@@ -1197,7 +1245,7 @@ ADDTEST
     async fn test_map_with_increment() {
         let mut interp = Interpreter::new();
         // 統一分数アーキテクチャ: MAPワードはベクタ結果を返す必要がある
-        let result = interp.execute("[ ': [ 1 ] +' ] 'INC' DEF [ 1 2 3 ] 'INC' MAP").await;
+        let result = interp.execute(": [ 1 ] + ; 'INC' DEF [ 1 2 3 ] 'INC' MAP").await;
         assert!(result.is_ok(), "MAP with increment function should succeed: {:?}", result);
 
         // 結果が [ 2 3 4 ] であることを確認
@@ -1218,7 +1266,7 @@ ADDTEST
     async fn test_map_stack_mode() {
         let mut interp = Interpreter::new();
         // Stackモードでの動作確認
-        let result = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP").await;
+        let result = interp.execute(": [ 2 ] * ; 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP").await;
         assert!(result.is_ok(), "MAP in Stack mode should work: {:?}", result);
 
         // スタックに3つの要素があること
@@ -1362,9 +1410,9 @@ ADDTEST
     async fn test_call_depth_3_ok() {
         let mut interp = Interpreter::new();
         // A -> B -> C = 深度3、OK
-        interp.execute("[ ': C' ] 'B' DEF").await.unwrap();
-        interp.execute("[ ': B' ] 'A' DEF").await.unwrap();
-        interp.execute("[ ': [ 1 ]' ] 'C' DEF").await.unwrap();
+        interp.execute(": C ; 'B' DEF").await.unwrap();
+        interp.execute(": B ; 'A' DEF").await.unwrap();
+        interp.execute(": [ 1 ] ; 'C' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
         assert!(result.is_ok(), "Call depth 3 should succeed: {:?}", result);
@@ -1375,10 +1423,10 @@ ADDTEST
     async fn test_call_depth_4_exceeds() {
         let mut interp = Interpreter::new();
         // A -> B -> C -> D = 深度4、エラー
-        interp.execute("[ ': B' ] 'A' DEF").await.unwrap();
-        interp.execute("[ ': C' ] 'B' DEF").await.unwrap();
-        interp.execute("[ ': D' ] 'C' DEF").await.unwrap();
-        interp.execute("[ ': [ 1 ]' ] 'D' DEF").await.unwrap();
+        interp.execute(": B ; 'A' DEF").await.unwrap();
+        interp.execute(": C ; 'B' DEF").await.unwrap();
+        interp.execute(": D ; 'C' DEF").await.unwrap();
+        interp.execute(": [ 1 ] ; 'D' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
         assert!(result.is_err(), "Call depth 4 should fail");
@@ -1391,7 +1439,7 @@ ADDTEST
         let mut interp = Interpreter::new();
         // REC -> REC -> REC -> REC で深度超過
         // シンプルな再帰ワード：常に自分自身を呼び出す
-        interp.execute("[ ': REC' ] 'REC' DEF").await.unwrap();
+        interp.execute(": REC ; 'REC' DEF").await.unwrap();
 
         let result = interp.execute("REC").await;
         assert!(result.is_err(), "Direct recursion should hit depth limit");
@@ -1403,8 +1451,8 @@ ADDTEST
     async fn test_call_depth_resets_after_completion() {
         let mut interp = Interpreter::new();
         // 深度2の呼び出しを2回実行しても問題ない
-        interp.execute("[ ': B' ] 'A' DEF").await.unwrap();
-        interp.execute("[ ': [ 1 ]' ] 'B' DEF").await.unwrap();
+        interp.execute(": B ; 'A' DEF").await.unwrap();
+        interp.execute(": [ 1 ] ; 'B' DEF").await.unwrap();
 
         // 1回目の呼び出し
         let result1 = interp.execute("A").await;
@@ -1419,10 +1467,10 @@ ADDTEST
     async fn test_call_depth_error_shows_trace() {
         let mut interp = Interpreter::new();
         // A -> B -> C -> D でエラーメッセージにスタックトレースが含まれることを確認
-        interp.execute("[ ': B' ] 'A' DEF").await.unwrap();
-        interp.execute("[ ': C' ] 'B' DEF").await.unwrap();
-        interp.execute("[ ': D' ] 'C' DEF").await.unwrap();
-        interp.execute("[ ': [ 1 ]' ] 'D' DEF").await.unwrap();
+        interp.execute(": B ; 'A' DEF").await.unwrap();
+        interp.execute(": C ; 'B' DEF").await.unwrap();
+        interp.execute(": D ; 'C' DEF").await.unwrap();
+        interp.execute(": [ 1 ] ; 'D' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
         assert!(result.is_err());

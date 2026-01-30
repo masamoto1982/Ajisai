@@ -66,7 +66,12 @@ mod ceil_tests {
         // >> [ 3 ] [ 1 ] < (3 < 1 = FALSE)
         // >> [ 7/3 ] CEIL (this branch is skipped)
         // >>> [ 0 ] (default branch, executed because condition is FALSE)
-        interp.execute("[ '>> [ 3 ] [ 1 ] <\n>> [ 7/3 ] CEIL\n>>> [ 0 ]' ] 'TEST' DEF").await.unwrap();
+        let def_code = r#":
+>> [ 3 ] [ 1 ] <
+>> [ 7/3 ] CEIL
+>>> [ 0 ]
+; 'TEST' DEF"#;
+        interp.execute(def_code).await.unwrap();
         interp.execute("TEST").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -194,7 +199,12 @@ mod round_tests {
         // >> [ 3 ] [ 1 ] < (3 < 1 = FALSE)
         // >> [ 8/3 ] ROUND (this branch is skipped)
         // >>> [ 0 ] (default branch, executed because condition is FALSE)
-        interp.execute("[ '>> [ 3 ] [ 1 ] <\n>> [ 8/3 ] ROUND\n>>> [ 0 ]' ] 'TEST' DEF").await.unwrap();
+        let def_code = r#":
+>> [ 3 ] [ 1 ] <
+>> [ 8/3 ] ROUND
+>>> [ 0 ]
+; 'TEST' DEF"#;
+        interp.execute(def_code).await.unwrap();
         interp.execute("TEST").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);

@@ -749,4 +749,31 @@ mod test_tokenizer {
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("removed"));
     }
+
+    #[test]
+    fn test_multiline_code_block_with_chevrons() {
+        let custom_words = HashSet::new();
+
+        // マルチラインのコードブロック
+        let input = r#":
+>> [ 1 ] =
+>> [ 10 ]
+>>> [ 20 ]
+; 'CHECK_ONE' DEF"#;
+
+        let result = tokenize_with_custom_words(input, &custom_words).unwrap();
+
+        // Print tokens for debugging
+        for (i, t) in result.iter().enumerate() {
+            println!("[{}] {:?}", i, t);
+        }
+
+        // Verify key tokens
+        assert_eq!(result[0], Token::CodeBlockStart); // :
+
+        // Find CodeBlockEnd
+        let code_block_end_index = result.iter().position(|t| matches!(t, Token::CodeBlockEnd));
+        assert!(code_block_end_index.is_some(), "CodeBlockEnd should exist in tokens");
+        println!("CodeBlockEnd at index: {:?}", code_block_end_index);
+    }
 }
