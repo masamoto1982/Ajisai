@@ -39,6 +39,56 @@ pub mod display;
 
 use std::collections::HashSet;
 use self::fraction::Fraction;
+use serde::Serialize;
+
+// ============================================================================
+// 音響ヒント（AudioHint）- PLAY機能強化用
+// ============================================================================
+
+/// 波形タイプ
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WaveformType {
+    #[default]
+    Sine,
+    Square,
+    Sawtooth,
+    Triangle,
+}
+
+/// ADSRエンベロープ
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Envelope {
+    pub attack: f64,   // 立ち上がり時間（秒）
+    pub decay: f64,    // 減衰時間（秒）
+    pub sustain: f64,  // 持続レベル（0.0-1.0）
+    pub release: f64,  // 余韻時間（秒）
+}
+
+impl Default for Envelope {
+    fn default() -> Self {
+        Self {
+            attack: 0.01,
+            decay: 0.0,
+            sustain: 1.0,
+            release: 0.01,
+        }
+    }
+}
+
+/// 音響ヒント
+///
+/// Valueに付加される音響関連のメタデータ。
+/// PLAYワードがこの情報を参照して再生方法を決定する。
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct AudioHint {
+    /// 同時再生（和音）フラグ
+    pub chord: bool,
+    /// ADSRエンベロープ
+    pub envelope: Option<Envelope>,
+    /// 波形タイプ
+    pub waveform: WaveformType,
+}
 
 /// 表示ヒント
 ///
@@ -84,6 +134,8 @@ pub struct Value {
     pub data: ValueData,
     /// 表示ヒント（演算には使用しない）
     pub display_hint: DisplayHint,
+    /// 音響ヒント（PLAYワードで使用）
+    pub audio_hint: Option<AudioHint>,
 }
 
 impl Value {
@@ -95,6 +147,7 @@ impl Value {
         Self {
             data: ValueData::Nil,
             display_hint: DisplayHint::Nil,
+            audio_hint: None,
         }
     }
 
@@ -104,6 +157,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(f),
             display_hint: DisplayHint::Number,
+            audio_hint: None,
         }
     }
 
@@ -113,6 +167,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(Fraction::from(n)),
             display_hint: DisplayHint::Number,
+            audio_hint: None,
         }
     }
 
@@ -122,6 +177,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
             display_hint: DisplayHint::Boolean,
+            audio_hint: None,
         }
     }
 
@@ -135,12 +191,14 @@ impl Value {
             return Self {
                 data: ValueData::Nil,
                 display_hint: DisplayHint::String,
+                audio_hint: None,
             };
         }
 
         Self {
             data: ValueData::Vector(children),
             display_hint: DisplayHint::String,
+            audio_hint: None,
         }
     }
 
@@ -155,6 +213,7 @@ impl Value {
         Self {
             data: ValueData::Vector(children),
             display_hint: DisplayHint::Auto,
+            audio_hint: None,
         }
     }
 
@@ -170,6 +229,7 @@ impl Value {
         Self {
             data: ValueData::Vector(values),
             display_hint: DisplayHint::Auto,
+            audio_hint: None,
         }
     }
 
@@ -185,6 +245,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(f),
             display_hint: DisplayHint::DateTime,
+            audio_hint: None,
         }
     }
 
@@ -436,11 +497,13 @@ impl Value {
             return Self {
                 data: ValueData::Scalar(v[0].clone()),
                 display_hint: DisplayHint::Number,
+                audio_hint: None,
             };
         }
         Self {
             data: ValueData::Vector(v.into_iter().map(Value::from_fraction).collect()),
             display_hint: DisplayHint::Number,
+            audio_hint: None,
         }
     }
 
@@ -454,12 +517,33 @@ impl Value {
             return Self {
                 data: ValueData::Scalar(v[0].clone()),
                 display_hint: DisplayHint::Auto,
+                audio_hint: None,
             };
         }
         Self {
             data: ValueData::Vector(v.into_iter().map(Value::from_fraction).collect()),
             display_hint: DisplayHint::Auto,
+            audio_hint: None,
         }
+    }
+
+    /// 音響ヒントを設定
+    #[inline]
+    pub fn with_audio_hint(mut self, hint: AudioHint) -> Self {
+        self.audio_hint = Some(hint);
+        self
+    }
+
+    /// 音響ヒントを取得
+    #[inline]
+    pub fn get_audio_hint(&self) -> Option<&AudioHint> {
+        self.audio_hint.as_ref()
+    }
+
+    /// 音響ヒントを可変で取得
+    #[inline]
+    pub fn get_audio_hint_mut(&mut self) -> &mut Option<AudioHint> {
+        &mut self.audio_hint
     }
 }
 

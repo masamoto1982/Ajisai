@@ -199,6 +199,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
                 display_hint: hint,
+                audio_hint: None,
             };
         }
         // データが複数ある場合はベクタ
@@ -216,6 +217,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
         return Value {
             data: ValueData::Vector(children),
             display_hint: hint,
+            audio_hint: None,
         };
     }
 
@@ -235,6 +237,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
     Value {
         data: ValueData::Vector(children),
         display_hint: hint,
+        audio_hint: None,
     }
 }
 
@@ -333,6 +336,7 @@ where
         ValueData::Scalar(f) => Value {
             data: ValueData::Scalar(op(f)),
             display_hint: val.display_hint,
+            audio_hint: val.audio_hint.clone(),
         },
         ValueData::Vector(children) => {
             let new_children: Vec<Value> = children.iter()
@@ -341,6 +345,7 @@ where
             Value {
                 data: ValueData::Vector(new_children),
                 display_hint: val.display_hint,
+                audio_hint: val.audio_hint.clone(),
             }
         }
         ValueData::Nil => val.clone(),
@@ -464,6 +469,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Number,
+                audio_hint: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vector")),
@@ -483,6 +489,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: val.display_hint,
+                audio_hint: val.audio_hint.clone(),
             })
         }
         ValueData::Nil => Ok(val.clone()),
@@ -502,6 +509,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Number,
+                audio_hint: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vector")),
@@ -521,6 +529,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: val.display_hint,
+                audio_hint: val.audio_hint.clone(),
             })
         }
         ValueData::Nil => Ok(val.clone()),
@@ -546,6 +555,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Number,
+                audio_hint: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vectors")),
@@ -570,6 +580,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: a.display_hint,
+                audio_hint: a.audio_hint.clone(),
             })
         }
         (ValueData::Scalar(fa), ValueData::Vector(cb)) => {
@@ -579,6 +590,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: b.display_hint,
+                audio_hint: b.audio_hint.clone(),
             })
         }
         (ValueData::Vector(ca), ValueData::Scalar(fb)) => {
@@ -588,6 +600,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(new_children?),
                 display_hint: a.display_hint,
+                audio_hint: a.audio_hint.clone(),
             })
         }
         _ => Err(AjisaiError::from("Cannot apply operation")),

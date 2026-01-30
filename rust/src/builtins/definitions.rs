@@ -85,6 +85,12 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("SEQ", "Set sequential playback mode", "[ 440 550 660 ] SEQ PLAY → play 3 notes sequentially", "Music"),
         ("SIM", "Set simultaneous playback mode", "[ 440 550 660 ] SIM PLAY → play 3 notes as chord", "Music"),
         ("PLAY", "Play audio", "[ 440/2 550 NIL 660 ] PLAY → 440Hz for 2 slots, 550Hz, rest, 660Hz", "Music"),
+        ("CHORD", "Mark vector as chord (simultaneous)", "[ 440 550 660 ] CHORD → chord marked", "Music"),
+        ("ADSR", "Set ADSR envelope", "[ 440 ] [ 0.01 0.1 0.8 0.2 ] ADSR → envelope applied", "Music"),
+        ("SINE", "Set sine waveform", "[ 440 ] SINE → sine wave", "Music"),
+        ("SQUARE", "Set square waveform", "[ 440 ] SQUARE → square wave", "Music"),
+        ("SAW", "Set sawtooth waveform", "[ 440 ] SAW → sawtooth wave", "Music"),
+        ("TRI", "Set triangle waveform", "[ 440 ] TRI → triangle wave", "Music"),
 
         // Word management
         ("DEF", "Define custom word", "[ [ 2 ] * ] 'DOUBLE' DEF", "Word Management"),
