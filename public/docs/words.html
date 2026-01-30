@@ -47,13 +47,13 @@
             <tr><td>Parse/Convert</td><td><code>NUM</code> <code>STR</code> <code>BOOL</code> <code>CHR</code></td></tr>
             <tr><td>DateTime</td><td><code>NOW</code> <code>DATETIME</code> <code>TIMESTAMP</code></td></tr>
             <tr><td>Arithmetic</td><td><code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>MOD</code> <code>FLOOR</code> <code>CEIL</code> <code>ROUND</code></td></tr>
-            <tr><td>Comparison</td><td><code>=</code> <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code></td></tr>
+            <tr><td>Comparison</td><td><code>=</code> <code>&lt;</code> <code>&lt;=</code></td></tr>
             <tr><td>Logic</td><td><code>AND</code> <code>OR</code> <code>NOT</code></td></tr>
             <tr><td>Higher-Order</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code></td></tr>
             <tr><td>I/O</td><td><code>PRINT</code></td></tr>
             <tr><td>Music</td><td><code>SEQ</code> <code>SIM</code> <code>PLAY</code></td></tr>
             <tr><td>Word Mgmt</td><td><code>DEF</code> <code>DEL</code> <code>?</code></td></tr>
-            <tr><td>Control</td><td><code>:</code> <code>TIMES</code> <code>WAIT</code> <code>!</code></td></tr>
+            <tr><td>Control</td><td><code>&gt;&gt;</code> <code>&gt;&gt;&gt;</code> <code>TIMES</code> <code>WAIT</code> <code>!</code></td></tr>
             <tr><td>Random</td><td><code>CSPRNG</code></td></tr>
             <tr><td>Hash</td><td><code>HASH</code></td></tr>
           </table>
@@ -251,10 +251,11 @@ NIL      # Pushes NIL (empty value)</code></div>
         <section>
           <h3>Comparison</h3>
           <div class="word-item">
-            <h4>= &lt; &lt;= &gt; &gt;=</h4>
-            <p>Comparison operators</p>
+            <h4>= &lt; &lt;=</h4>
+            <p>Comparison operators (equality, less than, less than or equal)</p>
             <div class="word-example"><code>[ 1 2 ] [ 1 2 ] =    # Result: TRUE
-[ 1 ] [ 2 ] <        # Result: TRUE</code></div>
+[ 1 ] [ 2 ] <        # Result: TRUE
+[ 2 ] [ 2 ] <=       # Result: TRUE</code></div>
           </div>
         </section>
 
@@ -320,8 +321,8 @@ TRUE NOT          # Result: FALSE</code></div>
           <h3>Word Management</h3>
           <div class="word-item">
             <h4>DEF</h4>
-            <p>Define custom word</p>
-            <div class="word-example"><code>[ '[ 2 ] *' ] 'DOUBLE' DEF</code></div>
+            <p>Define custom word using code block syntax <code>: ... ;</code></p>
+            <div class="word-example"><code>: [ 2 ] * ; 'DOUBLE' DEF</code></div>
           </div>
           <div class="word-item">
             <h4>DEL</h4>
@@ -338,9 +339,14 @@ TRUE NOT          # Result: FALSE</code></div>
         <section>
           <h3>Control Flow</h3>
           <div class="word-item">
-            <h4>:</h4>
-            <p>Guard separator for conditional branching</p>
-            <div class="word-example"><code>condition : then-code : else-code</code></div>
+            <h4>&gt;&gt; (Chevron Branch)</h4>
+            <p>Guard separator for conditional branching (condition-action pairs)</p>
+            <div class="word-example"><code>>> condition >> action >> condition >> action</code></div>
+          </div>
+          <div class="word-item">
+            <h4>&gt;&gt;&gt; (Chevron Default)</h4>
+            <p>Default branch in guard expressions</p>
+            <div class="word-example"><code>>> [ 0 ] < >> [ -1 ] >>> [ 1 ]</code></div>
           </div>
           <div class="word-item">
             <h4>TIMES</h4>
