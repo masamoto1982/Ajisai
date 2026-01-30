@@ -665,4 +665,88 @@ mod test_tokenizer {
         assert!(matches!(&result[6], Token::String(s) if s == "DOUBLE"));
         assert!(matches!(&result[7], Token::Symbol(s) if s == "DEF"));
     }
+
+    // === シェブロン分岐トークンのテスト ===
+
+    #[test]
+    fn test_chevron_branch_token() {
+        let custom_words = HashSet::new();
+
+        // >> トークン
+        let result = tokenize_with_custom_words(">> [ 5 ] [ 3 ] <", &custom_words).unwrap();
+        assert_eq!(result[0], Token::ChevronBranch);
+    }
+
+    #[test]
+    fn test_chevron_default_token() {
+        let custom_words = HashSet::new();
+
+        // >>> トークン
+        let result = tokenize_with_custom_words(">>> [ 0 ]", &custom_words).unwrap();
+        assert_eq!(result[0], Token::ChevronDefault);
+    }
+
+    #[test]
+    fn test_chevron_structure() {
+        let custom_words = HashSet::new();
+
+        // 複数行のシェブロン構造
+        // ">> [ 5 ] [ 3 ] <\n>> [ 100 ]\n>>> [ 0 ]"
+        // Tokens: ChevronBranch, VectorStart, Number(5), VectorEnd, VectorStart, Number(3), VectorEnd, Symbol(<), LineBreak,
+        //         ChevronBranch, VectorStart, Number(100), VectorEnd, LineBreak,
+        //         ChevronDefault, VectorStart, Number(0), VectorEnd
+        let result = tokenize_with_custom_words(">> [ 5 ] [ 3 ] <\n>> [ 100 ]\n>>> [ 0 ]", &custom_words).unwrap();
+        assert!(matches!(&result[0], Token::ChevronBranch));       // index 0: >>
+        assert!(matches!(&result[8], Token::LineBreak));           // index 8: \n (after <)
+        assert!(matches!(&result[9], Token::ChevronBranch));       // index 9: >>
+        assert!(matches!(&result[13], Token::LineBreak));          // index 13: \n (after ])
+        assert!(matches!(&result[14], Token::ChevronDefault));     // index 14: >>>
+    }
+
+    // === コードブロックトークンのテスト ===
+
+    #[test]
+    fn test_code_block_tokens() {
+        let custom_words = HashSet::new();
+
+        // : と ; トークン
+        let result = tokenize_with_custom_words(": [ 2 ] * ;", &custom_words).unwrap();
+        assert_eq!(result[0], Token::CodeBlockStart);
+        assert_eq!(result[result.len()-1], Token::CodeBlockEnd);
+    }
+
+    #[test]
+    fn test_code_block_def_syntax() {
+        let custom_words = HashSet::new();
+
+        // 新しいDEF構文
+        let result = tokenize_with_custom_words(": [ 2 ] * ; 'DOUBLE' DEF", &custom_words).unwrap();
+        // CodeBlockStart, VectorStart, Number, VectorEnd, Symbol, CodeBlockEnd, String, Symbol
+        assert_eq!(result[0], Token::CodeBlockStart);
+        assert_eq!(result[5], Token::CodeBlockEnd);
+        assert!(matches!(&result[6], Token::String(s) if s == "DOUBLE"));
+        assert!(matches!(&result[7], Token::Symbol(s) if s == "DEF"));
+    }
+
+    // === 廃止された演算子のエラーテスト ===
+
+    #[test]
+    fn test_greater_than_error() {
+        let custom_words = HashSet::new();
+
+        // 単独の > はエラー
+        let result = tokenize_with_custom_words("[ 5 ] [ 3 ] >", &custom_words);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("removed"));
+    }
+
+    #[test]
+    fn test_greater_than_equal_error() {
+        let custom_words = HashSet::new();
+
+        // >= はエラー
+        let result = tokenize_with_custom_words("[ 5 ] [ 3 ] >=", &custom_words);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("removed"));
+    }
 }

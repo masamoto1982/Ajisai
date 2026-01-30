@@ -60,17 +60,17 @@ mod ceil_tests {
     }
 
     #[tokio::test]
-    async fn test_ceil_with_guard() {
+    async fn test_ceil_with_chevron() {
         let mut interp = Interpreter::new();
-        // Test CEIL within a guarded word (using multiline definition)
-        // : [ 1 ] [ 3 ] > (1 > 3 = FALSE)
-        // : [ 7/3 ] CEIL (this branch is skipped)
-        // : [ 0 ] (default branch, executed because condition is FALSE)
-        interp.execute("[ ': [ 1 ] [ 3 ] >\n: [ 7/3 ] CEIL\n: [ 0 ]' ] 'TEST' DEF").await.unwrap();
+        // Test CEIL within a chevron branch word (using multiline definition)
+        // >> [ 3 ] [ 1 ] < (3 < 1 = FALSE)
+        // >> [ 7/3 ] CEIL (this branch is skipped)
+        // >>> [ 0 ] (default branch, executed because condition is FALSE)
+        interp.execute("[ '>> [ 3 ] [ 1 ] <\n>> [ 7/3 ] CEIL\n>>> [ 0 ]' ] 'TEST' DEF").await.unwrap();
         interp.execute("TEST").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
-        // 1 > 3 is FALSE, so default is executed
+        // 3 < 1 is FALSE, so default is executed
         let result = format!("{}", stack[0]);
         assert_eq!(result, "{ 0 }");
     }
@@ -188,17 +188,17 @@ mod round_tests {
     }
 
     #[tokio::test]
-    async fn test_round_with_guard() {
+    async fn test_round_with_chevron() {
         let mut interp = Interpreter::new();
-        // Test ROUND within a guarded word (using multiline definition)
-        // : [ 1 ] [ 3 ] > (1 > 3 = FALSE)
-        // : [ 8/3 ] ROUND (this branch is skipped)
-        // : [ 0 ] (default branch, executed because condition is FALSE)
-        interp.execute("[ ': [ 1 ] [ 3 ] >\n: [ 8/3 ] ROUND\n: [ 0 ]' ] 'TEST' DEF").await.unwrap();
+        // Test ROUND within a chevron branch word (using multiline definition)
+        // >> [ 3 ] [ 1 ] < (3 < 1 = FALSE)
+        // >> [ 8/3 ] ROUND (this branch is skipped)
+        // >>> [ 0 ] (default branch, executed because condition is FALSE)
+        interp.execute("[ '>> [ 3 ] [ 1 ] <\n>> [ 8/3 ] ROUND\n>>> [ 0 ]' ] 'TEST' DEF").await.unwrap();
         interp.execute("TEST").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
-        // 1 > 3 is FALSE, so default is executed
+        // 3 < 1 is FALSE, so default is executed
         let result = format!("{}", stack[0]);
         assert_eq!(result, "{ 0 }");
     }

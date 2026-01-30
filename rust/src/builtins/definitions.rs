@@ -63,16 +63,20 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("=", "Check if vectors are equal", "[ 1 2 ] [ 1 2 ] = → [ TRUE ]", "Comparison"),
         ("<", "Check if less than", "[ 1 ] [ 2 ] < → [ TRUE ]", "Comparison"),
         ("<=", "Check if less than or equal", "[ 1 ] [ 1 ] <= → [ TRUE ]", "Comparison"),
-        (">", "Check if greater than", "[ 3 ] [ 2 ] > → [ TRUE ]", "Comparison"),
-        (">=", "Check if greater than or equal", "[ 2 ] [ 2 ] >= → [ TRUE ]", "Comparison"),
+        // > と >= は廃止されました。< と <= のみ使用可能です。
 
         // Logic
         ("AND", "Logical AND", "[ TRUE FALSE ] [ TRUE TRUE ] AND → [ TRUE FALSE ]", "Logic"),
         ("OR", "Logical OR", "[ TRUE FALSE ] [ FALSE FALSE ] OR → [ TRUE FALSE ]", "Logic"),
         ("NOT", "Logical NOT", "[ TRUE FALSE ] NOT → [ FALSE TRUE ]", "Logic"),
 
-        // Control (guards)
-        (":", "Guard separator for conditional branching", "condition : then : condition : then : else", "Control"),
+        // Control (chevron branching)
+        (">>", "Chevron branch (condition/action)", ">> condition >> action >>> default", "Control"),
+        (">>>", "Chevron branch (default)", ">>> default_action", "Control"),
+
+        // Code block
+        (":", "Code block start for DEF", ": code ; 'NAME' DEF", "Control"),
+        (";", "Code block end for DEF", ": code ; 'NAME' DEF", "Control"),
 
         // Higher-order functions
         ("MAP", "Apply word to each element", "[ 1 2 3 ] 'DOUBLE' MAP → [ 2 4 6 ]", "Higher-Order"),

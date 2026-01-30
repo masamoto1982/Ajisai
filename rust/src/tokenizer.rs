@@ -46,7 +46,29 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
             continue;
         }
 
-        // 4. 引用文字列
+        // 4. シェブロン記号の処理（>>>, >>, >）
+        if chars[i] == '>' {
+            // >>> をチェック（デフォルト分岐）
+            if i + 2 < chars.len() && chars[i+1] == '>' && chars[i+2] == '>' {
+                tokens.push(Token::ChevronDefault);
+                i += 3;
+                continue;
+            }
+            // >> をチェック（条件/アクション分岐）
+            if i + 1 < chars.len() && chars[i+1] == '>' {
+                tokens.push(Token::ChevronBranch);
+                i += 2;
+                continue;
+            }
+            // >= をチェック（廃止された比較演算子）
+            if i + 1 < chars.len() && chars[i+1] == '=' {
+                return Err("The '>=' operator has been removed. Use '<= NOT' or reverse operands with '<=' instead.".to_string());
+            }
+            // 単独の '>' はエラー（廃止された比較演算子）
+            return Err("The '>' operator has been removed. Use '< NOT' or reverse operands with '<' instead.".to_string());
+        }
+
+        // 5. 引用文字列
         match parse_quote(&chars[i..]) {
             QuoteParseResult::StringSuccess(token, consumed) => {
                 tokens.push(token);
@@ -62,7 +84,7 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
             }
         }
 
-        // 5. トークンの読み取り（空白または特殊文字まで）
+        // 6. トークンの読み取り（空白または特殊文字まで）
         let start = i;
         while i < chars.len()
             && !chars[i].is_whitespace()
@@ -77,19 +99,19 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
 
         let token_str: String = chars[start..i].iter().collect();
 
-        // 6. キーワードチェック
+        // 7. キーワードチェック
         if let Some(token) = try_parse_keyword_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
 
-        // 7. 数値チェック
+        // 8. 数値チェック
         if let Some(token) = try_parse_number_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
 
-        // 8. シンボル（すべての残り - マルチバイト文字を含む）
+        // 9. シンボル（すべての残り - マルチバイト文字を含む）
         tokens.push(Token::Symbol(token_str));
     }
 
@@ -104,7 +126,7 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
 /// 特殊文字（トークン境界となる文字）の判定
 /// シングルクォートは文字列リテラル用
 fn is_special_char(c: char) -> bool {
-    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'')
+    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '>')
 }
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
@@ -113,7 +135,10 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
         // 表示時に深さに応じて適切な括弧に変換される
         '[' | '{' | '(' => Some((Token::VectorStart, 1)),
         ']' | '}' | ')' => Some((Token::VectorEnd, 1)),
-        ':' | ';' => Some((Token::GuardSeparator, 1)),
+        // コードブロック用
+        ':' => Some((Token::CodeBlockStart, 1)),
+        ';' => Some((Token::CodeBlockEnd, 1)),
+        // > は特別処理が必要（>> と >>> のチェック）
         _ => None,
     }
 }
