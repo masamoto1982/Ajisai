@@ -496,6 +496,7 @@ impl Interpreter {
             "REVERSE" => vector_ops::op_reverse(self),
             "RANGE" => vector_ops::op_range(self),
             "REORDER" => vector_ops::op_reorder(self),
+            "COLLECT" => vector_ops::op_collect(self),
             "SORT" => sort::op_sort(self),
             "FLOOR" => tensor_ops::op_floor(self),
             "CEIL" => tensor_ops::op_ceil(self),
