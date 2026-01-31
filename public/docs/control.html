@@ -65,16 +65,39 @@
 
         <section>
           <h3>TIMES - Repetition</h3>
-<pre><code>'word_name' [ count ] TIMES</code></pre>
+          <p>Execute code block or word N times:</p>
+<pre><code>: code ; [ count ] TIMES    # Code block syntax
+'word_name' [ count ] TIMES # Word name syntax</code></pre>
 
           <h4>Examples</h4>
-<pre><code># Double 3 times (multiply by 8)
-: [ 2 ] * ; 'DOUBLE' DEF
-[ 5 ] 'DOUBLE' [ 3 ] TIMES    # Result: [ 40 ]
+<pre><code># Double 3 times using code block (multiply by 8)
+[ 5 ] : [ 2 ] * ; [ 3 ] TIMES    # Result: [ 40 ]
 
-# Build a sequence
-: [ 1 ] CONCAT ; 'ADD_ONE' DEF
-[ ] 'ADD_ONE' [ 5 ] TIMES     # Result: [ 1 1 1 1 1 ]</code></pre>
+# Double 3 times using word name
+: [ 2 ] * ; 'DOUBLE' DEF
+[ 5 ] 'DOUBLE' [ 3 ] TIMES       # Result: [ 40 ]
+
+# Increment with code block
+[ 0 ] : [ 1 ] + ; [ 5 ] TIMES    # Result: [ 5 ]</code></pre>
+        </section>
+
+        <section>
+          <h3>Pipeline Operator (==)</h3>
+          <p>Visual marker for data flow (no-op). Makes complex transformations readable:</p>
+<pre><code>[ 1 2 3 4 5 ]
+  == : [ 2 ] * ; MAP
+  == : [ 5 ] < NOT ; FILTER
+  == [ 0 ] : + ; FOLD</code></pre>
+        </section>
+
+        <section>
+          <h3>Nil Coalescing (=>)</h3>
+          <p>Returns alternative value when first value is NIL:</p>
+<pre><code>NIL => [ 0 ]       # Result: [ 0 ]
+[ 42 ] => [ 0 ]    # Result: [ 42 ]
+
+# Useful for safe defaults
+'key' LOOKUP => [ 'not found' ]</code></pre>
         </section>
 
         <section>

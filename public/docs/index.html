@@ -77,8 +77,10 @@
 : [ 2 ] * ; 'DOUBLE' DEF
 [ 5 ] DOUBLE            # Result: [ 10 ]
 
-# Higher-order functions
-[ 1 2 3 4 5 ] 'DOUBLE' MAP    # Result: [ 2 4 6 8 10 ]</code></pre>
+# Higher-order functions with pipeline
+[ 1 2 3 4 5 ]
+  == 'DOUBLE' MAP             # Result: [ 2 4 6 8 10 ]
+  == [ 0 ] : + ; FOLD         # Sum: [ 30 ]</code></pre>
         </section>
 
         <section>
