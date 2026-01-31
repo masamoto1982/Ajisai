@@ -41,6 +41,7 @@ fn auto_display(data: &ValueData) -> String {
             // それ以外は数値として表示
             display_value(data, 0)
         }
+        ValueData::CodeBlock(tokens) => display_code_block(tokens),
     }
 }
 
@@ -83,7 +84,30 @@ fn display_value(data: &ValueData, depth: usize) -> String {
 
             format!("{} {} {}", open, inner.join(" "), close)
         }
+        ValueData::CodeBlock(tokens) => display_code_block(tokens),
     }
+}
+
+/// コードブロックを表示
+fn display_code_block(tokens: &[super::Token]) -> String {
+    use super::Token;
+    let token_strs: Vec<String> = tokens.iter().map(|t| {
+        match t {
+            Token::Number(n) => n.clone(),
+            Token::String(s) => format!("'{}'", s),
+            Token::Symbol(s) => s.clone(),
+            Token::VectorStart => "[".to_string(),
+            Token::VectorEnd => "]".to_string(),
+            Token::CodeBlockStart => ":".to_string(),
+            Token::CodeBlockEnd => ";".to_string(),
+            Token::ChevronBranch => ">>".to_string(),
+            Token::ChevronDefault => ">>>".to_string(),
+            Token::Pipeline => "==".to_string(),
+            Token::NilCoalesce => "=>".to_string(),
+            Token::LineBreak => "\n".to_string(),
+        }
+    }).collect();
+    format!(": {} ;", token_strs.join(" "))
 }
 
 /// Fractionを表示用にフォーマット
@@ -141,6 +165,7 @@ fn display_as_string(data: &ValueData) -> String {
             let chars = String::from_utf8_lossy(&bytes);
             format!("'{}'", chars)
         }
+        ValueData::CodeBlock(tokens) => display_code_block(tokens),
     }
 }
 
@@ -183,11 +208,13 @@ fn display_as_boolean(data: &ValueData) -> String {
                                 "TRUE"
                             }
                         }
+                        ValueData::CodeBlock(_) => "TRUE",
                     }
                 })
                 .collect();
             format!("{{ {} }}", inner.join(" "))
         }
+        ValueData::CodeBlock(tokens) => display_code_block(tokens),
     }
 }
 
@@ -208,5 +235,6 @@ fn display_as_datetime(data: &ValueData) -> String {
             // ベクターの場合は通常表示
             display_value(data, 0)
         }
+        ValueData::CodeBlock(tokens) => display_code_block(tokens),
     }
 }

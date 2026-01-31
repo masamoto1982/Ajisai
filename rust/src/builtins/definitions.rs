@@ -75,13 +75,17 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         (">>>", "Chevron branch (default)", ">>> default_action", "Control"),
 
         // Code block
-        (":", "Code block start for DEF", ": code ; 'NAME' DEF", "Control"),
-        (";", "Code block end for DEF", ": code ; 'NAME' DEF", "Control"),
+        (":", "Code block start", ": code ; → pushes code block to stack", "Control"),
+        (";", "Code block end", ": code ; → ends code block", "Control"),
+
+        // Pipeline and Nil Coalescing
+        ("==", "Pipeline operator (visual marker)", "[ 1 2 3 ] == : [ 2 ] * ; MAP", "Control"),
+        ("=>", "Nil coalescing operator", "NIL => [ 0 ] → [ 0 ]", "Control"),
 
         // Higher-order functions
-        ("MAP", "Apply word to each element", "[ 1 2 3 ] 'DOUBLE' MAP → [ 2 4 6 ]", "Higher-Order"),
-        ("FILTER", "Filter elements by condition", "[ 1 2 3 4 ] 'EVEN?' FILTER → [ 2 4 ]", "Higher-Order"),
-        ("FOLD", "Fold with initial value", "[ 1 2 3 4 ] [ 0 ] '+' FOLD → [ 10 ]", "Higher-Order"),
+        ("MAP", "Apply code to each element", "[ 1 2 3 ] : [ 2 ] * ; MAP → [ 2 4 6 ]", "Higher-Order"),
+        ("FILTER", "Filter elements by condition", "[ 1 2 3 4 ] : [ 2 ] MOD [ 0 ] = ; FILTER → [ 2 4 ]", "Higher-Order"),
+        ("FOLD", "Fold with initial value", "[ 1 2 3 4 ] [ 0 ] : + ; FOLD → [ 10 ]", "Higher-Order"),
 
         // I/O
         ("PRINT", "Print and pop stack top", "[ 42 ] PRINT → (outputs 42)", "I/O"),
@@ -98,12 +102,12 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("TRI", "Set triangle waveform", "[ 440 ] TRI → triangle wave", "Music"),
 
         // Word management
-        ("DEF", "Define custom word", "[ [ 2 ] * ] 'DOUBLE' DEF", "Word Management"),
+        ("DEF", "Define custom word", ": [ 2 ] * ; 'DOUBLE' DEF", "Word Management"),
         ("DEL", "Delete custom word", "'WORD' DEL", "Word Management"),
         ("?", "Show word definition", "'DOUBLE' ?", "Word Management"),
 
         // Control flow
-        ("TIMES", "Repeat code N times", "[ [ 1 ] + ] [ 5 ] TIMES", "Control Flow"),
+        ("TIMES", "Repeat code N times", ": [ 1 ] + ; [ 5 ] TIMES", "Control Flow"),
         ("WAIT", "Execute word after delay (ms)", "'PROCESS' [ 1000 ] WAIT", "Control Flow"),
         ("!", "Force flag - allow DEL/DEF of dependent words", "! 'WORD' DEL", "Control Flow"),
 

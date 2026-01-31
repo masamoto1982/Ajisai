@@ -30,6 +30,26 @@ pub fn vector_to_source(val: &Value) -> Result<String> {
                 }
             }
 
+            ValueData::CodeBlock(tokens) => {
+                // CodeBlockはソースコードとして表示
+                use crate::types::Token;
+                let token_strs: Vec<String> = tokens.iter().map(|t| {
+                    match t {
+                        Token::Number(n) => n.clone(),
+                        Token::String(s) => format!("'{}'", s),
+                        Token::Symbol(s) => s.clone(),
+                        Token::VectorStart => "[".to_string(),
+                        Token::VectorEnd => "]".to_string(),
+                        Token::CodeBlockStart => ":".to_string(),
+                        Token::CodeBlockEnd => ";".to_string(),
+                        Token::Pipeline => "==".to_string(),
+                        Token::NilCoalesce => "=>".to_string(),
+                        _ => String::new(),
+                    }
+                }).collect();
+                Ok(format!(": {} ;", token_strs.join(" ")))
+            }
+
             ValueData::Vector(children) => {
                 // DisplayHint::String の場合はシンボルとして出力
                 if val.display_hint == DisplayHint::String {

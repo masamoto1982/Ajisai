@@ -1,14 +1,13 @@
 // rust/src/interpreter/control.rs
 //
 // 統一分数アーキテクチャ版の制御フロー操作
-// Vectorの二重性（Vector Duality）対応
+// コードブロック (: ... ;) 対応
 //
 // 【責務】
 // TIMES、WAIT などの制御フロー操作を実装する。
 // カスタムワードの繰り返し実行や遅延実行をサポートする。
 
 use crate::interpreter::Interpreter;
-use crate::interpreter::vector_exec::execute_vector_as_code;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::types::{Value, ValueData, DisplayHint};
@@ -30,6 +29,7 @@ fn value_as_string(val: &Value) -> Option<String> {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
+            ValueData::CodeBlock(_) => vec![],
         }
     }
 
@@ -46,19 +46,19 @@ fn is_string_value(val: &Value) -> bool {
     val.display_hint == DisplayHint::String && !val.is_nil()
 }
 
-/// TIMES - Vectorまたはワード名をN回繰り返し実行する
+/// TIMES - コードブロックまたはワード名をN回繰り返し実行する
 ///
 /// 【責務】
-/// - 指定されたVector（コードとして解釈）またはカスタムワード名を指定回数繰り返し実行
+/// - 指定されたコードブロック（: ... ;）またはカスタムワード名を指定回数繰り返し実行
 /// - ビルトインワードには使用不可
 ///
 /// 【使用法】
-/// - `[ [ 1 ] + ] [5] TIMES` → Vector をコードとして5回実行（新構文）
+/// - `: [ 1 ] + ; [5] TIMES` → コードブロックを5回実行（新構文）
 /// - `'MYWORD' [5] TIMES` → カスタムワードを5回実行（ワード名）
 ///
 /// 【引数スタック】
 /// - [count]: 実行回数（単一要素ベクタの整数）
-/// - [ code ] または 'word_name': Vector（コード）または ワード名
+/// - : code ; または 'word_name': コードブロックまたはワード名
 ///
 /// 【戻り値スタック】
 /// - なし（実行結果がスタックに残る）
@@ -69,7 +69,7 @@ fn is_string_value(val: &Value) -> bool {
 pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::from(
-            "TIMES requires code and count. Usage: [ code ] [ n ] TIMES"
+            "TIMES requires code and count. Usage: : code ; [ n ] TIMES"
         ));
     }
 
@@ -82,52 +82,48 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     let saved_no_change_check = interp.disable_no_change_check;
     interp.disable_no_change_check = true;
 
-    // Vector（コード）または文字列（ワード名）を取得
-    let result = match &code_val.data {
-        ValueData::Vector(_) if is_string_value(&code_val) => {
-            // 文字列の場合はワード名として扱う
-            let word_name = value_as_string(&code_val)
-                .ok_or_else(|| AjisaiError::structure_error("vector (as code) or word name", "other format"))?;
-            let upper_word_name = word_name.to_uppercase();
-
-            // ワード名として辞書を検索
-            if let Some(def) = interp.dictionary.get(&upper_word_name) {
-                if def.is_builtin {
-                    interp.disable_no_change_check = saved_no_change_check;
-                    return Err(AjisaiError::from("TIMES can only be used with custom words, not builtin words"));
-                }
-
-                // カスタムワードを繰り返し実行
-                (|| {
-                    for _ in 0..count {
-                        interp.execute_word_core(&upper_word_name)?;
-                    }
-                    Ok(())
-                })()
-            } else {
-                // 辞書にない場合はエラー
-                interp.disable_no_change_check = saved_no_change_check;
-                return Err(AjisaiError::UnknownWord(upper_word_name));
+    // コードブロックまたは文字列（ワード名）を取得
+    let result = if let Some(tokens) = code_val.as_code_block() {
+        // コードブロックの場合
+        let tokens = tokens.clone();
+        (|| {
+            for _ in 0..count {
+                let (_, _) = interp.execute_section_core(&tokens, 0)?;
             }
-        }
-        ValueData::Vector(_) => {
-            // 通常のVector → コードとして実行
-            let code_val = code_val.clone();
+            Ok(())
+        })()
+    } else if is_string_value(&code_val) {
+        // 文字列の場合はワード名として扱う
+        let word_name = value_as_string(&code_val)
+            .ok_or_else(|| AjisaiError::structure_error("code block (: ... ;) or word name", "other format"))?;
+        let upper_word_name = word_name.to_uppercase();
+
+        // ワード名として辞書を検索
+        if let Some(def) = interp.dictionary.get(&upper_word_name) {
+            if def.is_builtin {
+                interp.disable_no_change_check = saved_no_change_check;
+                return Err(AjisaiError::from("TIMES can only be used with custom words, not builtin words"));
+            }
+
+            // カスタムワードを繰り返し実行
             (|| {
                 for _ in 0..count {
-                    execute_vector_as_code(interp, &code_val)?;
+                    interp.execute_word_core(&upper_word_name)?;
                 }
                 Ok(())
             })()
-        }
-        _ => {
+        } else {
+            // 辞書にない場合はエラー
             interp.disable_no_change_check = saved_no_change_check;
-            interp.stack.push(code_val);
-            interp.stack.push(count_val);
-            return Err(AjisaiError::from(
-                "TIMES requires a vector (as code) or word name. Usage: [ code ] [ n ] TIMES"
-            ));
+            return Err(AjisaiError::UnknownWord(upper_word_name));
         }
+    } else {
+        interp.disable_no_change_check = saved_no_change_check;
+        interp.stack.push(code_val);
+        interp.stack.push(count_val);
+        return Err(AjisaiError::from(
+            "TIMES requires a code block (: ... ;) or word name. Usage: : code ; [ n ] TIMES"
+        ));
     };
 
     // フラグを復元
@@ -276,14 +272,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_times_with_vector_code() {
+    async fn test_times_with_code_block() {
         let mut interp = Interpreter::new();
 
-        // Execute Vector as code (new syntax)
-        // [ 0 ] [ [ 1 ] + ] [ 5 ] TIMES -> [ 5 ]
-        let result = interp.execute("[ 0 ] [ [ 1 ] + ] [ 5 ] TIMES").await;
+        // Execute code block (new syntax with : ... ;)
+        // [ 0 ] : [ 1 ] + ; [ 5 ] TIMES -> [ 5 ]
+        let result = interp.execute("[ 0 ] : [ 1 ] + ; [ 5 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with vector code should succeed: {:?}", result);
+        assert!(result.is_ok(), "TIMES with code block should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
@@ -293,14 +289,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_times_with_vector_code_complex() {
+    async fn test_times_with_code_block_complex() {
         let mut interp = Interpreter::new();
 
-        // More complex inline code: [ 2 ] * (doubling)
-        // [ 1 ] [ [ 2 ] * ] [ 4 ] TIMES -> [ 16 ] (1 * 2 * 2 * 2 * 2 = 16)
-        let result = interp.execute("[ 1 ] [ [ 2 ] * ] [ 4 ] TIMES").await;
+        // More complex code block: [ 2 ] * (doubling)
+        // [ 1 ] : [ 2 ] * ; [ 4 ] TIMES -> [ 16 ] (1 * 2 * 2 * 2 * 2 = 16)
+        let result = interp.execute("[ 1 ] : [ 2 ] * ; [ 4 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with vector multiplication should succeed: {:?}", result);
+        assert!(result.is_ok(), "TIMES with code block multiplication should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
@@ -337,17 +333,29 @@ mod tests {
         }
     }
 
-    // === Vector Duality - Vectorをコードとして使用するTIMESのテスト ===
+    // === Code Block - コードブロック構文を使用するTIMESのテスト ===
 
     #[tokio::test]
-    async fn test_times_with_vector_as_code() {
+    async fn test_code_block_push() {
         let mut interp = Interpreter::new();
 
-        // Vector型をコードとして使ったTIMES（新構文）
-        // [ [ 1 ] + ] means: push 1, then add
-        let result = interp.execute("[ 0 ] [ [ 1 ] + ] [ 5 ] TIMES").await;
+        // コードブロックがスタックに正しくプッシュされることを確認
+        let result = interp.execute("[ 0 ] : [ 1 ] + ;").await;
 
-        assert!(result.is_ok(), "TIMES with vector as code should succeed: {:?}", result);
+        assert!(result.is_ok(), "Code block should parse successfully");
+        assert_eq!(interp.stack.len(), 2, "Should have 2 items on stack: [0] and code block");
+        assert!(interp.stack[1].as_code_block().is_some(), "Second item should be a code block");
+    }
+
+    #[tokio::test]
+    async fn test_times_with_code_block_increment() {
+        let mut interp = Interpreter::new();
+
+        // コードブロック構文を使ったTIMES
+        // : [ 1 ] + ; means: push 1, then add
+        let result = interp.execute("[ 0 ] : [ 1 ] + ; [ 5 ] TIMES").await;
+
+        assert!(result.is_ok(), "TIMES with code block should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
 
         // Check the value is [ 5 ] (Vector containing scalar 5)
@@ -366,14 +374,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_times_with_vector_as_code_complex() {
+    async fn test_times_with_code_block_doubling() {
         let mut interp = Interpreter::new();
 
-        // より複雑なVector: [ 2 ] * (2倍)
-        // [ 1 ] [ [ 2 ] * ] [ 4 ] TIMES -> [ 16 ] (1 * 2 * 2 * 2 * 2 = 16)
-        let result = interp.execute("[ 1 ] [ [ 2 ] * ] [ 4 ] TIMES").await;
+        // より複雑なコードブロック: [ 2 ] * (2倍)
+        // [ 1 ] : [ 2 ] * ; [ 4 ] TIMES -> [ 16 ] (1 * 2 * 2 * 2 * 2 = 16)
+        let result = interp.execute("[ 1 ] : [ 2 ] * ; [ 4 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with vector multiplication should succeed: {:?}", result);
+        assert!(result.is_ok(), "TIMES with code block multiplication should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
 
         // Check the value is [ 16 ] (Vector containing scalar 16)

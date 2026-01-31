@@ -20,6 +20,7 @@ fn value_has_any_truthy(val: &Value) -> bool {
         ValueData::Nil => false,
         ValueData::Scalar(f) => !f.is_zero(),
         ValueData::Vector(children) => children.iter().any(|c| value_has_any_truthy(c)),
+        ValueData::CodeBlock(_) => true,  // コードブロックは常にtruthy
     }
 }
 
@@ -49,6 +50,7 @@ fn apply_not_to_value(val: &Value) -> Value {
                 audio_hint: None,
             }
         }
+        ValueData::CodeBlock(_) => val.clone(),  // コードブロックにはNOTを適用しない
     }
 }
 
@@ -61,6 +63,11 @@ where
         // NIL処理は呼び出し元で処理済み
         (ValueData::Nil, _) | (_, ValueData::Nil) => {
             Err(AjisaiError::from("Cannot apply logic operation with NIL"))
+        }
+
+        // CodeBlock処理
+        (ValueData::CodeBlock(_), _) | (_, ValueData::CodeBlock(_)) => {
+            Err(AjisaiError::from("Cannot apply logic operation with code blocks"))
         }
 
         // 両方スカラー
