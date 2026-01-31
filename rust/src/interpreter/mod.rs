@@ -121,6 +121,8 @@ impl Interpreter {
                 Token::ChevronBranch => code_parts.push(">>".to_string()),
                 Token::ChevronDefault => code_parts.push(">>>".to_string()),
                 Token::LineBreak => code_parts.push("\n".to_string()),
+                Token::Pipeline => code_parts.push("==".to_string()),
+                Token::NilCoalesce => code_parts.push("=>".to_string()),
             }
             i += 1;
         }
@@ -363,9 +365,60 @@ impl Interpreter {
                         }
                     }
                 },
-                // CodeBlockStart and CodeBlockEnd are handled by tokens_to_lines
-                // They should not appear in the token stream at this point
-                Token::CodeBlockStart | Token::CodeBlockEnd | Token::ChevronBranch | Token::ChevronDefault | Token::LineBreak => {},
+                Token::CodeBlockStart => {
+                    // コードブロックのトークン列を収集してスタックにプッシュ
+                    let mut code_tokens = Vec::new();
+                    let mut depth = 1;
+                    i += 1;
+
+                    while i < tokens.len() && depth > 0 {
+                        match &tokens[i] {
+                            Token::CodeBlockStart => {
+                                depth += 1;
+                                code_tokens.push(tokens[i].clone());
+                            }
+                            Token::CodeBlockEnd => {
+                                depth -= 1;
+                                if depth > 0 {
+                                    code_tokens.push(tokens[i].clone());
+                                }
+                            }
+                            _ => {
+                                code_tokens.push(tokens[i].clone());
+                            }
+                        }
+                        i += 1;
+                    }
+
+                    if depth != 0 {
+                        return Err(AjisaiError::from("Unclosed code block: missing ';'"));
+                    }
+
+                    // コードブロック値としてスタックにプッシュ
+                    self.stack.push(Value::from_code_block(code_tokens));
+                    continue;  // i は既に進んでいるので、最後の i += 1 をスキップ
+                }
+                Token::Pipeline => {
+                    // パイプライン演算子は視覚的マーカーのみ（no-op）
+                    // 何もせず次のトークンへ進む
+                }
+                Token::NilCoalesce => {
+                    // Nil Coalescing: value => default
+                    // valueがNILならdefaultを、そうでなければvalueを返す
+                    let default_val = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                    let value = self.stack.pop().ok_or_else(|| {
+                        // スタックアンダーフローの場合、defaultをプッシュバック
+                        self.stack.push(default_val.clone());
+                        AjisaiError::StackUnderflow
+                    })?;
+
+                    if value.is_nil() {
+                        self.stack.push(default_val);
+                    } else {
+                        self.stack.push(value);
+                    }
+                }
+                Token::CodeBlockEnd | Token::ChevronBranch | Token::ChevronDefault | Token::LineBreak => {},
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
                 },
@@ -512,13 +565,29 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::CodeBlockStart => {
-                    // Collect entire code block as a single token sequence
-                    let (code_string, consumed) = self.collect_code_block(tokens, i)?;
-                    // Create a vector containing the code string (matches : ... ; to [ 'code' ] format)
-                    current_line.push(Token::VectorStart);
-                    current_line.push(Token::String(code_string));
-                    current_line.push(Token::VectorEnd);
-                    i += consumed;
+                    // Preserve code block tokens for execute_section_core to handle
+                    // This allows the code block to be pushed as a CodeBlock value
+                    current_line.push(Token::CodeBlockStart);
+                    i += 1;
+                    let mut depth = 1;
+                    while i < tokens.len() && depth > 0 {
+                        match &tokens[i] {
+                            Token::CodeBlockStart => {
+                                depth += 1;
+                                current_line.push(tokens[i].clone());
+                            }
+                            Token::CodeBlockEnd => {
+                                depth -= 1;
+                                current_line.push(tokens[i].clone());
+                            }
+                            _ => {
+                                // Preserve all tokens including LineBreak inside code blocks
+                                // (LineBreak is needed for chevron branching inside DEF)
+                                current_line.push(tokens[i].clone());
+                            }
+                        }
+                        i += 1;
+                    }
                 },
                 _ => {
                     current_line.push(tokens[i].clone());
@@ -691,6 +760,8 @@ impl Interpreter {
             Token::CodeBlockEnd => ";".to_string(),
             Token::ChevronBranch => ">>".to_string(),
             Token::ChevronDefault => ">>>".to_string(),
+            Token::Pipeline => "==".to_string(),
+            Token::NilCoalesce => "=>".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }

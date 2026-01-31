@@ -85,6 +85,7 @@ fn value_as_string(val: &Value) -> Option<String> {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
+            ValueData::CodeBlock(_) => vec![],
         }
     }
 

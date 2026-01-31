@@ -122,6 +122,8 @@ pub enum ValueData {
     Vector(Vec<Value>),
     /// NIL（空）
     Nil,
+    /// コードブロック（トークン列）- : ... ; 構文で作成
+    CodeBlock(Vec<Token>),
 }
 
 /// Ajisai の唯一の値型（再帰的定義）
@@ -284,6 +286,7 @@ impl Value {
             ValueData::Nil => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
             ValueData::Vector(v) => !v.is_empty() && !v.iter().all(|c| !c.is_truthy()),
+            ValueData::CodeBlock(_) => true,  // コードブロックは常にtruthy
         }
     }
 
@@ -293,12 +296,14 @@ impl Value {
     /// - Nil: 0
     /// - Scalar: 1
     /// - Vector: 子の数
+    /// - CodeBlock: トークン数
     #[inline]
     pub fn len(&self) -> usize {
         match &self.data {
             ValueData::Nil => 0,
             ValueData::Scalar(_) => 1,
             ValueData::Vector(v) => v.len(),
+            ValueData::CodeBlock(tokens) => tokens.len(),
         }
     }
 
@@ -338,6 +343,7 @@ impl Value {
             ValueData::Vector(v) => v.last(),
             ValueData::Scalar(_) => Some(self),
             ValueData::Nil => None,
+            ValueData::CodeBlock(_) => None,  // コードブロックには子がない
         }
     }
 
@@ -357,6 +363,9 @@ impl Value {
                 let old = Value::from_fraction(f.clone());
                 self.data = ValueData::Vector(vec![old, child]);
                 self.display_hint = DisplayHint::Auto;
+            }
+            ValueData::CodeBlock(_) => {
+                // コードブロックには子を追加できない（何もしない）
             }
         }
     }
@@ -460,6 +469,7 @@ impl Value {
             ValueData::Vector(v) => {
                 v.iter().flat_map(|c| c.flatten_fractions()).collect()
             }
+            ValueData::CodeBlock(_) => vec![],  // コードブロックは分数を含まない
         }
     }
 
@@ -484,6 +494,7 @@ impl Value {
                     }
                 }
             }
+            ValueData::CodeBlock(_) => vec![],  // コードブロックには形状がない
         }
     }
 
@@ -545,6 +556,33 @@ impl Value {
     pub fn get_audio_hint_mut(&mut self) -> &mut Option<AudioHint> {
         &mut self.audio_hint
     }
+
+    // === コードブロック関連 ===
+
+    /// コードブロックかどうか
+    #[inline]
+    pub fn is_code_block(&self) -> bool {
+        matches!(self.data, ValueData::CodeBlock(_))
+    }
+
+    /// コードブロックからトークン列を取得
+    #[inline]
+    pub fn as_code_block(&self) -> Option<&Vec<Token>> {
+        if let ValueData::CodeBlock(tokens) = &self.data {
+            Some(tokens)
+        } else {
+            None
+        }
+    }
+
+    /// トークン列からコードブロック値を作成
+    pub fn from_code_block(tokens: Vec<Token>) -> Self {
+        Self {
+            data: ValueData::CodeBlock(tokens),
+            display_hint: DisplayHint::Auto,
+            audio_hint: None,
+        }
+    }
 }
 
 // ============================================================================
@@ -574,6 +612,10 @@ pub enum Token {
     ChevronBranch,
     /// シェブロン分岐（デフォルト） - >>>
     ChevronDefault,
+    /// パイプライン演算子 - ==
+    Pipeline,
+    /// Nil Coalescing演算子 - =>
+    NilCoalesce,
     LineBreak,
 }
 

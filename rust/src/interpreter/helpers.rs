@@ -50,6 +50,9 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
         ValueData::Vector(_) => {
             Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
         }
+        ValueData::CodeBlock(_) => {
+            Err(AjisaiError::structure_error("single-element value with integer", "code block"))
+        }
     }
 }
 
@@ -84,6 +87,9 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
         }
         ValueData::Vector(_) => {
             Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
+        }
+        ValueData::CodeBlock(_) => {
+            Err(AjisaiError::structure_error("single-element value with integer", "code block"))
         }
     }
 }

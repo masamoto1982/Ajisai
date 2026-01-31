@@ -1,29 +1,31 @@
 // rust/src/interpreter/higher_order.rs
 //
 // Higher-order functions: MAP, FILTER, FOLD, UNFOLD.
-// Supports Vector Duality: vectors can be code or data.
+// Supports code blocks (: ... ;) and word names.
 
 use crate::interpreter::{Interpreter, OperationTarget};
-use crate::interpreter::vector_exec::execute_vector_as_code;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
-use crate::types::{Value, ValueData, DisplayHint};
+use crate::types::{Value, ValueData, DisplayHint, Token};
 
 enum ExecutableCode {
     WordName(String),
-    Vector(Value),
+    CodeBlock(Vec<Token>),
 }
 
 fn get_executable_code(val: &Value) -> Result<ExecutableCode> {
-    match &val.data {
-        ValueData::Vector(_) if val.display_hint == DisplayHint::String => {
-            get_word_name_from_value(val).map(ExecutableCode::WordName)
-        }
-        ValueData::Vector(_) => {
-            Ok(ExecutableCode::Vector(val.clone()))
-        }
-        _ => Err(AjisaiError::from("Expected vector (as code) or word name"))
+    // コードブロックの場合
+    if let Some(tokens) = val.as_code_block() {
+        return Ok(ExecutableCode::CodeBlock(tokens.clone()));
     }
+
+    // 文字列（ワード名）の場合
+    if val.display_hint == DisplayHint::String {
+        return get_word_name_from_value(val).map(ExecutableCode::WordName);
+    }
+
+    // それ以外はエラー
+    Err(AjisaiError::from("Expected code block (: ... ;) or word name"))
 }
 
 fn is_vector_value(val: &Value) -> bool {
@@ -75,7 +77,11 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
     fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
         match exec {
-            ExecutableCode::Vector(val) => execute_vector_as_code(interp, val),
+            ExecutableCode::CodeBlock(tokens) => {
+                // トークン列を直接実行
+                let (_, _) = interp.execute_section_core(tokens, 0)?;
+                Ok(())
+            }
             ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
         }
     }
@@ -260,7 +266,11 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
     fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
         match exec {
-            ExecutableCode::Vector(val) => execute_vector_as_code(interp, val),
+            ExecutableCode::CodeBlock(tokens) => {
+                // トークン列を直接実行
+                let (_, _) = interp.execute_section_core(tokens, 0)?;
+                Ok(())
+            }
             ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
         }
     }
@@ -459,7 +469,11 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
     fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
         match exec {
-            ExecutableCode::Vector(val) => execute_vector_as_code(interp, val),
+            ExecutableCode::CodeBlock(tokens) => {
+                // トークン列を直接実行
+                let (_, _) = interp.execute_section_core(tokens, 0)?;
+                Ok(())
+            }
             ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
         }
     }
@@ -615,7 +629,11 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
     fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
         match exec {
-            ExecutableCode::Vector(val) => execute_vector_as_code(interp, val),
+            ExecutableCode::CodeBlock(tokens) => {
+                // トークン列を直接実行
+                let (_, _) = interp.execute_section_core(tokens, 0)?;
+                Ok(())
+            }
             ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
         }
     }

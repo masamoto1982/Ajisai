@@ -32,6 +32,7 @@ fn value_to_string(val: &Value) -> Result<String> {
             ValueData::Vector(children) => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
+            ValueData::CodeBlock(_) => vec![],
         }
     }
 
@@ -66,6 +67,7 @@ fn is_string_like(val: &Value) -> bool {
             ValueData::Vector(children) => {
                 children.iter().all(|c| check_codepoints(c))
             }
+            ValueData::CodeBlock(_) => false,
         }
     }
 
@@ -124,14 +126,33 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 定義本体をソースコードに変換
-    // Vector Duality: Vectorをコードとして解釈する
+    // CodeBlock (: ... ;) またはVector (旧構文) をサポート
     let definition_str = match &def_val.data {
+        ValueData::CodeBlock(tokens) => {
+            // CodeBlockのトークン列をソースコード文字列に変換
+            tokens.iter().map(|t| {
+                match t {
+                    Token::Number(n) => n.clone(),
+                    Token::String(s) => format!("'{}'", s),
+                    Token::Symbol(s) => s.clone(),
+                    Token::VectorStart => "[".to_string(),
+                    Token::VectorEnd => "]".to_string(),
+                    Token::CodeBlockStart => ":".to_string(),
+                    Token::CodeBlockEnd => ";".to_string(),
+                    Token::ChevronBranch => ">>".to_string(),
+                    Token::ChevronDefault => ">>>".to_string(),
+                    Token::Pipeline => "==".to_string(),
+                    Token::NilCoalesce => "=>".to_string(),
+                    Token::LineBreak => "\n".to_string(),
+                }
+            }).collect::<Vec<_>>().join(" ")
+        }
         ValueData::Vector(_) => {
-            // VectorをAjisaiソースコードに変換
+            // VectorをAjisaiソースコードに変換（旧構文互換）
             vector_to_source(&def_val)?
         }
         _ => {
-            return Err(AjisaiError::from("DEF requires a vector as definition body"));
+            return Err(AjisaiError::from("DEF requires a code block (: ... ;) or vector as definition body"));
         }
     };
 
