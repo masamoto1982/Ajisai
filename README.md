@@ -174,6 +174,30 @@ This inherits FORTH's spirit: **trust the programmer**.
 [ 10 ] SIGN    # → [ 1 ]
 ```
 
+### Pipeline Operator (`==`)
+
+The pipeline operator is a visual marker for data flow (no-op):
+
+```ajisai
+# Readable data transformation pipeline
+[ 1 2 3 4 5 ]
+  == : [ 2 ] * ; MAP           # Double each: [ 2 4 6 8 10 ]
+  == : [ 5 ] < NOT ; FILTER    # Keep >= 5:   [ 6 8 10 ]
+  == [ 0 ] : + ; FOLD          # Sum:         [ 24 ]
+```
+
+### Nil Coalescing Operator (`=>`)
+
+Returns an alternative value when the first value is NIL:
+
+```ajisai
+NIL => [ 0 ]       # → [ 0 ]  (NIL replaced)
+[ 42 ] => [ 0 ]    # → [ 42 ] (non-NIL preserved)
+
+# Useful for default values
+'unknown_key' DICT_GET => [ 'default' ]
+```
+
 ---
 
 ## Built-in Words
@@ -227,7 +251,7 @@ This inherits FORTH's spirit: **trust the programmer**.
 `DEF` `DEL` `?`
 
 ### Control Flow
-`TIMES` `WAIT` `>>` `>>>` `!`
+`TIMES` `WAIT` `>>` `>>>` `!` `==` `=>`
 
 ### Random
 `CSPRNG`

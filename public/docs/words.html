@@ -53,7 +53,7 @@
             <tr><td>I/O</td><td><code>PRINT</code></td></tr>
             <tr><td>Music</td><td><code>SEQ</code> <code>SIM</code> <code>PLAY</code></td></tr>
             <tr><td>Word Mgmt</td><td><code>DEF</code> <code>DEL</code> <code>?</code></td></tr>
-            <tr><td>Control</td><td><code>&gt;&gt;</code> <code>&gt;&gt;&gt;</code> <code>TIMES</code> <code>WAIT</code> <code>!</code></td></tr>
+            <tr><td>Control</td><td><code>&gt;&gt;</code> <code>&gt;&gt;&gt;</code> <code>TIMES</code> <code>WAIT</code> <code>!</code> <code>==</code> <code>=&gt;</code></td></tr>
             <tr><td>Random</td><td><code>CSPRNG</code></td></tr>
             <tr><td>Hash</td><td><code>HASH</code></td></tr>
           </table>
@@ -350,8 +350,20 @@ TRUE NOT          # Result: FALSE</code></div>
           </div>
           <div class="word-item">
             <h4>TIMES</h4>
-            <p>Repeat N times</p>
-            <div class="word-example"><code>'DOUBLE' [ 3 ] TIMES    # Execute DOUBLE 3 times</code></div>
+            <p>Execute code block or word N times</p>
+            <div class="word-example"><code>: [ 2 ] * ; [ 3 ] TIMES    # Code block 3 times
+'DOUBLE' [ 3 ] TIMES       # Word name 3 times</code></div>
+          </div>
+          <div class="word-item">
+            <h4>== (Pipeline)</h4>
+            <p>Visual data flow marker (no-op)</p>
+            <div class="word-example"><code>[ 1 2 3 ] == : [ 2 ] * ; MAP    # Readable pipeline</code></div>
+          </div>
+          <div class="word-item">
+            <h4>=&gt; (Nil Coalescing)</h4>
+            <p>Return alternative value when NIL</p>
+            <div class="word-example"><code>NIL =&gt; [ 0 ]       # Result: [ 0 ]
+[ 42 ] =&gt; [ 0 ]    # Result: [ 42 ]</code></div>
           </div>
           <div class="word-item">
             <h4>WAIT</h4>

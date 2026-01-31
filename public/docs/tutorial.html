@@ -97,11 +97,31 @@
 # FOLD - reduce to one
 [ 1 2 3 4 5 ] [ 0 ] '+' FOLD      # Result: [ 15 ]
 
-# Chain them
+# Chain with pipeline operator (==)
 [ 1 2 3 4 5 6 7 8 9 10 ]
-  'EVEN?' FILTER         # [ 2 4 6 8 10 ]
-  'SQUARE' MAP           # [ 4 16 36 64 100 ]
-  [ 0 ] '+' FOLD         # [ 220 ]</code></pre>
+  == 'EVEN?' FILTER      # [ 2 4 6 8 10 ]
+  == 'SQUARE' MAP        # [ 4 16 36 64 100 ]
+  == [ 0 ] '+' FOLD      # [ 220 ]
+
+# Using inline code blocks
+[ 1 2 3 4 5 ]
+  == : [ 2 ] * ; MAP              # [ 2 4 6 8 10 ]
+  == : [ 5 ] < NOT ; FILTER       # [ 6 8 10 ]</code></pre>
+        </section>
+
+        <section>
+          <h3>Lesson 4.5: Pipeline &amp; Nil Coalescing</h3>
+          <p><code>==</code> is a visual marker for data flow (no-op):</p>
+<pre><code>[ 1 2 3 ]
+  == : [ 2 ] * ; MAP       # Clear flow visualization
+  == [ 0 ] : + ; FOLD</code></pre>
+
+          <p><code>=&gt;</code> returns alternative when NIL:</p>
+<pre><code>NIL =&gt; [ 0 ]            # Result: [ 0 ]
+[ 42 ] =&gt; [ 0 ]         # Result: [ 42 ]
+
+# Safe defaults
+'key' LOOKUP =&gt; [ 'default' ]</code></pre>
         </section>
 
         <section>

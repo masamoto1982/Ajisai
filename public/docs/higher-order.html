@@ -111,12 +111,19 @@
         </section>
 
         <section>
-          <h3>Chaining</h3>
+          <h3>Chaining with Pipeline Operator</h3>
+          <p>Use <code>==</code> for readable data flow visualization:</p>
 <pre><code># Pipeline: filter, map, reduce
 [ 1 2 3 4 5 6 7 8 9 10 ]
-  'EVEN?' FILTER           # [ 2 4 6 8 10 ]
-  'SQUARE' MAP             # [ 4 16 36 64 100 ]
-  [ 0 ] '+' FOLD           # [ 220 ]</code></pre>
+  == 'EVEN?' FILTER           # [ 2 4 6 8 10 ]
+  == 'SQUARE' MAP             # [ 4 16 36 64 100 ]
+  == [ 0 ] '+' FOLD           # [ 220 ]
+
+# With inline code blocks
+[ 1 2 3 4 5 ]
+  == : [ 2 ] * ; MAP           # Double: [ 2 4 6 8 10 ]
+  == : [ 5 ] < NOT ; FILTER    # >= 5:   [ 6 8 10 ]
+  == [ 0 ] : + ; FOLD          # Sum:    [ 24 ]</code></pre>
         </section>
 
         <section>

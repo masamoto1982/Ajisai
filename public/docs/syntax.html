@@ -126,6 +126,25 @@ a b c .. REVERSE    # Result: c b a</code></pre>
         </section>
 
         <section>
+          <h3>Pipeline Operator (==)</h3>
+          <p>Visual marker for data flow (no-op). Makes complex transformations readable:</p>
+<pre><code>[ 1 2 3 4 5 ]
+  == : [ 2 ] * ; MAP           # Double each
+  == : [ 5 ] < NOT ; FILTER    # Keep >= 5
+  == [ 0 ] : + ; FOLD          # Sum</code></pre>
+        </section>
+
+        <section>
+          <h3>Nil Coalescing Operator (=>)</h3>
+          <p>Returns alternative value when first value is NIL:</p>
+<pre><code>NIL => [ 0 ]       # Result: [ 0 ] (NIL replaced)
+[ 42 ] => [ 0 ]    # Result: [ 42 ] (non-NIL preserved)
+
+# Useful for default values
+'key' LOOKUP => [ 'default' ]</code></pre>
+        </section>
+
+        <section>
           <h3>Input Helpers</h3>
           <table>
             <tr><th>Helper</th><th>Result</th></tr>
