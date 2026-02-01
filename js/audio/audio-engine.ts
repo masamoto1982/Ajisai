@@ -44,6 +44,8 @@ export class AudioEngine {
     private audioContext: AudioContext | null = null;
     private isInitialized = false;
     private slotDuration = 0.5; // 0.5 seconds per slot
+    private currentGain = 1.0; // 音量（0.0〜1.0）
+    private currentPan = 0.0;  // 定位（-1.0〜1.0）
 
     async init(): Promise<void> {
         if (this.isInitialized) return;
@@ -132,16 +134,22 @@ export class AudioEngine {
 
         const oscillator = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
+        const panNode = this.audioContext.createStereoPanner();
 
+        // 接続: oscillator → gainNode → panNode → destination
         oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
+        gainNode.connect(panNode);
+        panNode.connect(this.audioContext.destination);
 
         oscillator.frequency.setValueAtTime(frequency, startTime);
         oscillator.type = waveform;
 
-        // ADSR Envelope
+        // パンニング設定
+        panNode.pan.setValueAtTime(this.currentPan, startTime);
+
+        // ADSR Envelope（currentGainを適用）
         const { attack, decay, sustain, release } = envelope;
-        const peakLevel = 0.3;  // 最大音量
+        const peakLevel = 0.3 * this.currentGain;  // currentGainを適用
         const sustainLevel = peakLevel * sustain;
 
         // リリースを考慮した実効音長
@@ -172,6 +180,24 @@ export class AudioEngine {
 
     getSlotDuration(): number {
         return this.slotDuration;
+    }
+
+    setGain(value: number): void {
+        this.currentGain = Math.max(0, Math.min(1, value));
+        console.log(`Audio gain set to ${this.currentGain}`);
+    }
+
+    getGain(): number {
+        return this.currentGain;
+    }
+
+    setPan(value: number): void {
+        this.currentPan = Math.max(-1, Math.min(1, value));
+        console.log(`Audio pan set to ${this.currentPan}`);
+    }
+
+    getPan(): number {
+        return this.currentPan;
     }
 }
 
