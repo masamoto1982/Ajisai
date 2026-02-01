@@ -734,6 +734,7 @@ impl Interpreter {
             "HASH" => hash::op_hash(self),
             "SEQ" => audio::op_seq(self),
             "SIM" => audio::op_sim(self),
+            "SLOT" => audio::op_slot(self),
             "PLAY" => audio::op_play(self),
             "CHORD" => audio::op_chord(self),
             "ADSR" => audio::op_adsr(self),

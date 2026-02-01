@@ -22,6 +22,7 @@
 
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData, DisplayHint, AudioHint, Envelope, WaveformType};
+use crate::types::fraction::Fraction;
 use super::Interpreter;
 use super::OperationTarget;
 use num_traits::ToPrimitive;
@@ -157,6 +158,60 @@ pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
 /// SIM ワード - 同時再生モードを設定
 pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
     interp.play_mode = PlayMode::Simultaneous;
+    Ok(())
+}
+
+// ============================================================================
+// SLOT ワード実装
+// ============================================================================
+
+/// ヘルパー関数: 値からスカラー値を取得（単一要素ベクタからも再帰的に取得）
+fn get_scalar_value(val: &Value) -> Option<Fraction> {
+    match &val.data {
+        ValueData::Scalar(f) => Some(f.clone()),
+        ValueData::Vector(children) if children.len() == 1 => {
+            get_scalar_value(&children[0])
+        }
+        _ => None,
+    }
+}
+
+/// SLOT ワード - スロットデュレーションを設定
+/// スタック: [ seconds ] --
+/// 1スロットあたりの秒数を設定する
+pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    // スカラー値を取得（単一要素ベクタからも取得可能）
+    let frac = get_scalar_value(&val)
+        .ok_or_else(|| AjisaiError::from("SLOT requires a single number"))?;
+
+    // f64に変換
+    let seconds = frac.to_f64()
+        .ok_or_else(|| AjisaiError::from("SLOT value too large"))?;
+
+    // バリデーション
+    if seconds <= 0.0 {
+        return Err(AjisaiError::from("SLOT duration must be positive"));
+    }
+
+    // 極端に小さい/大きい値の警告
+    if seconds < 0.01 {
+        interp.output_buffer.push_str(
+            &format!("Warning: SLOT duration {}s is very short\n", seconds)
+        );
+    }
+    if seconds > 10.0 {
+        interp.output_buffer.push_str(
+            &format!("Warning: SLOT duration {}s is very long\n", seconds)
+        );
+    }
+
+    // CONFIG コマンドを出力
+    interp.output_buffer.push_str(
+        &format!("CONFIG:{{\"slot_duration\":{}}}\n", seconds)
+    );
+
     Ok(())
 }
 
@@ -929,6 +984,93 @@ mod tests {
         assert!(output.contains("\"type\":\"sim\""), "Should be chord (sim)");
         assert!(output.contains("\"envelope\""), "Should have envelope");
         assert!(output.contains("\"waveform\":\"square\""), "Should be square wave");
+    }
+
+    // ============================================================================
+    // SLOT ワードテスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_slot_basic() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 0.25 ] SLOT").await;
+        assert!(result.is_ok(), "SLOT should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("CONFIG:"), "Should contain CONFIG command");
+        assert!(output.contains("\"slot_duration\":0.25"), "Should set duration to 0.25");
+    }
+
+    #[tokio::test]
+    async fn test_slot_fraction() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 1/4 ] SLOT").await;
+        assert!(result.is_ok(), "SLOT with fraction should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"slot_duration\":0.25"), "1/4 should become 0.25");
+    }
+
+    #[tokio::test]
+    async fn test_slot_negative_error() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        // Create negative number via arithmetic: 0 - 0.5 = -0.5
+        let result = interp.execute("[ 0 ] [ 0.5 ] - SLOT").await;
+        assert!(result.is_err(), "Negative SLOT should fail");
+    }
+
+    #[tokio::test]
+    async fn test_slot_zero_error() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 0 ] SLOT").await;
+        assert!(result.is_err(), "Zero SLOT should fail");
+    }
+
+    #[tokio::test]
+    async fn test_slot_warning_very_short() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 0.005 ] SLOT").await;
+        assert!(result.is_ok(), "Very short SLOT should succeed with warning");
+
+        let output = interp.get_output();
+        assert!(output.contains("Warning:"), "Should contain warning for very short duration");
+        assert!(output.contains("very short"), "Warning should mention 'very short'");
+    }
+
+    #[tokio::test]
+    async fn test_slot_warning_very_long() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 15 ] SLOT").await;
+        assert!(result.is_ok(), "Very long SLOT should succeed with warning");
+
+        let output = interp.get_output();
+        assert!(output.contains("Warning:"), "Should contain warning for very long duration");
+        assert!(output.contains("very long"), "Warning should mention 'very long'");
+    }
+
+    #[tokio::test]
+    async fn test_slot_one_second() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 1 ] SLOT").await;
+        assert!(result.is_ok(), "1 SLOT should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("CONFIG:"), "Should contain CONFIG command");
+        assert!(output.contains("\"slot_duration\":1"), "Should set duration to 1");
     }
 
     #[tokio::test]

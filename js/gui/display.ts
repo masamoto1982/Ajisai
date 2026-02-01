@@ -184,9 +184,14 @@ const extractAudioCommands = (output: string): string[] =>
         .filter(line => line.startsWith('AUDIO:'))
         .map(line => line.substring(6));
 
+const extractConfigCommands = (output: string): string[] =>
+    output.split('\n')
+        .filter(line => line.startsWith('CONFIG:'))
+        .map(line => line.substring(7));
+
 const filterAudioCommands = (output: string): string =>
     output.split('\n')
-        .filter(line => !line.startsWith('AUDIO:'))
+        .filter(line => !line.startsWith('AUDIO:') && !line.startsWith('CONFIG:'))
         .join('\n');
 
 const formatExecutionOutput = (result: ExecuteResult): { debug: string; program: string } => ({
@@ -217,7 +222,24 @@ const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
     parent.appendChild(child);
 };
 
+const processConfigCommands = (output: string): void => {
+    extractConfigCommands(output).forEach(commandStr => {
+        try {
+            const config = JSON.parse(commandStr);
+            if (config.slot_duration !== undefined) {
+                AUDIO_ENGINE.setSlotDuration(config.slot_duration);
+                console.log(`Slot duration set to ${config.slot_duration}s`);
+            }
+        } catch {
+            console.error('Failed to parse CONFIG command');
+        }
+    });
+};
+
 const processAudioCommands = (output: string): void => {
+    // Process CONFIG commands first (they may affect audio playback)
+    processConfigCommands(output);
+
     extractAudioCommands(output).forEach(commandStr => {
         try {
             const audioCommand = JSON.parse(commandStr);
