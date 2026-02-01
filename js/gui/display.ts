@@ -189,9 +189,14 @@ const extractConfigCommands = (output: string): string[] =>
         .filter(line => line.startsWith('CONFIG:'))
         .map(line => line.substring(7));
 
+const extractEffectCommands = (output: string): string[] =>
+    output.split('\n')
+        .filter(line => line.startsWith('EFFECT:'))
+        .map(line => line.substring(7));
+
 const filterAudioCommands = (output: string): string =>
     output.split('\n')
-        .filter(line => !line.startsWith('AUDIO:') && !line.startsWith('CONFIG:'))
+        .filter(line => !line.startsWith('AUDIO:') && !line.startsWith('CONFIG:') && !line.startsWith('EFFECT:'))
         .join('\n');
 
 const formatExecutionOutput = (result: ExecuteResult): { debug: string; program: string } => ({
@@ -222,6 +227,22 @@ const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
     parent.appendChild(child);
 };
 
+const processEffectCommands = (output: string): void => {
+    extractEffectCommands(output).forEach(commandStr => {
+        try {
+            const effect = JSON.parse(commandStr);
+            if (effect.gain !== undefined) {
+                AUDIO_ENGINE.setGain(effect.gain);
+            }
+            if (effect.pan !== undefined) {
+                AUDIO_ENGINE.setPan(effect.pan);
+            }
+        } catch {
+            console.error('Failed to parse EFFECT command:', commandStr);
+        }
+    });
+};
+
 const processConfigCommands = (output: string): void => {
     extractConfigCommands(output).forEach(commandStr => {
         try {
@@ -237,7 +258,9 @@ const processConfigCommands = (output: string): void => {
 };
 
 const processAudioCommands = (output: string): void => {
-    // Process CONFIG commands first (they may affect audio playback)
+    // Process EFFECT commands first (they set gain/pan before playback)
+    processEffectCommands(output);
+    // Process CONFIG commands (they may affect audio playback)
     processConfigCommands(output);
 
     extractAudioCommands(output).forEach(commandStr => {

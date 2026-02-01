@@ -51,7 +51,7 @@
             <tr><td>Logic</td><td><code>AND</code> <code>OR</code> <code>NOT</code></td></tr>
             <tr><td>Higher-Order</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code></td></tr>
             <tr><td>I/O</td><td><code>PRINT</code></td></tr>
-            <tr><td>Music</td><td><code>SEQ</code> <code>SIM</code> <code>SLOT</code> <code>PLAY</code></td></tr>
+            <tr><td>Music</td><td><code>SEQ</code> <code>SIM</code> <code>SLOT</code> <code>GAIN</code> <code>PAN</code> <code>PLAY</code></td></tr>
             <tr><td>Word Mgmt</td><td><code>DEF</code> <code>DEL</code> <code>?</code></td></tr>
             <tr><td>Control</td><td><code>&gt;&gt;</code> <code>&gt;&gt;&gt;</code> <code>TIMES</code> <code>WAIT</code> <code>!</code> <code>==</code> <code>=&gt;</code></td></tr>
             <tr><td>Random</td><td><code>CSPRNG</code></td></tr>
@@ -315,6 +315,31 @@ TRUE NOT          # Result: FALSE</code></div>
             <p>Set slot duration in seconds</p>
             <div class="word-example"><code>0.25 SLOT    # 1 slot = 0.25 seconds
 1/4 SLOT     # Fraction also works (same as above)</code></div>
+          </div>
+          <div class="word-item">
+            <h4>GAIN</h4>
+            <p>Set volume level (0.0-1.0)</p>
+            <div class="word-example"><code>0.5 GAIN    # 50% volume</code></div>
+          </div>
+          <div class="word-item">
+            <h4>GAIN-RESET</h4>
+            <p>Reset volume to default (100%)</p>
+            <div class="word-example"><code>GAIN-RESET</code></div>
+          </div>
+          <div class="word-item">
+            <h4>PAN</h4>
+            <p>Set stereo position (-1.0 left to 1.0 right)</p>
+            <div class="word-example"><code>-0.5 PAN    # slightly left</code></div>
+          </div>
+          <div class="word-item">
+            <h4>PAN-RESET</h4>
+            <p>Reset pan to center</p>
+            <div class="word-example"><code>PAN-RESET</code></div>
+          </div>
+          <div class="word-item">
+            <h4>FX-RESET</h4>
+            <p>Reset all audio effects</p>
+            <div class="word-example"><code>FX-RESET    # gain=1.0, pan=0.0</code></div>
           </div>
           <div class="word-item">
             <h4>PLAY</h4>

@@ -216,6 +216,90 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
 }
 
 // ============================================================================
+// GAIN ワード実装
+// ============================================================================
+
+/// GAIN ワード - 音量を設定
+/// スタック: [ value ] --
+/// 0.0〜1.0の範囲で音量を設定（範囲外はクランプ）
+pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let frac = get_scalar_value(&val)
+        .ok_or_else(|| AjisaiError::from("GAIN requires a number"))?;
+
+    let gain = frac.to_f64()
+        .ok_or_else(|| AjisaiError::from("GAIN value too large"))?;
+
+    // 0.0〜1.0にクランプ
+    let clamped = gain.clamp(0.0, 1.0);
+
+    if (gain - clamped).abs() > f64::EPSILON {
+        interp.output_buffer.push_str(
+            &format!("Warning: GAIN {} clamped to {}\n", gain, clamped)
+        );
+    }
+
+    // EFFECTコマンドを出力
+    interp.output_buffer.push_str(
+        &format!("EFFECT:{{\"gain\":{}}}\n", clamped)
+    );
+
+    Ok(())
+}
+
+/// GAIN-RESET ワード - 音量をデフォルト（1.0）に戻す
+pub fn op_gain_reset(interp: &mut Interpreter) -> Result<()> {
+    interp.output_buffer.push_str("EFFECT:{\"gain\":1.0}\n");
+    Ok(())
+}
+
+// ============================================================================
+// PAN ワード実装
+// ============================================================================
+
+/// PAN ワード - 定位を設定
+/// スタック: [ value ] --
+/// -1.0（左）〜1.0（右）の範囲で定位を設定（範囲外はクランプ）
+pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let frac = get_scalar_value(&val)
+        .ok_or_else(|| AjisaiError::from("PAN requires a number"))?;
+
+    let pan = frac.to_f64()
+        .ok_or_else(|| AjisaiError::from("PAN value too large"))?;
+
+    // -1.0〜1.0にクランプ
+    let clamped = pan.clamp(-1.0, 1.0);
+
+    if (pan - clamped).abs() > f64::EPSILON {
+        interp.output_buffer.push_str(
+            &format!("Warning: PAN {} clamped to {}\n", pan, clamped)
+        );
+    }
+
+    // EFFECTコマンドを出力
+    interp.output_buffer.push_str(
+        &format!("EFFECT:{{\"pan\":{}}}\n", clamped)
+    );
+
+    Ok(())
+}
+
+/// PAN-RESET ワード - 定位をデフォルト（0.0=中央）に戻す
+pub fn op_pan_reset(interp: &mut Interpreter) -> Result<()> {
+    interp.output_buffer.push_str("EFFECT:{\"pan\":0.0}\n");
+    Ok(())
+}
+
+/// FX-RESET ワード - 全エフェクトをデフォルトに戻す
+pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
+    interp.output_buffer.push_str("EFFECT:{\"gain\":1.0,\"pan\":0.0}\n");
+    Ok(())
+}
+
+// ============================================================================
 // CHORD ワード実装
 // ============================================================================
 
@@ -1088,6 +1172,152 @@ mod tests {
 
         let output = interp.get_output();
         assert!(output.contains("\"type\":\"sim\""), "Defined chord should produce sim");
+    }
+
+    // ============================================================================
+    // GAIN/PAN ワードテスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_gain_basic() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("0.5 GAIN").await;
+        assert!(result.is_ok(), "GAIN should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("EFFECT:"), "Should contain EFFECT command");
+        assert!(output.contains("\"gain\":0.5"), "Should set gain to 0.5");
+    }
+
+    #[tokio::test]
+    async fn test_gain_clamp_high() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("1.5 GAIN").await;
+        assert!(result.is_ok(), "GAIN should succeed with clamping");
+
+        let output = interp.get_output();
+        assert!(output.contains("\"gain\":1"), "Should clamp to 1.0");
+        assert!(output.contains("Warning:"), "Should warn about clamping");
+    }
+
+    #[tokio::test]
+    async fn test_gain_clamp_low() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        // Use arithmetic to get negative: 0 - 0.5 = -0.5
+        let result = interp.execute("[ 0 ] [ 0.5 ] - GAIN").await;
+        assert!(result.is_ok(), "GAIN should succeed with clamping");
+
+        let output = interp.get_output();
+        assert!(output.contains("\"gain\":0"), "Should clamp to 0.0");
+    }
+
+    #[tokio::test]
+    async fn test_gain_fraction() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("1/2 GAIN").await;
+        assert!(result.is_ok(), "GAIN with fraction should succeed");
+
+        let output = interp.get_output();
+        assert!(output.contains("\"gain\":0.5"), "1/2 should become 0.5");
+    }
+
+    #[tokio::test]
+    async fn test_gain_reset() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("GAIN-RESET").await;
+        assert!(result.is_ok(), "GAIN-RESET should succeed");
+
+        let output = interp.get_output();
+        assert!(output.contains("\"gain\":1"), "Should reset to 1.0");
+    }
+
+    #[tokio::test]
+    async fn test_pan_basic() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        // Use arithmetic to get negative: 0 - 0.5 = -0.5
+        let result = interp.execute("[ 0 ] [ 0.5 ] - PAN").await;
+        assert!(result.is_ok(), "PAN should succeed");
+
+        let output = interp.get_output();
+        assert!(output.contains("EFFECT:"), "Should contain EFFECT command");
+        assert!(output.contains("\"pan\":-0.5"), "Should set pan to -0.5");
+    }
+
+    #[tokio::test]
+    async fn test_pan_clamp() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("2 PAN").await;
+        assert!(result.is_ok(), "PAN should succeed with clamping");
+
+        let output = interp.get_output();
+        assert!(output.contains("\"pan\":1"), "Should clamp to 1.0");
+        assert!(output.contains("Warning:"), "Should warn about clamping");
+    }
+
+    #[tokio::test]
+    async fn test_pan_reset() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("PAN-RESET").await;
+        assert!(result.is_ok(), "PAN-RESET should succeed");
+
+        let output = interp.get_output();
+        assert!(output.contains("\"pan\":0"), "Should reset to 0.0");
+    }
+
+    #[tokio::test]
+    async fn test_fx_reset() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("FX-RESET").await;
+        assert!(result.is_ok(), "FX-RESET should succeed");
+
+        let output = interp.get_output();
+        assert!(output.contains("\"gain\":1"), "Should reset gain to 1.0");
+        assert!(output.contains("\"pan\":0"), "Should reset pan to 0.0");
+    }
+
+    #[tokio::test]
+    async fn test_gain_then_play() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("0.5 GAIN [ 440 ] PLAY").await;
+        assert!(result.is_ok(), "GAIN then PLAY should succeed");
+
+        let output = interp.get_output();
+        assert!(output.contains("EFFECT:"), "Should have EFFECT command");
+        assert!(output.contains("AUDIO:"), "Should have AUDIO command");
+    }
+
+    #[tokio::test]
+    async fn test_combined_gain_pan_play() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("0.5 GAIN 0.7 PAN [ 440 ] PLAY").await;
+        assert!(result.is_ok(), "Combined GAIN PAN PLAY should succeed");
+
+        let output = interp.get_output();
+        assert!(output.contains("\"gain\":0.5"), "Should have gain 0.5");
+        assert!(output.contains("\"pan\":0.7"), "Should have pan 0.7");
+        assert!(output.contains("AUDIO:"), "Should have AUDIO command");
     }
 
 }
