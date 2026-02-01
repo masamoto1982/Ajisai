@@ -51,7 +51,7 @@
             <tr><td>Logic</td><td><code>AND</code> <code>OR</code> <code>NOT</code></td></tr>
             <tr><td>Higher-Order</td><td><code>MAP</code> <code>FILTER</code> <code>FOLD</code></td></tr>
             <tr><td>I/O</td><td><code>PRINT</code></td></tr>
-            <tr><td>Music</td><td><code>SEQ</code> <code>SIM</code> <code>PLAY</code></td></tr>
+            <tr><td>Music</td><td><code>SEQ</code> <code>SIM</code> <code>SLOT</code> <code>PLAY</code></td></tr>
             <tr><td>Word Mgmt</td><td><code>DEF</code> <code>DEL</code> <code>?</code></td></tr>
             <tr><td>Control</td><td><code>&gt;&gt;</code> <code>&gt;&gt;&gt;</code> <code>TIMES</code> <code>WAIT</code> <code>!</code> <code>==</code> <code>=&gt;</code></td></tr>
             <tr><td>Random</td><td><code>CSPRNG</code></td></tr>
@@ -309,6 +309,12 @@ TRUE NOT          # Result: FALSE</code></div>
             <h4>SIM</h4>
             <p>Set simultaneous playback mode (chord)</p>
             <div class="word-example"><code>[ 440 550 660 ] SIM PLAY    # Play 3 notes as chord</code></div>
+          </div>
+          <div class="word-item">
+            <h4>SLOT</h4>
+            <p>Set slot duration in seconds</p>
+            <div class="word-example"><code>0.25 SLOT    # 1 slot = 0.25 seconds
+1/4 SLOT     # Fraction also works (same as above)</code></div>
           </div>
           <div class="word-item">
             <h4>PLAY</h4>
