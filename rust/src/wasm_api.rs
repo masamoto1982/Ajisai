@@ -569,6 +569,8 @@ fn value_to_js_value(value: &Value) -> JsValue {
                 }
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
+            // パイプ区切りフラグをJavaScriptに送信
+            js_sys::Reflect::set(&obj, &"pipeSeparated".into(), &value.pipe_separated.into()).unwrap();
         },
         _ => {}
     };

@@ -44,6 +44,7 @@ export interface Fraction {
 export interface Value {
     type: string;
     value: any | Fraction | Value[];
+    pipeSeparated?: boolean; // パイプ区切りフラグ（ベクターのみ）
 }
 
 export interface WasmModule {

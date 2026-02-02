@@ -135,7 +135,7 @@ const formatTensor = (value: unknown, depth: number): string => {
     return formatTensorRecursive(v.shape as number[], v.data as unknown[], depth, displayHint);
 };
 
-const formatVector = (value: unknown, depth: number): string => {
+const formatVector = (value: unknown, depth: number, pipeSeparated?: boolean): string => {
     const [open, close] = getBrackets(depth);
 
     if (Array.isArray(value)) {
@@ -144,8 +144,10 @@ const formatVector = (value: unknown, depth: number): string => {
         }
         const elements = value.map((v: Value) => {
             try { return formatValue(v, depth + 1); } catch { return '?'; }
-        }).join(' ');
-        return `${open} ${elements} ${close}`;
+        });
+        // パイプ区切りの場合は | で結合
+        const separator = pipeSeparated ? ' | ' : ' ';
+        return `${open} ${elements.join(separator)} ${close}`;
     }
     return `${open}${close}`;
 };
@@ -167,7 +169,7 @@ const formatValue = (item: Value, depth: number): string => {
         case 'boolean':
             return item.value ? 'TRUE' : 'FALSE';
         case 'vector':
-            return formatVector(item.value, depth);
+            return formatVector(item.value, depth, item.pipeSeparated);
         case 'nil':
             return 'NIL';
         case 'block': {

@@ -105,7 +105,8 @@ export function formatValueSimple(value: Value): string {
             return 'NIL';
         case 'vector':
             if (Array.isArray(value.value)) {
-                const elements = value.value.map(v => formatValueSimple(v)).join(' ');
+                const separator = value.pipeSeparated ? ' | ' : ' ';
+                const elements = value.value.map(v => formatValueSimple(v)).join(separator);
                 return `[${elements ? ' ' + elements + ' ' : ''}]`;
             }
             return '[]';
