@@ -14,6 +14,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("'", "Input single quote", "' → '", "Input Helper"),
         ("FRAME", "Create bracket structure with shape", "[ 2 3 ] FRAME → { ( ) ( ) ( ) } { ( ) ( ) ( ) }", "Input Helper"),
 
+        // Separator
+        ("|", "Visual separator (no-op)", "[ Key | Value ]", "Separator"),
+
         // Position operations (0-indexed)
         ("GET", "Get element at position (0-indexed)", "[ 10 20 30 ] [ 0 ] GET → [ 10 20 30 ] [ 10 ]", "Position"),
         ("INSERT", "Insert element at position", "[ 1 3 ] [ 1 2 ] INSERT → [ 1 2 3 ]", "Position"),

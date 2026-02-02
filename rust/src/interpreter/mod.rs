@@ -749,6 +749,7 @@ impl Interpreter {
             "SQUARE" => audio::op_square(self),
             "SAW" => audio::op_saw(self),
             "TRI" => audio::op_tri(self),
+            "|" => Ok(()), // Visual separator (no-op)
             "!" => {
                 self.force_flag = true;
                 Ok(())
@@ -1557,5 +1558,68 @@ ADDTEST
         // エラーメッセージにスタックトレースが含まれる
         assert!(err_msg.contains("A") && err_msg.contains("B") && err_msg.contains("C"),
             "Error message should show call trace: {}", err_msg);
+    }
+
+    // === パイプ区切り文字のテスト ===
+
+    #[tokio::test]
+    async fn test_pipe_separator_as_noop() {
+        let mut interp = Interpreter::new();
+
+        // パイプはコードとして実行されても何もしない（no-op）
+        // 10 | 20 + → スタックに30が積まれる
+        let result = interp.execute("[ 10 ] | [ 20 ] +").await;
+        assert!(result.is_ok(), "Pipe separator should work as no-op: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        // 結果が30であることを確認
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "30");
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pipe_separator_in_vector() {
+        let mut interp = Interpreter::new();
+
+        // ベクター内でパイプはシンボルとして保存される
+        // [ 'name' | 'Ajisai' ] → 長さ3のベクター
+        let result = interp.execute("[ 'name' | 'Ajisai' ]").await;
+        assert!(result.is_ok(), "Pipe in vector should work: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        // ベクターの長さが3であることを確認
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 3, "Vector should have 3 elements (name, |, Ajisai)");
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pipe_separator_multiple() {
+        let mut interp = Interpreter::new();
+
+        // 複数のパイプも正常に動作する
+        let result = interp.execute("[ 1 ] | | | [ 2 ] +").await;
+        assert!(result.is_ok(), "Multiple pipes should work: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        // 結果が3であることを確認
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "3");
+            } else {
+                panic!("Expected vector result");
+            }
+        }
     }
 }

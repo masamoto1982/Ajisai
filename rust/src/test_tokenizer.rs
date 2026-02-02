@@ -776,4 +776,83 @@ mod test_tokenizer {
         assert!(code_block_end_index.is_some(), "CodeBlockEnd should exist in tokens");
         println!("CodeBlockEnd at index: {:?}", code_block_end_index);
     }
+
+    // === パイプ区切り文字のテスト ===
+
+    #[test]
+    fn test_pipe_separator_basic() {
+        let custom_words = HashSet::new();
+
+        // パイプ区切り文字は特殊文字として認識される
+        let result = tokenize_with_custom_words("Key | Value", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::Symbol("Key".to_string()),
+            Token::Symbol("|".to_string()),
+            Token::Symbol("Value".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn test_pipe_separator_no_space() {
+        let custom_words = HashSet::new();
+
+        // スペースなしでもトークン分割される
+        let result = tokenize_with_custom_words("Key|Value", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::Symbol("Key".to_string()),
+            Token::Symbol("|".to_string()),
+            Token::Symbol("Value".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn test_pipe_separator_in_vector() {
+        let custom_words = HashSet::new();
+
+        // ベクター内でのパイプ区切り
+        let result = tokenize_with_custom_words("[ 'name' | 'Ajisai' ]", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::VectorStart,
+            Token::String("name".to_string()),
+            Token::Symbol("|".to_string()),
+            Token::String("Ajisai".to_string()),
+            Token::VectorEnd,
+        ]);
+    }
+
+    #[test]
+    fn test_pipe_separator_with_numbers() {
+        let custom_words = HashSet::new();
+
+        // 数値との組み合わせ
+        let result = tokenize_with_custom_words("10 | 20 +", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::Number("10".to_string()),
+            Token::Symbol("|".to_string()),
+            Token::Number("20".to_string()),
+            Token::Symbol("+".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn test_pipe_separator_dictionary_style() {
+        let custom_words = HashSet::new();
+
+        // 辞書スタイルの記述
+        let result = tokenize_with_custom_words("[ [ 'key1' | 'value1' ] [ 'key2' | 'value2' ] ]", &custom_words).unwrap();
+        assert_eq!(result, vec![
+            Token::VectorStart,
+            Token::VectorStart,
+            Token::String("key1".to_string()),
+            Token::Symbol("|".to_string()),
+            Token::String("value1".to_string()),
+            Token::VectorEnd,
+            Token::VectorStart,
+            Token::String("key2".to_string()),
+            Token::Symbol("|".to_string()),
+            Token::String("value2".to_string()),
+            Token::VectorEnd,
+            Token::VectorEnd,
+        ]);
+    }
 }
