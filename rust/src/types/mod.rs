@@ -138,6 +138,8 @@ pub struct Value {
     pub display_hint: DisplayHint,
     /// 音響ヒント（PLAYワードで使用）
     pub audio_hint: Option<AudioHint>,
+    /// パイプ区切り表示フラグ（表示時のみ使用、演算には影響しない）
+    pub pipe_separated: bool,
 }
 
 impl Value {
@@ -150,6 +152,7 @@ impl Value {
             data: ValueData::Nil,
             display_hint: DisplayHint::Nil,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -160,6 +163,7 @@ impl Value {
             data: ValueData::Scalar(f),
             display_hint: DisplayHint::Number,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -170,6 +174,7 @@ impl Value {
             data: ValueData::Scalar(Fraction::from(n)),
             display_hint: DisplayHint::Number,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -180,6 +185,7 @@ impl Value {
             data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
             display_hint: DisplayHint::Boolean,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -194,6 +200,7 @@ impl Value {
                 data: ValueData::Nil,
                 display_hint: DisplayHint::String,
                 audio_hint: None,
+                pipe_separated: false,
             };
         }
 
@@ -201,6 +208,7 @@ impl Value {
             data: ValueData::Vector(children),
             display_hint: DisplayHint::String,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -216,6 +224,7 @@ impl Value {
             data: ValueData::Vector(children),
             display_hint: DisplayHint::Auto,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -232,6 +241,21 @@ impl Value {
             data: ValueData::Vector(values),
             display_hint: DisplayHint::Auto,
             audio_hint: None,
+            pipe_separated: false,
+        }
+    }
+
+    /// パイプ区切りベクターを作成
+    pub fn from_vector_with_pipe(values: Vec<Value>) -> Self {
+        if values.is_empty() {
+            return Self::nil();
+        }
+
+        Self {
+            data: ValueData::Vector(values),
+            display_hint: DisplayHint::Auto,
+            audio_hint: None,
+            pipe_separated: true,
         }
     }
 
@@ -248,6 +272,7 @@ impl Value {
             data: ValueData::Scalar(f),
             display_hint: DisplayHint::DateTime,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -509,12 +534,14 @@ impl Value {
                 data: ValueData::Scalar(v[0].clone()),
                 display_hint: DisplayHint::Number,
                 audio_hint: None,
+                pipe_separated: false,
             };
         }
         Self {
             data: ValueData::Vector(v.into_iter().map(Value::from_fraction).collect()),
             display_hint: DisplayHint::Number,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -529,12 +556,14 @@ impl Value {
                 data: ValueData::Scalar(v[0].clone()),
                 display_hint: DisplayHint::Auto,
                 audio_hint: None,
+                pipe_separated: false,
             };
         }
         Self {
             data: ValueData::Vector(v.into_iter().map(Value::from_fraction).collect()),
             display_hint: DisplayHint::Auto,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 
@@ -581,6 +610,7 @@ impl Value {
             data: ValueData::CodeBlock(tokens),
             display_hint: DisplayHint::Auto,
             audio_hint: None,
+            pipe_separated: false,
         }
     }
 }

@@ -16,11 +16,11 @@ impl fmt::Display for Value {
                 if matches!(self.data, ValueData::Nil) {
                     write!(f, "NIL")
                 } else {
-                    write!(f, "{}", display_value(&self.data, 0))
+                    write!(f, "{}", display_value_inner(self, 0))
                 }
             }
-            DisplayHint::Auto => write!(f, "{}", auto_display(&self.data)),
-            DisplayHint::Number => write!(f, "{}", display_value(&self.data, 0)),
+            DisplayHint::Auto => write!(f, "{}", auto_display_value(self)),
+            DisplayHint::Number => write!(f, "{}", display_value_inner(self, 0)),
             DisplayHint::String => write!(f, "{}", display_as_string(&self.data)),
             DisplayHint::Boolean => write!(f, "{}", display_as_boolean(&self.data)),
             DisplayHint::DateTime => write!(f, "{}", display_as_datetime(&self.data)),
@@ -28,7 +28,24 @@ impl fmt::Display for Value {
     }
 }
 
-/// 自動判定による表示
+/// 自動判定による表示（Value全体を受け取る）
+fn auto_display_value(val: &Value) -> String {
+    match &val.data {
+        ValueData::Nil => "NIL".to_string(),
+        ValueData::Scalar(f) => format_fraction(f),
+        ValueData::Vector(v) => {
+            // すべてが印字可能な ASCII スカラーなら文字列として表示
+            if v.len() > 1 && looks_like_string(v) {
+                return display_as_string(&val.data);
+            }
+            // それ以外は数値として表示（pipe_separated情報を保持）
+            display_value_inner(val, 0)
+        }
+        ValueData::CodeBlock(tokens) => display_code_block(tokens),
+    }
+}
+
+/// 自動判定による表示（旧API互換）
 fn auto_display(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
@@ -64,8 +81,8 @@ fn looks_like_string(values: &[Value]) -> bool {
 }
 
 /// 再帰的にValueを表示（深さに応じた括弧）
-fn display_value(data: &ValueData, depth: usize) -> String {
-    match data {
+fn display_value_inner(val: &Value, depth: usize) -> String {
+    match &val.data {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::Vector(v) => {
@@ -79,13 +96,27 @@ fn display_value(data: &ValueData, depth: usize) -> String {
             let close = bracket.closing_char();
 
             let inner: Vec<String> = v.iter()
-                .map(|child| display_value(&child.data, depth + 1))
+                .map(|child| display_value_inner(child, depth + 1))
                 .collect();
 
-            format!("{} {} {}", open, inner.join(" "), close)
+            // パイプ区切りの場合は | で結合
+            let separator = if val.pipe_separated { " | " } else { " " };
+            format!("{} {} {}", open, inner.join(separator), close)
         }
         ValueData::CodeBlock(tokens) => display_code_block(tokens),
     }
+}
+
+/// 再帰的にValueを表示（深さに応じた括弧）- 旧API互換
+fn display_value(data: &ValueData, depth: usize) -> String {
+    // 旧API互換のため、pipe_separatedはfalseとして扱う
+    let temp_value = Value {
+        data: data.clone(),
+        display_hint: DisplayHint::Auto,
+        audio_hint: None,
+        pipe_separated: false,
+    };
+    display_value_inner(&temp_value, depth)
 }
 
 /// コードブロックを表示

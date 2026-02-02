@@ -83,7 +83,8 @@ impl Interpreter {
         interpreter
     }
 
-    fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
+    /// Returns (values, consumed, has_pipe_separator)
+    fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize, bool)> {
         self.collect_vector_with_depth(tokens, start_index, 1)
     }
 
@@ -129,7 +130,8 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed code block (missing ;)"))
     }
 
-    fn collect_vector_with_depth(&self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
+    /// Returns (values, consumed, has_pipe_separator)
+    fn collect_vector_with_depth(&self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize, bool)> {
         if depth > MAX_VISIBLE_DIMENSIONS {
             return Err(AjisaiError::from(format!(
                 "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
@@ -143,20 +145,26 @@ impl Interpreter {
 
         let mut values = Vec::new();
         let mut i = start_index + 1;
+        let mut has_pipe = false;
 
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart => {
-                    let (nested_values, consumed) = self.collect_vector_with_depth(tokens, i, depth + 1)?;
+                    let (nested_values, consumed, nested_has_pipe) = self.collect_vector_with_depth(tokens, i, depth + 1)?;
                     // 空のベクターは許容しない
                     if nested_values.is_empty() {
                         return Err(AjisaiError::from("Empty vector is not allowed. Use NIL for empty values."));
                     }
-                    values.push(Value::from_vector(nested_values));
+                    // パイプ区切りフラグを設定
+                    if nested_has_pipe {
+                        values.push(Value::from_vector_with_pipe(nested_values));
+                    } else {
+                        values.push(Value::from_vector(nested_values));
+                    }
                     i += consumed;
                 },
                 Token::VectorEnd => {
-                    return Ok((values, i - start_index + 1));
+                    return Ok((values, i - start_index + 1, has_pipe));
                 },
                 Token::Number(n) => {
                     values.push(Value::from_number(Fraction::from_str(n).map_err(AjisaiError::from)?));
@@ -167,8 +175,9 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::Symbol(s) => {
-                    // パイプ | は視覚的区切りのみ（データとしてスキップ）
+                    // パイプ | は視覚的区切りのみ（データとしてスキップ、フラグを立てる）
                     if s == "|" {
+                        has_pipe = true;
                         i += 1;
                         continue;
                     }
@@ -335,12 +344,17 @@ impl Interpreter {
                 },
                 // TRUE/FALSE/NIL are recognized as Symbols and executed as builtin words
                 Token::VectorStart => {
-                    let (values, consumed) = self.collect_vector(tokens, i)?;
+                    let (values, consumed, has_pipe) = self.collect_vector(tokens, i)?;
                     // 空のベクターは許容しない
                     if values.is_empty() {
                         return Err(AjisaiError::from("Empty vector is not allowed. Use NIL for empty values."));
                     }
-                    self.stack.push(Value::from_vector(values));
+                    // パイプ区切りフラグを設定
+                    if has_pipe {
+                        self.stack.push(Value::from_vector_with_pipe(values));
+                    } else {
+                        self.stack.push(Value::from_vector(values));
+                    }
                     i += consumed;
                     continue;
                 },
@@ -1605,6 +1619,23 @@ ADDTEST
             } else {
                 panic!("Expected vector result");
             }
+            // pipe_separatedフラグが立っていることを確認
+            assert!(val.pipe_separated, "Vector should have pipe_separated flag set");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pipe_separator_display() {
+        let mut interp = Interpreter::new();
+
+        // パイプ区切りベクターの表示確認
+        let result = interp.execute("[ 1 | 2 ]").await;
+        assert!(result.is_ok());
+
+        if let Some(val) = interp.stack.last() {
+            let display = format!("{}", val);
+            // 表示に | が含まれることを確認
+            assert!(display.contains("|"), "Display should contain pipe: {}", display);
         }
     }
 

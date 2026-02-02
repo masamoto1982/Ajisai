@@ -38,6 +38,7 @@ fn apply_not_to_value(val: &Value) -> Value {
                 data: ValueData::Scalar(result),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
+                pipe_separated: false,
             }
         }
         ValueData::Vector(children) => {
@@ -48,6 +49,7 @@ fn apply_not_to_value(val: &Value) -> Value {
                 data: ValueData::Vector(new_children),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
+                pipe_separated: false,
             }
         }
         ValueData::CodeBlock(_) => val.clone(),  // コードブロックにはNOTを適用しない
@@ -79,6 +81,7 @@ where
                 data: ValueData::Scalar(Fraction::from(if result { 1 } else { 0 })),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
+                pipe_separated: false,
             })
         }
 
@@ -92,6 +95,7 @@ where
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
+                pipe_separated: false,
             })
         }
 
@@ -105,6 +109,7 @@ where
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
+                pipe_separated: false,
             })
         }
 
@@ -120,6 +125,7 @@ where
                 data: ValueData::Vector(new_children?),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
+                pipe_separated: false,
             })
         }
     }
