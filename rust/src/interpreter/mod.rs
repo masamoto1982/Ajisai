@@ -167,6 +167,11 @@ impl Interpreter {
                     i += 1;
                 },
                 Token::Symbol(s) => {
+                    // パイプ | は視覚的区切りのみ（データとしてスキップ）
+                    if s == "|" {
+                        i += 1;
+                        continue;
+                    }
                     // TRUE/FALSE/NILは特別な値として処理
                     let upper = s.to_uppercase();
                     match upper.as_str() {
@@ -1587,16 +1592,16 @@ ADDTEST
     async fn test_pipe_separator_in_vector() {
         let mut interp = Interpreter::new();
 
-        // ベクター内でパイプはシンボルとして保存される
-        // [ 'name' | 'Ajisai' ] → 長さ3のベクター
+        // ベクター内でパイプは視覚的区切りのみ（データとしてスキップ）
+        // [ 'name' | 'Ajisai' ] → 長さ2のベクター [ "name", "Ajisai" ]
         let result = interp.execute("[ 'name' | 'Ajisai' ]").await;
         assert!(result.is_ok(), "Pipe in vector should work: {:?}", result);
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
-        // ベクターの長さが3であることを確認
+        // ベクターの長さが2であることを確認（|はデータに含まれない）
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 3, "Vector should have 3 elements (name, |, Ajisai)");
+                assert_eq!(children.len(), 2, "Vector should have 2 elements (name, Ajisai) - pipe is visual only");
             } else {
                 panic!("Expected vector result");
             }
