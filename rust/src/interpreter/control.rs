@@ -8,9 +8,11 @@
 // カスタムワードの繰り返し実行や遅延実行をサポートする。
 
 use crate::interpreter::Interpreter;
+use crate::interpreter::OperationTarget;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::types::{Value, ValueData, DisplayHint};
+use std::collections::HashSet;
 
 /// 値を文字列として解釈する（内部ヘルパー）
 fn value_as_string(val: &Value) -> Option<String> {
@@ -130,6 +132,104 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     interp.disable_no_change_check = saved_no_change_check;
 
     result
+}
+
+/// EXEC - ベクタ（またはスタック）をコードとして実行する
+///
+/// 【責務】
+/// - StackTopモード: スタックトップから値を1つポップし、それがVectorであればコードとして実行
+/// - Stackモード: スタック全体を取り出し、それらを要素とする一時的なVectorを生成してコードとして実行
+///
+/// 【使用法】
+/// - `[ 1 2 + ] EXEC` → [ 3 ]
+/// - `1 2 + .. EXEC` → [ 3 ] （スタック上のデータがコードとして実行される）
+///
+/// 【引数スタック】
+/// - StackTopモード: ベクタ（コードを表す）
+/// - Stackモード: スタック全体が対象
+///
+/// 【戻り値スタック】
+/// - 実行結果がスタックに残る
+pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
+    // 実行対象のValueを取得
+    let target_vector = match interp.operation_target {
+        OperationTarget::StackTop => {
+            interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+        },
+        OperationTarget::Stack => {
+            // スタック全体を取り出して一つのVectorにする
+            let all_elements: Vec<Value> = interp.stack.drain(..).collect();
+            Value::from_vector(all_elements)
+        }
+    };
+
+    // 実行前にoperation_targetをStackTopにリセット
+    // （実行されるコード内のワードはStackTopモードで動作する）
+    interp.operation_target = OperationTarget::StackTop;
+
+    // vector_execモジュールの機能を使って実行
+    crate::interpreter::vector_exec::execute_vector_as_code(interp, &target_vector)
+}
+
+/// EVAL - 文字列（またはスタック上の文字コード列）をパースして実行する
+///
+/// 【責務】
+/// - StackTopモード: スタックトップから値を1つポップし、文字列として解釈してパース・実行
+/// - Stackモード: スタック全体を取り出し、それらを文字コード列として結合してパース・実行
+///
+/// 【使用法】
+/// - `'1 2 +' EVAL` → [ 3 ]
+/// - `49 32 50 32 43 .. EVAL` → [ 3 ] （ASCII文字コードから "1 2 +" が復元され実行される）
+///
+/// 【引数スタック】
+/// - StackTopモード: 文字列値（DisplayHint::String）
+/// - Stackモード: スタック全体が文字コード列として扱われる
+///
+/// 【戻り値スタック】
+/// - 実行結果がスタックに残る
+pub(crate) fn op_eval(interp: &mut Interpreter) -> Result<()> {
+    // 実行対象のソースコード文字列（Rust String）を構築
+    let source_code = match interp.operation_target {
+        OperationTarget::StackTop => {
+            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            // ヘルパー関数を用いてValue -> String変換
+            value_as_string(&val)
+                .ok_or_else(|| AjisaiError::from("EVAL requires a string value"))?
+        },
+        OperationTarget::Stack => {
+            // スタック全体を文字コード列として結合
+            let all_elements: Vec<Value> = interp.stack.drain(..).collect();
+            if all_elements.is_empty() {
+                return Err(AjisaiError::from("EVAL requires at least one character on stack"));
+            }
+            // Vector化してから文字列変換
+            let temp_vec = Value::from_vector(all_elements);
+            value_as_string(&temp_vec)
+                .ok_or_else(|| AjisaiError::from("EVAL: cannot convert stack to string"))?
+        }
+    };
+
+    // 実行前にoperation_targetをStackTopにリセット
+    // （実行されるコード内のワードはStackTopモードで動作する）
+    interp.operation_target = OperationTarget::StackTop;
+
+    // トークナイズと実行
+    // カスタムワード辞書を取得
+    let custom_word_names: HashSet<String> = interp.dictionary.iter()
+        .filter(|(_, def)| !def.is_builtin)
+        .map(|(name, _)| name.clone())
+        .collect();
+
+    let tokens = crate::tokenizer::tokenize_with_custom_words(&source_code, &custom_word_names)
+        .map_err(|e| AjisaiError::from(format!("EVAL tokenization error: {}", e)))?;
+
+    let (_, action) = interp.execute_section_core(&tokens, 0)?;
+
+    if action.is_some() {
+        return Err(AjisaiError::from("Async operations not supported in EVAL"));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -397,5 +497,268 @@ mod tests {
                 panic!("Expected vector result");
             }
         }
+    }
+
+    // === EXEC テスト ===
+
+    #[tokio::test]
+    async fn test_exec_stack_top_simple() {
+        let mut interp = Interpreter::new();
+
+        // [ 1 1 + ] EXEC → Scalar(2)
+        // Note: When vector [ 1 1 + ] is converted to code "1 1 +",
+        // the numbers 1 and 1 become Scalars (not wrapped in vectors)
+        let result = interp.execute("[ 1 1 + ] EXEC").await;
+
+        assert!(result.is_ok(), "EXEC should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            // Since 1 1 + operates on Scalars, result is Scalar(2)
+            if let Some(f) = val.as_scalar() {
+                assert_eq!(f.to_i64().unwrap(), 2, "Result should be 2");
+            } else {
+                panic!("Expected scalar result, got {:?}", val.data);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_exec_stack_top_with_vectors() {
+        let mut interp = Interpreter::new();
+
+        // [ [ 2 ] [ 3 ] * ] EXEC → [ 6 ]
+        // Nested vectors remain as vectors when executed
+        let result = interp.execute("[ [ 2 ] [ 3 ] * ] EXEC").await;
+
+        assert!(result.is_ok(), "EXEC with vectors should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 6, "Result should be 6");
+                } else {
+                    panic!("Expected scalar inside vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_exec_stack_mode() {
+        let mut interp = Interpreter::new();
+
+        // [ 1 ] [ 1 ] '+' .. EXEC → [ 2 ]
+        // Stack elements are vectors, so result is a vector
+        let result = interp.execute("[ 1 ] [ 1 ] '+' .. EXEC").await;
+
+        assert!(result.is_ok(), "EXEC in Stack mode should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 2, "Result should be 2");
+                } else {
+                    panic!("Expected scalar inside vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_exec_stack_mode_multiplication() {
+        let mut interp = Interpreter::new();
+
+        // [ 2 ] [ 3 ] '*' .. EXEC → [ 6 ]
+        let result = interp.execute("[ 2 ] [ 3 ] '*' .. EXEC").await;
+
+        assert!(result.is_ok(), "EXEC Stack mode multiplication should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 6, "Result should be 6");
+                } else {
+                    panic!("Expected scalar inside vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    // === EVAL テスト ===
+
+    #[tokio::test]
+    async fn test_eval_stack_top_simple() {
+        let mut interp = Interpreter::new();
+
+        // '1 1 +' EVAL → Scalar(2)
+        // Note: Raw numbers become Scalars, not wrapped vectors
+        let result = interp.execute("'1 1 +' EVAL").await;
+
+        assert!(result.is_ok(), "EVAL should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let Some(f) = val.as_scalar() {
+                assert_eq!(f.to_i64().unwrap(), 2, "Result should be 2");
+            } else {
+                panic!("Expected scalar result, got {:?}", val.data);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_eval_stack_top_with_vectors() {
+        let mut interp = Interpreter::new();
+
+        // '[ 2 ] [ 3 ] *' EVAL → [ 6 ]
+        let result = interp.execute("'[ 2 ] [ 3 ] *' EVAL").await;
+
+        assert!(result.is_ok(), "EVAL with vectors should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 6, "Result should be 6");
+                } else {
+                    panic!("Expected scalar inside vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_eval_stack_mode_ascii() {
+        let mut interp = Interpreter::new();
+
+        // ASCII: 49='1', 32=' ', 50='2', 32=' ', 43='+'
+        // "1 2 +" → Scalar(3)
+        let result = interp.execute("[ 49 ] [ 32 ] [ 50 ] [ 32 ] [ 43 ] .. EVAL").await;
+
+        assert!(result.is_ok(), "EVAL in Stack mode should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let Some(f) = val.as_scalar() {
+                assert_eq!(f.to_i64().unwrap(), 3, "Result should be 3");
+            } else {
+                panic!("Expected scalar result, got {:?}", val.data);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_eval_stack_mode_bracket() {
+        let mut interp = Interpreter::new();
+
+        // ASCII: 91='[', 53='5', 93=']'
+        // "[5]" → [ 5 ]
+        let result = interp.execute("[ 91 ] [ 53 ] [ 93 ] .. EVAL").await;
+
+        assert!(result.is_ok(), "EVAL in Stack mode with brackets should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 5, "Result should be 5");
+                } else {
+                    panic!("Expected scalar inside vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_exec_with_custom_word() {
+        let mut interp = Interpreter::new();
+
+        // カスタムワードを定義してEXECで使用
+        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+
+        // [ [ 3 ] DOUBLE ] EXEC → [ 6 ]
+        let result = interp.execute("[ [ 3 ] DOUBLE ] EXEC").await;
+
+        assert!(result.is_ok(), "EXEC with custom word should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 6, "Result should be 6");
+                } else {
+                    panic!("Expected scalar inside vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_eval_with_custom_word() {
+        let mut interp = Interpreter::new();
+
+        // カスタムワードを定義してEVALで使用
+        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+
+        // '[ 3 ] DOUBLE' EVAL → [ 6 ]
+        let result = interp.execute("'[ 3 ] DOUBLE' EVAL").await;
+
+        assert!(result.is_ok(), "EVAL with custom word should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1, "Stack should have one element");
+
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1, "Result should have one element");
+                if let Some(f) = children[0].as_scalar() {
+                    assert_eq!(f.to_i64().unwrap(), 6, "Result should be 6");
+                } else {
+                    panic!("Expected scalar inside vector");
+                }
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_exec_empty_stack_error() {
+        let mut interp = Interpreter::new();
+
+        // 空のスタックでEXECはエラー
+        let result = interp.execute("EXEC").await;
+
+        assert!(result.is_err(), "EXEC on empty stack should fail");
+    }
+
+    #[tokio::test]
+    async fn test_eval_empty_stack_error() {
+        let mut interp = Interpreter::new();
+
+        // 空のスタックでEVALはエラー
+        let result = interp.execute("EVAL").await;
+
+        assert!(result.is_err(), "EVAL on empty stack should fail");
     }
 }

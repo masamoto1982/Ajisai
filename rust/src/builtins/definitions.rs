@@ -128,5 +128,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
 
         // Hash
         ("HASH", "Deterministic hash of any value", "'hello' HASH → [ 0.xxx ], [ 128 ] 'hello' HASH → 128-bit", "Hash"),
+
+        // Meta-programming
+        ("EXEC", "Execute vector (or stack) as code", "[ 1 2 + ] EXEC → 3, 1 2 + .. EXEC → 3", "Meta"),
+        ("EVAL", "Parse and execute string (or stack chars)", "'1 2 +' EVAL → 3", "Meta"),
     ]
 }
