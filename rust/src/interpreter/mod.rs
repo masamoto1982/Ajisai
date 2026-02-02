@@ -704,6 +704,8 @@ impl Interpreter {
             "FILTER" => higher_order::op_filter(self),
             "FOLD" => higher_order::op_fold(self),
             "TIMES" => control::execute_times(self),
+            "EXEC" => control::op_exec(self),
+            "EVAL" => control::op_eval(self),
             "WAIT" => {
                 Err(AjisaiError::from(
                     "WAIT should be handled by execute_section_core, not execute_builtin"
