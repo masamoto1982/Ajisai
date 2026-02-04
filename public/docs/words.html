@@ -38,6 +38,7 @@
           <table>
             <tr><th>Category</th><th>Words</th></tr>
             <tr><td>Target</td><td><code>.</code> <code>..</code></td></tr>
+            <tr><td>Consumption</td><td><code>,</code> <code>,,</code></td></tr>
             <tr><td>Input Helper</td><td><code>'</code> <code>FRAME</code></td></tr>
             <tr><td>Position</td><td><code>GET</code> <code>INSERT</code> <code>REPLACE</code> <code>REMOVE</code></td></tr>
             <tr><td>Quantity</td><td><code>LENGTH</code> <code>TAKE</code></td></tr>
@@ -71,6 +72,22 @@
             <p>Stack mode - operates on entire stack</p>
             <div class="word-example"><code>a b c .. REVERSE    # Result: c b a</code></div>
           </div>
+        </section>
+
+        <section>
+          <h3>Consumption Mode</h3>
+          <div class="word-item">
+            <h4>,</h4>
+            <p>Consume mode (default). Operands are removed from stack after operation.</p>
+            <div class="word-example"><code>[ 1 ] [ 2 ] , +    # Result: [ 3 ] (same as default)</code></div>
+          </div>
+          <div class="word-item">
+            <h4>,,</h4>
+            <p>Keep mode - operands remain on stack, result is added</p>
+            <div class="word-example"><code>[ 1 ] [ 2 ] ,, +    # Result: [ 1 ] [ 2 ] [ 3 ]
+[ 3 ] [ 4 ] ,, *    # Result: [ 3 ] [ 4 ] [ 12 ]</code></div>
+          </div>
+          <p class="note">Modifiers are order-independent: <code>,, ..</code> and <code>.. ,,</code> produce the same result.</p>
         </section>
 
         <section>
