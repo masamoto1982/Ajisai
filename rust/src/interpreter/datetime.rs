@@ -40,7 +40,7 @@
 // - 実在しない日時（2023-13-32など）はエラー
 // - 分数システムと親和性を保つ（サブ秒精度を分数で表現可能）
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::wrap_datetime;
 use crate::types::{Value, ValueData, DisplayHint};
@@ -115,7 +115,7 @@ extern "C" {
 
 pub fn op_now(interp: &mut Interpreter) -> Result<()> {
     // NOWはStackモードをサポートしない（日付時刻ワード）
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("NOW does not support Stack mode (..)"));
     }
 
@@ -166,7 +166,7 @@ extern "C" {
 
 pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     // DATETIMEはStackモードをサポートしない（日付時刻ワード）
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("DATETIME does not support Stack mode (..)"));
     }
 
@@ -289,7 +289,7 @@ extern "C" {
 
 pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // TIMESTAMPはStackモードをサポートしない（日付時刻ワード）
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("TIMESTAMP does not support Stack mode (..)"));
     }
 

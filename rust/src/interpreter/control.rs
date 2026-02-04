@@ -8,7 +8,7 @@
 // カスタムワードの繰り返し実行や遅延実行をサポートする。
 
 use crate::interpreter::Interpreter;
-use crate::interpreter::OperationTarget;
+use crate::interpreter::OperationTargetMode;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::types::{Value, ValueData, DisplayHint};
@@ -152,11 +152,11 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
 /// - 実行結果がスタックに残る
 pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
     // 実行対象のValueを取得
-    let target_vector = match interp.operation_target {
-        OperationTarget::StackTop => {
+    let target_vector = match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
         },
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             // スタック全体を取り出して一つのVectorにする
             let all_elements: Vec<Value> = interp.stack.drain(..).collect();
             Value::from_vector(all_elements)
@@ -165,7 +165,7 @@ pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
 
     // 実行前にoperation_targetをStackTopにリセット
     // （実行されるコード内のワードはStackTopモードで動作する）
-    interp.operation_target = OperationTarget::StackTop;
+    interp.operation_target_mode = OperationTargetMode::StackTop;
 
     // vector_execモジュールの機能を使って実行
     crate::interpreter::vector_exec::execute_vector_as_code(interp, &target_vector)
@@ -189,14 +189,14 @@ pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
 /// - 実行結果がスタックに残る
 pub(crate) fn op_eval(interp: &mut Interpreter) -> Result<()> {
     // 実行対象のソースコード文字列（Rust String）を構築
-    let source_code = match interp.operation_target {
-        OperationTarget::StackTop => {
+    let source_code = match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             // ヘルパー関数を用いてValue -> String変換
             value_as_string(&val)
                 .ok_or_else(|| AjisaiError::from("EVAL requires a string value"))?
         },
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             // スタック全体を文字コード列として結合
             let all_elements: Vec<Value> = interp.stack.drain(..).collect();
             if all_elements.is_empty() {
@@ -211,7 +211,7 @@ pub(crate) fn op_eval(interp: &mut Interpreter) -> Result<()> {
 
     // 実行前にoperation_targetをStackTopにリセット
     // （実行されるコード内のワードはStackTopモードで動作する）
-    interp.operation_target = OperationTarget::StackTop;
+    interp.operation_target_mode = OperationTargetMode::StackTop;
 
     // トークナイズと実行
     // カスタムワード辞書を取得

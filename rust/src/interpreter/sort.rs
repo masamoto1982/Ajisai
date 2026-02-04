@@ -7,7 +7,7 @@
 //
 // 統一Value宇宙アーキテクチャ版
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
@@ -43,8 +43,8 @@ fn introsort_fractions(values: &mut [(usize, Fraction)]) {
 
 /// SORT - 高速ソート
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             if is_vector_value(&val) {
@@ -101,7 +101,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(val);
             Err(AjisaiError::structure_error("vector", "other format"))
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             if interp.stack.is_empty() {
                 return Ok(());
             }

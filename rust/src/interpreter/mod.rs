@@ -30,13 +30,24 @@ use self::helpers::wrap_number;
 use gloo_timers::future::sleep;
 use std::time::Duration;
 
+/// 操作の対象（What）を決定するモード
 /// Operation target selector. Resets to StackTop after each word execution.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum OperationTarget {
+pub enum OperationTargetMode {
+    /// Operate on the top element (default, activated by `.`)
+    StackTop,
     /// Operate on the entire stack (activated by `..`)
     Stack,
-    /// Operate on the top element (default)
-    StackTop,
+}
+
+/// 値の扱い（How）を決定するモード
+/// Consumption mode selector. Resets to Consume after each word execution.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ConsumptionMode {
+    /// Consume values from stack (default, activated by `,`)
+    Consume,
+    /// Keep values on stack (activated by `,,`)
+    Keep,
 }
 
 /// Async action returned when async operation is needed during execution.
@@ -54,7 +65,10 @@ pub struct Interpreter {
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
-    pub(crate) operation_target: OperationTarget,
+    /// 操作の対象（What）を決定するモード
+    pub(crate) operation_target_mode: OperationTargetMode,
+    /// 値の扱い（How）を決定するモード
+    pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) force_flag: bool,
     pub(crate) disable_no_change_check: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
@@ -71,7 +85,8 @@ impl Interpreter {
             dependents: HashMap::new(),
             output_buffer: String::new(),
             definition_to_load: None,
-            operation_target: OperationTarget::StackTop,
+            operation_target_mode: OperationTargetMode::StackTop,
+            consumption_mode: ConsumptionMode::Consume,
             force_flag: false,
             disable_no_change_check: false,
             pending_tokens: None,
@@ -81,6 +96,26 @@ impl Interpreter {
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
+    }
+
+    // ========================================================================
+    // モード設定メソッド（Setters）
+    // ========================================================================
+
+    /// 操作対象モードを設定する
+    pub fn set_operation_target_mode(&mut self, mode: OperationTargetMode) {
+        self.operation_target_mode = mode;
+    }
+
+    /// 消費モードを設定する
+    pub fn set_consumption_mode(&mut self, mode: ConsumptionMode) {
+        self.consumption_mode = mode;
+    }
+
+    /// 両方のモードをデフォルト（StackTop, Consume）にリセットする
+    pub fn reset_modes(&mut self) {
+        self.operation_target_mode = OperationTargetMode::StackTop;
+        self.consumption_mode = ConsumptionMode::Consume;
     }
 
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
@@ -341,24 +376,32 @@ impl Interpreter {
                 },
                 Token::Symbol(s) => {
                     match s.as_str() {
+                        // ターゲット修飾子
                         ".." => {
-                            self.operation_target = OperationTarget::Stack;
+                            self.set_operation_target_mode(OperationTargetMode::Stack);
                         },
                         "." => {
-                            self.operation_target = OperationTarget::StackTop;
+                            self.set_operation_target_mode(OperationTargetMode::StackTop);
+                        },
+                        // 消費修飾子
+                        ",," => {
+                            self.set_consumption_mode(ConsumptionMode::Keep);
+                        },
+                        "," => {
+                            self.set_consumption_mode(ConsumptionMode::Consume);
                         },
                         _ => {
                             let upper = s.to_uppercase();
                             match upper.as_str() {
-                                        "WAIT" => {
+                                "WAIT" => {
                                     let action = self.prepare_wait_action()?;
                                     return Ok((i + 1, Some(action)));
                                 },
                                 _ => {
                                     self.execute_word_core(&upper)?;
-                                    // SEQ/SIM preserve operation_target for PLAY
+                                    // SEQ/SIM preserve modes for PLAY
                                     if upper != "SEQ" && upper != "SIM" {
-                                        self.operation_target = OperationTarget::StackTop;
+                                        self.reset_modes();
                                     }
                                 }
                             }
@@ -798,7 +841,7 @@ impl Interpreter {
         self.dependents.clear();
         self.output_buffer.clear();
         self.definition_to_load = None;
-        self.operation_target = OperationTarget::StackTop;
+        self.reset_modes();
         self.force_flag = false;
         self.pending_tokens = None;
         self.pending_token_index = 0;
@@ -1557,5 +1600,112 @@ ADDTEST
         // エラーメッセージにスタックトレースが含まれる
         assert!(err_msg.contains("A") && err_msg.contains("B") && err_msg.contains("C"),
             "Error message should show call trace: {}", err_msg);
+    }
+
+    // === 対称モードテスト ===
+
+    #[tokio::test]
+    async fn test_keep_mode_basic() {
+        let mut interp = Interpreter::new();
+        // Keepモード（,,）で加算：元の値が残り、結果が追加される
+        // [1] [2] ,, + → [1] [2] [3]
+        let result = interp.execute("[1] [2] ,, +").await;
+        assert!(result.is_ok(), "Keep mode addition should succeed: {:?}", result);
+
+        // スタックには3つの要素（元の[1], [2], 結果の[3]）
+        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode operation");
+    }
+
+    #[tokio::test]
+    async fn test_modifiers_order_independent_stack_keep() {
+        let mut interp = Interpreter::new();
+        // [1] [2] .. ,, + と [1] [2] ,, .. + が同じ挙動になるか確認
+        // Stackモード（..）+ Keepモード（,,）
+
+        // 順序1: .. ,,
+        let result1 = interp.execute("[1] [2] [3] [3] .. ,, +").await;
+        assert!(result1.is_ok(), "Stack+Keep mode (.. ,,) should succeed: {:?}", result1);
+        let stack1 = interp.stack.clone();
+
+        interp.execute_reset().unwrap();
+
+        // 順序2: ,, ..
+        let result2 = interp.execute("[1] [2] [3] [3] ,, .. +").await;
+        assert!(result2.is_ok(), "Stack+Keep mode (,, ..) should succeed: {:?}", result2);
+        let stack2 = interp.stack.clone();
+
+        // 両方の結果が同じであることを確認
+        assert_eq!(stack1.len(), stack2.len(),
+            "Both modifier orders should produce same stack length: {} vs {}",
+            stack1.len(), stack2.len());
+    }
+
+    #[tokio::test]
+    async fn test_consume_mode_default() {
+        let mut interp = Interpreter::new();
+        // デフォルトはConsumeモード
+        let result = interp.execute("[1] [2] +").await;
+        assert!(result.is_ok(), "Default consume mode should work: {:?}", result);
+
+        // スタックには1つの要素（結果の[3]のみ）
+        assert_eq!(interp.stack.len(), 1, "Stack should have 1 element after consume mode operation");
+    }
+
+    #[tokio::test]
+    async fn test_explicit_consume_mode() {
+        let mut interp = Interpreter::new();
+        // 明示的なConsumeモード（,）
+        let result = interp.execute("[1] [2] , +").await;
+        assert!(result.is_ok(), "Explicit consume mode should work: {:?}", result);
+
+        // スタックには1つの要素（結果の[3]のみ）
+        assert_eq!(interp.stack.len(), 1, "Stack should have 1 element after explicit consume mode");
+    }
+
+    #[tokio::test]
+    async fn test_mode_reset_after_word() {
+        let mut interp = Interpreter::new();
+        // モードはワード実行後にリセットされる
+        // 最初の+は Keep モードで実行
+        // 2番目の+は Consume モード（デフォルト）で実行
+        let result = interp.execute("[1] [2] ,, + [3] +").await;
+        assert!(result.is_ok(), "Mode should reset after word: {:?}", result);
+
+        // [1] [2] ,, + → [1] [2] [3]
+        // [1] [2] [3] [3] + → [1] [2] [6]  (consumeモードなので[3]が消費される)
+        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements: {:?}", interp.stack);
+    }
+
+    #[tokio::test]
+    async fn test_keep_mode_with_mul() {
+        let mut interp = Interpreter::new();
+        // Keepモードで乗算
+        let result = interp.execute("[3] [4] ,, *").await;
+        assert!(result.is_ok(), "Keep mode multiplication should succeed: {:?}", result);
+
+        // スタックには3つの要素（元の[3], [4], 結果の[12]）
+        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode multiplication");
+    }
+
+    #[tokio::test]
+    async fn test_keep_mode_with_sub() {
+        let mut interp = Interpreter::new();
+        // Keepモードで減算
+        let result = interp.execute("[10] [3] ,, -").await;
+        assert!(result.is_ok(), "Keep mode subtraction should succeed: {:?}", result);
+
+        // スタックには3つの要素（元の[10], [3], 結果の[7]）
+        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode subtraction");
+    }
+
+    #[tokio::test]
+    async fn test_keep_mode_with_div() {
+        let mut interp = Interpreter::new();
+        // Keepモードで除算
+        let result = interp.execute("[12] [4] ,, /").await;
+        assert!(result.is_ok(), "Keep mode division should succeed: {:?}", result);
+
+        // スタックには3つの要素（元の[12], [4], 結果の[3]）
+        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode division");
     }
 }

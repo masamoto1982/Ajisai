@@ -21,7 +21,7 @@
 //
 // ============================================================================
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
@@ -79,7 +79,7 @@ fn extract_positive_integer(val: &Value) -> Option<BigInt> {
 /// CSPRNG - 暗号論的疑似乱数を生成（分母指定モード対応）
 pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
     // CSPRNGはStackモード(..)をサポートしない
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("CSPRNG does not support Stack mode (..)"));
     }
 

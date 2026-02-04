@@ -4,7 +4,7 @@
 //! すべての値は再帰的ValueData構造で表現される。
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::interpreter::helpers::wrap_number;
 use crate::types::{Value, ValueData, DisplayHint, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
@@ -58,7 +58,7 @@ fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
 ///
 /// 形状は1次元Vectorとして返される
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target == OperationTarget::Stack {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("SHAPE does not support Stack (..) mode"));
     }
 
@@ -92,7 +92,7 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
 ///   [ 1 2 3 ] RANK           → [ 1 2 3 ] [ 1 ]
 ///   [ { 1 2 } { 3 4 } ] RANK → [ { 1 2 } { 3 4 } ] [ 2 ]
 pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target == OperationTarget::Stack {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("RANK does not support Stack (..) mode"));
     }
 
@@ -124,7 +124,7 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 注意: 3次元までに制限されています
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target == OperationTarget::Stack {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("RESHAPE does not support Stack (..) mode"));
     }
 
@@ -247,7 +247,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
 /// 使用法:
 ///   [ { 1 2 3 } { 4 5 6 } ] TRANSPOSE → [ { 1 4 } { 2 5 } { 3 6 } ]
 pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target == OperationTarget::Stack {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("TRANSPOSE does not support Stack (..) mode"));
     }
 
@@ -296,7 +296,7 @@ fn unary_math_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()
 where
     F: Fn(&Fraction) -> Fraction,
 {
-    if interp.operation_target == OperationTarget::Stack {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from(format!("{} does not support Stack (..) mode", op_name)));
     }
 
@@ -391,7 +391,7 @@ pub fn op_round(interp: &mut Interpreter) -> Result<()> {
 ///   [ -7 ] [ 3 ] MOD → [ 2 ]   # 数学的剰余
 ///   [ 7 8 9 ] [ 3 ] MOD → [ 1 2 0 ]  # ブロードキャスト
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target == OperationTarget::Stack {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("MOD does not support Stack (..) mode"));
     }
 
@@ -624,7 +624,7 @@ where
 /// 引数ベクタの最後の要素が埋める値、それより前が形状
 /// 注意: 3次元までに制限されています
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target == OperationTarget::Stack {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("FILL does not support Stack (..) mode"));
     }
 

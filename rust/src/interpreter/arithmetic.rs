@@ -2,9 +2,9 @@
 //
 // Unified Fraction Architecture: all values are fractions. No type checking.
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::get_integer_from_value;
+use crate::interpreter::helpers::{get_integer_from_value, get_operands, push_result};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
@@ -72,30 +72,43 @@ fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
-            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-            let result = match broadcast_binary_op(&a_val, &b_val, op) {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
+            // get_operands を使用してオペランドを取得
+            let operands = get_operands(interp, 2)?;
+            let a_val = &operands[0];
+            let b_val = &operands[1];
+
+            let result = match broadcast_binary_op(a_val, b_val, op) {
                 Ok(r) => r,
                 Err(e) => {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
+                    // エラー時、Consume モードの場合は値を復元
+                    if !is_keep_mode {
+                        for val in operands {
+                            interp.stack.push(val);
+                        }
+                    }
                     return Err(e);
                 }
             };
 
-            if !interp.disable_no_change_check && (result == a_val || result == b_val) {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
+            if !interp.disable_no_change_check && (result == *a_val || result == *b_val) {
+                // エラー時、Consume モードの場合は値を復元
+                if !is_keep_mode {
+                    for val in operands {
+                        interp.stack.push(val);
+                    }
+                }
                 return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
             }
 
-            interp.stack.push(result);
+            push_result(interp, result);
         },
 
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
+            // Stack モードでは、カウント値は常に消費する
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
@@ -114,10 +127,18 @@ where
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count ..).collect();
+            // Keep モードの場合は peek、Consume モードの場合は drain
+            let items: Vec<Value> = if is_keep_mode {
+                let stack_len = interp.stack.len();
+                interp.stack[stack_len - count..].iter().cloned().collect()
+            } else {
+                interp.stack.drain(interp.stack.len() - count..).collect()
+            };
 
             if items.iter().any(|v| !is_single_scalar(v)) {
-                interp.stack.extend(items);
+                if !is_keep_mode {
+                    interp.stack.extend(items);
+                }
                 interp.stack.push(count_val);
                 return Err(AjisaiError::from("STACK mode requires single-element values"));
             }
@@ -133,12 +154,14 @@ where
             }
 
             if !interp.disable_no_change_check && acc == original_first {
-                interp.stack.extend(items);
+                if !is_keep_mode {
+                    interp.stack.extend(items);
+                }
                 interp.stack.push(count_val);
                 return Err(AjisaiError::from("STACK operation resulted in no change"));
             }
 
-            interp.stack.push(Value::from_fraction(acc));
+            push_result(interp, Value::from_fraction(acc));
         }
     }
     Ok(())
@@ -153,34 +176,45 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target == OperationTarget::StackTop {
-        if let (Some(b_val), Some(a_val)) = (interp.stack.pop(), interp.stack.pop()) {
-            if a_val.is_nil() || b_val.is_nil() {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::from("Cannot operate with NIL"));
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    if interp.operation_target_mode == OperationTargetMode::StackTop {
+        let operands = get_operands(interp, 2)?;
+        let a_val = &operands[0];
+        let b_val = &operands[1];
+
+        if a_val.is_nil() || b_val.is_nil() {
+            if !is_keep_mode {
+                for val in operands {
+                    interp.stack.push(val);
+                }
             }
+            return Err(AjisaiError::from("Cannot operate with NIL"));
+        }
 
-            let result = apply_optimized_mul(&a_val, &b_val);
+        let result = apply_optimized_mul(a_val, b_val);
 
-            match result {
-                Ok(r) => {
-                    if !interp.disable_no_change_check && (r == a_val || r == b_val) {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
-                        return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+        match result {
+            Ok(r) => {
+                if !interp.disable_no_change_check && (r == *a_val || r == *b_val) {
+                    if !is_keep_mode {
+                        for val in operands {
+                            interp.stack.push(val);
+                        }
                     }
-                    interp.stack.push(r);
-                    return Ok(());
+                    return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
                 }
-                Err(e) => {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
-                    return Err(e);
-                }
+                push_result(interp, r);
+                return Ok(());
             }
-        } else {
-            return Err(AjisaiError::StackUnderflow);
+            Err(e) => {
+                if !is_keep_mode {
+                    for val in operands {
+                        interp.stack.push(val);
+                    }
+                }
+                return Err(e);
+            }
         }
     }
 
@@ -246,34 +280,45 @@ fn apply_scalar_mul_to_value(scalar: &Fraction, val: &Value) -> Value {
 }
 
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target == OperationTarget::StackTop {
-        if let (Some(b_val), Some(a_val)) = (interp.stack.pop(), interp.stack.pop()) {
-            if a_val.is_nil() || b_val.is_nil() {
-                interp.stack.push(a_val);
-                interp.stack.push(b_val);
-                return Err(AjisaiError::from("Cannot operate with NIL"));
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    if interp.operation_target_mode == OperationTargetMode::StackTop {
+        let operands = get_operands(interp, 2)?;
+        let a_val = &operands[0];
+        let b_val = &operands[1];
+
+        if a_val.is_nil() || b_val.is_nil() {
+            if !is_keep_mode {
+                for val in operands {
+                    interp.stack.push(val);
+                }
             }
+            return Err(AjisaiError::from("Cannot operate with NIL"));
+        }
 
-            let result = apply_optimized_div(&a_val, &b_val);
+        let result = apply_optimized_div(a_val, b_val);
 
-            match result {
-                Ok(r) => {
-                    if !interp.disable_no_change_check && (r == a_val || r == b_val) {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
-                        return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+        match result {
+            Ok(r) => {
+                if !interp.disable_no_change_check && (r == *a_val || r == *b_val) {
+                    if !is_keep_mode {
+                        for val in operands {
+                            interp.stack.push(val);
+                        }
                     }
-                    interp.stack.push(r);
-                    return Ok(());
+                    return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
                 }
-                Err(e) => {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
-                    return Err(e);
-                }
+                push_result(interp, r);
+                return Ok(());
             }
-        } else {
-            return Err(AjisaiError::StackUnderflow);
+            Err(e) => {
+                if !is_keep_mode {
+                    for val in operands {
+                        interp.stack.push(val);
+                    }
+                }
+                return Err(e);
+            }
         }
     }
 

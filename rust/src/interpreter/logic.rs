@@ -4,7 +4,7 @@
 //
 // 論理演算（0 = false、非0 = true）
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::types::{Value, ValueData, DisplayHint};
@@ -135,8 +135,8 @@ where
 /// - ゼロなら 1、非ゼロなら 0
 /// - NIL なら NIL を返す（不明の否定は不明）
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // NILの場合はNILを返す（Kleene三値論理: NOT NIL = NIL）
@@ -150,7 +150,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(result);
             Ok(())
         },
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             // Stackモードは単項演算子では意味が不明確なため未対応
             Err(AjisaiError::from("NOT does not support Stack (..) mode"))
         }
@@ -165,8 +165,8 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 /// - TRUE AND NIL = NIL（不明が伝播）
 /// - NIL AND NIL = NIL（不明が伝播）
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
@@ -204,7 +204,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         },
 
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
@@ -250,8 +250,8 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 /// - FALSE OR NIL = NIL（不明が伝播）
 /// - NIL OR NIL = NIL（不明が伝播）
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
@@ -289,7 +289,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         },
 
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 

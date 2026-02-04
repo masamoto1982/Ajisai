@@ -4,7 +4,7 @@
 //
 // 比較演算の結果は Boolean ヒント付きの値として返す
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::types::{Value, ValueData};
@@ -38,9 +38,9 @@ fn binary_comparison_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
-    match interp.operation_target {
+    match interp.operation_target_mode {
         // StackTopモード: 2つの単一要素値を比較
-        OperationTarget::StackTop => {
+        OperationTargetMode::StackTop => {
             if interp.stack.len() < 2 {
                 return Err(AjisaiError::StackUnderflow);
             }
@@ -72,7 +72,7 @@ where
         },
 
         // Stackモード: N個の要素を順に比較
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
@@ -139,9 +139,9 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
 ///
 /// データが完全に等しいかを比較（DisplayHintは無視）
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
+    match interp.operation_target_mode {
         // StackTopモード: 2つの値を比較
-        OperationTarget::StackTop => {
+        OperationTargetMode::StackTop => {
             if interp.stack.len() < 2 {
                 return Err(AjisaiError::StackUnderflow);
             }
@@ -156,7 +156,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
         },
 
         // Stackモード: N個の要素を順に比較
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
