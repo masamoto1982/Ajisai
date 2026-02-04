@@ -6,7 +6,7 @@
 // すべての値は Vec<Fraction> として表現される。
 // 文字列は分数のベクタ（各要素がコードポイント）として格納される。
 
-use crate::interpreter::{Interpreter, WordDefinition, OperationTarget};
+use crate::interpreter::{Interpreter, WordDefinition, OperationTargetMode};
 use crate::interpreter::helpers::get_word_name_from_value;
 use crate::interpreter::vector_exec::vector_to_source;
 use crate::error::{AjisaiError, Result};
@@ -76,7 +76,7 @@ fn is_string_like(val: &Value) -> bool {
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // DEFはStackモードをサポートしない（辞書操作ワード）
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("DEF does not support Stack mode (..)"));
     }
 
@@ -297,7 +297,7 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     // DELはStackモードをサポートしない（辞書操作ワード）
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("DEL does not support Stack mode (..)"));
     }
 
@@ -367,7 +367,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     // ?はStackモードをサポートしない（辞書操作ワード）
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("? (LOOKUP) does not support Stack mode (..)"));
     }
 

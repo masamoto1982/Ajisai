@@ -24,7 +24,7 @@ use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData, DisplayHint, AudioHint, Envelope, WaveformType};
 use crate::types::fraction::Fraction;
 use super::Interpreter;
-use super::OperationTarget;
+use super::OperationTargetMode;
 use num_traits::ToPrimitive;
 use serde::Serialize;
 
@@ -447,16 +447,16 @@ fn set_waveform(interp: &mut Interpreter, waveform: WaveformType) -> Result<()> 
 /// PLAY ワードのエントリポイント
 pub fn op_play(interp: &mut Interpreter) -> Result<()> {
     let mode = interp.play_mode;
-    let target = interp.operation_target;
+    let target = interp.operation_target_mode;
 
     match target {
-        OperationTarget::StackTop => {
+        OperationTargetMode::StackTop => {
             // スタックトップのベクタを処理
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let structure = build_audio_structure(&val, mode, &mut interp.output_buffer)?;
             output_play_command(&structure, &mut interp.output_buffer);
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             // スタック全体の各要素を処理
             let values: Vec<Value> = interp.stack.drain(..).collect();
             if values.is_empty() {
@@ -488,7 +488,7 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
 
     // リセット
     interp.play_mode = PlayMode::Sequential;
-    interp.operation_target = OperationTarget::StackTop;
+    interp.operation_target_mode = OperationTargetMode::StackTop;
 
     Ok(())
 }

@@ -8,7 +8,7 @@
 //
 // 統一Value宇宙アーキテクチャ版
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index, wrap_number};
 use crate::types::{Value, ValueData};
@@ -71,8 +71,8 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let target_val = interp.stack.pop().ok_or_else(|| {
                 interp.stack.push(index_val.clone());
                 AjisaiError::StackUnderflow
@@ -106,7 +106,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let stack_len = interp.stack.len();
             if stack_len == 0 {
                 interp.stack.push(index_val);
@@ -180,8 +180,8 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("INSERT requires [index element]"));
     };
 
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let vector_val = interp.stack.pop().ok_or_else(|| {
                 interp.stack.push(args_val.clone());
                 AjisaiError::StackUnderflow
@@ -205,7 +205,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let len = interp.stack.len() as i64;
             let insert_index = if index < 0 {
                 (len + index).max(0) as usize
@@ -269,8 +269,8 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("REPLACE requires [index element]"));
     };
 
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let vector_val = interp.stack.pop().ok_or_else(|| {
                 interp.stack.push(args_val.clone());
                 AjisaiError::StackUnderflow
@@ -297,7 +297,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let len = interp.stack.len();
             let actual_index = match normalize_index(index, len) {
                 Some(idx) => idx,
@@ -343,8 +343,8 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let vector_val = interp.stack.pop().ok_or_else(|| {
                 interp.stack.push(index_val.clone());
                 AjisaiError::StackUnderflow
@@ -376,7 +376,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let len = interp.stack.len();
             let actual_index = match normalize_index(index, len) {
                 Some(idx) => idx,
@@ -416,8 +416,8 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
 /// 【エラー】
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    let len = match interp.operation_target {
-        OperationTarget::StackTop => {
+    let len = match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             if target_val.is_nil() {
@@ -434,7 +434,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::structure_error("vector", "other format"));
             }
         }
-        OperationTarget::Stack => interp.stack.len(),
+        OperationTargetMode::Stack => interp.stack.len(),
     };
     let len_frac = Fraction::new(BigInt::from(len), BigInt::one());
     interp.stack.push(wrap_number(len_frac));
@@ -474,8 +474,8 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let vector_val = interp.stack.pop().ok_or_else(|| {
                 interp.stack.push(count_val.clone());
                 AjisaiError::StackUnderflow
@@ -515,7 +515,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let len = interp.stack.len();
             if count < 0 {
                 let abs_count = (-count) as usize;
@@ -594,8 +594,8 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("SPLIT requires [sizes...] vector"));
     };
 
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let vector_val = interp.stack.pop().ok_or_else(|| {
                 interp.stack.push(args_val.clone());
                 AjisaiError::from("SPLIT requires a vector to split")
@@ -630,7 +630,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let total_size: usize = sizes.iter().sum();
             if total_size > interp.stack.len() {
                 interp.stack.push(args_val);
@@ -683,8 +683,8 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 /// 【エラー】
 /// - カウントがスタック長を超える場合
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             // スタックトップからcountを取得（オプション、デフォルトは2）
             // count_value_optはポップした引数を追跡し、エラー時に復元する
             let (count_i64, count_value_opt) = if let Some(top) = interp.stack.last() {
@@ -735,7 +735,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(Value::from_vector(result_vec));
             Ok(())
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             // Stackモード: スタックトップがcountかチェック、なければスタック全体
             // count_value_optはポップした引数を追跡し、エラー時に復元する
             let (count_i64, count_value_opt) = if let Some(top) = interp.stack.last() {
@@ -810,8 +810,8 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
 /// - 回文の場合（変化なし）
 /// - 対象がベクタでない場合（StackTopモード）
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             if is_vector_value(&val) {
@@ -840,7 +840,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             // "No change is an error" チェック（disable_no_change_check で無効化可能）
             if !interp.disable_no_change_check {
                 if interp.stack.len() < 2 {
@@ -1060,8 +1060,8 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let target_val = interp.stack.pop().ok_or_else(|| {
                 interp.stack.push(indices_val.clone());
                 AjisaiError::StackUnderflow
@@ -1103,7 +1103,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                 Err(AjisaiError::structure_error("vector", "other format"))
             }
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             let len = interp.stack.len();
 
             if len == 0 {

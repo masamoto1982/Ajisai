@@ -10,6 +10,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
+use crate::interpreter::{Interpreter, ConsumptionMode};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
@@ -207,6 +208,67 @@ pub fn wrap_number(fraction: Fraction) -> Value {
 /// - DateTime ヒント付きのスカラーValue
 pub fn wrap_datetime(fraction: Fraction) -> Value {
     Value::from_datetime(fraction)
+}
+
+// ============================================================================
+// オペランド取得関数
+// ============================================================================
+
+/// スタックからオペランドを取得する
+///
+/// 【責務】
+/// - consumption_mode に基づいて値を取得
+/// - Consume: スタックから pop して値を返す
+/// - Keep: スタックの上位 count 個を peek (clone) して値を返す（スタックは変更しない）
+///
+/// 【用途】
+/// - 各ワード実装で統一的にオペランドを取得
+/// - モードを意識せずに実装可能
+///
+/// 【引数】
+/// - interp: インタープリタへのミュータブル参照
+/// - count: 取得するオペランドの数
+///
+/// 【戻り値】
+/// - Ok(Vec<Value>): 取得した値のベクタ（スタックの上から順に取得、結果は逆順で返す）
+/// - Err: スタック不足の場合
+pub fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
+    if interp.stack.len() < count {
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    match interp.consumption_mode {
+        ConsumptionMode::Consume => {
+            // スタックから pop して値を返す（逆順で返す：最初にpopした値が末尾）
+            let mut values = Vec::with_capacity(count);
+            for _ in 0..count {
+                values.push(interp.stack.pop().unwrap());
+            }
+            values.reverse(); // [a, b] + の場合、a が先、b が後
+            Ok(values)
+        }
+        ConsumptionMode::Keep => {
+            // スタックの上位 count 個を peek (clone) して値を返す
+            let stack_len = interp.stack.len();
+            let values: Vec<Value> = interp.stack[stack_len - count..]
+                .iter()
+                .cloned()
+                .collect();
+            Ok(values)
+        }
+    }
+}
+
+/// 結果をスタックにプッシュする
+///
+/// 【責務】
+/// - Keep モードの場合は元の値がスタックに残っているので、結果のみをプッシュ
+/// - Consume モードの場合も結果をプッシュ
+///
+/// 【用途】
+/// - get_operands と組み合わせて使用
+pub fn push_result(interp: &mut Interpreter, result: Value) {
+    interp.stack.push(result);
 }
 
 // ============================================================================

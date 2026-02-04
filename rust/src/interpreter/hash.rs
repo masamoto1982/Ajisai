@@ -41,7 +41,7 @@
 //
 // ============================================================================
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::fraction::Fraction;
@@ -284,7 +284,7 @@ fn extract_positive_integer(val: &Value) -> Option<u32> {
 /// - ビット数が32未満または1024超
 pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
     // HASHはStackモード(..)をサポートしない
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("HASH does not support Stack mode (..)"));
     }
 

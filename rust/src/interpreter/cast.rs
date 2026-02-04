@@ -7,7 +7,7 @@
 // DisplayHint は表示目的のみに使用し、演算には使用しない。
 // 「型変換」は実質的に DisplayHint の変更と、表示形式の変換である。
 
-use crate::interpreter::{Interpreter, OperationTarget};
+use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::wrap_number;
 use crate::types::{Value, ValueData, DisplayHint};
@@ -80,7 +80,7 @@ fn is_datetime_value(val: &Value) -> bool {
 /// 【エラー】
 /// - 入力が既にStringの場合（「変化なしはエラー」原則）
 pub fn op_str(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("STR does not support Stack (..) mode"));
     }
 
@@ -159,7 +159,7 @@ fn fraction_to_string(f: &Fraction) -> String {
 /// 【エラー】
 /// - 入力がStringでない場合（「変化なしはエラー」原則）
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("NUM does not support Stack (..) mode"));
     }
 
@@ -229,7 +229,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 /// 【エラー】
 /// - 入力が既にBooleanの場合（「変化なしはエラー」原則）
 pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("BOOL does not support Stack (..) mode"));
     }
 
@@ -291,7 +291,7 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 /// - Number型
 /// - Nil型（同型変換）
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("NIL does not support Stack (..) mode"));
     }
 
@@ -345,8 +345,8 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
 /// - 空文字列
 /// - String以外の型
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // NILの場合
@@ -387,7 +387,7 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(val);
             Err(AjisaiError::from("CHARS: requires string format"))
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             // スタック上の各要素に対してCHARSを適用
             let stack_len = interp.stack.len();
             if stack_len == 0 {
@@ -457,8 +457,8 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
 /// - 空ベクタ
 /// - String/Number以外の要素を含む場合
 pub fn op_join(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target {
-        OperationTarget::StackTop => {
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
             // NILの場合
@@ -536,7 +536,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(val);
             Err(AjisaiError::from(format!("JOIN: requires vector format, got {}", type_name)))
         }
-        OperationTarget::Stack => {
+        OperationTargetMode::Stack => {
             // スタック上の各ベクタに対してJOINを適用
             let stack_len = interp.stack.len();
             if stack_len == 0 {
@@ -650,7 +650,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 /// - 入力が有効なUnicodeコードポイントでない場合
 /// - 入力が数値でない場合
 pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target != OperationTarget::StackTop {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::from("CHR does not support Stack (..) mode"));
     }
 
