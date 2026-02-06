@@ -387,3 +387,202 @@ mod dimension_limit_tests {
         assert!(result.is_ok(), ".. operation should succeed");
     }
 }
+
+#[cfg(test)]
+mod tensor_ops_integration_tests {
+    use crate::interpreter::Interpreter;
+
+    #[tokio::test]
+    async fn test_shape_1d() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 ] SHAPE").await.unwrap();
+        let stack = interp.get_stack();
+        // SHAPE consumes the vector and pushes shape
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ 3 }");
+    }
+
+    #[tokio::test]
+    async fn test_shape_2d() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ 2 3 }");
+    }
+
+    #[tokio::test]
+    async fn test_shape_keep_mode() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 ] ,, SHAPE").await.unwrap();
+        let stack = interp.get_stack();
+        // Keep mode: original + shape
+        assert_eq!(stack.len(), 2);
+        let original = format!("{}", stack[0]);
+        assert_eq!(original, "{ 1 2 3 }");
+        let shape = format!("{}", stack[1]);
+        assert_eq!(shape, "{ 3 }");
+    }
+
+    #[tokio::test]
+    async fn test_rank_1d() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 ] RANK").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "1"); // RANK returns a scalar
+    }
+
+    #[tokio::test]
+    async fn test_rank_2d() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 ] [ 3 4 ] ] RANK").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "2"); // RANK returns a scalar
+    }
+
+    #[tokio::test]
+    async fn test_reshape_basic() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ ( 1 2 3 ) ( 4 5 6 ) }");
+    }
+
+    #[tokio::test]
+    async fn test_reshape_3d() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ ( 1 2 ) ( 3 4 ) ( 5 6 ) }");
+    }
+
+    #[tokio::test]
+    async fn test_transpose_basic() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ ( 1 4 ) ( 2 5 ) ( 3 6 ) }");
+    }
+
+    #[tokio::test]
+    async fn test_fill_basic() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 3 0 ] FILL").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ 0 0 0 }");
+    }
+
+    #[tokio::test]
+    async fn test_fill_2d() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 2 3 5 ] FILL").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ ( 5 5 5 ) ( 5 5 5 ) }");
+    }
+
+    #[tokio::test]
+    async fn test_shape_nil_propagation() {
+        let mut interp = Interpreter::new();
+        interp.execute("NIL SHAPE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil(), "SHAPE of NIL should return NIL (Map type NIL propagation)");
+    }
+
+    #[tokio::test]
+    async fn test_transpose_nil_returns_nil() {
+        let mut interp = Interpreter::new();
+        interp.execute("NIL TRANSPOSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil(), "TRANSPOSE of NIL should return NIL (Form type: NIL = empty set)");
+    }
+}
+
+#[cfg(test)]
+mod unicode_tests {
+    use crate::interpreter::Interpreter;
+    use crate::types::Value;
+
+    #[test]
+    fn test_from_string_ascii() {
+        let val = Value::from_string("A");
+        // 'A' = U+0041 = 65
+        let fracs = val.flatten_fractions();
+        assert_eq!(fracs.len(), 1);
+        assert_eq!(fracs[0].to_i64(), Some(65));
+    }
+
+    #[test]
+    fn test_from_string_unicode_japanese() {
+        let val = Value::from_string("あ");
+        // 'あ' = U+3042 = 12354
+        let fracs = val.flatten_fractions();
+        assert_eq!(fracs.len(), 1, "Japanese char should be 1 code point, not multiple bytes");
+        assert_eq!(fracs[0].to_i64(), Some(12354));
+    }
+
+    #[test]
+    fn test_from_string_emoji() {
+        let val = Value::from_string("🌸");
+        // '🌸' = U+1F338 = 127800
+        let fracs = val.flatten_fractions();
+        assert_eq!(fracs.len(), 1, "Emoji should be 1 code point");
+        assert_eq!(fracs[0].to_i64(), Some(127800));
+    }
+
+    #[test]
+    fn test_from_string_mixed() {
+        let val = Value::from_string("Aあ");
+        let fracs = val.flatten_fractions();
+        assert_eq!(fracs.len(), 2, "Should have 2 code points");
+        assert_eq!(fracs[0].to_i64(), Some(65));   // 'A'
+        assert_eq!(fracs[1].to_i64(), Some(12354)); // 'あ'
+    }
+
+    #[tokio::test]
+    async fn test_chr_japanese() {
+        let mut interp = Interpreter::new();
+        // 12354 CHR → 'あ'
+        interp.execute("12354 CHR").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'あ'");
+    }
+
+    #[tokio::test]
+    async fn test_string_display_unicode() {
+        let mut interp = Interpreter::new();
+        interp.execute("'Hello'").await.unwrap();
+        let stack = interp.get_stack();
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'Hello'");
+    }
+
+    #[tokio::test]
+    async fn test_chars_join_unicode_roundtrip() {
+        let mut interp = Interpreter::new();
+        interp.execute("'hello' CHARS JOIN").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'hello'");
+    }
+}

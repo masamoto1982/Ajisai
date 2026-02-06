@@ -51,8 +51,17 @@ fn looks_like_string(values: &[Value]) -> bool {
         if let ValueData::Scalar(f) = &v.data {
             f.is_integer() && {
                 if let Some(n) = f.to_i64() {
-                    // 印字可能 ASCII または一般的な制御文字
-                    (n >= 32 && n < 127) || n == 10 || n == 13 || n == 9
+                    // 有効なUnicodeコードポイントで、印字可能または一般的な制御文字
+                    if n >= 0 && n <= 0x10FFFF {
+                        if let Some(c) = char::from_u32(n as u32) {
+                            // 印字可能文字、改行、タブ等
+                            !c.is_control() || c == '\n' || c == '\r' || c == '\t'
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
@@ -124,17 +133,18 @@ fn format_fraction(f: &Fraction) -> String {
 
 /// 文字列として表示
 ///
-/// UTF-8バイト列として保存されたデータを文字列に復元する。
-/// 各Fractionは0-255のバイト値として解釈される。
+/// Unicodeコードポイントとして保存されたデータを文字列に復元する。
+/// 各FractionはUnicodeコードポイント（0-0x10FFFF）として解釈される。
 fn display_as_string(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "''".to_string(),
         ValueData::Scalar(f) => {
-            // 単一文字
+            // 単一文字（Unicodeコードポイント）
             if let Some(n) = f.to_i64() {
-                if n >= 0 && n <= 255 {
-                    let c = n as u8 as char;
-                    return format!("'{}'", c);
+                if n >= 0 && n <= 0x10FFFF {
+                    if let Some(c) = char::from_u32(n as u32) {
+                        return format!("'{}'", c);
+                    }
                 }
             }
             format!("'{}'", format_fraction(f))
@@ -144,13 +154,13 @@ fn display_as_string(data: &ValueData) -> String {
                 return "''".to_string();
             }
 
-            // 各Valueをバイトとして収集
-            let bytes: Vec<u8> = v.iter()
+            // 各ValueをUnicodeコードポイントとして収集
+            let chars: String = v.iter()
                 .filter_map(|child| {
                     if let ValueData::Scalar(f) = &child.data {
                         f.to_i64().and_then(|n| {
-                            if n >= 0 && n <= 255 {
-                                Some(n as u8)
+                            if n >= 0 && n <= 0x10FFFF {
+                                char::from_u32(n as u32)
                             } else {
                                 None
                             }
@@ -161,8 +171,6 @@ fn display_as_string(data: &ValueData) -> String {
                 })
                 .collect();
 
-            // UTF-8として復元
-            let chars = String::from_utf8_lossy(&bytes);
             format!("'{}'", chars)
         }
         ValueData::CodeBlock(tokens) => display_code_block(tokens),

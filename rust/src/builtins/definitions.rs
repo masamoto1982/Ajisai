@@ -121,6 +121,13 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("WAIT", "Execute word after delay (ms)", "'PROCESS' [ 1000 ] WAIT", "Control Flow"),
         ("!", "Force flag - allow DEL/DEF of dependent words", "! 'WORD' DEL", "Control Flow"),
 
+        // Shape operations
+        ("SHAPE", "Get vector shape", "[ 1 2 3 ] SHAPE → [ 3 ]", "Shape"),
+        ("RANK", "Get number of dimensions", "[ [ 1 2 ] [ 3 4 ] ] RANK → [ 2 ]", "Shape"),
+        ("RESHAPE", "Reshape vector to new dimensions", "[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → { ( 1 2 3 ) ( 4 5 6 ) }", "Shape"),
+        ("TRANSPOSE", "Transpose 2D vector", "{ ( 1 2 3 ) ( 4 5 6 ) } TRANSPOSE → { ( 1 4 ) ( 2 5 ) ( 3 6 ) }", "Shape"),
+        ("FILL", "Generate vector filled with value", "[ 2 3 0 ] FILL → { ( 0 0 0 ) ( 0 0 0 ) }", "Shape"),
+
         // Math functions
         ("MOD", "Modulo (mathematical)", "[ 7 ] [ 3 ] MOD → [ 1 ]", "Math"),
         ("FLOOR", "Floor (toward negative infinity)", "[ 7/3 ] FLOOR → [ 2 ]", "Math"),

@@ -183,10 +183,10 @@ impl Value {
         }
     }
 
-    /// 文字列から値を作成（各文字をスカラーとして持つVector）
+    /// 文字列から値を作成（各文字をUnicodeコードポイントのスカラーとして持つVector）
     pub fn from_string(s: &str) -> Self {
-        let children: Vec<Value> = s.bytes()
-            .map(|b| Value::from_int(b as i64))
+        let children: Vec<Value> = s.chars()
+            .map(|c| Value::from_int(c as u32 as i64))
             .collect();
 
         if children.is_empty() {
