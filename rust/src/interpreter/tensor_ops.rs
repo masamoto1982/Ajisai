@@ -50,79 +50,105 @@ fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
 // 形状操作ワード
 // ============================================================================
 
-/// SHAPE - ベクタの形状を取得
+/// SHAPE - ベクタの形状を取得（Map型）
 ///
 /// 使用法:
-///   [ 1 2 3 ] SHAPE           → [ 1 2 3 ] [ 3 ]
-///   [ { 1 2 } { 3 4 } ] SHAPE → [ { 1 2 } { 3 4 } ] [ 2 2 ]
+///   [ 1 2 3 ] SHAPE           → [ 3 ]
+///   [ [ 1 2 ] [ 3 4 ] ] SHAPE → [ 2 2 ]
 ///
 /// 形状は1次元Vectorとして返される
+/// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("SHAPE does not support Stack (..) mode"));
     }
 
-    let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // NILの場合
+    // NILの場合: Map型 → NIL伝播
     if val.is_nil() {
-        return Err(AjisaiError::from("SHAPE requires vector, got NIL"));
+        interp.stack.push(Value::nil());
+        return Ok(());
     }
 
     // ベクタの場合
-    if is_vector_value(val) {
-        let shape_vec = infer_shape_from_value(val);
+    if is_vector_value(&val) {
+        let shape_vec = infer_shape_from_value(&val);
 
         let shape_values: Vec<Value> = shape_vec
             .iter()
             .map(|&n| Value::from_number(Fraction::new(BigInt::from(n as i64), BigInt::one())))
             .collect();
 
+        // 保持モードの場合は元の値を戻す
+        if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
+            interp.stack.push(val);
+        }
+
         interp.stack.push(Value::from_vector(shape_values));
         return Ok(());
     }
 
-    // スカラーの場合はエラー
-    Err(AjisaiError::from("SHAPE requires vector, got scalar"))
+    // スカラーの場合: 形状は空（0次元）
+    if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
+        interp.stack.push(val);
+    }
+    interp.stack.push(Value::from_vector(vec![]));
+    Ok(())
 }
 
-/// RANK - ベクタの次元数を取得
+/// RANK - ベクタの次元数を取得（Map型）
 ///
 /// 使用法:
-///   [ 1 2 3 ] RANK           → [ 1 2 3 ] [ 1 ]
-///   [ { 1 2 } { 3 4 } ] RANK → [ { 1 2 } { 3 4 } ] [ 2 ]
+///   [ 1 2 3 ] RANK           → [ 1 ]
+///   [ [ 1 2 ] [ 3 4 ] ] RANK → [ 2 ]
+///
+/// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("RANK does not support Stack (..) mode"));
     }
 
-    let val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // NILの場合
+    // NILの場合: Map型 → NIL伝播
     if val.is_nil() {
-        return Err(AjisaiError::from("RANK requires vector, got NIL"));
+        interp.stack.push(Value::nil());
+        return Ok(());
     }
 
     // ベクタの場合
-    if is_vector_value(val) {
-        let shape = infer_shape_from_value(val);
+    if is_vector_value(&val) {
+        let shape = infer_shape_from_value(&val);
         let r = shape.len();
         let rank_frac = Fraction::new(BigInt::from(r as i64), BigInt::one());
+
+        // 保持モードの場合は元の値を戻す
+        if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
+            interp.stack.push(val);
+        }
+
         interp.stack.push(wrap_number(rank_frac));
         return Ok(());
     }
 
-    // スカラーの場合はエラー
-    Err(AjisaiError::from("RANK requires vector, got scalar"))
+    // スカラーの場合: ランクは0
+    let rank_frac = Fraction::new(BigInt::from(0i64), BigInt::one());
+    if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
+        interp.stack.push(val);
+    }
+    interp.stack.push(wrap_number(rank_frac));
+    Ok(())
 }
 
-/// RESHAPE - ベクタの形状を変更
+/// RESHAPE - ベクタの形状を変更（Form型）
 ///
 /// 使用法:
-///   [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → [ { 1 2 3 } { 4 5 6 } ]
-///   [ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE → [ { 1 2 } { 3 4 } { 5 6 } ]
+///   [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → { ( 1 2 3 ) ( 4 5 6 ) }
+///   [ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE → { ( 1 2 ) ( 3 4 ) ( 5 6 ) }
 ///
 /// 注意: 3次元までに制限されています
+/// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("RESHAPE does not support Stack (..) mode"));
@@ -188,6 +214,12 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     // 新しい値を作成（再帰的構造を構築）
     let result = build_nested_value(&data_fractions, &new_shape, data_val.display_hint);
 
+    // 保持モードの場合は元の値を戻す
+    if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
+        interp.stack.push(data_val);
+        interp.stack.push(shape_val);
+    }
+
     interp.stack.push(result);
     Ok(())
 }
@@ -242,10 +274,12 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
     }
 }
 
-/// TRANSPOSE - 2次元ベクタの転置
+/// TRANSPOSE - 2次元ベクタの転置（Form型）
 ///
 /// 使用法:
-///   [ { 1 2 3 } { 4 5 6 } ] TRANSPOSE → [ { 1 4 } { 2 5 } { 3 6 } ]
+///   { ( 1 2 3 ) ( 4 5 6 ) } TRANSPOSE → { ( 1 4 ) ( 2 5 ) ( 3 6 ) }
+///
+/// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::from("TRANSPOSE does not support Stack (..) mode"));
@@ -253,10 +287,10 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // NILの場合
+    // NILの場合: Form型 → NIL = 空集合
     if val.is_nil() {
-        interp.stack.push(val);
-        return Err(AjisaiError::from("TRANSPOSE requires vector"));
+        interp.stack.push(Value::nil());
+        return Ok(());
     }
 
     // 形状を取得
@@ -282,6 +316,11 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
 
     // 新しい形状で再構築
     let result = build_nested_value(&transposed_data, &[cols, rows], val.display_hint);
+
+    // 保持モードの場合は元の値を戻す
+    if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
+        interp.stack.push(val);
+    }
 
     interp.stack.push(result);
     Ok(())
@@ -683,6 +722,11 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 
     // 再帰的構造を構築
     let result = build_nested_value(&data, &shape, DisplayHint::Number);
+
+    // 保持モードの場合は元の値を戻す
+    if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
+        interp.stack.push(args_val);
+    }
 
     interp.stack.push(result);
     Ok(())
