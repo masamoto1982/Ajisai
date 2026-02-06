@@ -186,6 +186,22 @@ The pipeline operator is a visual marker for data flow (no-op):
   == [ 0 ] : + ; FOLD          # Sum:         [ 24 ]
 ```
 
+### Consumption Mode (Keep Mode with `,,`)
+
+The keep mode preserves operands while pushing the result:
+
+```ajisai
+# Default: Consume mode (operands removed)
+[ 1 ] [ 2 ] +       # → [ 3 ]
+
+# Keep mode: operands preserved
+[ 1 ] [ 2 ] ,, +    # → [ 1 ] [ 2 ] [ 3 ]
+
+# Modifiers are order-independent
+[ 1 ] [ 2 ] [ 3 ] [ 3 ] .. ,, +   # Stack mode + Keep mode
+[ 1 ] [ 2 ] [ 3 ] [ 3 ] ,, .. +   # Same result
+```
+
 ### Nil Coalescing Operator (`=>`)
 
 Returns an alternative value when the first value is NIL:
@@ -204,6 +220,9 @@ NIL => [ 0 ]       # → [ 0 ]  (NIL replaced)
 
 ### Target Specification
 `.` `..`
+
+### Consumption Mode
+`,` `,,`
 
 ### Input Helpers
 `'` `FRAME`

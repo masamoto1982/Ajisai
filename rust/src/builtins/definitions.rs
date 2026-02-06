@@ -6,9 +6,13 @@
 /// Each tuple contains: (word_name, description, syntax_example, category)
 pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
     vec![
-        // Target specification
+        // Target specification (Operation Target Mode)
         (".", "Set operation target to stack top (default)", ". + → add to stack top", "Target"),
         ("..", "Set operation target to entire stack", ".. + [ 3 ] → add 3 to all stack elements", "Target"),
+
+        // Consumption mode specification
+        (",", "Set consumption mode to consume (default)", ", + → consume operands", "Consumption"),
+        (",,", "Set consumption mode to keep (preserve operands)", "[1] [2] ,, + → [1] [2] [3]", "Consumption"),
 
         // Input helpers
         ("'", "Input single quote", "' → '", "Input Helper"),
