@@ -94,23 +94,6 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         // I/O
         ("PRINT", "Print and pop stack top", "[ 42 ] PRINT → (outputs 42)", "I/O"),
 
-        // Music DSL
-        ("SEQ", "Set sequential playback mode", "[ 440 550 660 ] SEQ PLAY → play 3 notes sequentially", "Music"),
-        ("SIM", "Set simultaneous playback mode", "[ 440 550 660 ] SIM PLAY → play 3 notes as chord", "Music"),
-        ("SLOT", "Set slot duration in seconds", "0.25 SLOT → 1 slot = 0.25 seconds", "Music"),
-        ("GAIN", "Set volume level (0.0-1.0)", "0.5 GAIN → 50% volume", "Music"),
-        ("GAIN-RESET", "Reset volume to default (1.0)", "GAIN-RESET → 100% volume", "Music"),
-        ("PAN", "Set stereo position (-1.0 left to 1.0 right)", "-0.5 PAN → slightly left", "Music"),
-        ("PAN-RESET", "Reset pan to center (0.0)", "PAN-RESET → center", "Music"),
-        ("FX-RESET", "Reset all audio effects to defaults", "FX-RESET → gain=1.0, pan=0.0", "Music"),
-        ("PLAY", "Play audio", "[ 440/2 550 NIL 660 ] PLAY → 440Hz for 2 slots, 550Hz, rest, 660Hz", "Music"),
-        ("CHORD", "Mark vector as chord (simultaneous)", "[ 440 550 660 ] CHORD → chord marked", "Music"),
-        ("ADSR", "Set ADSR envelope", "[ 440 ] [ 0.01 0.1 0.8 0.2 ] ADSR → envelope applied", "Music"),
-        ("SINE", "Set sine waveform", "[ 440 ] SINE → sine wave", "Music"),
-        ("SQUARE", "Set square waveform", "[ 440 ] SQUARE → square wave", "Music"),
-        ("SAW", "Set sawtooth waveform", "[ 440 ] SAW → sawtooth wave", "Music"),
-        ("TRI", "Set triangle waveform", "[ 440 ] TRI → triangle wave", "Music"),
-
         // Word management
         ("DEF", "Define custom word", ": [ 2 ] * ; 'DOUBLE' DEF", "Word Management"),
         ("DEL", "Delete custom word", "'WORD' DEL", "Word Management"),
@@ -143,5 +126,29 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         // Meta-programming
         ("EXEC", "Execute vector (or stack) as code", "[ 1 2 + ] EXEC → 3, 1 2 + .. EXEC → 3", "Meta"),
         ("EVAL", "Parse and execute string (or stack chars)", "'1 2 +' EVAL → 3", "Meta"),
+    ]
+}
+
+/// Returns the list of extension word definitions (Music DSL).
+/// Extension words have native implementations but are not built-in protected,
+/// allowing users to override (DEF with !) or delete (DEL) them.
+pub fn get_extension_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
+    vec![
+        // Music DSL - 拡張ワードドメイン（サンプル）
+        ("SEQ", "Set sequential playback mode", "[ 440 550 660 ] SEQ PLAY → play 3 notes sequentially", "Music"),
+        ("SIM", "Set simultaneous playback mode", "[ 440 550 660 ] SIM PLAY → play 3 notes as chord", "Music"),
+        ("SLOT", "Set slot duration in seconds", "0.25 SLOT → 1 slot = 0.25 seconds", "Music"),
+        ("GAIN", "Set volume level (0.0-1.0)", "0.5 GAIN → 50% volume", "Music"),
+        ("GAIN-RESET", "Reset volume to default (1.0)", "GAIN-RESET → 100% volume", "Music"),
+        ("PAN", "Set stereo position (-1.0 left to 1.0 right)", "-0.5 PAN → slightly left", "Music"),
+        ("PAN-RESET", "Reset pan to center (0.0)", "PAN-RESET → center", "Music"),
+        ("FX-RESET", "Reset all audio effects to defaults", "FX-RESET → gain=1.0, pan=0.0", "Music"),
+        ("PLAY", "Play audio", "[ 440/2 550 NIL 660 ] PLAY → 440Hz for 2 slots, 550Hz, rest, 660Hz", "Music"),
+        ("CHORD", "Mark vector as chord (simultaneous)", "[ 440 550 660 ] CHORD → chord marked", "Music"),
+        ("ADSR", "Set ADSR envelope", "[ 440 ] [ 0.01 0.1 0.8 0.2 ] ADSR → envelope applied", "Music"),
+        ("SINE", "Set sine waveform", "[ 440 ] SINE → sine wave", "Music"),
+        ("SQUARE", "Set square waveform", "[ 440 ] SQUARE → square wave", "Music"),
+        ("SAW", "Set sawtooth waveform", "[ 440 ] SAW → sawtooth wave", "Music"),
+        ("TRI", "Set triangle waveform", "[ 440 ] TRI → triangle wave", "Music"),
     ]
 }
