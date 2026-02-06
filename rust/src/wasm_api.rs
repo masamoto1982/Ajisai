@@ -353,8 +353,10 @@ impl AjisaiInterpreter {
     }
 
     fn get_custom_words_for_state(&self) -> JsValue {
+        // Persist only user-defined custom words (non-builtin with custom lines).
+        // Extension words (native impl, empty lines) are auto-registered on startup.
         let words_info: Vec<CustomWordData> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
+            .filter(|(_, def)| !def.is_builtin && !def.lines.is_empty())
             .map(|(name, def)| {
                 CustomWordData {
                     name: name.clone(),
@@ -368,7 +370,9 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_builtin_words_info(&self) -> JsValue {
-        to_value(&builtins::get_builtin_definitions()).unwrap_or(JsValue::NULL)
+        let mut all_defs = builtins::get_builtin_definitions();
+        all_defs.extend(builtins::get_extension_definitions());
+        to_value(&all_defs).unwrap_or(JsValue::NULL)
     }
 
     #[wasm_bindgen]
