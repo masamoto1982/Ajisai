@@ -736,22 +736,24 @@ Ajisaiのコア言語は、Vector操作・算術・制御構造・高階関数�
 音楽DSLの価値は、コア言語のVector操作と自然に組み合わせられる点にある。
 
 ```ajisai
-# 純正律の音階をカスタムワードで定義
+# 純正律の音階をカスタムワードで定義（国際表記）
 : [ 261.63 ] ; 'C4' DEF
-: C4 * ; 'Hz' DEF
-: [ 1 ] ; 'DO' DEF
-: [ 9/8 ] ; 'RE' DEF
-: [ 5/4 ] ; 'MI' DEF
-: [ 3/2 ] ; 'SO' DEF
+: C4 [ 9/8 ] * ; 'D4' DEF
+: C4 [ 5/4 ] * ; 'E4' DEF
+: C4 [ 4/3 ] * ; 'F4' DEF
+: C4 [ 3/2 ] * ; 'G4' DEF
+: C4 [ 5/3 ] * ; 'A4' DEF
+: C4 [ 15/8 ] * ; 'B4' DEF
+: C4 [ 2 ] * ; 'C5' DEF
 
 # カスタムワードとVector操作でメロディを構築
-DO Hz RE Hz MI Hz SO Hz [ 4 ] .. CONCAT PLAY
+C4 D4 E4 G4 [ 4 ] .. CONCAT PLAY
 
 # 和音
-DO Hz MI Hz SO Hz [ 3 ] .. CONCAT SIM PLAY
+C4 E4 G4 [ 3 ] .. CONCAT SIM PLAY
 ```
 
-このように、音楽固有のワード（SEQ, SIM, PLAY等）はドメインへの入口を提供するが、メロディの構築自体にはコア言語のカスタムワード定義（DEF）やVector操作（CONCAT等）がそのまま使われる。
+このように、音楽固有のワード（SEQ, SIM, PLAY等）はドメインへの入口を提供するが、メロディの構築自体にはコア言語のカスタムワード定義（DEF）やVector操作（CONCAT等）がそのまま使われる。国際表記（C4, D4, ...）を採用することで、各ワードが直接周波数ベクタを返し、中間変換なしにPLAYへ渡せる。
 
 ---
 
