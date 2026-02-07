@@ -512,6 +512,133 @@ mod tests {
                 "Expected Stack mode error for ?, got: {}", err_msg);
     }
 
+    /// ヘルパー: restore_custom_words フローを模倣してサンプルワードをロードする
+    /// CodeBlockStart/CodeBlockEnd ラッパーを除去する（wasm_api.rs と同じロジック）
+    fn restore_sample_words(interp: &mut Interpreter, sample_words: &[(&str, &str, &str)]) {
+        use crate::tokenizer;
+        use crate::types::Token;
+        use std::collections::HashSet;
+
+        let custom_word_names: HashSet<String> = sample_words.iter()
+            .map(|(name, _, _)| name.to_uppercase())
+            .collect();
+
+        for (name, definition, description) in sample_words {
+            let tokens = tokenizer::tokenize_with_custom_words(definition, &custom_word_names)
+                .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
+
+            // wasm_api.rs の restore_custom_words と同じ CodeBlockStart 除去ロジック
+            let tokens = if !tokens.is_empty() && tokens[0] == Token::CodeBlockStart {
+                if tokens.last() == Some(&Token::CodeBlockEnd) {
+                    tokens[1..tokens.len()-1].to_vec()
+                } else {
+                    tokens[1..].to_vec()
+                }
+            } else {
+                tokens
+            };
+
+            super::op_def_inner(interp, name, &tokens, Some(description.to_string()))
+                .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
+        }
+
+        interp.rebuild_dependencies().expect("Failed to rebuild dependencies");
+    }
+
+    /// Test: DEL of sample custom words (definitions with ':' prefix - legacy format)
+    #[tokio::test]
+    async fn test_del_sample_custom_words_legacy_format() {
+        let mut interp = Interpreter::new();
+
+        // 旧フォーマット: ':' プレフィックス付き（IndexedDB に保存された旧データ等）
+        let sample_words = vec![
+            ("C4", ": [ 261.63 ]", "純正律 C4"),
+            ("D4", ": C4 [ 9/8 ] *", "純正律 D4"),
+            ("E4", ": C4 [ 5/4 ] *", "純正律 E4"),
+        ];
+        restore_sample_words(&mut interp, &sample_words);
+
+        assert!(interp.dictionary.contains_key("C4"));
+        assert!(interp.dictionary.contains_key("D4"));
+        assert!(interp.dictionary.contains_key("E4"));
+
+        // Leaf node D4 の削除（依存なし）
+        let result = interp.execute("'D4' DEL").await;
+        assert!(result.is_ok(), "Should delete D4: {:?}", result.err());
+        assert!(!interp.dictionary.contains_key("D4"));
+
+        // C4 の削除（E4 が依存 → エラー）
+        let result = interp.execute("'C4' DEL").await;
+        assert!(result.is_err(), "Should not delete C4 (has dependents)");
+
+        // 強制削除
+        let result = interp.execute("! 'C4' DEL").await;
+        assert!(result.is_ok(), "Should force delete C4: {:?}", result.err());
+        assert!(!interp.dictionary.contains_key("C4"));
+    }
+
+    /// Test: DEL of sample custom words (new format without ':' prefix)
+    #[tokio::test]
+    async fn test_del_sample_custom_words_new_format() {
+        let mut interp = Interpreter::new();
+
+        // 新フォーマット: ':' プレフィックスなし
+        let sample_words = vec![
+            ("C4", "[ 261.63 ]", "純正律 C4"),
+            ("D4", "C4 [ 9/8 ] *", "純正律 D4"),
+            ("E4", "C4 [ 5/4 ] *", "純正律 E4"),
+        ];
+        restore_sample_words(&mut interp, &sample_words);
+
+        // Leaf node D4 の削除
+        let result = interp.execute("'D4' DEL").await;
+        assert!(result.is_ok(), "Should delete D4: {:?}", result.err());
+        assert!(!interp.dictionary.contains_key("D4"));
+    }
+
+    /// Test: Execution of restored sample words works correctly
+    #[tokio::test]
+    async fn test_execute_restored_sample_words() {
+        let mut interp = Interpreter::new();
+
+        // 旧フォーマット（':' プレフィックス付き）でも実行できることを確認
+        let sample_words = vec![
+            ("C4", ": [ 261.63 ]", "純正律 C4"),
+            ("D4", ": C4 [ 9/8 ] *", "純正律 D4"),
+        ];
+        restore_sample_words(&mut interp, &sample_words);
+
+        // C4 の実行: [261.63] がスタックにプッシュされるべき
+        let result = interp.execute("C4").await;
+        assert!(result.is_ok(), "Executing C4 should succeed: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 1);
+
+        // D4 の実行: C4 * 9/8 がスタックにプッシュされるべき
+        let result = interp.execute("D4").await;
+        assert!(result.is_ok(), "Executing D4 should succeed: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 2);
+    }
+
+    /// Test: Execution of restored sample words (new format) works correctly
+    #[tokio::test]
+    async fn test_execute_restored_sample_words_new_format() {
+        let mut interp = Interpreter::new();
+
+        let sample_words = vec![
+            ("C4", "[ 261.63 ]", "純正律 C4"),
+            ("D4", "C4 [ 9/8 ] *", "純正律 D4"),
+        ];
+        restore_sample_words(&mut interp, &sample_words);
+
+        let result = interp.execute("C4").await;
+        assert!(result.is_ok(), "Executing C4 should succeed: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 1);
+
+        let result = interp.execute("D4").await;
+        assert!(result.is_ok(), "Executing D4 should succeed: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 2);
+    }
+
     #[tokio::test]
     async fn test_def_with_vector_duality() {
         let mut interp = Interpreter::new();

@@ -411,6 +411,20 @@ impl AjisaiInterpreter {
             let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
                 .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
 
+            // サンプルワードや旧バージョンの保存データでは定義が ": ... " や ": ... ;" 形式で
+            // CodeBlockStart/CodeBlockEnd トークンが含まれている場合がある。
+            // op_def_inner は CodeBlock の中身（: と ; を除いた部分）を期待するため、
+            // ラッパーのCodeBlockStart/CodeBlockEndを除去する。
+            let tokens = if !tokens.is_empty() && tokens[0] == Token::CodeBlockStart {
+                if tokens.last() == Some(&Token::CodeBlockEnd) {
+                    tokens[1..tokens.len()-1].to_vec()
+                } else {
+                    tokens[1..].to_vec()
+                }
+            } else {
+                tokens
+            };
+
             interpreter::dictionary::op_def_inner(&mut self.interpreter, &word.name, &tokens, word.description.clone())
                 .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
         }
