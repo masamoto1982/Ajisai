@@ -47,6 +47,17 @@ const syncInterpreterState = (
     }
     if (result.customWords) {
         interpreter.restore_custom_words(result.customWords);
+
+        // Worker 側で削除されたエクステンションワードをメインスレッドからも削除する。
+        // reset() は全エクステンションを再登録するが、Worker の結果に含まれない
+        // ワードは Worker 側で削除されたことを意味する。
+        const workerWordNames = new Set(result.customWords.map(w => w.name.toUpperCase()));
+        const mainWords = interpreter.get_custom_words_info();
+        for (const [name] of mainWords) {
+            if (!workerWordNames.has(name.toUpperCase())) {
+                interpreter.remove_word(name);
+            }
+        }
     }
 };
 
