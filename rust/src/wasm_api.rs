@@ -97,7 +97,7 @@ fn generate_bracket_structure_from_shape(shape: &[usize]) -> String {
 #[derive(Serialize, Deserialize)]
 struct CustomWordData {
     name: String,
-    definition: String,
+    definition: Option<String>,
     description: Option<String>,
 }
 
@@ -360,7 +360,7 @@ impl AjisaiInterpreter {
             .map(|(name, def)| {
                 CustomWordData {
                     name: name.clone(),
-                    definition: self.interpreter.get_word_definition_tokens(name).unwrap_or_default(),
+                    definition: self.interpreter.get_word_definition_tokens(name),
                     description: def.description.clone(),
                 }
             })
@@ -402,7 +402,13 @@ impl AjisaiInterpreter {
             .collect();
 
         for word in words {
-            let tokens = tokenizer::tokenize_with_custom_words(&word.definition, &custom_word_names)
+            // Skip words with null/empty definitions (extension words saved by older versions)
+            let definition = match &word.definition {
+                Some(def) if !def.is_empty() => def.clone(),
+                _ => continue,
+            };
+
+            let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
                 .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
 
             interpreter::dictionary::op_def_inner(&mut self.interpreter, &word.name, &tokens, word.description.clone())
