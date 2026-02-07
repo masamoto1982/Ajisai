@@ -201,6 +201,18 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
                 if (state.customWords && state.customWords.length > 0) {
                     await window.ajisaiInterpreter.restore_custom_words(state.customWords);
+
+                    // ユーザーが DEL で削除したエクステンションワードを反映する。
+                    // new AjisaiInterpreter() は全エクステンションを登録するが、
+                    // 保存データに含まれないワードは削除済みなので除去する。
+                    const savedWordNames = new Set(state.customWords.map((w: CustomWord) => w.name.toUpperCase()));
+                    const currentWords = window.ajisaiInterpreter.get_custom_words_info();
+                    for (const [name] of currentWords) {
+                        if (!savedWordNames.has(name.toUpperCase())) {
+                            window.ajisaiInterpreter.remove_word(name);
+                        }
+                    }
+
                     console.log('Interpreter state restored.');
                 } else {
                     await loadSampleWords();
