@@ -20,6 +20,7 @@ export interface AjisaiInterpreter {
     get_word_definition(name: string): string | null;
     restore_stack(stack_js: Value[]): void;
     restore_custom_words(words: CustomWord[]): void;
+    remove_word(name: string): void;
 }
 
 export interface ExecuteResult {

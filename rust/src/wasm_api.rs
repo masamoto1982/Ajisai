@@ -353,10 +353,11 @@ impl AjisaiInterpreter {
     }
 
     fn get_custom_words_for_state(&self) -> JsValue {
-        // Persist only user-defined custom words (non-builtin with custom lines).
-        // Extension words (native impl, empty lines) are auto-registered on startup.
+        // 全ての非ビルトインワード（ユーザー定義 + エクステンション）を返す。
+        // エクステンションワード（ネイティブ実装、lines が空）は definition=null で含まれる。
+        // これにより Worker 側でのエクステンション削除がメインスレッドに正しく反映される。
         let words_info: Vec<CustomWordData> = self.interpreter.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin && !def.lines.is_empty())
+            .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| {
                 CustomWordData {
                     name: name.clone(),
@@ -379,6 +380,25 @@ impl AjisaiInterpreter {
         self.interpreter.get_word_definition_tokens(&upper_name)
             .map(|def| JsValue::from_str(&def))
             .unwrap_or(JsValue::NULL)
+    }
+
+    /// 辞書から指定されたワードを直接削除する（依存関係チェックなし）。
+    /// syncInterpreterState で Worker 側の削除をメインスレッドに反映するために使用。
+    #[wasm_bindgen]
+    pub fn remove_word(&mut self, name: &str) {
+        let upper_name = name.to_uppercase();
+        if let Some(removed_def) = self.interpreter.dictionary.remove(&upper_name) {
+            // 依存関係のクリーンアップ
+            for dep_name in &removed_def.dependencies {
+                if let Some(deps) = self.interpreter.dependents.get_mut(dep_name) {
+                    deps.remove(&upper_name);
+                }
+            }
+            self.interpreter.dependents.remove(&upper_name);
+            for deps in self.interpreter.dependents.values_mut() {
+                deps.remove(&upper_name);
+            }
+        }
     }
 
     #[wasm_bindgen]
