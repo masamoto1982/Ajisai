@@ -370,9 +370,7 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_builtin_words_info(&self) -> JsValue {
-        let mut all_defs = builtins::get_builtin_definitions();
-        all_defs.extend(builtins::get_extension_definitions());
-        to_value(&all_defs).unwrap_or(JsValue::NULL)
+        to_value(&builtins::get_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
 
     #[wasm_bindgen]
