@@ -71,7 +71,7 @@
                     <h2>Input</h2>
                     <div class="textarea-wrapper">
                         <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here&#10;&#10;Run → Shift+Enter&#10;Step → Ctrl+Enter&#10;Abort → Escape&#10;Reset → Ctrl+Alt+Enter"></textarea>
-                        <button id="clear-btn" type="button" aria-label="Clear input">&times;</button>
+                        <button id="clear-btn" type="button" class="inline-clear-btn" aria-label="Clear input">&times;</button>
                     </div>
                     <div class="controls">
                         <button id="run-btn" type="button">Run</button>
@@ -88,7 +88,10 @@
                 <section class="dictionary-area">
                     <div class="dictionary-header">
                         <h2>Dictionary</h2>
-                        <input type="search" id="word-search" placeholder="Search words..." aria-label="Search dictionary words">
+                        <div class="search-wrapper">
+                            <input type="text" id="word-search" placeholder="Search words..." aria-label="Search dictionary words">
+                            <button id="search-clear-btn" type="button" class="inline-clear-btn" aria-label="Clear search">&times;</button>
+                        </div>
                     </div>
                     <div class="dictionary-container">
                         <div class="builtin-words-area">

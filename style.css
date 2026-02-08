@@ -79,18 +79,16 @@
     color: var(--code-comment);
 }
 
-/* テキスト入力クリアボタン（検索窓の×と同じ作法） */
-#clear-btn {
+/* インラインクリアボタン（×）共通スタイル */
+.inline-clear-btn {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.5rem;
+    height: 1.5rem;
     padding: 0;
     border: none;
     background: none;
     color: var(--code-comment);
-    font-size: 1rem;
+    font-size: 1.15rem;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -100,11 +98,16 @@
     transition: opacity 0.15s ease;
 }
 
-#clear-btn:hover {
+.inline-clear-btn:hover {
     opacity: 1;
 }
 
-/* テキストが空のとき×ボタンを非表示 */
+/* テキストエディタ用×ボタン配置 */
+#clear-btn {
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
 #code-input:placeholder-shown ~ #clear-btn {
     display: none;
 }
@@ -166,8 +169,15 @@
     border-bottom: none;
 }
 
+/* 検索窓ラッパー */
+.search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 #word-search {
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem 1.75rem 0.25rem 0.5rem;
     border: none;
     border-radius: 0;
     font-size: 0.85rem;
@@ -184,6 +194,17 @@
 
 #word-search::placeholder {
     color: var(--code-comment);
+}
+
+/* 検索窓用×ボタン配置 */
+#search-clear-btn {
+    right: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#word-search:placeholder-shown ~ #search-clear-btn {
+    display: none;
 }
 
 /* 検索結果なしメッセージ */

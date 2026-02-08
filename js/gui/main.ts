@@ -29,6 +29,7 @@ export interface GUIElements {
     readonly builtinWordInfo: HTMLElement;
     readonly customWordInfo: HTMLElement;
     readonly wordSearch: HTMLInputElement;
+    readonly searchClearBtn: HTMLButtonElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
@@ -61,6 +62,7 @@ const cacheElements = (): GUIElements => ({
     builtinWordInfo: document.getElementById('builtin-word-info')!,
     customWordInfo: document.getElementById('custom-word-info')!,
     wordSearch: document.getElementById('word-search') as HTMLInputElement,
+    searchClearBtn: document.getElementById('search-clear-btn') as HTMLButtonElement,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
@@ -158,9 +160,10 @@ export const createGUI = (): GUI => {
 
         elements.wordSearch.addEventListener('input', handleSearchInput);
 
-        // 検索窓をクリアしたとき（×ボタン）も即座に反映
-        elements.wordSearch.addEventListener('search', () => {
-            dictionary.setSearchFilter(elements.wordSearch.value);
+        // 検索窓の×ボタンでクリア
+        elements.searchClearBtn.addEventListener('click', () => {
+            elements.wordSearch.value = '';
+            dictionary.setSearchFilter('');
         });
 
         elements.clearBtn.addEventListener('click', () => editor.clear());
