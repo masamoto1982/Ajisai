@@ -95,7 +95,6 @@ impl Interpreter {
             call_stack: Vec::new(),
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
-        crate::builtins::register_extensions(&mut interpreter.dictionary);
         interpreter
     }
 
@@ -653,12 +652,12 @@ impl Interpreter {
         let def = self.dictionary.get(name).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
-        // Native implementation (built-in or extension without custom override)
+        // Native implementation (built-in words with no user-defined code)
         if def.lines.is_empty() {
             return self.execute_builtin(name);
         }
 
-        // Custom word (user-defined or overridden extension)
+        // Custom word (user-defined)
         if self.call_stack.len() >= MAX_CALL_DEPTH {
             let stack_trace = self.call_stack.join(" -> ");
             return Err(AjisaiError::from(format!(
@@ -689,12 +688,12 @@ impl Interpreter {
         let def = self.dictionary.get(name).cloned()
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
-        // Native implementation (built-in or extension without custom override)
+        // Native implementation (built-in words with no user-defined code)
         if def.lines.is_empty() {
             return self.execute_builtin(name);
         }
 
-        // Custom word (user-defined or overridden extension)
+        // Custom word (user-defined)
         if self.call_stack.len() >= MAX_CALL_DEPTH {
             let stack_trace = self.call_stack.join(" -> ");
             return Err(AjisaiError::from(format!(
@@ -858,7 +857,6 @@ impl Interpreter {
         self.play_mode = audio::PlayMode::default();
         self.call_stack.clear();
         crate::builtins::register_builtins(&mut self.dictionary);
-        crate::builtins::register_extensions(&mut self.dictionary);
         Ok(())
     }
 
