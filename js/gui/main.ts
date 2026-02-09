@@ -257,9 +257,14 @@ export const createGUI = (): GUI => {
         dictionary.renderBuiltinWords();
         updateAllDisplays();
         mobile.updateView('input');
-        await initializeWorkers();
+
+        // データの読み込みをワーカー初期化より先に行う。
+        // ワーカーのWASMコンパイルがCPUを占有するため、
+        // モバイルではUIが応答不能になる。先にデータを読み込んで
+        // ボタンを描画し、ワーカー初期化を最後に遅延させる。
         await persistence.loadDatabaseData();
         updateAllDisplays();
+        await initializeWorkers();
 
         console.log('[GUI] GUI initialization completed');
     };
