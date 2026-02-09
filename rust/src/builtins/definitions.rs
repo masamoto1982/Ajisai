@@ -126,15 +126,8 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         // Meta-programming
         ("EXEC", "Execute vector (or stack) as code", "[ 1 2 + ] EXEC → 3, 1 2 + .. EXEC → 3", "Meta"),
         ("EVAL", "Parse and execute string (or stack chars)", "'1 2 +' EVAL → 3", "Meta"),
-    ]
-}
 
-/// Returns the list of extension word definitions (Music DSL).
-/// Extension words have native implementations but are not built-in protected,
-/// allowing users to override (DEF with !) or delete (DEL) them.
-pub fn get_extension_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
-    vec![
-        // Music DSL - 拡張ワードドメイン（サンプル）
+        // Music DSL - 組み込みワード（組み込みワードの組み合わせでは再現できない機能を提供する）
         ("SEQ", "Set sequential playback mode", "[ 440 550 660 ] SEQ PLAY → play 3 notes sequentially", "Music"),
         ("SIM", "Set simultaneous playback mode", "[ 440 550 660 ] SIM PLAY → play 3 notes as chord", "Music"),
         ("SLOT", "Set slot duration in seconds", "0.25 SLOT → 1 slot = 0.25 seconds", "Music"),

@@ -353,9 +353,8 @@ impl AjisaiInterpreter {
     }
 
     fn get_custom_words_for_state(&self) -> JsValue {
-        // 全ての非ビルトインワード（ユーザー定義 + エクステンション）を返す。
-        // エクステンションワード（ネイティブ実装、lines が空）は definition=null で含まれる。
-        // これにより Worker 側でのエクステンション削除がメインスレッドに正しく反映される。
+        // カスタムワード（ユーザー定義）のみを返す。
+        // 組み込みワード（音楽DSL含む）は自動登録されるため状態保存の対象外。
         let words_info: Vec<CustomWordData> = self.interpreter.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| {
@@ -422,7 +421,7 @@ impl AjisaiInterpreter {
             .collect();
 
         for word in words {
-            // Skip words with null/empty definitions (extension words saved by older versions)
+            // Skip words with null/empty definitions (e.g. from older versions)
             let definition = match &word.definition {
                 Some(def) if !def.is_empty() => def.clone(),
                 _ => continue,
