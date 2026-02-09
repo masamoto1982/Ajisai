@@ -19,11 +19,16 @@ interface WorkerInstance {
     currentTaskId: string | null;
 }
 
+const MOBILE_BREAKPOINT = 768;
+const MAX_MOBILE_WORKERS = 2;
+
 export class WorkerManager {
     private workers: WorkerInstance[] = [];
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
-    private maxWorkers = navigator.hardwareConcurrency || 4;
+    private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
+        ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
+        : navigator.hardwareConcurrency || 4;
 
     async init(): Promise<void> {
         console.log('[WorkerManager] Initializing worker pool...');

@@ -63,6 +63,9 @@ const getSelectionRange = (element: HTMLTextAreaElement): { start: number; end: 
     end: element.selectionEnd
 });
 
+const MOBILE_BREAKPOINT = 768;
+const isMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
+
 export const createEditor = (
     element: HTMLTextAreaElement,
     callbacks: EditorCallbacks = {}
@@ -109,7 +112,12 @@ export const createEditor = (
         const newPos = start + word.length;
         setSelectionRange(element, newPos, newPos);
 
-        focusElement(element);
+        // モバイルではfocusを避ける。focus()が仮想キーボードの開閉を誘発し、
+        // ビューポートのリサイズとレイアウトリフローを引き起こすため、
+        // ワードボタンのタップが反映されないように見える問題を防ぐ。
+        if (!isMobile()) {
+            focusElement(element);
+        }
         switchToInputMode();
     };
 
