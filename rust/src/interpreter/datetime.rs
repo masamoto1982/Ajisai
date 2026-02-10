@@ -116,7 +116,7 @@ extern "C" {
 pub fn op_now(interp: &mut Interpreter) -> Result<()> {
     // NOWはStackモードをサポートしない（日付時刻ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("NOW does not support Stack mode (..)"));
+        return Err(AjisaiError::ModeUnsupported { word: "NOW".into(), mode: "Stack".into() });
     }
 
     // JavaScriptのDate.now()を呼び出し（ミリ秒単位）
@@ -167,7 +167,7 @@ extern "C" {
 pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     // DATETIMEはStackモードをサポートしない（日付時刻ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("DATETIME does not support Stack mode (..)"));
+        return Err(AjisaiError::ModeUnsupported { word: "DATETIME".into(), mode: "Stack".into() });
     }
 
     // タイムゾーン文字列を取得
@@ -290,7 +290,7 @@ extern "C" {
 pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // TIMESTAMPはStackモードをサポートしない（日付時刻ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("TIMESTAMP does not support Stack mode (..)"));
+        return Err(AjisaiError::ModeUnsupported { word: "TIMESTAMP".into(), mode: "Stack".into() });
     }
 
     // タイムゾーン文字列を取得

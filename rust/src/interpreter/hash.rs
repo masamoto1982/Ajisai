@@ -285,7 +285,7 @@ fn extract_positive_integer(val: &Value) -> Option<u32> {
 pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
     // HASHはStackモード(..)をサポートしない
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("HASH does not support Stack mode (..)"));
+        return Err(AjisaiError::ModeUnsupported { word: "HASH".into(), mode: "Stack".into() });
     }
 
     if interp.stack.is_empty() {

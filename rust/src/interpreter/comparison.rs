@@ -34,7 +34,7 @@ fn extract_scalar_for_comparison(val: &Value) -> Option<&Fraction> {
 // ============================================================================
 
 /// 二項比較演算の汎用ハンドラ
-fn binary_comparison_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
+fn binary_comparison_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
@@ -79,7 +79,7 @@ where
             // カウント0, 1はエラー（"No change is an error"原則）
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK comparison with count 0 or 1 results in no change"));
+                return Err(AjisaiError::NoChange { word: op_name.into() });
             }
 
             if interp.stack.len() < count {
@@ -124,12 +124,12 @@ where
 
 /// < 演算子 - 小なり
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
-    binary_comparison_op(interp, |a, b| a.lt(b))
+    binary_comparison_op(interp, |a, b| a.lt(b), "<")
 }
 
 /// <= 演算子 - 小なりイコール
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
-    binary_comparison_op(interp, |a, b| a.le(b))
+    binary_comparison_op(interp, |a, b| a.le(b), "<=")
 }
 
 // > と >= は廃止されました
@@ -163,7 +163,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
             // カウント0, 1はエラー（"No change is an error"原則）
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK comparison with count 0 or 1 results in no change"));
+                return Err(AjisaiError::NoChange { word: "=".into() });
             }
 
             if interp.stack.len() < count {

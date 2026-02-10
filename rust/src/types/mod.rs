@@ -616,6 +616,8 @@ pub enum Token {
     Pipeline,
     /// Nil Coalescing演算子 - =>
     NilCoalesce,
+    /// セーフモード修飾子 - ~
+    SafeMode,
     LineBreak,
 }
 

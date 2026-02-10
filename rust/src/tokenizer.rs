@@ -146,7 +146,7 @@ pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) 
 /// 特殊文字（トークン境界となる文字）の判定
 /// シングルクォートは文字列リテラル用
 fn is_special_char(c: char) -> bool {
-    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '>' | '=')
+    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '>' | '=' | '~')
 }
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
@@ -158,6 +158,8 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
         // コードブロック用
         ':' => Some((Token::CodeBlockStart, 1)),
         ';' => Some((Token::CodeBlockEnd, 1)),
+        // セーフモード修飾子
+        '~' => Some((Token::SafeMode, 1)),
         // > は特別処理が必要（>> と >>> のチェック）
         _ => None,
     }

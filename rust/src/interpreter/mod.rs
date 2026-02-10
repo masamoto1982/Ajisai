@@ -71,6 +71,8 @@ pub struct Interpreter {
     pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) force_flag: bool,
     pub(crate) disable_no_change_check: bool,
+    /// セーフモード修飾子（~）：エラー時にNILを返す
+    pub(crate) safe_mode: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
     pub(crate) play_mode: audio::PlayMode,
@@ -89,6 +91,7 @@ impl Interpreter {
             consumption_mode: ConsumptionMode::Consume,
             force_flag: false,
             disable_no_change_check: false,
+            safe_mode: false,
             pending_tokens: None,
             pending_token_index: 0,
             play_mode: audio::PlayMode::default(),
@@ -116,6 +119,7 @@ impl Interpreter {
     pub fn reset_modes(&mut self) {
         self.operation_target_mode = OperationTargetMode::StackTop;
         self.consumption_mode = ConsumptionMode::Consume;
+        self.safe_mode = false;
     }
 
     fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
@@ -158,6 +162,7 @@ impl Interpreter {
                 Token::LineBreak => code_parts.push("\n".to_string()),
                 Token::Pipeline => code_parts.push("==".to_string()),
                 Token::NilCoalesce => code_parts.push("=>".to_string()),
+                Token::SafeMode => code_parts.push("~".to_string()),
             }
             i += 1;
         }
@@ -166,10 +171,7 @@ impl Interpreter {
 
     fn collect_vector_with_depth(&self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
         if depth > MAX_VISIBLE_DIMENSIONS {
-            return Err(AjisaiError::from(format!(
-                "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
-                depth
-            )));
+            return Err(AjisaiError::DimensionLimitExceeded { depth });
         }
 
         if !matches!(&tokens[start_index], Token::VectorStart) {
@@ -398,7 +400,26 @@ impl Interpreter {
                                     return Ok((i + 1, Some(action)));
                                 },
                                 _ => {
-                                    self.execute_word_core(&upper)?;
+                                    if self.safe_mode {
+                                        // セーフモード: エラー時にスタックを復元しNILを返す
+                                        let stack_snapshot = self.stack.clone();
+                                        let saved_safe_mode = true;
+                                        self.safe_mode = false; // ワード実行中はsafe_modeをリセット
+                                        match self.execute_word_core(&upper) {
+                                            Ok(()) => {
+                                                // 正常実行: そのまま進む
+                                            }
+                                            Err(_) => {
+                                                // エラー: スタックを復元しNILをプッシュ
+                                                self.stack = stack_snapshot;
+                                                self.stack.push(Value::nil());
+                                            }
+                                        }
+                                        // safe_modeは消費済みなのでリセット不要（既にfalse）
+                                        let _ = saved_safe_mode;
+                                    } else {
+                                        self.execute_word_core(&upper)?;
+                                    }
                                     // SEQ/SIM preserve modes for PLAY
                                     if upper != "SEQ" && upper != "SIM" {
                                         self.reset_modes();
@@ -460,6 +481,9 @@ impl Interpreter {
                     } else {
                         self.stack.push(value);
                     }
+                }
+                Token::SafeMode => {
+                    self.safe_mode = true;
                 }
                 Token::CodeBlockEnd | Token::ChevronBranch | Token::ChevronDefault | Token::LineBreak => {},
                 Token::VectorEnd => {
@@ -659,11 +683,11 @@ impl Interpreter {
 
         // Custom word (user-defined)
         if self.call_stack.len() >= MAX_CALL_DEPTH {
-            let stack_trace = self.call_stack.join(" -> ");
-            return Err(AjisaiError::from(format!(
-                "Call depth limit ({}) exceeded: {} -> {}",
-                MAX_CALL_DEPTH, stack_trace, name
-            )));
+            let chain = format!("{} -> {}", self.call_stack.join(" -> "), name);
+            return Err(AjisaiError::DepthLimitExceeded {
+                depth: MAX_CALL_DEPTH,
+                chain,
+            });
         }
 
         self.call_stack.push(name.to_string());
@@ -695,11 +719,11 @@ impl Interpreter {
 
         // Custom word (user-defined)
         if self.call_stack.len() >= MAX_CALL_DEPTH {
-            let stack_trace = self.call_stack.join(" -> ");
-            return Err(AjisaiError::from(format!(
-                "Call depth limit ({}) exceeded: {} -> {}",
-                MAX_CALL_DEPTH, stack_trace, name
-            )));
+            let chain = format!("{} -> {}", self.call_stack.join(" -> "), name);
+            return Err(AjisaiError::DepthLimitExceeded {
+                depth: MAX_CALL_DEPTH,
+                chain,
+            });
         }
 
         self.call_stack.push(name.to_string());
@@ -822,6 +846,7 @@ impl Interpreter {
             Token::ChevronDefault => ">>>".to_string(),
             Token::Pipeline => "==".to_string(),
             Token::NilCoalesce => "=>".to_string(),
+            Token::SafeMode => "~".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }
@@ -1716,5 +1741,105 @@ ADDTEST
 
         // スタックには3つの要素（元の[12], [4], 結果の[3]）
         assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode division");
+    }
+
+    // === セーフモード（~）テスト ===
+
+    #[tokio::test]
+    async fn test_safe_mode_normal_execution() {
+        let mut interp = Interpreter::new();
+        // 正常時: ~ があっても通常通り結果を返す
+        let result = interp.execute("[ 1 2 3 ] [ 1 ] ~ GET").await;
+        assert!(result.is_ok(), "Safe mode should not affect normal execution: {:?}", result);
+        // GET succeeds: preserves source [1 2 3] and pushes result (2)
+        assert_eq!(interp.stack.len(), 2);
+        assert!(!interp.stack[1].is_nil(), "Result should not be NIL on success");
+    }
+
+    #[tokio::test]
+    async fn test_safe_mode_error_returns_nil() {
+        let mut interp = Interpreter::new();
+        // エラー時: スタック復元 + NILがプッシュされる
+        let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ GET").await;
+        assert!(result.is_ok(), "Safe mode should suppress error: {:?}", result);
+        // Stack restored to [[1,2,3], [10]] then NIL pushed → 3 items
+        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements (restored + NIL): {:?}", interp.stack);
+        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL on error");
+    }
+
+    #[tokio::test]
+    async fn test_safe_mode_with_nil_coalesce() {
+        let mut interp = Interpreter::new();
+        // => と組み合わせてデフォルト値を提供
+        // After ~ GET error: [[1,2,3], [10], NIL], push [0]: [[1,2,3], [10], NIL, [0]]
+        // => pops [0] and NIL → NIL → push [0]: [[1,2,3], [10], [0]]
+        let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ GET => [ 0 ]").await;
+        assert!(result.is_ok(), "Safe mode with nil coalesce should work: {:?}", result);
+        assert!(!interp.stack.last().unwrap().is_nil(), "Top should be the default value [0], not NIL");
+    }
+
+    #[tokio::test]
+    async fn test_safe_mode_division_by_zero() {
+        let mut interp = Interpreter::new();
+        // ゼロ除算のセーフモード: 復元 + NIL
+        let result = interp.execute("[ 10 ] [ 0 ] ~ /").await;
+        assert!(result.is_ok(), "Safe mode should suppress division by zero: {:?}", result);
+        // Stack restored to [[10], [0]] then NIL pushed → 3 items
+        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements: {:?}", interp.stack);
+        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL on division by zero");
+    }
+
+    #[tokio::test]
+    async fn test_safe_mode_stack_restore_on_error() {
+        let mut interp = Interpreter::new();
+        // エラー時にスタックがワード実行前の状態に復元 + NILがプッシュされる
+        let result = interp.execute("[ 100 ] [ 1 2 3 ] [ 10 ] ~ GET").await;
+        assert!(result.is_ok(), "Safe mode should suppress error: {:?}", result);
+        // Stack: [100], [1,2,3], [10], NIL → 4 elements
+        assert_eq!(interp.stack.len(), 4, "Stack should have 4 elements: {:?}", interp.stack);
+        assert!(interp.stack.last().unwrap().is_nil(), "Top of stack should be NIL");
+    }
+
+    #[tokio::test]
+    async fn test_safe_mode_resets_after_word() {
+        let mut interp = Interpreter::new();
+        // ~ はワード実行後に自動的にリセットされる
+        let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ GET").await;
+        assert!(result.is_ok());
+
+        // 次の操作はセーフモードではない
+        let result2 = interp.execute("[ 1 2 3 ] [ 10 ] GET").await;
+        assert!(result2.is_err(), "Second GET without ~ should fail");
+    }
+
+    #[tokio::test]
+    async fn test_safe_mode_with_keep_mode() {
+        let mut interp = Interpreter::new();
+        // ~ と ,, の組み合わせ
+        let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ ,, GET").await;
+        assert!(result.is_ok(), "Safe mode with keep mode should work: {:?}", result);
+        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL");
+    }
+
+    #[tokio::test]
+    async fn test_safe_mode_unknown_word() {
+        let mut interp = Interpreter::new();
+        // 未知のワードのセーフモード: 復元 + NIL
+        let result = interp.execute("[ 1 ] ~ NONEXISTENT").await;
+        assert!(result.is_ok(), "Safe mode should suppress unknown word error: {:?}", result);
+        // Stack restored to [[1]], then NIL pushed → 2 elements
+        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements: {:?}", interp.stack);
+        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL for unknown word");
+    }
+
+    #[tokio::test]
+    async fn test_safe_mode_with_no_change_error() {
+        let mut interp = Interpreter::new();
+        // 「変化なしはエラー」原則も ~ の対象: 復元 + NIL
+        let result = interp.execute("[ 1 ] ~ REVERSE").await;
+        assert!(result.is_ok(), "Safe mode should suppress no-change error: {:?}", result);
+        // Stack restored to [[1]], then NIL pushed → 2 elements
+        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements: {:?}", interp.stack);
+        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL for no-change error");
     }
 }

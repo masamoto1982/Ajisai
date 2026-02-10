@@ -82,15 +82,11 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                     if !interp.disable_no_change_check {
                         if children.len() < 2 {
                             interp.stack.push(Value::from_vector(sorted_v));
-                            return Err(AjisaiError::from(
-                                "SORT resulted in no change on a vector with less than 2 elements"
-                            ));
+                            return Err(AjisaiError::NoChange { word: "SORT".into() });
                         }
                         if sorted_v == *children {
                             interp.stack.push(Value::from_vector(sorted_v));
-                            return Err(AjisaiError::from(
-                                "SORT resulted in no change (vector is already sorted)"
-                            ));
+                            return Err(AjisaiError::NoChange { word: "SORT".into() });
                         }
                     }
 
@@ -132,14 +128,10 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             // "No change is an error" チェック
             if !interp.disable_no_change_check {
                 if original_stack.len() < 2 {
-                    return Err(AjisaiError::from(
-                        "SORT resulted in no change on a stack with less than 2 elements"
-                    ));
+                    return Err(AjisaiError::NoChange { word: "SORT".into() });
                 }
                 if sorted_stack == original_stack.as_slice() {
-                    return Err(AjisaiError::from(
-                        "SORT resulted in no change (stack is already sorted)"
-                    ));
+                    return Err(AjisaiError::NoChange { word: "SORT".into() });
                 }
             }
 

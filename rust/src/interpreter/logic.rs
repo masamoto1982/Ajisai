@@ -152,7 +152,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
         },
         OperationTargetMode::Stack => {
             // Stackモードは単項演算子では意味が不明確なため未対応
-            Err(AjisaiError::from("NOT does not support Stack (..) mode"))
+            Err(AjisaiError::ModeUnsupported { word: "NOT".into(), mode: "Stack".into() })
         }
     }
 }
@@ -210,7 +210,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation with count 0 or 1 results in no change"));
+                return Err(AjisaiError::NoChange { word: "AND".into() });
             }
 
             if interp.stack.len() < count {
@@ -295,7 +295,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation with count 0 or 1 results in no change"));
+                return Err(AjisaiError::NoChange { word: "OR".into() });
             }
 
             if interp.stack.len() < count {
