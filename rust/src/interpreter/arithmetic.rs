@@ -68,7 +68,7 @@ where
     }
 }
 
-fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F) -> Result<()>
+fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
@@ -101,7 +101,7 @@ where
                         interp.stack.push(val);
                     }
                 }
-                return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+                return Err(AjisaiError::NoChange { word: op_name.into() });
             }
 
             push_result(interp, result);
@@ -114,12 +114,12 @@ where
 
             if count == 0 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation with count 0 results in no change"));
+                return Err(AjisaiError::NoChange { word: op_name.into() });
             }
 
             if count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation with count 1 results in no change"));
+                return Err(AjisaiError::NoChange { word: op_name.into() });
             }
 
             if interp.stack.len() < count {
@@ -158,7 +158,7 @@ where
                     interp.stack.extend(items);
                 }
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK operation resulted in no change"));
+                return Err(AjisaiError::NoChange { word: op_name.into() });
             }
 
             push_result(interp, Value::from_fraction(acc));
@@ -168,11 +168,11 @@ where
 }
 
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
-    binary_arithmetic_op(interp, |a, b| Ok(a.add(b)))
+    binary_arithmetic_op(interp, |a, b| Ok(a.add(b)), "+")
 }
 
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
-    binary_arithmetic_op(interp, |a, b| Ok(a.sub(b)))
+    binary_arithmetic_op(interp, |a, b| Ok(a.sub(b)), "-")
 }
 
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
@@ -202,7 +202,7 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
                             interp.stack.push(val);
                         }
                     }
-                    return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+                    return Err(AjisaiError::NoChange { word: "*".into() });
                 }
                 push_result(interp, r);
                 return Ok(());
@@ -218,7 +218,7 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)))
+    binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)), "*")
 }
 
 fn apply_optimized_mul(a: &Value, b: &Value) -> Result<Value> {
@@ -306,7 +306,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
                             interp.stack.push(val);
                         }
                     }
-                    return Err(AjisaiError::from("Arithmetic operation resulted in no change"));
+                    return Err(AjisaiError::NoChange { word: "/".into() });
                 }
                 push_result(interp, r);
                 return Ok(());
@@ -328,7 +328,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         } else {
             Ok(a.div(b))
         }
-    })
+    }, "/")
 }
 
 fn apply_optimized_div(a: &Value, b: &Value) -> Result<Value> {

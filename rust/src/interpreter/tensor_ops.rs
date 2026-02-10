@@ -60,7 +60,7 @@ fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
 /// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::from("SHAPE does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "SHAPE".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -106,7 +106,7 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
 /// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::from("RANK does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "RANK".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -151,7 +151,7 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
 /// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::from("RESHAPE does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "RESHAPE".into(), mode: "Stack".into() });
     }
 
     let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -282,7 +282,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
 /// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::from("TRANSPOSE does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "TRANSPOSE".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -336,7 +336,7 @@ where
     F: Fn(&Fraction) -> Fraction,
 {
     if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::from(format!("{} does not support Stack (..) mode", op_name)));
+        return Err(AjisaiError::ModeUnsupported { word: op_name.to_string(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -431,7 +431,7 @@ pub fn op_round(interp: &mut Interpreter) -> Result<()> {
 ///   [ 7 8 9 ] [ 3 ] MOD → [ 1 2 0 ]  # ブロードキャスト
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::from("MOD does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "MOD".into(), mode: "Stack".into() });
     }
 
     let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -664,7 +664,7 @@ where
 /// 注意: 3次元までに制限されています
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::from("FILL does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "FILL".into(), mode: "Stack".into() });
     }
 
     // 引数ベクタ [ shape... value ] を取得

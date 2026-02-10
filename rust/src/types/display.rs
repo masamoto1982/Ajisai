@@ -113,6 +113,7 @@ fn display_code_block(tokens: &[super::Token]) -> String {
             Token::ChevronDefault => ">>>".to_string(),
             Token::Pipeline => "==".to_string(),
             Token::NilCoalesce => "=>".to_string(),
+            Token::SafeMode => "~".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }).collect();

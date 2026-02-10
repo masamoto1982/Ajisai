@@ -14,6 +14,7 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
+    // === 既存（維持） ===
     StackUnderflow,
     /// 構造エラー: 期待される構造（要素数、形状等）と実際の構造が一致しない
     StructureError { expected: String, got: String },
@@ -21,7 +22,21 @@ pub enum AjisaiError {
     DivisionByZero,
     IndexOutOfBounds { index: i64, length: usize },
     VectorLengthMismatch { len1: usize, len2: usize },
-    Custom(String),
+
+    // === 新規追加 ===
+    /// 呼び出し深度制限超過
+    DepthLimitExceeded { depth: usize, chain: String },
+    /// 次元制限超過
+    DimensionLimitExceeded { depth: usize },
+    /// 「変化なしはエラー」原則による検出
+    NoChange { word: String },
+    /// ワードが対応しないモードの使用
+    ModeUnsupported { word: String, mode: String },
+    /// 組み込みワードの削除・上書き
+    BuiltinProtection { word: String, operation: String },
+
+    // === 段階的に廃止 ===
+    Custom(String),  // 新規コードでは使用禁止。既存箇所を順次マイグレーション
 }
 
 impl AjisaiError {
@@ -49,6 +64,21 @@ impl fmt::Display for AjisaiError {
             },
             AjisaiError::VectorLengthMismatch { len1, len2 } => {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
+            },
+            AjisaiError::DepthLimitExceeded { depth, chain } => {
+                write!(f, "Call depth limit ({}) exceeded: {}", depth, chain)
+            },
+            AjisaiError::DimensionLimitExceeded { depth } => {
+                write!(f, "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.", depth)
+            },
+            AjisaiError::NoChange { word } => {
+                write!(f, "No change: {} produced no effect", word)
+            },
+            AjisaiError::ModeUnsupported { word, mode } => {
+                write!(f, "{} does not support {} mode (..)", word, mode)
+            },
+            AjisaiError::BuiltinProtection { word, operation } => {
+                write!(f, "Cannot {} built-in word: {}", operation, word)
             },
             AjisaiError::Custom(msg) => write!(f, "{}", msg),
         }

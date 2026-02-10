@@ -81,7 +81,7 @@ fn is_datetime_value(val: &Value) -> bool {
 /// - 入力が既にStringの場合（「変化なしはエラー」原則）
 pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("STR does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "STR".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -95,7 +95,7 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     // 既に文字列形式の場合は冗長な変換エラー
     if is_string_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("STR: value is already in string format"));
+        return Err(AjisaiError::NoChange { word: "STR".into() });
     }
 
     // 真偽値の場合
@@ -160,7 +160,7 @@ fn fraction_to_string(f: &Fraction) -> String {
 /// - 入力がStringでない場合（「変化なしはエラー」原則）
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("NUM does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "NUM".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -186,7 +186,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     // 既に数値の場合
     if is_number_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NUM: value is already a number (no change is an error)"));
+        return Err(AjisaiError::NoChange { word: "NUM".into() });
     }
 
     // 真偽値の場合
@@ -230,7 +230,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 /// - 入力が既にBooleanの場合（「変化なしはエラー」原則）
 pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("BOOL does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "BOOL".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -238,7 +238,7 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     // 既に真偽値形式の場合は冗長な変換エラー（変化なしはエラー原則）
     if is_boolean_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("BOOL: value is already a boolean (no change is an error)"));
+        return Err(AjisaiError::NoChange { word: "BOOL".into() });
     }
 
     // 文字列の場合: パース
@@ -292,7 +292,7 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 /// - Nil型（同型変換）
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("NIL does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "NIL".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -300,7 +300,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     // 既にNIL形式の場合は冗長な変換エラー
     if val.is_nil() {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NIL: value is already nil"));
+        return Err(AjisaiError::NoChange { word: "NIL".into() });
     }
 
     // 文字列の場合
@@ -651,7 +651,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 /// - 入力が数値でない場合
 pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("CHR does not support Stack (..) mode"));
+        return Err(AjisaiError::ModeUnsupported { word: "CHR".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;

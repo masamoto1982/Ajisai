@@ -80,7 +80,7 @@ fn extract_positive_integer(val: &Value) -> Option<BigInt> {
 pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
     // CSPRNGはStackモード(..)をサポートしない
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("CSPRNG does not support Stack mode (..)"));
+        return Err(AjisaiError::ModeUnsupported { word: "CSPRNG".into(), mode: "Stack".into() });
     }
 
     let (denominator, count) = parse_csprng_args(interp)?;

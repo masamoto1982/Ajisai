@@ -77,7 +77,7 @@ fn is_string_like(val: &Value) -> bool {
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     // DEFはStackモードをサポートしない（辞書操作ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("DEF does not support Stack mode (..)"));
+        return Err(AjisaiError::ModeUnsupported { word: "DEF".into(), mode: "Stack".into() });
     }
 
     if interp.stack.len() < 2 {
@@ -143,6 +143,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                     Token::ChevronDefault => ">>>".to_string(),
                     Token::Pipeline => "==".to_string(),
                     Token::NilCoalesce => "=>".to_string(),
+                    Token::SafeMode => "~".to_string(),
                     Token::LineBreak => "\n".to_string(),
                 }
             }).collect::<Vec<_>>().join(" ")
@@ -176,9 +177,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     if let Some(existing) = interp.dictionary.get(&upper_name) {
         if existing.is_builtin {
             interp.force_flag = false;
-            return Err(AjisaiError::from(format!(
-                "Cannot redefine built-in word: {}", upper_name
-            )));
+            return Err(AjisaiError::BuiltinProtection {
+                word: upper_name,
+                operation: "redefine".into(),
+            });
         }
 
         // カスタムワードの再定義: 依存関係チェック
@@ -298,7 +300,7 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     // DELはStackモードをサポートしない（辞書操作ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("DEL does not support Stack mode (..)"));
+        return Err(AjisaiError::ModeUnsupported { word: "DEL".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -312,9 +314,10 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     if let Some(def) = interp.dictionary.get(&upper_name) {
         if def.is_builtin {
             interp.force_flag = false;  // フラグをリセット
-            return Err(AjisaiError::from(format!(
-                "Cannot delete built-in word: {}", upper_name
-            )));
+            return Err(AjisaiError::BuiltinProtection {
+                word: upper_name.clone(),
+                operation: "delete".into(),
+            });
         }
     } else {
         interp.force_flag = false;  // フラグをリセット
@@ -368,7 +371,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     // ?はStackモードをサポートしない（辞書操作ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("? (LOOKUP) does not support Stack mode (..)"));
+        return Err(AjisaiError::ModeUnsupported { word: "? (LOOKUP)".into(), mode: "Stack".into() });
     }
 
     // LOOKUP (?) は 'NAME' を期待する
