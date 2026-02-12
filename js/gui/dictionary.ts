@@ -53,25 +53,16 @@ const toWordInfo = (wordData: [string, string | null, boolean]): WordInfo => ({
     protected: wordData[2] || false
 });
 
-const groupByCategory = (
-    builtinWords: unknown[][]
-): Record<string, unknown[][]> => {
-    const groups: Record<string, unknown[][]> = {};
+const sortWordName = (a: string, b: string): number => {
+    const aIsAlpha = /^[A-Za-z]/.test(a);
+    const bIsAlpha = /^[A-Za-z]/.test(b);
 
-    builtinWords
-        .filter((wordData): wordData is unknown[] =>
-            Array.isArray(wordData) && wordData[0] !== ';' && wordData[0] !== '"'
-        )
-        .forEach(wordData => {
-            // New data structure: [name, description, syntaxExample, category]
-            const category = (wordData[3] as string) || 'Other';
-            if (!groups[category]) {
-                groups[category] = [];
-            }
-            groups[category].push(wordData);
-        });
+    // Symbols first, alphabetic after
+    if (!aIsAlpha && bIsAlpha) return -1;
+    if (aIsAlpha && !bIsAlpha) return 1;
 
-    return groups;
+    // Within same group, sort by localeCompare
+    return a.localeCompare(b);
 };
 
 const clearElement = (element: HTMLElement): void => {
@@ -156,56 +147,47 @@ export const createDictionary = (
         }
     };
 
-    const renderBuiltinWordsWithGroups = (
+    const renderBuiltinWordsSorted = (
         container: HTMLElement,
         builtinWords: unknown[][]
     ): void => {
         clearElement(container);
 
-        const groups = groupByCategory(builtinWords);
-        let totalMatches = 0;
+        // Filter out ';' and '"'
+        const filtered = builtinWords.filter(
+            (wd): wd is unknown[] =>
+                Array.isArray(wd) && wd[0] !== ';' && wd[0] !== '"'
+        );
 
-        Object.keys(groups).sort().forEach(category => {
-            const categoryWords = groups[category];
-            if (!categoryWords) return;
+        // Sort: symbols first, then alphabetic
+        const sorted = [...filtered].sort((a, b) =>
+            sortWordName(a[0] as string, b[0] as string)
+        );
 
-            // フィルタリング: マッチするワードのみ抽出
-            const filteredWords = categoryWords.filter(wordData => {
-                const name = wordData[0] as string;
-                return matchesFilter(name, searchFilter);
-            });
+        // Apply search filter
+        const matched = sorted.filter(wd =>
+            matchesFilter(wd[0] as string, searchFilter)
+        );
 
-            // カテゴリ内にマッチするワードがなければスキップ
-            if (filteredWords.length === 0) return;
+        // Create buttons
+        matched.forEach(wordData => {
+            const name = wordData[0] as string;
+            const description = (wordData[1] as string) || name;
+            const syntaxExample = (wordData[2] as string) || '';
 
-            totalMatches += filteredWords.length;
+            const button = createButton(
+                name,
+                description,
+                'word-button builtin',
+                () => onWordClick(name),
+                () => { elements.builtinWordInfo.textContent = syntaxExample; },
+                () => { elements.builtinWordInfo.textContent = ''; }
+            );
 
-            const groupContainer = document.createElement('span');
-            groupContainer.className = 'builtin-category-group';
-
-            filteredWords.forEach(wordData => {
-                // Data structure: [name, description, syntaxExample, category]
-                const name = wordData[0] as string;
-                const description = (wordData[1] as string) || name;
-                const syntaxExample = (wordData[2] as string) || '';
-
-                const button = createButton(
-                    name,
-                    description,
-                    'word-button builtin',
-                    () => onWordClick(name),
-                    () => { elements.builtinWordInfo.textContent = syntaxExample; },
-                    () => { elements.builtinWordInfo.textContent = ''; }
-                );
-
-                groupContainer.appendChild(button);
-            });
-
-            container.appendChild(groupContainer);
+            container.appendChild(button);
         });
 
-        // フィルターが設定されているが結果がない場合
-        if (searchFilter && totalMatches === 0) {
+        if (searchFilter && matched.length === 0) {
             container.appendChild(createNoResultsMessage());
         }
     };
@@ -221,7 +203,12 @@ export const createDictionary = (
             matchesFilter(wordInfo.name, searchFilter)
         );
 
-        filteredWords.forEach(wordInfo => {
+        // Sort: symbols first, then alphabetic
+        const sortedFiltered = [...filteredWords].sort((a, b) =>
+            sortWordName(a.name, b.name)
+        );
+
+        sortedFiltered.forEach(wordInfo => {
             const className = wordInfo.protected
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
@@ -255,7 +242,7 @@ export const createDictionary = (
 
         try {
             const builtinWords = window.ajisaiInterpreter.get_builtin_words_info();
-            renderBuiltinWordsWithGroups(elements.builtinWordsDisplay, builtinWords);
+            renderBuiltinWordsSorted(elements.builtinWordsDisplay, builtinWords);
         } catch (error) {
             console.error('Failed to render builtin words:', error);
         }
@@ -288,6 +275,5 @@ export const createDictionary = (
 export const dictionaryUtils = {
     decodeWordName,
     toWordInfo,
-    groupByCategory,
     SYMBOL_MAP
 };
