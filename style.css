@@ -234,11 +234,6 @@
     margin-bottom: 0;
 }
 
-/* 組み込みワードのカテゴリーグループ - インライン表示 */
-.builtin-category-group {
-    display: inline;
-}
-
 /* empty表示 */
 .state-display {
     color: var(--color-text);
