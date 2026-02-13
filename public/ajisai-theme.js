@@ -238,7 +238,12 @@ const AjisaiTheme = {
             "--color-builtin": "#E65100",
             "--color-dependency": "#E69500",
             "--color-non-dependency": "#009B68",
-            "--color-stack": "#990099"
+            "--color-stack": "#990099",
+
+            // シグネチャ型背景色（固定・色覚配慮）
+            "--color-signature-map": "#E8F0FE",
+            "--color-signature-form": "#E6F4EA",
+            "--color-signature-fold": "#FDE8E0"
         };
     },
 
