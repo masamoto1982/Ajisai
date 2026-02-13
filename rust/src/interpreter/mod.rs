@@ -196,7 +196,7 @@ impl Interpreter {
                     return Ok((values, i - start_index + 1));
                 },
                 Token::Number(n) => {
-                    values.push(Value::from_number(Fraction::from_str(n).map_err(AjisaiError::from)?));
+                    values.push(Value::from_number(Fraction::from_str_unreduced(n).map_err(AjisaiError::from)?));
                     i += 1;
                 },
                 Token::String(s) => {

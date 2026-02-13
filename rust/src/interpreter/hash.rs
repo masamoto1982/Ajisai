@@ -161,22 +161,24 @@ fn serialize_value_inner(val: &Value, bytes: &mut Vec<u8>) {
     }
 
     // 数値判定（単一スカラー）
+    // 正規形（GCD約分済み）でハッシュ化することで、1/2 と 2/4 が同じハッシュを生成
     if val.is_scalar() {
         if let Some(frac) = val.as_scalar() {
+            let canonical = Fraction::new(frac.numerator.clone(), frac.denominator.clone());
             bytes.push(0x01);
-            if frac.numerator < BigInt::zero() {
+            if canonical.numerator < BigInt::zero() {
                 bytes.push(0x00);
             } else {
                 bytes.push(0x01);
             }
-            let num_bytes = if frac.numerator < BigInt::zero() {
-                (-&frac.numerator).to_bytes_le().1
+            let num_bytes = if canonical.numerator < BigInt::zero() {
+                (-&canonical.numerator).to_bytes_le().1
             } else {
-                frac.numerator.to_bytes_le().1
+                canonical.numerator.to_bytes_le().1
             };
             bytes.extend_from_slice(&(num_bytes.len() as u32).to_le_bytes());
             bytes.extend_from_slice(&num_bytes);
-            let den_bytes = frac.denominator.to_bytes_le().1;
+            let den_bytes = canonical.denominator.to_bytes_le().1;
             bytes.extend_from_slice(&(den_bytes.len() as u32).to_le_bytes());
             bytes.extend_from_slice(&den_bytes);
             return;

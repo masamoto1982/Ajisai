@@ -636,7 +636,7 @@ mod tests {
     }
 
     fn make_fraction(num: i64, den: i64) -> Value {
-        Value::from_fraction(Fraction::new(
+        Value::from_fraction(Fraction::new_unreduced(
             BigInt::from(num),
             BigInt::from(den),
         ))
@@ -683,18 +683,17 @@ mod tests {
     }
 
     #[test]
-    fn test_tone_from_fraction_normalized() {
-        // 440/2 gets normalized to 220/1 by Fraction::new (GCD reduction)
-        // This becomes 220Hz, 1スロット
+    fn test_tone_from_fraction_unreduced() {
+        // 440/2 is preserved as-is (no GCD reduction) for music DSL
+        // This becomes 440Hz, 2スロット
         let val = make_fraction(440, 2);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
         match structure {
             AudioStructure::Tone { frequency, duration, .. } => {
-                // Fraction(440, 2) normalizes to Fraction(220, 1)
-                assert_eq!(frequency, 220.0);
-                assert_eq!(duration, 1.0);
+                assert_eq!(frequency, 440.0);
+                assert_eq!(duration, 2.0);
             }
             _ => panic!("Expected Tone"),
         }
@@ -702,16 +701,14 @@ mod tests {
 
     #[test]
     fn test_rest_from_zero() {
-        // 0/4 gets normalized to 0/1 by Fraction::new (GCD reduction with 0)
-        // This becomes 1-slot rest
+        // 0/4 is preserved as-is for music DSL → 4-slot rest
         let val = make_fraction(0, 4);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
         match structure {
             AudioStructure::Rest { duration } => {
-                // Fraction(0, 4) normalizes to Fraction(0, 1)
-                assert_eq!(duration, 1.0);
+                assert_eq!(duration, 4.0);
             }
             _ => panic!("Expected Rest"),
         }
@@ -719,14 +716,14 @@ mod tests {
 
     #[test]
     fn test_rest_from_zero_coprime() {
-        // 0/3 also normalizes to 0/1, same behavior
+        // 0/3 is preserved as-is for music DSL → 3-slot rest
         let val = make_fraction(0, 3);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
         match structure {
             AudioStructure::Rest { duration } => {
-                assert_eq!(duration, 1.0);
+                assert_eq!(duration, 3.0);
             }
             _ => panic!("Expected Rest"),
         }
@@ -934,16 +931,14 @@ mod tests {
     async fn test_play_with_zero_rest() {
         use crate::interpreter::Interpreter;
 
-        // Note: 0/n always normalizes to 0/1, so rest duration is always 1
-        // This is a limitation of the current fraction normalization
+        // 0/2 is preserved unreduced in vectors → 2-slot rest
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 440 0/2 550 ] PLAY").await;
         assert!(result.is_ok(), "PLAY with 0/n rest should succeed: {:?}", result);
 
         let output = interp.get_output();
         assert!(output.contains("\"type\":\"rest\""), "Should contain rest");
-        // 0/2 normalizes to 0/1, so duration is 1, not 2
-        assert!(output.contains("\"duration\":1"), "Should contain duration 1 for normalized rest");
+        assert!(output.contains("\"duration\":2"), "Should contain duration 2 for 0/2 rest");
     }
 
     // ============================================================================
@@ -1318,6 +1313,45 @@ mod tests {
         assert!(output.contains("\"gain\":0.5"), "Should have gain 0.5");
         assert!(output.contains("\"pan\":0.7"), "Should have pan 0.7");
         assert!(output.contains("AUDIO:"), "Should have AUDIO command");
+    }
+
+    // ============================================================================
+    // 歌詞（文字列混在ベクタ）テスト
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_play_with_lyrics() {
+        use crate::interpreter::Interpreter;
+
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440/2 'Hello' 550/2 'World' ] PLAY").await;
+        assert!(result.is_ok(), "PLAY with lyrics should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        // 歌詞がOutputに書き込まれていること
+        assert!(output.contains("Hello"), "Should output lyrics 'Hello'");
+        assert!(output.contains("World"), "Should output lyrics 'World'");
+        // AUDIO構造に音だけ含まれていること（unreduced fractions preserved）
+        assert!(output.contains("\"frequency\":440"), "Should contain 440Hz tone");
+        assert!(output.contains("\"frequency\":550"), "Should contain 550Hz tone");
+        assert!(output.contains("\"duration\":2"), "Should contain duration 2");
+    }
+
+    #[tokio::test]
+    async fn test_play_with_duration_unreduced() {
+        use crate::interpreter::Interpreter;
+
+        // 440/2 and 550/2 should now be preserved unreduced
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 440/2 550/2 ] PLAY").await;
+        assert!(result.is_ok(), "PLAY with unreduced fractions should succeed: {:?}", result);
+
+        let output = interp.get_output();
+        assert!(output.contains("\"frequency\":440"), "Should contain 440Hz");
+        assert!(output.contains("\"frequency\":550"), "Should contain 550Hz");
+        // Both should have duration 2 (not 1)
+        let duration_count = output.matches("\"duration\":2").count();
+        assert_eq!(duration_count, 2, "Should have two tones with duration 2, got output: {}", output);
     }
 
 }
