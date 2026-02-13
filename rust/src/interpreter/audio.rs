@@ -514,11 +514,11 @@ fn build_audio_structure(
         return Ok(AudioStructure::Rest { duration: 1.0 });
     }
 
-    // 文字列判定
+    // 文字列判定（歌詞: Outputに出力、時間消費なし）
     if is_string_value(value) {
         let s = value_as_string(value);
         output.push_str(&s);
-        output.push(' ');
+        output.push('\n');
         return Ok(AudioStructure::Seq { children: vec![], envelope: None, waveform: WaveformType::Sine });
     }
 
@@ -612,6 +612,10 @@ fn output_play_command(structure: &AudioStructure, output: &mut String) {
     };
 
     if let Ok(json) = serde_json::to_string(&command) {
+        // AUDIOコマンドが必ず行頭から始まるようにする
+        if !output.is_empty() && !output.ends_with('\n') {
+            output.push('\n');
+        }
         output.push_str("AUDIO:");
         output.push_str(&json);
         output.push('\n');
