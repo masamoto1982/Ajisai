@@ -241,9 +241,9 @@ const AjisaiTheme = {
             "--color-stack": "#990099",
 
             // シグネチャ型背景色（固定・色覚配慮）
-            "--color-signature-map": "#E8F0FE",
-            "--color-signature-form": "#E6F4EA",
-            "--color-signature-fold": "#FDE8E0"
+            "--color-signature-map": "#D6E6FC",
+            "--color-signature-form": "#D4EADB",
+            "--color-signature-fold": "#FADDD0"
         };
     },
 
