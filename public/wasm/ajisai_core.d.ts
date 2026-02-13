@@ -11,6 +11,11 @@ export class AjisaiInterpreter {
     get_stack(): any;
     get_word_definition(name: string): any;
     constructor();
+    /**
+     * 辞書から指定されたワードを直接削除する（依存関係チェックなし）。
+     * syncInterpreterState で Worker 側の削除をメインスレッドに反映するために使用。
+     */
+    remove_word(name: string): void;
     reset(): any;
     restore_custom_words(words_js: any): void;
     restore_stack(stack_js: any): void;
@@ -28,14 +33,15 @@ export interface InitOutput {
     readonly ajisaiinterpreter_get_stack: (a: number) => any;
     readonly ajisaiinterpreter_get_word_definition: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_new: () => number;
+    readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_reset: (a: number) => any;
     readonly ajisaiinterpreter_restore_custom_words: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
-    readonly wasm_bindgen__closure__destroy__h475e1d64d4eaec82: (a: number, b: number) => void;
-    readonly wasm_bindgen__closure__destroy__h37d2552c1768367a: (a: number, b: number) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h4f35714ee4b88e24: (a: number, b: number, c: any, d: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__hda25708ba2a38ac6: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h6bcada729442d4c0: (a: number, b: number) => void;
+    readonly wasm_bindgen__closure__destroy__hc7ddc5b9c6ef0bf5: (a: number, b: number) => void;
+    readonly wasm_bindgen__closure__destroy__hcf049d74e7de4874: (a: number, b: number) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h6f232364e7aff175: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h782fde46ff4164f1: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h24bf0fdab81abd1b: (a: number, b: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

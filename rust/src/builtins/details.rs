@@ -2251,7 +2251,7 @@ Form型（新しい構造を生成する）
         _ => {
             // 既存の定義情報にフォールバック
             let definitions = get_builtin_definitions();
-            for (word_name, description, syntax_example) in definitions {
+            for (word_name, description, syntax_example, _) in definitions {
                 if word_name == name {
                     return format!("# {} - {}\n\n## 説明\n{}\n\n## 構文例\n{}\n\n詳細な説明は未実装です。",
                         name, description, description, syntax_example);

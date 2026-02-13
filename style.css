@@ -310,6 +310,19 @@
     box-shadow: 0 0 0 var(--color-medium);
 }
 
+/* シグネチャ型背景色 */
+.word-button.signature-map {
+    background: var(--color-signature-map);
+}
+
+.word-button.signature-form {
+    background: var(--color-signature-form);
+}
+
+.word-button.signature-fold {
+    background: var(--color-signature-fold);
+}
+
 /* --------------------------------------------------------------------------
  * 6. スタック項目（色覚配慮カラー）
  * -------------------------------------------------------------------------- */

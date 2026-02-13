@@ -174,11 +174,13 @@ export const createDictionary = (
             const name = wordData[0] as string;
             const description = (wordData[1] as string) || name;
             const syntaxExample = (wordData[2] as string) || '';
+            const signatureType = (wordData[3] as string) || 'none';
+            const sigClass = signatureType !== 'none' ? ` signature-${signatureType}` : '';
 
             const button = createButton(
                 name,
                 description,
-                'word-button builtin',
+                `word-button builtin${sigClass}`,
                 () => onWordClick(name),
                 () => { elements.builtinWordInfo.textContent = syntaxExample; },
                 () => { elements.builtinWordInfo.textContent = ''; }
