@@ -86,9 +86,9 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // NILの場合
+    // NILの場合: 不明な値に変換を射しても不明である (仕様セクション7.2)
     if val.is_nil() {
-        interp.stack.push(Value::from_string("NIL"));
+        interp.stack.push(Value::nil());
         return Ok(());
     }
 
@@ -1239,12 +1239,10 @@ mod tests {
     async fn test_str_nil() {
         let mut interp = Interpreter::new();
 
-        // NIL STR → 'NIL'
+        // NIL STR → NIL (仕様セクション7.2: 不明な値に変換を射しても不明)
         interp.execute("NIL STR").await.unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(is_string_value(val));
-            let s = value_as_string(val).unwrap();
-            assert_eq!(s, "NIL");
+            assert!(val.is_nil(), "NIL STR should return NIL, not a string");
         }
     }
 }

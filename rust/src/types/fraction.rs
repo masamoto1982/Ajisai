@@ -35,11 +35,26 @@ fn bigint_from_i128(n: i128) -> BigInt {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Fraction {
     pub numerator: BigInt,
     pub denominator: BigInt,
 }
+
+/// Mathematical equality via cross-multiplication.
+/// This correctly handles unreduced fractions: 440/2 == 220/1.
+impl PartialEq for Fraction {
+    fn eq(&self, other: &Self) -> bool {
+        // NIL special case: NIL == NIL, NIL != anything else
+        if self.is_nil() || other.is_nil() {
+            return self.is_nil() && other.is_nil();
+        }
+        // Cross-multiplication: a/b == c/d ⟺ a*d == c*b
+        &self.numerator * &other.denominator == &other.numerator * &self.denominator
+    }
+}
+
+impl Eq for Fraction {}
 
 impl Fraction {
     /// NIL sentinel: denominator = 0. Propagates through arithmetic (three-valued logic).
@@ -66,6 +81,18 @@ impl Fraction {
             den = -den;
         }
         Fraction { numerator: num, denominator: den }
+    }
+
+    /// Constructs a fraction without GCD reduction. Only normalizes sign.
+    /// Used for music DSL where n/d represents frequency/duration as independent parameters.
+    #[inline]
+    pub fn new_unreduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
+        if denominator.is_zero() { panic!("Division by zero"); }
+        if denominator < BigInt::zero() {
+            numerator = -numerator;
+            denominator = -denominator;
+        }
+        Fraction { numerator, denominator }
     }
 
     /// Constructs a fraction that is already in lowest terms. Only normalizes sign.
@@ -200,6 +227,28 @@ impl Fraction {
         } else {
             let num = BigInt::from_str(s).map_err(|e| e.to_string())?;
             Ok(Fraction::new(num, BigInt::one()))
+        }
+    }
+
+    /// Parses a fraction string without GCD reduction for explicit a/b forms.
+    /// Integers and decimals are still reduced (they represent single mathematical values).
+    /// Used for vector construction where a/b may represent frequency/duration.
+    pub fn from_str_unreduced(s: &str) -> std::result::Result<Self, String> {
+        if s.is_empty() { return Err("Empty string".to_string()); }
+
+        // Scientific notation: delegate to from_str (reduction is appropriate)
+        if s.contains(|c: char| c == 'e' || c == 'E') {
+            return Self::from_str(s);
+        }
+
+        // Explicit fraction a/b: preserve original numerator and denominator
+        if let Some(pos) = s.find('/') {
+            let num = BigInt::from_str(&s[..pos]).map_err(|e| e.to_string())?;
+            let den = BigInt::from_str(&s[pos+1..]).map_err(|e| e.to_string())?;
+            Ok(Self::new_unreduced(num, den))
+        } else {
+            // Integer or decimal: regular parsing (reduction is fine for single values)
+            Self::from_str(s)
         }
     }
 
