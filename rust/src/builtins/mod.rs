@@ -1,11 +1,3 @@
-// rust/src/builtins/mod.rs
-//
-// Built-in words module
-//
-// This module is organized into:
-// - definitions.rs: Word definitions (name, description, syntax_example, signature_type)
-// - details.rs: Detailed documentation for each word (used by ? command)
-
 mod definitions;
 mod details;
 

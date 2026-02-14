@@ -1,11 +1,3 @@
-// rust/src/interpreter/dictionary.rs
-//
-// 統一分数アーキテクチャ版の辞書操作
-// Vectorの二重性（Vector Duality）対応
-//
-// すべての値は Vec<Fraction> として表現される。
-// 文字列は分数のベクタ（各要素がコードポイント）として格納される。
-
 use crate::interpreter::{Interpreter, WordDefinition, OperationTargetMode};
 use crate::interpreter::helpers::get_word_name_from_value;
 use crate::interpreter::vector_exec::vector_to_source;
@@ -13,9 +5,6 @@ use crate::error::{AjisaiError, Result};
 use crate::types::{Token, ExecutionLine, DisplayHint, Value, ValueData};
 use std::collections::HashSet;
 
-/// 値を文字列として解釈する
-///
-/// 統一Value宇宙アーキテクチャ: 再帰的にValue構造を走査して文字列を構築
 fn value_to_string(val: &Value) -> Result<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
@@ -44,20 +33,15 @@ fn value_to_string(val: &Value) -> Result<String> {
     Ok(chars.into_iter().collect())
 }
 
-/// 値が文字列として解釈可能かチェック
-///
-/// DisplayHint が String の場合、または有効なコードポイントの範囲内にある場合
 fn is_string_like(val: &Value) -> bool {
     if val.is_nil() {
         return false;
     }
 
-    // DisplayHint が String の場合は確実に文字列
     if val.display_hint == DisplayHint::String {
         return true;
     }
 
-    // 再帰的にすべての要素が有効なコードポイント範囲にあるかチェック
     fn check_codepoints(val: &Value) -> bool {
         match &val.data {
             ValueData::Nil => false,
@@ -75,7 +59,6 @@ fn is_string_like(val: &Value) -> bool {
 }
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
-    // DEFはStackモードをサポートしない（辞書操作ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported { word: "DEF".into(), mode: "Stack".into() });
     }
@@ -84,16 +67,11 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    // 説明（オプション）を先にチェック
-    // 説明ありの場合: [ベクタ] ['NAME'] ['説明']
-    // 説明なしの場合: [ベクタ] ['NAME']
     let mut description = None;
 
     let has_description = if interp.stack.len() >= 3 {
-        // トップ2つが文字列的な値の場合のみ、説明ありと判定
         if let Some(top_val) = interp.stack.last() {
             if is_string_like(top_val) {
-                // 次（2番目）も文字列的かチェック
                 if let Some(second_val) = interp.stack.get(interp.stack.len() - 2) {
                     is_string_like(second_val)
                 } else {
@@ -111,25 +89,19 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     if has_description {
         if let Some(desc_val) = interp.stack.pop() {
-            // 文字列を取得（統一分数アーキテクチャ: 直接変換）
             if let Ok(s) = value_to_string(&desc_val) {
                 description = Some(s);
             }
         }
     }
 
-    // スタックから名前を取得
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let name_str = get_word_name_from_value(&name_val)?;
 
-    // 定義本体を取得
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 定義本体をソースコードに変換
-    // CodeBlock (: ... ;) またはVector (旧構文) をサポート
     let definition_str = match &def_val.data {
         ValueData::CodeBlock(tokens) => {
-            // CodeBlockのトークン列をソースコード文字列に変換
             tokens.iter().map(|t| {
                 match t {
                     Token::Number(n) => n.clone(),
@@ -149,7 +121,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             }).collect::<Vec<_>>().join(" ")
         }
         ValueData::Vector(_) => {
-            // VectorをAjisaiソースコードに変換（旧構文互換）
             vector_to_source(&def_val)?
         }
         _ => {
@@ -157,7 +128,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    // 定義本体をトークン化
     let custom_word_names: HashSet<String> = interp.dictionary.iter()
         .filter(|(_, def)| !def.is_builtin)
         .map(|(name, _)| name.clone())
@@ -166,14 +136,12 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let tokens = crate::tokenizer::tokenize_with_custom_words(&definition_str, &custom_word_names)
         .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
 
-    // 内部定義関数を呼び出し
     op_def_inner(interp, &name_str, &tokens, description)
 }
 
 pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token], description: Option<String>) -> Result<()> {
     let upper_name = name.to_uppercase();
 
-    // 組み込みワードは再定義不可（! があっても不可）
     if let Some(existing) = interp.dictionary.get(&upper_name) {
         if existing.is_builtin {
             interp.force_flag = false;
@@ -183,7 +151,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             });
         }
 
-        // カスタムワードの再定義: 依存関係チェック
         let dependents = interp.get_dependents(&upper_name);
 
         if !dependents.is_empty() && !interp.force_flag {
@@ -195,7 +162,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             )));
         }
 
-        // 警告メッセージを準備（依存関係があった場合）
         if !dependents.is_empty() {
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
             interp.output_buffer.push_str(&format!(
@@ -204,7 +170,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             ));
         }
 
-        // 既存のカスタムワードの依存関係をクリーンアップ
         for dep_name in &existing.dependencies {
             if let Some(dependents) = interp.dependents.get_mut(dep_name) {
                 dependents.remove(&upper_name);
@@ -213,7 +178,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     }
 
     let lines = parse_definition_body(tokens, &interp.dictionary)?;
-    
+
     let mut new_dependencies = HashSet::new();
     for line in &lines {
         for token in line.body_tokens.iter() {
@@ -225,11 +190,11 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             }
         }
     }
-    
+
     for dep_name in &new_dependencies {
         interp.dependents.entry(dep_name.clone()).or_default().insert(upper_name.clone());
     }
-    
+
     let new_def = WordDefinition {
         lines,
         is_builtin: false,
@@ -240,27 +205,24 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
 
     interp.dictionary.insert(upper_name.clone(), new_def);
     interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
-    interp.force_flag = false;  // フラグをリセット
+    interp.force_flag = false;
     Ok(())
 }
 
 fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMap<String, WordDefinition>) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut processed_tokens = Vec::new();
-    
+
     let mut i = 0;
     while i < tokens.len() {
         match &tokens[i] {
             Token::String(s) if s.starts_with('\'') && s.ends_with('\'') => {
-                // シングルクォート文字列をクォーテーションとして扱う
                 let inner = &s[1..s.len()-1];
-                // カスタムワード名のセットを作成
                 let custom_word_names: HashSet<String> = dictionary.iter()
                     .filter(|(_, def)| !def.is_builtin)
                     .map(|(name, _)| name.clone())
                     .collect();
-                    
-                // 内部をトークン化
+
                 let inner_tokens = crate::tokenizer::tokenize_with_custom_words(inner, &custom_word_names)
                     .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
                 processed_tokens.push(Token::VectorStart);
@@ -282,55 +244,50 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
         }
         i += 1;
     }
-    
+
     if !processed_tokens.is_empty() {
         let execution_line = ExecutionLine {
             body_tokens: processed_tokens,
         };
         lines.push(execution_line);
     }
-    
+
     if lines.is_empty() {
         return Err(AjisaiError::from("Word definition cannot be empty"));
     }
-    
+
     Ok(lines)
 }
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    // DELはStackモードをサポートしない（辞書操作ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported { word: "DEL".into(), mode: "Stack".into() });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 統一分数アーキテクチャ: 値を文字列として解釈
     let name = get_word_name_from_value(&val)?;
 
     let upper_name = name.to_uppercase();
 
-    // 組み込みワードは削除不可（! があっても不可）
     if let Some(def) = interp.dictionary.get(&upper_name) {
         if def.is_builtin {
-            interp.force_flag = false;  // フラグをリセット
+            interp.force_flag = false;
             return Err(AjisaiError::BuiltinProtection {
                 word: upper_name.clone(),
                 operation: "delete".into(),
             });
         }
     } else {
-        interp.force_flag = false;  // フラグをリセット
+        interp.force_flag = false;
         return Err(AjisaiError::from(format!(
             "Word '{}' is not defined", upper_name
         )));
     }
 
-    // 依存関係のチェック
     let dependents = interp.get_dependents(&upper_name);
 
     if !dependents.is_empty() && !interp.force_flag {
-        // 依存関係があり、強制フラグがない場合はエラー
         let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
         return Err(AjisaiError::from(format!(
             "Cannot delete '{}': referenced by {}. Use ! '{}' DEL to force.",
@@ -338,7 +295,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    // 削除実行
     if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
@@ -347,12 +303,10 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         }
         interp.dependents.remove(&upper_name);
 
-        // 他のワードの依存関係リストからも削除
         for deps in interp.dependents.values_mut() {
             deps.remove(&upper_name);
         }
 
-        // 警告メッセージ（依存関係があった場合）
         if !dependents.is_empty() {
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
             interp.output_buffer.push_str(&format!(
@@ -364,20 +318,17 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
     }
 
-    interp.force_flag = false;  // フラグをリセット
+    interp.force_flag = false;
     Ok(())
 }
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
-    // ?はStackモードをサポートしない（辞書操作ワード）
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported { word: "? (LOOKUP)".into(), mode: "Stack".into() });
     }
 
-    // LOOKUP (?) は 'NAME' を期待する
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 統一分数アーキテクチャ: 値を文字列として解釈
     let name_str = get_word_name_from_value(&name_val)?;
 
     let upper_name = name_str.to_uppercase();
@@ -393,7 +344,6 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
             interp.definition_to_load = Some(original_source.clone());
         } else {
             let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
-            // 新構文: [ [ code ] ] 'NAME' DEF の形式で表示
             let full_definition = if definition.is_empty() {
                 format!("[ NIL ] '{}' DEF", name_str)
             } else {
@@ -419,7 +369,6 @@ mod tests {
     #[tokio::test]
     async fn test_cannot_override_builtin_word() {
         let mut interp = Interpreter::new();
-        // 組み込みワードGETを上書きしようとする（新構文: Vectorをコードとして使用）
         let result = interp.execute("[ [ [ 1 ] + ] ] 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
@@ -430,7 +379,6 @@ mod tests {
     #[tokio::test]
     async fn test_can_override_custom_word() {
         let mut interp = Interpreter::new();
-        // カスタムワードは上書き可能（新構文）
         let result1 = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
 
@@ -440,7 +388,6 @@ mod tests {
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
         assert!(result3.is_ok(), "Executing redefined word should succeed");
 
-        // スタックトップが [ 15 ] であることを確認（Vector containing scalar 15）
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
@@ -460,7 +407,6 @@ mod tests {
     async fn test_cannot_override_other_builtin_words() {
         let mut interp = Interpreter::new();
 
-        // 複数の組み込みワードを上書きしようとする（新構文）
         let builtin_words = vec!["INSERT", "REPLACE", "MAP", "FILTER", "PRINT"];
 
         for word in builtin_words {
@@ -477,7 +423,6 @@ mod tests {
     async fn test_def_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        // Stackモード（..）でDEFを呼び出した場合はエラー（新構文）
         let result = interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' .. DEF").await;
         assert!(result.is_err(), "DEF should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
@@ -489,10 +434,8 @@ mod tests {
     async fn test_del_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        // まず定義（新構文）
         interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF").await.unwrap();
 
-        // Stackモード（..）でDELを呼び出した場合はエラー
         let result = interp.execute("'DOUBLE' .. DEL").await;
         assert!(result.is_err(), "DEL should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
@@ -504,10 +447,8 @@ mod tests {
     async fn test_lookup_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        // まず定義（新構文）
         interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF").await.unwrap();
 
-        // Stackモード（..）で?を呼び出した場合はエラー
         let result = interp.execute("'DOUBLE' .. ?").await;
         assert!(result.is_err(), "? (LOOKUP) should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
@@ -515,11 +456,8 @@ mod tests {
                 "Expected Stack mode error for ?, got: {}", err_msg);
     }
 
-    /// ヘルパー: restore_custom_words フローを模倣してサンプルワードをロードする
-    /// CodeBlockStart/CodeBlockEnd ラッパーを除去する（wasm_api.rs と同じロジック）
     fn restore_sample_words(interp: &mut Interpreter, sample_words: &[(&str, &str, &str)]) {
         use crate::tokenizer;
-        use crate::types::Token;
         use std::collections::HashSet;
 
         let custom_word_names: HashSet<String> = sample_words.iter()
@@ -530,17 +468,6 @@ mod tests {
             let tokens = tokenizer::tokenize_with_custom_words(definition, &custom_word_names)
                 .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
 
-            // wasm_api.rs の restore_custom_words と同じ CodeBlockStart 除去ロジック
-            let tokens = if !tokens.is_empty() && tokens[0] == Token::CodeBlockStart {
-                if tokens.last() == Some(&Token::CodeBlockEnd) {
-                    tokens[1..tokens.len()-1].to_vec()
-                } else {
-                    tokens[1..].to_vec()
-                }
-            } else {
-                tokens
-            };
-
             super::op_def_inner(interp, name, &tokens, Some(description.to_string()))
                 .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
         }
@@ -548,44 +475,10 @@ mod tests {
         interp.rebuild_dependencies().expect("Failed to rebuild dependencies");
     }
 
-    /// Test: DEL of sample custom words (definitions with ':' prefix - legacy format)
     #[tokio::test]
-    async fn test_del_sample_custom_words_legacy_format() {
+    async fn test_del_sample_custom_words() {
         let mut interp = Interpreter::new();
 
-        // 旧フォーマット: ':' プレフィックス付き（IndexedDB に保存された旧データ等）
-        let sample_words = vec![
-            ("C4", ": [ 261.63 ]", "純正律 C4"),
-            ("D4", ": C4 [ 9/8 ] *", "純正律 D4"),
-            ("E4", ": C4 [ 5/4 ] *", "純正律 E4"),
-        ];
-        restore_sample_words(&mut interp, &sample_words);
-
-        assert!(interp.dictionary.contains_key("C4"));
-        assert!(interp.dictionary.contains_key("D4"));
-        assert!(interp.dictionary.contains_key("E4"));
-
-        // Leaf node D4 の削除（依存なし）
-        let result = interp.execute("'D4' DEL").await;
-        assert!(result.is_ok(), "Should delete D4: {:?}", result.err());
-        assert!(!interp.dictionary.contains_key("D4"));
-
-        // C4 の削除（E4 が依存 → エラー）
-        let result = interp.execute("'C4' DEL").await;
-        assert!(result.is_err(), "Should not delete C4 (has dependents)");
-
-        // 強制削除
-        let result = interp.execute("! 'C4' DEL").await;
-        assert!(result.is_ok(), "Should force delete C4: {:?}", result.err());
-        assert!(!interp.dictionary.contains_key("C4"));
-    }
-
-    /// Test: DEL of sample custom words (new format without ':' prefix)
-    #[tokio::test]
-    async fn test_del_sample_custom_words_new_format() {
-        let mut interp = Interpreter::new();
-
-        // 新フォーマット: ':' プレフィックスなし
         let sample_words = vec![
             ("C4", "[ 261.63 ]", "純正律 C4"),
             ("D4", "C4 [ 9/8 ] *", "純正律 D4"),
@@ -593,38 +486,24 @@ mod tests {
         ];
         restore_sample_words(&mut interp, &sample_words);
 
-        // Leaf node D4 の削除
+        assert!(interp.dictionary.contains_key("C4"));
+        assert!(interp.dictionary.contains_key("D4"));
+        assert!(interp.dictionary.contains_key("E4"));
+
         let result = interp.execute("'D4' DEL").await;
         assert!(result.is_ok(), "Should delete D4: {:?}", result.err());
         assert!(!interp.dictionary.contains_key("D4"));
+
+        let result = interp.execute("'C4' DEL").await;
+        assert!(result.is_err(), "Should not delete C4 (has dependents)");
+
+        let result = interp.execute("! 'C4' DEL").await;
+        assert!(result.is_ok(), "Should force delete C4: {:?}", result.err());
+        assert!(!interp.dictionary.contains_key("C4"));
     }
 
-    /// Test: Execution of restored sample words works correctly
     #[tokio::test]
     async fn test_execute_restored_sample_words() {
-        let mut interp = Interpreter::new();
-
-        // 旧フォーマット（':' プレフィックス付き）でも実行できることを確認
-        let sample_words = vec![
-            ("C4", ": [ 261.63 ]", "純正律 C4"),
-            ("D4", ": C4 [ 9/8 ] *", "純正律 D4"),
-        ];
-        restore_sample_words(&mut interp, &sample_words);
-
-        // C4 の実行: [261.63] がスタックにプッシュされるべき
-        let result = interp.execute("C4").await;
-        assert!(result.is_ok(), "Executing C4 should succeed: {:?}", result.err());
-        assert_eq!(interp.stack.len(), 1);
-
-        // D4 の実行: C4 * 9/8 がスタックにプッシュされるべき
-        let result = interp.execute("D4").await;
-        assert!(result.is_ok(), "Executing D4 should succeed: {:?}", result.err());
-        assert_eq!(interp.stack.len(), 2);
-    }
-
-    /// Test: Execution of restored sample words (new format) works correctly
-    #[tokio::test]
-    async fn test_execute_restored_sample_words_new_format() {
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
@@ -646,16 +525,12 @@ mod tests {
     async fn test_def_with_vector_duality() {
         let mut interp = Interpreter::new();
 
-        // Vector Duality: Vectorをコードとして定義
-        // [ [ 2 ] * ] は「2を掛ける」という意味
         let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
         assert!(result.is_ok(), "DEF with vector should succeed: {:?}", result);
 
-        // 定義したワードを実行
         let result = interp.execute("[ 5 ] DOUBLE").await;
         assert!(result.is_ok(), "Executing DOUBLE should succeed: {:?}", result);
 
-        // 結果が [ 10 ] であることを確認 (Vector containing scalar 10)
         assert_eq!(interp.stack.len(), 1, "Stack should have 1 element");
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {

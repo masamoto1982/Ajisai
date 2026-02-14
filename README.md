@@ -9,9 +9,9 @@
 
 > **"Ajisai is a vessel of water."**
 
-**A stack-based programming language inspired by FORTH and LISP**
+**A Vector-oriented programming language**
 
-Ajisai inherits **postfix notation** and the **dictionary system** from FORTH, and **fractal data structures** from LISP.
+Ajisai inherits **postfix notation** and the **dictionary system** from FORTH. The center of its data structure is not the stack but the **Vector**.
 
 **Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
 
@@ -21,33 +21,34 @@ Ajisai inherits **postfix notation** and the **dictionary system** from FORTH, a
 
 The botanical name for hydrangea (Ajisai in Japanese) is *Hydrangea*, derived from the Greek words *hydor* (water) and *angos* (vessel) — literally meaning "vessel of water."
 
-This etymology perfectly captures the essence of Ajisai's architecture.
-
-### The Metaphor
-
-Imagine a vessel filled with water. The substance within is singular — just water. Yet upon its surface, countless ripples can form, each creating different patterns of light and shadow.
-
-In Ajisai:
+This etymology captures the essence of Ajisai's architecture.
 
 | Concept | Metaphor | Technical Reality |
 |:--------|:---------|:------------------|
-| **Data** | Water | `Vec<Fraction>` — the sole truth |
+| **Data** | Water | `Fraction` — the sole truth |
 | **Type** | Ripple | `DisplayHint` — interpretation for display only |
-| **Shape** | Vessel | `shape: Vec<usize>` — dimensional structure |
-
-Just as water conforms to its container while remaining fundamentally unchanged, Ajisai's data adapts its interpretation to context while maintaining a unified internal representation.
+| **Shape** | Vessel | Dimensional structure derived from nesting |
+| **NIL** | Bubble | `ValueData::Nil` — exists in water but is not water |
+| **CodeBlock** | How to pour water | Deferred code that produces water when executed |
 
 ---
 
 ## Unified Fraction Architecture
 
-In Ajisai, all values exist as a single substance: **fractions**. There is no type system.
+In Ajisai, all computational data exists as a single substance: **fractions**. There is no type system.
 
 ```rust
 pub struct Value {
-    pub data: Vec<Fraction>,       // The water (sole truth)
-    pub display_hint: DisplayHint, // The ripple (display interpretation)
-    pub shape: Vec<usize>,         // The vessel (dimensional shape)
+    pub data: ValueData,            // Water (recursive data structure)
+    pub display_hint: DisplayHint,  // Ripple (display interpretation)
+    pub audio_hint: Option<AudioHint>, // Music DSL metadata
+}
+
+pub enum ValueData {
+    Scalar(Fraction),       // A single fraction
+    Vector(Vec<Value>),     // Array of Values (recursively nestable)
+    Nil,                    // Absence of value (bubble)
+    CodeBlock(Vec<Token>),  // Deferred code (not a fraction)
 }
 ```
 
@@ -57,19 +58,11 @@ What users see as "types" are merely ripples on the surface:
 
 | Appearance (Ripple) | Reality (Water) | Explanation |
 |:--------------------|:----------------|:------------|
-| `42` | `[42/1]` | Integers are fractions |
-| `TRUE` | `[1/1]` | 1 is true, 0 is false |
-| `'A'` | `[65/1]` | Character code (ASCII/Unicode) |
-| `'Hello'` | `[72/1, 101/1, ...]` | Array of character codes |
-| `NIL` | `[0/0]` | Sentinel value |
-
-### Design Implications
-
-- **No type errors**: Any data can mix with any other — they are all water
-- **Structural validation**: Shape and length mismatches are caught, not "types"
-- **Display freedom**: Words like `STR` and `NUM` only change the ripple pattern, not the water itself
-
-This inherits FORTH's spirit: **trust the programmer**.
+| `42` | `Scalar(42/1)` | Integers are fractions |
+| `TRUE` | `Scalar(1/1)` + Boolean hint | 1 is true, 0 is false |
+| `'A'` | `Scalar(65/1)` + String hint | Character code (Unicode) |
+| `'Hello'` | `Vector([72/1, 101/1, ...])` + String hint | Array of character codes |
+| `NIL` | `Nil` | Absence of value |
 
 ---
 
@@ -77,18 +70,18 @@ This inherits FORTH's spirit: **trust the programmer**.
 
 ### Language Design
 
-- **Stack-based with Reverse Polish Notation (RPN)**
-  - FORTH-style stack operations
+- **Vector-oriented with Reverse Polish Notation (RPN)**
+  - FORTH-inherited postfix notation and dictionary system
+  - No stack manipulation words (DUP, SWAP, ROT, OVER do not exist)
 
 - **Exact Fraction Arithmetic**
   - All numbers internally represented as fractions — no rounding errors
   - Arbitrary precision through `num-bigint`
 
-- **Vector-based Fractal Structure**
+- **Recursive Vector Structure**
   - All container data represented as nestable Vectors
   - Bracket `[ ]` nesting expresses dimensions
-  - Tensor-like operations (SHAPE, RESHAPE, etc.)
-  - **Heterogeneous mixing**: `[ 1 'hello' TRUE [ 2 3 ] ]`
+  - Tensor operations (SHAPE, RESHAPE, TRANSPOSE, FILL)
   - NumPy/APL-style broadcasting
 
 - **The Rule of 3: Dimension and Call Depth Limits**
@@ -102,11 +95,6 @@ This inherits FORTH's spirit: **trust the programmer**.
 
 - **Built-in Word Protection**
   - Built-in words cannot be deleted or overwritten
-
-### Visualization
-
-- **Depth-based bracket styles**: `[ ]` → `{ }` → `( )` → `[ ]` (cycles every 3 levels)
-- **Real-time state display**: Stack, dictionary, memory visible in GUI
 
 ### Technology Stack
 
@@ -126,16 +114,13 @@ This inherits FORTH's spirit: **trust the programmer**.
 
 ```ajisai
 # Creating vectors
-[ 1 2 3 ]               # 1D vector: shape [3]
-[ [ 1 2 ] [ 3 4 ] ]     # Nested vector: shape [2, 2]
-
-# Heterogeneous data
-[ 1 'hello' TRUE [ 2 3 ] ]
+[ 1 2 3 ]               # 1D vector: { 1 2 3 }
+[ [ 1 2 ] [ 3 4 ] ]     # Nested: { ( 1 2 ) ( 3 4 ) }
 
 # Broadcasting arithmetic
-[ 5 ] [ 1 2 3 ] +       # → [ 6 7 8 ]
+[ 5 ] [ 1 2 3 ] +       # -> { 6 7 8 }
 [ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +
-# → [ [ 11 22 33 ] [ 14 25 36 ] ]
+# -> { ( 11 22 33 ) ( 14 25 36 ) }
 ```
 
 ### Custom Word Definition
@@ -145,21 +130,15 @@ This inherits FORTH's spirit: **trust the programmer**.
 : [ 2 ] * ; 'DOUBLE' DEF
 
 # Usage
-[ 5 ] DOUBLE    # → [ 10 ]
+[ 5 ] DOUBLE    # -> { 10 }
 
 # Combine with higher-order functions
-[ 1 2 3 4 5 ] 'DOUBLE' MAP    # → [ 2 4 6 8 10 ]
+[ 1 2 3 4 5 ] 'DOUBLE' MAP    # -> { 2 4 6 8 10 }
 ```
 
 ### Control Structure (Guards with Chevron Branching)
 
 ```ajisai
-# Conditional: TRUE if even, FALSE if odd
-: [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
-
-[ 4 ] EVEN?    # → [ TRUE ]
-[ 7 ] EVEN?    # → [ FALSE ]
-
 # Multi-branch guard (>> for conditions, >>> for default)
 :
   >> [ 0 ] <
@@ -169,9 +148,9 @@ This inherits FORTH's spirit: **trust the programmer**.
   >>> [ 1 ]
 ; 'SIGN' DEF
 
-[ -5 ] SIGN    # → [ -1 ]
-[ 0 ] SIGN     # → [ 0 ]
-[ 10 ] SIGN    # → [ 1 ]
+[ -5 ] SIGN    # -> { -1 }
+[ 0 ] SIGN     # -> { 0 }
+[ 10 ] SIGN    # -> { 1 }
 ```
 
 ### Pipeline Operator (`==`)
@@ -181,51 +160,25 @@ The pipeline operator is a visual marker for data flow (no-op):
 ```ajisai
 # Readable data transformation pipeline
 [ 1 2 3 4 5 ]
-  == : [ 2 ] * ; MAP           # Double each: [ 2 4 6 8 10 ]
-  == : [ 5 ] < NOT ; FILTER    # Keep >= 5:   [ 6 8 10 ]
-  == [ 0 ] : + ; FOLD          # Sum:         [ 24 ]
+  == : [ 2 ] * ; MAP           # Double each: { 2 4 6 8 10 }
+  == : [ 5 ] < NOT ; FILTER    # Keep >= 5:   { 6 8 10 }
+  == [ 0 ] : + ; FOLD          # Sum:         { 24 }
 ```
 
-### Consumption Mode (Keep Mode with `,,`)
-
-The keep mode preserves operands while pushing the result:
+### Safe Mode and Nil Coalescing
 
 ```ajisai
-# Default: Consume mode (operands removed)
-[ 1 ] [ 2 ] +       # → [ 3 ]
-
-# Keep mode: operands preserved
-[ 1 ] [ 2 ] ,, +    # → [ 1 ] [ 2 ] [ 3 ]
-
-# Modifiers are order-independent
-[ 1 ] [ 2 ] [ 3 ] [ 3 ] .. ,, +   # Stack mode + Keep mode
-[ 1 ] [ 2 ] [ 3 ] [ 3 ] ,, .. +   # Same result
-```
-
-### Nil Coalescing Operator (`=>`)
-
-Returns an alternative value when the first value is NIL:
-
-```ajisai
-NIL => [ 0 ]       # → [ 0 ]  (NIL replaced)
-[ 42 ] => [ 0 ]    # → [ 42 ] (non-NIL preserved)
-
-# Useful for default values
-'unknown_key' DICT_GET => [ 'default' ]
+# Safe mode (~): convert errors to NIL
+[ 1 2 3 ] [ 10 ] ~ GET           # -> NIL (index out of bounds)
+[ 1 2 3 ] [ 10 ] ~ GET => [ 0 ]  # -> { 0 } (with default)
 ```
 
 ---
 
 ## Built-in Words
 
-### Target Specification
-`.` `..`
-
-### Consumption Mode
-`,` `,,`
-
-### Input Helpers
-`'` `FRAME`
+### Modifiers
+`.` `..` `,` `,,` `~` `!` `==` `=>`
 
 ### Position Operations (0-indexed)
 `GET` `INSERT` `REPLACE` `REMOVE`
@@ -234,7 +187,7 @@ NIL => [ 0 ]       # → [ 0 ]  (NIL replaced)
 `LENGTH` `TAKE`
 
 ### Vector Operations
-`SPLIT` `CONCAT` `REVERSE` `RANGE` `SORT`
+`SPLIT` `CONCAT` `REVERSE` `RANGE` `REORDER` `COLLECT` `SORT`
 
 ### Constants
 `TRUE` `FALSE` `NIL`
@@ -242,11 +195,8 @@ NIL => [ 0 ]       # → [ 0 ]  (NIL replaced)
 ### String Operations
 `CHARS` `JOIN`
 
-### Parse/Convert
+### Format Conversion
 `NUM` `STR` `BOOL` `CHR`
-
-### DateTime
-`NOW` `DATETIME` `TIMESTAMP`
 
 ### Arithmetic
 `+` `-` `*` `/` `MOD` `FLOOR` `CEIL` `ROUND`
@@ -260,23 +210,29 @@ NIL => [ 0 ]       # → [ 0 ]  (NIL replaced)
 ### Higher-Order Functions
 `MAP` `FILTER` `FOLD`
 
+### Tensor Operations
+`SHAPE` `RANK` `RESHAPE` `TRANSPOSE` `FILL`
+
 ### I/O
 `PRINT`
 
-### Music
-`SEQ` `SIM` `PLAY`
+### Control Flow
+`TIMES` `WAIT` `>>` `>>>` `:` `;`
 
 ### Word Management
 `DEF` `DEL` `?`
 
-### Control Flow
-`TIMES` `WAIT` `>>` `>>>` `!` `==` `=>`
+### Meta
+`EXEC` `EVAL` `HASH` `CSPRNG`
 
-### Random
-`CSPRNG`
+### DateTime
+`NOW` `DATETIME` `TIMESTAMP`
 
-### Hash
-`HASH`
+### Music DSL
+`SEQ` `SIM` `PLAY` `CHORD` `SLOT` `GAIN` `GAIN-RESET` `PAN` `PAN-RESET` `FX-RESET` `ADSR` `SINE` `SQUARE` `SAW` `TRI`
+
+### Input Helpers
+`'` `FRAME`
 
 ---
 
