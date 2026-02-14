@@ -1,12 +1,7 @@
-// rust/src/tokenizer.rs (空白区切りベース - 伝統的なFORTHスタイル)
-
 use crate::types::Token;
 use std::collections::HashSet;
 
 #[allow(unused_variables)]
-
-/// 伝統的なFORTHスタイルの空白区切りトークナイザー
-/// マルチバイト文字（日本語など）のワード名をサポート
 pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let chars: Vec<char> = input.chars().collect();

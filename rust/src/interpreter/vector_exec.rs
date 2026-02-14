@@ -1,21 +1,8 @@
-// rust/src/interpreter/vector_exec.rs
-//
-// Vectorの二重性（Vector Duality）を実現するためのモジュール
-//
-// VectorをAjisaiコードとして解釈し、実行する機能を提供する。
-// これにより、[ DUP * ] のようなVectorをコードブロックとして扱える。
-
 use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueData, DisplayHint};
 use crate::error::{AjisaiError, Result};
 use std::collections::HashSet;
 
-/// VectorをAjisaiソースコード文字列に変換
-///
-/// # Examples
-/// - `[ DUP * ]` → `"DUP *"`
-/// - `[ [ 2 ] * ]` → `"[ 2 ] *"`
-/// - `[ 1 2 3 ]` → `"1 2 3"`
 pub fn vector_to_source(val: &Value) -> Result<String> {
     fn value_to_code(val: &Value, depth: usize) -> Result<String> {
         match &val.data {
@@ -84,9 +71,6 @@ pub fn vector_to_source(val: &Value) -> Result<String> {
     value_to_code(val, 0)
 }
 
-/// Vectorをトークン列に変換して実行
-///
-/// 高階ワード（MAP, FILTER, FOLD, TIMES）からVectorをコードとして実行する際に使用する。
 pub fn execute_vector_as_code(interp: &mut Interpreter, val: &Value) -> Result<()> {
     let source = vector_to_source(val)?;
 

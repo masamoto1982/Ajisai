@@ -1,12 +1,3 @@
-// rust/src/interpreter/helpers.rs
-//
-// 【責務】
-// インタプリタ内で頻繁に使用される共通ヘルパー関数を提供する。
-// 型変換、値の抽出、エラーハンドリングなどの定型処理を一元化し、
-// コードの重複を排除して保守性を向上させる。
-//
-// 統一Value宇宙アーキテクチャ対応版
-
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
@@ -14,25 +5,6 @@ use crate::interpreter::{Interpreter, ConsumptionMode};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
-// ============================================================================
-// 整数・インデックス抽出関数
-// ============================================================================
-
-/// 単一要素の値から整数値（i64）を抽出する
-///
-/// 【責務】
-/// - 値がスカラーまたは単一要素ベクタであることを検証
-/// - 内部の数値が整数（分母が1）であることを検証
-/// - i64範囲内に収まることを検証
-///
-/// 【用途】
-/// - カウント引数の取得（MAP/FILTER/算術演算のSTACKモード）
-/// - 整数パラメータの取得
-///
-/// 【エラー】
-/// - 複数要素ベクタの場合
-/// - 分数の場合
-/// - i64範囲を超える場合
 pub fn get_integer_from_value(value: &Value) -> Result<i64> {
     match &value.data {
         ValueData::Scalar(f) => {
@@ -45,7 +17,6 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
             Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
         }
         ValueData::Vector(children) if children.len() == 1 => {
-            // 単一要素ベクタの場合、再帰的に処理
             get_integer_from_value(&children[0])
         }
         ValueData::Vector(_) => {
@@ -57,20 +28,6 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
     }
 }
 
-/// 単一要素の値からBigInt整数値を抽出する
-///
-/// 【責務】
-/// - 値がスカラーまたは単一要素ベクタであることを検証
-/// - 内部の数値が整数（分母が1）であることを検証
-/// - BigIntとして返す（サイズ制限なし）
-///
-/// 【用途】
-/// - インデックス指定（GET/INSERT/REPLACE/REMOVE）
-/// - 大きな整数値の取得
-///
-/// 【エラー】
-/// - 複数要素ベクタの場合
-/// - 分数の場合
 pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
     match &value.data {
         ValueData::Scalar(f) => {
@@ -83,7 +40,6 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
             Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
         }
         ValueData::Vector(children) if children.len() == 1 => {
-            // 単一要素ベクタの場合、再帰的に処理
             get_bigint_from_value(&children[0])
         }
         ValueData::Vector(_) => {
@@ -95,28 +51,11 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
     }
 }
 
-// ============================================================================
-// 値抽出・アンラップ関数
-// ============================================================================
-
-/// 単一要素の値から文字列を抽出する（文字列ヒント付きの値から）
-///
-/// 【責務】
-/// - 文字列ヒント付きの値から文字列を復元
-/// - ワード名として使用するため大文字に変換
-///
-/// 【用途】
-/// - ワード名の取得（MAP/FILTER）
-/// - 文字列パラメータの取得
-///
-/// 【エラー】
-/// - NILの場合
 pub fn get_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
         return Err(AjisaiError::from("Cannot get word name from NIL"));
     }
 
-    // 分数の配列を文字列として解釈
     let fractions = value.flatten_fractions();
     let chars: String = fractions.iter()
         .filter_map(|f| {
@@ -133,30 +72,8 @@ pub fn get_word_name_from_value(value: &Value) -> Result<String> {
     Ok(chars.to_uppercase())
 }
 
-// ============================================================================
-// インデックス正規化関数
-// ============================================================================
-
-/// 負数インデックスを正規化し、範囲チェックを行う
-///
-/// 【責務】
-/// - 負数インデックス（-1 = 末尾）を正のインデックスに変換
-/// - 範囲外の場合はNoneを返す
-///
-/// 【用途】
-/// - GET/REPLACE/REMOVE操作でのインデックス計算
-/// - すべてのベクタ・スタック操作でのインデックス処理
-///
-/// 【引数】
-/// - index: 指定されたインデックス（負数可）
-/// - length: 対象の長さ
-///
-/// 【戻り値】
-/// - Some(usize): 正規化された有効なインデックス
-/// - None: 範囲外
 pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
     let actual_index = if index < 0 {
-        // 負数インデックス: -1は末尾、-2は末尾の1つ前
         let offset = (length as i64) + index;
         if offset < 0 {
             return None;
@@ -173,65 +90,14 @@ pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
     }
 }
 
-// ============================================================================
-// 値作成・ラッピング関数
-// ============================================================================
-
-/// 数値を単一要素の値として作成する
-///
-/// 【責務】
-/// - 数値（Fraction）を1要素のValueとして作成
-///
-/// 【用途】
-/// - 数値リテラルのスタックへのプッシュ
-/// - 数値演算結果の統一形式での返却
-///
-/// 【引数】
-/// - fraction: ラップする数値
-///
-/// 【戻り値】
-/// - スカラーの数値Value
 pub fn wrap_number(fraction: Fraction) -> Value {
     Value::from_fraction(fraction)
 }
 
-/// DateTimeを単一要素の値として作成する
-///
-/// 【責務】
-/// - DateTime型のFractionを単一要素の値として作成
-/// - 日付時刻ワードの結果を返すために使用
-///
-/// 【引数】
-/// - fraction: ラップするタイムスタンプ（Unixタイムスタンプ）
-///
-/// 【戻り値】
-/// - DateTime ヒント付きのスカラーValue
 pub fn wrap_datetime(fraction: Fraction) -> Value {
     Value::from_datetime(fraction)
 }
 
-// ============================================================================
-// オペランド取得関数
-// ============================================================================
-
-/// スタックからオペランドを取得する
-///
-/// 【責務】
-/// - consumption_mode に基づいて値を取得
-/// - Consume: スタックから pop して値を返す
-/// - Keep: スタックの上位 count 個を peek (clone) して値を返す（スタックは変更しない）
-///
-/// 【用途】
-/// - 各ワード実装で統一的にオペランドを取得
-/// - モードを意識せずに実装可能
-///
-/// 【引数】
-/// - interp: インタープリタへのミュータブル参照
-/// - count: 取得するオペランドの数
-///
-/// 【戻り値】
-/// - Ok(Vec<Value>): 取得した値のベクタ（スタックの上から順に取得、結果は逆順で返す）
-/// - Err: スタック不足の場合
 pub fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
     if interp.stack.len() < count {
         return Err(AjisaiError::StackUnderflow);
@@ -239,16 +105,14 @@ pub fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>
 
     match interp.consumption_mode {
         ConsumptionMode::Consume => {
-            // スタックから pop して値を返す（逆順で返す：最初にpopした値が末尾）
             let mut values = Vec::with_capacity(count);
             for _ in 0..count {
                 values.push(interp.stack.pop().unwrap());
             }
-            values.reverse(); // [a, b] + の場合、a が先、b が後
+            values.reverse();
             Ok(values)
         }
         ConsumptionMode::Keep => {
-            // スタックの上位 count 個を peek (clone) して値を返す
             let stack_len = interp.stack.len();
             let values: Vec<Value> = interp.stack[stack_len - count..]
                 .iter()
@@ -259,21 +123,9 @@ pub fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>
     }
 }
 
-/// 結果をスタックにプッシュする
-///
-/// 【責務】
-/// - Keep モードの場合は元の値がスタックに残っているので、結果のみをプッシュ
-/// - Consume モードの場合も結果をプッシュ
-///
-/// 【用途】
-/// - get_operands と組み合わせて使用
 pub fn push_result(interp: &mut Interpreter, result: Value) {
     interp.stack.push(result);
 }
-
-// ============================================================================
-// テストモジュール
-// ============================================================================
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,3 @@
-// rust/src/types/fraction.rs
-
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive, Signed};
 use num_integer::Integer;

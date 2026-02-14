@@ -1,47 +1,24 @@
-// rust/src/error.rs
-//
-// Ajisai言語のエラー型定義
-// インタプリタ実行時およびパース時のエラーを統一的に管理
-//
-// 統一分数アーキテクチャ：
-// Ajisaiでは「型」という概念は廃止されています。
-// すべての値は内部的に Vec<Fraction> として表現され、
-// エラーは構造的な要件（要素数、形状等）の不一致として報告されます。
-
 use std::fmt;
 
 pub type Result<T> = std::result::Result<T, AjisaiError>;
 
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
-    // === 既存（維持） ===
     StackUnderflow,
-    /// 構造エラー: 期待される構造（要素数、形状等）と実際の構造が一致しない
     StructureError { expected: String, got: String },
     UnknownWord(String),
     DivisionByZero,
     IndexOutOfBounds { index: i64, length: usize },
     VectorLengthMismatch { len1: usize, len2: usize },
-
-    // === 新規追加 ===
-    /// 呼び出し深度制限超過
     DepthLimitExceeded { depth: usize, chain: String },
-    /// 次元制限超過
     DimensionLimitExceeded { depth: usize },
-    /// 「変化なしはエラー」原則による検出
     NoChange { word: String },
-    /// ワードが対応しないモードの使用
     ModeUnsupported { word: String, mode: String },
-    /// 組み込みワードの削除・上書き
     BuiltinProtection { word: String, operation: String },
-
-    // === 段階的に廃止 ===
-    Custom(String),  // 新規コードでは使用禁止。既存箇所を順次マイグレーション
+    Custom(String),
 }
 
 impl AjisaiError {
-    /// 構造エラーを生成する
-    /// 統一分数アーキテクチャでは「型」ではなく「構造」の不一致としてエラーを報告
     pub fn structure_error(expected: &str, got: &str) -> Self {
         AjisaiError::StructureError {
             expected: expected.to_string(),

@@ -1,5 +1,3 @@
-// rust/src/interpreter/mod.rs
-
 pub mod helpers;
 pub mod vector_ops;
 pub mod tensor_ops;
@@ -30,27 +28,18 @@ use self::helpers::wrap_number;
 use gloo_timers::future::sleep;
 use std::time::Duration;
 
-/// 操作の対象（What）を決定するモード
-/// Operation target selector. Resets to StackTop after each word execution.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTargetMode {
-    /// Operate on the top element (default, activated by `.`)
     StackTop,
-    /// Operate on the entire stack (activated by `..`)
     Stack,
 }
 
-/// 値の扱い（How）を決定するモード
-/// Consumption mode selector. Resets to Consume after each word execution.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ConsumptionMode {
-    /// Consume values from stack (default, activated by `,`)
     Consume,
-    /// Keep values on stack (activated by `,,`)
     Keep,
 }
 
-/// Async action returned when async operation is needed during execution.
 #[derive(Debug, Clone)]
 pub enum AsyncAction {
     Wait {
@@ -65,13 +54,10 @@ pub struct Interpreter {
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
-    /// 操作の対象（What）を決定するモード
     pub(crate) operation_target_mode: OperationTargetMode,
-    /// 値の扱い（How）を決定するモード
     pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) force_flag: bool,
     pub(crate) disable_no_change_check: bool,
-    /// セーフモード修飾子（~）：エラー時にNILを返す
     pub(crate) safe_mode: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
@@ -101,21 +87,14 @@ impl Interpreter {
         interpreter
     }
 
-    // ========================================================================
-    // モード設定メソッド（Setters）
-    // ========================================================================
-
-    /// 操作対象モードを設定する
     pub fn set_operation_target_mode(&mut self, mode: OperationTargetMode) {
         self.operation_target_mode = mode;
     }
 
-    /// 消費モードを設定する
     pub fn set_consumption_mode(&mut self, mode: ConsumptionMode) {
         self.consumption_mode = mode;
     }
 
-    /// 両方のモードをデフォルト（StackTop, Consume）にリセットする
     pub fn reset_modes(&mut self) {
         self.operation_target_mode = OperationTargetMode::StackTop;
         self.consumption_mode = ConsumptionMode::Consume;
