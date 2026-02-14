@@ -16,16 +16,6 @@ use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
-// ============================================================================
-// ヘルパー関数（統一Value宇宙アーキテクチャ用）
-// ============================================================================
-
-/// ベクタ値かどうかを判定
-fn is_vector_value(val: &Value) -> bool {
-    val.is_vector()
-}
-
-/// ベクタの要素を再構築する（子Valueのリストを返す）
 fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
     match &val.data {
         ValueData::Vector(children) => children.clone(),
@@ -78,7 +68,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 AjisaiError::StackUnderflow
             })?;
 
-            if is_vector_value(&target_val) {
+            if target_val.is_vector() {
                 let v = reconstruct_vector_elements(&target_val);
                 let len = v.len();
                 if len == 0 {
@@ -155,7 +145,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 引数から index と element を抽出
-    let (index, element) = if is_vector_value(&args_val) {
+    let (index, element) = if args_val.is_vector() {
         let v = reconstruct_vector_elements(&args_val);
         if v.len() != 2 {
             interp.stack.push(args_val);
@@ -187,7 +177,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
                 AjisaiError::StackUnderflow
             })?;
 
-            if is_vector_value(&vector_val) {
+            if vector_val.is_vector() {
                 let mut v = reconstruct_vector_elements(&vector_val);
                 let len = v.len() as i64;
                 let insert_index = if index < 0 {
@@ -244,7 +234,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 引数から index と new_element を抽出
-    let (index, new_element) = if is_vector_value(&args_val) {
+    let (index, new_element) = if args_val.is_vector() {
         let v = reconstruct_vector_elements(&args_val);
         if v.len() != 2 {
             interp.stack.push(args_val);
@@ -276,7 +266,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
                 AjisaiError::StackUnderflow
             })?;
 
-            if is_vector_value(&vector_val) {
+            if vector_val.is_vector() {
                 let mut v = reconstruct_vector_elements(&vector_val);
                 let len = v.len();
                 let actual_index = match normalize_index(index, len) {
@@ -350,7 +340,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                 AjisaiError::StackUnderflow
             })?;
 
-            if is_vector_value(&vector_val) {
+            if vector_val.is_vector() {
                 let mut v = reconstruct_vector_elements(&vector_val);
                 let len = v.len();
                 let actual_index = match normalize_index(index, len) {
@@ -424,7 +414,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
                 // NIL = 空ベクタ → 長さ0
                 interp.stack.push(target_val);
                 0
-            } else if is_vector_value(&target_val) {
+            } else if target_val.is_vector() {
                 let v = reconstruct_vector_elements(&target_val);
                 let len = v.len();
                 interp.stack.push(target_val);
@@ -481,7 +471,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                 AjisaiError::StackUnderflow
             })?;
 
-            if is_vector_value(&vector_val) {
+            if vector_val.is_vector() {
                 let v = reconstruct_vector_elements(&vector_val);
                 let len = v.len();
                 let result = if count < 0 {
@@ -563,7 +553,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // サイズを抽出
-    let sizes: Vec<usize> = if is_vector_value(&args_val) {
+    let sizes: Vec<usize> = if args_val.is_vector() {
         let v = reconstruct_vector_elements(&args_val);
         if v.is_empty() {
             interp.stack.push(args_val);
@@ -601,7 +591,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                 AjisaiError::from("SPLIT requires a vector to split")
             })?;
 
-            if is_vector_value(&vector_val) {
+            if vector_val.is_vector() {
                 let v = reconstruct_vector_elements(&vector_val);
                 let total_size: usize = sizes.iter().sum();
                 if total_size > v.len() {
@@ -724,7 +714,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             let mut result_vec = Vec::new();
 
             for val in vecs_to_concat {
-                if is_vector_value(&val) {
+                if val.is_vector() {
                     let v = reconstruct_vector_elements(&val);
                     result_vec.extend(v);
                 } else {
@@ -775,7 +765,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             let mut result_vec = Vec::new();
 
             for val in vecs_to_concat {
-                if is_vector_value(&val) {
+                if val.is_vector() {
                     let v = reconstruct_vector_elements(&val);
                     result_vec.extend(v);
                 } else {
@@ -814,7 +804,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
         OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            if is_vector_value(&val) {
+            if val.is_vector() {
                 let mut v = reconstruct_vector_elements(&val);
                 // "No change is an error" チェック（disable_no_change_check で無効化可能）
                 if !interp.disable_no_change_check {
@@ -894,7 +884,7 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 引数ベクタから start, end, step を抽出
-    let (start, end, step) = if is_vector_value(&args_val) {
+    let (start, end, step) = if args_val.is_vector() {
         let v = reconstruct_vector_elements(&args_val);
         if v.len() < 2 || v.len() > 3 {
             interp.stack.push(args_val);
@@ -1031,7 +1021,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
     let indices_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // インデックスリストを抽出
-    let indices = if is_vector_value(&indices_val) {
+    let indices = if indices_val.is_vector() {
         let v = reconstruct_vector_elements(&indices_val);
         if v.is_empty() {
             interp.stack.push(indices_val);
@@ -1067,7 +1057,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                 AjisaiError::StackUnderflow
             })?;
 
-            if is_vector_value(&target_val) {
+            if target_val.is_vector() {
                 let elements = reconstruct_vector_elements(&target_val);
                 let len = elements.len();
 

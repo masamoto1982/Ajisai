@@ -1,7 +1,7 @@
 use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueData, DisplayHint};
 use crate::error::{AjisaiError, Result};
-use std::collections::HashSet;
+
 
 pub fn vector_to_source(val: &Value) -> Result<String> {
     fn value_to_code(val: &Value, depth: usize) -> Result<String> {
@@ -74,12 +74,7 @@ pub fn vector_to_source(val: &Value) -> Result<String> {
 pub fn execute_vector_as_code(interp: &mut Interpreter, val: &Value) -> Result<()> {
     let source = vector_to_source(val)?;
 
-    let custom_word_names: HashSet<String> = interp.dictionary.iter()
-        .filter(|(_, def)| !def.is_builtin)
-        .map(|(name, _)| name.clone())
-        .collect();
-
-    let tokens = crate::tokenizer::tokenize_with_custom_words(&source, &custom_word_names)
+    let tokens = crate::tokenizer::tokenize(&source)
         .map_err(|e| AjisaiError::from(format!("Tokenization error: {}", e)))?;
 
     let (_, action) = interp.execute_section_core(&tokens, 0)?;

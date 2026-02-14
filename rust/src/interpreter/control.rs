@@ -12,7 +12,7 @@ use crate::interpreter::OperationTargetMode;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::types::{Value, ValueData, DisplayHint};
-use std::collections::HashSet;
+
 
 /// 値を文字列として解釈する（内部ヘルパー）
 fn value_as_string(val: &Value) -> Option<String> {
@@ -213,14 +213,7 @@ pub(crate) fn op_eval(interp: &mut Interpreter) -> Result<()> {
     // （実行されるコード内のワードはStackTopモードで動作する）
     interp.operation_target_mode = OperationTargetMode::StackTop;
 
-    // トークナイズと実行
-    // カスタムワード辞書を取得
-    let custom_word_names: HashSet<String> = interp.dictionary.iter()
-        .filter(|(_, def)| !def.is_builtin)
-        .map(|(name, _)| name.clone())
-        .collect();
-
-    let tokens = crate::tokenizer::tokenize_with_custom_words(&source_code, &custom_word_names)
+    let tokens = crate::tokenizer::tokenize(&source_code)
         .map_err(|e| AjisaiError::from(format!("EVAL tokenization error: {}", e)))?;
 
     let (_, action) = interp.execute_section_core(&tokens, 0)?;

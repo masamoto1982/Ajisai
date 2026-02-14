@@ -128,12 +128,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let custom_word_names: HashSet<String> = interp.dictionary.iter()
-        .filter(|(_, def)| !def.is_builtin)
-        .map(|(name, _)| name.clone())
-        .collect();
-
-    let tokens = crate::tokenizer::tokenize_with_custom_words(&definition_str, &custom_word_names)
+    let tokens = crate::tokenizer::tokenize(&definition_str)
         .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
 
     op_def_inner(interp, &name_str, &tokens, description)
@@ -218,12 +213,8 @@ fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMa
         match &tokens[i] {
             Token::String(s) if s.starts_with('\'') && s.ends_with('\'') => {
                 let inner = &s[1..s.len()-1];
-                let custom_word_names: HashSet<String> = dictionary.iter()
-                    .filter(|(_, def)| !def.is_builtin)
-                    .map(|(name, _)| name.clone())
-                    .collect();
 
-                let inner_tokens = crate::tokenizer::tokenize_with_custom_words(inner, &custom_word_names)
+                let inner_tokens = crate::tokenizer::tokenize(inner)
                     .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
                 processed_tokens.push(Token::VectorStart);
                 processed_tokens.extend(inner_tokens);
@@ -458,14 +449,9 @@ mod tests {
 
     fn restore_sample_words(interp: &mut Interpreter, sample_words: &[(&str, &str, &str)]) {
         use crate::tokenizer;
-        use std::collections::HashSet;
-
-        let custom_word_names: HashSet<String> = sample_words.iter()
-            .map(|(name, _, _)| name.to_uppercase())
-            .collect();
 
         for (name, definition, description) in sample_words {
-            let tokens = tokenizer::tokenize_with_custom_words(definition, &custom_word_names)
+            let tokens = tokenizer::tokenize(definition)
                 .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
 
             super::op_def_inner(interp, name, &tokens, Some(description.to_string()))

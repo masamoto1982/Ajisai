@@ -204,12 +204,7 @@ impl AjisaiInterpreter {
             self.step_position = 0;
             self.current_step_code = code.to_string();
 
-            let custom_word_names: std::collections::HashSet<String> = self.interpreter.dictionary.iter()
-                .filter(|(_, def)| !def.is_builtin)
-                .map(|(name, _)| name.clone())
-                .collect();
-
-            match tokenizer::tokenize_with_custom_words(code, &custom_word_names) {
+            match tokenizer::tokenize(code) {
                 Ok(tokens) => { self.step_tokens = tokens; }
                 Err(e) => {
                     self.step_mode = false;
@@ -374,17 +369,13 @@ impl AjisaiInterpreter {
         let words: Vec<CustomWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 
-        let custom_word_names: std::collections::HashSet<String> = words.iter()
-            .map(|w| w.name.to_uppercase())
-            .collect();
-
         for word in words {
             let definition = match &word.definition {
                 Some(def) if !def.is_empty() => def.clone(),
                 _ => continue,
             };
 
-            let tokens = tokenizer::tokenize_with_custom_words(&definition, &custom_word_names)
+            let tokens = tokenizer::tokenize(&definition)
                 .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
 
             interpreter::dictionary::op_def_inner(&mut self.interpreter, &word.name, &tokens, word.description.clone())

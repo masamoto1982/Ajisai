@@ -1,8 +1,6 @@
 use crate::types::Token;
-use std::collections::HashSet;
 
-#[allow(unused_variables)]
-pub fn tokenize_with_custom_words(input: &str, _custom_words: &HashSet<String>) -> Result<Vec<Token>, String> {
+pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
