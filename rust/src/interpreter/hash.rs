@@ -48,16 +48,6 @@ use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive};
 
-// ============================================================================
-// ヘルパー関数（統一Value宇宙アーキテクチャ用）
-// ============================================================================
-
-/// ベクタ値かどうかを判定
-fn is_vector_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Vector(_))
-}
-
-/// 文字列値かどうかを判定
 fn is_string_value(val: &Value) -> bool {
     val.display_hint == DisplayHint::String && !val.is_nil()
 }

@@ -1,8 +1,3 @@
-//! 行列演算ワード
-//!
-//! 統一Value宇宙アーキテクチャ版
-//! すべての値は再帰的ValueData構造で表現される。
-
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::interpreter::helpers::wrap_number;
@@ -11,32 +6,6 @@ use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 
-// ============================================================================
-// ヘルパー関数
-// ============================================================================
-
-/// 値がベクタ（複数要素）かチェック
-fn is_vector_value(val: &Value) -> bool {
-    val.is_vector()
-}
-
-/// 値が数値（スカラー）かチェック
-fn is_number_value(val: &Value) -> bool {
-    val.is_scalar()
-}
-
-/// 形状を推論する（統一Value宇宙アーキテクチャ版）
-fn infer_shape_from_value(val: &Value) -> Vec<usize> {
-    val.shape()
-}
-
-/// 値からスカラー数値を抽出
-#[allow(dead_code)]
-fn extract_scalar(val: &Value) -> Option<&Fraction> {
-    val.as_scalar()
-}
-
-/// ベクタの要素を再構築する
 fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
     match &val.data {
         ValueData::Vector(children) => children.clone(),
@@ -46,18 +15,6 @@ fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
     }
 }
 
-// ============================================================================
-// 形状操作ワード
-// ============================================================================
-
-/// SHAPE - ベクタの形状を取得（Map型）
-///
-/// 使用法:
-///   [ 1 2 3 ] SHAPE           → [ 3 ]
-///   [ [ 1 2 ] [ 3 4 ] ] SHAPE → [ 2 2 ]
-///
-/// 形状は1次元Vectorとして返される
-/// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported { word: "SHAPE".into(), mode: "Stack".into() });
@@ -72,8 +29,8 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     }
 
     // ベクタの場合
-    if is_vector_value(&val) {
-        let shape_vec = infer_shape_from_value(&val);
+    if val.is_vector() {
+        let shape_vec = val.shape();
 
         let shape_values: Vec<Value> = shape_vec
             .iter()
@@ -97,13 +54,6 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// RANK - ベクタの次元数を取得（Map型）
-///
-/// 使用法:
-///   [ 1 2 3 ] RANK           → [ 1 ]
-///   [ [ 1 2 ] [ 3 4 ] ] RANK → [ 2 ]
-///
-/// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported { word: "RANK".into(), mode: "Stack".into() });
@@ -118,8 +68,8 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     }
 
     // ベクタの場合
-    if is_vector_value(&val) {
-        let shape = infer_shape_from_value(&val);
+    if val.is_vector() {
+        let shape = val.shape();
         let r = shape.len();
         let rank_frac = Fraction::new(BigInt::from(r as i64), BigInt::one());
 
@@ -141,14 +91,6 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// RESHAPE - ベクタの形状を変更（Form型）
-///
-/// 使用法:
-///   [ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → { ( 1 2 3 ) ( 4 5 6 ) }
-///   [ 1 2 3 4 5 6 ] [ 3 2 ] RESHAPE → { ( 1 2 ) ( 3 4 ) ( 5 6 ) }
-///
-/// 注意: 3次元までに制限されています
-/// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported { word: "RESHAPE".into(), mode: "Stack".into() });
@@ -158,7 +100,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     let data_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 形状をベクタから抽出
-    if !is_vector_value(&shape_val) && !shape_val.is_nil() {
+    if !shape_val.is_vector() && !shape_val.is_nil() {
         interp.stack.push(data_val);
         interp.stack.push(shape_val);
         return Err(AjisaiError::from("RESHAPE requires shape as vector"));
@@ -224,7 +166,6 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// 平坦化されたデータから再帰的Value構造を構築
 fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> Value {
     if shape.is_empty() {
         // スカラー
@@ -274,12 +215,6 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
     }
 }
 
-/// TRANSPOSE - 2次元ベクタの転置（Form型）
-///
-/// 使用法:
-///   { ( 1 2 3 ) ( 4 5 6 ) } TRANSPOSE → { ( 1 4 ) ( 2 5 ) ( 3 6 ) }
-///
-/// デフォルト消費原則: 対象を消費する。,, で保持可能。
 pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported { word: "TRANSPOSE".into(), mode: "Stack".into() });
@@ -294,7 +229,7 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 形状を取得
-    let shape = infer_shape_from_value(&val);
+    let shape = val.shape();
     if shape.len() != 2 {
         interp.stack.push(val);
         return Err(AjisaiError::from("TRANSPOSE requires 2D vector"));
@@ -326,11 +261,6 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-// ============================================================================
-// 基本数学関数
-// ============================================================================
-
-/// 単項演算のヘルパー関数
 fn unary_math_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction) -> Fraction,
@@ -348,7 +278,7 @@ where
     }
 
     // 単一数値の場合
-    if is_number_value(&val) {
+    if val.is_scalar() {
         if let Some(f) = val.as_scalar() {
             let result = op(f);
             interp.stack.push(wrap_number(result));
@@ -357,7 +287,7 @@ where
     }
 
     // ベクタの場合
-    if is_vector_value(&val) {
+    if val.is_vector() {
         let result = apply_unary_to_value(&val, &op);
         interp.stack.push(result);
         return Ok(());
@@ -367,7 +297,6 @@ where
     Err(AjisaiError::from(format!("{} requires number or vector", op_name)))
 }
 
-/// 再帰的に単項演算を適用
 fn apply_unary_to_value<F>(val: &Value, op: &F) -> Value
 where
     F: Fn(&Fraction) -> Fraction,
@@ -393,42 +322,18 @@ where
     }
 }
 
-/// FLOOR - 切り捨て（負の無限大方向）
-///
-/// 使用法:
-///   [ 7/3 ] FLOOR → [ 2 ]      # 7/3 = 2.333... → 2
-///   [ -7/3 ] FLOOR → [ -3 ]    # -7/3 = -2.333... → -3
-///   [ 5 ] FLOOR → [ 5 ]        # 整数はそのまま
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
     unary_math_op(interp, |f| f.floor(), "FLOOR")
 }
 
-/// CEIL - 切り上げ（正の無限大方向）
-///
-/// 使用法:
-///   [ 7/3 ] CEIL → [ 3 ]       # 7/3 = 2.333... → 3
-///   [ -7/3 ] CEIL → [ -2 ]     # -7/3 = -2.333... → -2
-///   [ 5 ] CEIL → [ 5 ]         # 整数はそのまま
 pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
     unary_math_op(interp, |f| f.ceil(), "CEIL")
 }
 
-/// ROUND - 四捨五入
-///
-/// 使用法:
-///   [ 7/3 ] ROUND → [ 2 ]      # 2.333... → 2
-///   [ 5/2 ] ROUND → [ 3 ]      # 2.5 → 3（0から遠い方向）
-///   [ -5/2 ] ROUND → [ -3 ]    # -2.5 → -3（0から遠い方向）
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     unary_math_op(interp, |f| f.round(), "ROUND")
 }
 
-/// MOD - 剰余（数学的剰余: a mod b = a - b * floor(a/b)）
-///
-/// 使用法:
-///   [ 7 ] [ 3 ] MOD → [ 1 ]
-///   [ -7 ] [ 3 ] MOD → [ 2 ]   # 数学的剰余
-///   [ 7 8 9 ] [ 3 ] MOD → [ 1 2 0 ]  # ブロードキャスト
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported { word: "MOD".into(), mode: "Stack".into() });
@@ -466,7 +371,6 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// ブロードキャスト付き二項演算
 fn apply_binary_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
@@ -497,7 +401,6 @@ where
     Err(AjisaiError::from("Cannot broadcast values"))
 }
 
-/// スカラーをベクタの各要素に適用
 fn apply_scalar_to_vector<F>(scalar: &Fraction, vec: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
@@ -538,7 +441,6 @@ where
     }
 }
 
-/// ベクタの各要素にスカラーを適用
 fn apply_vector_to_scalar<F>(vec: &Value, scalar: &Fraction, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
@@ -579,7 +481,6 @@ where
     }
 }
 
-/// 2つのベクタを要素ごとに適用
 fn apply_vector_to_vector<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
@@ -650,18 +551,6 @@ where
     }
 }
 
-// ============================================================================
-// 生成関数
-// ============================================================================
-
-/// FILL - 任意値埋めベクタ生成
-///
-/// 使用法:
-///   [ 2 3 5 ] FILL → [ { 5 5 5 } { 5 5 5 } ]
-///   [ 3 1/2 ] FILL → [ 1/2 1/2 1/2 ]
-///
-/// 引数ベクタの最後の要素が埋める値、それより前が形状
-/// 注意: 3次元までに制限されています
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported { word: "FILL".into(), mode: "Stack".into() });

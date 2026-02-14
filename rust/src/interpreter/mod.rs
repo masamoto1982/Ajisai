@@ -380,22 +380,15 @@ impl Interpreter {
                                 },
                                 _ => {
                                     if self.safe_mode {
-                                        // セーフモード: エラー時にスタックを復元しNILを返す
                                         let stack_snapshot = self.stack.clone();
-                                        let saved_safe_mode = true;
-                                        self.safe_mode = false; // ワード実行中はsafe_modeをリセット
+                                        self.safe_mode = false;
                                         match self.execute_word_core(&upper) {
-                                            Ok(()) => {
-                                                // 正常実行: そのまま進む
-                                            }
+                                            Ok(()) => {}
                                             Err(_) => {
-                                                // エラー: スタックを復元しNILをプッシュ
                                                 self.stack = stack_snapshot;
                                                 self.stack.push(Value::nil());
                                             }
                                         }
-                                        // safe_modeは消費済みなのでリセット不要（既にfalse）
-                                        let _ = saved_safe_mode;
                                     } else {
                                         self.execute_word_core(&upper)?;
                                     }
@@ -754,7 +747,6 @@ impl Interpreter {
             "DEF" => dictionary::op_def(self),
             "DEL" => dictionary::op_del(self),
             "?" => dictionary::op_lookup(self),
-            "RESET" => self.execute_reset(),
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
             "FOLD" => higher_order::op_fold(self),
@@ -865,11 +857,7 @@ impl Interpreter {
     }
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
-        let custom_word_names: HashSet<String> = self.dictionary.iter()
-            .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, _)| name.clone())
-            .collect();
-        let tokens = crate::tokenizer::tokenize_with_custom_words(code, &custom_word_names)?;
+        let tokens = crate::tokenizer::tokenize(code)?;
         
         // トークンを行に分割
         let lines = self.tokens_to_lines(&tokens)?;
