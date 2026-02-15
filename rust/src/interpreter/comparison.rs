@@ -4,7 +4,7 @@
 //
 // 比較演算の結果は Boolean ヒント付きの値として返す
 
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::types::{Value, ValueData};
@@ -33,11 +33,17 @@ fn extract_scalar_for_comparison(val: &Value) -> Option<&Fraction> {
 // 比較演算子
 // ============================================================================
 
-/// 二項比較演算の汎用ハンドラ
+/// 二項比較演算の汎用ハンドラ（Fold型）
+///
+/// 【消費モード】
+/// - Consume（デフォルト）: オペランドを消費し、結果をプッシュ
+/// - Keep（,,）: オペランドを保持し、結果を追加
 fn binary_comparison_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         // StackTopモード: 2つの単一要素値を比較
         OperationTargetMode::StackTop => {
@@ -45,23 +51,37 @@ where
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let b_val = interp.stack.pop().unwrap();
-            let a_val = interp.stack.pop().unwrap();
+            let (a_val, b_val) = if is_keep_mode {
+                // Keep mode: peek without removing
+                let stack_len = interp.stack.len();
+                let a_val = interp.stack[stack_len - 2].clone();
+                let b_val = interp.stack[stack_len - 1].clone();
+                (a_val, b_val)
+            } else {
+                // Consume mode: pop
+                let b_val = interp.stack.pop().unwrap();
+                let a_val = interp.stack.pop().unwrap();
+                (a_val, b_val)
+            };
 
             // スカラーを抽出（単一要素ベクタも許容）
             let a_scalar = match extract_scalar_for_comparison(&a_val) {
                 Some(f) => f,
                 None => {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
+                    if !is_keep_mode {
+                        interp.stack.push(a_val);
+                        interp.stack.push(b_val);
+                    }
                     return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
                 }
             };
             let b_scalar = match extract_scalar_for_comparison(&b_val) {
                 Some(f) => f,
                 None => {
-                    interp.stack.push(a_val);
-                    interp.stack.push(b_val);
+                    if !is_keep_mode {
+                        interp.stack.push(a_val);
+                        interp.stack.push(b_val);
+                    }
                     return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
                 }
             };
@@ -87,7 +107,14 @@ where
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let items: Vec<Value> = if is_keep_mode {
+                // Keep mode: peek without removing
+                let stack_len = interp.stack.len();
+                interp.stack[stack_len - count..].iter().cloned().collect()
+            } else {
+                // Consume mode: drain
+                interp.stack.drain(interp.stack.len() - count..).collect()
+            };
 
             // 全ての隣接ペアをチェック
             let mut all_true = true;
@@ -96,7 +123,9 @@ where
                 let a_scalar = match extract_scalar_for_comparison(&items[i]) {
                     Some(f) => f,
                     None => {
-                        interp.stack.extend(items);
+                        if !is_keep_mode {
+                            interp.stack.extend(items);
+                        }
                         interp.stack.push(count_val);
                         return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
                     }
@@ -104,7 +133,9 @@ where
                 let b_scalar = match extract_scalar_for_comparison(&items[i + 1]) {
                     Some(f) => f,
                     None => {
-                        interp.stack.extend(items);
+                        if !is_keep_mode {
+                            interp.stack.extend(items);
+                        }
                         interp.stack.push(count_val);
                         return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
                     }
@@ -139,6 +170,8 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
 ///
 /// データが完全に等しいかを比較（DisplayHintは無視）
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         // StackTopモード: 2つの値を比較
         OperationTargetMode::StackTop => {
@@ -146,8 +179,16 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let b_val = interp.stack.pop().unwrap();
-            let a_val = interp.stack.pop().unwrap();
+            let (a_val, b_val) = if is_keep_mode {
+                let stack_len = interp.stack.len();
+                let a_val = interp.stack[stack_len - 2].clone();
+                let b_val = interp.stack[stack_len - 1].clone();
+                (a_val, b_val)
+            } else {
+                let b_val = interp.stack.pop().unwrap();
+                let a_val = interp.stack.pop().unwrap();
+                (a_val, b_val)
+            };
 
             // データが等しいかを比較（DisplayHintは無視）
             let result = a_val.data == b_val.data;
@@ -171,7 +212,12 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let items: Vec<Value> = if is_keep_mode {
+                let stack_len = interp.stack.len();
+                interp.stack[stack_len - count..].iter().cloned().collect()
+            } else {
+                interp.stack.drain(interp.stack.len() - count..).collect()
+            };
 
             // 全ての隣接ペアをチェック（データのみ比較）
             let mut all_equal = true;

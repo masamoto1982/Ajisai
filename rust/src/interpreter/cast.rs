@@ -7,7 +7,7 @@
 // DisplayHint は表示目的のみに使用し、演算には使用しない。
 // 「型変換」は実質的に DisplayHint の変更と、表示形式の変換である。
 
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::wrap_number;
 use crate::types::{Value, ValueData, DisplayHint};
@@ -79,56 +79,105 @@ fn is_datetime_value(val: &Value) -> bool {
 ///
 /// 【エラー】
 /// - 入力が既にStringの場合（「変化なしはエラー」原則）
-pub fn op_str(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "STR".into(), mode: "Stack".into() });
-    }
-
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
+/// STR の単一値変換（内部ヘルパー）
+/// 成功時は Ok(converted_value)、NoChange 時は Err を返す
+fn str_convert_single(val: &Value) -> Result<Value> {
     // NILの場合: 不明な値に変換を射しても不明である (仕様セクション7.2)
     if val.is_nil() {
-        interp.stack.push(Value::nil());
-        return Ok(());
+        return Ok(Value::nil());
     }
 
     // 既に文字列形式の場合は冗長な変換エラー
-    if is_string_value(&val) {
-        interp.stack.push(val);
+    if is_string_value(val) {
         return Err(AjisaiError::NoChange { word: "STR".into() });
     }
 
     // 真偽値の場合
-    if is_boolean_value(&val) {
+    if is_boolean_value(val) {
         if let Some(f) = val.as_scalar() {
             let string_repr = if !f.is_zero() { "TRUE" } else { "FALSE" };
-            interp.stack.push(Value::from_string(string_repr));
-            return Ok(());
+            return Ok(Value::from_string(string_repr));
         }
     }
 
     // DateTimeの場合
-    if is_datetime_value(&val) {
+    if is_datetime_value(val) {
         if let Some(f) = val.as_scalar() {
             let string_repr = fraction_to_string(f);
-            interp.stack.push(Value::from_string(&string_repr));
-            return Ok(());
+            return Ok(Value::from_string(&string_repr));
         }
     }
 
     // 数値の場合
-    if is_number_value(&val) {
+    if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
             let string_repr = fraction_to_string(f);
-            interp.stack.push(Value::from_string(&string_repr));
-            return Ok(());
+            return Ok(Value::from_string(&string_repr));
         }
     }
 
     // ベクタの場合（複数要素）
-    let string_repr = value_to_string_repr(&val);
-    interp.stack.push(Value::from_string(&string_repr));
-    Ok(())
+    let string_repr = value_to_string_repr(val);
+    Ok(Value::from_string(&string_repr))
+}
+
+pub fn op_str(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
+            let val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+            } else {
+                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+            };
+
+            match str_convert_single(&val) {
+                Ok(result) => {
+                    interp.stack.push(result);
+                    Ok(())
+                }
+                Err(e) => {
+                    if !is_keep_mode {
+                        interp.stack.push(val);
+                    }
+                    Err(e)
+                }
+            }
+        }
+        OperationTargetMode::Stack => {
+            if interp.stack.is_empty() {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            if is_keep_mode {
+                // Keep mode: preserve originals, push converted results
+                let originals: Vec<Value> = interp.stack.iter().cloned().collect();
+                let mut results = Vec::with_capacity(originals.len());
+                for val in &originals {
+                    match str_convert_single(val) {
+                        Ok(result) => results.push(result),
+                        Err(e) => return Err(e),
+                    }
+                }
+                interp.stack.extend(results);
+            } else {
+                // Consume mode: replace each element
+                let elements: Vec<Value> = interp.stack.drain(..).collect();
+                for val in &elements {
+                    match str_convert_single(val) {
+                        Ok(result) => interp.stack.push(result),
+                        Err(e) => {
+                            // Restore remaining elements on error
+                            interp.stack.extend(elements);
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
 }
 
 /// 分数を文字列に変換するヘルパー
@@ -158,52 +207,83 @@ fn fraction_to_string(f: &Fraction) -> String {
 ///
 /// 【エラー】
 /// - 入力がStringでない場合（「変化なしはエラー」原則）
-pub fn op_num(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "NUM".into(), mode: "Stack".into() });
-    }
-
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
+/// NUM の単一値変換（内部ヘルパー）
+fn num_convert_single(val: &Value) -> Result<Value> {
     // 文字列の場合のみ処理
-    if is_string_value(&val) {
-        let s = value_as_string(&val).unwrap_or_default();
+    if is_string_value(val) {
+        let s = value_as_string(val).unwrap_or_default();
         match Fraction::from_str(&s) {
-            Ok(fraction) => {
-                // パース成功: 数値を返す
-                interp.stack.push(wrap_number(fraction));
-                return Ok(());
-            }
-            Err(_) => {
-                // パース失敗: NILを返す（エラーにしない）
-                interp.stack.push(Value::nil());
-                return Ok(());
-            }
+            Ok(fraction) => return Ok(wrap_number(fraction)),
+            Err(_) => return Ok(Value::nil()),
         }
     }
 
-    // 「変化なしはエラー」原則: 文字列以外の入力はエラー
-    // 既に数値の場合
-    if is_number_value(&val) {
-        interp.stack.push(val);
+    if is_number_value(val) {
         return Err(AjisaiError::NoChange { word: "NUM".into() });
     }
-
-    // 真偽値の場合
-    if is_boolean_value(&val) {
-        interp.stack.push(val);
+    if is_boolean_value(val) {
         return Err(AjisaiError::from("NUM: cannot parse Boolean (expected String)"));
     }
-
-    // NILの場合
     if val.is_nil() {
-        interp.stack.push(val);
         return Err(AjisaiError::from("NUM: cannot parse Nil (expected String)"));
     }
-
-    // その他（ベクタなど）
-    interp.stack.push(val);
     Err(AjisaiError::from("NUM: expected String input"))
+}
+
+pub fn op_num(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
+            let val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+            } else {
+                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+            };
+
+            match num_convert_single(&val) {
+                Ok(result) => {
+                    interp.stack.push(result);
+                    Ok(())
+                }
+                Err(e) => {
+                    if !is_keep_mode {
+                        interp.stack.push(val);
+                    }
+                    Err(e)
+                }
+            }
+        }
+        OperationTargetMode::Stack => {
+            if interp.stack.is_empty() {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            if is_keep_mode {
+                let originals: Vec<Value> = interp.stack.iter().cloned().collect();
+                let mut results = Vec::with_capacity(originals.len());
+                for val in &originals {
+                    match num_convert_single(val) {
+                        Ok(result) => results.push(result),
+                        Err(e) => return Err(e),
+                    }
+                }
+                interp.stack.extend(results);
+            } else {
+                let elements: Vec<Value> = interp.stack.drain(..).collect();
+                for val in &elements {
+                    match num_convert_single(val) {
+                        Ok(result) => interp.stack.push(result),
+                        Err(e) => {
+                            interp.stack.extend(elements);
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
 }
 
 /// BOOL - 文字列または数値を真偽値に正規化（Parse/Normalize Boolean）
@@ -228,53 +308,87 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 ///
 /// 【エラー】
 /// - 入力が既にBooleanの場合（「変化なしはエラー」原則）
-pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "BOOL".into(), mode: "Stack".into() });
-    }
-
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    // 既に真偽値形式の場合は冗長な変換エラー（変化なしはエラー原則）
-    if is_boolean_value(&val) {
-        interp.stack.push(val);
+/// BOOL の単一値変換（内部ヘルパー）
+fn bool_convert_single(val: &Value) -> Result<Value> {
+    if is_boolean_value(val) {
         return Err(AjisaiError::NoChange { word: "BOOL".into() });
     }
-
-    // 文字列の場合: パース
-    if is_string_value(&val) {
-        let s = value_as_string(&val).unwrap_or_default();
+    if is_string_value(val) {
+        let s = value_as_string(val).unwrap_or_default();
         let upper = s.to_uppercase();
         if upper == "TRUE" {
-            interp.stack.push(Value::from_bool(true));
+            return Ok(Value::from_bool(true));
         } else if upper == "FALSE" {
-            interp.stack.push(Value::from_bool(false));
+            return Ok(Value::from_bool(false));
         } else {
-            // パース失敗: NILを返す（エラーにしない）
-            interp.stack.push(Value::nil());
+            return Ok(Value::nil());
         }
-        return Ok(());
     }
-
-    // 数値の場合: Truthiness判定
-    if is_number_value(&val) {
+    if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
-            // 0はFALSE、0以外はTRUE
-            let bool_val = !f.is_zero();
-            interp.stack.push(Value::from_bool(bool_val));
-            return Ok(());
+            return Ok(Value::from_bool(!f.is_zero()));
         }
     }
-
-    // NILの場合
     if val.is_nil() {
-        interp.stack.push(val);
         return Err(AjisaiError::from("BOOL: cannot convert Nil (expected String or Number)"));
     }
-
-    // その他（ベクタなど）
-    interp.stack.push(val);
     Err(AjisaiError::from("BOOL: expected String or Number input"))
+}
+
+pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
+            let val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+            } else {
+                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+            };
+
+            match bool_convert_single(&val) {
+                Ok(result) => {
+                    interp.stack.push(result);
+                    Ok(())
+                }
+                Err(e) => {
+                    if !is_keep_mode {
+                        interp.stack.push(val);
+                    }
+                    Err(e)
+                }
+            }
+        }
+        OperationTargetMode::Stack => {
+            if interp.stack.is_empty() {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            if is_keep_mode {
+                let originals: Vec<Value> = interp.stack.iter().cloned().collect();
+                let mut results = Vec::with_capacity(originals.len());
+                for val in &originals {
+                    match bool_convert_single(val) {
+                        Ok(result) => results.push(result),
+                        Err(e) => return Err(e),
+                    }
+                }
+                interp.stack.extend(results);
+            } else {
+                let elements: Vec<Value> = interp.stack.drain(..).collect();
+                for val in &elements {
+                    match bool_convert_single(val) {
+                        Ok(result) => interp.stack.push(result),
+                        Err(e) => {
+                            interp.stack.extend(elements);
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
 }
 
 /// NIL - 文字列をNilに変換
@@ -649,37 +763,22 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 /// 【エラー】
 /// - 入力が有効なUnicodeコードポイントでない場合
 /// - 入力が数値でない場合
-pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "CHR".into(), mode: "Stack".into() });
-    }
-
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    // 数値の場合のみ処理
-    if is_number_value(&val) {
+/// CHR の単一値変換（内部ヘルパー）
+fn chr_convert_single(val: &Value) -> Result<Value> {
+    if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
-            // 整数のみ受け付ける
             if let Some(code) = f.to_i64() {
-                // 有効なUnicodeコードポイントかチェック
                 if code >= 0 && code <= 0x10FFFF {
                     if let Some(c) = char::from_u32(code as u32) {
-                        let s = c.to_string();
-                        interp.stack.push(Value::from_string(&s));
-                        return Ok(());
+                        return Ok(Value::from_string(&c.to_string()));
                     }
                 }
-                // 無効なコードポイント
-                interp.stack.push(val);
                 return Err(AjisaiError::from(format!(
                     "CHR: {} is not a valid Unicode code point (valid range: 0-0x10FFFF, excluding surrogates)",
                     code
                 )));
             } else {
-                // 整数に変換できない（分数など）
-                // 先に文字列表現を取得してから val をプッシュ
                 let frac_str = fraction_to_string(f);
-                interp.stack.push(val);
                 return Err(AjisaiError::from(format!(
                     "CHR: requires an integer, got {}",
                     frac_str
@@ -687,28 +786,72 @@ pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
             }
         }
     }
-
-    // 文字列の場合
-    if is_string_value(&val) {
-        interp.stack.push(val);
+    if is_string_value(val) {
         return Err(AjisaiError::from("CHR: expected Number, got String"));
     }
-
-    // 真偽値の場合
-    if is_boolean_value(&val) {
-        interp.stack.push(val);
+    if is_boolean_value(val) {
         return Err(AjisaiError::from("CHR: expected Number, got Boolean"));
     }
-
-    // NILの場合
     if val.is_nil() {
-        interp.stack.push(val);
         return Err(AjisaiError::from("CHR: expected Number, got Nil"));
     }
-
-    // その他
-    interp.stack.push(val);
     Err(AjisaiError::from("CHR: expected Number input"))
+}
+
+pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
+            let val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+            } else {
+                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+            };
+
+            match chr_convert_single(&val) {
+                Ok(result) => {
+                    interp.stack.push(result);
+                    Ok(())
+                }
+                Err(e) => {
+                    if !is_keep_mode {
+                        interp.stack.push(val);
+                    }
+                    Err(e)
+                }
+            }
+        }
+        OperationTargetMode::Stack => {
+            if interp.stack.is_empty() {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            if is_keep_mode {
+                let originals: Vec<Value> = interp.stack.iter().cloned().collect();
+                let mut results = Vec::with_capacity(originals.len());
+                for val in &originals {
+                    match chr_convert_single(val) {
+                        Ok(result) => results.push(result),
+                        Err(e) => return Err(e),
+                    }
+                }
+                interp.stack.extend(results);
+            } else {
+                let elements: Vec<Value> = interp.stack.drain(..).collect();
+                for val in &elements {
+                    match chr_convert_single(val) {
+                        Ok(result) => interp.stack.push(result),
+                        Err(e) => {
+                            interp.stack.extend(elements);
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
 }
 
 /// 値を文字列表現に変換する（内部ヘルパー）

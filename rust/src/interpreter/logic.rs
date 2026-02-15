@@ -4,7 +4,7 @@
 //
 // 論理演算（0 = false、非0 = true）
 
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::types::{Value, ValueData, DisplayHint};
@@ -129,15 +129,21 @@ where
 // 論理演算子
 // ============================================================================
 
-/// NOT 演算子 - 論理否定
+/// NOT 演算子 - 論理否定（Map型）
 ///
-/// Kleene三値論理:
-/// - ゼロなら 1、非ゼロなら 0
-/// - NIL なら NIL を返す（不明の否定は不明）
+/// 【消費モード】
+/// - Consume（デフォルト）: オペランドを消費し、結果をプッシュ
+/// - Keep（,,）: オペランドを保持し、結果を追加
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+            } else {
+                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+            };
 
             // NILの場合はNILを返す（Kleene三値論理: NOT NIL = NIL）
             if val.is_nil() {
@@ -151,35 +157,64 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         },
         OperationTargetMode::Stack => {
-            // Stackモードは単項演算子では意味が不明確なため未対応
-            Err(AjisaiError::ModeUnsupported { word: "NOT".into(), mode: "Stack".into() })
+            if is_keep_mode {
+                // Keep mode: preserve original stack, push NOT results
+                let original: Vec<Value> = interp.stack.iter().cloned().collect();
+                let results: Vec<Value> = original.iter().map(|v| {
+                    if v.is_nil() {
+                        Value::nil()
+                    } else {
+                        apply_not_to_value(v)
+                    }
+                }).collect();
+                interp.stack.extend(results);
+            } else {
+                // Consume mode: replace each element with its NOT
+                let elements: Vec<Value> = interp.stack.drain(..).collect();
+                for v in elements {
+                    if v.is_nil() {
+                        interp.stack.push(Value::nil());
+                    } else {
+                        interp.stack.push(apply_not_to_value(&v));
+                    }
+                }
+            }
+            Ok(())
         }
     }
 }
 
-/// AND 演算子 - 論理積
+/// AND 演算子 - 論理積（Fold型）
 ///
-/// Kleene三値論理:
-/// - 両方が非ゼロなら 1、それ以外は 0
-/// - FALSE AND NIL = FALSE（FALSEが確定的に偽）
-/// - TRUE AND NIL = NIL（不明が伝播）
-/// - NIL AND NIL = NIL（不明が伝播）
+/// 【消費モード】
+/// - Consume（デフォルト）: オペランドを消費し、結果をプッシュ
+/// - Keep（,,）: オペランドを保持し、結果を追加
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            if interp.stack.len() < 2 {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let (a_val, b_val) = if is_keep_mode {
+                let stack_len = interp.stack.len();
+                (interp.stack[stack_len - 2].clone(), interp.stack[stack_len - 1].clone())
+            } else {
+                let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                (a_val, b_val)
+            };
 
             let a_is_nil = a_val.is_nil();
             let b_is_nil = b_val.is_nil();
 
             // Kleene三値論理でのAND処理
             if a_is_nil && b_is_nil {
-                // NIL AND NIL = NIL
                 interp.stack.push(Value::nil());
                 return Ok(());
             } else if a_is_nil {
-                // NIL AND b: bがfalsy（全て0）ならFALSE、それ以外はNIL
                 let b_has_any_truthy = value_has_any_truthy(&b_val);
                 if b_has_any_truthy {
                     interp.stack.push(Value::nil());
@@ -188,7 +223,6 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 }
                 return Ok(());
             } else if b_is_nil {
-                // a AND NIL: aがfalsy（全て0）ならFALSE、それ以外はNIL
                 let a_has_any_truthy = value_has_any_truthy(&a_val);
                 if a_has_any_truthy {
                     interp.stack.push(Value::nil());
@@ -198,7 +232,6 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            // 両方がNILでない場合は通常のAND演算
             let result = apply_binary_logic(&a_val, &b_val, |a, b| a && b)?;
             interp.stack.push(result);
             Ok(())
@@ -218,12 +251,13 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let items: Vec<Value> = if is_keep_mode {
+                let stack_len = interp.stack.len();
+                interp.stack[stack_len - count..].iter().cloned().collect()
+            } else {
+                interp.stack.drain(interp.stack.len() - count..).collect()
+            };
 
-            // Kleene三値論理でのSTACKモードAND:
-            // - どれかがNILでどれかがtruthyなら NIL
-            // - どれかがfalsy（非NILで全て0）なら FALSE
-            // - 全てがtruthyなら TRUE
             let has_nil = items.iter().any(|v| v.is_nil());
             let has_falsy_non_nil = items.iter().any(|v| !v.is_nil() && !v.is_truthy());
             let all_truthy = items.iter().all(|v| v.is_truthy());
@@ -242,29 +276,37 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// OR 演算子 - 論理和
+/// OR 演算子 - 論理和（Fold型）
 ///
-/// Kleene三値論理:
-/// - どちらかが非ゼロなら 1
-/// - TRUE OR NIL = TRUE（TRUEが確定的に真）
-/// - FALSE OR NIL = NIL（不明が伝播）
-/// - NIL OR NIL = NIL（不明が伝播）
+/// 【消費モード】
+/// - Consume（デフォルト）: オペランドを消費し、結果をプッシュ
+/// - Keep（,,）: オペランドを保持し、結果を追加
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            if interp.stack.len() < 2 {
+                return Err(AjisaiError::StackUnderflow);
+            }
+
+            let (a_val, b_val) = if is_keep_mode {
+                let stack_len = interp.stack.len();
+                (interp.stack[stack_len - 2].clone(), interp.stack[stack_len - 1].clone())
+            } else {
+                let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                (a_val, b_val)
+            };
 
             let a_is_nil = a_val.is_nil();
             let b_is_nil = b_val.is_nil();
 
             // Kleene三値論理でのOR処理
             if a_is_nil && b_is_nil {
-                // NIL OR NIL = NIL
                 interp.stack.push(Value::nil());
                 return Ok(());
             } else if a_is_nil {
-                // NIL OR b: bがtruthy（どれか非0）ならTRUE、それ以外はNIL
                 let b_has_any_truthy = value_has_any_truthy(&b_val);
                 if b_has_any_truthy {
                     interp.stack.push(Value::from_bool(true));
@@ -273,7 +315,6 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 }
                 return Ok(());
             } else if b_is_nil {
-                // a OR NIL: aがtruthy（どれか非0）ならTRUE、それ以外はNIL
                 let a_has_any_truthy = value_has_any_truthy(&a_val);
                 if a_has_any_truthy {
                     interp.stack.push(Value::from_bool(true));
@@ -283,7 +324,6 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            // 両方がNILでない場合は通常のOR演算
             let result = apply_binary_logic(&a_val, &b_val, |a, b| a || b)?;
             interp.stack.push(result);
             Ok(())
@@ -303,12 +343,13 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            let items: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            let items: Vec<Value> = if is_keep_mode {
+                let stack_len = interp.stack.len();
+                interp.stack[stack_len - count..].iter().cloned().collect()
+            } else {
+                interp.stack.drain(interp.stack.len() - count..).collect()
+            };
 
-            // Kleene三値論理でのSTACKモードOR:
-            // - どれかがtruthy（非NILで非0要素あり）なら TRUE
-            // - どれかがNILで残りがfalsy（全て0）なら NIL
-            // - 全てがfalsy（非NILで全て0）なら FALSE
             let has_nil = items.iter().any(|v| v.is_nil());
             let has_truthy = items.iter().any(|v| v.is_truthy());
 

@@ -1718,9 +1718,9 @@ ADDTEST
         // 正常時: ~ があっても通常通り結果を返す
         let result = interp.execute("[ 1 2 3 ] [ 1 ] ~ GET").await;
         assert!(result.is_ok(), "Safe mode should not affect normal execution: {:?}", result);
-        // GET succeeds: preserves source [1 2 3] and pushes result (2)
-        assert_eq!(interp.stack.len(), 2);
-        assert!(!interp.stack[1].is_nil(), "Result should not be NIL on success");
+        // GET succeeds: consumes source [1 2 3] and pushes result (2)
+        assert_eq!(interp.stack.len(), 1);
+        assert!(!interp.stack[0].is_nil(), "Result should not be NIL on success");
     }
 
     #[tokio::test]
