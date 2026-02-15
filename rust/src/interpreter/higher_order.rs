@@ -3,7 +3,7 @@
 // Higher-order functions: MAP, FILTER, FOLD, UNFOLD.
 // Supports code blocks (: ... ;) and word names.
 
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
 use crate::types::{Value, ValueData, DisplayHint, Token};
@@ -86,9 +86,18 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let target_val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or_else(|| {
+                    interp.stack.push(code_val.clone());
+                    AjisaiError::StackUnderflow
+                })?
+            } else {
+                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+            };
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = if target_val.is_nil() {
@@ -96,7 +105,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             } else if is_vector_value(&target_val) {
                 reconstruct_vector_elements(&target_val)
             } else {
-                interp.stack.push(target_val);
+                if !is_keep_mode {
+                    interp.stack.push(target_val);
+                }
                 interp.stack.push(code_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));
             };
@@ -149,7 +160,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                                 interp.operation_target_mode = saved_target;
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
-                                interp.stack.push(Value::from_vector(elements));
+                                if !is_keep_mode {
+                                    interp.stack.push(Value::from_vector(elements));
+                                }
                                 interp.stack.push(code_val);
                                 return Err(AjisaiError::from("MAP code must return a value"));
                             }
@@ -160,7 +173,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target_mode = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
-                        interp.stack.push(Value::from_vector(elements));
+                        if !is_keep_mode {
+                            interp.stack.push(Value::from_vector(elements));
+                        }
                         interp.stack.push(code_val);
                         return Err(e);
                     }
@@ -275,9 +290,18 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let target_val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or_else(|| {
+                    interp.stack.push(code_val.clone());
+                    AjisaiError::StackUnderflow
+                })?
+            } else {
+                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+            };
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = if target_val.is_nil() {
@@ -285,7 +309,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             } else if is_vector_value(&target_val) {
                 reconstruct_vector_elements(&target_val)
             } else {
-                interp.stack.push(target_val);
+                if !is_keep_mode {
+                    interp.stack.push(target_val);
+                }
                 interp.stack.push(code_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));
             };
@@ -329,7 +355,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                                 interp.operation_target_mode = saved_target;
                                 interp.disable_no_change_check = saved_no_change_check;
                                 interp.stack = original_stack_below;
-                                interp.stack.push(Value::from_vector(elements));
+                                if !is_keep_mode {
+                                    interp.stack.push(Value::from_vector(elements));
+                                }
                                 interp.stack.push(code_val);
                                 return Err(AjisaiError::structure_error("boolean result from FILTER code", "other format"));
                             }
@@ -338,7 +366,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             interp.operation_target_mode = saved_target;
                             interp.disable_no_change_check = saved_no_change_check;
                             interp.stack = original_stack_below;
-                            interp.stack.push(Value::from_vector(elements));
+                            if !is_keep_mode {
+                                interp.stack.push(Value::from_vector(elements));
+                            }
                             interp.stack.push(code_val);
                             return Err(AjisaiError::structure_error("boolean vector result from FILTER code", "other format"));
                         };
@@ -352,7 +382,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                         interp.operation_target_mode = saved_target;
                         interp.disable_no_change_check = saved_no_change_check;
                         interp.stack = original_stack_below;
-                        interp.stack.push(Value::from_vector(elements));
+                        if !is_keep_mode {
+                            interp.stack.push(Value::from_vector(elements));
+                        }
                         interp.stack.push(code_val);
                         return Err(e);
                     }
@@ -478,10 +510,24 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let init_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let target_val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or_else(|| {
+                    interp.stack.push(init_val.clone());
+                    interp.stack.push(code_val.clone());
+                    AjisaiError::StackUnderflow
+                })?
+            } else {
+                interp.stack.pop().ok_or_else(|| {
+                    interp.stack.push(init_val.clone());
+                    interp.stack.push(code_val.clone());
+                    AjisaiError::StackUnderflow
+                })?
+            };
 
             // Vectorを処理（NIL = 空ベクタとして扱う）
             let elements = if target_val.is_nil() {
@@ -489,7 +535,9 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             } else if is_vector_value(&target_val) {
                 reconstruct_vector_elements(&target_val)
             } else {
-                interp.stack.push(target_val);
+                if !is_keep_mode {
+                    interp.stack.push(target_val);
+                }
                 interp.stack.push(init_val);
                 interp.stack.push(code_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));

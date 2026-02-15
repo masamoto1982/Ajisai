@@ -20,13 +20,13 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("FRAME", "Create bracket structure with shape", "[ 2 3 ] FRAME → { ( ) ( ) ( ) } { ( ) ( ) ( ) }", "none"),
 
         // Position operations (0-indexed)
-        ("GET", "Get element at position (0-indexed)", "[ 10 20 30 ] [ 0 ] GET → [ 10 20 30 ] [ 10 ]", "form"),
+        ("GET", "Get element at position (0-indexed)", "[ 10 20 30 ] [ 0 ] GET → [ 10 ]", "form"),
         ("INSERT", "Insert element at position", "[ 1 3 ] [ 1 2 ] INSERT → [ 1 2 3 ]", "form"),
         ("REPLACE", "Replace element at position", "[ 1 2 3 ] [ 0 9 ] REPLACE → [ 9 2 3 ]", "form"),
         ("REMOVE", "Remove element at position", "[ 1 2 3 ] [ 0 ] REMOVE → [ 2 3 ]", "form"),
 
         // Quantity operations
-        ("LENGTH", "Get vector length", "[ 1 2 3 4 5 ] LENGTH → [ 1 2 3 4 5 ] [ 5 ]", "form"),
+        ("LENGTH", "Get vector length", "[ 1 2 3 4 5 ] LENGTH → [ 5 ]", "form"),
         ("TAKE", "Take N elements from start or end", "[ 1 2 3 4 5 ] [ 3 ] TAKE → [ 1 2 3 ]", "form"),
 
         // Vector operations

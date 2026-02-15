@@ -7,7 +7,7 @@
 //
 // 統一Value宇宙アーキテクチャ版
 
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
@@ -41,11 +41,21 @@ fn introsort_fractions(values: &mut [(usize, Fraction)]) {
     values.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 }
 
-/// SORT - 高速ソート
+/// SORT - 高速ソート（Form型）
+///
+/// 【消費モード】
+/// - Consume（デフォルト）: 対象ベクタを消費し、ソート結果を返す
+/// - Keep（,,）: 対象ベクタを保持し、ソート結果を追加する
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let val = if is_keep_mode {
+                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+            } else {
+                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+            };
 
             if is_vector_value(&val) {
                 if let Some(children) = get_vector_children(&val) {
@@ -61,7 +71,9 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                         match extract_fraction(elem) {
                             Some(f) => indexed_fractions.push((i, f)),
                             None => {
-                                interp.stack.push(val);
+                                if !is_keep_mode {
+                                    interp.stack.push(val);
+                                }
                                 return Err(AjisaiError::from(
                                     "SORT requires all elements to be numbers"
                                 ));
@@ -81,11 +93,15 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                     // "No change is an error" チェック
                     if !interp.disable_no_change_check {
                         if children.len() < 2 {
-                            interp.stack.push(Value::from_vector(sorted_v));
+                            if !is_keep_mode {
+                                interp.stack.push(Value::from_vector(sorted_v));
+                            }
                             return Err(AjisaiError::NoChange { word: "SORT".into() });
                         }
                         if sorted_v == *children {
-                            interp.stack.push(Value::from_vector(sorted_v));
+                            if !is_keep_mode {
+                                interp.stack.push(Value::from_vector(sorted_v));
+                            }
                             return Err(AjisaiError::NoChange { word: "SORT".into() });
                         }
                     }
@@ -94,7 +110,9 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                     return Ok(());
                 }
             }
-            interp.stack.push(val);
+            if !is_keep_mode {
+                interp.stack.push(val);
+            }
             Err(AjisaiError::structure_error("vector", "other format"))
         }
         OperationTargetMode::Stack => {
@@ -135,9 +153,14 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            interp.stack.clear();
-            for val in sorted_stack {
-                interp.stack.push(val);
+            if is_keep_mode {
+                // Keep mode: preserve original stack, push sorted elements
+                interp.stack.extend(sorted_stack);
+            } else {
+                interp.stack.clear();
+                for val in sorted_stack {
+                    interp.stack.push(val);
+                }
             }
             Ok(())
         }
