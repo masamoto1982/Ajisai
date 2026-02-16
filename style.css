@@ -362,11 +362,20 @@
 }
 
 .has-tooltip::after {
-    content: ' ?';
-    font-size: 0.65em;
+    content: '?';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1em;
+    height: 1.1em;
+    margin-left: 0.3em;
+    font-size: 0.55em;
+    font-weight: 600;
     color: var(--color-text-light, #999);
-    font-weight: normal;
-    vertical-align: super;
+    border: 1.5px solid var(--color-text-light, #999);
+    border-radius: 50%;
+    vertical-align: middle;
+    line-height: 1;
 }
 
 .area-tooltip {
