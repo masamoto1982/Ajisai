@@ -63,6 +63,9 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 };
 
                 let result_elem = v[actual_index].clone();
+                if is_keep_mode {
+                    interp.stack.push(index_val);
+                }
                 interp.stack.push(result_elem);
                 Ok(())
             } else {
@@ -90,10 +93,8 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 
             let result_elem = interp.stack[actual_index].clone();
             if !is_keep_mode {
-                // Consume mode: remove the element from its position
-                // (Note: for Stack GET, consuming the entire stack is the Form-type behavior,
-                //  but GET in stack mode reads a single element. We keep existing behavior
-                //  of not draining the stack for GET in stack mode, only adding the result.)
+                // Consume mode: スタック全体を消費し、取得した要素のみを残す
+                interp.stack.clear();
             }
             interp.stack.push(result_elem);
             Ok(())

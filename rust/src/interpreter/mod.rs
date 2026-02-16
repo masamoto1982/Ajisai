@@ -929,44 +929,32 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Test basic .. GET behavior
+        // [5] [0] .. GET:
+        //   スタック: [5], [0] → pop index [0] → stack: [5]
+        //   Stack+Consume: stack[0] = [5], stack.clear(), push [5]
+        //   結果: [5] のみ（スタック全体を消費し、取得した要素を返す）
         let code = "[5] [0] .. GET";
 
-        println!("\n=== Basic .. GET Test ===");
         let result = interp.execute(code).await;
-        println!("Result: {:?}", result);
-        println!("Final stack length: {}", interp.stack.len());
-        println!("Final stack contents:");
-        for (i, val) in interp.stack.iter().enumerate() {
-            println!("  [{}]: {:?}", i, val);
-        }
-
         assert!(result.is_ok());
-        // スタックには [5] と [5] が含まれるはず (元の値と取得した値)
-        assert_eq!(interp.stack.len(), 2);
+        assert_eq!(interp.stack.len(), 1, "Stack+Consume GET should consume stack and push result only");
     }
 
     #[tokio::test]
     async fn test_stack_get_with_guard_and_comparison() {
         let mut interp = Interpreter::new();
 
-        // Test .. GET with comparison
-        // スタックモードでGETした値を比較できることを確認
-        // 修正後: [1] .. GET は [20] を返す（二重ラップなし）
-        // 修正前: [1] .. GET は [[20]] を返していた（二重ラップ）
-        let code = "[10] [20] [30] [1] .. GET [20] =";
+        // Test ,, .. GET with comparison（保持モードでスタックを保持）
+        // [10] [20] [30] [1] ,, .. GET:
+        //   pop index [1] → stack: [10], [20], [30]
+        //   Stack+Keep: stack[1] = [20], push [20]
+        //   結果: [10] [20] [30] [20]
+        // [20] =: push [20], compare [20] [20] → TRUE
+        //   結果: [10] [20] [30] [TRUE]
+        let code = "[10] [20] [30] [1] ,, .. GET [20] =";
 
-        println!("\n=== Stack GET with Comparison Test ===");
         let result = interp.execute(code).await;
-        println!("Result: {:?}", result);
-        println!("Final stack length: {}", interp.stack.len());
-        println!("Final stack contents:");
-        for (i, val) in interp.stack.iter().enumerate() {
-            println!("  [{}]: {:?}", i, val);
-        }
-
         assert!(result.is_ok());
-        // スタックには [10], [20], [30], [TRUE] が含まれるはず
-        // [1] .. GET は [20] を取得してプッシュ、[20] = で比較して TRUE
         assert_eq!(interp.stack.len(), 4);
         // 最後の値が TRUE であることを確認
         let val = &interp.stack[3];
