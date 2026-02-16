@@ -286,11 +286,12 @@ async fn test_get_consume_mode() {
 async fn test_get_keep_mode() {
     let mut interp = Interpreter::new();
 
-    // 保持モード: 対象ベクタを保持
+    // 保持モード: 対象ベクタと引数ベクタの両方を保持（デフォルト消費原則）
     let result = interp.execute("[ 10 20 30 ] [ 0 ] ,, GET").await;
     assert!(result.is_ok(), "GET with keep mode should succeed: {:?}", result);
-    // 保持モードでは対象ベクタが残り、結果が追加される
-    assert_eq!(interp.stack.len(), 2, "GET in keep mode should preserve target and add result");
+    // 保持モードでは対象ベクタ・引数ベクタが残り、結果が追加される
+    // [ 10 20 30 ] [ 0 ] ,, GET → [ 10 20 30 ] [ 0 ] [ 10 ]
+    assert_eq!(interp.stack.len(), 3, "GET in keep mode should preserve target, index, and add result");
 }
 
 #[tokio::test]
@@ -331,4 +332,112 @@ async fn test_take_keep_mode() {
     let result = interp.execute("[ 1 2 3 4 5 ] [ 3 ] ,, TAKE").await;
     assert!(result.is_ok(), "TAKE with keep mode should succeed: {:?}", result);
     assert_eq!(interp.stack.len(), 3, "TAKE in keep mode should preserve target, args, and add result");
+}
+
+// ============================================================================
+// デフォルト消費原則の網羅的検証テスト
+// 仕様書 §3.3: 「すべてのオペランドを保持する」原則の検証
+// ============================================================================
+
+#[tokio::test]
+async fn test_get_keep_mode_preserves_all_operands() {
+    // GET in ,,: 対象Vector + 引数Vector の両方を保持
+    // [ 10 20 30 ] [ 0 ] ,, GET → [ 10 20 30 ] [ 0 ] [ 10 ]
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 20 30 ] [ 0 ] ,, GET").await;
+    assert!(result.is_ok(), "GET ,, should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 3, "target + index + result");
+
+    // stack[0] = [10, 20, 30] (対象Vector保持)
+    assert!(interp.stack[0].is_vector());
+    // stack[1] = [0] (引数Vector保持)
+    assert!(interp.stack[1].is_vector());
+    // stack[2] = [10] (結果)
+    let result_scalar = interp.stack[2].as_scalar().expect("result should be scalar");
+    assert_eq!(result_scalar.to_i64(), Some(10));
+}
+
+#[tokio::test]
+async fn test_get_stack_consume_drains_stack() {
+    // .. GET (Consume): スタック全体を消費し、取得した要素のみを返す
+    // [10] [20] [30] [1] .. GET → [20]
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[10] [20] [30] [1] .. GET").await;
+    assert!(result.is_ok(), "Stack GET should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 1, "Stack+Consume GET should leave only the result");
+    // stack[1] の [20] がそのまま返される（ベクタ形式）
+    assert!(interp.stack[0].is_vector(), "result should be a vector [20]");
+}
+
+#[tokio::test]
+async fn test_get_stack_keep_preserves_stack() {
+    // ,, .. GET (Keep): スタックを保持し、取得した要素を追加する
+    // [10] [20] [30] [1] ,, .. GET → [10] [20] [30] [20]
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[10] [20] [30] [1] ,, .. GET").await;
+    assert!(result.is_ok(), "Stack Keep GET should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 4, "Stack+Keep GET should preserve stack and add result");
+    // 最後の要素が [20] (ベクタ)であることを確認
+    assert!(interp.stack[3].is_vector(), "result should be a vector [20]");
+}
+
+#[tokio::test]
+async fn test_print_keep_mode() {
+    // ,, PRINT: 値を出力しつつスタックに保持する
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 42 ] ,, PRINT").await;
+    assert!(result.is_ok(), "PRINT ,, should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 1, "PRINT in keep mode should preserve value on stack");
+    assert!(interp.output_buffer.contains("42"), "PRINT should output the value");
+}
+
+#[tokio::test]
+async fn test_floor_keep_mode() {
+    // ,, FLOOR: 結果を追加しつつ元の値を保持する
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 3.7 ] ,, FLOOR").await;
+    assert!(result.is_ok(), "FLOOR ,, should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 2, "FLOOR in keep mode should preserve original and add result");
+}
+
+#[tokio::test]
+async fn test_mod_keep_mode() {
+    // ,, MOD: 両オペランドを保持しつつ結果を追加する
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 ] [ 3 ] ,, MOD").await;
+    assert!(result.is_ok(), "MOD ,, should succeed: {:?}", result);
+    assert_eq!(interp.stack.len(), 3, "MOD in keep mode should preserve both operands and add result");
+}
+
+#[tokio::test]
+async fn test_modifier_order_independence() {
+    // .. ,, と ,, .. は同じ結果を返す（修飾子の順序非依存性）
+    let mut interp1 = Interpreter::new();
+    let result1 = interp1.execute("[1] [2] [3] [3] .. ,, +").await;
+    assert!(result1.is_ok());
+
+    let mut interp2 = Interpreter::new();
+    let result2 = interp2.execute("[1] [2] [3] [3] ,, .. +").await;
+    assert!(result2.is_ok());
+
+    assert_eq!(interp1.stack.len(), interp2.stack.len(),
+        ".. ,, and ,, .. should produce same result");
+}
+
+#[tokio::test]
+async fn test_modes_auto_reset_after_execution() {
+    // モードはワード実行後にデフォルト (. ,) にリセットされる
+    let mut interp = Interpreter::new();
+
+    // まず ,, + でKeepモードを使用
+    let result1 = interp.execute("[ 1 ] [ 2 ] ,, +").await;
+    assert!(result1.is_ok());
+    // [1] [2] [3] の3要素
+    assert_eq!(interp.stack.len(), 3);
+
+    // 次の + はデフォルト (Consume) に戻っているはず
+    // スタック: [1], [2], [3] → [2] + [3] = [5] → [1], [5]
+    let result2 = interp.execute("+").await;
+    assert!(result2.is_ok());
+    assert_eq!(interp.stack.len(), 2, "After auto-reset, + should consume operands");
 }

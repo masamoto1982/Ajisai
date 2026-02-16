@@ -269,11 +269,19 @@ where
         return Err(AjisaiError::ModeUnsupported { word: op_name.to_string(), mode: "Stack".into() });
     }
 
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let is_keep_mode = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
+
+    let val = if is_keep_mode {
+        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
 
     // NILの場合
     if val.is_nil() {
-        interp.stack.push(val);
+        if !is_keep_mode {
+            interp.stack.push(val);
+        }
         return Err(AjisaiError::from(format!("{} requires number or vector", op_name)));
     }
 
@@ -293,7 +301,9 @@ where
         return Ok(());
     }
 
-    interp.stack.push(val);
+    if !is_keep_mode {
+        interp.stack.push(val);
+    }
     Err(AjisaiError::from(format!("{} requires number or vector", op_name)))
 }
 
@@ -339,13 +349,28 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::ModeUnsupported { word: "MOD".into(), mode: "Stack".into() });
     }
 
-    let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let is_keep_mode = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
+
+    let b_val = if is_keep_mode {
+        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
+
+    let a_val = if is_keep_mode {
+        let stack_len = interp.stack.len();
+        if stack_len < 2 { return Err(AjisaiError::StackUnderflow); }
+        interp.stack[stack_len - 2].clone()
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
 
     // NILチェック
     if a_val.is_nil() || b_val.is_nil() {
-        interp.stack.push(a_val);
-        interp.stack.push(b_val);
+        if !is_keep_mode {
+            interp.stack.push(a_val);
+            interp.stack.push(b_val);
+        }
         return Err(AjisaiError::from("MOD requires vectors or numbers"));
     }
 
@@ -364,8 +389,10 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         }
         Err(e) => {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
+            if !is_keep_mode {
+                interp.stack.push(a_val);
+                interp.stack.push(b_val);
+            }
             Err(e)
         }
     }
