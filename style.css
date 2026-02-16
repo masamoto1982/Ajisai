@@ -354,9 +354,70 @@
 }
 
 /* --------------------------------------------------------------------------
- * 7. モバイル対応（アプリ固有）
+ * 7. エリアツールチップ
+ * -------------------------------------------------------------------------- */
+.has-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.has-tooltip::after {
+    content: ' ?';
+    font-size: 0.65em;
+    color: var(--color-text-light, #999);
+    font-weight: normal;
+    vertical-align: super;
+}
+
+.area-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 100;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-article, #f5f3fa);
+    color: var(--color-text, #333);
+    border: 1px solid var(--color-secondary, #6b5b95);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: normal;
+    line-height: 1.5;
+    white-space: normal;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.has-tooltip:hover .area-tooltip {
+    display: block;
+}
+
+.area-tooltip a {
+    display: inline-block;
+    margin-top: 0.25rem;
+    color: var(--heading-h3, #6b5b95);
+    text-decoration: underline;
+    font-size: 0.75rem;
+}
+
+.area-tooltip a:hover {
+    opacity: 0.7;
+}
+
+/* --------------------------------------------------------------------------
+ * 8. モバイル対応（アプリ固有）
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+    /* モバイルではホバーツールチップを非表示 */
+    .has-tooltip::after {
+        display: none;
+    }
+
+    .has-tooltip:hover .area-tooltip {
+        display: none;
+    }
+
     .main-layout {
         flex-direction: column;
         padding: 0;
