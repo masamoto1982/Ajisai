@@ -15,6 +15,9 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         (",", "Set consumption mode to consume (default)", ", + → consume operands", "none"),
         (",,", "Set consumption mode to keep (preserve operands)", "[1] [2] ,, + → [1] [2] [3]", "none"),
 
+        // Safe mode
+        ("~", "Safe mode - suppress errors and return NIL", "[ 1 2 3 ] [ 10 ] ~ GET → NIL", "none"),
+
         // Input helpers
         ("'", "Input single quote", "' → '", "none"),
         ("FRAME", "Create bracket structure with shape", "[ 2 3 ] FRAME → { ( ) ( ) ( ) } { ( ) ( ) ( ) }", "none"),
