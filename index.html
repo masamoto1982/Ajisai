@@ -64,11 +64,15 @@
         <main class="main-layout">
             <div id="editor-panel" class="panel">
                 <section class="output-area">
-                    <h2>Output</h2>
+                    <h2 class="has-tooltip">Output
+                        <span class="area-tooltip">文字色 — 青: プログラム出力 / 赤: エラー / 灰: 情報<br><a href="docs/syntax.html" target="_blank">Reference →</a></span>
+                    </h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 <section class="input-area">
-                    <h2>Input</h2>
+                    <h2 class="has-tooltip">Input
+                        <span class="area-tooltip">Dictionaryのワードボタンをクリックすると入力エリアにワード名が挿入されます。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span>
+                    </h2>
                     <div class="textarea-wrapper">
                         <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here&#10;&#10;Run → Shift+Enter&#10;Step → Ctrl+Enter&#10;Abort → Escape&#10;Reset → Ctrl+Alt+Enter"></textarea>
                         <button id="clear-btn" type="button" class="inline-clear-btn" aria-label="Clear input">&times;</button>
@@ -81,13 +85,17 @@
             
             <div id="state-panel" class="panel">
                 <section class="stack-area">
-                    <h2>Stack</h2>
+                    <h2 class="has-tooltip">Stack
+                        <span class="area-tooltip">スタックはVector型です。ネストは最大3階層まで。<br><a href="docs/types.html" target="_blank">Reference →</a></span>
+                    </h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 
                 <section class="dictionary-area">
                     <div class="dictionary-header">
-                        <h2>Dictionary</h2>
+                        <h2 class="has-tooltip">Dictionary
+                            <span class="area-tooltip">ボタンの背景色はシグネチャ型を示します（map / form / fold）。<br><a href="docs/higher-order.html" target="_blank">Reference →</a></span>
+                        </h2>
                         <div class="search-wrapper">
                             <input type="text" id="word-search" placeholder="Search words..." aria-label="Search dictionary words">
                             <button id="search-clear-btn" type="button" class="inline-clear-btn" aria-label="Clear search">&times;</button>
@@ -96,14 +104,18 @@
                     <div class="dictionary-container">
                         <div class="builtin-words-area">
                             <div class="words-header">
-                                <h3>Built-in Words</h3>
+                                <h3 class="has-tooltip">Built-in Words
+                                    <span class="area-tooltip">赤い枠線は組み込みワードを示します。ホバーで構文例を表示。<br><a href="docs/words.html" target="_blank">Reference →</a></span>
+                                </h3>
                                 <span id="builtin-word-info" class="word-info-display"></span>
                             </div>
                             <div id="builtin-words-display" class="words-display"></div>
                         </div>
                         <div class="custom-words-area">
                             <div class="words-header">
-                                <h3>Custom Words</h3>
+                                <h3 class="has-tooltip">Custom Words
+                                    <span class="area-tooltip">枠線の色 — 黄: 他ワードから参照あり / 緑: 参照なし。右クリックで削除。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span>
+                                </h3>
                                 <span id="custom-word-info" class="word-info-display"></span>
                             </div>
                             <div id="custom-words-display" class="words-display"></div>
