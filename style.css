@@ -13,9 +13,14 @@
 .main-layout {
     display: flex;
     flex: 1;
-    gap: 0;
+    gap: 1rem;
     padding: 0;
     min-height: 0;
+}
+
+/* アプリ内セクションの余白はパネルのgapで制御 */
+.main-layout section {
+    margin-bottom: 0;
 }
 
 /* 作業領域パネル */
@@ -25,6 +30,7 @@
     flex-direction: column;
     gap: 1rem;
     min-height: 0;
+    padding: 1rem 0 1rem 1rem;
 }
 
 /* 状態表示パネル */
@@ -34,6 +40,7 @@
     flex-direction: column;
     gap: 1rem;
     min-height: 0;
+    padding: 1rem 1rem 1rem 0;
 }
 
 /* 入力・出力エリア */
@@ -159,8 +166,8 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--color-secondary);
+    padding-bottom: 0.15rem;
+    border-bottom: 1px solid var(--color-secondary);
 }
 
 .dictionary-header h2 {
@@ -224,6 +231,10 @@
 .builtin-words-area,
 .custom-words-area {
     width: 100%;
+}
+
+.words-header {
+    margin-bottom: 0.5rem;
 }
 
 .words-display > div {
@@ -440,6 +451,7 @@
         width: 100%;
         height: auto;
         overflow-y: visible;
+        padding: 1rem;
     }
 
     #state-panel {
@@ -484,11 +496,15 @@
 /* タブレット対応 */
 @media (min-width: 769px) and (max-width: 1024px) {
     .main-layout {
-        gap: 0;
+        gap: 0.75rem;
         padding: 0;
     }
 
-    .panel {
-        padding: 0.75rem;
+    #editor-panel {
+        padding: 0.75rem 0 0.75rem 0.75rem;
+    }
+
+    #state-panel {
+        padding: 0.75rem 0.75rem 0.75rem 0;
     }
 }
