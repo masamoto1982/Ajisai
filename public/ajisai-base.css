@@ -284,10 +284,8 @@ section {
 section h2 {
     font-size: 1.125rem;
     margin-bottom: 0.75rem;
-    padding-bottom: 0.15rem;
     color: var(--heading-h2);
     font-weight: 500;
-    border-bottom: 1px solid var(--color-secondary);
 }
 
 section h3,
