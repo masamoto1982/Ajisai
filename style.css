@@ -229,15 +229,6 @@
 .builtin-words-area,
 .custom-words-area {
     width: 100%;
-    background-color: rgba(255, 255, 255, 0.5);
-    padding: 0.75rem;
-}
-
-/* words-display自体の背景・パディングを除去（親が担当） */
-.builtin-words-area .words-display,
-.custom-words-area .words-display {
-    background-color: transparent;
-    padding: 0;
 }
 
 .words-header {
