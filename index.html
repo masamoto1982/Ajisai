@@ -65,13 +65,13 @@
             <div id="editor-panel" class="panel">
                 <section class="output-area">
                     <h2 class="has-tooltip">Output
-                        <span class="area-tooltip">プログラム出力は青文字、エラーは赤文字、インフォメーションは灰文字で表現されます。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span>
+                        <span class="area-tooltip">プログラム出力は青文字、エラーは赤文字、インフォメーションは灰文字で表します。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span>
                     </h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 <section class="input-area">
                     <h2 class="has-tooltip">Input
-                        <span class="area-tooltip">入力は、タイピングによる方法とDictionaryエリアのワードボタンを使う方法があります。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span>
+                        <span class="area-tooltip">入力は、タイピングによる方法と辞書エリアのワードボタンを使う方法があります。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span>
                     </h2>
                     <div class="textarea-wrapper">
                         <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here&#10;&#10;Run → Shift+Enter&#10;Step → Ctrl+Enter&#10;Abort → Escape&#10;Reset → Ctrl+Alt+Enter"></textarea>
@@ -86,7 +86,7 @@
             <div id="state-panel" class="panel">
                 <section class="stack-area">
                     <h2 class="has-tooltip">Stack
-                        <span class="area-tooltip">いま見えているスタックエリアはVectorです。スタックを含めて四次元のネストが許容されます。<br><a href="docs/types.html" target="_blank">Reference →</a></span>
+                        <span class="area-tooltip">スタックエリアはVectorの最外殻です。Vectorのネストは最外殻を含めて四次元までがサポートされます。<br><a href="docs/types.html" target="_blank">Reference →</a></span>
                     </h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
                 </section>
@@ -114,7 +114,7 @@
                         <div class="custom-words-area">
                             <div class="words-header">
                                 <h3 class="has-tooltip">Custom Words
-                                    <span class="area-tooltip">緑枠のワードは意味の上書きや削除が可能です。黄枠のワードは意味の上書きや削除に一手間を要します。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span>
+                                    <span class="area-tooltip">緑枠のワードは意味の上書きや削除が可能です。黄枠のワードは他のワードから参照を受けているため、意味の上書きや削除に一手間を要します。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span>
                                 </h3>
                                 <span id="custom-word-info" class="word-info-display"></span>
                             </div>
