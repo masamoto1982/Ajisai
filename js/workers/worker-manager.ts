@@ -9,6 +9,7 @@ interface WorkerTask {
         stack: Value[];
         customWords: CustomWord[];
     };
+    inputBuffer?: string;
     resolve: (result: any) => void;
     reject: (error: any) => void;
 }
@@ -104,7 +105,8 @@ export class WorkerManager {
             type: 'execute',
             id: task.id,
             code: task.code,
-            state: task.state
+            state: task.state,
+            inputBuffer: task.inputBuffer
         });
     }
 
@@ -117,12 +119,13 @@ export class WorkerManager {
         return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     }
 
-    execute(code: string, state: { stack: Value[], customWords: CustomWord[] }): Promise<ExecuteResult> {
+    execute(code: string, state: { stack: Value[], customWords: CustomWord[] }, inputBuffer?: string): Promise<ExecuteResult> {
         return new Promise((resolve, reject) => {
             const task: WorkerTask = {
                 id: this.generateTaskId(),
                 code,
                 state,
+                inputBuffer,
                 resolve,
                 reject
             };

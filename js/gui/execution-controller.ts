@@ -16,6 +16,8 @@ export interface ExecutionCallbacks {
     readonly saveState: () => Promise<void>;
     readonly fullReset: () => Promise<void>;
     readonly updateView: (mode: 'input' | 'execution') => void;
+    readonly getIoInputValue: () => string;
+    readonly setIoOutput: (text: string) => void;
 }
 
 export interface ExecutionController {
@@ -71,7 +73,9 @@ export const createExecutionController = (
         updateDisplays,
         saveState,
         fullReset,
-        updateView
+        updateView,
+        getIoInputValue,
+        setIoOutput
     } = callbacks;
 
     const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
@@ -80,7 +84,9 @@ export const createExecutionController = (
         showError,
         showExecutionResult,
         updateDisplays,
-        saveState
+        saveState,
+        getIoInputValue,
+        setIoOutput
     });
 
     const handleResult = (result: ExecuteResult, code: string): void => {
@@ -121,7 +127,8 @@ export const createExecutionController = (
                 customWords: getCustomWords(interpreter),
             };
 
-            const result = await WORKER_MANAGER.execute(code, currentState);
+            const inputBuffer = getIoInputValue();
+            const result = await WORKER_MANAGER.execute(code, currentState, inputBuffer || undefined);
 
             try {
                 syncInterpreterState(interpreter, result);
@@ -131,6 +138,11 @@ export const createExecutionController = (
             }
 
             handleResult(result, code);
+
+            // I/O: OUTPUTワードの結果を表示
+            if (result.ioOutput) {
+                setIoOutput(result.ioOutput);
+            }
 
         } catch (error) {
             console.error('[ExecController] Code execution failed:', error);

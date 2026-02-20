@@ -54,7 +54,7 @@ async function init(): Promise<boolean> {
 }
 
 self.onmessage = async (event: MessageEvent) => {
-    const { type, id, code, state } = event.data;
+    const { type, id, code, state, inputBuffer } = event.data;
 
     if (type === 'abort') {
         if (id === currentTaskId || id === '*') {
@@ -84,11 +84,23 @@ self.onmessage = async (event: MessageEvent) => {
             interpreter.restore_custom_words(state.customWords);
         }
 
+        // I/O: 入力バッファを設定
+        if (inputBuffer !== undefined) {
+            interpreter.set_input_buffer(inputBuffer);
+        }
+        interpreter.clear_io_output_buffer();
+
         if (isAborted) throw new Error('aborted');
 
         const result: ExecuteResult = await interpreter.execute(code);
 
         if (isAborted) throw new Error('aborted');
+
+        // I/O: 出力バッファを結果に付加
+        const ioOutput = interpreter.get_io_output_buffer();
+        if (ioOutput) {
+            result.ioOutput = ioOutput;
+        }
 
         self.postMessage({ type: 'result', id, data: result });
 

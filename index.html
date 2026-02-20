@@ -69,6 +69,24 @@
                     </h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                 </section>
+                <section class="io-area" id="io-area">
+                    <button id="io-toggle" class="io-toggle" type="button" aria-expanded="false" aria-controls="io-panel">
+                        <span class="io-toggle-icon">&#9654;</span>
+                        Data I/O
+                    </button>
+                    <div id="io-panel" class="io-panel" hidden>
+                        <div class="io-columns">
+                            <div class="io-column">
+                                <label for="io-input" class="io-label">IO Input</label>
+                                <textarea id="io-input" class="io-textarea" placeholder='Data for INPUT word&#10;e.g. [1, 2, 3]'></textarea>
+                            </div>
+                            <div class="io-column">
+                                <label class="io-label">IO Output</label>
+                                <div id="io-output" class="io-output-display"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
                 <section class="input-area">
                     <h2 class="has-tooltip">Input
                         <span class="area-tooltip">入力は、タイピングによる方法と辞書エリアのワードボタンを使う方法があります。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span>

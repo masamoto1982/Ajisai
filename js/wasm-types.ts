@@ -21,6 +21,9 @@ export interface AjisaiInterpreter {
     restore_stack(stack_js: Value[]): void;
     restore_custom_words(words: CustomWord[]): void;
     remove_word(name: string): void;
+    set_input_buffer(text: string): void;
+    get_io_output_buffer(): string;
+    clear_io_output_buffer(): void;
 }
 
 export interface ExecuteResult {
@@ -35,6 +38,8 @@ export interface ExecuteResult {
     // Workerから返されるインタプリタの状態
     stack?: Value[];
     customWords?: CustomWord[];
+    // I/O: OUTPUTワードの出力バッファ
+    ioOutput?: string;
 }
 
 export interface Fraction {

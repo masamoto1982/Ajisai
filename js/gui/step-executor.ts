@@ -16,6 +16,8 @@ export interface StepExecutorCallbacks {
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
+    readonly getIoInputValue: () => string;
+    readonly setIoOutput: (text: string) => void;
 }
 
 export interface StepExecutor {
@@ -89,7 +91,9 @@ export const createStepExecutor = (
         showError,
         showExecutionResult,
         updateDisplays,
-        saveState
+        saveState,
+        getIoInputValue,
+        setIoOutput
     } = callbacks;
 
     let state = createInitialState();
@@ -147,7 +151,8 @@ export const createStepExecutor = (
                 customWords: getCustomWords(interpreter),
             };
 
-            const result = await WORKER_MANAGER.execute(token, currentState);
+            const inputBuffer = getIoInputValue();
+            const result = await WORKER_MANAGER.execute(token, currentState, inputBuffer || undefined);
 
             try {
                 syncInterpreterState(interpreter, result);
@@ -158,6 +163,9 @@ export const createStepExecutor = (
 
             if (result.status === 'OK' && !result.error) {
                 showExecutionResult(result);
+                if (result.ioOutput) {
+                    setIoOutput(result.ioOutput);
+                }
             } else {
                 showError(result.message || 'Unknown error');
                 reset();
