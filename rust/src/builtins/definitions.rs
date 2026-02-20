@@ -131,6 +131,15 @@ pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static st
         ("EXEC", "Execute vector (or stack) as code", "[ 1 2 + ] EXEC → 3, 1 2 + .. EXEC → 3", "none"),
         ("EVAL", "Parse and execute string (or stack chars)", "'1 2 +' EVAL → 3", "none"),
 
+        // JSON / 外部データ連携
+        ("PARSE", "Parse JSON string to Ajisai value", "'{ \"x\": 1 }' PARSE → [[\"x\" 1]]", "map"),
+        ("STRINGIFY", "Convert Ajisai value to JSON string", "[ 1 2 3 ] STRINGIFY → '[1,2,3]'", "map"),
+        ("INPUT", "Read text from input buffer", "INPUT → 'input text'", "none"),
+        ("OUTPUT", "Write value to output buffer", "'result' OUTPUT → (writes to output)", "none"),
+        ("JSON-GET", "Get value by key from JSON object", "obj 'key' JSON-GET → value", "form"),
+        ("JSON-KEYS", "Get all keys from JSON object", "obj JSON-KEYS → [keys...]", "form"),
+        ("JSON-SET", "Set key-value in JSON object", "obj 'key' value JSON-SET → obj'", "form"),
+
         // Music DSL - 組み込みワード（組み込みワードの組み合わせでは再現できない機能を提供する）
         ("SEQ", "Set sequential playback mode", "[ 440 550 660 ] SEQ PLAY → play 3 notes sequentially", "none"),
         ("SIM", "Set simultaneous playback mode", "[ 440 550 660 ] SIM PLAY → play 3 notes as chord", "none"),

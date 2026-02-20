@@ -283,7 +283,6 @@ mod dimension_limit_tests {
 
     #[tokio::test]
     async fn test_dimension_limit_at_3_visible() {
-        // 3次元（可視限界）は成功すべき
         let mut interp = Interpreter::new();
         let result = interp.execute("[ [ [ 1 2 3 ] ] ]").await;
         assert!(result.is_ok(), "3 visible dimensions should succeed");
@@ -293,32 +292,52 @@ mod dimension_limit_tests {
     }
 
     #[tokio::test]
-    async fn test_dimension_limit_exceeds_at_4_visible() {
-        // 4次元（可視）はエラーになるべき
+    async fn test_dimension_4_visible_succeeds() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ [ [ [ 1 ] ] ] ]").await;
-        assert!(result.is_err(), "4 visible dimensions should result in an error");
+        assert!(result.is_ok(), "4 visible dimensions should succeed with new limit");
+    }
 
-        // エラーメッセージに "3 visible dimensions" が含まれることを確認
+    #[tokio::test]
+    async fn test_dimension_5_visible_succeeds() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ [ [ [ [ 1 ] ] ] ] ]").await;
+        assert!(result.is_ok(), "5 visible dimensions should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_dimension_limit_at_9_visible() {
+        // 9可視次元（10次元）は上限であり成功すべき
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ]").await;
+        assert!(result.is_ok(), "9 visible dimensions (10 total) should succeed: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_dimension_limit_exceeds_at_10_visible() {
+        // 10可視次元（11次元）はエラーになるべき
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ [ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ] ]").await;
+        assert!(result.is_err(), "10 visible dimensions (11 total) should result in an error");
+
         let error_msg = result.unwrap_err().to_string();
         assert!(
-            error_msg.contains("3 visible dimensions"),
-            "Error message should mention '3 visible dimensions', got: {}",
+            error_msg.contains("10 dimensions"),
+            "Error message should mention '10 dimensions', got: {}",
             error_msg
         );
     }
 
     #[tokio::test]
-    async fn test_dimension_error_message_mentions_dimension_0() {
-        // エラーメッセージに "dimension 0: the stack" が含まれることを確認
+    async fn test_dimension_error_message_format() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ [ [ [ 1 ] ] ] ]").await;
+        let result = interp.execute("[ [ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ] ]").await;
         assert!(result.is_err());
 
         let error_msg = result.unwrap_err().to_string();
         assert!(
-            error_msg.contains("dimension 0: the stack"),
-            "Error message should mention 'dimension 0: the stack', got: {}",
+            error_msg.contains("Nesting depth limit exceeded"),
+            "Error message should mention 'Nesting depth limit exceeded', got: {}",
             error_msg
         );
     }
@@ -369,6 +388,27 @@ mod dimension_limit_tests {
         assert!(result.contains('['), "3D innermost should contain [], got: {}", result);
         // Verify exact format
         assert_eq!(result, "{ ( [ 1 ] [ 2 ] [ 3 ] ) ( [ 4 ] [ 5 ] [ 6 ] ) }", "Expected 3D structure");
+    }
+
+    #[tokio::test]
+    async fn test_bracket_display_4d() {
+        // 4次元は { ( [ { } ] ) } — 括弧サイクルが繰り返される
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ [ [ 1 ] ] ] ]").await.unwrap();
+        let stack = interp.get_stack();
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ ( [ { 1 } ] ) }", "4D should cycle brackets: {}", result);
+    }
+
+    #[tokio::test]
+    async fn test_bracket_display_9d() {
+        // 9可視次元（10次元上限）の括弧表示確認
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ]").await.unwrap();
+        let stack = interp.get_stack();
+        let result = format!("{}", stack[0]);
+        // depth 0={}, 1=(), 2=[], 3={}, 4=(), 5=[], 6={}, 7=(), 8=[]
+        assert_eq!(result, "{ ( [ { ( [ { ( [ 1 ] ) } ] ) } ] ) }", "9D bracket cycle: {}", result);
     }
 
     #[tokio::test]
@@ -579,5 +619,327 @@ mod unicode_tests {
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
         assert_eq!(result, "'hello'");
+    }
+}
+
+#[cfg(test)]
+mod json_io_tests {
+    use crate::interpreter::Interpreter;
+
+    // ========================================================================
+    // PARSE tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_parse_integer() {
+        let mut interp = Interpreter::new();
+        interp.execute("'42' PARSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "42");
+    }
+
+    #[tokio::test]
+    async fn test_parse_string() {
+        let mut interp = Interpreter::new();
+        interp.execute(r#"'"hello"' PARSE"#).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'hello'");
+    }
+
+    #[tokio::test]
+    async fn test_parse_null() {
+        let mut interp = Interpreter::new();
+        interp.execute("'null' PARSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn test_parse_bool_true() {
+        let mut interp = Interpreter::new();
+        interp.execute("'true' PARSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "TRUE");
+    }
+
+    #[tokio::test]
+    async fn test_parse_bool_false() {
+        let mut interp = Interpreter::new();
+        interp.execute("'false' PARSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "FALSE");
+    }
+
+    #[tokio::test]
+    async fn test_parse_array() {
+        let mut interp = Interpreter::new();
+        interp.execute("'[1, 2, 3]' PARSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert_eq!(stack[0].len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_parse_empty_array() {
+        let mut interp = Interpreter::new();
+        interp.execute("'[]' PARSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn test_parse_invalid_json() {
+        let mut interp = Interpreter::new();
+        interp.execute("'not json' PARSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn test_parse_keep_mode() {
+        let mut interp = Interpreter::new();
+        interp.execute("'42' ,, PARSE").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 2);
+        let original = format!("{}", stack[0]);
+        assert_eq!(original, "'42'");
+        let parsed = format!("{}", stack[1]);
+        assert_eq!(parsed, "42");
+    }
+
+    // ========================================================================
+    // STRINGIFY tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_stringify_integer() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 42 ] STRINGIFY").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'[42]'");
+    }
+
+    #[tokio::test]
+    async fn test_stringify_nil() {
+        let mut interp = Interpreter::new();
+        interp.execute("NIL STRINGIFY").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'null'");
+    }
+
+    #[tokio::test]
+    async fn test_stringify_bool() {
+        let mut interp = Interpreter::new();
+        interp.execute("TRUE STRINGIFY").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'true'");
+    }
+
+    #[tokio::test]
+    async fn test_stringify_string() {
+        let mut interp = Interpreter::new();
+        interp.execute("'hello' STRINGIFY").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, r#"'"hello"'"#);
+    }
+
+    #[tokio::test]
+    async fn test_stringify_array() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 ] STRINGIFY").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'[1,2,3]'");
+    }
+
+    // ========================================================================
+    // INPUT / OUTPUT tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_input_empty() {
+        let mut interp = Interpreter::new();
+        interp.execute("INPUT").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "''");
+    }
+
+    #[tokio::test]
+    async fn test_input_with_buffer() {
+        let mut interp = Interpreter::new();
+        interp.input_buffer = "hello world".to_string();
+        interp.execute("INPUT").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'hello world'");
+    }
+
+    #[tokio::test]
+    async fn test_output() {
+        let mut interp = Interpreter::new();
+        interp.execute("'result' OUTPUT").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 0);
+        assert_eq!(interp.io_output_buffer, "'result'");
+    }
+
+    #[tokio::test]
+    async fn test_output_keep_mode() {
+        let mut interp = Interpreter::new();
+        interp.execute("'result' ,, OUTPUT").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(!interp.io_output_buffer.is_empty());
+    }
+
+    // ========================================================================
+    // JSON-GET tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_json_get_existing_key() {
+        let mut interp = Interpreter::new();
+        interp.execute(r#"'{"name": "Ajisai", "version": 1}' PARSE 'name' JSON-GET"#).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'Ajisai'");
+    }
+
+    #[tokio::test]
+    async fn test_json_get_missing_key() {
+        let mut interp = Interpreter::new();
+        interp.execute(r#"'{"a": 1}' PARSE 'b' JSON-GET"#).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn test_json_get_numeric_value() {
+        let mut interp = Interpreter::new();
+        interp.execute(r#"'{"x": 42}' PARSE 'x' JSON-GET"#).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "42");
+    }
+
+    // ========================================================================
+    // JSON-KEYS tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_json_keys() {
+        let mut interp = Interpreter::new();
+        interp.execute(r#"'{"a": 1, "b": 2}' PARSE JSON-KEYS"#).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_vector());
+        assert_eq!(stack[0].len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_json_keys_non_object() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 1 2 3 ] JSON-KEYS").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil());
+    }
+
+    // ========================================================================
+    // JSON-SET tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_json_set_new_key() {
+        let mut interp = Interpreter::new();
+        interp.execute(r#"'{"a": 1}' PARSE 'b' [ 2 ] JSON-SET"#).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_vector());
+        assert_eq!(stack[0].len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_json_set_update_key() {
+        let mut interp = Interpreter::new();
+        interp.execute(r#"'{"a": 1}' PARSE 'a' [ 99 ] JSON-SET 'a' JSON-GET"#).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ 99 }");
+    }
+
+    #[tokio::test]
+    async fn test_json_set_on_nil() {
+        let mut interp = Interpreter::new();
+        interp.execute("NIL 'key' 'value' JSON-SET").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_vector());
+        assert_eq!(stack[0].len(), 1);
+    }
+
+    // ========================================================================
+    // Roundtrip tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_parse_stringify_roundtrip_number() {
+        let mut interp = Interpreter::new();
+        interp.execute("'42' PARSE STRINGIFY").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'42'");
+    }
+
+    #[tokio::test]
+    async fn test_parse_stringify_roundtrip_array() {
+        let mut interp = Interpreter::new();
+        interp.execute("'[1,2,3]' PARSE STRINGIFY").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "'[1,2,3]'");
+    }
+
+    // ========================================================================
+    // INPUT → PARSE → process → STRINGIFY → OUTPUT pipeline
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_input_parse_process_stringify_output() {
+        let mut interp = Interpreter::new();
+        interp.input_buffer = "[1, 2, 3]".to_string();
+        interp.execute("INPUT PARSE : [ 2 ] * ; MAP STRINGIFY OUTPUT").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 0);
+        assert_eq!(interp.io_output_buffer, "'[2,4,6]'");
     }
 }

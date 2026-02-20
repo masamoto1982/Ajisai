@@ -113,7 +113,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(data_val);
         interp.stack.push(shape_val);
         return Err(AjisaiError::from(format!(
-            "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+            "Nesting depth limit exceeded: Ajisai supports up to 10 dimensions. Nesting depth {} exceeds the limit.",
             dim_count
         )));
     }
@@ -615,7 +615,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     if shape_len > MAX_VISIBLE_DIMENSIONS {
         interp.stack.push(args_val);
         return Err(AjisaiError::from(format!(
-            "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.",
+            "Nesting depth limit exceeded: Ajisai supports up to 10 dimensions. Nesting depth {} exceeds the limit.",
             shape_len
         )));
     }

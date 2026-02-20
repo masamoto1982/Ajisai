@@ -119,16 +119,16 @@ pub enum DisplayHint {
 2. 表示時のみ `display_hint` を参照し、フォーマットを決定する
 3. 形式変換ワード（STR, NUM, BOOL等）は `display_hint` を変更する。`data` は必要に応じて変換される
 
-### 2.3 「3」の原則
+### 2.3 構造的制限
 
-Ajisaiは一貫した「3」の制限に基づいて設計されている。
+Ajisaiは認知的負荷を制御するために、以下の制限を設けている。
 
 | 制限 | 値 | 説明 |
 |------|-----|------|
-| 可視次元 | 3 | `{ ( [ ] ) }` まで |
+| ネスト次元 | 10 | 括弧3種 × 3サイクル + スタック（詳細は2.4節） |
 | 呼び出し深度 | 3 | `A -> B -> C` まで |
 
-これらの制限はAjisaiの設計の核心であり、緩和の対象ではない。
+呼び出し深度制限はAjisaiの設計の核心であり、緩和の対象ではない。
 
 #### 呼び出し深度制限
 
@@ -156,19 +156,30 @@ Ajisaiは一貫した「3」の制限に基づいて設計されている。
 
 ### 2.4 次元モデル
 
-| 次元 | 括弧 | 可視性 | 役割 |
-|------|------|--------|------|
-| 0次元 | `[ ]` | 不可視 | スタック（暗黙の最外殻Vector） |
-| 1次元 | `{ }` | 可視 | 最外殻 |
-| 2次元 | `( )` | 可視 | 2番目のネスト |
-| 3次元 | `[ ]` | 可視 | 最深のネスト（限界） |
-| 4次元以降 | --- | --- | エラー |
+Ajisaiのネスト表現には `[]` `{}` `()` の3種類の括弧を使用する。
+GUIのスタックエリアは暗黙的に `[]`（第1次元）に相当し、そこから括弧が以下のサイクルで対応する:
 
-4次元以上を作成しようとした場合:
+| 次元 | 括弧 | 備考 |
+|------|------|------|
+| 1次元 | `[]` | スタック最外殻（暗黙） |
+| 2次元 | `{}` | |
+| 3次元 | `()` | |
+| 4次元 | `[]` | |
+| 5次元 | `{}` | |
+| 6次元 | `()` | |
+| 7次元 | `[]` | |
+| 8次元 | `{}` | |
+| 9次元 | `()` | |
+| 10次元 | `[]` | 上限 |
+
+3種の括弧が3サイクルして `[]` に戻ったところを上限とする。
+これは「両手の指の数（10）」という人間の認知的上限と一致し、かつ括弧システムの構造的な区切りとも整合する。
+
+**10次元を超えるネストはエラーとする。** エラー時はスタックを変更しない。
 
 ```
-Dimension limit exceeded: Ajisai supports up to 3 visible dimensions
-(plus dimension 0: the stack). Nesting depth 4 exceeds the limit.
+Nesting depth limit exceeded: Ajisai supports up to 10 dimensions.
+Nesting depth 11 exceeds the limit.
 ```
 
 #### 括弧表示規則
@@ -707,6 +718,13 @@ Ajisaiでは、**組み込みワードの組み合わせでは再現できない
 | 形状操作 | `SHAPE` `RANK` | Map |
 | | `RESHAPE` `TRANSPOSE` `FILL` | Form |
 | 入出力 | `PRINT` | Map |
+| | `INPUT` | --- |
+| | `OUTPUT` | --- |
+| JSON連携 | `PARSE` | Map |
+| | `STRINGIFY` | Map |
+| | `JSON-GET` | Form |
+| | `JSON-KEYS` | Form |
+| | `JSON-SET` | Form |
 | 音楽DSL | `SEQ` `SIM` `PLAY` `CHORD` | --- |
 | | `SLOT` | --- |
 | | `GAIN` `GAIN-RESET` `PAN` `PAN-RESET` `FX-RESET` | --- |
@@ -775,13 +793,15 @@ GUIの辞書エリアでは、組み込みワードとカスタムワードを�
 以下の分類はセクション6.2のワード一覧に既に記載されているが、GUI表示の根拠として改めて明示する。
 
 ```
-Map型:  CHARS, JOIN, NUM, STR, BOOL, CHR, FLOOR, CEIL, ROUND, NOT, SHAPE, RANK, PRINT
+Map型:  CHARS, JOIN, NUM, STR, BOOL, CHR, FLOOR, CEIL, ROUND, NOT, SHAPE, RANK, PRINT,
+        PARSE, STRINGIFY
 Form型: GET, INSERT, REPLACE, REMOVE, LENGTH, TAKE, SPLIT, CONCAT, REVERSE, RANGE,
-        REORDER, SORT, MAP, FILTER, FOLD, RESHAPE, TRANSPOSE, FILL
+        REORDER, SORT, MAP, FILTER, FOLD, RESHAPE, TRANSPOSE, FILL,
+        JSON-GET, JSON-KEYS, JSON-SET
 Fold型: +, -, *, /, MOD, =, <, <=, AND, OR
 None:   上記以外の全ワード（定数、修飾子、制御フロー、入力支援、メタ、スタック操作、
-        生成、日時、音楽DSL — COLLECT, TIMES, WAIT, EXEC, EVAL, HASH, CSPRNG,
-        NOW, DATETIME, TIMESTAMP 等）
+        生成、日時、音楽DSL、入出力 — COLLECT, TIMES, WAIT, EXEC, EVAL, HASH,
+        CSPRNG, NOW, DATETIME, TIMESTAMP, INPUT, OUTPUT 等）
 ```
 
 ---
@@ -914,7 +934,7 @@ Ajisaiの実行時エラーは以下のカテゴリに分類される。セー�
 | IndexOutOfBounds | インデックスが範囲外 | `[ 1 2 3 ] [ 10 ] GET` |
 | LengthMismatch | ベクタ長の不一致（ブロードキャスト不可） | `[ 1 2 3 ] [ 1 2 ] +` |
 | DepthLimitExceeded | 呼び出し深度制限（3）超過 | `A → B → C → D` |
-| DimensionLimitExceeded | 次元制限（3可視次元）超過 | `[ [ [ [ 1 ] ] ] ]` |
+| DimensionLimitExceeded | 次元制限（10次元）超過 | 10次元を超えるネスト |
 | NoChange | 「変化なしはエラー」原則による検出 | `[ 1 ] REVERSE` |
 | ModeUnsupported | ワードが対応しないモードの使用 | `'NAME' .. DEF` |
 | BuiltinProtection | 組み込みワードの削除・上書き | `[ [ 1 ] ] 'GET' DEF` |
@@ -928,7 +948,7 @@ Ajisaiの実行時エラーは以下のカテゴリに分類される。セー�
 以下はAjisaiの設計に反するため、仕様として明確に禁止する:
 
 1. **スタック操作ワード（DUP, SWAP, ROT, OVER等）の導入**: Ajisaiはこれらを持たない。同等の操作は `REORDER` や `.. GET` 等のVector操作で表現する
-2. **次元制限（3）を超える構造の導入**
+2. **次元制限（10）を超える構造の導入**
 3. **呼び出し深度制限（3）を超える再帰チェーンの許容**
 4. **型システムの導入**: すべての値は分数であり、型チェックは存在しない
 5. **後方互換性の維持**: Ajisaiはプレリリース段階であり、後方互換性は常に破棄する。既存の動作を保護するためのフォールバック、非推奨パス、互換シムを導入してはならない
@@ -1075,6 +1095,95 @@ C4 E4 G4 [ 3 ] .. CONCAT SIM PLAY
 
 ---
 
+## 11. 外部データ連携
+
+### 11.1 JSON ↔ Ajisai データ型マッピング
+
+| JSONの型 | Ajisaiの表現 | 備考 |
+|----------|-------------|------|
+| `null` | `NIL` | |
+| `Number` | `Scalar(Fraction)` | 浮動小数点は `f64` をそのまま保持し、有理数変換は行わない。変換が必要な場合はユーザーが明示的に行う |
+| `String` | `Vector<Char>` + `DisplayHint::String` | 既存の文字列表現と統一 |
+| `Boolean` | `Scalar(1)` / `Scalar(0)` + `DisplayHint::Boolean` | |
+| `Array` | `Vector` | 既存のVector操作をそのまま適用可能 |
+| `Object` | `Vector<[key, value]>` | キーはStringベクター、値は再帰的にマップ |
+
+**Objectの設計注記**: ObjectをVectorのリストとして表現するため、アクセスにはヘルパーワード（`JSON-GET`, `JSON-KEYS`, `JSON-SET`）が必要。
+
+**ネスト深度の注記**: JSONのパース中にAjisaiの表現が10次元を超えるネスト構造となる場合、`PARSE` はエラーを返し `NIL` をプッシュする。エラーメッセージにはどの階層で超過したかを記録する。
+
+### 11.2 新規組み込みワード
+
+#### `PARSE` （Map型）
+- **入力**: スタックトップの文字列（JSONテキスト）
+- **出力**: 対応するAjisai Value（上記マッピングに従う）
+- **エラー時**: `NIL` をプッシュし、エラーメッセージをステータスに記録
+- **ネスト超過時**: 10次元を超えるネストが検出された場合もエラーとして扱い、`NIL` をプッシュしてステータスに「ネスト上限（10次元）を超過しました」と記録する
+
+#### `STRINGIFY` （Map型）
+- **入力**: スタックトップの任意のValue
+- **出力**: JSON形式の文字列（`Vector<Char>` + `DisplayHint::String`）
+- **Object表現**: `[ [key value] ... ]` をJSONオブジェクトとして出力
+
+#### `INPUT` （シグネチャ型なし）
+- **入力**: なし（スタック操作不要）
+- **出力**: GUIのInputエリアにあるテキスト内容を文字列としてプッシュ
+- **実装注記**: `Interpreter` 構造体が保持する `input_buffer: String` フィールドから読み取る
+
+#### `OUTPUT` （シグネチャ型なし）
+- **入力**: スタックトップの値（消費する）
+- **出力**: GUIのOutputエリアにその文字列表現を書き込む
+- **設計理由**: スタックトップの自動転送は副作用が大きく、Ajisaiのスタック指向と相性が悪いため、ユーザーが明示的に呼ぶ設計とする
+
+#### Objectヘルパーワード
+
+| ワード名 | シグネチャ | 動作 |
+|---------|:----------:|------|
+| `JSON-GET` | Form | `( obj key -- value )` キー文字列でObjectから値を取り出す。見つからない場合は `NIL` |
+| `JSON-KEYS` | Form | `( obj -- keys-vector )` ObjectのキーをVectorとして返す |
+| `JSON-SET` | Form | `( obj key value -- obj' )` Objectにキーバリューを追加・更新した新しいObjectを返す |
+
+### 11.3 I/Oデータフロー
+
+```
+[実行前]
+JS: interpreter.set_input_buffer(inputTextarea.value)
+
+[Ajisaiコード実行]
+INPUT    → input_bufferの内容を文字列としてスタックにプッシュ
+PARSE    → スタックトップのJSON文字列をAjisai Valueに変換
+...      → Vector演算で加工
+STRINGIFY → Ajisai ValueをJSON文字列に変換
+OUTPUT   → output_bufferに書き込み
+
+[実行後]
+JS: interpreter.get_output_buffer() でOutputエリアに反映
+```
+
+### 11.4 使用例
+
+```ajisai
+# JSON配列のパースとVector演算
+INPUT PARSE
+[ 2 ] *
+STRINGIFY OUTPUT
+# Input: [1, 2, 3] → Output: [2, 4, 6]
+
+# JSONオブジェクトのキー取得
+INPUT PARSE
+'name' JSON-GET
+STRINGIFY OUTPUT
+# Input: {"name": "Ajisai", "version": 1} → Output: "Ajisai"
+
+# JSONオブジェクトの更新
+INPUT PARSE
+'version' [ 2 ] JSON-SET
+STRINGIFY OUTPUT
+# Input: {"name": "Ajisai", "version": 1} → Output: {"name":"Ajisai","version":2}
+```
+
+---
+
 ## 変更履歴
 
 | バージョン | 日付 | 内容 |
@@ -1093,3 +1202,5 @@ C4 E4 G4 [ 3 ] .. CONCAT SIM PLAY
 | v0.9.0 | 2026-02-13 | 仕様と実装の整合性レビュー。Value構造体を実装に合わせて更新（概念モデルと実装構造の分離）。NIL内部表現をValueData::Nilに修正。TIMES/EXEC/EVAL/COLLECT/!の詳細仕様を追加。ワード一覧テーブルを実装の全組み込みワードで網羅 |
 | v0.9.1 | 2026-02-13 | NILのメタファーを「空の容器」から「泡」に変更 |
 | v0.10.0 | 2026-02-13 | 開発原則セクションを追加（実装とメタ情報の一貫性、ソースコメント最小化、後方互換性の破棄）。設計上の禁止事項に後方互換性維持の禁止を追加 |
+| v0.11.0 | 2026-02-20 | ネスト上限を3可視次元（4次元）から9可視次元（10次元）に拡張。括弧3種×3サイクルの構造的根拠を明記。次元モデルを1次元起点の10次元体系に改定 |
+| v0.12.0 | 2026-02-20 | 外部データ連携セクション（11章）を新設。JSON↔Ajisaiデータ型マッピング、PARSE/STRINGIFY/INPUT/OUTPUT/JSON-GET/JSON-KEYS/JSON-SETの7ワード仕様を策定 |

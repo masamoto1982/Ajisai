@@ -47,24 +47,31 @@ fn value_as_string(val: &Value) -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
-fn generate_bracket_structure_from_shape(shape: &[usize]) -> String {
-    match shape.len() {
-        1 => {
-            (0..shape[0]).map(|_| "{ }").collect::<Vec<_>>().join(" ")
-        }
-        2 => {
-            let inner = (0..shape[1]).map(|_| "( )").collect::<Vec<_>>().join(" ");
-            let one_element = format!("{{ {} }}", inner);
-            (0..shape[0]).map(|_| one_element.as_str()).collect::<Vec<_>>().join(" ")
-        }
-        3 => {
-            let innermost = (0..shape[2]).map(|_| "[ ]").collect::<Vec<_>>().join(" ");
-            let middle = (0..shape[1]).map(|_| format!("( {} )", innermost)).collect::<Vec<_>>().join(" ");
-            let one_element = format!("{{ {} }}", middle);
-            (0..shape[0]).map(|_| one_element.as_str()).collect::<Vec<_>>().join(" ")
-        }
-        _ => "{ }".to_string()
+fn bracket_chars_for_depth(depth: usize) -> (char, char) {
+    match depth % 3 {
+        0 => ('{', '}'),
+        1 => ('(', ')'),
+        2 => ('[', ']'),
+        _ => unreachable!(),
     }
+}
+
+fn generate_bracket_structure_from_shape(shape: &[usize]) -> String {
+    fn build_level(shape: &[usize], depth: usize) -> String {
+        let (open, close) = bracket_chars_for_depth(depth);
+        if shape.len() == 1 {
+            let empty = format!("{} {}", open, close);
+            (0..shape[0]).map(|_| empty.as_str()).collect::<Vec<_>>().join(" ")
+        } else {
+            let inner = build_level(&shape[1..], depth + 1);
+            let one_element = format!("{} {} {}", open, inner, close);
+            (0..shape[0]).map(|_| one_element.as_str()).collect::<Vec<_>>().join(" ")
+        }
+    }
+    if shape.is_empty() {
+        return "{ }".to_string();
+    }
+    build_level(shape, 0)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -128,7 +135,7 @@ impl AjisaiInterpreter {
                 let shape = if let Some(top) = self.interpreter.stack.last() {
                     if is_vector_value(top) && !top.is_nil() {
                         let mut dims = Vec::new();
-                        let mut valid = top.len() >= 1 && top.len() <= 3;
+                        let mut valid = top.len() >= 1 && top.len() <= 9;
                         if valid {
                             if let ValueData::Vector(children) = &top.data {
                                 for child in children {
@@ -166,7 +173,7 @@ impl AjisaiInterpreter {
                     return Ok(obj.into());
                 } else {
                     js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"message".into(), &"FRAME requires a shape vector [ dim1 dim2 ... ] (1-3 dimensions, values 1-100)".into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"message".into(), &"FRAME requires a shape vector [ dim1 dim2 ... ] (1-9 dimensions, values 1-100)".into()).unwrap();
                     js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
                     return Ok(obj.into());
                 }
@@ -365,6 +372,21 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn set_input_buffer(&mut self, text: String) {
+        self.interpreter.input_buffer = text;
+    }
+
+    #[wasm_bindgen]
+    pub fn get_io_output_buffer(&self) -> String {
+        self.interpreter.io_output_buffer.clone()
+    }
+
+    #[wasm_bindgen]
+    pub fn clear_io_output_buffer(&mut self) {
+        self.interpreter.io_output_buffer.clear();
+    }
+
+    #[wasm_bindgen]
     pub fn restore_custom_words(&mut self, words_js: JsValue) -> Result<(), String> {
         let words: Vec<CustomWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
@@ -560,5 +582,8 @@ mod test_input_helper {
         assert_eq!(generate_bracket_structure_from_shape(&[1, 1, 2]), "{ ( [ ] [ ] ) }");
         assert_eq!(generate_bracket_structure_from_shape(&[1, 2, 3]), "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }");
         assert_eq!(generate_bracket_structure_from_shape(&[2, 2, 3]), "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) } { ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }");
+
+        // 4D: brackets cycle back to { }
+        assert_eq!(generate_bracket_structure_from_shape(&[1, 1, 1, 1]), "{ ( [ { } ] ) }");
     }
 }

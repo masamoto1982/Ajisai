@@ -1,5 +1,6 @@
 pub mod fraction;
 pub mod display;
+pub mod json;
 
 use std::collections::HashSet;
 use self::fraction::Fraction;
@@ -507,4 +508,4 @@ pub struct WordDefinition {
 
 pub type Stack = Vec<Value>;
 
-pub const MAX_VISIBLE_DIMENSIONS: usize = 3;
+pub const MAX_VISIBLE_DIMENSIONS: usize = 9;
