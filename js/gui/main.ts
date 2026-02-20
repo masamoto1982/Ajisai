@@ -34,10 +34,6 @@ export interface GUIElements {
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
     readonly dictionaryArea: HTMLElement;
-    readonly ioToggle: HTMLButtonElement;
-    readonly ioPanel: HTMLElement;
-    readonly ioInput: HTMLTextAreaElement;
-    readonly ioOutput: HTMLElement;
 }
 
 export interface GUI {
@@ -70,11 +66,7 @@ const cacheElements = (): GUIElements => ({
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
-    dictionaryArea: document.querySelector('.dictionary-area')!,
-    ioToggle: document.getElementById('io-toggle') as HTMLButtonElement,
-    ioPanel: document.getElementById('io-panel')!,
-    ioInput: document.getElementById('io-input') as HTMLTextAreaElement,
-    ioOutput: document.getElementById('io-output')!
+    dictionaryArea: document.querySelector('.dictionary-area')!
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -191,13 +183,6 @@ export const createGUI = (): GUI => {
         elements.exportBtn?.addEventListener('click', () => persistence.exportCustomWords());
         elements.importBtn?.addEventListener('click', () => persistence.importCustomWords());
 
-        // Data I/O パネルの折りたたみトグル
-        elements.ioToggle.addEventListener('click', () => {
-            const expanded = elements.ioToggle.getAttribute('aria-expanded') === 'true';
-            elements.ioToggle.setAttribute('aria-expanded', String(!expanded));
-            elements.ioPanel.hidden = expanded;
-        });
-
         elements.codeInput.addEventListener('keydown', (e) => {
             // Shift+Enter: run
             if (e.key === 'Enter' && e.shiftKey) {
@@ -241,7 +226,8 @@ export const createGUI = (): GUI => {
         persistence = createPersistence({
             showError: (error) => display.showError(error),
             updateDisplays: updateAllDisplays,
-            showInfo: (text, append) => display.showInfo(text, append)
+            showInfo: (text, append) => display.showInfo(text, append),
+            showExportLink: (url, filename) => display.showExportLink(url, filename)
         });
         await persistence.init();
 
@@ -269,8 +255,8 @@ export const createGUI = (): GUI => {
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),
             updateView: (mode) => mobile.updateView(mode),
-            getIoInputValue: () => elements.ioInput.value,
-            setIoOutput: (text) => { elements.ioOutput.textContent = text; }
+            getIoInputValue: () => '',
+            setIoOutput: () => {}
         });
 
         setupEventListeners();

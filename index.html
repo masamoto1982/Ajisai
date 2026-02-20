@@ -56,41 +56,27 @@
                     </svg>
                     Test
                 </button>
-                <button id="export-btn" class="header-btn" type="button">Export</button>
-                <button id="import-btn" class="header-btn" type="button">Import</button>
             </div>
         </header>
         
         <main class="main-layout">
             <div id="editor-panel" class="panel">
                 <section class="output-area">
-                    <h2 class="has-tooltip">Output
-                        <span class="area-tooltip">プログラム出力は青文字、エラーは赤文字、インフォメーションは灰文字で表します。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span>
-                    </h2>
+                    <div class="area-header">
+                        <h2 class="has-tooltip">Output
+                            <span class="area-tooltip">プログラム出力は青文字、エラーは赤文字、インフォメーションは灰文字で表します。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span>
+                        </h2>
+                        <button id="export-btn" class="area-action-btn" type="button">Export</button>
+                    </div>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                 </section>
-                <section class="io-area" id="io-area">
-                    <button id="io-toggle" class="io-toggle" type="button" aria-expanded="false" aria-controls="io-panel">
-                        <span class="io-toggle-icon">&#9654;</span>
-                        Data I/O
-                    </button>
-                    <div id="io-panel" class="io-panel" hidden>
-                        <div class="io-columns">
-                            <div class="io-column">
-                                <label for="io-input" class="io-label">IO Input</label>
-                                <textarea id="io-input" class="io-textarea" placeholder='Data for INPUT word&#10;e.g. [1, 2, 3]'></textarea>
-                            </div>
-                            <div class="io-column">
-                                <label class="io-label">IO Output</label>
-                                <div id="io-output" class="io-output-display"></div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
                 <section class="input-area">
-                    <h2 class="has-tooltip">Input
-                        <span class="area-tooltip">入力は、タイピングによる方法と辞書エリアのワードボタンを使う方法があります。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span>
-                    </h2>
+                    <div class="area-header">
+                        <h2 class="has-tooltip">Input
+                            <span class="area-tooltip">入力は、タイピングによる方法と辞書エリアのワードボタンを使う方法があります。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span>
+                        </h2>
+                        <button id="import-btn" class="area-action-btn" type="button">Import</button>
+                    </div>
                     <div class="textarea-wrapper">
                         <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here&#10;&#10;Run → Shift+Enter&#10;Step → Ctrl+Enter&#10;Abort → Escape&#10;Reset → Ctrl+Alt+Enter"></textarea>
                         <button id="clear-btn" type="button" class="inline-clear-btn" aria-label="Clear input">&times;</button>

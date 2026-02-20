@@ -14,6 +14,7 @@ export interface PersistenceCallbacks {
     readonly showError?: (error: Error) => void;
     readonly updateDisplays?: () => void;
     readonly showInfo?: (text: string, append: boolean) => void;
+    readonly showExportLink?: (url: string, filename: string) => void;
 }
 
 export interface Persistence {
@@ -127,7 +128,7 @@ const parseCustomWords = (jsonString: string): Result<CustomWord[], Error> => {
 };
 
 export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
-    const { showError, updateDisplays, showInfo } = callbacks;
+    const { showError, updateDisplays, showInfo, showExportLink } = callbacks;
     let dbInitialized = false;
     const MAX_RETRY_COUNT = 3;
     const RETRY_DELAY_MS = 1000;
@@ -235,8 +236,16 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         const exportData = createExportData(window.ajisaiInterpreter);
         const filename = generateExportFilename();
 
-        downloadJson(exportData, filename);
-        showInfo?.(`Custom words exported as ${filename}`, true);
+        const jsonString = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        if (showExportLink) {
+            showExportLink(url, filename);
+        } else {
+            downloadJson(exportData, filename);
+            showInfo?.(`Custom words exported as ${filename}`, true);
+        }
     };
 
     const importCustomWords = (): void => {

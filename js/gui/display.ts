@@ -21,6 +21,7 @@ export interface Display {
     readonly showOutput: (text: string) => void;
     readonly showError: (error: Error | { message?: string } | string) => void;
     readonly showInfo: (text: string, append?: boolean) => void;
+    readonly showExportLink: (url: string, filename: string) => void;
     readonly updateStack: (stack: Value[]) => void;
     readonly getState: () => DisplayState;
 }
@@ -381,6 +382,21 @@ export const createDisplay = (elements: DisplayElements): Display => {
         appendToElement(display, container);
     };
 
+    const showExportLink = (url: string, filename: string): void => {
+        mainOutput = `Exported: ${filename}`;
+        clearElement(elements.outputDisplay);
+
+        const label = createSpan('Exported: ', '#666');
+        appendToElement(elements.outputDisplay, label);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.textContent = filename;
+        link.className = 'export-link';
+        appendToElement(elements.outputDisplay, link);
+    };
+
     const getState = (): DisplayState => ({ mainOutput });
 
     return {
@@ -390,6 +406,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         showOutput,
         showError,
         showInfo,
+        showExportLink,
         updateStack,
         getState
     };
