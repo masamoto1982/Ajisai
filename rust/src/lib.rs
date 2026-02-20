@@ -283,7 +283,6 @@ mod dimension_limit_tests {
 
     #[tokio::test]
     async fn test_dimension_limit_at_3_visible() {
-        // 3次元（可視限界）は成功すべき
         let mut interp = Interpreter::new();
         let result = interp.execute("[ [ [ 1 2 3 ] ] ]").await;
         assert!(result.is_ok(), "3 visible dimensions should succeed");
@@ -293,32 +292,52 @@ mod dimension_limit_tests {
     }
 
     #[tokio::test]
-    async fn test_dimension_limit_exceeds_at_4_visible() {
-        // 4次元（可視）はエラーになるべき
+    async fn test_dimension_4_visible_succeeds() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ [ [ [ 1 ] ] ] ]").await;
-        assert!(result.is_err(), "4 visible dimensions should result in an error");
+        assert!(result.is_ok(), "4 visible dimensions should succeed with new limit");
+    }
 
-        // エラーメッセージに "3 visible dimensions" が含まれることを確認
+    #[tokio::test]
+    async fn test_dimension_5_visible_succeeds() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ [ [ [ [ 1 ] ] ] ] ]").await;
+        assert!(result.is_ok(), "5 visible dimensions should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_dimension_limit_at_9_visible() {
+        // 9可視次元（10次元）は上限であり成功すべき
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ]").await;
+        assert!(result.is_ok(), "9 visible dimensions (10 total) should succeed: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_dimension_limit_exceeds_at_10_visible() {
+        // 10可視次元（11次元）はエラーになるべき
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ [ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ] ]").await;
+        assert!(result.is_err(), "10 visible dimensions (11 total) should result in an error");
+
         let error_msg = result.unwrap_err().to_string();
         assert!(
-            error_msg.contains("3 visible dimensions"),
-            "Error message should mention '3 visible dimensions', got: {}",
+            error_msg.contains("10 dimensions"),
+            "Error message should mention '10 dimensions', got: {}",
             error_msg
         );
     }
 
     #[tokio::test]
-    async fn test_dimension_error_message_mentions_dimension_0() {
-        // エラーメッセージに "dimension 0: the stack" が含まれることを確認
+    async fn test_dimension_error_message_format() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ [ [ [ 1 ] ] ] ]").await;
+        let result = interp.execute("[ [ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ] ]").await;
         assert!(result.is_err());
 
         let error_msg = result.unwrap_err().to_string();
         assert!(
-            error_msg.contains("dimension 0: the stack"),
-            "Error message should mention 'dimension 0: the stack', got: {}",
+            error_msg.contains("Nesting depth limit exceeded"),
+            "Error message should mention 'Nesting depth limit exceeded', got: {}",
             error_msg
         );
     }
@@ -369,6 +388,27 @@ mod dimension_limit_tests {
         assert!(result.contains('['), "3D innermost should contain [], got: {}", result);
         // Verify exact format
         assert_eq!(result, "{ ( [ 1 ] [ 2 ] [ 3 ] ) ( [ 4 ] [ 5 ] [ 6 ] ) }", "Expected 3D structure");
+    }
+
+    #[tokio::test]
+    async fn test_bracket_display_4d() {
+        // 4次元は { ( [ { } ] ) } — 括弧サイクルが繰り返される
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ [ [ 1 ] ] ] ]").await.unwrap();
+        let stack = interp.get_stack();
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ ( [ { 1 } ] ) }", "4D should cycle brackets: {}", result);
+    }
+
+    #[tokio::test]
+    async fn test_bracket_display_9d() {
+        // 9可視次元（10次元上限）の括弧表示確認
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ]").await.unwrap();
+        let stack = interp.get_stack();
+        let result = format!("{}", stack[0]);
+        // depth 0={}, 1=(), 2=[], 3={}, 4=(), 5=[], 6={}, 7=(), 8=[]
+        assert_eq!(result, "{ ( [ { ( [ { ( [ 1 ] ) } ] ) } ] ) }", "9D bracket cycle: {}", result);
     }
 
     #[tokio::test]

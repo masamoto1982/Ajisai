@@ -46,7 +46,7 @@ impl fmt::Display for AjisaiError {
                 write!(f, "Call depth limit ({}) exceeded: {}", depth, chain)
             },
             AjisaiError::DimensionLimitExceeded { depth } => {
-                write!(f, "Dimension limit exceeded: Ajisai supports up to 3 visible dimensions (plus dimension 0: the stack). Nesting depth {} exceeds the limit.", depth)
+                write!(f, "Nesting depth limit exceeded: Ajisai supports up to 10 dimensions. Nesting depth {} exceeds the limit.", depth)
             },
             AjisaiError::NoChange { word } => {
                 write!(f, "No change: {} produced no effect", word)
