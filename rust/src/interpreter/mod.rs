@@ -15,6 +15,7 @@ pub mod random;
 pub mod hash;
 pub mod audio;
 pub mod vector_exec;
+pub mod json;
 
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
@@ -63,6 +64,8 @@ pub struct Interpreter {
     pub(crate) pending_token_index: usize,
     pub(crate) play_mode: audio::PlayMode,
     pub(crate) call_stack: Vec<String>,
+    pub(crate) input_buffer: String,
+    pub(crate) io_output_buffer: String,
 }
 
 impl Interpreter {
@@ -82,6 +85,8 @@ impl Interpreter {
             pending_token_index: 0,
             play_mode: audio::PlayMode::default(),
             call_stack: Vec::new(),
+            input_buffer: String::new(),
+            io_output_buffer: String::new(),
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -796,6 +801,13 @@ impl Interpreter {
             "SQUARE" => audio::op_square(self),
             "SAW" => audio::op_saw(self),
             "TRI" => audio::op_tri(self),
+            "PARSE" => json::op_parse(self),
+            "STRINGIFY" => json::op_stringify(self),
+            "INPUT" => json::op_input(self),
+            "OUTPUT" => json::op_output(self),
+            "JSON-GET" => json::op_json_get(self),
+            "JSON-KEYS" => json::op_json_keys(self),
+            "JSON-SET" => json::op_json_set(self),
             "!" => {
                 self.force_flag = true;
                 Ok(())

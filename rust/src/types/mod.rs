@@ -1,5 +1,6 @@
 pub mod fraction;
 pub mod display;
+pub mod json;
 
 use std::collections::HashSet;
 use self::fraction::Fraction;

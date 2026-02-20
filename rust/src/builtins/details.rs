@@ -1423,6 +1423,199 @@ PRINT PRINT PRINT         # 出力: 1 2 3
 - 出力後、要素はスタックから削除されます
 - 出力フォーマットは要素の型によって自動的に決定されます"#.to_string(),
 
+        // ============================================================================
+        // JSON / 外部データ連携
+        // ============================================================================
+
+        "PARSE" => r#"# PARSE - JSON文字列をAjisai値に変換
+
+## 機能
+JSON文字列をパースし、Ajisaiのデータ構造に変換します。
+パースエラー時はNILを返し、エラーメッセージを出力バッファに書き込みます。
+
+## 型マッピング
+- null → NIL
+- true/false → TRUE/FALSE（Boolean hint）
+- Number (整数) → Scalar(Fraction)
+- Number (浮動小数点) → Scalar(Fraction)
+- String → Vector<Scalar> + String hint
+- Array → Vector（空配列はNIL）
+- Object → Vector<[key, value]>（キーはString hint付きVector）
+
+## 使用法
+'JSON文字列' PARSE
+→ 変換されたAjisai値
+
+## 使用例
+'42' PARSE                           # → [ 42 ]
+'"hello"' PARSE                      # → 'hello'
+'true' PARSE                         # → TRUE
+'null' PARSE                         # → NIL
+'[1, 2, 3]' PARSE                    # → [ 1 2 3 ]
+'{"name": "Ajisai"}' PARSE           # → [['name' 'Ajisai']]
+
+# パースエラー時
+'invalid json' PARSE                 # → NIL（エラーメッセージが出力される）
+
+## 注意
+- ネスト深さは10次元まで（超過時はNILを返す）
+- パースエラーはRustエラーとして伝播せず、NIL + エラーメッセージ
+- ,, (Keep) モードをサポート"#.to_string(),
+
+        "STRINGIFY" => r#"# STRINGIFY - Ajisai値をJSON文字列に変換
+
+## 機能
+Ajisaiのデータ構造をJSON文字列に変換します。
+
+## 型マッピング（逆変換）
+- NIL → "null"
+- Scalar (Boolean hint) → "true" / "false"
+- Scalar (整数) → "42"
+- Scalar (分数) → 浮動小数点近似値
+- Vector (String hint) → "\"hello\""
+- Vector (Object形式) → "{\"key\": value}"
+- Vector (その他) → "[1, 2, 3]"
+- CodeBlock → "null"
+
+## 使用法
+value STRINGIFY
+→ JSON文字列
+
+## 使用例
+[ 42 ] STRINGIFY                     # → '42'
+'hello' STRINGIFY                    # → '"hello"'
+TRUE STRINGIFY                       # → 'true'
+NIL STRINGIFY                        # → 'null'
+[ 1 2 3 ] STRINGIFY                  # → '[1,2,3]'
+
+# ラウンドトリップ
+'{"name": "Ajisai"}' PARSE STRINGIFY # → '{"name":"Ajisai"}'
+
+## 注意
+- ,, (Keep) モードをサポート"#.to_string(),
+
+        "INPUT" => r#"# INPUT - 入力バッファからテキストを読み取り
+
+## 機能
+GUIの入力パネルから設定されたテキストをスタックに文字列としてプッシュします。
+WASM環境ではJavaScript側から set_input_buffer() で設定された内容を読み取ります。
+
+## 使用法
+INPUT
+→ 入力バッファの内容（String hint付きVector）
+
+## 使用例
+# 入力バッファに '42' が設定されている場合
+INPUT                                # → '42'
+INPUT NUM                            # → [ 42 ]（数値に変換）
+INPUT PARSE                          # → JSONとしてパース
+
+# 入力バッファが空の場合
+INPUT                                # → ''（空文字列）
+
+## 注意
+- 入力バッファは読み取り後もクリアされません
+- スタックモード (..) はサポートされません"#.to_string(),
+
+        "OUTPUT" => r#"# OUTPUT - 出力バッファにテキストを書き込み
+
+## 機能
+スタックトップの値をテキストに変換し、GUIの出力パネル用バッファに書き込みます。
+PRINTとは異なる専用バッファ（io_output_buffer）に出力されます。
+
+## 使用法
+value OUTPUT
+→ 値をテキスト変換して出力バッファに追加
+
+## 使用例
+'Hello' OUTPUT                       # 出力バッファに 'Hello' を書き込み
+[ 42 ] OUTPUT                        # 出力バッファに '[ 42 ]' を書き込み
+
+# JSONデータを処理して出力
+INPUT PARSE                          # 入力JSONをパース
+: [ 2 ] * ; MAP                      # 各要素を2倍
+STRINGIFY OUTPUT                     # JSON文字列として出力
+
+## 注意
+- PRINTとは別のバッファに出力されます
+- WASM環境では get_io_output_buffer() で取得可能
+- ,, (Keep) モードをサポート"#.to_string(),
+
+        "JSON-GET" => r#"# JSON-GET - JSONオブジェクトから値を取得
+
+## 機能
+JSONオブジェクト（[key, value] ペアのベクタ）から、指定したキーに対応する値を取得します。
+キーが見つからない場合はNILを返します。
+
+## 使用法
+object 'key' JSON-GET
+→ キーに対応する値、またはNIL
+
+## 使用例
+'{"name": "Ajisai", "version": 1}' PARSE
+== 'name' JSON-GET                   # → 'Ajisai'
+
+'{"x": 10, "y": 20}' PARSE
+== 'x' JSON-GET                      # → [ 10 ]
+
+# キーが存在しない場合
+'{"a": 1}' PARSE 'b' JSON-GET        # → NIL
+
+# Nil Coalescingと組み合わせ
+'{"a": 1}' PARSE 'b' JSON-GET => [ 0 ]  # → [ 0 ]
+
+## 注意
+- ,, (Keep) モードをサポート
+- オブジェクトでない値に対してはNILを返します"#.to_string(),
+
+        "JSON-KEYS" => r#"# JSON-KEYS - JSONオブジェクトの全キーを取得
+
+## 機能
+JSONオブジェクト（[key, value] ペアのベクタ）から、全てのキーをベクタとして取得します。
+キーがない場合はNILを返します。
+
+## 使用法
+object JSON-KEYS
+→ キーのベクタ、またはNIL
+
+## 使用例
+'{"name": "Ajisai", "version": 1}' PARSE
+== JSON-KEYS                         # → ['name' 'version']
+
+# キーの数を取得
+'{"a": 1, "b": 2, "c": 3}' PARSE
+== JSON-KEYS LENGTH                  # → [ 3 ]
+
+## 注意
+- ,, (Keep) モードをサポート
+- オブジェクトでない値に対してはNILを返します"#.to_string(),
+
+        "JSON-SET" => r#"# JSON-SET - JSONオブジェクトにキー・値を設定
+
+## 機能
+JSONオブジェクト（[key, value] ペアのベクタ）に、キーと値のペアを追加または更新します。
+既存のキーの場合は値を更新、新規キーの場合は追加します。
+
+## 使用法
+object 'key' value JSON-SET
+→ 更新されたオブジェクト
+
+## 使用例
+# 新規キーの追加
+'{"name": "Ajisai"}' PARSE
+== 'version' [ 1 ] JSON-SET          # → [['name' 'Ajisai'] ['version' 1]]
+
+# 既存キーの更新
+'{"x": 1, "y": 2}' PARSE
+== 'x' [ 10 ] JSON-SET               # → [['x' 10] ['y' 2]]
+
+# 空からオブジェクトを構築
+NIL 'key' 'value' JSON-SET           # → [['key' 'value']]
+
+## 注意
+- ,, (Keep) モードをサポート
+- 非オブジェクト値に対しても新しい1要素オブジェクトを作成"#.to_string(),
+
         "SEQ" => r#"# SEQ - 順次再生モード
 
 ## 機能

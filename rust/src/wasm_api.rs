@@ -372,6 +372,21 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn set_input_buffer(&mut self, text: String) {
+        self.interpreter.input_buffer = text;
+    }
+
+    #[wasm_bindgen]
+    pub fn get_io_output_buffer(&self) -> String {
+        self.interpreter.io_output_buffer.clone()
+    }
+
+    #[wasm_bindgen]
+    pub fn clear_io_output_buffer(&mut self) {
+        self.interpreter.io_output_buffer.clear();
+    }
+
+    #[wasm_bindgen]
     pub fn restore_custom_words(&mut self, words_js: JsValue) -> Result<(), String> {
         let words: Vec<CustomWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
