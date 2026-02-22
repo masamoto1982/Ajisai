@@ -808,6 +808,7 @@ impl Interpreter {
             "JSON-GET" => json::op_json_get(self),
             "JSON-KEYS" => json::op_json_keys(self),
             "JSON-SET" => json::op_json_set(self),
+            "JSON-EXPORT" => json::op_json_export(self),
             "!" => {
                 self.force_flag = true;
                 Ok(())

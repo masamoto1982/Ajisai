@@ -1616,6 +1616,34 @@ NIL 'key' 'value' JSON-SET           # → [['key' 'value']]
 - ,, (Keep) モードをサポート
 - 非オブジェクト値に対しても新しい1要素オブジェクトを作成"#.to_string(),
 
+        "JSON-EXPORT" => r#"# JSON-EXPORT - JSONファイルとしてエクスポート
+
+## 機能
+スタックトップの値をJSON形式に変換し、Outputエリアにダウンロードリンクを表示します。
+ダウンロードリンクをクリックすると、整形されたJSONファイルがダウンロードされます。
+
+## 使用法
+value JSON-EXPORT
+→ Outputにダウンロードリンクを表示
+
+## 使用例
+# 配列のエクスポート
+[ 1 2 3 ] JSON-EXPORT              # → [1, 2, 3] のダウンロードリンク
+
+# オブジェクトのエクスポート
+NIL 'name' 'Ajisai' JSON-SET
+== 'version' [ 1 ] JSON-SET
+== JSON-EXPORT                      # → {"name": "Ajisai", "version": 1}
+
+# Keep モードでスタックを保持
+[ 1 2 3 ] ,, JSON-EXPORT           # → [ 1 2 3 ] はスタックに残る
+
+## 注意
+- ,, (Keep) モードをサポート
+- CodeBlock は null として出力されます
+- ネストされたベクタはJSONの配列として出力されます
+- [key, value] ペアのベクタはJSONオブジェクトとして出力されます"#.to_string(),
+
         "SEQ" => r#"# SEQ - 順次再生モード
 
 ## 機能

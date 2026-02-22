@@ -21,6 +21,7 @@ export interface AjisaiInterpreter {
     restore_stack(stack_js: Value[]): void;
     restore_custom_words(words: CustomWord[]): void;
     remove_word(name: string): void;
+    push_json_string(json: string): { status: string; message?: string };
 }
 
 export interface ExecuteResult {

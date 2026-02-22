@@ -194,9 +194,18 @@ const extractEffectCommands = (output: string): string[] =>
         .filter(line => line.startsWith('EFFECT:'))
         .map(line => line.substring(7));
 
+const extractJsonExportCommands = (output: string): string[] =>
+    output.split('\n')
+        .filter(line => line.startsWith('JSONEXPORT:'))
+        .map(line => line.substring(11));
+
+const isSpecialCommand = (line: string): boolean =>
+    line.startsWith('AUDIO:') || line.startsWith('CONFIG:') ||
+    line.startsWith('EFFECT:') || line.startsWith('JSONEXPORT:');
+
 const filterAudioCommands = (output: string): string =>
     output.split('\n')
-        .filter(line => !line.startsWith('AUDIO:') && !line.startsWith('CONFIG:') && !line.startsWith('EFFECT:'))
+        .filter(line => !isSpecialCommand(line))
         .join('\n');
 
 const formatExecutionOutput = (result: ExecuteResult): { debug: string; program: string } => ({
@@ -273,6 +282,37 @@ const processAudioCommands = (output: string): void => {
     });
 };
 
+const createJsonDownloadLink = (jsonCompact: string): HTMLAnchorElement => {
+    // Pretty-print for download file
+    let prettyJson: string;
+    try {
+        prettyJson = JSON.stringify(JSON.parse(jsonCompact), null, 2);
+    } catch {
+        prettyJson = jsonCompact;
+    }
+
+    const blob = new Blob([prettyJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `ajisai_export_${timestamp}.json`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.className = 'json-download-link';
+    a.textContent = `Download: ${filename}`;
+    return a;
+};
+
+const processJsonExportCommands = (output: string, outputDisplay: HTMLElement): void => {
+    extractJsonExportCommands(output).forEach(jsonCompact => {
+        const link = createJsonDownloadLink(jsonCompact);
+        appendToElement(outputDisplay, document.createElement('br'));
+        appendToElement(outputDisplay, link);
+    });
+};
+
 export const createDisplay = (elements: DisplayElements): Display => {
     let mainOutput = '';
 
@@ -289,7 +329,8 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const showExecutionResult = (result: ExecuteResult): void => {
         const { debug, program } = formatExecutionOutput(result);
-        processAudioCommands(result.output || '');
+        const rawOutput = result.output || '';
+        processAudioCommands(rawOutput);
 
         mainOutput = `${debug}\n${program}`;
         clearElement(elements.outputDisplay);
@@ -306,7 +347,10 @@ export const createDisplay = (elements: DisplayElements): Display => {
             appendSpan(program, '#4DC4FF');
         }
 
-        if (!debug && !program && result.status === 'OK') {
+        // JSON export download links
+        processJsonExportCommands(rawOutput, elements.outputDisplay);
+
+        if (!debug && !program && !extractJsonExportCommands(rawOutput).length && result.status === 'OK') {
             appendSpan('OK', '#333');
         }
     };
