@@ -387,6 +387,33 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn push_json_string(&mut self, json_string: &str) -> Result<JsValue, JsValue> {
+        use crate::types::json::from_json;
+
+        let obj = js_sys::Object::new();
+
+        match serde_json::from_str::<serde_json::Value>(json_string) {
+            Ok(json_val) => {
+                match from_json(json_val, 1) {
+                    Ok(parsed) => {
+                        self.interpreter.stack.push(parsed);
+                        js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                    }
+                    Err(e) => {
+                        js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                        js_sys::Reflect::set(&obj, &"message".into(), &format!("{}", e).into()).unwrap();
+                    }
+                }
+            }
+            Err(e) => {
+                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"message".into(), &format!("JSON parse error: {}", e).into()).unwrap();
+            }
+        }
+        Ok(obj.into())
+    }
+
+    #[wasm_bindgen]
     pub fn restore_custom_words(&mut self, words_js: JsValue) -> Result<(), String> {
         let words: Vec<CustomWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;

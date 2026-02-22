@@ -125,6 +125,38 @@
     gap: 0.75rem;
 }
 
+/* JSON読み込みボタン */
+.json-import-btn {
+    padding: 0.75rem 1rem;
+    background: var(--color-light);
+    color: var(--color-text);
+    border: var(--border-main);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: var(--radius-main);
+    transition: background-color 0.2s ease;
+}
+
+.json-import-btn:hover {
+    background: var(--color-medium);
+}
+
+/* JSONエクスポート ダウンロードリンク */
+.json-download-link {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    color: var(--color-primary);
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: var(--font-stack-mono);
+    font-size: 0.85rem;
+}
+
+.json-download-link:hover {
+    color: var(--color-secondary);
+}
+
 /* --------------------------------------------------------------------------
  * 3. 出力表示
  * -------------------------------------------------------------------------- */

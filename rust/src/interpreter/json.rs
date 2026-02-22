@@ -235,6 +235,21 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+
+    let val = if is_keep {
+        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
+
+    let json_val = to_json(&val);
+    let json_compact = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
+    interp.output_buffer.push_str(&format!("JSONEXPORT:{}\n", json_compact));
+    Ok(())
+}
+
 fn value_to_string_content(val: &Value) -> String {
     if let ValueData::Vector(chars) = &val.data {
         if val.display_hint == DisplayHint::String || chars.iter().all(|c| matches!(c.data, ValueData::Scalar(_))) {

@@ -22,6 +22,7 @@ export interface GUIElements {
     readonly testBtn: HTMLButtonElement;
     readonly exportBtn: HTMLButtonElement;
     readonly importBtn: HTMLButtonElement;
+    readonly jsonImportBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
     readonly builtinWordsDisplay: HTMLElement;
@@ -55,6 +56,7 @@ const cacheElements = (): GUIElements => ({
     testBtn: document.getElementById('test-btn') as HTMLButtonElement,
     exportBtn: document.getElementById('export-btn') as HTMLButtonElement,
     importBtn: document.getElementById('import-btn') as HTMLButtonElement,
+    jsonImportBtn: document.getElementById('json-import-btn') as HTMLButtonElement,
     outputDisplay: document.getElementById('output-display')!,
     stackDisplay: document.getElementById('stack-display')!,
     builtinWordsDisplay: document.getElementById('builtin-words-display')!,
@@ -182,6 +184,7 @@ export const createGUI = (): GUI => {
 
         elements.exportBtn?.addEventListener('click', () => persistence.exportCustomWords());
         elements.importBtn?.addEventListener('click', () => persistence.importCustomWords());
+        elements.jsonImportBtn?.addEventListener('click', () => persistence.importJsonAsVector());
 
         elements.codeInput.addEventListener('keydown', (e) => {
             // Shift+Enter: run

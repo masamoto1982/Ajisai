@@ -23,6 +23,7 @@ export interface Persistence {
     readonly fullReset: () => Promise<void>;
     readonly exportCustomWords: () => void;
     readonly importCustomWords: () => void;
+    readonly importJsonAsVector: () => void;
 }
 
 declare global {
@@ -263,6 +264,34 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         });
     };
 
+    const importJsonAsVector = (): void => {
+        openFileDialog('.json', async (file) => {
+            try {
+                const jsonString = await readFileAsText(file);
+
+                // JSONとして有効か検証
+                try {
+                    JSON.parse(jsonString);
+                } catch {
+                    showError?.(new Error('Invalid JSON file.'));
+                    return;
+                }
+
+                const result = window.ajisaiInterpreter.push_json_string(jsonString);
+
+                if (result.status === 'OK') {
+                    updateDisplays?.();
+                    await saveCurrentState();
+                    showInfo?.(`JSON loaded from ${file.name}`, true);
+                } else {
+                    showError?.(new Error(result.message || 'Failed to parse JSON'));
+                }
+            } catch (error) {
+                showError?.(error as Error);
+            }
+        });
+    };
+
     const fullReset = async (): Promise<void> => {
         try {
             if (dbInitialized) {
@@ -285,7 +314,8 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         loadDatabaseData,
         fullReset,
         exportCustomWords,
-        importCustomWords
+        importCustomWords,
+        importJsonAsVector
     };
 };
 
