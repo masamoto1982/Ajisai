@@ -3,8 +3,8 @@ import type { CustomWord } from '../wasm-types';
 export const SAMPLE_CUSTOM_WORDS: CustomWord[] = [
     {
         name: 'C4',
-        definition: '[ 261.63 ]',
-        description: '純正律 C4 / ド (261.63Hz)',
+        definition: '[ 264 ]',
+        description: '純正律 C4 / ド (264Hz)',
     },
     {
         name: 'D4',

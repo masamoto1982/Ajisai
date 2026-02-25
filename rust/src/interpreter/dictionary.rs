@@ -466,7 +466,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
-            ("C4", "[ 261.63 ]", "純正律 C4"),
+            ("C4", "[ 264 ]", "純正律 C4"),
             ("D4", "C4 [ 9/8 ] *", "純正律 D4"),
             ("E4", "C4 [ 5/4 ] *", "純正律 E4"),
         ];
@@ -493,7 +493,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
-            ("C4", "[ 261.63 ]", "純正律 C4"),
+            ("C4", "[ 264 ]", "純正律 C4"),
             ("D4", "C4 [ 9/8 ] *", "純正律 D4"),
         ];
         restore_sample_words(&mut interp, &sample_words);
