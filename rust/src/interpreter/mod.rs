@@ -20,7 +20,7 @@ pub mod json;
 use std::collections::{HashMap, HashSet};
 use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
 
-pub const MAX_CALL_DEPTH: usize = 3;
+pub const MAX_CALL_DEPTH: usize = 4;
 
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
@@ -1531,29 +1531,31 @@ ADDTEST
     // === 呼び出し深度制限テスト ===
 
     #[tokio::test]
-    async fn test_call_depth_3_ok() {
+    async fn test_call_depth_4_ok() {
         let mut interp = Interpreter::new();
-        // A -> B -> C = 深度3、OK
-        interp.execute(": C ; 'B' DEF").await.unwrap();
-        interp.execute(": B ; 'A' DEF").await.unwrap();
-        interp.execute(": [ 1 ] ; 'C' DEF").await.unwrap();
-
-        let result = interp.execute("A").await;
-        assert!(result.is_ok(), "Call depth 3 should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
-    }
-
-    #[tokio::test]
-    async fn test_call_depth_4_exceeds() {
-        let mut interp = Interpreter::new();
-        // A -> B -> C -> D = 深度4、エラー
+        // A -> B -> C -> D = チェーン4段（5階層）、OK
         interp.execute(": B ; 'A' DEF").await.unwrap();
         interp.execute(": C ; 'B' DEF").await.unwrap();
         interp.execute(": D ; 'C' DEF").await.unwrap();
         interp.execute(": [ 1 ] ; 'D' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
-        assert!(result.is_err(), "Call depth 4 should fail");
+        assert!(result.is_ok(), "Call depth 4 should succeed: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_call_depth_5_exceeds() {
+        let mut interp = Interpreter::new();
+        // A -> B -> C -> D -> E = チェーン5段（6階層）、エラー
+        interp.execute(": B ; 'A' DEF").await.unwrap();
+        interp.execute(": C ; 'B' DEF").await.unwrap();
+        interp.execute(": D ; 'C' DEF").await.unwrap();
+        interp.execute(": E ; 'D' DEF").await.unwrap();
+        interp.execute(": [ 1 ] ; 'E' DEF").await.unwrap();
+
+        let result = interp.execute("A").await;
+        assert!(result.is_err(), "Call depth 5 should fail");
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Call depth limit"), "Error message should mention call depth limit: {}", err_msg);
     }
@@ -1561,7 +1563,7 @@ ADDTEST
     #[tokio::test]
     async fn test_direct_recursion_limited() {
         let mut interp = Interpreter::new();
-        // REC -> REC -> REC -> REC で深度超過
+        // REC -> REC -> REC -> REC -> REC で深度超過
         // シンプルな再帰ワード：常に自分自身を呼び出す
         interp.execute(": REC ; 'REC' DEF").await.unwrap();
 
@@ -1590,17 +1592,18 @@ ADDTEST
     #[tokio::test]
     async fn test_call_depth_error_shows_trace() {
         let mut interp = Interpreter::new();
-        // A -> B -> C -> D でエラーメッセージにスタックトレースが含まれることを確認
+        // A -> B -> C -> D -> E でエラーメッセージにスタックトレースが含まれることを確認
         interp.execute(": B ; 'A' DEF").await.unwrap();
         interp.execute(": C ; 'B' DEF").await.unwrap();
         interp.execute(": D ; 'C' DEF").await.unwrap();
-        interp.execute(": [ 1 ] ; 'D' DEF").await.unwrap();
+        interp.execute(": E ; 'D' DEF").await.unwrap();
+        interp.execute(": [ 1 ] ; 'E' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         // エラーメッセージにスタックトレースが含まれる
-        assert!(err_msg.contains("A") && err_msg.contains("B") && err_msg.contains("C"),
+        assert!(err_msg.contains("A") && err_msg.contains("B") && err_msg.contains("C") && err_msg.contains("D"),
             "Error message should show call trace: {}", err_msg);
     }
 
