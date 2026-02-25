@@ -41,8 +41,8 @@ PHRASE-B
 
 # === Just Intonation Test ===
 
-# Define base frequency (C4 = 261.63 Hz)
-[ 261.63 ] 'C4' DEF
+# Define base frequency (C4 = 264 Hz, just intonation where A4 = 440 Hz)
+[ 264 ] 'C4' DEF
 
 # Define intervals (ratios)
 [ 1 ] 'DO' DEF
