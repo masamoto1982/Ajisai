@@ -2,12 +2,13 @@
 
 import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-types';
 import type DB from '../db';
-import { SAMPLE_CUSTOM_WORDS } from './sample-words';
+import { SAMPLE_CUSTOM_WORDS, SAMPLE_WORDS_VERSION } from './sample-words';
 import { Result, ok, err } from './fp-utils';
 
 export interface InterpreterState {
     readonly stack: Value[];
     readonly customWords: CustomWord[];
+    readonly sampleWordsVersion?: number;
 }
 
 export interface PersistenceCallbacks {
@@ -50,7 +51,8 @@ const getCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
 
     return {
         stack: interpreter.get_stack(),
-        customWords
+        customWords,
+        sampleWordsVersion: SAMPLE_WORDS_VERSION
     };
 };
 
@@ -201,17 +203,37 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
 
                 if (state.customWords && state.customWords.length > 0) {
-                    await window.ajisaiInterpreter.restore_custom_words(state.customWords);
+                    // サンプルワードのバージョンチェックとマイグレーション
+                    const savedVersion = state.sampleWordsVersion || 0;
+                    let wordsToRestore = state.customWords;
+
+                    if (savedVersion < SAMPLE_WORDS_VERSION) {
+                        const sampleWordNames = new Set(
+                            SAMPLE_CUSTOM_WORDS.map(w => w.name.toUpperCase())
+                        );
+                        const userWords = state.customWords.filter(
+                            (w: CustomWord) => !sampleWordNames.has(w.name.toUpperCase())
+                        );
+                        wordsToRestore = [...SAMPLE_CUSTOM_WORDS, ...userWords];
+                        console.log(`Sample words migrated: v${savedVersion} → v${SAMPLE_WORDS_VERSION}`);
+                    }
+
+                    await window.ajisaiInterpreter.restore_custom_words(wordsToRestore);
 
                     // ユーザーが DEL で削除したエクステンションワードを反映する。
                     // new AjisaiInterpreter() は全エクステンションを登録するが、
                     // 保存データに含まれないワードは削除済みなので除去する。
-                    const savedWordNames = new Set(state.customWords.map((w: CustomWord) => w.name.toUpperCase()));
+                    const savedWordNames = new Set(wordsToRestore.map((w: CustomWord) => w.name.toUpperCase()));
                     const currentWords = window.ajisaiInterpreter.get_custom_words_info();
                     for (const [name] of currentWords) {
                         if (!savedWordNames.has(name.toUpperCase())) {
                             window.ajisaiInterpreter.remove_word(name);
                         }
+                    }
+
+                    // マイグレーション後は新バージョンで保存
+                    if (savedVersion < SAMPLE_WORDS_VERSION) {
+                        await saveCurrentState();
                     }
 
                     console.log('Interpreter state restored.');
