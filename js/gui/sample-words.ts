@@ -1,5 +1,9 @@
 import type { CustomWord } from '../wasm-types';
 
+// サンプルワードの定義を更新した際はバージョンをインクリメントすること。
+// persistence.ts のマイグレーションロジックが IndexedDB の古い定義を自動更新する。
+export const SAMPLE_WORDS_VERSION = 2;
+
 export const SAMPLE_CUSTOM_WORDS: CustomWord[] = [
     {
         name: 'C4',

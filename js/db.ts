@@ -11,6 +11,7 @@ interface InterpreterState {
     key: string;
     stack: any;
     customWords: any;
+    sampleWordsVersion?: number;
     updatedAt: string;
 }
 
@@ -170,7 +171,8 @@ class AjisaiDB {
                 if (result) {
                     resolve({
                         stack: result.stack,
-                        customWords: result.customWords
+                        customWords: result.customWords,
+                        sampleWordsVersion: result.sampleWordsVersion
                     });
                 } else {
                     resolve(null);
