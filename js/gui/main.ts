@@ -265,9 +265,9 @@ export const createGUI = (): GUI => {
         mobile.updateView('input');
 
         // データの読み込みをワーカー初期化より先に行う。
-        // ワーカーのWASMコンパイルがCPUを占有するため、
-        // モバイルではUIが応答不能になる。先にデータを読み込んで
-        // ボタンを描画し、ワーカー初期化を最後に遅延させる。
+        // ボタンを先に描画してからワーカーを初期化する。
+        // モバイルではワーカーのWASMコンパイルによるCPU飽和を
+        // 防ぐため、WorkerManager側で段階的遅延作成を行う。
         await persistence.loadDatabaseData();
         updateAllDisplays();
         await initializeWorkers();
