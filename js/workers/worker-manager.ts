@@ -21,18 +21,60 @@ interface WorkerInstance {
 
 const MOBILE_BREAKPOINT = 768;
 const MAX_MOBILE_WORKERS = 2;
+// モバイルでのワーカー遅延作成パラメータ
+// 初期化直後のUI操作を妨げないよう、最初のワーカー作成を遅延させる
+const MOBILE_FIRST_WORKER_DELAY = 3000;
+// 複数ワーカーが同時にWASMコンパイルしないよう、間隔を空ける
+const MOBILE_WORKER_STAGGER_DELAY = 10000;
 
 export class WorkerManager {
     private workers: WorkerInstance[] = [];
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
+    private deferredTimers: ReturnType<typeof setTimeout>[] = [];
     private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
         ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
         : navigator.hardwareConcurrency || 4;
 
     async init(): Promise<void> {
         console.log('[WorkerManager] Initializing worker pool...');
+        this.cancelDeferredTimers();
         this.workers = [];
+
+        if (window.innerWidth <= MOBILE_BREAKPOINT) {
+            // モバイルではワーカー作成を段階的に遅延させる。
+            // 複数ワーカーが同時にWASMコンパイルを行うとCPUが飽和し、
+            // メインスレッドのイベント処理が妨げられて
+            // ワードボタンのタップが反映されなくなる。
+            this.scheduleDeferredCreation();
+            return;
+        }
+
+        for (let i = 0; i < this.maxWorkers; i++) {
+            this.createWorker();
+        }
+    }
+
+    private scheduleDeferredCreation(): void {
+        for (let i = 0; i < this.maxWorkers; i++) {
+            const delay = MOBILE_FIRST_WORKER_DELAY + i * MOBILE_WORKER_STAGGER_DELAY;
+            const timerId = setTimeout(() => {
+                this.createWorker();
+                this.processQueue();
+            }, delay);
+            this.deferredTimers.push(timerId);
+        }
+    }
+
+    private cancelDeferredTimers(): void {
+        this.deferredTimers.forEach(id => clearTimeout(id));
+        this.deferredTimers = [];
+    }
+
+    // コード実行時にワーカーが未作成の場合、即座に作成する
+    private ensureWorkers(): void {
+        if (this.workers.length > 0) return;
+        this.cancelDeferredTimers();
         for (let i = 0; i < this.maxWorkers; i++) {
             this.createWorker();
         }
@@ -118,6 +160,7 @@ export class WorkerManager {
     }
 
     execute(code: string, state: { stack: Value[], customWords: CustomWord[] }): Promise<ExecuteResult> {
+        this.ensureWorkers();
         return new Promise((resolve, reject) => {
             const task: WorkerTask = {
                 id: this.generateTaskId(),
@@ -151,6 +194,7 @@ export class WorkerManager {
     }
 
     async resetAllWorkers(): Promise<void> {
+        this.cancelDeferredTimers();
         this.abortAll();
         this.workers.forEach(w => w.worker.terminate());
         await this.init();
