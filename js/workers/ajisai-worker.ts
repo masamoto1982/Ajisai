@@ -1,60 +1,62 @@
 // js/workers/ajisai-worker.ts
 
-import type { WasmModule, AjisaiInterpreter, ExecuteResult } from '../wasm-types';
+import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
 
 let interpreter: AjisaiInterpreter | null = null;
 let isAborted = false;
 let currentTaskId: string | null = null;
-let initAttempts = 0;
-let isInitializing = false;
-const MAX_INIT_ATTEMPTS = 3;
-const INIT_RETRY_DELAY_MS = 500;
 
-const sleep = (ms: number): Promise<void> =>
-    new Promise(resolve => setTimeout(resolve, ms));
+// JSグルーコードを先行ロード。
+// import()はJSバインディングの読み込みのみ行い、
+// WASMコンパイルはinitSync/default呼び出し時まで発生しない。
+const bindingsPromise = import('../pkg/ajisai_core.js');
 
-async function init(): Promise<boolean> {
+/**
+ * メインスレッドから受け取ったコンパイル済みWebAssembly.Moduleで初期化する。
+ * initSync()はコンパイル済みモジュールからのインスタンス化のみ行うため、
+ * WASMの再コンパイルが発生せず、ほぼ瞬時に完了する。
+ */
+async function initFromCompiledModule(wasmModule: WebAssembly.Module): Promise<boolean> {
+    try {
+        const bindings = await bindingsPromise;
+        bindings.initSync(wasmModule);
+        interpreter = new bindings.AjisaiInterpreter() as unknown as AjisaiInterpreter;
+        console.log('[Worker] Initialized from pre-compiled module');
+        return true;
+    } catch (e) {
+        console.error('[Worker] Failed to init from pre-compiled module:', e);
+        return false;
+    }
+}
+
+/**
+ * フォールバック: コンパイル済みモジュールが提供されない場合、
+ * default()で自力初期化する（WASMコンパイルが発生するため低速）。
+ */
+async function initFallback(): Promise<boolean> {
     if (interpreter) return true;
-    if (isInitializing) {
-        // 初期化中の場合は完了を待つ
-        while (isInitializing) {
-            await sleep(50);
-        }
-        return interpreter !== null;
+    try {
+        const bindings = await bindingsPromise;
+        await bindings.default();
+        interpreter = new bindings.AjisaiInterpreter() as unknown as AjisaiInterpreter;
+        console.log('[Worker] Initialized via fallback (default init)');
+        return true;
+    } catch (e) {
+        console.error('[Worker] Fallback initialization failed:', e);
+        return false;
     }
-
-    isInitializing = true;
-
-    while (initAttempts < MAX_INIT_ATTEMPTS) {
-        initAttempts++;
-        try {
-            const wasmModule = await import('../pkg/ajisai_core.js') as unknown as WasmModule;
-            if (wasmModule.default) {
-                await wasmModule.default();
-            } else if (wasmModule.init) {
-                await wasmModule.init();
-            }
-            interpreter = new wasmModule.AjisaiInterpreter();
-            console.log('[Worker] WASM Interpreter Initialized');
-            isInitializing = false;
-            return true;
-        } catch (e) {
-            console.error(`[Worker] Failed to initialize WASM (attempt ${initAttempts}/${MAX_INIT_ATTEMPTS})`, e);
-            if (initAttempts < MAX_INIT_ATTEMPTS) {
-                await sleep(INIT_RETRY_DELAY_MS * initAttempts);
-            }
-        }
-    }
-
-    // すべてのリトライが失敗
-    isInitializing = false;
-    console.error('[Worker] WASM initialization failed after all retries');
-    self.postMessage({ type: 'error', id: 'init', data: 'Worker WASM initialization failed after all retries' });
-    return false;
 }
 
 self.onmessage = async (event: MessageEvent) => {
-    const { type, id, code, state } = event.data;
+    const { type, id } = event.data;
+
+    if (type === 'init') {
+        // メインスレッドからコンパイル済みWebAssembly.Moduleを受信
+        if (event.data.wasmModule instanceof WebAssembly.Module) {
+            await initFromCompiledModule(event.data.wasmModule);
+        }
+        return;
+    }
 
     if (type === 'abort') {
         if (id === currentTaskId || id === '*') {
@@ -65,10 +67,13 @@ self.onmessage = async (event: MessageEvent) => {
 
     if (type !== 'execute') return;
 
-    const initSuccess = await init();
-    if (!initSuccess || !interpreter) {
-        self.postMessage({ type: 'error', id, data: 'Interpreter not initialized after all retries' });
-        return;
+    // インタプリタ未初期化の場合、フォールバックで初期化を試行
+    if (!interpreter) {
+        const success = await initFallback();
+        if (!success) {
+            self.postMessage({ type: 'error', id, data: 'Interpreter not initialized' });
+            return;
+        }
     }
 
     isAborted = false;
@@ -76,17 +81,17 @@ self.onmessage = async (event: MessageEvent) => {
 
     try {
         // 実行前に状態を復元
-        interpreter.reset();
-        if (state.stack) {
-            interpreter.restore_stack(state.stack);
+        interpreter!.reset();
+        if (event.data.state?.stack) {
+            interpreter!.restore_stack(event.data.state.stack);
         }
-        if (state.customWords) {
-            interpreter.restore_custom_words(state.customWords);
+        if (event.data.state?.customWords) {
+            interpreter!.restore_custom_words(event.data.state.customWords);
         }
 
         if (isAborted) throw new Error('aborted');
 
-        const result: ExecuteResult = await interpreter.execute(code);
+        const result: ExecuteResult = await interpreter!.execute(event.data.code);
 
         if (isAborted) throw new Error('aborted');
 
@@ -102,6 +107,3 @@ self.onmessage = async (event: MessageEvent) => {
         currentTaskId = null;
     }
 };
-
-// Workerがロードされたらすぐに初期化を開始
-init();
