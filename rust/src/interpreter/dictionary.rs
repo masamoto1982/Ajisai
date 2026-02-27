@@ -466,9 +466,9 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
-            ("C4", "[ 264 ]", "純正律 C4"),
-            ("D4", "C4 [ 9/8 ] *", "純正律 D4"),
-            ("E4", "C4 [ 5/4 ] *", "純正律 E4"),
+            ("C4", "264", "純正律 C4"),
+            ("D4", "C4 9 * 8 /", "純正律 D4"),
+            ("E4", "C4 5 * 4 /", "純正律 E4"),
         ];
         restore_sample_words(&mut interp, &sample_words);
 
@@ -493,8 +493,8 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
-            ("C4", "[ 264 ]", "純正律 C4"),
-            ("D4", "C4 [ 9/8 ] *", "純正律 D4"),
+            ("C4", "264", "純正律 C4"),
+            ("D4", "C4 9 * 8 /", "純正律 D4"),
         ];
         restore_sample_words(&mut interp, &sample_words);
 
@@ -505,6 +505,103 @@ mod tests {
         let result = interp.execute("D4").await;
         assert!(result.is_ok(), "Executing D4 should succeed: {:?}", result.err());
         assert_eq!(interp.stack.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_sample_words_in_vector_literal_play() {
+        // Bug fix: sample custom words (C4, D4 etc.) should be resolved when
+        // placed inside a vector literal like [ C4 D4 E4 ] and played with PLAY.
+        // Previously they were interpreted as strings (lyrics) instead of sounds.
+        let mut interp = Interpreter::new();
+
+        let sample_words = vec![
+            ("C4", "264", "純正律 C4"),
+            ("D4", "C4 9 * 8 /", "純正律 D4"),
+            ("E4", "C4 5 * 4 /", "純正律 E4"),
+        ];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.get_output();
+
+        // Custom word names inside a vector literal should resolve to their values
+        let result = interp.execute("[ C4 D4 E4 ] SEQ PLAY").await;
+        assert!(result.is_ok(), "[ C4 D4 E4 ] SEQ PLAY should succeed: {:?}", result.err());
+
+        let output = interp.get_output();
+        assert!(output.contains("AUDIO:"), "Should contain AUDIO command, got: {}", output);
+        assert!(output.contains("\"type\":\"tone\""), "Should contain tone, got: {}", output);
+        assert!(output.contains("\"frequency\":264"), "Should contain C4 frequency 264Hz, got: {}", output);
+    }
+
+    #[tokio::test]
+    async fn test_sample_words_scalar_output() {
+        // Sample words should push scalar values (not vectors)
+        let mut interp = Interpreter::new();
+
+        let sample_words = vec![
+            ("C4", "264", "純正律 C4"),
+            ("D4", "C4 9 * 8 /", "純正律 D4"),
+        ];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.get_output();
+
+        let _ = interp.execute("C4").await.unwrap();
+        assert_eq!(interp.stack.len(), 1);
+        if let Some(val) = interp.stack.last() {
+            assert!(val.as_scalar().is_some(), "C4 should push a scalar, not a vector");
+            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
+        }
+
+        let _ = interp.execute("D4").await.unwrap();
+        assert_eq!(interp.stack.len(), 2);
+        if let Some(val) = interp.stack.last() {
+            assert!(val.as_scalar().is_some(), "D4 should push a scalar, not a vector");
+            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 297);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_builtin_symbols_remain_strings_in_vector() {
+        // Built-in operator symbols should still become strings in vectors
+        // (preserving Vector Duality behavior for DEF)
+        let mut interp = Interpreter::new();
+
+        // [ [ 2 ] * ] uses builtin * which should remain as a string
+        let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
+        assert!(result.is_ok(), "Vector Duality DEF should still work: {:?}", result.err());
+
+        let result = interp.execute("[ 5 ] DOUBLE").await;
+        assert!(result.is_ok(), "Executing DOUBLE should succeed: {:?}", result.err());
+        if let Some(val) = interp.stack.last() {
+            if let ValueData::Vector(children) = &val.data {
+                assert_eq!(children.len(), 1);
+                assert_eq!(children[0].as_scalar().unwrap().to_i64().unwrap(), 10);
+            } else {
+                panic!("Expected vector result");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_custom_word_resolved_in_nested_vector() {
+        // Custom words should also resolve inside nested vectors
+        let mut interp = Interpreter::new();
+
+        let sample_words = vec![
+            ("C4", "264", "純正律 C4"),
+            ("E4", "330", "純正律 E4"),
+            ("G4", "396", "純正律 G4"),
+        ];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.get_output();
+
+        // Nested vector: [ [ C4 E4 G4 ] ] should create a vector of a vector of scalars
+        let result = interp.execute("[ [ C4 E4 G4 ] ] SIM PLAY").await;
+        assert!(result.is_ok(), "Nested vector with custom words should work: {:?}", result.err());
+
+        let output = interp.get_output();
+        assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
+        assert!(output.contains("\"frequency\":264"), "Should contain C4 frequency");
+        assert!(output.contains("\"frequency\":396"), "Should contain G4 frequency");
     }
 
     #[tokio::test]
