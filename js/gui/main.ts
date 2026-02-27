@@ -264,10 +264,9 @@ export const createGUI = (): GUI => {
         updateAllDisplays();
         mobile.updateView('input');
 
-        // データの読み込みをワーカー初期化より先に行う。
-        // ボタンを先に描画してからワーカーを初期化する。
-        // モバイルではワーカーのWASMコンパイルによるCPU飽和を
-        // 防ぐため、WorkerManager側で段階的遅延作成を行う。
+        // データの読み込みとボタン描画をワーカー初期化より先に行う。
+        // ワーカーにはメインスレッドでコンパイル済みのWebAssembly.Moduleを
+        // 転送するため、ワーカー側での再コンパイルは発生しない。
         await persistence.loadDatabaseData();
         updateAllDisplays();
         await initializeWorkers();

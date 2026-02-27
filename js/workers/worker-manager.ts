@@ -1,6 +1,7 @@
 // js/workers/worker-manager.ts
 
 import type { ExecuteResult, Value, CustomWord } from '../wasm-types';
+import { getCompiledWasmModule } from '../wasm-loader';
 
 interface WorkerTask {
     id: string;
@@ -21,60 +22,31 @@ interface WorkerInstance {
 
 const MOBILE_BREAKPOINT = 768;
 const MAX_MOBILE_WORKERS = 2;
-// モバイルでのワーカー遅延作成パラメータ
-// 初期化直後のUI操作を妨げないよう、最初のワーカー作成を遅延させる
-const MOBILE_FIRST_WORKER_DELAY = 3000;
-// 複数ワーカーが同時にWASMコンパイルしないよう、間隔を空ける
-const MOBILE_WORKER_STAGGER_DELAY = 10000;
 
 export class WorkerManager {
     private workers: WorkerInstance[] = [];
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
-    private deferredTimers: ReturnType<typeof setTimeout>[] = [];
+    private compiledModule: WebAssembly.Module | null = null;
     private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
         ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
         : navigator.hardwareConcurrency || 4;
 
     async init(): Promise<void> {
         console.log('[WorkerManager] Initializing worker pool...');
-        this.cancelDeferredTimers();
         this.workers = [];
 
-        if (window.innerWidth <= MOBILE_BREAKPOINT) {
-            // モバイルではワーカー作成を段階的に遅延させる。
-            // 複数ワーカーが同時にWASMコンパイルを行うとCPUが飽和し、
-            // メインスレッドのイベント処理が妨げられて
-            // ワードボタンのタップが反映されなくなる。
-            this.scheduleDeferredCreation();
-            return;
+        // メインスレッドでコンパイル済みのWASMモジュールを取得。
+        // これをワーカーに転送することで、ワーカー側での再コンパイルを回避する。
+        this.compiledModule = getCompiledWasmModule();
+
+        if (!this.compiledModule) {
+            console.warn('[WorkerManager] Compiled WASM module not available; workers will init independently');
         }
 
-        for (let i = 0; i < this.maxWorkers; i++) {
-            this.createWorker();
-        }
-    }
-
-    private scheduleDeferredCreation(): void {
-        for (let i = 0; i < this.maxWorkers; i++) {
-            const delay = MOBILE_FIRST_WORKER_DELAY + i * MOBILE_WORKER_STAGGER_DELAY;
-            const timerId = setTimeout(() => {
-                this.createWorker();
-                this.processQueue();
-            }, delay);
-            this.deferredTimers.push(timerId);
-        }
-    }
-
-    private cancelDeferredTimers(): void {
-        this.deferredTimers.forEach(id => clearTimeout(id));
-        this.deferredTimers = [];
-    }
-
-    // コード実行時にワーカーが未作成の場合、即座に作成する
-    private ensureWorkers(): void {
-        if (this.workers.length > 0) return;
-        this.cancelDeferredTimers();
+        // コンパイル済みモジュールを転送するため、モバイルでも遅延なしで
+        // 全ワーカーを即座に作成できる。initSyncによるインスタンス化は
+        // WASMコンパイルを伴わないため、CPU負荷がほぼ発生しない。
         for (let i = 0; i < this.maxWorkers; i++) {
             this.createWorker();
         }
@@ -86,10 +58,25 @@ export class WorkerManager {
 
         worker.onmessage = (event) => this.handleWorkerMessage(instance, event.data);
         worker.onerror = (error) => this.handleWorkerError(instance, error);
-        
+
+        // コンパイル済みモジュールをワーカーに転送。
+        // WebAssembly.Moduleはstructured-cloneableなので、
+        // postMessageで効率的に転送できる。
+        if (this.compiledModule) {
+            worker.postMessage({ type: 'init', wasmModule: this.compiledModule });
+        }
+
         this.workers.push(instance);
     }
-    
+
+    // コード実行時にワーカーが未作成の場合、即座に作成する
+    private ensureWorkers(): void {
+        if (this.workers.length > 0) return;
+        for (let i = 0; i < this.maxWorkers; i++) {
+            this.createWorker();
+        }
+    }
+
     private handleWorkerMessage(instance: WorkerInstance, message: any): void {
         const task = this.activeTasks.get(message.id);
         if (!task) return;
@@ -107,7 +94,7 @@ export class WorkerManager {
         }
         this.completeTask(instance);
     }
-    
+
     private handleWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
         console.error('[WorkerManager] Worker error:', error.message);
         if (instance.currentTaskId) {
@@ -119,7 +106,7 @@ export class WorkerManager {
         if (index > -1) this.workers.splice(index, 1);
         this.createWorker();
     }
-    
+
     private completeTask(instance: WorkerInstance): void {
         if (instance.currentTaskId) {
             this.activeTasks.delete(instance.currentTaskId);
@@ -141,7 +128,7 @@ export class WorkerManager {
         instance.busy = true;
         instance.currentTaskId = task.id;
         this.activeTasks.set(task.id, task);
-        
+
         instance.worker.postMessage({
             type: 'execute',
             id: task.id,
@@ -194,7 +181,6 @@ export class WorkerManager {
     }
 
     async resetAllWorkers(): Promise<void> {
-        this.cancelDeferredTimers();
         this.abortAll();
         this.workers.forEach(w => w.worker.terminate());
         await this.init();
