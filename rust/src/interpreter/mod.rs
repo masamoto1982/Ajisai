@@ -106,7 +106,7 @@ impl Interpreter {
         self.safe_mode = false;
     }
 
-    fn collect_vector(&self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector(&mut self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
         self.collect_vector_with_depth(tokens, start_index, 1)
     }
 
@@ -153,7 +153,7 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed code block (missing ;)"))
     }
 
-    fn collect_vector_with_depth(&self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector_with_depth(&mut self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
         if depth > MAX_VISIBLE_DIMENSIONS {
             return Err(AjisaiError::DimensionLimitExceeded { depth });
         }
@@ -194,7 +194,39 @@ impl Interpreter {
                         "TRUE" => values.push(Value::from_bool(true)),
                         "FALSE" => values.push(Value::from_bool(false)),
                         "NIL" => values.push(Value::nil()),
-                        _ => values.push(Value::from_string(s)),
+                        _ => {
+                            // カスタムワード（非組み込み）の場合、実行して結果を取得する。
+                            // 安全性のため、スタックを退避し空の状態でワードを実行する。
+                            // 実行に失敗した場合は文字列として扱う（Vector Duality用）。
+                            let resolved = if let Some(def) = self.dictionary.get(&upper) {
+                                !def.is_builtin
+                            } else {
+                                false
+                            };
+
+                            if resolved {
+                                let stack_backup = std::mem::take(&mut self.stack);
+                                let output_backup = std::mem::take(&mut self.output_buffer);
+                                match self.execute_word_core(&upper) {
+                                    Ok(()) => {
+                                        let results = std::mem::replace(&mut self.stack, stack_backup);
+                                        self.output_buffer = output_backup;
+                                        if results.is_empty() {
+                                            values.push(Value::from_string(s));
+                                        } else {
+                                            values.extend(results);
+                                        }
+                                    }
+                                    Err(_) => {
+                                        self.stack = stack_backup;
+                                        self.output_buffer = output_backup;
+                                        values.push(Value::from_string(s));
+                                    }
+                                }
+                            } else {
+                                values.push(Value::from_string(s));
+                            }
+                        }
                     }
                     i += 1;
                 },
