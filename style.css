@@ -406,13 +406,8 @@
 /* --------------------------------------------------------------------------
  * 7. エリアツールチップ
  * -------------------------------------------------------------------------- */
-.has-tooltip {
+.tooltip-icon {
     position: relative;
-    cursor: default;
-}
-
-.has-tooltip::after {
-    content: 'i';
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -426,13 +421,15 @@
     border-radius: 50%;
     vertical-align: middle;
     line-height: 1;
+    cursor: help;
 }
 
 .area-tooltip {
     display: none;
     position: absolute;
-    top: calc(100% + 2px);
-    left: 0;
+    top: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 100;
     min-width: 220px;
     max-width: 320px;
@@ -448,7 +445,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.has-tooltip:hover .area-tooltip {
+.tooltip-icon:hover .area-tooltip {
     display: block;
 }
 
@@ -469,11 +466,7 @@
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     /* モバイルではホバーツールチップを非表示 */
-    .has-tooltip::after {
-        display: none;
-    }
-
-    .has-tooltip:hover .area-tooltip {
+    .tooltip-icon {
         display: none;
     }
 
