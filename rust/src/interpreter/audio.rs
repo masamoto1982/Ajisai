@@ -56,7 +56,7 @@ fn value_as_string(val: &Value) -> String {
                     }
                 }).map(|c| vec![c]).unwrap_or_default()
             }
-            ValueData::Vector(children) => {
+            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
             ValueData::CodeBlock(_) => vec![],
@@ -67,10 +67,10 @@ fn value_as_string(val: &Value) -> String {
 
 /// ベクタの子要素を取得
 fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
-    if let ValueData::Vector(children) = &val.data {
-        Some(children)
-    } else {
-        None
+    match &val.data {
+        ValueData::Vector(children) => Some(children),
+        ValueData::JsonObject { pairs: children, .. } => Some(children),
+        _ => None,
     }
 }
 

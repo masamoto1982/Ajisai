@@ -18,7 +18,7 @@ fn value_to_string(val: &Value) -> Result<String> {
                     }
                 }).map(|c| vec![c]).unwrap_or_default()
             }
-            ValueData::Vector(children) => {
+            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
             ValueData::CodeBlock(_) => vec![],
@@ -48,7 +48,7 @@ fn is_string_like(val: &Value) -> bool {
             ValueData::Scalar(f) => {
                 f.to_i64().map(|n| n >= 0 && n <= 0x10FFFF).unwrap_or(false)
             }
-            ValueData::Vector(children) => {
+            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
                 children.iter().all(|c| check_codepoints(c))
             }
             ValueData::CodeBlock(_) => false,
@@ -120,7 +120,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 }
             }).collect::<Vec<_>>().join(" ")
         }
-        ValueData::Vector(_) => {
+        ValueData::Vector(_) | ValueData::JsonObject { .. } => {
             vector_to_source(&def_val)?
         }
         _ => {

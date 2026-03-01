@@ -1,4 +1,5 @@
 use serde_json;
+use std::collections::HashMap;
 use crate::types::{Value, ValueData, DisplayHint, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
@@ -56,7 +57,9 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
                 return Ok(Value::nil());
             }
             let mut pairs = Vec::with_capacity(map.len());
+            let mut index = HashMap::with_capacity(map.len());
             for (key, val) in map {
+                index.insert(key.clone(), pairs.len());
                 let key_val = Value::from_string(&key);
                 let val_val = from_json(val, depth + 1)?;
                 pairs.push(Value {
@@ -66,7 +69,7 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
                 });
             }
             Ok(Value {
-                data: ValueData::Vector(pairs),
+                data: ValueData::JsonObject { pairs, index },
                 display_hint: DisplayHint::Auto,
                 audio_hint: None,
             })
@@ -94,6 +97,20 @@ pub fn to_json(val: &Value) -> serde_json::Value {
                 }
             }
             serde_json::Value::Null
+        }
+
+        ValueData::JsonObject { pairs, .. } => {
+            let mut map = serde_json::Map::new();
+            for pair in pairs {
+                if let ValueData::Vector(kv) = &pair.data {
+                    if kv.len() == 2 {
+                        let key = value_to_string_content(&kv[0]);
+                        let val_json = to_json(&kv[1]);
+                        map.insert(key, val_json);
+                    }
+                }
+            }
+            serde_json::Value::Object(map)
         }
 
         ValueData::Vector(children) => {

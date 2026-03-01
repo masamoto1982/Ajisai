@@ -16,10 +16,10 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
         ValueData::Nil => {
             Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
         }
-        ValueData::Vector(children) if children.len() == 1 => {
+        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } if children.len() == 1 => {
             get_integer_from_value(&children[0])
         }
-        ValueData::Vector(_) => {
+        ValueData::Vector(_) | ValueData::JsonObject { .. } => {
             Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
         }
         ValueData::CodeBlock(_) => {
@@ -39,10 +39,10 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
         ValueData::Nil => {
             Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
         }
-        ValueData::Vector(children) if children.len() == 1 => {
+        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } if children.len() == 1 => {
             get_bigint_from_value(&children[0])
         }
-        ValueData::Vector(_) => {
+        ValueData::Vector(_) | ValueData::JsonObject { .. } => {
             Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
         }
         ValueData::CodeBlock(_) => {

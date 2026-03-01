@@ -2,7 +2,7 @@ pub mod fraction;
 pub mod display;
 pub mod json;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use self::fraction::Fraction;
 use serde::Serialize;
 
@@ -57,6 +57,7 @@ pub enum DisplayHint {
 pub enum ValueData {
     Scalar(Fraction),
     Vector(Vec<Value>),
+    JsonObject { pairs: Vec<Value>, index: HashMap<String, usize> },
     Nil,
     CodeBlock(Vec<Token>),
 }
@@ -182,7 +183,7 @@ impl Value {
 
     #[inline]
     pub fn is_vector(&self) -> bool {
-        matches!(self.data, ValueData::Vector(_))
+        matches!(self.data, ValueData::Vector(_) | ValueData::JsonObject { .. })
     }
 
     #[inline]
@@ -190,7 +191,9 @@ impl Value {
         match &self.data {
             ValueData::Nil => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
-            ValueData::Vector(v) => !v.is_empty() && !v.iter().all(|c| !c.is_truthy()),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+                !v.is_empty() && !v.iter().all(|c| !c.is_truthy())
+            }
             ValueData::CodeBlock(_) => true,
         }
     }
@@ -200,7 +203,7 @@ impl Value {
         match &self.data {
             ValueData::Nil => 0,
             ValueData::Scalar(_) => 1,
-            ValueData::Vector(v) => v.len(),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.len(),
             ValueData::CodeBlock(tokens) => tokens.len(),
         }
     }
@@ -212,7 +215,7 @@ impl Value {
 
     pub fn get_child(&self, index: usize) -> Option<&Value> {
         match &self.data {
-            ValueData::Vector(v) => v.get(index),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.get(index),
             ValueData::Scalar(_) if index == 0 => Some(self),
             _ => None,
         }
@@ -220,7 +223,7 @@ impl Value {
 
     pub fn get_child_mut(&mut self, index: usize) -> Option<&mut Value> {
         match &mut self.data {
-            ValueData::Vector(v) => v.get_mut(index),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.get_mut(index),
             _ => None,
         }
     }
@@ -233,7 +236,7 @@ impl Value {
     #[inline]
     pub fn last(&self) -> Option<&Value> {
         match &self.data {
-            ValueData::Vector(v) => v.last(),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.last(),
             ValueData::Scalar(_) => Some(self),
             ValueData::Nil => None,
             ValueData::CodeBlock(_) => None,
@@ -242,7 +245,7 @@ impl Value {
 
     pub fn push_child(&mut self, child: Value) {
         match &mut self.data {
-            ValueData::Vector(v) => v.push(child),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.push(child),
             ValueData::Nil => {
                 self.data = ValueData::Vector(vec![child]);
                 self.display_hint = DisplayHint::Auto;
@@ -258,35 +261,43 @@ impl Value {
 
     pub fn pop_child(&mut self) -> Option<Value> {
         match &mut self.data {
-            ValueData::Vector(v) => v.pop(),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.pop(),
             _ => None,
         }
     }
 
     pub fn insert_child(&mut self, index: usize, child: Value) {
-        if let ValueData::Vector(v) = &mut self.data {
-            if index <= v.len() {
-                v.insert(index, child);
-            }
+        let v = match &mut self.data {
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v,
+            _ => return,
+        };
+        if index <= v.len() {
+            v.insert(index, child);
         }
     }
 
     pub fn remove_child(&mut self, index: usize) -> Option<Value> {
-        if let ValueData::Vector(v) = &mut self.data {
-            if index < v.len() {
-                return Some(v.remove(index));
-            }
+        let v = match &mut self.data {
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v,
+            _ => return None,
+        };
+        if index < v.len() {
+            Some(v.remove(index))
+        } else {
+            None
         }
-        None
     }
 
     pub fn replace_child(&mut self, index: usize, child: Value) -> Option<Value> {
-        if let ValueData::Vector(v) = &mut self.data {
-            if index < v.len() {
-                return Some(std::mem::replace(&mut v[index], child));
-            }
+        let v = match &mut self.data {
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v,
+            _ => return None,
+        };
+        if index < v.len() {
+            Some(std::mem::replace(&mut v[index], child))
+        } else {
+            None
         }
-        None
     }
 
     #[inline]
@@ -318,7 +329,7 @@ impl Value {
     #[inline]
     pub fn as_vector(&self) -> Option<&Vec<Value>> {
         match &self.data {
-            ValueData::Vector(v) => Some(v),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => Some(v),
             _ => None,
         }
     }
@@ -326,7 +337,7 @@ impl Value {
     #[inline]
     pub fn as_vector_mut(&mut self) -> Option<&mut Vec<Value>> {
         match &mut self.data {
-            ValueData::Vector(v) => Some(v),
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => Some(v),
             _ => None,
         }
     }
@@ -335,7 +346,7 @@ impl Value {
         match &self.data {
             ValueData::Nil => vec![Fraction::nil()],
             ValueData::Scalar(f) => vec![f.clone()],
-            ValueData::Vector(v) => {
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
                 v.iter().flat_map(|c| c.flatten_fractions()).collect()
             }
             ValueData::CodeBlock(_) => vec![],
@@ -346,7 +357,7 @@ impl Value {
         match &self.data {
             ValueData::Nil => vec![],
             ValueData::Scalar(_) => vec![],
-            ValueData::Vector(v) => {
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
                 if v.is_empty() {
                     vec![0]
                 } else {

@@ -8,7 +8,7 @@ use num_traits::{One, Zero};
 
 fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
     match &val.data {
-        ValueData::Vector(children) => children.clone(),
+        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => children.clone(),
         ValueData::Scalar(_) => vec![val.clone()],
         ValueData::Nil => vec![],
         ValueData::CodeBlock(_) => vec![val.clone()],
@@ -317,7 +317,7 @@ where
             display_hint: val.display_hint,
             audio_hint: val.audio_hint.clone(),
         },
-        ValueData::Vector(children) => {
+        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
             let new_children: Vec<Value> = children.iter()
                 .map(|c| apply_unary_to_value(c, op))
                 .collect();
@@ -453,7 +453,7 @@ where
 {
     match &val.data {
         ValueData::Scalar(f) => Ok(Value::from_fraction(op(scalar, f)?)),
-        ValueData::Vector(children) => {
+        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
             let new_children: Result<Vec<Value>> = children.iter()
                 .map(|c| apply_scalar_to_value(scalar, c, op))
                 .collect();
@@ -493,7 +493,7 @@ where
 {
     match &val.data {
         ValueData::Scalar(f) => Ok(Value::from_fraction(op(f, scalar)?)),
-        ValueData::Vector(children) => {
+        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
             let new_children: Result<Vec<Value>> = children.iter()
                 .map(|c| apply_value_to_scalar(c, scalar, op))
                 .collect();
@@ -513,7 +513,10 @@ where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
     match (&a.data, &b.data) {
-        (ValueData::Vector(ca), ValueData::Vector(cb)) => {
+        (ValueData::Vector(ca), ValueData::Vector(cb))
+        | (ValueData::Vector(ca), ValueData::JsonObject { pairs: cb, .. })
+        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::Vector(cb))
+        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::JsonObject { pairs: cb, .. }) => {
             if ca.len() != cb.len() {
                 return Err(AjisaiError::from(format!(
                     "Cannot broadcast shapes [{} elements] and [{} elements]",
@@ -541,7 +544,10 @@ where
         (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
             Ok(Value::from_fraction(op(fa, fb)?))
         }
-        (ValueData::Vector(ca), ValueData::Vector(cb)) => {
+        (ValueData::Vector(ca), ValueData::Vector(cb))
+        | (ValueData::Vector(ca), ValueData::JsonObject { pairs: cb, .. })
+        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::Vector(cb))
+        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::JsonObject { pairs: cb, .. }) => {
             if ca.len() != cb.len() {
                 return Err(AjisaiError::from("Shape mismatch"));
             }
@@ -554,7 +560,8 @@ where
                 audio_hint: a.audio_hint.clone(),
             })
         }
-        (ValueData::Scalar(fa), ValueData::Vector(cb)) => {
+        (ValueData::Scalar(fa), ValueData::Vector(cb))
+        | (ValueData::Scalar(fa), ValueData::JsonObject { pairs: cb, .. }) => {
             let new_children: Result<Vec<Value>> = cb.iter()
                 .map(|c| apply_scalar_to_value(fa, c, op))
                 .collect();
@@ -564,7 +571,8 @@ where
                 audio_hint: b.audio_hint.clone(),
             })
         }
-        (ValueData::Vector(ca), ValueData::Scalar(fb)) => {
+        (ValueData::Vector(ca), ValueData::Scalar(fb))
+        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::Scalar(fb)) => {
             let new_children: Result<Vec<Value>> = ca.iter()
                 .map(|c| apply_value_to_scalar(c, fb, op))
                 .collect();

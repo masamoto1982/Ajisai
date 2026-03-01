@@ -82,7 +82,7 @@ fn value_as_string(val: &Value) -> Option<String> {
                     }
                 }).map(|c| vec![c]).unwrap_or_default()
             }
-            ValueData::Vector(children) => {
+            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
                 children.iter().flat_map(|c| collect_chars(c)).collect()
             }
             ValueData::CodeBlock(_) => vec![],
