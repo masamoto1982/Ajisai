@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::interpreter::{Interpreter, ConsumptionMode};
 use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::json::{from_json, to_json};
@@ -99,7 +100,29 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
 
     let key_str = value_to_string_content(&key_val);
 
-    if let ValueData::Vector(pairs) = &obj_val.data {
+    let (pairs, index) = match &obj_val.data {
+        ValueData::JsonObject { pairs, index } => (pairs.as_slice(), Some(index)),
+        ValueData::Vector(v) => (v.as_slice(), None),
+        _ => {
+            interp.stack.push(Value::nil());
+            return Ok(());
+        }
+    };
+
+    if let Some(index) = index {
+        // O(1) lookup via pre-built index
+        if let Some(&idx) = index.get(&key_str) {
+            if let Some(pair) = pairs.get(idx) {
+                if let ValueData::Vector(kv) = &pair.data {
+                    if kv.len() == 2 {
+                        interp.stack.push(kv[1].clone());
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    } else {
+        // O(n) fallback for plain vectors
         for pair in pairs {
             if let ValueData::Vector(kv) = &pair.data {
                 if kv.len() == 2 {
@@ -126,26 +149,31 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
 
-    if let ValueData::Vector(pairs) = &obj_val.data {
-        let mut keys = Vec::new();
-        for pair in pairs {
-            if let ValueData::Vector(kv) = &pair.data {
-                if kv.len() == 2 {
-                    keys.push(kv[0].clone());
-                }
+    let pairs = match &obj_val.data {
+        ValueData::JsonObject { pairs, .. } => pairs.as_slice(),
+        ValueData::Vector(v) => v.as_slice(),
+        _ => {
+            interp.stack.push(Value::nil());
+            return Ok(());
+        }
+    };
+
+    let mut keys = Vec::new();
+    for pair in pairs {
+        if let ValueData::Vector(kv) = &pair.data {
+            if kv.len() == 2 {
+                keys.push(kv[0].clone());
             }
         }
-        if keys.is_empty() {
-            interp.stack.push(Value::nil());
-        } else {
-            interp.stack.push(Value {
-                data: ValueData::Vector(keys),
-                display_hint: DisplayHint::Auto,
-                audio_hint: None,
-            });
-        }
-    } else {
+    }
+    if keys.is_empty() {
         interp.stack.push(Value::nil());
+    } else {
+        interp.stack.push(Value {
+            data: ValueData::Vector(keys),
+            display_hint: DisplayHint::Auto,
+            audio_hint: None,
+        });
     }
 
     Ok(())
@@ -178,21 +206,38 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
 
     let key_str = value_to_string_content(&key_val);
 
-    if let ValueData::Vector(pairs) = &obj_val.data {
-        let mut new_pairs: Vec<Value> = Vec::with_capacity(pairs.len() + 1);
-        let mut found = false;
+    let (old_pairs, old_index) = match &obj_val.data {
+        ValueData::JsonObject { pairs, index } => (Some(pairs.as_slice()), Some(index)),
+        ValueData::Vector(v) => (Some(v.as_slice()), None),
+        _ => (None, None),
+    };
 
-        for pair in pairs {
-            if let ValueData::Vector(kv) = &pair.data {
-                if kv.len() == 2 {
-                    let k = value_to_string_content(&kv[0]);
-                    if k == key_str {
+    if let Some(old_pairs) = old_pairs {
+        let mut new_pairs: Vec<Value> = Vec::with_capacity(old_pairs.len() + 1);
+        let mut new_index: HashMap<String, usize> = old_index.cloned().unwrap_or_default();
+        let found_idx = if let Some(idx) = old_index {
+            idx.get(&key_str).copied()
+        } else {
+            // O(n) fallback for plain vectors
+            old_pairs.iter().position(|pair| {
+                if let ValueData::Vector(kv) = &pair.data {
+                    if kv.len() == 2 {
+                        return value_to_string_content(&kv[0]) == key_str;
+                    }
+                }
+                false
+            })
+        };
+
+        for (i, pair) in old_pairs.iter().enumerate() {
+            if Some(i) == found_idx {
+                if let ValueData::Vector(kv) = &pair.data {
+                    if kv.len() == 2 {
                         new_pairs.push(Value {
                             data: ValueData::Vector(vec![kv[0].clone(), new_value.clone()]),
                             display_hint: DisplayHint::Auto,
                             audio_hint: None,
                         });
-                        found = true;
                         continue;
                     }
                 }
@@ -200,7 +245,8 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             new_pairs.push(pair.clone());
         }
 
-        if !found {
+        if found_idx.is_none() {
+            new_index.insert(key_str.clone(), new_pairs.len());
             new_pairs.push(Value {
                 data: ValueData::Vector(vec![
                     Value::from_string(&key_str),
@@ -211,12 +257,27 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             });
         }
 
+        // Rebuild index from scratch if we didn't have one
+        if old_index.is_none() {
+            new_index.clear();
+            for (i, pair) in new_pairs.iter().enumerate() {
+                if let ValueData::Vector(kv) = &pair.data {
+                    if kv.len() == 2 {
+                        let k = value_to_string_content(&kv[0]);
+                        new_index.insert(k, i);
+                    }
+                }
+            }
+        }
+
         interp.stack.push(Value {
-            data: ValueData::Vector(new_pairs),
+            data: ValueData::JsonObject { pairs: new_pairs, index: new_index },
             display_hint: DisplayHint::Auto,
             audio_hint: None,
         });
     } else {
+        let mut index = HashMap::new();
+        index.insert(key_str.clone(), 0);
         let pairs = vec![Value {
             data: ValueData::Vector(vec![
                 Value::from_string(&key_str),
@@ -226,7 +287,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             audio_hint: None,
         }];
         interp.stack.push(Value {
-            data: ValueData::Vector(pairs),
+            data: ValueData::JsonObject { pairs, index },
             display_hint: DisplayHint::Auto,
             audio_hint: None,
         });

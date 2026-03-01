@@ -37,7 +37,7 @@ pub fn vector_to_source(val: &Value) -> Result<String> {
                 Ok(format!(": {} ;", token_strs.join(" ")))
             }
 
-            ValueData::Vector(children) => {
+            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
                 // DisplayHint::String の場合はシンボルとして出力
                 if val.display_hint == DisplayHint::String {
                     // 文字列をシンボル名として解釈

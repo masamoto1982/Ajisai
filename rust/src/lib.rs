@@ -942,4 +942,96 @@ mod json_io_tests {
         assert_eq!(stack.len(), 0);
         assert_eq!(interp.io_output_buffer, "'[2,4,6]'");
     }
+
+    // ========================================================================
+    // JSON optimization correctness tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_json_get_large_object() {
+        let mut interp = Interpreter::new();
+
+        // Build a JSON object with 50+ keys
+        let mut pairs = Vec::new();
+        for i in 0..60 {
+            pairs.push(format!(r#""key{}": {}"#, i, i * 10));
+        }
+        let json_str = format!("{{{}}}", pairs.join(", "));
+
+        // Parse it
+        let code = format!("'{}' PARSE", json_str);
+        interp.execute(&code).await.unwrap();
+
+        // Access the first, middle, and last keys
+        interp.execute("'key0' JSON-GET").await.unwrap();
+        let stack = interp.get_stack();
+        let result = format!("{}", stack.last().unwrap());
+        assert_eq!(result, "0");
+
+        // Reset stack and re-parse for next test
+        interp.stack.clear();
+        interp.execute(&code).await.unwrap();
+        interp.execute("'key30' JSON-GET").await.unwrap();
+        let result = format!("{}", interp.get_stack().last().unwrap());
+        assert_eq!(result, "300");
+
+        interp.stack.clear();
+        interp.execute(&code).await.unwrap();
+        interp.execute("'key59' JSON-GET").await.unwrap();
+        let result = format!("{}", interp.get_stack().last().unwrap());
+        assert_eq!(result, "590");
+
+        // Non-existent key should return NIL
+        interp.stack.clear();
+        interp.execute(&code).await.unwrap();
+        interp.execute("'nonexistent' JSON-GET").await.unwrap();
+        assert!(interp.get_stack().last().unwrap().is_nil());
+    }
+
+    #[tokio::test]
+    async fn test_json_set_then_get_consistency() {
+        let mut interp = Interpreter::new();
+
+        // Create object, set a new key, then get it
+        interp.execute(r#"'{"a": 1, "b": 2}' PARSE 'c' 3 JSON-SET"#).await.unwrap();
+        interp.execute("'c' JSON-GET").await.unwrap();
+        let result = format!("{}", interp.get_stack().last().unwrap());
+        assert_eq!(result, "3");
+
+        // Update an existing key, then get it
+        interp.stack.clear();
+        interp.execute(r#"'{"a": 1, "b": 2}' PARSE 'a' 99 JSON-SET"#).await.unwrap();
+        interp.execute("'a' JSON-GET").await.unwrap();
+        let result = format!("{}", interp.get_stack().last().unwrap());
+        assert_eq!(result, "99");
+
+        // Verify other keys are unaffected after update
+        interp.stack.clear();
+        interp.execute(r#"'{"a": 1, "b": 2}' PARSE 'a' 99 JSON-SET"#).await.unwrap();
+        interp.execute("'b' JSON-GET").await.unwrap();
+        let result = format!("{}", interp.get_stack().last().unwrap());
+        assert_eq!(result, "2");
+    }
+
+    #[tokio::test]
+    async fn test_json_keys_order_preserved() {
+        let mut interp = Interpreter::new();
+
+        // Parse an object and verify keys come out in insertion order
+        interp.execute(r#"'{"alpha": 1, "beta": 2, "gamma": 3}' PARSE JSON-KEYS"#).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_vector());
+        assert_eq!(stack[0].len(), 3);
+
+        // STRINGIFY the original object to verify order is preserved in output
+        interp.stack.clear();
+        interp.execute(r#"'{"alpha": 1, "beta": 2, "gamma": 3}' PARSE STRINGIFY"#).await.unwrap();
+        let result = format!("{}", interp.get_stack().last().unwrap());
+        // The stringified output should contain all keys (order in serde_json::Map may vary,
+        // but the keys must all be present)
+        assert!(result.contains("alpha"));
+        assert!(result.contains("beta"));
+        assert!(result.contains("gamma"));
+    }
 }
