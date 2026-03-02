@@ -4,6 +4,7 @@ use crate::interpreter::vector_exec::vector_to_source;
 use crate::error::{AjisaiError, Result};
 use crate::types::{Token, ExecutionLine, DisplayHint, Value, ValueData};
 use std::collections::HashSet;
+use std::sync::Arc;
 
 fn value_to_string(val: &Value) -> Result<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
@@ -198,13 +199,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         original_source: None,
     };
 
-    interp.dictionary.insert(upper_name.clone(), new_def);
+    interp.dictionary.insert(upper_name.clone(), Arc::new(new_def));
     interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
     interp.force_flag = false;
     Ok(())
 }
 
-fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMap<String, WordDefinition>) -> Result<Vec<ExecutionLine>> {
+fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMap<String, Arc<WordDefinition>>) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut processed_tokens = Vec::new();
 

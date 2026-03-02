@@ -136,30 +136,40 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             // Introsortでソート
             introsort_fractions(&mut indexed_fractions);
 
-            // ソート結果からスタックを再構築
-            let original_stack = interp.stack.clone();
-            let sorted_stack: Vec<Value> = indexed_fractions
-                .iter()
-                .map(|(orig_idx, _)| original_stack[*orig_idx].clone())
-                .collect();
-
-            // "No change is an error" チェック
+            // "No change is an error" チェック（クローンなしで順列が恒等かを判定）
+            let is_identity = indexed_fractions.iter().enumerate().all(|(i, (orig, _))| *orig == i);
             if !interp.disable_no_change_check {
-                if original_stack.len() < 2 {
-                    return Err(AjisaiError::NoChange { word: "SORT".into() });
-                }
-                if sorted_stack == original_stack.as_slice() {
+                if interp.stack.len() < 2 || is_identity {
                     return Err(AjisaiError::NoChange { word: "SORT".into() });
                 }
             }
 
+            // 順列をインプレースで適用（スタッククローン不要）
+            let perm: Vec<usize> = indexed_fractions.iter().map(|(orig, _)| *orig).collect();
             if is_keep_mode {
                 // Keep mode: preserve original stack, push sorted elements
+                let sorted_stack: Vec<Value> = perm.iter()
+                    .map(|&orig_idx| interp.stack[orig_idx].clone())
+                    .collect();
                 interp.stack.extend(sorted_stack);
             } else {
-                interp.stack.clear();
-                for val in sorted_stack {
-                    interp.stack.push(val);
+                // Consume mode: apply permutation in-place via cycle chasing
+                let mut placed = vec![false; perm.len()];
+                for i in 0..perm.len() {
+                    if placed[i] || perm[i] == i {
+                        continue;
+                    }
+                    let mut j = i;
+                    loop {
+                        let next = perm[j];
+                        if next == i {
+                            placed[j] = true;
+                            break;
+                        }
+                        interp.stack.swap(j, next);
+                        placed[j] = true;
+                        j = next;
+                    }
                 }
             }
             Ok(())

@@ -118,7 +118,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let mut results = Vec::new();
+            let mut results = Vec::with_capacity(elements.len());
 
             // 元のスタックを保存
             let original_stack_below = interp.stack.clone();
@@ -217,7 +217,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target_mode = OperationTargetMode::StackTop;
             interp.disable_no_change_check = true;
 
-            let mut results = Vec::new();
+            let mut results = Vec::with_capacity(targets.len());
             for item in &targets {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
@@ -322,7 +322,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let mut results = Vec::new();
+            let mut results = Vec::with_capacity(elements.len());
 
             // 元のスタックを保存（MAPと同様）
             let original_stack_below = interp.stack.clone();
@@ -429,7 +429,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target_mode = OperationTargetMode::StackTop;
             interp.disable_no_change_check = true;
 
-            let mut results = Vec::new();
+            let mut results = Vec::with_capacity(targets.len());
             for item in &targets {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();

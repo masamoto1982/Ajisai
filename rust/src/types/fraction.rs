@@ -47,7 +47,17 @@ impl PartialEq for Fraction {
         if self.is_nil() || other.is_nil() {
             return self.is_nil() && other.is_nil();
         }
-        // Cross-multiplication: a/b == c/d ⟺ a*d == c*b
+        // i64 shortpath: both integers → direct numerator comparison (zero allocation)
+        if self.denominator.is_one() && other.denominator.is_one() {
+            return self.numerator == other.numerator;
+        }
+        // i64 shortpath: both fit in i64 → i128 cross-multiplication (zero allocation)
+        if let (Some((a, b)), Some((c, d))) =
+            (self.try_as_i64_pair(), other.try_as_i64_pair())
+        {
+            return (a as i128) * (d as i128) == (c as i128) * (b as i128);
+        }
+        // BigInt fallback: cross-multiplication
         &self.numerator * &other.denominator == &other.numerator * &self.denominator
     }
 }
@@ -71,6 +81,19 @@ impl Fraction {
 
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
         if denominator.is_zero() { panic!("Division by zero"); }
+
+        // Fast path: numerator is 0 → always 0/1
+        if numerator.is_zero() {
+            return Fraction {
+                numerator: BigInt::zero(),
+                denominator: BigInt::one(),
+            };
+        }
+
+        // Fast path: denominator is 1 → already an integer, no GCD needed
+        if denominator.is_one() {
+            return Fraction { numerator, denominator };
+        }
 
         if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
             let g = gcd_i64(n, d);
@@ -192,6 +215,15 @@ impl Fraction {
         if d < 0 {
             n = -n;
             d = -d;
+        }
+        // i64 shortpath: avoid BigInt allocation when result fits in i64
+        if n >= i64::MIN as i128 && n <= i64::MAX as i128
+            && d >= 1 && d <= i64::MAX as i128
+        {
+            return Fraction {
+                numerator: BigInt::from(n as i64),
+                denominator: BigInt::from(d as i64),
+            };
         }
         Fraction {
             numerator: bigint_from_i128(n),
@@ -460,33 +492,25 @@ impl Fraction {
         )
     }
 
-    /// a/b < c/d ⟺ a*d < c*b (denominators are positive)
+    /// a/b < c/d — delegates to Ord::cmp for unified fast path
+    #[inline]
     pub fn lt(&self, other: &Fraction) -> bool {
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
-            return (a as i128) * (d as i128) < (c as i128) * (b as i128);
-        }
-        &self.numerator * &other.denominator < &other.numerator * &self.denominator
+        self.cmp(other) == std::cmp::Ordering::Less
     }
 
+    #[inline]
     pub fn le(&self, other: &Fraction) -> bool {
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
-            return (a as i128) * (d as i128) <= (c as i128) * (b as i128);
-        }
-        &self.numerator * &other.denominator <= &other.numerator * &self.denominator
+        self.cmp(other) != std::cmp::Ordering::Greater
     }
 
+    #[inline]
     pub fn gt(&self, other: &Fraction) -> bool {
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
-            return (a as i128) * (d as i128) > (c as i128) * (b as i128);
-        }
-        &self.numerator * &other.denominator > &other.numerator * &self.denominator
+        self.cmp(other) == std::cmp::Ordering::Greater
     }
 
+    #[inline]
     pub fn ge(&self, other: &Fraction) -> bool {
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
-            return (a as i128) * (d as i128) >= (c as i128) * (b as i128);
-        }
-        &self.numerator * &other.denominator >= &other.numerator * &self.denominator
+        self.cmp(other) != std::cmp::Ordering::Less
     }
 
     /// Floor: rounds toward negative infinity.
