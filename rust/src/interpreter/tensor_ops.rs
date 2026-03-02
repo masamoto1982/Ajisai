@@ -6,15 +6,6 @@ use crate::types::fraction::Fraction;
 
 use num_traits::Zero;
 
-fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    match &val.data {
-        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => children.clone(),
-        ValueData::Scalar(_) => vec![val.clone()],
-        ValueData::Nil => vec![],
-        ValueData::CodeBlock(_) => vec![val.clone()],
-    }
-}
-
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported { word: "SHAPE".into(), mode: "Stack".into() });
@@ -107,8 +98,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 形状配列を構築
-    let shape_elements = reconstruct_vector_elements(&shape_val);
-    let dim_count = shape_elements.len();
+    let dim_count = shape_val.len();
     if dim_count > MAX_VISIBLE_DIMENSIONS {
         interp.stack.push(data_val);
         interp.stack.push(shape_val);
@@ -119,8 +109,8 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     }
 
     let mut new_shape = Vec::with_capacity(dim_count);
-    for elem in &shape_elements {
-        let dim = match elem.as_scalar().and_then(|f| f.as_usize()) {
+    for i in 0..dim_count {
+        let dim = match shape_val.get_child(i).unwrap().as_scalar().and_then(|f| f.as_usize()) {
             Some(d) => d,
             None => {
                 interp.stack.push(data_val);
@@ -601,16 +591,16 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 要素を取得
-    let elements = reconstruct_vector_elements(&args_val);
+    let n = args_val.len();
 
     // 最低2要素必要
-    if elements.len() < 2 {
+    if n < 2 {
         interp.stack.push(args_val);
         return Err(AjisaiError::from("FILL requires [shape... value] (at least 2 elements)"));
     }
 
     // 最後の要素が埋める値
-    let fill_value = match elements.last().and_then(|v| v.as_scalar()) {
+    let fill_value = match args_val.get_child(n - 1).and_then(|v| v.as_scalar()) {
         Some(f) => f.clone(),
         None => {
             interp.stack.push(args_val);
@@ -619,7 +609,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     };
 
     // それより前の要素が形状
-    let shape_len = elements.len() - 1;
+    let shape_len = n - 1;
     if shape_len > MAX_VISIBLE_DIMENSIONS {
         interp.stack.push(args_val);
         return Err(AjisaiError::from(format!(
@@ -630,7 +620,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 
     let mut shape = Vec::with_capacity(shape_len);
     for i in 0..shape_len {
-        let dim = match elements[i].as_scalar().and_then(|f| f.as_usize()) {
+        let dim = match args_val.get_child(i).unwrap().as_scalar().and_then(|f| f.as_usize()) {
             Some(d) if d > 0 => d,
             _ => {
                 interp.stack.push(args_val);

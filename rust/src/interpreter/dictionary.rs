@@ -173,7 +173,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         }
     }
 
-    let lines = parse_definition_body(tokens, &interp.dictionary)?;
+    let lines = parse_definition_body(tokens)?;
 
     let mut new_dependencies = HashSet::new();
     for line in &lines {
@@ -205,7 +205,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     Ok(())
 }
 
-fn parse_definition_body(tokens: &[Token], dictionary: &std::collections::HashMap<String, Arc<WordDefinition>>) -> Result<Vec<ExecutionLine>> {
+fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut processed_tokens = Vec::new();
 

@@ -1,4 +1,4 @@
-pub mod helpers;
+pub(crate) mod helpers;
 pub mod vector_ops;
 pub mod tensor_ops;
 pub mod arithmetic;
@@ -94,15 +94,15 @@ impl Interpreter {
         interpreter
     }
 
-    pub fn set_operation_target_mode(&mut self, mode: OperationTargetMode) {
+    fn set_operation_target_mode(&mut self, mode: OperationTargetMode) {
         self.operation_target_mode = mode;
     }
 
-    pub fn set_consumption_mode(&mut self, mode: ConsumptionMode) {
+    fn set_consumption_mode(&mut self, mode: ConsumptionMode) {
         self.consumption_mode = mode;
     }
 
-    pub fn reset_modes(&mut self) {
+    fn reset_modes(&mut self) {
         self.operation_target_mode = OperationTargetMode::StackTop;
         self.consumption_mode = ConsumptionMode::Consume;
         self.safe_mode = false;
@@ -110,49 +110,6 @@ impl Interpreter {
 
     fn collect_vector(&mut self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
         self.collect_vector_with_depth(tokens, start_index, 1)
-    }
-
-    /// Collect tokens between : and ; to form a code block
-    /// Returns (code_string, consumed_count)
-    fn collect_code_block(&self, tokens: &[Token], start_index: usize) -> Result<(String, usize)> {
-        if !matches!(&tokens[start_index], Token::CodeBlockStart) {
-            return Err(AjisaiError::from("Expected code block start (:)"));
-        }
-
-        let mut code_parts = Vec::new();
-        let mut i = start_index + 1;
-        let mut depth = 1; // Track nested code blocks
-
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::CodeBlockStart => {
-                    depth += 1;
-                    code_parts.push(":".to_string());
-                },
-                Token::CodeBlockEnd => {
-                    depth -= 1;
-                    if depth == 0 {
-                        // End of code block
-                        let code = code_parts.join(" ");
-                        return Ok((code, i - start_index + 1));
-                    }
-                    code_parts.push(";".to_string());
-                },
-                Token::Number(n) => code_parts.push(n.clone()),
-                Token::String(s) => code_parts.push(format!("'{}'", s)),
-                Token::Symbol(s) => code_parts.push(s.clone()),
-                Token::VectorStart => code_parts.push("[".to_string()),
-                Token::VectorEnd => code_parts.push("]".to_string()),
-                Token::ChevronBranch => code_parts.push(">>".to_string()),
-                Token::ChevronDefault => code_parts.push(">>>".to_string()),
-                Token::LineBreak => code_parts.push("\n".to_string()),
-                Token::Pipeline => code_parts.push("==".to_string()),
-                Token::NilCoalesce => code_parts.push("=>".to_string()),
-                Token::SafeMode => code_parts.push("~".to_string()),
-            }
-            i += 1;
-        }
-        Err(AjisaiError::from("Unclosed code block (missing ;)"))
     }
 
     fn collect_vector_with_depth(&mut self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
@@ -258,80 +215,14 @@ impl Interpreter {
 
     #[async_recursion(?Send)]
     pub(crate) async fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
-        if lines.is_empty() {
-            return Ok(());
-        }
-
-        // シェブロン分岐かどうかをチェック
-        let is_chevron_structure = lines.iter().all(|line| {
-            matches!(
-                line.body_tokens.first(),
-                Some(Token::ChevronBranch) | Some(Token::ChevronDefault)
-            )
-        });
-
-        if !is_chevron_structure {
-            // 通常の逐次実行
-            for line in lines {
-                self.execute_section(&line.body_tokens).await?;
-            }
-            return Ok(());
-        }
-
-        // シェブロン分岐の処理
-        // 最後の行が >>> であることを検証
-        let last_line = lines.last().unwrap();
-        if last_line.body_tokens.first() != Some(&Token::ChevronDefault) {
-            return Err(AjisaiError::from(
-                "Chevron branch must end with >>> (default branch)"
-            ));
-        }
-
-        let mut i = 0;
-        while i < lines.len() - 1 {  // 最後の行（デフォルト）は別処理
-            let line = &lines[i];
-
-            if line.body_tokens.first() != Some(&Token::ChevronBranch) {
-                return Err(AjisaiError::from("Expected >> at line start"));
-            }
-
-            let content_tokens = &line.body_tokens[1..];
-
-            if i + 1 < lines.len() - 1 {
-                // 条件行
-                self.execute_section(content_tokens).await?;
-
-                if self.is_condition_true()? {
-                    // 次の行はアクション行
-                    i += 1;
-                    let action_line = &lines[i];
-                    if action_line.body_tokens.first() != Some(&Token::ChevronBranch) {
-                        return Err(AjisaiError::from("Expected >> for action line"));
-                    }
-                    let action_tokens = &action_line.body_tokens[1..];
-                    self.execute_section(action_tokens).await?;
-                    return Ok(());
-                }
-                i += 2;
-            } else {
-                // 最後の条件行の後にデフォルトがある
-                self.execute_section(content_tokens).await?;
-
-                if self.is_condition_true()? {
-                    // デフォルト行を実行
-                    let default_tokens = &lines[lines.len() - 1].body_tokens[1..];
-                    self.execute_section(default_tokens).await?;
-                    return Ok(());
-                }
-                i += 1;
+        // sync コアで実行し、WAIT が発生した場合のみ async 処理
+        match self.execute_guard_structure_core(lines)? {
+            None => Ok(()),
+            Some(AsyncAction::Wait { duration_ms, word_name }) => {
+                sleep(Duration::from_millis(duration_ms)).await;
+                self.execute_word_async(&word_name).await
             }
         }
-
-        // デフォルト行を実行
-        let default_line = &lines[lines.len() - 1];
-        let default_tokens = &default_line.body_tokens[1..];
-        self.execute_section(default_tokens).await?;
-        Ok(())
     }
 
     fn prepare_wait_action(&mut self) -> Result<AsyncAction> {
@@ -505,26 +396,6 @@ impl Interpreter {
         }
 
         Ok((i, None))
-    }
-
-    #[async_recursion(?Send)]
-    async fn execute_section(&mut self, tokens: &[Token]) -> Result<()> {
-        let mut current_index = 0;
-
-        loop {
-            let (next_index, action) = self.execute_section_core(tokens, current_index)?;
-
-            match action {
-                None => break,
-                Some(AsyncAction::Wait { duration_ms, word_name }) => {
-                    sleep(Duration::from_millis(duration_ms)).await;
-                    self.execute_word_async(&word_name).await?;
-                    current_index = next_index;
-                }
-            }
-        }
-
-        Ok(())
     }
 
     fn execute_guard_structure_core(
@@ -866,7 +737,7 @@ impl Interpreter {
         }
     }
 
-    pub fn token_to_string(&self, token: &Token) -> String {
+    fn token_to_string(&self, token: &Token) -> String {
         match token {
             Token::Number(n) => n.clone(),
             Token::String(s) => format!("'{}'", s),

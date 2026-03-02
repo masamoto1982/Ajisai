@@ -21,26 +21,22 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let len = match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             if is_keep_mode {
-                // Keep mode: peek without removing
                 let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
                 if target_val.is_nil() {
                     0
                 } else if target_val.is_vector() {
-                    let v = reconstruct_vector_elements(target_val);
-                    v.len()
+                    reconstruct_vector_elements(target_val).len()
                 } else {
                     return Err(AjisaiError::structure_error("vector", "other format"));
                 }
             } else {
-                // Consume mode: pop
                 let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
                 if target_val.is_nil() {
                     0
                 } else if target_val.is_vector() {
-                    let v = reconstruct_vector_elements(&target_val);
-                    v.len()
+                    reconstruct_vector_elements(&target_val).len()
                 } else {
                     interp.stack.push(target_val);
                     return Err(AjisaiError::structure_error("vector", "other format"));
@@ -93,28 +89,28 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let v = reconstruct_vector_elements(&vector_val);
-                let len = v.len();
+                let elements = reconstruct_vector_elements(&vector_val);
+                let len = elements.len();
                 let result = if count < 0 {
                     let abs_count = (-count) as usize;
                     if abs_count > len {
                         if !is_keep_mode {
-                            interp.stack.push(Value::from_vector(v));
+                            interp.stack.push(vector_val);
                         }
                         interp.stack.push(count_val);
                         return Err(AjisaiError::from("Take count exceeds vector length"));
                     }
-                    v[len - abs_count..].to_vec()
+                    elements[len - abs_count..].to_vec()
                 } else {
                     let take_count = count as usize;
                     if take_count > len {
                         if !is_keep_mode {
-                            interp.stack.push(Value::from_vector(v));
+                            interp.stack.push(vector_val);
                         }
                         interp.stack.push(count_val);
                         return Err(AjisaiError::from("Take count exceeds vector length"));
                     }
-                    v[..take_count].to_vec()
+                    elements[..take_count].to_vec()
                 };
 
                 if is_keep_mode {
@@ -191,15 +187,15 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 
     // サイズを抽出
     let sizes: Vec<usize> = if args_val.is_vector() {
-        let v = reconstruct_vector_elements(&args_val);
-        if v.is_empty() {
+        let n = args_val.len();
+        if n == 0 {
             interp.stack.push(args_val);
             return Err(AjisaiError::from("SPLIT requires at least one size"));
         }
 
-        let mut sizes = Vec::with_capacity(v.len());
-        for elem in &v {
-            match get_bigint_from_value(elem) {
+        let mut sizes = Vec::with_capacity(n);
+        for i in 0..n {
+            match get_bigint_from_value(args_val.get_child(i).unwrap()) {
                 Ok(bi) => {
                     match bi.to_usize() {
                         Some(s) => sizes.push(s),
@@ -236,11 +232,11 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let v = reconstruct_vector_elements(&vector_val);
+                let elements = reconstruct_vector_elements(&vector_val);
                 let total_size: usize = sizes.iter().sum();
-                if total_size > v.len() {
+                if total_size > elements.len() {
                     if !is_keep_mode {
-                        interp.stack.push(Value::from_vector(v));
+                        interp.stack.push(vector_val);
                     }
                     interp.stack.push(args_val);
                     return Err(AjisaiError::from("Split sizes sum exceeds vector length"));
@@ -250,12 +246,12 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                 let mut result_vectors = Vec::new();
 
                 for &size in &sizes {
-                    let chunk = v[current_pos..current_pos + size].to_vec();
+                    let chunk = elements[current_pos..current_pos + size].to_vec();
                     result_vectors.push(Value::from_vector(chunk));
                     current_pos += size;
                 }
-                if current_pos < v.len() {
-                    let chunk = v[current_pos..].to_vec();
+                if current_pos < elements.len() {
+                    let chunk = elements[current_pos..].to_vec();
                     result_vectors.push(Value::from_vector(chunk));
                 }
                 if is_keep_mode {
