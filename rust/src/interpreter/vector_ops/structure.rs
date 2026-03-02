@@ -7,8 +7,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_integer_from_value, get_bigint_from_value, normalize_index};
 use crate::types::{Value};
 use crate::types::fraction::Fraction;
-use num_bigint::BigInt;
-use num_traits::{One, ToPrimitive};
+use num_traits::ToPrimitive;
 use super::reconstruct_vector_elements;
 
 /// CONCAT - 複数のベクタを連結する（Form型）
@@ -298,12 +297,12 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
     if step > 0 {
         while current <= end {
-            range_vec.push(Value::from_fraction(Fraction::new(BigInt::from(current), BigInt::one())));
+            range_vec.push(Value::from_fraction(Fraction::from(current)));
             current += step;
         }
     } else {
         while current >= end {
-            range_vec.push(Value::from_fraction(Fraction::new(BigInt::from(current), BigInt::one())));
+            range_vec.push(Value::from_fraction(Fraction::from(current)));
             current += step;
         }
     }

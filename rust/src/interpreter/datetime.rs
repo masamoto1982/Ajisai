@@ -252,12 +252,12 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
 
     // Vectorを構築
     let mut values = vec![
-        Value::from_number(Fraction::new(BigInt::from(year), BigInt::one())),
-        Value::from_number(Fraction::new(BigInt::from(month), BigInt::one())),
-        Value::from_number(Fraction::new(BigInt::from(day), BigInt::one())),
-        Value::from_number(Fraction::new(BigInt::from(hour), BigInt::one())),
-        Value::from_number(Fraction::new(BigInt::from(minute), BigInt::one())),
-        Value::from_number(Fraction::new(BigInt::from(second), BigInt::one())),
+        Value::from_number(Fraction::from(year as i64)),
+        Value::from_number(Fraction::from(month as i64)),
+        Value::from_number(Fraction::from(day as i64)),
+        Value::from_number(Fraction::from(hour as i64)),
+        Value::from_number(Fraction::from(minute as i64)),
+        Value::from_number(Fraction::from(second as i64)),
     ];
 
     // サブ秒精度がある場合は追加
