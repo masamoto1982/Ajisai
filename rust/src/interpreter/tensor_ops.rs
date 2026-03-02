@@ -3,8 +3,8 @@ use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::interpreter::helpers::wrap_number;
 use crate::types::{Value, ValueData, DisplayHint, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
-use num_bigint::BigInt;
-use num_traits::{One, Zero};
+
+use num_traits::Zero;
 
 fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
     match &val.data {
@@ -34,7 +34,7 @@ pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
 
         let shape_values: Vec<Value> = shape_vec
             .iter()
-            .map(|&n| Value::from_number(Fraction::new(BigInt::from(n as i64), BigInt::one())))
+            .map(|&n| Value::from_number(Fraction::from(n as i64)))
             .collect();
 
         // 保持モードの場合は元の値を戻す
@@ -71,7 +71,7 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     if val.is_vector() {
         let shape = val.shape();
         let r = shape.len();
-        let rank_frac = Fraction::new(BigInt::from(r as i64), BigInt::one());
+        let rank_frac = Fraction::from(r as i64);
 
         // 保持モードの場合は元の値を戻す
         if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
@@ -83,7 +83,7 @@ pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
     }
 
     // スカラーの場合: ランクは0
-    let rank_frac = Fraction::new(BigInt::from(0i64), BigInt::one());
+    let rank_frac = Fraction::from(0i64);
     if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
         interp.stack.push(val);
     }

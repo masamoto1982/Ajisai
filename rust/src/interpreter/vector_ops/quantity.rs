@@ -7,8 +7,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_integer_from_value, get_bigint_from_value, wrap_number};
 use crate::types::{Value};
 use crate::types::fraction::Fraction;
-use num_bigint::BigInt;
-use num_traits::{One, ToPrimitive};
+use num_traits::ToPrimitive;
 use super::reconstruct_vector_elements;
 
 /// LENGTH - 要素数を取得する（Form型）
@@ -58,7 +57,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
             }
         }
     };
-    let len_frac = Fraction::new(BigInt::from(len), BigInt::one());
+    let len_frac = Fraction::from(len as i64);
     interp.stack.push(wrap_number(len_frac));
     Ok(())
 }

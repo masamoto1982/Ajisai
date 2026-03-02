@@ -1,7 +1,7 @@
 mod error;
-mod types;
+pub mod types;
 mod tokenizer;
-mod interpreter;
+pub mod interpreter;
 mod builtins;
 mod wasm_api;
 

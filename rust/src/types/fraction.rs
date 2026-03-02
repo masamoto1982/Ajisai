@@ -71,6 +71,21 @@ impl Fraction {
 
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
         if denominator.is_zero() { panic!("Division by zero"); }
+
+        if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
+            let g = gcd_i64(n, d);
+            let mut num = n / g;
+            let mut den = d / g;
+            if den < 0 {
+                num = -num;
+                den = -den;
+            }
+            return Fraction {
+                numerator: BigInt::from(num),
+                denominator: BigInt::from(den),
+            };
+        }
+
         let common = numerator.gcd(&denominator);
         let mut num = &numerator / &common;
         let mut den = &denominator / &common;
@@ -224,7 +239,8 @@ impl Fraction {
             Ok(Fraction::new(if int_part < BigInt::zero() { -total_num } else { total_num }, frac_den))
         } else {
             let num = BigInt::from_str(s).map_err(|e| e.to_string())?;
-            Ok(Fraction::new(num, BigInt::one()))
+            // Integer / 1 is already in lowest terms — skip GCD
+            Ok(Fraction { numerator: num, denominator: BigInt::one() })
         }
     }
 
@@ -567,7 +583,21 @@ impl Fraction {
             panic!("Modulo by zero");
         }
 
+        // i64 fast path for integer modulo
         if self.denominator.is_one() && other.denominator.is_one() {
+            if let (Some(a), Some(b)) = (self.numerator.to_i64(), other.numerator.to_i64()) {
+                let rem = a % b;
+                let result = if rem < 0 {
+                    if b > 0 { rem + b } else { rem - b }
+                } else {
+                    rem
+                };
+                return Fraction {
+                    numerator: BigInt::from(result),
+                    denominator: BigInt::one(),
+                };
+            }
+
             let rem = &self.numerator % &other.numerator;
             let result = if rem < BigInt::zero() {
                 if other.numerator > BigInt::zero() {
@@ -582,6 +612,24 @@ impl Fraction {
                 numerator: result,
                 denominator: BigInt::one(),
             };
+        }
+
+        // i64 fast path for fractional modulo: a/b mod c/d = (a*d mod c*b) / (b*d)
+        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            let a = a as i128;
+            let b = b as i128;
+            let c = c as i128;
+            let d = d as i128;
+            let num = a * d;
+            let mod_by = c * b;
+            let den = b * d;
+            let rem = num % mod_by;
+            let result_num = if rem < 0 {
+                if mod_by > 0 { rem + mod_by } else { rem - mod_by }
+            } else {
+                rem
+            };
+            return Self::new_from_i128(result_num, den);
         }
 
         let div_result = self.div(other);
