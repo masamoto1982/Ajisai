@@ -42,6 +42,7 @@ pub struct Fraction {
 /// Mathematical equality via cross-multiplication.
 /// This correctly handles unreduced fractions: 440/2 == 220/1.
 impl PartialEq for Fraction {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         // NIL special case: NIL == NIL, NIL != anything else
         if self.is_nil() || other.is_nil() {
@@ -305,20 +306,18 @@ impl Fraction {
         }
 
         if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
-            let a = a as i128;
-            let b = b as i128;
-            let c = c as i128;
-            let d = d as i128;
-            let num = a * d + c * b;
-            let den = b * d;
-            return Self::new_from_i128(num, den);
-        }
-
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return Fraction {
-                numerator: &self.numerator + &other.numerator,
-                denominator: BigInt::one(),
-            };
+            if b == 1 && d == 1 {
+                return Self::new_from_i128((a as i128) + (c as i128), 1);
+            }
+            if b == d {
+                return Self::new_from_i128((a as i128) + (c as i128), b as i128);
+            }
+            if let Some(num) = (a as i128).checked_mul(d as i128)
+                .and_then(|ad| (c as i128).checked_mul(b as i128)
+                    .and_then(|cb| ad.checked_add(cb)))
+            {
+                return Self::new_from_i128(num, (b as i128) * (d as i128));
+            }
         }
 
         if self.denominator == other.denominator {
@@ -341,20 +340,18 @@ impl Fraction {
         }
 
         if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
-            let a = a as i128;
-            let b = b as i128;
-            let c = c as i128;
-            let d = d as i128;
-            let num = a * d - c * b;
-            let den = b * d;
-            return Self::new_from_i128(num, den);
-        }
-
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return Fraction {
-                numerator: &self.numerator - &other.numerator,
-                denominator: BigInt::one(),
-            };
+            if b == 1 && d == 1 {
+                return Self::new_from_i128((a as i128) - (c as i128), 1);
+            }
+            if b == d {
+                return Self::new_from_i128((a as i128) - (c as i128), b as i128);
+            }
+            if let Some(num) = (a as i128).checked_mul(d as i128)
+                .and_then(|ad| (c as i128).checked_mul(b as i128)
+                    .and_then(|cb| ad.checked_sub(cb)))
+            {
+                return Self::new_from_i128(num, (b as i128) * (d as i128));
+            }
         }
 
         if self.denominator == other.denominator {
@@ -384,9 +381,9 @@ impl Fraction {
             let b_r = (b / g2) as i128;
             let c_r = (c / g2) as i128;
             let d_r = (d / g1) as i128;
-            let num = a_r * c_r;
-            let den = b_r * d_r;
-            return Self::new_from_i128(num, den);
+            if let (Some(num), Some(den)) = (a_r.checked_mul(c_r), b_r.checked_mul(d_r)) {
+                return Self::new_from_i128(num, den);
+            }
         }
 
         if self.denominator.is_one() && other.denominator.is_one() {
@@ -446,9 +443,9 @@ impl Fraction {
             let b_r = (b / g2) as i128;
             let c_r = (c / g1) as i128;
             let d_r = (d / g2) as i128;
-            let num = a_r * d_r;
-            let den = b_r * c_r;
-            return Self::new_from_i128(num, den);
+            if let (Some(num), Some(den)) = (a_r.checked_mul(d_r), b_r.checked_mul(c_r)) {
+                return Self::new_from_i128(num, den);
+            }
         }
 
         if self.denominator.is_one() && other.denominator.is_one() {
@@ -588,10 +585,12 @@ impl Fraction {
         }
     }
 
+    #[inline]
     pub fn is_exact_integer(&self) -> bool {
         self.denominator == BigInt::one()
     }
 
+    #[inline]
     pub fn as_usize(&self) -> Option<usize> {
         if self.is_exact_integer() && self.numerator >= BigInt::zero() {
             self.numerator.to_usize()
@@ -663,12 +662,14 @@ impl Fraction {
 }
 
 impl PartialOrd for Fraction {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for Fraction {
+    #[inline]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
             let lhs = (a as i128) * (d as i128);

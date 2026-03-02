@@ -5,7 +5,7 @@ use crate::interpreter::{Interpreter, ConsumptionMode};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
-pub fn get_integer_from_value(value: &Value) -> Result<i64> {
+pub(crate) fn get_integer_from_value(value: &Value) -> Result<i64> {
     match &value.data {
         ValueData::Scalar(f) => {
             if f.denominator != BigInt::one() {
@@ -28,7 +28,7 @@ pub fn get_integer_from_value(value: &Value) -> Result<i64> {
     }
 }
 
-pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
+pub(crate) fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
     match &value.data {
         ValueData::Scalar(f) => {
             if f.denominator != BigInt::one() {
@@ -51,7 +51,7 @@ pub fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
     }
 }
 
-pub fn get_word_name_from_value(value: &Value) -> Result<String> {
+pub(crate) fn get_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
         return Err(AjisaiError::from("Cannot get word name from NIL"));
     }
@@ -72,7 +72,7 @@ pub fn get_word_name_from_value(value: &Value) -> Result<String> {
     Ok(chars.to_uppercase())
 }
 
-pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
+pub(crate) fn normalize_index(index: i64, length: usize) -> Option<usize> {
     let actual_index = if index < 0 {
         let offset = (length as i64) + index;
         if offset < 0 {
@@ -90,15 +90,15 @@ pub fn normalize_index(index: i64, length: usize) -> Option<usize> {
     }
 }
 
-pub fn wrap_number(fraction: Fraction) -> Value {
+pub(crate) fn wrap_number(fraction: Fraction) -> Value {
     Value::from_fraction(fraction)
 }
 
-pub fn wrap_datetime(fraction: Fraction) -> Value {
+pub(crate) fn wrap_datetime(fraction: Fraction) -> Value {
     Value::from_datetime(fraction)
 }
 
-pub fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
+pub(crate) fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
     if interp.stack.len() < count {
         return Err(AjisaiError::StackUnderflow);
     }
@@ -123,7 +123,7 @@ pub fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>
     }
 }
 
-pub fn push_result(interp: &mut Interpreter, result: Value) {
+pub(crate) fn push_result(interp: &mut Interpreter, result: Value) {
     interp.stack.push(result);
 }
 

@@ -57,8 +57,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             let mut result_vec = Vec::new();
             for val in ordered {
                 if val.is_vector() {
-                    let v = reconstruct_vector_elements(&val);
-                    result_vec.extend(v);
+                    result_vec.extend_from_slice(reconstruct_vector_elements(&val));
                 } else {
                     result_vec.push(val);
                 }
@@ -114,8 +113,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
             let mut result_vec = Vec::new();
             for val in ordered {
                 if val.is_vector() {
-                    let v = reconstruct_vector_elements(&val);
-                    result_vec.extend(v);
+                    result_vec.extend_from_slice(reconstruct_vector_elements(&val));
                 } else {
                     result_vec.push(val);
                 }
@@ -149,7 +147,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
             };
 
             if val.is_vector() {
-                let mut v = reconstruct_vector_elements(&val);
+                let mut v = reconstruct_vector_elements(&val).to_vec();
                 if !interp.disable_no_change_check {
                     if v.len() < 2 {
                         if !is_keep_mode {
@@ -224,13 +222,13 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
     // 引数ベクタから start, end, step を抽出
     let (start, end, step) = if args_val.is_vector() {
-        let v = reconstruct_vector_elements(&args_val);
-        if v.len() < 2 || v.len() > 3 {
+        let n = args_val.len();
+        if n < 2 || n > 3 {
             interp.stack.push(args_val);
             return Err(AjisaiError::from("RANGE requires [start end] or [start end step]"));
         }
 
-        let start = match get_bigint_from_value(&v[0]) {
+        let start = match get_bigint_from_value(args_val.get_child(0).unwrap()) {
             Ok(bi) => match bi.to_i64() {
                 Some(i) => i,
                 None => {
@@ -244,7 +242,7 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
             }
         };
 
-        let end = match get_bigint_from_value(&v[1]) {
+        let end = match get_bigint_from_value(args_val.get_child(1).unwrap()) {
             Ok(bi) => match bi.to_i64() {
                 Some(i) => i,
                 None => {
@@ -258,8 +256,8 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
             }
         };
 
-        let step = if v.len() == 3 {
-            match get_bigint_from_value(&v[2]) {
+        let step = if n == 3 {
+            match get_bigint_from_value(args_val.get_child(2).unwrap()) {
                 Ok(bi) => match bi.to_i64() {
                     Some(i) => i,
                     None => {
@@ -325,16 +323,16 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
 
     // インデックスリストを抽出
     let indices = if indices_val.is_vector() {
-        let v = reconstruct_vector_elements(&indices_val);
-        if v.is_empty() {
+        let n = indices_val.len();
+        if n == 0 {
             interp.stack.push(indices_val);
             return Err(AjisaiError::from("REORDER requires non-empty index list"));
         }
 
-        let mut indices = Vec::with_capacity(v.len());
-        for elem in &v {
-            match get_integer_from_value(elem) {
-                Ok(i) => indices.push(i),
+        let mut indices = Vec::with_capacity(n);
+        for i in 0..n {
+            match get_integer_from_value(indices_val.get_child(i).unwrap()) {
+                Ok(idx) => indices.push(idx),
                 Err(_) => {
                     interp.stack.push(indices_val);
                     return Err(AjisaiError::from("REORDER indices must be integers"));
@@ -367,8 +365,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
             };
 
             if target_val.is_vector() {
-                let elements = reconstruct_vector_elements(&target_val);
-                let len = elements.len();
+                let len = target_val.len();
 
                 if len == 0 {
                     if !is_keep_mode {
@@ -390,7 +387,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                             return Err(AjisaiError::IndexOutOfBounds { index: idx, length: len });
                         }
                     };
-                    result.push(elements[actual].clone());
+                    result.push(target_val.get_child(actual).unwrap().clone());
                 }
 
                 if is_keep_mode {

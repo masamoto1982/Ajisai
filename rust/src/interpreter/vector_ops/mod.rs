@@ -21,11 +21,9 @@ pub use structure::{op_concat, op_reverse, op_range, op_reorder, op_collect};
 
 use crate::types::{Value, ValueData};
 
-pub(crate) fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
+pub(crate) fn reconstruct_vector_elements(val: &Value) -> &[Value] {
     match &val.data {
-        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => children.clone(),
-        ValueData::Scalar(_) => vec![val.clone()],
-        ValueData::Nil => vec![],
-        ValueData::CodeBlock(_) => vec![val.clone()],
+        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => children,
+        _ => &[],
     }
 }

@@ -41,8 +41,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             };
 
             if target_val.is_vector() {
-                let v = reconstruct_vector_elements(&target_val);
-                let len = v.len();
+                let len = target_val.len();
                 if len == 0 {
                     if !is_keep_mode {
                         interp.stack.push(target_val);
@@ -62,7 +61,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                     }
                 };
 
-                let result_elem = v[actual_index].clone();
+                let result_elem = target_val.get_child(actual_index).unwrap().clone();
                 if is_keep_mode {
                     interp.stack.push(index_val);
                 }
@@ -115,13 +114,12 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 
     // 引数から index と element を抽出
     let (index, element) = if args_val.is_vector() {
-        let v = reconstruct_vector_elements(&args_val);
-        if v.len() != 2 {
+        if args_val.len() != 2 {
             interp.stack.push(args_val);
             return Err(AjisaiError::from("INSERT requires [index element]"));
         }
 
-        let index = match get_integer_from_value(&v[0]) {
+        let index = match get_integer_from_value(args_val.get_child(0).unwrap()) {
             Ok(i) => i,
             Err(_) => {
                 interp.stack.push(args_val);
@@ -129,7 +127,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             }
         };
 
-        let element = v[1].clone();
+        let element = args_val.get_child(1).unwrap().clone();
         (index, element)
     } else {
         interp.stack.push(args_val);
@@ -151,7 +149,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let mut v = reconstruct_vector_elements(&vector_val);
+                let mut v = reconstruct_vector_elements(&vector_val).to_vec();
                 let len = v.len() as i64;
                 let insert_index = if index < 0 {
                     (len + index).max(0) as usize
@@ -161,7 +159,6 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 
                 v.insert(insert_index, element.clone());
                 if is_keep_mode {
-                    // In Keep mode, args_val is already consumed from stack but we need to preserve it
                     interp.stack.push(args_val);
                 }
                 interp.stack.push(Value::from_vector(v));
@@ -199,13 +196,12 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let (index, new_element) = if args_val.is_vector() {
-        let v = reconstruct_vector_elements(&args_val);
-        if v.len() != 2 {
+        if args_val.len() != 2 {
             interp.stack.push(args_val);
             return Err(AjisaiError::from("REPLACE requires [index element]"));
         }
 
-        let index = match get_integer_from_value(&v[0]) {
+        let index = match get_integer_from_value(args_val.get_child(0).unwrap()) {
             Ok(i) => i,
             Err(_) => {
                 interp.stack.push(args_val);
@@ -213,7 +209,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             }
         };
 
-        let new_element = v[1].clone();
+        let new_element = args_val.get_child(1).unwrap().clone();
         (index, new_element)
     } else {
         interp.stack.push(args_val);
@@ -235,7 +231,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let mut v = reconstruct_vector_elements(&vector_val);
+                let mut v = reconstruct_vector_elements(&vector_val).to_vec();
                 let len = v.len();
                 let actual_index = match normalize_index(index, len) {
                     Some(idx) => idx,
@@ -320,7 +316,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let mut v = reconstruct_vector_elements(&vector_val);
+                let mut v = reconstruct_vector_elements(&vector_val).to_vec();
                 let len = v.len();
                 let actual_index = match normalize_index(index, len) {
                     Some(idx) => idx,

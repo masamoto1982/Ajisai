@@ -41,21 +41,6 @@ fn is_boolean_true(val: &Value) -> bool {
     false
 }
 
-fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
-    if let ValueData::Vector(children) = &val.data {
-        Some(children)
-    } else {
-        None
-    }
-}
-
-fn reconstruct_vector_elements(val: &Value) -> Vec<Value> {
-    if let Some(children) = get_vector_children(val) {
-        children.clone()
-    } else {
-        vec![val.clone()]
-    }
-}
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -99,95 +84,73 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            // Vectorを処理（NIL = 空ベクタとして扱う）
-            let elements = if target_val.is_nil() {
-                vec![]
-            } else if is_vector_value(&target_val) {
-                reconstruct_vector_elements(&target_val)
-            } else {
+            if target_val.is_nil() {
+                interp.stack.push(Value::nil());
+                return Ok(());
+            }
+
+            if !is_vector_value(&target_val) {
                 if !is_keep_mode {
                     interp.stack.push(target_val);
                 }
                 interp.stack.push(code_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));
-            };
+            }
 
-            // 空ベクタ/NILの場合はNILを返す
-            if elements.is_empty() {
+            let n_elements = target_val.len();
+            if n_elements == 0 {
                 interp.stack.push(Value::nil());
                 return Ok(());
             }
 
-            let mut results = Vec::with_capacity(elements.len());
-
-            // 元のスタックを保存
+            let mut results = Vec::with_capacity(n_elements);
             let original_stack_below = interp.stack.clone();
 
-            // operation_target を一時的に保存してStackTopに設定
-            // MAP内部では「変化なし」チェックを無効化
             let saved_target = interp.operation_target_mode;
             let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target_mode = OperationTargetMode::StackTop;
             interp.disable_no_change_check = true;
 
-            for elem in &elements {
-                // スタックをクリアして単一要素を処理（Stackモードと同様）
+            let mut error: Option<AjisaiError> = None;
+            for i in 0..n_elements {
+                let elem = target_val.get_child(i).unwrap().clone();
                 interp.stack.clear();
-                // 各要素を単一要素Vectorでラップしてプッシュ
-                interp.stack.push(elem.clone());
-                // 実行可能コードを実行
+                interp.stack.push(elem);
                 match execute_code(interp, &executable) {
                     Ok(_) => {
-                        // 結果を取得
                         match interp.stack.pop() {
                             Some(result_val) => {
-                                // 結果の処理：スカラーもベクタも受け入れる
-                                if is_vector_value(&result_val) {
-                                    // ベクタの場合
-                                    let v = reconstruct_vector_elements(&result_val);
-                                    if v.len() == 1 {
-                                        results.push(v[0].clone());
-                                    } else {
-                                        results.push(Value::from_vector(v));
-                                    }
+                                if is_vector_value(&result_val) && result_val.len() == 1 {
+                                    results.push(result_val.get_child(0).unwrap().clone());
                                 } else {
-                                    // スカラーやNILの場合はそのまま追加
                                     results.push(result_val);
                                 }
                             },
                             None => {
-                                // エラー時にスタックを復元
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = original_stack_below;
-                                if !is_keep_mode {
-                                    interp.stack.push(Value::from_vector(elements));
-                                }
-                                interp.stack.push(code_val);
-                                return Err(AjisaiError::from("MAP code must return a value"));
+                                error = Some(AjisaiError::from("MAP code must return a value"));
+                                break;
                             }
                         }
                     }
                     Err(e) => {
-                        // エラー時にスタックを復元
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        interp.stack = original_stack_below;
-                        if !is_keep_mode {
-                            interp.stack.push(Value::from_vector(elements));
-                        }
-                        interp.stack.push(code_val);
-                        return Err(e);
+                        error = Some(e);
+                        break;
                     }
                 }
             }
 
-            // operation_target とno_change_checkを復元、スタックを復元
             interp.operation_target_mode = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
 
-            // 結果をVectorとして返す
+            if let Some(e) = error {
+                if !is_keep_mode {
+                    interp.stack.push(target_val);
+                }
+                interp.stack.push(code_val);
+                return Err(e);
+            }
+
             interp.stack.push(Value::from_vector(results));
         },
         OperationTargetMode::Stack => {
@@ -303,100 +266,83 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            // Vectorを処理（NIL = 空ベクタとして扱う）
-            let elements = if target_val.is_nil() {
-                vec![]
-            } else if is_vector_value(&target_val) {
-                reconstruct_vector_elements(&target_val)
-            } else {
+            if target_val.is_nil() {
+                interp.stack.push(Value::nil());
+                return Ok(());
+            }
+
+            if !is_vector_value(&target_val) {
                 if !is_keep_mode {
                     interp.stack.push(target_val);
                 }
                 interp.stack.push(code_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));
-            };
+            }
 
-            // 空ベクタ/NILの場合はNILを返す
-            if elements.is_empty() {
+            let n_elements = target_val.len();
+            if n_elements == 0 {
                 interp.stack.push(Value::nil());
                 return Ok(());
             }
 
-            let mut results = Vec::with_capacity(elements.len());
-
-            // 元のスタックを保存（MAPと同様）
+            let mut results = Vec::with_capacity(n_elements);
             let original_stack_below = interp.stack.clone();
 
-            // operation_target と no_change_check を保存
             let saved_target = interp.operation_target_mode;
             let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target_mode = OperationTargetMode::StackTop;
             interp.disable_no_change_check = true;
 
-            for elem in &elements {
-                // スタックをクリアして単一要素を処理（MAPと同様）
+            let mut error: Option<AjisaiError> = None;
+            for i in 0..n_elements {
+                let elem = target_val.get_child(i).unwrap().clone();
                 interp.stack.clear();
-                // 各要素を単一要素Vectorでラップしてプッシュ
                 interp.stack.push(elem.clone());
-                // 実行可能コードを実行
                 match execute_code(interp, &executable) {
                     Ok(_) => {
-                        // 条件判定結果を取得
-                        let condition_result = interp.stack.pop()
-                            .ok_or_else(|| AjisaiError::from("FILTER code must return a boolean value"))?;
+                        let condition_result = match interp.stack.pop() {
+                            Some(r) => r,
+                            None => {
+                                error = Some(AjisaiError::from("FILTER code must return a boolean value"));
+                                break;
+                            }
+                        };
 
-                        // VectorからBoolean値を抽出
                         let is_true = if is_vector_value(&condition_result) {
-                            let v = reconstruct_vector_elements(&condition_result);
-                            if v.len() == 1 {
-                                is_boolean_true(&v[0])
+                            if condition_result.len() == 1 {
+                                is_boolean_true(condition_result.get_child(0).unwrap())
                             } else {
-                                // エラー時にスタックを復元
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = original_stack_below;
-                                if !is_keep_mode {
-                                    interp.stack.push(Value::from_vector(elements));
-                                }
-                                interp.stack.push(code_val);
-                                return Err(AjisaiError::structure_error("boolean result from FILTER code", "other format"));
+                                error = Some(AjisaiError::structure_error("boolean result from FILTER code", "other format"));
+                                break;
                             }
                         } else {
-                            // エラー時にスタックを復元
-                            interp.operation_target_mode = saved_target;
-                            interp.disable_no_change_check = saved_no_change_check;
-                            interp.stack = original_stack_below;
-                            if !is_keep_mode {
-                                interp.stack.push(Value::from_vector(elements));
-                            }
-                            interp.stack.push(code_val);
-                            return Err(AjisaiError::structure_error("boolean vector result from FILTER code", "other format"));
+                            error = Some(AjisaiError::structure_error("boolean vector result from FILTER code", "other format"));
+                            break;
                         };
 
                         if is_true {
-                            results.push(elem.clone());
+                            results.push(elem);
                         }
                     }
                     Err(e) => {
-                        // エラー時にスタックを復元
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        interp.stack = original_stack_below;
-                        if !is_keep_mode {
-                            interp.stack.push(Value::from_vector(elements));
-                        }
-                        interp.stack.push(code_val);
-                        return Err(e);
+                        error = Some(e);
+                        break;
                     }
                 }
             }
 
-            // operation_target と no_change_check を復元し、スタックを復元
             interp.operation_target_mode = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
 
-            // 結果が空の場合はNILを返す（空ベクタ禁止ルール）
+            if let Some(e) = error {
+                if !is_keep_mode {
+                    interp.stack.push(target_val);
+                }
+                interp.stack.push(code_val);
+                return Err(e);
+            }
+
             if results.is_empty() {
                 interp.stack.push(Value::nil());
             } else {
@@ -451,11 +397,11 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             }
                         };
 
-                        if is_vector_value(&condition_result) {
-                            let v = reconstruct_vector_elements(&condition_result);
-                            if v.len() == 1 && is_boolean_true(&v[0]) {
-                                results.push(item.clone());
-                            }
+                        if is_vector_value(&condition_result)
+                            && condition_result.len() == 1
+                            && is_boolean_true(condition_result.get_child(0).unwrap())
+                        {
+                            results.push(item.clone());
                         }
                     }
                     Err(e) => {
@@ -529,76 +475,71 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 })?
             };
 
-            // Vectorを処理（NIL = 空ベクタとして扱う）
-            let elements = if target_val.is_nil() {
-                vec![]
-            } else if is_vector_value(&target_val) {
-                reconstruct_vector_elements(&target_val)
-            } else {
+            if target_val.is_nil() {
+                interp.stack.push(init_val);
+                return Ok(());
+            }
+
+            if !is_vector_value(&target_val) {
                 if !is_keep_mode {
                     interp.stack.push(target_val);
                 }
                 interp.stack.push(init_val);
                 interp.stack.push(code_val);
                 return Err(AjisaiError::structure_error("vector", "other format"));
-            };
+            }
 
-            // 初期値をアンラップ
-            let mut accumulator = init_val;
-
-            if elements.is_empty() {
-                // 空ベクタ/NIL: 初期値をそのまま返す
-                interp.stack.push(accumulator);
+            let n_elements = target_val.len();
+            if n_elements == 0 {
+                interp.stack.push(init_val);
                 return Ok(());
             }
 
-            // 元のスタックを保存（MAPと同様）
+            let mut accumulator = init_val;
             let original_stack_below = interp.stack.clone();
 
-            // operation_target と no_change_check を保存
             let saved_target = interp.operation_target_mode;
             let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target_mode = OperationTargetMode::StackTop;
             interp.disable_no_change_check = true;
 
-            for elem in &elements {
-                // スタックをクリアして処理（MAPと同様）
+            let mut error: Option<AjisaiError> = None;
+            for i in 0..n_elements {
+                let elem = target_val.get_child(i).unwrap().clone();
                 interp.stack.clear();
                 interp.stack.push(accumulator.clone());
-                interp.stack.push(elem.clone());
+                interp.stack.push(elem);
 
                 match execute_code(interp, &executable) {
                     Ok(_) => {
-                        let result = interp.stack.pop()
-                            .ok_or_else(|| {
-                                // エラー時にスタックを復元
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = original_stack_below.clone();
-                                interp.stack.push(Value::from_vector(elements.clone()));
-                                interp.stack.push(accumulator.clone());
-                                interp.stack.push(code_val.clone());
-                                AjisaiError::from("FOLD: code must return a value")
-                            })?;
-                        accumulator = result;
+                        match interp.stack.pop() {
+                            Some(result) => { accumulator = result; }
+                            None => {
+                                error = Some(AjisaiError::from("FOLD: code must return a value"));
+                                break;
+                            }
+                        }
                     }
                     Err(e) => {
-                        // エラー時にスタックを復元
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        interp.stack = original_stack_below;
-                        interp.stack.push(Value::from_vector(elements));
-                        interp.stack.push(accumulator);
-                        interp.stack.push(code_val);
-                        return Err(e);
+                        error = Some(e);
+                        break;
                     }
                 }
             }
 
-            // operation_target と no_change_check を復元し、スタックを復元
             interp.operation_target_mode = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = original_stack_below;
+
+            if let Some(e) = error {
+                if !is_keep_mode {
+                    interp.stack.push(target_val);
+                }
+                interp.stack.push(accumulator);
+                interp.stack.push(code_val);
+                return Err(e);
+            }
+
             interp.stack.push(accumulator);
             Ok(())
         }
@@ -753,16 +694,15 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
                 // ベクタで2要素の場合は [要素, 次の状態]
                 if is_vector_value(&unwrapped) {
-                    let v = reconstruct_vector_elements(&unwrapped);
-                    if v.len() == 2 {
-                        results.push(v[0].clone());
+                    if unwrapped.len() == 2 {
+                        results.push(unwrapped.get_child(0).unwrap().clone());
 
-                        // 次の状態がNILの場合は終了
-                        if v[1].is_nil() {
+                        let next_state = unwrapped.get_child(1).unwrap();
+                        if next_state.is_nil() {
                             break;
                         }
 
-                        state = Value::from_vector(vec![v[1].clone()]);
+                        state = Value::from_vector(vec![next_state.clone()]);
                         continue;
                     }
                 }
@@ -840,20 +780,16 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         }
 
                         // ベクタで2要素の場合は [要素, 次の状態]
-                        if is_vector_value(&unwrapped) {
-                            let v = reconstruct_vector_elements(&unwrapped);
-                            if v.len() == 2 {
-                                // 結果をVectorでラップ
-                                results.push(v[0].clone());
+                        if is_vector_value(&unwrapped) && unwrapped.len() == 2 {
+                            results.push(unwrapped.get_child(0).unwrap().clone());
 
-                                // 次の状態がNILの場合は終了
-                                if v[1].is_nil() {
-                                    break;
-                                }
-
-                                state = Value::from_vector(vec![v[1].clone()]);
-                                continue;
+                            let next_state = unwrapped.get_child(1).unwrap();
+                            if next_state.is_nil() {
+                                break;
                             }
+
+                            state = Value::from_vector(vec![next_state.clone()]);
+                            continue;
                         }
 
                         interp.operation_target_mode = saved_target;
