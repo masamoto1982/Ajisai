@@ -176,6 +176,39 @@ fn bench_fraction_comparison(c: &mut Criterion) {
     });
 }
 
+fn bench_fraction_eq_i64(c: &mut Criterion) {
+    let a = Fraction::from(42i64);
+    let b = Fraction::from(42i64);
+
+    c.bench_function("fraction_eq_i64", |b_iter| {
+        b_iter.iter(|| {
+            black_box(a == b);
+        })
+    });
+}
+
+fn bench_fraction_lt_i64(c: &mut Criterion) {
+    let a = Fraction::from(42i64);
+    let b = Fraction::from(58i64);
+
+    c.bench_function("fraction_lt_i64", |b_iter| {
+        b_iter.iter(|| {
+            black_box(a.lt(&b));
+        })
+    });
+}
+
+fn bench_fraction_eq_fraction(c: &mut Criterion) {
+    let a = Fraction::new(BigInt::from(355), BigInt::from(113));
+    let b = Fraction::new(BigInt::from(355), BigInt::from(113));
+
+    c.bench_function("fraction_eq_fraction", |b_iter| {
+        b_iter.iter(|| {
+            black_box(a == b);
+        })
+    });
+}
+
 // ---------------------------------------------------------------------------
 // 4. Full Interpreter Benchmarks (end-to-end)
 // ---------------------------------------------------------------------------
@@ -448,6 +481,9 @@ criterion_group!(
     bench_fraction_mul_bigint_path,
     bench_fraction_modulo,
     bench_fraction_comparison,
+    bench_fraction_eq_i64,
+    bench_fraction_lt_i64,
+    bench_fraction_eq_fraction,
 );
 
 criterion_group!(

@@ -18,6 +18,8 @@ pub mod vector_exec;
 pub mod json;
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use smallvec::SmallVec;
 use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
 
 pub const MAX_CALL_DEPTH: usize = 4;
@@ -51,7 +53,7 @@ pub enum AsyncAction {
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
-    pub(crate) dictionary: HashMap<String, WordDefinition>,
+    pub(crate) dictionary: HashMap<String, Arc<WordDefinition>>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
@@ -63,7 +65,7 @@ pub struct Interpreter {
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
     pub(crate) play_mode: audio::PlayMode,
-    pub(crate) call_stack: Vec<String>,
+    pub(crate) call_stack: SmallVec<[String; 5]>,
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
 }
@@ -84,7 +86,7 @@ impl Interpreter {
             pending_tokens: None,
             pending_token_index: 0,
             play_mode: audio::PlayMode::default(),
-            call_stack: Vec::new(),
+            call_stack: SmallVec::new(),
             input_buffer: String::new(),
             io_output_buffer: String::new(),
         };
@@ -682,7 +684,7 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(name).cloned()
+        let def = self.dictionary.get(name).map(Arc::clone)
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         // Native implementation (built-in words with no user-defined code)
@@ -718,7 +720,7 @@ impl Interpreter {
 
     #[async_recursion(?Send)]
     pub(crate) async fn execute_word_async(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(name).cloned()
+        let def = self.dictionary.get(name).map(Arc::clone)
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         // Native implementation (built-in words with no user-defined code)
@@ -748,53 +750,27 @@ impl Interpreter {
         }
 
         match name {
-            "GET" => vector_ops::op_get(self),
-            "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self),
-            "REMOVE" => vector_ops::op_remove(self),
-            "LENGTH" => vector_ops::op_length(self),
-            "TAKE" => vector_ops::op_take(self),
-            "SPLIT" => vector_ops::op_split(self),
-            "CONCAT" => vector_ops::op_concat(self),
-            "REVERSE" => vector_ops::op_reverse(self),
-            "RANGE" => vector_ops::op_range(self),
-            "REORDER" => vector_ops::op_reorder(self),
-            "COLLECT" => vector_ops::op_collect(self),
-            "SORT" => sort::op_sort(self),
-            "SHAPE" => tensor_ops::op_shape(self),
-            "RANK" => tensor_ops::op_rank(self),
-            "RESHAPE" => tensor_ops::op_reshape(self),
-            "TRANSPOSE" => tensor_ops::op_transpose(self),
-            "FILL" => tensor_ops::op_fill(self),
-            "FLOOR" => tensor_ops::op_floor(self),
-            "CEIL" => tensor_ops::op_ceil(self),
-            "ROUND" => tensor_ops::op_round(self),
-            "MOD" => tensor_ops::op_mod(self),
+            // Hot path: arithmetic operators (most frequent in typical programs)
             "+" => arithmetic::op_add(self),
             "-" => arithmetic::op_sub(self),
             "*" => arithmetic::op_mul(self),
             "/" => arithmetic::op_div(self),
+            // Hot path: comparison operators
             "=" => comparison::op_eq(self),
             "<" => comparison::op_lt(self),
             "<=" => comparison::op_le(self),
-            "AND" => logic::op_and(self),
-            "OR" => logic::op_or(self),
-            "NOT" => logic::op_not(self),
-            "PRINT" => io::op_print(self),
-            "DEF" => dictionary::op_def(self),
-            "DEL" => dictionary::op_del(self),
-            "?" => dictionary::op_lookup(self),
+            // Hot path: higher-order and collection operations
             "MAP" => higher_order::op_map(self),
             "FILTER" => higher_order::op_filter(self),
             "FOLD" => higher_order::op_fold(self),
-            "TIMES" => control::execute_times(self),
-            "EXEC" => control::op_exec(self),
-            "EVAL" => control::op_eval(self),
-            "WAIT" => {
-                Err(AjisaiError::from(
-                    "WAIT should be handled by execute_section_core, not execute_builtin"
-                ))
-            },
+            "GET" => vector_ops::op_get(self),
+            "LENGTH" => vector_ops::op_length(self),
+            "CONCAT" => vector_ops::op_concat(self),
+            // Logic
+            "AND" => logic::op_and(self),
+            "OR" => logic::op_or(self),
+            "NOT" => logic::op_not(self),
+            // Literals
             "TRUE" => {
                 self.stack.push(Value::from_bool(true));
                 Ok(())
@@ -807,17 +783,56 @@ impl Interpreter {
                 self.stack.push(Value::nil());
                 Ok(())
             },
+            // Control flow
+            "TIMES" => control::execute_times(self),
+            "EXEC" => control::op_exec(self),
+            "EVAL" => control::op_eval(self),
+            // Dictionary
+            "DEF" => dictionary::op_def(self),
+            "DEL" => dictionary::op_del(self),
+            "?" => dictionary::op_lookup(self),
+            "!" => {
+                self.force_flag = true;
+                Ok(())
+            },
+            // I/O
+            "PRINT" => io::op_print(self),
+            // Vector operations
+            "INSERT" => vector_ops::op_insert(self),
+            "REPLACE" => vector_ops::op_replace(self),
+            "REMOVE" => vector_ops::op_remove(self),
+            "TAKE" => vector_ops::op_take(self),
+            "SPLIT" => vector_ops::op_split(self),
+            "REVERSE" => vector_ops::op_reverse(self),
+            "RANGE" => vector_ops::op_range(self),
+            "REORDER" => vector_ops::op_reorder(self),
+            "COLLECT" => vector_ops::op_collect(self),
+            "SORT" => sort::op_sort(self),
+            // Tensor operations
+            "SHAPE" => tensor_ops::op_shape(self),
+            "RANK" => tensor_ops::op_rank(self),
+            "RESHAPE" => tensor_ops::op_reshape(self),
+            "TRANSPOSE" => tensor_ops::op_transpose(self),
+            "FILL" => tensor_ops::op_fill(self),
+            "FLOOR" => tensor_ops::op_floor(self),
+            "CEIL" => tensor_ops::op_ceil(self),
+            "ROUND" => tensor_ops::op_round(self),
+            "MOD" => tensor_ops::op_mod(self),
+            // Cast
             "STR" => cast::op_str(self),
             "NUM" => cast::op_num(self),
             "BOOL" => cast::op_bool(self),
             "CHR" => cast::op_chr(self),
             "CHARS" => cast::op_chars(self),
             "JOIN" => cast::op_join(self),
+            // Date/time
             "NOW" => datetime::op_now(self),
             "DATETIME" => datetime::op_datetime(self),
             "TIMESTAMP" => datetime::op_timestamp(self),
+            // Random/Hash
             "CSPRNG" => random::op_csprng(self),
             "HASH" => hash::op_hash(self),
+            // Audio
             "SEQ" => audio::op_seq(self),
             "SIM" => audio::op_sim(self),
             "SLOT" => audio::op_slot(self),
@@ -833,6 +848,7 @@ impl Interpreter {
             "SQUARE" => audio::op_square(self),
             "SAW" => audio::op_saw(self),
             "TRI" => audio::op_tri(self),
+            // JSON
             "PARSE" => json::op_parse(self),
             "STRINGIFY" => json::op_stringify(self),
             "INPUT" => json::op_input(self),
@@ -841,9 +857,10 @@ impl Interpreter {
             "JSON-KEYS" => json::op_json_keys(self),
             "JSON-SET" => json::op_json_set(self),
             "JSON-EXPORT" => json::op_json_export(self),
-            "!" => {
-                self.force_flag = true;
-                Ok(())
+            "WAIT" => {
+                Err(AjisaiError::from(
+                    "WAIT should be handled by execute_section_core, not execute_builtin"
+                ))
             },
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
@@ -927,9 +944,9 @@ impl Interpreter {
 
     pub fn rebuild_dependencies(&mut self) -> Result<()> {
         self.dependents.clear();
-        let custom_words: Vec<(String, WordDefinition)> = self.dictionary.iter()
+        let custom_words: Vec<(String, Arc<WordDefinition>)> = self.dictionary.iter()
             .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, def)| (name.clone(), def.clone()))
+            .map(|(name, def)| (name.clone(), Arc::clone(def)))
             .collect();
 
         for (word_name, word_def) in custom_words {
@@ -946,7 +963,7 @@ impl Interpreter {
                 }
             }
             if let Some(def) = self.dictionary.get_mut(&word_name) {
-                def.dependencies = dependencies;
+                Arc::make_mut(def).dependencies = dependencies;
             }
         }
         Ok(())
