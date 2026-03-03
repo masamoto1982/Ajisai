@@ -97,7 +97,11 @@ export const createEditor = (
 
     const clear = (switchView = true): void => {
         setElementValue(element, '');
-        focusElement(element);
+        // モバイルではfocusを避ける。focus()が仮想キーボードの開閉を誘発し、
+        // ビューポートのリサイズとレイアウトリフローを引き起こすため。
+        if (!isMobile()) {
+            focusElement(element);
+        }
         if (switchView) {
             switchToInputMode();
         }
@@ -130,7 +134,11 @@ export const createEditor = (
         const cursorPos = calculateCursorPosition(start, text, true);
         setSelectionRange(element, cursorPos, cursorPos);
 
-        focusElement(element);
+        // モバイルではfocusを避ける。focus()が仮想キーボードの開閉を誘発し、
+        // ビューポートのリサイズとレイアウトリフローを引き起こすため。
+        if (!isMobile()) {
+            focusElement(element);
+        }
         switchToInputMode();
     };
 
