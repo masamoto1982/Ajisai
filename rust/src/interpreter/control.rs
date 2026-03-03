@@ -10,43 +10,8 @@
 use crate::interpreter::Interpreter;
 use crate::interpreter::OperationTargetMode;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, ValueData, DisplayHint};
-
-
-/// 値を文字列として解釈する（内部ヘルパー）
-fn value_as_string(val: &Value) -> Option<String> {
-    fn collect_chars(val: &Value) -> Vec<char> {
-        match &val.data {
-            ValueData::Nil => vec![],
-            ValueData::Scalar(f) => {
-                f.to_i64().and_then(|n| {
-                    if n >= 0 && n <= 0x10FFFF {
-                        char::from_u32(n as u32)
-                    } else {
-                        None
-                    }
-                }).map(|c| vec![c]).unwrap_or_default()
-            }
-            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
-                children.iter().flat_map(|c| collect_chars(c)).collect()
-            }
-            ValueData::CodeBlock(_) => vec![],
-        }
-    }
-
-    let chars = collect_chars(val);
-    if chars.is_empty() {
-        None
-    } else {
-        Some(chars.into_iter().collect())
-    }
-}
-
-/// 値が文字列として扱えるかチェック
-fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.is_nil()
-}
+use crate::interpreter::helpers::{get_integer_from_value, is_string_value, value_as_string};
+use crate::types::Value;
 
 /// TIMES - コードブロックまたはワード名をN回繰り返し実行する
 ///

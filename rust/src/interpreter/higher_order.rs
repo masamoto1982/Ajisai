@@ -5,8 +5,8 @@
 
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value};
-use crate::types::{Value, ValueData, DisplayHint, Token};
+use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, is_vector_value};
+use crate::types::{Value, DisplayHint, Token};
 
 enum ExecutableCode {
     WordName(String),
@@ -14,22 +14,15 @@ enum ExecutableCode {
 }
 
 fn get_executable_code(val: &Value) -> Result<ExecutableCode> {
-    // コードブロックの場合
     if let Some(tokens) = val.as_code_block() {
         return Ok(ExecutableCode::CodeBlock(tokens.clone()));
     }
 
-    // 文字列（ワード名）の場合
     if val.display_hint == DisplayHint::String {
         return get_word_name_from_value(val).map(ExecutableCode::WordName);
     }
 
-    // それ以外はエラー
     Err(AjisaiError::from("Expected code block (: ... ;) or word name"))
-}
-
-fn is_vector_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Vector(_))
 }
 
 fn is_boolean_true(val: &Value) -> bool {

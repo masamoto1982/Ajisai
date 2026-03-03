@@ -1,9 +1,47 @@
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData};
+use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::fraction::Fraction;
 use crate::interpreter::{Interpreter, ConsumptionMode};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
+
+#[inline]
+pub(crate) fn is_vector_value(val: &Value) -> bool {
+    matches!(&val.data, ValueData::Vector(_))
+}
+
+#[inline]
+pub(crate) fn is_string_value(val: &Value) -> bool {
+    val.display_hint == DisplayHint::String && !val.is_nil()
+}
+
+pub(crate) fn value_as_string(val: &Value) -> Option<String> {
+    fn collect_chars(val: &Value) -> Vec<char> {
+        match &val.data {
+            ValueData::Nil => vec![],
+            ValueData::Scalar(f) => {
+                f.to_i64().and_then(|n| {
+                    if n >= 0 && n <= 0x10FFFF {
+                        char::from_u32(n as u32)
+                    } else {
+                        None
+                    }
+                }).map(|c| vec![c]).unwrap_or_default()
+            }
+            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
+                children.iter().flat_map(|c| collect_chars(c)).collect()
+            }
+            ValueData::CodeBlock(_) => vec![],
+        }
+    }
+
+    let chars = collect_chars(val);
+    if chars.is_empty() {
+        None
+    } else {
+        Some(chars.into_iter().collect())
+    }
+}
 
 pub(crate) fn get_integer_from_value(value: &Value) -> Result<i64> {
     match &value.data {
