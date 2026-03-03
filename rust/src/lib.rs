@@ -531,6 +531,27 @@ mod tensor_ops_integration_tests {
         assert_eq!(result, "{ ( 5 5 5 ) ( 5 5 5 ) }");
     }
 
+
+    #[tokio::test]
+    async fn test_add_broadcast_row_vector_to_matrix() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ ( 11 22 33 ) ( 14 25 36 ) }");
+    }
+
+    #[tokio::test]
+    async fn test_add_broadcast_column_vector_to_matrix() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ [ 1 2 3 ] [ 4 5 6 ] ] [ [ 100 ] [ 200 ] ] +").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let result = format!("{}", stack[0]);
+        assert_eq!(result, "{ ( 101 102 103 ) ( 204 205 206 ) }");
+    }
+
     #[tokio::test]
     async fn test_shape_nil_propagation() {
         let mut interp = Interpreter::new();
