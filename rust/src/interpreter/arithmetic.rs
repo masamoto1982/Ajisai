@@ -61,13 +61,50 @@ where
         | (ValueData::Vector(va), ValueData::JsonObject { pairs: vb, .. })
         | (ValueData::JsonObject { pairs: va, .. }, ValueData::Vector(vb))
         | (ValueData::JsonObject { pairs: va, .. }, ValueData::JsonObject { pairs: vb, .. }) => {
-            if va.len() != vb.len() {
-                return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
+            if va.len() == vb.len() {
+                let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
+                    .map(|(ai, bi)| broadcast_binary_op(ai, bi, op))
+                    .collect();
+                return Ok(Value::from_children(result?));
             }
-            let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
-                .map(|(ai, bi)| broadcast_binary_op(ai, bi, op))
-                .collect();
-            Ok(Value::from_children(result?))
+
+            // 次元サイズ1の通常ブロードキャスト
+            if va.len() == 1 {
+                let result: Result<Vec<Value>> = vb.iter()
+                    .map(|bi| broadcast_binary_op(&va[0], bi, op))
+                    .collect();
+                return Ok(Value::from_children(result?));
+            }
+
+            if vb.len() == 1 {
+                let result: Result<Vec<Value>> = va.iter()
+                    .map(|ai| broadcast_binary_op(ai, &vb[0], op))
+                    .collect();
+                return Ok(Value::from_children(result?));
+            }
+
+            // 右揃えブロードキャスト（例: [2,3] と [3]）
+            if va.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::JsonObject { .. }))
+                && vb.iter().all(|v| matches!(v.data, ValueData::Scalar(_)))
+            {
+                let rhs = Value::from_children(vb.clone());
+                let result: Result<Vec<Value>> = va.iter()
+                    .map(|ai| broadcast_binary_op(ai, &rhs, op))
+                    .collect();
+                return Ok(Value::from_children(result?));
+            }
+
+            if vb.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::JsonObject { .. }))
+                && va.iter().all(|v| matches!(v.data, ValueData::Scalar(_)))
+            {
+                let lhs = Value::from_children(va.clone());
+                let result: Result<Vec<Value>> = vb.iter()
+                    .map(|bi| broadcast_binary_op(&lhs, bi, op))
+                    .collect();
+                return Ok(Value::from_children(result?));
+            }
+
+            Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() })
         }
 
     }
