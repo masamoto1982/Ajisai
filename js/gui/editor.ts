@@ -97,25 +97,31 @@ export const createEditor = (
 
     const clear = (switchView = true): void => {
         setElementValue(element, '');
-        focusElement(element);
+        // モバイルではfocusを避け、仮想キーボードの自動表示を防ぐ。
+        if (!isMobile()) {
+            focusElement(element);
+        }
         if (switchView) {
             switchToInputMode();
         }
     };
 
     const insertWord = (word: string): void => {
-        const { start, end } = getSelectionRange(element);
-        const newText = insertAt(element.value, start, end, word);
+        if (isMobile()) {
+            // モバイル: 後置記法に従い、テキストの先頭に挿入する。
+            // フォーカスなしではカーソル位置が保持されないため、
+            // 常に先頭に挿入することで新しいワードが左側に配置される。
+            const space = element.value.length > 0 ? ' ' : '';
+            const newText = word + space + element.value;
+            setElementValue(element, newText);
+        } else {
+            const { start, end } = getSelectionRange(element);
+            const newText = insertAt(element.value, start, end, word);
 
-        setElementValue(element, newText);
+            setElementValue(element, newText);
 
-        const newPos = start + word.length;
-        setSelectionRange(element, newPos, newPos);
-
-        // モバイルではfocusを避ける。focus()が仮想キーボードの開閉を誘発し、
-        // ビューポートのリサイズとレイアウトリフローを引き起こすため、
-        // ワードボタンのタップが反映されないように見える問題を防ぐ。
-        if (!isMobile()) {
+            const newPos = start + word.length;
+            setSelectionRange(element, newPos, newPos);
             focusElement(element);
         }
         switchToInputMode();
@@ -130,7 +136,11 @@ export const createEditor = (
         const cursorPos = calculateCursorPosition(start, text, true);
         setSelectionRange(element, cursorPos, cursorPos);
 
-        focusElement(element);
+        // モバイルではfocusを避け、仮想キーボードの自動表示を防ぐ。
+        // ユーザーが明示的にテキストエディタをタップしたときのみキーボードを表示する。
+        if (!isMobile()) {
+            focusElement(element);
+        }
         switchToInputMode();
     };
 
