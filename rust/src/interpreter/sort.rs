@@ -8,44 +8,15 @@
 // 統一Value宇宙アーキテクチャ版
 
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
+use crate::interpreter::helpers::is_vector_value;
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
-// ============================================================================
-// ヘルパー関数（統一Value宇宙アーキテクチャ用）
-// ============================================================================
-
-/// ベクタ値かどうかを判定
-fn is_vector_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Vector(_))
-}
-
-/// 値から数値（Fraction）を抽出する
-/// スカラー値の場合にFractionを返す
-fn extract_fraction(val: &Value) -> Option<Fraction> {
-    val.as_scalar().cloned()
-}
-
-/// ベクタの子要素を取得
-fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
-    if let ValueData::Vector(children) = &val.data {
-        Some(children)
-    } else {
-        None
-    }
-}
-
-/// Introsortによる分数ソート（昇順）
 fn introsort_fractions(values: &mut [(usize, Fraction)]) {
     values.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 }
 
-/// SORT - 高速ソート（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタを消費し、ソート結果を返す
-/// - Keep（,,）: 対象ベクタを保持し、ソート結果を追加する
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -58,18 +29,16 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             };
 
             if is_vector_value(&val) {
-                if let Some(children) = get_vector_children(&val) {
+                if let ValueData::Vector(children) = &val.data {
                     if children.is_empty() {
-                        // 空ベクタはNILとして返す
                         interp.stack.push(Value::nil());
                         return Ok(());
                     }
 
-                    // 各要素からFractionを抽出
                     let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(children.len());
                     for (i, elem) in children.iter().enumerate() {
-                        match extract_fraction(elem) {
-                            Some(f) => indexed_fractions.push((i, f)),
+                        match elem.as_scalar() {
+                            Some(f) => indexed_fractions.push((i, f.clone())),
                             None => {
                                 if !is_keep_mode {
                                     interp.stack.push(val);
@@ -81,16 +50,13 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                         }
                     }
 
-                    // Introsortでソート
                     introsort_fractions(&mut indexed_fractions);
 
-                    // ソート結果から新しいベクタを構築
                     let sorted_v: Vec<Value> = indexed_fractions
                         .iter()
                         .map(|(orig_idx, _)| children[*orig_idx].clone())
                         .collect();
 
-                    // "No change is an error" チェック
                     if !interp.disable_no_change_check {
                         if children.len() < 2 {
                             if !is_keep_mode {
@@ -120,11 +86,10 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            // スタックの全要素からFractionを抽出
             let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(interp.stack.len());
             for (i, elem) in interp.stack.iter().enumerate() {
-                match extract_fraction(elem) {
-                    Some(f) => indexed_fractions.push((i, f)),
+                match elem.as_scalar() {
+                    Some(f) => indexed_fractions.push((i, f.clone())),
                     None => {
                         return Err(AjisaiError::from(
                             "SORT requires all stack elements to be numbers"
@@ -133,10 +98,8 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            // Introsortでソート
             introsort_fractions(&mut indexed_fractions);
 
-            // "No change is an error" チェック（クローンなしで順列が恒等かを判定）
             let is_identity = indexed_fractions.iter().enumerate().all(|(i, (orig, _))| *orig == i);
             if !interp.disable_no_change_check {
                 if interp.stack.len() < 2 || is_identity {
@@ -144,16 +107,13 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            // 順列をインプレースで適用（スタッククローン不要）
             let perm: Vec<usize> = indexed_fractions.iter().map(|(orig, _)| *orig).collect();
             if is_keep_mode {
-                // Keep mode: preserve original stack, push sorted elements
                 let sorted_stack: Vec<Value> = perm.iter()
                     .map(|&orig_idx| interp.stack[orig_idx].clone())
                     .collect();
                 interp.stack.extend(sorted_stack);
             } else {
-                // Consume mode: apply permutation in-place via cycle chasing
                 let mut placed = vec![false; perm.len()];
                 for i in 0..perm.len() {
                     if placed[i] || perm[i] == i {
@@ -188,12 +148,10 @@ mod tests {
 
     #[test]
     fn test_fraction_comparison() {
-        // 1/2 > 1/3 のテスト（クロス乗算: 1*3 > 2*1）
         let half = make_fraction(1, 2);
         let third = make_fraction(1, 3);
         assert!(half > third);
 
-        // 2/3 > 1/2 のテスト
         let two_thirds = make_fraction(2, 3);
         assert!(two_thirds > half);
     }
@@ -208,7 +166,6 @@ mod tests {
         ];
         introsort_fractions(&mut values);
 
-        // ソート後: 2, 8, 18, 32
         assert_eq!(values[0].1, make_fraction(2, 1));
         assert_eq!(values[1].1, make_fraction(8, 1));
         assert_eq!(values[2].1, make_fraction(18, 1));
@@ -224,7 +181,6 @@ mod tests {
         ];
         introsort_fractions(&mut values);
 
-        // ソート後: 1/3, 1/2, 2/3
         assert_eq!(values[0].1, make_fraction(1, 3));
         assert_eq!(values[1].1, make_fraction(1, 2));
         assert_eq!(values[2].1, make_fraction(2, 3));
@@ -233,14 +189,13 @@ mod tests {
     #[test]
     fn test_introsort_mixed() {
         let mut values = vec![
-            (0, make_fraction(3, 1)),   // 3
-            (1, make_fraction(1, 2)),   // 0.5
-            (2, make_fraction(2, 1)),   // 2
-            (3, make_fraction(1, 4)),   // 0.25
+            (0, make_fraction(3, 1)),
+            (1, make_fraction(1, 2)),
+            (2, make_fraction(2, 1)),
+            (3, make_fraction(1, 4)),
         ];
         introsort_fractions(&mut values);
 
-        // ソート後: 1/4, 1/2, 2, 3
         assert_eq!(values[0].1, make_fraction(1, 4));
         assert_eq!(values[1].1, make_fraction(1, 2));
         assert_eq!(values[2].1, make_fraction(2, 1));

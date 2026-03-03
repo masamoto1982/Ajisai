@@ -42,38 +42,12 @@
 // ============================================================================
 
 use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::helpers::{is_string_value, value_as_string};
 use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive};
-
-fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.is_nil()
-}
-
-/// Valueから文字列を取得
-fn value_as_string(val: &Value) -> String {
-    fn collect_chars(val: &Value) -> Vec<char> {
-        match &val.data {
-            ValueData::Nil => vec![],
-            ValueData::Scalar(f) => {
-                f.to_i64().and_then(|n| {
-                    if n >= 0 && n <= 0x10FFFF {
-                        char::from_u32(n as u32)
-                    } else {
-                        None
-                    }
-                }).map(|c| vec![c]).unwrap_or_default()
-            }
-            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
-                children.iter().flat_map(|c| collect_chars(c)).collect()
-            }
-            ValueData::CodeBlock(_) => vec![],
-        }
-    }
-    collect_chars(val).into_iter().collect()
-}
 
 /// デフォルトのハッシュビット数
 const DEFAULT_HASH_BITS: u32 = 256;
@@ -120,7 +94,7 @@ fn serialize_value_inner(val: &Value, bytes: &mut Vec<u8>) {
 
     // 文字列判定
     if is_string_value(val) {
-        let s = value_as_string(val);
+        let s = value_as_string(val).unwrap_or_default();
         bytes.push(0x02);
         bytes.extend_from_slice(&(s.len() as u32).to_le_bytes());
         bytes.extend_from_slice(s.as_bytes());

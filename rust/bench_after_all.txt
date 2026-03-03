@@ -1,0 +1,374 @@
+   Compiling cfg-if v1.0.4
+   Compiling itoa v1.0.17
+   Compiling memchr v2.8.0
+   Compiling once_cell v1.21.3
+   Compiling unicode-ident v1.0.24
+   Compiling serde_core v1.0.228
+   Compiling serde v1.0.228
+   Compiling zmij v1.0.21
+   Compiling serde_json v1.0.149
+   Compiling wasm-bindgen-shared v0.2.114
+   Compiling crossbeam-utils v0.8.21
+   Compiling num-traits v0.2.19
+   Compiling zerocopy v0.8.40
+   Compiling futures-core v0.3.32
+   Compiling libc v0.2.182
+   Compiling wasm-bindgen v0.2.114
+   Compiling pin-project-lite v0.2.17
+   Compiling either v1.15.0
+   Compiling rayon-core v1.13.0
+   Compiling regex-syntax v0.8.10
+   Compiling futures-task v0.3.32
+   Compiling slab v0.4.12
+   Compiling plotters-backend v0.3.7
+   Compiling clap_lex v1.0.0
+   Compiling ciborium-io v0.2.2
+   Compiling anstyle v1.0.13
+   Compiling futures-channel v0.3.32
+   Compiling futures-util v0.3.32
+   Compiling itertools v0.10.5
+   Compiling cast v0.3.0
+   Compiling iana-time-zone v0.1.65
+   Compiling clap_builder v4.5.60
+   Compiling crossbeam-epoch v0.9.18
+   Compiling plotters-svg v0.3.7
+   Compiling same-file v1.0.6
+   Compiling lazy_static v1.5.0
+   Compiling smallvec v1.15.1
+   Compiling anes v0.1.6
+   Compiling walkdir v2.5.0
+   Compiling oorandom v11.1.5
+   Compiling tokio v1.49.0
+   Compiling crossbeam-deque v0.8.6
+   Compiling num-integer v0.1.46
+   Compiling chrono v0.4.44
+   Compiling plotters v0.3.7
+   Compiling getrandom v0.2.17
+   Compiling is-terminal v0.4.17
+   Compiling regex-automata v0.4.14
+   Compiling criterion-plot v0.5.0
+   Compiling rayon v1.11.0
+   Compiling clap v4.5.60
+   Compiling num-bigint v0.4.6
+   Compiling tinytemplate v1.2.1
+   Compiling regex v1.12.3
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling js-sys v0.3.91
+   Compiling ciborium v0.2.2
+   Compiling criterion v0.5.1
+   Compiling gloo-timers v0.3.0
+   Compiling web-sys v0.3.91
+   Compiling wasm-bindgen-futures v0.4.64
+   Compiling serde-wasm-bindgen v0.6.5
+   Compiling ajisai-core v0.1.0 (/home/user/Ajisai/rust)
+    Finished `bench` profile [optimized] target(s) in 52.04s
+     Running benches/bottleneck.rs (target/release/deps/bottleneck-39bc5e9eadcab972)
+Gnuplot not found, using plotters backend
+Benchmarking hashmap_lookup_hit
+Benchmarking hashmap_lookup_hit: Warming up for 3.0000 s
+Benchmarking hashmap_lookup_hit: Collecting 100 samples in estimated 5.0003 s (49M iterations)
+Benchmarking hashmap_lookup_hit: Analyzing
+hashmap_lookup_hit      time:   [99.805 ns 100.63 ns 101.60 ns]
+                        change: [-20.095% -18.352% -16.758%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 6 outliers among 100 measurements (6.00%)
+  1 (1.00%) high mild
+  5 (5.00%) high severe
+
+Benchmarking hashmap_lookup_miss
+Benchmarking hashmap_lookup_miss: Warming up for 3.0000 s
+Benchmarking hashmap_lookup_miss: Collecting 100 samples in estimated 5.0002 s (97M iterations)
+Benchmarking hashmap_lookup_miss: Analyzing
+hashmap_lookup_miss     time:   [52.130 ns 52.258 ns 52.405 ns]
+                        change: [-17.909% -16.908% -15.722%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  1 (1.00%) high mild
+  4 (4.00%) high severe
+
+Benchmarking trie_lookup_hit
+Benchmarking trie_lookup_hit: Warming up for 3.0000 s
+Benchmarking trie_lookup_hit: Collecting 100 samples in estimated 5.0002 s (100M iterations)
+Benchmarking trie_lookup_hit: Analyzing
+trie_lookup_hit         time:   [47.988 ns 48.183 ns 48.395 ns]
+                        change: [-30.672% -29.749% -28.772%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking trie_lookup_miss
+Benchmarking trie_lookup_miss: Warming up for 3.0000 s
+Benchmarking trie_lookup_miss: Collecting 100 samples in estimated 5.0000 s (442M iterations)
+Benchmarking trie_lookup_miss: Analyzing
+trie_lookup_miss        time:   [11.093 ns 11.197 ns 11.357 ns]
+                        change: [-38.082% -37.419% -36.756%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) low mild
+  1 (1.00%) high severe
+
+Benchmarking fraction_new_small_integers
+Benchmarking fraction_new_small_integers: Warming up for 3.0000 s
+Benchmarking fraction_new_small_integers: Collecting 100 samples in estimated 5.0001 s (143M iterations)
+Benchmarking fraction_new_small_integers: Analyzing
+fraction_new_small_integers
+                        time:   [34.094 ns 34.219 ns 34.360 ns]
+                        change: [-7.1941% -6.0614% -5.0785%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking fraction_new_needs_gcd
+Benchmarking fraction_new_needs_gcd: Warming up for 3.0000 s
+Benchmarking fraction_new_needs_gcd: Collecting 100 samples in estimated 5.0000 s (57M iterations)
+Benchmarking fraction_new_needs_gcd: Analyzing
+fraction_new_needs_gcd  time:   [86.803 ns 87.917 ns 89.527 ns]
+                        change: [-15.700% -14.959% -14.041%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  1 (1.00%) low mild
+  2 (2.00%) high mild
+  4 (4.00%) high severe
+
+Benchmarking fraction_new_large_gcd
+Benchmarking fraction_new_large_gcd: Warming up for 3.0000 s
+Benchmarking fraction_new_large_gcd: Collecting 100 samples in estimated 5.0001 s (75M iterations)
+Benchmarking fraction_new_large_gcd: Analyzing
+fraction_new_large_gcd  time:   [65.081 ns 65.416 ns 65.771 ns]
+                        change: [-19.372% -18.804% -18.251%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking fraction_add_i64_path
+Benchmarking fraction_add_i64_path: Warming up for 3.0000 s
+Benchmarking fraction_add_i64_path: Collecting 100 samples in estimated 5.0001 s (58M iterations)
+Benchmarking fraction_add_i64_path: Analyzing
+fraction_add_i64_path   time:   [85.100 ns 85.613 ns 86.208 ns]
+                        change: [-15.874% -14.867% -13.843%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking fraction_add_bigint_path
+Benchmarking fraction_add_bigint_path: Warming up for 3.0000 s
+Benchmarking fraction_add_bigint_path: Collecting 100 samples in estimated 5.0011 s (9.0M iterations)
+Benchmarking fraction_add_bigint_path: Analyzing
+fraction_add_bigint_path
+                        time:   [558.59 ns 565.42 ns 574.17 ns]
+                        change: [-44.560% -44.010% -43.484%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  2 (2.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking fraction_add_integers
+Benchmarking fraction_add_integers: Warming up for 3.0000 s
+Benchmarking fraction_add_integers: Collecting 100 samples in estimated 5.0002 s (98M iterations)
+Benchmarking fraction_add_integers: Analyzing
+fraction_add_integers   time:   [49.947 ns 50.336 ns 50.856 ns]
+                        change: [-19.775% -18.446% -17.254%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking fraction_mul_i64_path
+Benchmarking fraction_mul_i64_path: Warming up for 3.0000 s
+Benchmarking fraction_mul_i64_path: Collecting 100 samples in estimated 5.0003 s (52M iterations)
+Benchmarking fraction_mul_i64_path: Analyzing
+fraction_mul_i64_path   time:   [95.733 ns 96.064 ns 96.421 ns]
+                        change: [-20.722% -20.266% -19.825%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+
+Benchmarking fraction_mul_bigint_path
+Benchmarking fraction_mul_bigint_path: Warming up for 3.0000 s
+Benchmarking fraction_mul_bigint_path: Collecting 100 samples in estimated 5.0006 s (9.9M iterations)
+Benchmarking fraction_mul_bigint_path: Analyzing
+fraction_mul_bigint_path
+                        time:   [504.31 ns 508.20 ns 512.51 ns]
+                        change: [-45.669% -44.641% -43.263%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 6 outliers among 100 measurements (6.00%)
+  3 (3.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking fraction_modulo
+Benchmarking fraction_modulo: Warming up for 3.0000 s
+Benchmarking fraction_modulo: Collecting 100 samples in estimated 5.0002 s (80M iterations)
+Benchmarking fraction_modulo: Analyzing
+fraction_modulo         time:   [61.891 ns 62.167 ns 62.473 ns]
+                        change: [-16.634% -14.636% -12.268%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) high mild
+  5 (5.00%) high severe
+
+Benchmarking fraction_comparison_lt
+Benchmarking fraction_comparison_lt: Warming up for 3.0000 s
+Benchmarking fraction_comparison_lt: Collecting 100 samples in estimated 5.0000 s (1.1B iterations)
+Benchmarking fraction_comparison_lt: Analyzing
+fraction_comparison_lt  time:   [4.6285 ns 4.6548 ns 4.6856 ns]
+                        change: [-12.485% -10.852% -9.6085%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  2 (2.00%) low mild
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking fraction_eq_i64
+Benchmarking fraction_eq_i64: Warming up for 3.0000 s
+Benchmarking fraction_eq_i64: Collecting 100 samples in estimated 5.0000 s (1.5B iterations)
+Benchmarking fraction_eq_i64: Analyzing
+fraction_eq_i64         time:   [3.3834 ns 3.4100 ns 3.4386 ns]
+                        change: [-3.2827% -2.2229% -1.2494%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+
+Benchmarking fraction_lt_i64
+Benchmarking fraction_lt_i64: Warming up for 3.0000 s
+Benchmarking fraction_lt_i64: Collecting 100 samples in estimated 5.0000 s (1.1B iterations)
+Benchmarking fraction_lt_i64: Analyzing
+fraction_lt_i64         time:   [4.5119 ns 4.5858 ns 4.7073 ns]
+                        change: [-13.389% -12.173% -10.545%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking fraction_eq_fraction
+Benchmarking fraction_eq_fraction: Warming up for 3.0000 s
+Benchmarking fraction_eq_fraction: Collecting 100 samples in estimated 5.0000 s (836M iterations)
+Benchmarking fraction_eq_fraction: Analyzing
+fraction_eq_fraction    time:   [6.1296 ns 6.2217 ns 6.3542 ns]
+                        change: [-9.8733% -7.8787% -5.8798%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  3 (3.00%) low mild
+  2 (2.00%) high mild
+  7 (7.00%) high severe
+
+Benchmarking interp_init_only
+Benchmarking interp_init_only: Warming up for 3.0000 s
+Benchmarking interp_init_only: Collecting 100 samples in estimated 5.0750 s (222k iterations)
+Benchmarking interp_init_only: Analyzing
+interp_init_only        time:   [22.707 µs 22.811 µs 22.930 µs]
+                        change: [-3.5526% -2.7989% -2.0665%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  2 (2.00%) low mild
+  5 (5.00%) high mild
+
+Benchmarking interp_simple_arithmetic
+Benchmarking interp_simple_arithmetic: Warming up for 3.0000 s
+Benchmarking interp_simple_arithmetic: Collecting 100 samples in estimated 5.0669 s (182k iterations)
+Benchmarking interp_simple_arithmetic: Analyzing
+interp_simple_arithmetic
+                        time:   [27.704 µs 27.998 µs 28.331 µs]
+                        change: [-2.4844% -0.7359% +1.4268%] (p = 0.46 > 0.05)
+                        No change in performance detected.
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+
+Benchmarking interp_reuse_add
+Benchmarking interp_reuse_add: Warming up for 3.0000 s
+Benchmarking interp_reuse_add: Collecting 100 samples in estimated 5.0093 s (2.1M iterations)
+Benchmarking interp_reuse_add: Analyzing
+interp_reuse_add        time:   [2.3639 µs 2.4016 µs 2.4573 µs]
+                        change: [-19.127% -16.945% -14.339%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 14 outliers among 100 measurements (14.00%)
+  3 (3.00%) high mild
+  11 (11.00%) high severe
+
+Benchmarking interp_map
+Benchmarking interp_map: Warming up for 3.0000 s
+Benchmarking interp_map: Collecting 100 samples in estimated 5.1243 s (146k iterations)
+Benchmarking interp_map: Analyzing
+interp_map              time:   [34.730 µs 34.989 µs 35.299 µs]
+                        change: [-10.751% -9.7336% -8.7306%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 11 outliers among 100 measurements (11.00%)
+  1 (1.00%) low mild
+  3 (3.00%) high mild
+  7 (7.00%) high severe
+
+Benchmarking interp_fold
+Benchmarking interp_fold: Warming up for 3.0000 s
+Benchmarking interp_fold: Collecting 100 samples in estimated 5.0518 s (152k iterations)
+Benchmarking interp_fold: Analyzing
+interp_fold             time:   [32.665 µs 32.853 µs 33.054 µs]
+                        change: [-12.734% -11.434% -10.280%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking interp_sort
+Benchmarking interp_sort: Warming up for 3.0000 s
+Benchmarking interp_sort: Collecting 100 samples in estimated 5.0805 s (162k iterations)
+Benchmarking interp_sort: Analyzing
+interp_sort             time:   [30.978 µs 31.332 µs 31.813 µs]
+                        change: [-8.0433% -6.5415% -5.0266%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 8 outliers among 100 measurements (8.00%)
+  4 (4.00%) high mild
+  4 (4.00%) high severe
+
+Benchmarking interp_many_word_lookups
+Benchmarking interp_many_word_lookups: Warming up for 3.0000 s
+Benchmarking interp_many_word_lookups: Collecting 100 samples in estimated 5.0914 s (192k iterations)
+Benchmarking interp_many_word_lookups: Analyzing
+interp_many_word_lookups
+                        time:   [26.053 µs 26.178 µs 26.308 µs]
+                        change: [-8.5270% -7.0294% -5.6973%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  1 (1.00%) low mild
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking interp_custom_word
+Benchmarking interp_custom_word: Warming up for 3.0000 s
+Benchmarking interp_custom_word: Collecting 100 samples in estimated 5.1327 s (152k iterations)
+Benchmarking interp_custom_word: Analyzing
+interp_custom_word      time:   [33.862 µs 34.009 µs 34.148 µs]
+                        change: [-8.0946% -7.1557% -6.2350%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) low mild
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking interp_vector_construction
+Benchmarking interp_vector_construction: Warming up for 3.0000 s
+Benchmarking interp_vector_construction: Collecting 100 samples in estimated 5.1286 s (162k iterations)
+Benchmarking interp_vector_construction: Analyzing
+interp_vector_construction
+                        time:   [30.902 µs 31.118 µs 31.440 µs]
+                        change: [-3.0977% -2.1551% -0.8508%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high severe
+
+Benchmarking interp_fraction_heavy
+Benchmarking interp_fraction_heavy: Warming up for 3.0000 s
+Benchmarking interp_fraction_heavy: Collecting 100 samples in estimated 5.1421 s (172k iterations)
+Benchmarking interp_fraction_heavy: Analyzing
+interp_fraction_heavy   time:   [29.723 µs 29.999 µs 30.356 µs]
+                        change: [-6.7531% -5.9339% -4.9702%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 10 outliers among 100 measurements (10.00%)
+  1 (1.00%) low mild
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+

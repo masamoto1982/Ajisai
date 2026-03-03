@@ -21,58 +21,13 @@
 // - .. PLAY: スタック全体を再生（マルチトラック）
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData, DisplayHint, AudioHint, Envelope, WaveformType};
+use crate::types::{Value, ValueData, AudioHint, Envelope, WaveformType};
 use crate::types::fraction::Fraction;
+use crate::interpreter::helpers::{is_vector_value, is_string_value, value_as_string};
 use super::Interpreter;
 use super::OperationTargetMode;
 use num_traits::ToPrimitive;
 use serde::Serialize;
-
-// ============================================================================
-// ヘルパー関数（統一Value宇宙アーキテクチャ用）
-// ============================================================================
-
-/// ベクタ値かどうかを判定
-fn is_vector_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Vector(_))
-}
-
-/// 文字列値かどうかを判定
-fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.is_nil()
-}
-
-/// Valueから文字列を取得
-fn value_as_string(val: &Value) -> String {
-    fn collect_chars(val: &Value) -> Vec<char> {
-        match &val.data {
-            ValueData::Nil => vec![],
-            ValueData::Scalar(f) => {
-                f.to_i64().and_then(|n| {
-                    if n >= 0 && n <= 0x10FFFF {
-                        char::from_u32(n as u32)
-                    } else {
-                        None
-                    }
-                }).map(|c| vec![c]).unwrap_or_default()
-            }
-            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
-                children.iter().flat_map(|c| collect_chars(c)).collect()
-            }
-            ValueData::CodeBlock(_) => vec![],
-        }
-    }
-    collect_chars(val).into_iter().collect()
-}
-
-/// ベクタの子要素を取得
-fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
-    match &val.data {
-        ValueData::Vector(children) => Some(children),
-        ValueData::JsonObject { pairs: children, .. } => Some(children),
-        _ => None,
-    }
-}
 
 // ============================================================================
 // PlayMode - 再生モード
@@ -516,7 +471,7 @@ fn build_audio_structure(
 
     // 文字列判定（歌詞: Outputに出力、時間消費なし）
     if is_string_value(value) {
-        let s = value_as_string(value);
+        let s = value_as_string(value).unwrap_or_default();
         output.push_str(&s);
         output.push('\n');
         return Ok(AudioStructure::Seq { children: vec![], envelope: None, waveform: WaveformType::Sine });
@@ -524,7 +479,7 @@ fn build_audio_structure(
 
     // ベクタ判定
     if is_vector_value(value) {
-        if let Some(children) = get_vector_children(value) {
+        if let Some(children) = value.as_vector() {
             if children.is_empty() {
                 return Err(AjisaiError::from("Empty vector not allowed"));
             }

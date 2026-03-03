@@ -44,21 +44,21 @@ pub struct Fraction {
 impl PartialEq for Fraction {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        // NIL special case: NIL == NIL, NIL != anything else
         if self.is_nil() || other.is_nil() {
             return self.is_nil() && other.is_nil();
         }
-        // i64 shortpath: both integers → direct numerator comparison (zero allocation)
         if self.denominator.is_one() && other.denominator.is_one() {
             return self.numerator == other.numerator;
         }
-        // i64 shortpath: both fit in i64 → i128 cross-multiplication (zero allocation)
         if let (Some((a, b)), Some((c, d))) =
             (self.try_as_i64_pair(), other.try_as_i64_pair())
         {
+            if b == d { return a == c; }
             return (a as i128) * (d as i128) == (c as i128) * (b as i128);
         }
-        // BigInt fallback: cross-multiplication
+        if self.denominator == other.denominator {
+            return self.numerator == other.numerator;
+        }
         &self.numerator * &other.denominator == &other.numerator * &self.denominator
     }
 }
@@ -83,7 +83,6 @@ impl Fraction {
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
         if denominator.is_zero() { panic!("Division by zero"); }
 
-        // Fast path: numerator is 0 → always 0/1
         if numerator.is_zero() {
             return Fraction {
                 numerator: BigInt::zero(),
@@ -91,7 +90,6 @@ impl Fraction {
             };
         }
 
-        // Fast path: denominator is 1 → already an integer, no GCD needed
         if denominator.is_one() {
             return Fraction { numerator, denominator };
         }
@@ -299,7 +297,7 @@ impl Fraction {
         }
     }
 
-    /// (a/b) + (c/d) = (a*d + c*b) / (b*d)
+    /// (a/b) + (c/d) with same-denominator fast path and cross-cancellation for shared factors.
     pub fn add(&self, other: &Fraction) -> Fraction {
         if self.is_nil() || other.is_nil() {
             return Self::nil();
@@ -321,10 +319,15 @@ impl Fraction {
         }
 
         if self.denominator == other.denominator {
-            return Fraction::new(
-                &self.numerator + &other.numerator,
-                self.denominator.clone(),
-            );
+            let sum = &self.numerator + &other.numerator;
+            if sum.is_zero() {
+                return Fraction { numerator: BigInt::zero(), denominator: BigInt::one() };
+            }
+            let g = sum.gcd(&self.denominator);
+            if g.is_one() {
+                return Self::new_already_reduced(sum, self.denominator.clone());
+            }
+            return Self::new_already_reduced(&sum / &g, &self.denominator / &g);
         }
 
         Fraction::new(
@@ -333,7 +336,7 @@ impl Fraction {
         )
     }
 
-    /// (a/b) - (c/d) = (a*d - c*b) / (b*d)
+    /// (a/b) - (c/d) with same-denominator fast path.
     pub fn sub(&self, other: &Fraction) -> Fraction {
         if self.is_nil() || other.is_nil() {
             return Self::nil();
@@ -355,10 +358,15 @@ impl Fraction {
         }
 
         if self.denominator == other.denominator {
-            return Fraction::new(
-                &self.numerator - &other.numerator,
-                self.denominator.clone(),
-            );
+            let diff = &self.numerator - &other.numerator;
+            if diff.is_zero() {
+                return Fraction { numerator: BigInt::zero(), denominator: BigInt::one() };
+            }
+            let g = diff.gcd(&self.denominator);
+            if g.is_one() {
+                return Self::new_already_reduced(diff, self.denominator.clone());
+            }
+            return Self::new_already_reduced(&diff / &g, &self.denominator / &g);
         }
 
         Fraction::new(
@@ -672,9 +680,15 @@ impl Ord for Fraction {
     #[inline]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+            if b == d {
+                return a.cmp(&c);
+            }
             let lhs = (a as i128) * (d as i128);
             let rhs = (c as i128) * (b as i128);
             return lhs.cmp(&rhs);
+        }
+        if self.denominator == other.denominator {
+            return self.numerator.cmp(&other.numerator);
         }
         let lhs = &self.numerator * &other.denominator;
         let rhs = &other.numerator * &self.denominator;

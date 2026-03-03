@@ -42,68 +42,15 @@
 
 use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::wrap_datetime;
-use crate::types::{Value, ValueData, DisplayHint};
+use crate::interpreter::helpers::{wrap_datetime, is_vector_value, is_string_value, value_as_string};
+use crate::types::{Value, DisplayHint};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{ToPrimitive, One, Zero};
 use wasm_bindgen::prelude::*;
 
-// ============================================================================
-// ヘルパー関数（統一Value宇宙アーキテクチャ用）
-// ============================================================================
-
-/// ベクタ値かどうかを判定
-fn is_vector_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Vector(_))
-}
-
-/// 文字列値かどうかを判定
-fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.is_nil()
-}
-
-/// 数値値かどうかを判定
 fn is_number_value(val: &Value) -> bool {
     matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto | DisplayHint::DateTime) && val.is_scalar()
-}
-
-/// Valueから文字列を取得
-fn value_as_string(val: &Value) -> Option<String> {
-    fn collect_chars(val: &Value) -> Vec<char> {
-        match &val.data {
-            ValueData::Nil => vec![],
-            ValueData::Scalar(f) => {
-                f.to_i64().and_then(|n| {
-                    if n >= 0 && n <= 0x10FFFF {
-                        char::from_u32(n as u32)
-                    } else {
-                        None
-                    }
-                }).map(|c| vec![c]).unwrap_or_default()
-            }
-            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
-                children.iter().flat_map(|c| collect_chars(c)).collect()
-            }
-            ValueData::CodeBlock(_) => vec![],
-        }
-    }
-
-    let chars = collect_chars(val);
-    if chars.is_empty() {
-        None
-    } else {
-        Some(chars.into_iter().collect())
-    }
-}
-
-/// ベクタの子要素を取得
-fn get_vector_children(val: &Value) -> Option<&Vec<Value>> {
-    if let ValueData::Vector(children) = &val.data {
-        Some(children)
-    } else {
-        None
-    }
 }
 
 /// NOW - 現在のUnixタイムスタンプを取得
@@ -173,7 +120,7 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let timezone = if is_vector_value(&tz_val) {
-        if let Some(children) = get_vector_children(&tz_val) {
+        if let Some(children) = tz_val.as_vector() {
             if children.len() == 1 && is_string_value(&children[0]) {
                 value_as_string(&children[0]).unwrap_or_default()
             } else {
@@ -202,7 +149,7 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
 
     // Vectorから数値またはDateTime型を抽出
     let timestamp = if is_vector_value(&val) {
-        if let Some(children) = get_vector_children(&val) {
+        if let Some(children) = val.as_vector() {
             if children.len() == 1 && is_number_value(&children[0]) {
                 if let Some(f) = children[0].as_scalar() {
                     f.clone()
@@ -296,7 +243,7 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     // タイムゾーン文字列を取得
     let tz_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let timezone = if is_vector_value(&tz_val) {
-        if let Some(children) = get_vector_children(&tz_val) {
+        if let Some(children) = tz_val.as_vector() {
             if children.len() == 1 && is_string_value(&children[0]) {
                 value_as_string(&children[0]).unwrap_or_default()
             } else {
@@ -325,9 +272,9 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     // Vectorから日付時刻成分を抽出（[[year month day hour minute second]]形式）
     let components = if is_vector_value(&val) {
-        if let Some(children) = get_vector_children(&val) {
+        if let Some(children) = val.as_vector() {
             if children.len() == 1 && is_vector_value(&children[0]) {
-                if let Some(inner_children) = get_vector_children(&children[0]) {
+                if let Some(inner_children) = children[0].as_vector() {
                     inner_children.clone()
                 } else {
                     interp.stack.push(val);
