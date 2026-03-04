@@ -130,6 +130,41 @@ export const createGUI = (): GUI => {
     let mobile: MobileHandler;
     let persistence: Persistence;
     let executionController: ExecutionController;
+    let currentMode: ViewMode = 'input';
+
+    const getTabButtons = (): Record<ViewMode, HTMLButtonElement> => ({
+        input: elements.tabInputBtn,
+        output: elements.tabOutputBtn,
+        stack: elements.tabStackBtn,
+        dictionary: elements.tabDictionaryBtn
+    });
+
+    const updateTabState = (mode: ViewMode): void => {
+        Object.entries(getTabButtons()).forEach(([key, button]) => {
+            const isActive = key === mode;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', String(isActive));
+        });
+    };
+
+    const syncPanelLayout = (mode: ViewMode): void => {
+        const isEditorMode = mode === 'input' || mode === 'output';
+        elements.editorPanel.style.display = isEditorMode ? 'flex' : 'none';
+        elements.statePanel.style.display = isEditorMode ? 'none' : 'flex';
+    };
+
+    const switchArea = (mode: ViewMode): void => {
+        currentMode = mode;
+        mobile.updateView(mode);
+        document.body.dataset.activeArea = mode;
+        syncPanelLayout(mode);
+        updateTabState(mode);
+    };
+
+    const updateInputPreview = (content: string): void => {
+        elements.inputPreviewBtn.textContent = normalizePreviewText(content);
+        elements.inputPreviewBtn.title = content.trim() === '' ? '(empty)' : content;
+    };
 
     const getTabButtons = (): Record<ViewMode, HTMLButtonElement> => ({
         input: elements.tabInputBtn,
@@ -265,6 +300,10 @@ export const createGUI = (): GUI => {
                 e.preventDefault();
                 executionController.executeStep();
             }
+        });
+
+        window.addEventListener('resize', () => {
+            switchArea(currentMode);
         });
 
         window.addEventListener('keydown', (e) => {
