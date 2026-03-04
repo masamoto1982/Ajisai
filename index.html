@@ -66,7 +66,18 @@
                 <button id="import-btn" class="header-btn" type="button">Import</button>
             </div>
         </header>
-        
+
+        <nav class="area-tabs" aria-label="Area tabs">
+            <button id="tab-input" class="area-tab active" type="button" data-mode="input" aria-selected="true">Input</button>
+            <button id="tab-output" class="area-tab" type="button" data-mode="output" aria-selected="false">Output</button>
+            <button id="tab-stack" class="area-tab" type="button" data-mode="stack" aria-selected="false">Stack</button>
+            <button id="tab-dictionary" class="area-tab" type="button" data-mode="dictionary" aria-selected="false">Dictionary</button>
+            <div class="input-preview" aria-live="polite">
+                <span class="input-preview-label">Input preview</span>
+                <button id="input-preview-btn" class="input-preview-btn" type="button"></button>
+            </div>
+        </nav>
+
         <main class="main-layout">
             <div id="editor-panel" class="panel">
                 <section class="output-area">
@@ -77,7 +88,7 @@
                 </section>
                 <section class="input-area">
                     <h2>Input
-                        <span class="tooltip-icon">i<span class="area-tooltip">入力は、タイピングによる方法と辞書エリアのワードボタンを使う方法があります。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span></span>
+                        <span class="tooltip-icon">i<span class="area-tooltip">入力はタイピング中心です。Ctrl+Spaceでオートコンプリート候補を表示できます。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span></span>
                     </h2>
                     <div class="textarea-wrapper">
                         <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here&#10;&#10;Run → Shift+Enter&#10;Step → Ctrl+Enter&#10;Abort → Escape&#10;Reset → Ctrl+Alt+Enter"></textarea>
@@ -87,6 +98,7 @@
                         <button id="run-btn" type="button">Run</button>
                         <button id="json-import-btn" type="button" class="json-import-btn" aria-label="Import JSON as vector">JSON</button>
                     </div>
+                    <p class="input-assist-hint">Autocomplete: Ctrl+Space / Tab / ↑↓</p>
                 </section>
             </div>
             
@@ -101,7 +113,7 @@
                 <section class="dictionary-area">
                     <div class="dictionary-header">
                         <h2>Dictionary
-                            <span class="tooltip-icon">i<span class="area-tooltip">ボタンの背景色はシグネチャ型を表します。<br><a href="docs/higher-order.html" target="_blank">Reference →</a></span></span>
+                            <span class="tooltip-icon">i<span class="area-tooltip">語彙の登録状況を確認するエリアです（入力はエディタのオートコンプリートを使用）。<br><a href="docs/higher-order.html" target="_blank">Reference →</a></span></span>
                         </h2>
                         <div class="search-wrapper">
                             <input type="text" id="word-search" placeholder="Search words..." aria-label="Search dictionary words">

@@ -3,7 +3,7 @@
 import { createDisplay, Display, DisplayElements } from './display';
 import { createDictionary, Dictionary, DictionaryElements } from './dictionary';
 import { createEditor, Editor } from './editor';
-import { createMobileHandler, MobileHandler, MobileElements } from './mobile';
+import { createMobileHandler, MobileHandler, MobileElements, ViewMode } from './mobile';
 import { createPersistence, Persistence } from './persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
 import { WORKER_MANAGER } from '../workers/worker-manager';
@@ -35,6 +35,13 @@ export interface GUIElements {
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
     readonly dictionaryArea: HTMLElement;
+    readonly editorPanel: HTMLElement;
+    readonly statePanel: HTMLElement;
+    readonly tabInputBtn: HTMLButtonElement;
+    readonly tabOutputBtn: HTMLButtonElement;
+    readonly tabStackBtn: HTMLButtonElement;
+    readonly tabDictionaryBtn: HTMLButtonElement;
+    readonly inputPreviewBtn: HTMLButtonElement;
 }
 
 export interface GUI {
@@ -68,7 +75,14 @@ const cacheElements = (): GUIElements => ({
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
-    dictionaryArea: document.querySelector('.dictionary-area')!
+    dictionaryArea: document.querySelector('.dictionary-area')!,
+    editorPanel: document.getElementById('editor-panel')!,
+    statePanel: document.getElementById('state-panel')!,
+    tabInputBtn: document.getElementById('tab-input') as HTMLButtonElement,
+    tabOutputBtn: document.getElementById('tab-output') as HTMLButtonElement,
+    tabStackBtn: document.getElementById('tab-stack') as HTMLButtonElement,
+    tabDictionaryBtn: document.getElementById('tab-dictionary') as HTMLButtonElement,
+    inputPreviewBtn: document.getElementById('input-preview-btn') as HTMLButtonElement
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -95,6 +109,19 @@ const checkStackHighlight = (content: string): boolean => {
     return stackRegex.test(content);
 };
 
+const normalizePreviewText = (content: string): string => {
+    const normalized = content.replace(/\s+/g, ' ').trim();
+    return normalized === '' ? '(empty)' : normalized;
+};
+
+const getAutocompleteWords = (): string[] => {
+    if (!window.ajisaiInterpreter) return [];
+
+    const builtinWords = window.ajisaiInterpreter.get_builtin_words_info().map(word => word[0]);
+    const customWords = window.ajisaiInterpreter.get_custom_words_info().map(word => word[0]);
+    return Array.from(new Set([...builtinWords, ...customWords])).sort((a, b) => a.localeCompare(b));
+};
+
 export const createGUI = (): GUI => {
     let elements: GUIElements;
     let display: Display;
@@ -103,6 +130,43 @@ export const createGUI = (): GUI => {
     let mobile: MobileHandler;
     let persistence: Persistence;
     let executionController: ExecutionController;
+    let currentMode: ViewMode = 'input';
+
+    const getTabButtons = (): Record<ViewMode, HTMLButtonElement> => ({
+        input: elements.tabInputBtn,
+        output: elements.tabOutputBtn,
+        stack: elements.tabStackBtn,
+        dictionary: elements.tabDictionaryBtn
+    });
+
+    const updateTabState = (mode: ViewMode): void => {
+        const tabButtons = getTabButtons();
+        (Object.keys(tabButtons) as ViewMode[]).forEach((key) => {
+            const button = tabButtons[key];
+            const isActive = key === mode;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', String(isActive));
+        });
+    };
+
+    const syncPanelLayout = (mode: ViewMode): void => {
+        const isEditorMode = mode === 'input' || mode === 'output';
+        elements.editorPanel.style.display = isEditorMode ? 'flex' : 'none';
+        elements.statePanel.style.display = isEditorMode ? 'none' : 'flex';
+    };
+
+    const switchArea = (mode: ViewMode): void => {
+        currentMode = mode;
+        mobile.updateView(mode);
+        document.body.dataset.activeArea = mode;
+        syncPanelLayout(mode);
+        updateTabState(mode);
+    };
+
+    const updateInputPreview = (content: string): void => {
+        elements.inputPreviewBtn.textContent = normalizePreviewText(content);
+        elements.inputPreviewBtn.title = content.trim() === '' ? '(empty)' : content;
+    };
 
     const updateHighlights = (content: string): void => {
         const hasStackWord = checkStackHighlight(content);
@@ -112,6 +176,8 @@ export const createGUI = (): GUI => {
         } else {
             elements.stackDisplay.classList.remove('highlight-all');
         }
+
+        updateInputPreview(content);
     };
 
     const updateAllDisplays = (): void => {
@@ -170,8 +236,19 @@ export const createGUI = (): GUI => {
 
         elements.clearBtn.addEventListener('click', () => editor.clear());
 
+        const tabButtons = getTabButtons();
+        (Object.keys(tabButtons) as ViewMode[]).forEach((mode) => {
+            const button = tabButtons[mode];
+            button.addEventListener('click', () => switchArea(mode));
+        });
+
+        elements.inputPreviewBtn.addEventListener('click', () => {
+            switchArea('input');
+            editor.focus();
+        });
+
         elements.testBtn?.addEventListener('click', () => {
-            mobile.updateView('execution');
+            switchArea('output');
             import('./test').then(({ createTestRunner }) => {
                 const testRunner = createTestRunner({
                     showInfo: (text, append) => display.showInfo(text, append),
@@ -197,6 +274,10 @@ export const createGUI = (): GUI => {
                 e.preventDefault();
                 executionController.executeStep();
             }
+        });
+
+        window.addEventListener('resize', () => {
+            switchArea(currentMode);
         });
 
         window.addEventListener('keydown', (e) => {
@@ -235,11 +316,14 @@ export const createGUI = (): GUI => {
 
         editor = createEditor(elements.codeInput, {
             onContentChange: updateHighlights,
-            onSwitchToInputMode: () => mobile.updateView('input')
+            onSwitchToInputMode: () => switchArea('input'),
+            onRequestSuggestions: () => getAutocompleteWords()
         });
 
         dictionary = createDictionary(extractDictionaryElements(elements), {
-            onWordClick: (word) => editor.insertWord(word),
+            onWordClick: (word) => {
+                display.showInfo(`Dictionary is now read-only. Type '${word}' in the editor or use autocomplete (Ctrl+Space).`, false);
+            },
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
             showInfo: (text, append) => display.showInfo(text, append)
@@ -256,13 +340,13 @@ export const createGUI = (): GUI => {
             updateDisplays: updateAllDisplays,
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),
-            updateView: (mode) => mobile.updateView(mode)
+            updateView: (mode) => switchArea(mode)
         });
 
         setupEventListeners();
         dictionary.renderBuiltinWords();
         updateAllDisplays();
-        mobile.updateView('input');
+        switchArea('input');
 
         // データの読み込みとボタン描画をワーカー初期化より先に行う。
         // ワーカーにはメインスレッドでコンパイル済みのWebAssembly.Moduleを
