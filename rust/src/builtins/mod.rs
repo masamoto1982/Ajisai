@@ -4,19 +4,22 @@ mod details;
 pub use definitions::get_builtin_definitions;
 pub use details::get_builtin_detail;
 
+use crate::types::WordDefinition;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use crate::types::WordDefinition;
 
 /// Registers all built-in words (including Music DSL) into the dictionary.
 pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) {
     for (name, description, _, _) in get_builtin_definitions() {
-        dictionary.insert(name.to_string(), Arc::new(WordDefinition {
-            lines: vec![],
-            is_builtin: true,
-            description: Some(description.to_string()),
-            dependencies: HashSet::new(),
-            original_source: None,
-        }));
+        dictionary.insert(
+            name.to_string(),
+            Arc::new(WordDefinition {
+                lines: std::sync::Arc::from([]),
+                is_builtin: true,
+                description: Some(description.to_string()),
+                dependencies: HashSet::new(),
+                original_source: None,
+            }),
+        );
     }
 }

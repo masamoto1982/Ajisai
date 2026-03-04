@@ -42,19 +42,19 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // 4. = で始まる演算子の処理（==, =>, =）
         if chars[i] == '=' {
             // == をチェック（パイプライン演算子）
-            if i + 1 < chars.len() && chars[i+1] == '=' {
+            if i + 1 < chars.len() && chars[i + 1] == '=' {
                 tokens.push(Token::Pipeline);
                 i += 2;
                 continue;
             }
             // => をチェック（Nil Coalescing演算子）
-            if i + 1 < chars.len() && chars[i+1] == '>' {
+            if i + 1 < chars.len() && chars[i + 1] == '>' {
                 tokens.push(Token::NilCoalesce);
                 i += 2;
                 continue;
             }
             // 単独の = は比較演算子シンボル
-            tokens.push(Token::Symbol("=".to_string()));
+            tokens.push(Token::Symbol("=".into()));
             i += 1;
             continue;
         }
@@ -62,19 +62,19 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // 5. シェブロン記号の処理（>>>, >>, >）
         if chars[i] == '>' {
             // >>> をチェック（デフォルト分岐）
-            if i + 2 < chars.len() && chars[i+1] == '>' && chars[i+2] == '>' {
+            if i + 2 < chars.len() && chars[i + 1] == '>' && chars[i + 2] == '>' {
                 tokens.push(Token::ChevronDefault);
                 i += 3;
                 continue;
             }
             // >> をチェック（条件/アクション分岐）
-            if i + 1 < chars.len() && chars[i+1] == '>' {
+            if i + 1 < chars.len() && chars[i + 1] == '>' {
                 tokens.push(Token::ChevronBranch);
                 i += 2;
                 continue;
             }
             // >= をチェック（廃止された比較演算子）
-            if i + 1 < chars.len() && chars[i+1] == '=' {
+            if i + 1 < chars.len() && chars[i + 1] == '=' {
                 return Err("The '>=' operator has been removed. Use '<= NOT' or reverse operands with '<=' instead.".to_string());
             }
             // 単独の '>' はエラー（廃止された比較演算子）
@@ -99,9 +99,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
         // 7. トークンの読み取り（空白または特殊文字まで）
         let start = i;
-        while i < chars.len()
-            && !chars[i].is_whitespace()
-            && !is_special_char(chars[i]) {
+        while i < chars.len() && !chars[i].is_whitespace() && !is_special_char(chars[i]) {
             i += 1;
         }
 
@@ -125,7 +123,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         // 10. シンボル（すべての残り - マルチバイト文字を含む）
-        tokens.push(Token::Symbol(token_str));
+        tokens.push(Token::Symbol(token_str.into()));
     }
 
     // 最後の不要なLineBreakを削除
@@ -139,7 +137,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 /// 特殊文字（トークン境界となる文字）の判定
 /// シングルクォートは文字列リテラル用
 fn is_special_char(c: char) -> bool {
-    matches!(c, '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '>' | '=' | '~')
+    matches!(
+        c,
+        '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '>' | '=' | '~'
+    )
 }
 
 fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
@@ -169,13 +170,15 @@ enum QuoteParseResult {
 }
 
 fn parse_quote(chars: &[char]) -> QuoteParseResult {
-    if chars.is_empty() { return QuoteParseResult::NotQuote; }
+    if chars.is_empty() {
+        return QuoteParseResult::NotQuote;
+    }
 
     let quote_char = chars[0];
 
     match quote_char {
         '\'' => parse_string_literal(chars),
-        _    => QuoteParseResult::NotQuote,
+        _ => QuoteParseResult::NotQuote,
     }
 }
 
@@ -193,7 +196,7 @@ fn parse_string_literal(chars: &[char]) -> QuoteParseResult {
         if chars[i] == '\'' {
             // 次の文字が区切り文字（または EOF）かチェック
             if i + 1 >= chars.len() || is_delimiter(chars[i + 1]) {
-                return QuoteParseResult::StringSuccess(Token::String(string), i + 1);
+                return QuoteParseResult::StringSuccess(Token::String(string.into()), i + 1);
             } else {
                 // 区切り文字ではないので、クォート文字を文字列に含める
                 string.push(chars[i]);
@@ -219,8 +222,8 @@ fn is_delimiter(c: char) -> bool {
 /// すべてのシンボルは統一的に Symbol として扱われる
 fn try_parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
-        "." => Some(Token::Symbol(".".to_string())),
-        ".." => Some(Token::Symbol("..".to_string())),
+        "." => Some(Token::Symbol(".".into())),
+        ".." => Some(Token::Symbol("..".into())),
         _ => None,
     }
 }
@@ -278,7 +281,7 @@ fn try_parse_number_from_string(s: &str) -> Option<Token> {
 
         // 全体を読み切ったかチェック
         if i == chars.len() {
-            return Some(Token::Number(s.to_string()));
+            return Some(Token::Number(s.into()));
         } else {
             // 余分な文字があるので数値ではない (例: "1/3abc")
             return None;
@@ -318,7 +321,7 @@ fn try_parse_number_from_string(s: &str) -> Option<Token> {
 
     // 全体を読み切ったかチェック
     if i == chars.len() {
-        Some(Token::Number(s.to_string()))
+        Some(Token::Number(s.into()))
     } else {
         // 余分な文字があるので数値ではない
         None

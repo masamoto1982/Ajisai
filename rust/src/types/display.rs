@@ -1,5 +1,5 @@
-use super::{Value, ValueData, DisplayHint, BracketType};
 use super::fraction::Fraction;
+use super::{BracketType, DisplayHint, Value, ValueData};
 use std::fmt;
 
 impl fmt::Display for Value {
@@ -73,7 +73,8 @@ fn display_value(data: &ValueData, depth: usize) -> String {
             let open = bracket.opening_char();
             let close = bracket.closing_char();
 
-            let inner: Vec<String> = v.iter()
+            let inner: Vec<String> = v
+                .iter()
                 .map(|child| display_value(&child.data, depth + 1))
                 .collect();
 
@@ -85,11 +86,12 @@ fn display_value(data: &ValueData, depth: usize) -> String {
 
 fn display_code_block(tokens: &[super::Token]) -> String {
     use super::Token;
-    let token_strs: Vec<String> = tokens.iter().map(|t| {
-        match t {
-            Token::Number(n) => n.clone(),
+    let token_strs: Vec<String> = tokens
+        .iter()
+        .map(|t| match t {
+            Token::Number(n) => n.to_string(),
             Token::String(s) => format!("'{}'", s),
-            Token::Symbol(s) => s.clone(),
+            Token::Symbol(s) => s.to_string(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
             Token::CodeBlockStart => ":".to_string(),
@@ -100,8 +102,8 @@ fn display_code_block(tokens: &[super::Token]) -> String {
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),
             Token::LineBreak => "\n".to_string(),
-        }
-    }).collect();
+        })
+        .collect();
     format!(": {} ;", token_strs.join(" "))
 }
 
@@ -134,7 +136,8 @@ fn display_as_string(data: &ValueData) -> String {
                 return "''".to_string();
             }
 
-            let chars: String = v.iter()
+            let chars: String = v
+                .iter()
                 .filter_map(|child| {
                     if let ValueData::Scalar(f) = &child.data {
                         f.to_i64().and_then(|n| {
@@ -173,33 +176,32 @@ fn display_as_boolean(data: &ValueData) -> String {
                 return "FALSE".to_string();
             }
 
-            let inner: Vec<&str> = v.iter()
-                .map(|child| {
-                    match &child.data {
-                        ValueData::Nil => "NIL",
-                        ValueData::Scalar(f) => {
-                            if f.is_nil() {
-                                "NIL"
-                            } else if f.is_zero() {
-                                "FALSE"
-                            } else {
-                                "TRUE"
-                            }
+            let inner: Vec<&str> = v
+                .iter()
+                .map(|child| match &child.data {
+                    ValueData::Nil => "NIL",
+                    ValueData::Scalar(f) => {
+                        if f.is_nil() {
+                            "NIL"
+                        } else if f.is_zero() {
+                            "FALSE"
+                        } else {
+                            "TRUE"
                         }
-                        ValueData::Vector(_) | ValueData::JsonObject { .. } => {
-                            let cv = match &child.data {
-                                ValueData::Vector(v) => v,
-                                ValueData::JsonObject { pairs, .. } => pairs,
-                                _ => unreachable!(),
-                            };
-                            if cv.is_empty() {
-                                "FALSE"
-                            } else {
-                                "TRUE"
-                            }
-                        }
-                        ValueData::CodeBlock(_) => "TRUE",
                     }
+                    ValueData::Vector(_) | ValueData::JsonObject { .. } => {
+                        let cv = match &child.data {
+                            ValueData::Vector(v) => v,
+                            ValueData::JsonObject { pairs, .. } => pairs,
+                            _ => unreachable!(),
+                        };
+                        if cv.is_empty() {
+                            "FALSE"
+                        } else {
+                            "TRUE"
+                        }
+                    }
+                    ValueData::CodeBlock(_) => "TRUE",
                 })
                 .collect();
             format!("{{ {} }}", inner.join(" "))
@@ -219,9 +221,7 @@ fn display_as_datetime(data: &ValueData) -> String {
                 format!("@{}/{}", f.numerator, f.denominator)
             }
         }
-        ValueData::Vector(_) | ValueData::JsonObject { .. } => {
-            display_value(data, 0)
-        }
+        ValueData::Vector(_) | ValueData::JsonObject { .. } => display_value(data, 0),
         ValueData::CodeBlock(tokens) => display_code_block(tokens),
     }
 }
