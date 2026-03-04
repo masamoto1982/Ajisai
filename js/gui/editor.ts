@@ -117,11 +117,27 @@ export const createEditor = (
         selectedSuggestionIndex = 0;
     };
 
+    const getCursorCoords = (el: HTMLTextAreaElement): { top: number; left: number } => {
+        const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20;
+        const paddingTop = parseFloat(getComputedStyle(el).paddingTop) || 0;
+        const text = el.value.substring(0, el.selectionStart);
+        const lines = text.split('\n');
+        const lineIndex = lines.length - 1;
+        const top = paddingTop + lineIndex * lineHeight + lineHeight;
+        const left = 0;
+        return { top, left };
+    };
+
     const renderSuggestions = (): void => {
         if (currentSuggestions.length === 0) {
             hideSuggestions();
             return;
         }
+
+        const { top, left } = getCursorCoords(element);
+        suggestionPanel.style.top = `${top}px`;
+        suggestionPanel.style.left = `${left + 8}px`;
+        suggestionPanel.style.bottom = 'auto';
 
         suggestionPanel.innerHTML = '';
         currentSuggestions.forEach((suggestion, index) => {

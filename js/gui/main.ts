@@ -41,7 +41,6 @@ export interface GUIElements {
     readonly tabOutputBtn: HTMLButtonElement;
     readonly tabStackBtn: HTMLButtonElement;
     readonly tabDictionaryBtn: HTMLButtonElement;
-    readonly inputPreviewBtn: HTMLButtonElement;
 }
 
 export interface GUI {
@@ -81,8 +80,7 @@ const cacheElements = (): GUIElements => ({
     tabInputBtn: document.getElementById('tab-input') as HTMLButtonElement,
     tabOutputBtn: document.getElementById('tab-output') as HTMLButtonElement,
     tabStackBtn: document.getElementById('tab-stack') as HTMLButtonElement,
-    tabDictionaryBtn: document.getElementById('tab-dictionary') as HTMLButtonElement,
-    inputPreviewBtn: document.getElementById('input-preview-btn') as HTMLButtonElement
+    tabDictionaryBtn: document.getElementById('tab-dictionary') as HTMLButtonElement
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -107,11 +105,6 @@ const extractMobileElements = (elements: GUIElements): MobileElements => ({
 const checkStackHighlight = (content: string): boolean => {
     const stackRegex = /(\s|^)\.\.(\s|$)/;
     return stackRegex.test(content);
-};
-
-const normalizePreviewText = (content: string): string => {
-    const normalized = content.replace(/\s+/g, ' ').trim();
-    return normalized === '' ? '(empty)' : normalized;
 };
 
 const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
@@ -155,6 +148,9 @@ export const createGUI = (): GUI => {
         const isEditorMode = mode === 'input' || mode === 'output';
         elements.editorPanel.style.display = isEditorMode ? 'flex' : 'none';
         elements.statePanel.style.display = isEditorMode ? 'none' : 'flex';
+        // 表示中のパネルが main-layout 全体を占有する
+        elements.editorPanel.style.flex = '1';
+        elements.statePanel.style.flex = '1';
     };
 
     const switchArea = (mode: ViewMode): void => {
@@ -165,11 +161,6 @@ export const createGUI = (): GUI => {
         updateTabState(mode);
     };
 
-    const updateInputPreview = (content: string): void => {
-        elements.inputPreviewBtn.textContent = normalizePreviewText(content);
-        elements.inputPreviewBtn.title = content.trim() === '' ? '(empty)' : content;
-    };
-
     const updateHighlights = (content: string): void => {
         const hasStackWord = checkStackHighlight(content);
 
@@ -178,8 +169,6 @@ export const createGUI = (): GUI => {
         } else {
             elements.stackDisplay.classList.remove('highlight-all');
         }
-
-        updateInputPreview(content);
     };
 
     const updateAllDisplays = (): void => {
@@ -242,11 +231,6 @@ export const createGUI = (): GUI => {
         TAB_MODES.forEach((mode) => {
             const button = tabButtons[mode];
             button.addEventListener('click', () => switchArea(mode));
-        });
-
-        elements.inputPreviewBtn.addEventListener('click', () => {
-            switchArea('input');
-            editor.focus();
         });
 
         elements.testBtn?.addEventListener('click', () => {
