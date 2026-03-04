@@ -114,6 +114,8 @@ const normalizePreviewText = (content: string): string => {
     return normalized === '' ? '(empty)' : normalized;
 };
 
+const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
+
 const getAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
@@ -140,7 +142,9 @@ export const createGUI = (): GUI => {
     });
 
     const updateTabState = (mode: ViewMode): void => {
-        Object.entries(getTabButtons()).forEach(([key, button]) => {
+        const tabButtons = getTabButtons();
+        TAB_MODES.forEach((key) => {
+            const button = tabButtons[key];
             const isActive = key === mode;
             button.classList.toggle('active', isActive);
             button.setAttribute('aria-selected', String(isActive));
@@ -158,36 +162,6 @@ export const createGUI = (): GUI => {
         mobile.updateView(mode);
         document.body.dataset.activeArea = mode;
         syncPanelLayout(mode);
-        updateTabState(mode);
-    };
-
-    const updateInputPreview = (content: string): void => {
-        elements.inputPreviewBtn.textContent = normalizePreviewText(content);
-        elements.inputPreviewBtn.title = content.trim() === '' ? '(empty)' : content;
-    };
-
-    const getTabButtons = (): Record<ViewMode, HTMLButtonElement> => ({
-        input: elements.tabInputBtn,
-        output: elements.tabOutputBtn,
-        stack: elements.tabStackBtn,
-        dictionary: elements.tabDictionaryBtn
-    });
-
-    const updateTabState = (mode: ViewMode): void => {
-        Object.entries(getTabButtons()).forEach(([key, button]) => {
-            const isActive = key === mode;
-            button.classList.toggle('active', isActive);
-            button.setAttribute('aria-selected', String(isActive));
-        });
-    };
-
-    const switchArea = (mode: ViewMode): void => {
-        mobile.updateView(mode);
-        document.body.dataset.activeArea = mode;
-
-        const isEditorMode = mode === 'input' || mode === 'output';
-        elements.editorPanel.style.display = isEditorMode ? 'flex' : 'none';
-        elements.statePanel.style.display = isEditorMode ? 'none' : 'flex';
         updateTabState(mode);
     };
 
@@ -264,8 +238,10 @@ export const createGUI = (): GUI => {
 
         elements.clearBtn.addEventListener('click', () => editor.clear());
 
-        Object.entries(getTabButtons()).forEach(([mode, button]) => {
-            button.addEventListener('click', () => switchArea(mode as ViewMode));
+        const tabButtons = getTabButtons();
+        TAB_MODES.forEach((mode) => {
+            const button = tabButtons[mode];
+            button.addEventListener('click', () => switchArea(mode));
         });
 
         elements.inputPreviewBtn.addEventListener('click', () => {
