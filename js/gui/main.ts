@@ -114,6 +114,8 @@ const normalizePreviewText = (content: string): string => {
     return normalized === '' ? '(empty)' : normalized;
 };
 
+const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
+
 const getAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
@@ -141,7 +143,7 @@ export const createGUI = (): GUI => {
 
     const updateTabState = (mode: ViewMode): void => {
         const tabButtons = getTabButtons();
-        (Object.keys(tabButtons) as ViewMode[]).forEach((key) => {
+        TAB_MODES.forEach((key) => {
             const button = tabButtons[key];
             const isActive = key === mode;
             button.classList.toggle('active', isActive);
@@ -237,7 +239,7 @@ export const createGUI = (): GUI => {
         elements.clearBtn.addEventListener('click', () => editor.clear());
 
         const tabButtons = getTabButtons();
-        (Object.keys(tabButtons) as ViewMode[]).forEach((mode) => {
+        TAB_MODES.forEach((mode) => {
             const button = tabButtons[mode];
             button.addEventListener('click', () => switchArea(mode));
         });
