@@ -18,6 +18,7 @@ pub mod vector_exec;
 pub mod json;
 
 use std::collections::{HashMap, HashSet};
+use std::borrow::Cow;
 use std::sync::Arc;
 use smallvec::SmallVec;
 use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
@@ -108,6 +109,14 @@ impl Interpreter {
         self.safe_mode = false;
     }
 
+    fn normalize_symbol<'a>(symbol: &'a str) -> Cow<'a, str> {
+        if symbol.as_bytes().iter().any(|b| b.is_ascii_lowercase()) {
+            Cow::Owned(symbol.to_uppercase())
+        } else {
+            Cow::Borrowed(symbol)
+        }
+    }
+
     fn collect_vector(&mut self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
         self.collect_vector_with_depth(tokens, start_index, 1)
     }
@@ -148,8 +157,8 @@ impl Interpreter {
                 },
                 Token::Symbol(s) => {
                     // TRUE/FALSE/NILは特別な値として処理
-                    let upper = s.to_uppercase();
-                    match upper.as_str() {
+                    let upper = Self::normalize_symbol(s);
+                    match upper.as_ref() {
                         "TRUE" => values.push(Value::from_bool(true)),
                         "FALSE" => values.push(Value::from_bool(false)),
                         "NIL" => values.push(Value::nil()),
@@ -157,7 +166,7 @@ impl Interpreter {
                             // カスタムワード（非組み込み）の場合、実行して結果を取得する。
                             // 安全性のため、スタックを退避し空の状態でワードを実行する。
                             // 実行に失敗した場合は文字列として扱う（Vector Duality用）。
-                            let resolved = if let Some(def) = self.dictionary.get(&upper) {
+                            let resolved = if let Some(def) = self.dictionary.get(upper.as_ref()) {
                                 !def.is_builtin
                             } else {
                                 false
@@ -166,7 +175,7 @@ impl Interpreter {
                             if resolved {
                                 let stack_backup = std::mem::take(&mut self.stack);
                                 let output_backup = std::mem::take(&mut self.output_buffer);
-                                match self.execute_word_core(&upper) {
+                                match self.execute_word_core(upper.as_ref()) {
                                     Ok(()) => {
                                         let results = std::mem::replace(&mut self.stack, stack_backup);
                                         self.output_buffer = output_backup;
@@ -302,17 +311,18 @@ impl Interpreter {
                             self.set_consumption_mode(ConsumptionMode::Consume);
                         },
                         _ => {
-                            let upper = s.to_uppercase();
-                            match upper.as_str() {
+                            let upper = Self::normalize_symbol(s);
+                            match upper.as_ref() {
                                 "WAIT" => {
                                     let action = self.prepare_wait_action()?;
+                                    self.reset_modes();
                                     return Ok((i + 1, Some(action)));
                                 },
                                 _ => {
                                     if self.safe_mode {
                                         let stack_snapshot = self.stack.clone();
                                         self.safe_mode = false;
-                                        match self.execute_word_core(&upper) {
+                                        match self.execute_word_core(upper.as_ref()) {
                                             Ok(()) => {}
                                             Err(_) => {
                                                 self.stack = stack_snapshot;
@@ -320,7 +330,7 @@ impl Interpreter {
                                             }
                                         }
                                     } else {
-                                        self.execute_word_core(&upper)?;
+                                        self.execute_word_core(upper.as_ref())?;
                                     }
                                     // SEQ/SIM preserve modes for PLAY
                                     if upper != "SEQ" && upper != "SIM" {
@@ -826,9 +836,11 @@ impl Interpreter {
                 for token in line.body_tokens.iter() {
                     if let Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
-                        if self.dictionary.contains_key(&upper_s) && !self.dictionary.get(&upper_s).unwrap().is_builtin {
-                            dependencies.insert(upper_s.clone());
-                            self.dependents.entry(upper_s).or_default().insert(word_name.clone());
+                        if let Some(dep_def) = self.dictionary.get(&upper_s) {
+                            if !dep_def.is_builtin {
+                                dependencies.insert(upper_s.clone());
+                                self.dependents.entry(upper_s).or_default().insert(word_name.clone());
+                            }
                         }
                     }
                 }
@@ -1600,6 +1612,21 @@ ADDTEST
         // [1] [2] [3] [3] + → [1] [2] [6]  (consumeモードなので[3]が消費される)
         assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements: {:?}", interp.stack);
     }
+
+
+    #[test]
+    fn test_wait_resets_modes_in_section_core() {
+        let mut interp = Interpreter::new();
+        interp.execute_guard_structure_sync(&interp.tokens_to_lines(&crate::tokenizer::tokenize(": [9] ; 'NOP' DEF").unwrap()).unwrap()).unwrap();
+
+        let tokens = crate::tokenizer::tokenize(".. ,, 'NOP' [0] WAIT").unwrap();
+        let result = interp.execute_section_core(&tokens, 0);
+        assert!(result.is_ok(), "WAIT should be prepared in section core: {:?}", result);
+
+        assert_eq!(interp.operation_target_mode, OperationTargetMode::StackTop);
+        assert_eq!(interp.consumption_mode, ConsumptionMode::Consume);
+    }
+
 
     #[tokio::test]
     async fn test_keep_mode_with_mul() {
