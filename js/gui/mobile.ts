@@ -50,7 +50,7 @@ const getNextMode = (currentMode: ViewMode, direction: 'left' | 'right'): ViewMo
 };
 
 const getInputModeStyles = (): Record<keyof MobileElements, string> => ({
-    inputArea: 'block',
+    inputArea: 'flex',
     outputArea: 'none',
     stackArea: 'none',
     dictionaryArea: 'none'
@@ -58,7 +58,7 @@ const getInputModeStyles = (): Record<keyof MobileElements, string> => ({
 
 const getOutputModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
-    outputArea: 'block',
+    outputArea: 'flex',
     stackArea: 'none',
     dictionaryArea: 'none'
 });
@@ -66,7 +66,7 @@ const getOutputModeStyles = (): Record<keyof MobileElements, string> => ({
 const getStackModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'none',
-    stackArea: 'block',
+    stackArea: 'flex',
     dictionaryArea: 'none'
 });
 
@@ -74,7 +74,7 @@ const getDictionaryModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'none',
     stackArea: 'none',
-    dictionaryArea: 'block'
+    dictionaryArea: 'flex'
 });
 
 const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> =>
