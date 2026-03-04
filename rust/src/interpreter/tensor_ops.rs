@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::interpreter::helpers::wrap_number;
@@ -179,7 +180,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
             .map(|f| Value::from_fraction(f.clone()))
             .collect();
         return Value {
-            data: ValueData::Vector(children),
+            data: ValueData::Vector(Rc::new(children)),
             display_hint: hint,
             audio_hint: None,
         };
@@ -199,7 +200,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
         .collect();
 
     Value {
-        data: ValueData::Vector(children),
+        data: ValueData::Vector(Rc::new(children)),
         display_hint: hint,
         audio_hint: None,
     }
@@ -312,7 +313,7 @@ where
                 .map(|c| apply_unary_to_value(c, op))
                 .collect();
             Value {
-                data: ValueData::Vector(new_children),
+                data: ValueData::Vector(Rc::new(new_children)),
                 display_hint: val.display_hint,
                 audio_hint: val.audio_hint.clone(),
             }
@@ -428,7 +429,7 @@ where
                 .map(|c| apply_scalar_to_value(scalar, c, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Number,
                 audio_hint: None,
             })
@@ -448,7 +449,7 @@ where
                 .map(|c| apply_scalar_to_value(scalar, c, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: val.display_hint,
                 audio_hint: val.audio_hint.clone(),
             })
@@ -468,7 +469,7 @@ where
                 .map(|c| apply_value_to_scalar(c, scalar, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Number,
                 audio_hint: None,
             })
@@ -488,7 +489,7 @@ where
                 .map(|c| apply_value_to_scalar(c, scalar, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: val.display_hint,
                 audio_hint: val.audio_hint.clone(),
             })
@@ -517,7 +518,7 @@ where
                 .map(|(a, b)| apply_values(a, b, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Number,
                 audio_hint: None,
             })
@@ -545,7 +546,7 @@ where
                 .map(|(a, b)| apply_values(a, b, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: a.display_hint,
                 audio_hint: a.audio_hint.clone(),
             })
@@ -556,7 +557,7 @@ where
                 .map(|c| apply_scalar_to_value(fa, c, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: b.display_hint,
                 audio_hint: b.audio_hint.clone(),
             })
@@ -567,7 +568,7 @@ where
                 .map(|c| apply_value_to_scalar(c, fb, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: a.display_hint,
                 audio_hint: a.audio_hint.clone(),
             })

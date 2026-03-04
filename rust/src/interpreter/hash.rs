@@ -153,7 +153,7 @@ fn serialize_value_inner(val: &Value, bytes: &mut Vec<u8>) {
     if let ValueData::Vector(children) = &val.data {
         bytes.push(0x04);
         bytes.extend_from_slice(&(children.len() as u32).to_le_bytes());
-        for elem in children {
+        for elem in children.iter() {
             serialize_value_inner(elem, bytes);
         }
     }

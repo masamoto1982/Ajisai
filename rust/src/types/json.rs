@@ -1,5 +1,6 @@
 use serde_json;
 use std::collections::HashMap;
+use std::rc::Rc;
 use crate::types::{Value, ValueData, DisplayHint, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
@@ -43,7 +44,7 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
                 values.push(from_json(item, depth + 1)?);
             }
             Ok(Value {
-                data: ValueData::Vector(values),
+                data: ValueData::Vector(Rc::new(values)),
                 display_hint: DisplayHint::Auto,
                 audio_hint: None,
             })
@@ -63,13 +64,13 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
                 let key_val = Value::from_string(&key);
                 let val_val = from_json(val, depth + 1)?;
                 pairs.push(Value {
-                    data: ValueData::Vector(vec![key_val, val_val]),
+                    data: ValueData::Vector(Rc::new(vec![key_val, val_val])),
                     display_hint: DisplayHint::Auto,
                     audio_hint: None,
                 });
             }
             Ok(Value {
-                data: ValueData::JsonObject { pairs, index },
+                data: ValueData::JsonObject { pairs: Rc::new(pairs), index },
                 display_hint: DisplayHint::Auto,
                 audio_hint: None,
             })
@@ -101,7 +102,7 @@ pub fn to_json(val: &Value) -> serde_json::Value {
 
         ValueData::JsonObject { pairs, .. } => {
             let mut map = serde_json::Map::new();
-            for pair in pairs {
+            for pair in pairs.iter() {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
                         let key = value_to_string_content(&kv[0]);
@@ -133,7 +134,7 @@ pub fn to_json(val: &Value) -> serde_json::Value {
 
             if is_json_object(children) {
                 let mut map = serde_json::Map::new();
-                for pair in children {
+                for pair in children.iter() {
                     if let ValueData::Vector(kv) = &pair.data {
                         if kv.len() == 2 {
                             let key = value_to_string_content(&kv[0]);
@@ -240,7 +241,7 @@ mod tests {
     fn test_from_json_object() {
         let val = from_json(serde_json::json!({"name": "Ajisai"}), 1).unwrap();
         assert!(val.is_vector());
-        if let ValueData::Vector(pairs) = &val.data {
+        if let ValueData::JsonObject { pairs, .. } = &val.data {
             assert_eq!(pairs.len(), 1);
             if let ValueData::Vector(kv) = &pairs[0].data {
                 assert_eq!(kv.len(), 2);
@@ -287,11 +288,11 @@ mod tests {
     #[test]
     fn test_to_json_array() {
         let val = Value {
-            data: ValueData::Vector(vec![
+            data: ValueData::Vector(Rc::new(vec![
                 Value::from_int(1),
                 Value::from_int(2),
                 Value::from_int(3),
-            ]),
+            ])),
             display_hint: DisplayHint::Auto,
             audio_hint: None,
         };

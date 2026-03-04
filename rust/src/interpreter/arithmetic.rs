@@ -5,6 +5,7 @@
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_integer_from_value, get_operands, push_result};
+use crate::interpreter::simd_ops;
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
@@ -87,7 +88,7 @@ where
             if va.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::JsonObject { .. }))
                 && vb.iter().all(|v| matches!(v.data, ValueData::Scalar(_)))
             {
-                let rhs = Value::from_children(vb.clone());
+                let rhs = Value::from_children((**vb).clone());
                 let result: Result<Vec<Value>> = va.iter()
                     .map(|ai| broadcast_binary_op(ai, &rhs, op))
                     .collect();
@@ -97,7 +98,7 @@ where
             if vb.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::JsonObject { .. }))
                 && va.iter().all(|v| matches!(v.data, ValueData::Scalar(_)))
             {
-                let lhs = Value::from_children(va.clone());
+                let lhs = Value::from_children((**va).clone());
                 let result: Result<Vec<Value>> = vb.iter()
                     .map(|bi| broadcast_binary_op(&lhs, bi, op))
                     .collect();
@@ -210,15 +211,87 @@ where
 }
 
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
+    // SIMD fast path for integer vector addition
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = &interp.stack[stack_len - 2];
+        let b = &interp.stack[stack_len - 1];
+
+        // Try vector + vector SIMD
+        if let Some(result) = simd_ops::try_simd_add(a, b) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+
+        // Try scalar + vector or vector + scalar SIMD
+        if let Some(result) = simd_ops::try_simd_scalar_add(a, b)
+            .or_else(|| simd_ops::try_simd_scalar_add(b, a))
+        {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+    }
     binary_arithmetic_op(interp, |a, b| Ok(a.add(b)), "+")
 }
 
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
+    // SIMD fast path for integer vector subtraction
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = &interp.stack[stack_len - 2];
+        let b = &interp.stack[stack_len - 1];
+
+        if let Some(result) = simd_ops::try_simd_sub(a, b) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+    }
     binary_arithmetic_op(interp, |a, b| Ok(a.sub(b)), "-")
 }
 
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+
+    // SIMD fast path for integer vector multiplication
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = &interp.stack[stack_len - 2];
+        let b = &interp.stack[stack_len - 1];
+
+        // Try vector * vector SIMD
+        if let Some(result) = simd_ops::try_simd_mul(a, b) {
+            if !is_keep_mode {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+
+        // Try scalar * vector or vector * scalar SIMD
+        if let Some(result) = simd_ops::try_simd_scalar_mul(a, b)
+            .or_else(|| simd_ops::try_simd_scalar_mul(b, a))
+        {
+            if !is_keep_mode {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+    }
 
     if interp.operation_target_mode == OperationTargetMode::StackTop {
         let operands = get_operands(interp, 2)?;

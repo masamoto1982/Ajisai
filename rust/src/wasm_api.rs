@@ -149,7 +149,7 @@ impl AjisaiInterpreter {
                         let mut valid = top.len() >= 1 && top.len() <= 9;
                         if valid {
                             if let ValueData::Vector(children) = &top.data {
-                                for child in children {
+                                for child in children.iter() {
                                     if let Some(val) = child.as_usize() {
                                         if val >= 1 && val <= 100 {
                                             dims.push(val);
@@ -684,7 +684,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
         "vector" => {
             let js_array = js_sys::Array::new();
             if let ValueData::Vector(children) = &value.data {
-                for child in children {
+                for child in children.iter() {
                     js_array.push(&value_to_js_value(child));
                 }
             }
