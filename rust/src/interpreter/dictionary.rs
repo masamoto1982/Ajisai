@@ -1,8 +1,8 @@
-use crate::interpreter::{Interpreter, WordDefinition, OperationTargetMode};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_word_name_from_value;
 use crate::interpreter::vector_exec::vector_to_source;
-use crate::error::{AjisaiError, Result};
-use crate::types::{Token, ExecutionLine, DisplayHint, Value, ValueData};
+use crate::interpreter::{Interpreter, OperationTargetMode, WordDefinition};
+use crate::types::{DisplayHint, ExecutionLine, Token, Value, ValueData};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -10,18 +10,21 @@ fn value_to_string(val: &Value) -> Result<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
             ValueData::Nil => vec![],
-            ValueData::Scalar(f) => {
-                f.to_i64().and_then(|n| {
+            ValueData::Scalar(f) => f
+                .to_i64()
+                .and_then(|n| {
                     if n >= 0 && n <= 0x10FFFF {
                         char::from_u32(n as u32)
                     } else {
                         None
                     }
-                }).map(|c| vec![c]).unwrap_or_default()
-            }
-            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
-                children.iter().flat_map(|c| collect_chars(c)).collect()
-            }
+                })
+                .map(|c| vec![c])
+                .unwrap_or_default(),
+            ValueData::Vector(children)
+            | ValueData::JsonObject {
+                pairs: children, ..
+            } => children.iter().flat_map(|c| collect_chars(c)).collect(),
             ValueData::CodeBlock(_) => vec![],
         }
     }
@@ -46,12 +49,11 @@ fn is_string_like(val: &Value) -> bool {
     fn check_codepoints(val: &Value) -> bool {
         match &val.data {
             ValueData::Nil => false,
-            ValueData::Scalar(f) => {
-                f.to_i64().map(|n| n >= 0 && n <= 0x10FFFF).unwrap_or(false)
-            }
-            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
-                children.iter().all(|c| check_codepoints(c))
-            }
+            ValueData::Scalar(f) => f.to_i64().map(|n| n >= 0 && n <= 0x10FFFF).unwrap_or(false),
+            ValueData::Vector(children)
+            | ValueData::JsonObject {
+                pairs: children, ..
+            } => children.iter().all(|c| check_codepoints(c)),
             ValueData::CodeBlock(_) => false,
         }
     }
@@ -61,7 +63,10 @@ fn is_string_like(val: &Value) -> bool {
 
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "DEF".into(), mode: "Stack".into() });
+        return Err(AjisaiError::ModeUnsupported {
+            word: "DEF".into(),
+            mode: "Stack".into(),
+        });
     }
 
     if interp.stack.len() < 2 {
@@ -102,30 +107,30 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let definition_str = match &def_val.data {
-        ValueData::CodeBlock(tokens) => {
-            tokens.iter().map(|t| {
-                match t {
-                    Token::Number(n) => n.clone(),
-                    Token::String(s) => format!("'{}'", s),
-                    Token::Symbol(s) => s.clone(),
-                    Token::VectorStart => "[".to_string(),
-                    Token::VectorEnd => "]".to_string(),
-                    Token::CodeBlockStart => ":".to_string(),
-                    Token::CodeBlockEnd => ";".to_string(),
-                    Token::ChevronBranch => ">>".to_string(),
-                    Token::ChevronDefault => ">>>".to_string(),
-                    Token::Pipeline => "==".to_string(),
-                    Token::NilCoalesce => "=>".to_string(),
-                    Token::SafeMode => "~".to_string(),
-                    Token::LineBreak => "\n".to_string(),
-                }
-            }).collect::<Vec<_>>().join(" ")
-        }
-        ValueData::Vector(_) | ValueData::JsonObject { .. } => {
-            vector_to_source(&def_val)?
-        }
+        ValueData::CodeBlock(tokens) => tokens
+            .iter()
+            .map(|t| match t {
+                Token::Number(n) => n.to_string(),
+                Token::String(s) => format!("'{}'", s),
+                Token::Symbol(s) => s.to_string(),
+                Token::VectorStart => "[".to_string(),
+                Token::VectorEnd => "]".to_string(),
+                Token::CodeBlockStart => ":".to_string(),
+                Token::CodeBlockEnd => ";".to_string(),
+                Token::ChevronBranch => ">>".to_string(),
+                Token::ChevronDefault => ">>>".to_string(),
+                Token::Pipeline => "==".to_string(),
+                Token::NilCoalesce => "=>".to_string(),
+                Token::SafeMode => "~".to_string(),
+                Token::LineBreak => "\n".to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
+        ValueData::Vector(_) | ValueData::JsonObject { .. } => vector_to_source(&def_val)?,
         _ => {
-            return Err(AjisaiError::from("DEF requires a code block (: ... ;) or vector as definition body"));
+            return Err(AjisaiError::from(
+                "DEF requires a code block (: ... ;) or vector as definition body",
+            ));
         }
     };
 
@@ -135,7 +140,12 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     op_def_inner(interp, &name_str, &tokens, description)
 }
 
-pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token], description: Option<String>) -> Result<()> {
+pub(crate) fn op_def_inner(
+    interp: &mut Interpreter,
+    name: &str,
+    tokens: &[Token],
+    description: Option<String>,
+) -> Result<()> {
     let upper_name = name.to_uppercase();
 
     if let Some(existing) = interp.dictionary.get(&upper_name) {
@@ -180,7 +190,9 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = s.to_uppercase();
-                if interp.dictionary.contains_key(&upper_s) && !interp.dictionary.get(&upper_s).unwrap().is_builtin {
+                if interp.dictionary.contains_key(&upper_s)
+                    && !interp.dictionary.get(&upper_s).unwrap().is_builtin
+                {
                     new_dependencies.insert(upper_s);
                 }
             }
@@ -188,19 +200,27 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     }
 
     for dep_name in &new_dependencies {
-        interp.dependents.entry(dep_name.clone()).or_default().insert(upper_name.clone());
+        interp
+            .dependents
+            .entry(dep_name.clone())
+            .or_default()
+            .insert(upper_name.clone());
     }
 
     let new_def = WordDefinition {
-        lines,
+        lines: lines.into(),
         is_builtin: false,
         description,
         dependencies: new_dependencies,
         original_source: None,
     };
 
-    interp.dictionary.insert(upper_name.clone(), Arc::new(new_def));
-    interp.output_buffer.push_str(&format!("Defined word: {}\n", name));
+    interp
+        .dictionary
+        .insert(upper_name.clone(), Arc::new(new_def));
+    interp
+        .output_buffer
+        .push_str(&format!("Defined word: {}\n", name));
     interp.force_flag = false;
     Ok(())
 }
@@ -213,23 +233,23 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     while i < tokens.len() {
         match &tokens[i] {
             Token::String(s) if s.starts_with('\'') && s.ends_with('\'') => {
-                let inner = &s[1..s.len()-1];
+                let inner = &s[1..s.len() - 1];
 
                 let inner_tokens = crate::tokenizer::tokenize(inner)
                     .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
                 processed_tokens.push(Token::VectorStart);
                 processed_tokens.extend(inner_tokens);
                 processed_tokens.push(Token::VectorEnd);
-            },
+            }
             Token::LineBreak => {
                 if !processed_tokens.is_empty() {
                     let execution_line = ExecutionLine {
-                        body_tokens: processed_tokens.clone(),
+                        body_tokens: processed_tokens.clone().into(),
                     };
                     lines.push(execution_line);
                     processed_tokens.clear();
                 }
-            },
+            }
             _ => {
                 processed_tokens.push(tokens[i].clone());
             }
@@ -239,7 +259,7 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
 
     if !processed_tokens.is_empty() {
         let execution_line = ExecutionLine {
-            body_tokens: processed_tokens,
+            body_tokens: processed_tokens.into(),
         };
         lines.push(execution_line);
     }
@@ -253,7 +273,10 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "DEL".into(), mode: "Stack".into() });
+        return Err(AjisaiError::ModeUnsupported {
+            word: "DEL".into(),
+            mode: "Stack".into(),
+        });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -273,7 +296,8 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     } else {
         interp.force_flag = false;
         return Err(AjisaiError::from(format!(
-            "Word '{}' is not defined", upper_name
+            "Word '{}' is not defined",
+            upper_name
         )));
     }
 
@@ -307,7 +331,9 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             ));
         }
 
-        interp.output_buffer.push_str(&format!("Deleted word: {}\n", name));
+        interp
+            .output_buffer
+            .push_str(&format!("Deleted word: {}\n", name));
     }
 
     interp.force_flag = false;
@@ -316,7 +342,10 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "? (LOOKUP)".into(), mode: "Stack".into() });
+        return Err(AjisaiError::ModeUnsupported {
+            word: "? (LOOKUP)".into(),
+            mode: "Stack".into(),
+        });
     }
 
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -335,7 +364,9 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
         if let Some(original_source) = &def.original_source {
             interp.definition_to_load = Some(original_source.clone());
         } else {
-            let definition = interp.get_word_definition_tokens(&upper_name).unwrap_or_default();
+            let definition = interp
+                .get_word_definition_tokens(&upper_name)
+                .unwrap_or_default();
             let full_definition = if definition.is_empty() {
                 format!("[ NIL ] '{}' DEF", name_str)
             } else {
@@ -364,8 +395,11 @@ mod tests {
         let result = interp.execute("[ [ [ 1 ] + ] ] 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Cannot redefine built-in word"),
-                "Expected error message to contain 'Cannot redefine built-in word', got: {}", err_msg);
+        assert!(
+            err_msg.contains("Cannot redefine built-in word"),
+            "Expected error message to contain 'Cannot redefine built-in word', got: {}",
+            err_msg
+        );
     }
 
     #[tokio::test]
@@ -404,10 +438,18 @@ mod tests {
         for word in builtin_words {
             let code = format!("[ [ 1 ] + ] '{}' DEF", word);
             let result = interp.execute(&code).await;
-            assert!(result.is_err(), "Should not be able to override builtin word: {}", word);
+            assert!(
+                result.is_err(),
+                "Should not be able to override builtin word: {}",
+                word
+            );
             let err_msg = result.unwrap_err().to_string();
-            assert!(err_msg.contains("Cannot redefine built-in word"),
-                    "Expected error for {}, got: {}", word, err_msg);
+            assert!(
+                err_msg.contains("Cannot redefine built-in word"),
+                "Expected error for {}, got: {}",
+                word,
+                err_msg
+            );
         }
     }
 
@@ -418,34 +460,49 @@ mod tests {
         let result = interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' .. DEF").await;
         assert!(result.is_err(), "DEF should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("DEF") && err_msg.contains("Stack mode"),
-                "Expected Stack mode error for DEF, got: {}", err_msg);
+        assert!(
+            err_msg.contains("DEF") && err_msg.contains("Stack mode"),
+            "Expected Stack mode error for DEF, got: {}",
+            err_msg
+        );
     }
 
     #[tokio::test]
     async fn test_del_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF").await.unwrap();
+        interp
+            .execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF")
+            .await
+            .unwrap();
 
         let result = interp.execute("'DOUBLE' .. DEL").await;
         assert!(result.is_err(), "DEL should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("DEL") && err_msg.contains("Stack mode"),
-                "Expected Stack mode error for DEL, got: {}", err_msg);
+        assert!(
+            err_msg.contains("DEL") && err_msg.contains("Stack mode"),
+            "Expected Stack mode error for DEL, got: {}",
+            err_msg
+        );
     }
 
     #[tokio::test]
     async fn test_lookup_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF").await.unwrap();
+        interp
+            .execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF")
+            .await
+            .unwrap();
 
         let result = interp.execute("'DOUBLE' .. ?").await;
         assert!(result.is_err(), "? (LOOKUP) should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("?") && err_msg.contains("Stack mode"),
-                "Expected Stack mode error for ?, got: {}", err_msg);
+        assert!(
+            err_msg.contains("?") && err_msg.contains("Stack mode"),
+            "Expected Stack mode error for ?, got: {}",
+            err_msg
+        );
     }
 
     fn restore_sample_words(interp: &mut Interpreter, sample_words: &[(&str, &str, &str)]) {
@@ -459,7 +516,9 @@ mod tests {
                 .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
         }
 
-        interp.rebuild_dependencies().expect("Failed to rebuild dependencies");
+        interp
+            .rebuild_dependencies()
+            .expect("Failed to rebuild dependencies");
     }
 
     #[tokio::test]
@@ -500,11 +559,19 @@ mod tests {
         restore_sample_words(&mut interp, &sample_words);
 
         let result = interp.execute("C4").await;
-        assert!(result.is_ok(), "Executing C4 should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Executing C4 should succeed: {:?}",
+            result.err()
+        );
         assert_eq!(interp.stack.len(), 1);
 
         let result = interp.execute("D4").await;
-        assert!(result.is_ok(), "Executing D4 should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Executing D4 should succeed: {:?}",
+            result.err()
+        );
         assert_eq!(interp.stack.len(), 2);
     }
 
@@ -525,12 +592,28 @@ mod tests {
 
         // Custom word names inside a vector literal should resolve to their values
         let result = interp.execute("[ C4 D4 E4 ] SEQ PLAY").await;
-        assert!(result.is_ok(), "[ C4 D4 E4 ] SEQ PLAY should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "[ C4 D4 E4 ] SEQ PLAY should succeed: {:?}",
+            result.err()
+        );
 
         let output = interp.get_output();
-        assert!(output.contains("AUDIO:"), "Should contain AUDIO command, got: {}", output);
-        assert!(output.contains("\"type\":\"tone\""), "Should contain tone, got: {}", output);
-        assert!(output.contains("\"frequency\":264"), "Should contain C4 frequency 264Hz, got: {}", output);
+        assert!(
+            output.contains("AUDIO:"),
+            "Should contain AUDIO command, got: {}",
+            output
+        );
+        assert!(
+            output.contains("\"type\":\"tone\""),
+            "Should contain tone, got: {}",
+            output
+        );
+        assert!(
+            output.contains("\"frequency\":264"),
+            "Should contain C4 frequency 264Hz, got: {}",
+            output
+        );
     }
 
     #[tokio::test]
@@ -548,14 +631,20 @@ mod tests {
         let _ = interp.execute("C4").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            assert!(val.as_scalar().is_some(), "C4 should push a scalar, not a vector");
+            assert!(
+                val.as_scalar().is_some(),
+                "C4 should push a scalar, not a vector"
+            );
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
 
         let _ = interp.execute("D4").await.unwrap();
         assert_eq!(interp.stack.len(), 2);
         if let Some(val) = interp.stack.last() {
-            assert!(val.as_scalar().is_some(), "D4 should push a scalar, not a vector");
+            assert!(
+                val.as_scalar().is_some(),
+                "D4 should push a scalar, not a vector"
+            );
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 297);
         }
     }
@@ -568,10 +657,18 @@ mod tests {
 
         // [ [ 2 ] * ] uses builtin * which should remain as a string
         let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
-        assert!(result.is_ok(), "Vector Duality DEF should still work: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Vector Duality DEF should still work: {:?}",
+            result.err()
+        );
 
         let result = interp.execute("[ 5 ] DOUBLE").await;
-        assert!(result.is_ok(), "Executing DOUBLE should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Executing DOUBLE should succeed: {:?}",
+            result.err()
+        );
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
                 assert_eq!(children.len(), 1);
@@ -597,12 +694,22 @@ mod tests {
 
         // Nested vector: [ [ C4 E4 G4 ] ] should create a vector of a vector of scalars
         let result = interp.execute("[ [ C4 E4 G4 ] ] SIM PLAY").await;
-        assert!(result.is_ok(), "Nested vector with custom words should work: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Nested vector with custom words should work: {:?}",
+            result.err()
+        );
 
         let output = interp.get_output();
         assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
-        assert!(output.contains("\"frequency\":264"), "Should contain C4 frequency");
-        assert!(output.contains("\"frequency\":396"), "Should contain G4 frequency");
+        assert!(
+            output.contains("\"frequency\":264"),
+            "Should contain C4 frequency"
+        );
+        assert!(
+            output.contains("\"frequency\":396"),
+            "Should contain G4 frequency"
+        );
     }
 
     #[tokio::test]
@@ -610,10 +717,18 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let result = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
-        assert!(result.is_ok(), "DEF with vector should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "DEF with vector should succeed: {:?}",
+            result
+        );
 
         let result = interp.execute("[ 5 ] DOUBLE").await;
-        assert!(result.is_ok(), "Executing DOUBLE should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Executing DOUBLE should succeed: {:?}",
+            result
+        );
 
         assert_eq!(interp.stack.len(), 1, "Stack should have 1 element");
         if let Some(val) = interp.stack.last() {

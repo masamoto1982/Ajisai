@@ -1,10 +1,11 @@
-pub mod fraction;
 pub mod display;
+pub mod fraction;
 pub mod json;
 
-use std::collections::{HashMap, HashSet};
 use self::fraction::Fraction;
 use serde::Serialize;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -57,7 +58,10 @@ pub enum DisplayHint {
 pub enum ValueData {
     Scalar(Fraction),
     Vector(Vec<Value>),
-    JsonObject { pairs: Vec<Value>, index: HashMap<String, usize> },
+    JsonObject {
+        pairs: Vec<Value>,
+        index: HashMap<String, usize>,
+    },
     Nil,
     CodeBlock(Vec<Token>),
 }
@@ -107,9 +111,10 @@ impl Value {
     }
 
     pub fn from_string(s: &str) -> Self {
-        let children: Vec<Value> = s.chars()
-            .map(|c| Value::from_int(c as u32 as i64))
-            .collect();
+        let mut children: Vec<Value> = Vec::with_capacity(s.chars().count());
+        for c in s.chars() {
+            children.push(Value::from_int(c as u32 as i64));
+        }
 
         if children.is_empty() {
             return Self {
@@ -183,7 +188,10 @@ impl Value {
 
     #[inline]
     pub fn is_vector(&self) -> bool {
-        matches!(self.data, ValueData::Vector(_) | ValueData::JsonObject { .. })
+        matches!(
+            self.data,
+            ValueData::Vector(_) | ValueData::JsonObject { .. }
+        )
     }
 
     #[inline]
@@ -455,9 +463,9 @@ impl Value {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    Number(String),
-    String(String),
-    Symbol(String),
+    Number(Arc<str>),
+    String(Arc<str>),
+    Symbol(Arc<str>),
     VectorStart,
     VectorEnd,
     CodeBlockStart,
@@ -505,12 +513,12 @@ impl BracketType {
 
 #[derive(Debug, Clone)]
 pub struct ExecutionLine {
-    pub body_tokens: Vec<Token>,
+    pub body_tokens: Arc<[Token]>,
 }
 
 #[derive(Debug, Clone)]
 pub struct WordDefinition {
-    pub lines: Vec<ExecutionLine>,
+    pub lines: Arc<[ExecutionLine]>,
     pub is_builtin: bool,
     pub description: Option<String>,
     pub dependencies: HashSet<String>,

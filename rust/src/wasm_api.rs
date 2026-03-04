@@ -1,14 +1,14 @@
-use wasm_bindgen::prelude::*;
-use serde_wasm_bindgen::to_value;
-use crate::interpreter::Interpreter;
-use crate::types::{Value, ValueData, DisplayHint, Token, ExecutionLine};
-use crate::types::fraction::Fraction;
-use num_bigint::BigInt;
-use std::str::FromStr;
-use serde::{Deserialize, Serialize};
-use crate::interpreter;
-use crate::tokenizer;
 use crate::builtins;
+use crate::interpreter;
+use crate::interpreter::Interpreter;
+use crate::tokenizer;
+use crate::types::fraction::Fraction;
+use crate::types::{DisplayHint, ExecutionLine, Token, Value, ValueData};
+use num_bigint::BigInt;
+use serde::{Deserialize, Serialize};
+use serde_wasm_bindgen::to_value;
+use std::str::FromStr;
+use wasm_bindgen::prelude::*;
 
 fn is_string_value(val: &Value) -> bool {
     val.display_hint == DisplayHint::String && val.is_vector()
@@ -32,7 +32,8 @@ fn is_vector_value(val: &Value) -> bool {
 
 fn value_as_string(val: &Value) -> String {
     let fractions = val.flatten_fractions();
-    let bytes: Vec<u8> = fractions.iter()
+    let bytes: Vec<u8> = fractions
+        .iter()
         .filter_map(|f| {
             f.to_i64().and_then(|n| {
                 if n >= 0 && n <= 255 {
@@ -61,11 +62,17 @@ fn generate_bracket_structure_from_shape(shape: &[usize]) -> String {
         let (open, close) = bracket_chars_for_depth(depth);
         if shape.len() == 1 {
             let empty = format!("{} {}", open, close);
-            (0..shape[0]).map(|_| empty.as_str()).collect::<Vec<_>>().join(" ")
+            (0..shape[0])
+                .map(|_| empty.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
         } else {
             let inner = build_level(&shape[1..], depth + 1);
             let one_element = format!("{} {} {}", open, inner, close);
-            (0..shape[0]).map(|_| one_element.as_str()).collect::<Vec<_>>().join(" ")
+            (0..shape[0])
+                .map(|_| one_element.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
         }
     }
     if shape.is_empty() {
@@ -116,7 +123,10 @@ impl AjisaiInterpreter {
             let is_valid = if prefix_len == 0 {
                 true
             } else {
-                upper_code.chars().nth(prefix_len - 1).map_or(false, |c| c.is_whitespace())
+                upper_code
+                    .chars()
+                    .nth(prefix_len - 1)
+                    .map_or(false, |c| c.is_whitespace())
             };
 
             if is_valid {
@@ -125,7 +135,8 @@ impl AjisaiInterpreter {
                     if !prefix_code.is_empty() {
                         if let Err(e) = self.interpreter.execute(prefix_code).await {
                             js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                            js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
+                            js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into())
+                                .unwrap();
                             js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
                             return Ok(obj.into());
                         }
@@ -155,7 +166,11 @@ impl AjisaiInterpreter {
                                 valid = false;
                             }
                         }
-                        if valid { Some(dims) } else { None }
+                        if valid {
+                            Some(dims)
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
@@ -169,7 +184,12 @@ impl AjisaiInterpreter {
                     js_sys::Reflect::set(&obj, &"inputHelper".into(), &helper_text.into()).unwrap();
                     js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                     js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                    js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
+                    js_sys::Reflect::set(
+                        &obj,
+                        &"customWords".into(),
+                        &self.get_custom_words_for_state(),
+                    )
+                    .unwrap();
                     return Ok(obj.into());
                 } else {
                     js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -186,10 +206,16 @@ impl AjisaiInterpreter {
                 let output = self.interpreter.get_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"customWords".into(),
+                    &self.get_custom_words_for_state(),
+                )
+                .unwrap();
 
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
-                    js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into())
+                        .unwrap();
                 }
             }
             Err(e) => {
@@ -212,11 +238,18 @@ impl AjisaiInterpreter {
             self.current_step_code = code.to_string();
 
             match tokenizer::tokenize(code) {
-                Ok(tokens) => { self.step_tokens = tokens; }
+                Ok(tokens) => {
+                    self.step_tokens = tokens;
+                }
                 Err(e) => {
                     self.step_mode = false;
                     js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"message".into(), &format!("Tokenization error: {}", e).into()).unwrap();
+                    js_sys::Reflect::set(
+                        &obj,
+                        &"message".into(),
+                        &format!("Tokenization error: {}", e).into(),
+                    )
+                    .unwrap();
                     js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
                     return obj.into();
                 }
@@ -226,7 +259,8 @@ impl AjisaiInterpreter {
         if self.step_position >= self.step_tokens.len() {
             self.step_mode = false;
             js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"output".into(), &"Step execution completed".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"output".into(), &"Step execution completed".into())
+                .unwrap();
             js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
             return obj.into();
         }
@@ -234,7 +268,7 @@ impl AjisaiInterpreter {
         let token = self.step_tokens[self.step_position].clone();
 
         let line = ExecutionLine {
-            body_tokens: vec![token],
+            body_tokens: vec![token].into(),
         };
         let result = self.interpreter.execute_guard_structure_sync(&[line]);
 
@@ -244,11 +278,31 @@ impl AjisaiInterpreter {
                 self.step_position += 1;
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"hasMore".into(), &(self.step_position < self.step_tokens.len()).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"position".into(), &(self.step_position as u32).into()).unwrap();
-                js_sys::Reflect::set(&obj, &"total".into(), &(self.step_tokens.len() as u32).into()).unwrap();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"hasMore".into(),
+                    &(self.step_position < self.step_tokens.len()).into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"position".into(),
+                    &(self.step_position as u32).into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"total".into(),
+                    &(self.step_tokens.len() as u32).into(),
+                )
+                .unwrap();
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"customWords".into(),
+                    &self.get_custom_words_for_state(),
+                )
+                .unwrap();
             }
             Err(e) => {
                 self.step_mode = false;
@@ -274,9 +328,15 @@ impl AjisaiInterpreter {
         match self.interpreter.execute_reset() {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into())
+                    .unwrap();
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
-                js_sys::Reflect::set(&obj, &"customWords".into(), &self.get_custom_words_for_state()).unwrap();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"customWords".into(),
+                    &self.get_custom_words_for_state(),
+                )
+                .unwrap();
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -301,14 +361,24 @@ impl AjisaiInterpreter {
         let js_array = js_sys::Array::new();
 
         for (name, def) in self.interpreter.dictionary.iter() {
-            if def.is_builtin { continue; }
+            if def.is_builtin {
+                continue;
+            }
 
-            let is_protected = self.interpreter.dependents.get(name)
+            let is_protected = self
+                .interpreter
+                .dependents
+                .get(name)
                 .map_or(false, |deps| !deps.is_empty());
 
             let item = js_sys::Array::new();
             item.push(&name.clone().into());
-            item.push(&def.description.clone().map(JsValue::from).unwrap_or(JsValue::NULL));
+            item.push(
+                &def.description
+                    .clone()
+                    .map(JsValue::from)
+                    .unwrap_or(JsValue::NULL),
+            );
             item.push(&is_protected.into());
 
             js_array.push(&item);
@@ -318,14 +388,15 @@ impl AjisaiInterpreter {
     }
 
     fn get_custom_words_for_state(&self) -> JsValue {
-        let words_info: Vec<CustomWordData> = self.interpreter.dictionary.iter()
+        let words_info: Vec<CustomWordData> = self
+            .interpreter
+            .dictionary
+            .iter()
             .filter(|(_, def)| !def.is_builtin)
-            .map(|(name, def)| {
-                CustomWordData {
-                    name: name.clone(),
-                    definition: self.interpreter.get_word_definition_tokens(name),
-                    description: def.description.clone(),
-                }
+            .map(|(name, def)| CustomWordData {
+                name: name.clone(),
+                definition: self.interpreter.get_word_definition_tokens(name),
+                description: def.description.clone(),
             })
             .collect();
         to_value(&words_info).unwrap_or(JsValue::NULL)
@@ -339,7 +410,8 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
         let upper_name = name.to_uppercase();
-        self.interpreter.get_word_definition_tokens(&upper_name)
+        self.interpreter
+            .get_word_definition_tokens(&upper_name)
             .map(|def| JsValue::from_str(&def))
             .unwrap_or(JsValue::NULL)
     }
@@ -393,21 +465,25 @@ impl AjisaiInterpreter {
         let obj = js_sys::Object::new();
 
         match serde_json::from_str::<serde_json::Value>(json_string) {
-            Ok(json_val) => {
-                match from_json(json_val, 1) {
-                    Ok(parsed) => {
-                        self.interpreter.stack.push(parsed);
-                        js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                    }
-                    Err(e) => {
-                        js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                        js_sys::Reflect::set(&obj, &"message".into(), &format!("{}", e).into()).unwrap();
-                    }
+            Ok(json_val) => match from_json(json_val, 1) {
+                Ok(parsed) => {
+                    self.interpreter.stack.push(parsed);
+                    js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 }
-            }
+                Err(e) => {
+                    js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
+                    js_sys::Reflect::set(&obj, &"message".into(), &format!("{}", e).into())
+                        .unwrap();
+                }
+            },
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &format!("JSON parse error: {}", e).into()).unwrap();
+                js_sys::Reflect::set(
+                    &obj,
+                    &"message".into(),
+                    &format!("JSON parse error: {}", e).into(),
+                )
+                .unwrap();
             }
         }
         Ok(obj.into())
@@ -427,11 +503,18 @@ impl AjisaiInterpreter {
             let tokens = tokenizer::tokenize(&definition)
                 .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
 
-            interpreter::dictionary::op_def_inner(&mut self.interpreter, &word.name, &tokens, word.description.clone())
-                .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
+            interpreter::dictionary::op_def_inner(
+                &mut self.interpreter,
+                &word.name,
+                &tokens,
+                word.description.clone(),
+            )
+            .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
         }
 
-        self.interpreter.rebuild_dependencies().map_err(|e| e.to_string())?;
+        self.interpreter
+            .rebuild_dependencies()
+            .map_err(|e| e.to_string())?;
 
         // 復元時の内部メッセージはユーザーに見せない
         let _ = self.interpreter.get_output();
@@ -444,43 +527,56 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
     let type_str = js_sys::Reflect::get(&obj, &"type".into())
         .map_err(|_| "Failed to get 'type' property".to_string())?
-        .as_string().ok_or("Type not string")?;
+        .as_string()
+        .ok_or("Type not string")?;
     let value_js = js_sys::Reflect::get(&obj, &"value".into())
         .map_err(|_| "Failed to get 'value' property".to_string())?;
 
     match type_str.as_str() {
         "number" => {
             let num_obj = js_sys::Object::from(value_js);
-            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|_| "No numerator".to_string())?.as_string().ok_or("Numerator not string")?;
-            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|_| "No denominator".to_string())?.as_string().ok_or("Denominator not string")?;
+            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into())
+                .map_err(|_| "No numerator".to_string())?
+                .as_string()
+                .ok_or("Numerator not string")?;
+            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into())
+                .map_err(|_| "No denominator".to_string())?
+                .as_string()
+                .ok_or("Denominator not string")?;
             let fraction = Fraction::new(
                 BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                BigInt::from_str(&den_str).map_err(|e| e.to_string())?
+                BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
             );
             Ok(Value::from_fraction(fraction))
-        },
+        }
         "datetime" => {
             let num_obj = js_sys::Object::from(value_js);
-            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into()).map_err(|_| "No numerator".to_string())?.as_string().ok_or("Numerator not string")?;
-            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into()).map_err(|_| "No denominator".to_string())?.as_string().ok_or("Denominator not string")?;
+            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into())
+                .map_err(|_| "No numerator".to_string())?
+                .as_string()
+                .ok_or("Numerator not string")?;
+            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into())
+                .map_err(|_| "No denominator".to_string())?
+                .as_string()
+                .ok_or("Denominator not string")?;
             let fraction = Fraction::new(
                 BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                BigInt::from_str(&den_str).map_err(|e| e.to_string())?
+                BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
             );
             Ok(Value::from_datetime(fraction))
-        },
+        }
         "string" => {
             let s = value_js.as_string().ok_or("Value not string")?;
             Ok(Value::from_string(&s))
-        },
+        }
         "boolean" => {
             let b = value_js.as_bool().ok_or("Value not boolean")?;
             Ok(Value::from_bool(b))
-        },
+        }
         "symbol" => {
             let s = value_js.as_string().ok_or("Value not string")?;
             Ok(Value::from_symbol(&s))
-        },
+        }
         "vector" => {
             let js_array = js_sys::Array::from(&value_js);
             let mut vec = Vec::new();
@@ -488,7 +584,7 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 vec.push(js_value_to_value(js_array.get(i))?);
             }
             Ok(Value::from_vector(vec))
-        },
+        }
         "tensor" => {
             let tensor_obj = js_sys::Object::from(value_js);
 
@@ -500,23 +596,23 @@ fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 let frac_obj = js_sys::Object::from(data_array.get(i));
                 let num_str = js_sys::Reflect::get(&frac_obj, &"numerator".into())
                     .map_err(|_| "No numerator in tensor data".to_string())?
-                    .as_string().ok_or("Numerator not string")?;
+                    .as_string()
+                    .ok_or("Numerator not string")?;
                 let den_str = js_sys::Reflect::get(&frac_obj, &"denominator".into())
                     .map_err(|_| "No denominator in tensor data".to_string())?
-                    .as_string().ok_or("Denominator not string")?;
+                    .as_string()
+                    .ok_or("Denominator not string")?;
                 let fraction = Fraction::new(
                     BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?
+                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
                 );
                 fractions.push(fraction);
             }
 
-            let children: Vec<Value> = fractions.into_iter()
-                .map(Value::from_fraction)
-                .collect();
+            let children: Vec<Value> = fractions.into_iter().map(Value::from_fraction).collect();
 
             Ok(Value::from_children(children))
-        },
+        }
         "nil" => Ok(Value::nil()),
         _ => Err(format!("Unknown type: {}", type_str)),
     }
@@ -560,21 +656,31 @@ fn value_to_js_value(value: &Value) -> JsValue {
         "number" | "datetime" => {
             if let Some(f) = value.as_scalar() {
                 let num_obj = js_sys::Object::new();
-                js_sys::Reflect::set(&num_obj, &"numerator".into(), &f.numerator.to_string().into()).unwrap();
-                js_sys::Reflect::set(&num_obj, &"denominator".into(), &f.denominator.to_string().into()).unwrap();
+                js_sys::Reflect::set(
+                    &num_obj,
+                    &"numerator".into(),
+                    &f.numerator.to_string().into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &num_obj,
+                    &"denominator".into(),
+                    &f.denominator.to_string().into(),
+                )
+                .unwrap();
                 js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
             }
-        },
+        }
         "string" => {
             let s = value_as_string(value);
             js_sys::Reflect::set(&obj, &"value".into(), &s.into()).unwrap();
-        },
+        }
         "boolean" => {
             if let Some(f) = value.as_scalar() {
                 let b = !f.is_zero();
                 js_sys::Reflect::set(&obj, &"value".into(), &b.into()).unwrap();
             }
-        },
+        }
         "vector" => {
             let js_array = js_sys::Array::new();
             if let ValueData::Vector(children) = &value.data {
@@ -583,7 +689,7 @@ fn value_to_js_value(value: &Value) -> JsValue {
                 }
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
-        },
+        }
         _ => {}
     };
 
@@ -601,16 +707,40 @@ mod test_input_helper {
         assert_eq!(generate_bracket_structure_from_shape(&[3]), "{ } { } { }");
 
         assert_eq!(generate_bracket_structure_from_shape(&[1, 1]), "{ ( ) }");
-        assert_eq!(generate_bracket_structure_from_shape(&[1, 2]), "{ ( ) ( ) }");
-        assert_eq!(generate_bracket_structure_from_shape(&[1, 3]), "{ ( ) ( ) ( ) }");
-        assert_eq!(generate_bracket_structure_from_shape(&[2, 3]), "{ ( ) ( ) ( ) } { ( ) ( ) ( ) }");
+        assert_eq!(
+            generate_bracket_structure_from_shape(&[1, 2]),
+            "{ ( ) ( ) }"
+        );
+        assert_eq!(
+            generate_bracket_structure_from_shape(&[1, 3]),
+            "{ ( ) ( ) ( ) }"
+        );
+        assert_eq!(
+            generate_bracket_structure_from_shape(&[2, 3]),
+            "{ ( ) ( ) ( ) } { ( ) ( ) ( ) }"
+        );
 
-        assert_eq!(generate_bracket_structure_from_shape(&[1, 1, 1]), "{ ( [ ] ) }");
-        assert_eq!(generate_bracket_structure_from_shape(&[1, 1, 2]), "{ ( [ ] [ ] ) }");
-        assert_eq!(generate_bracket_structure_from_shape(&[1, 2, 3]), "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }");
-        assert_eq!(generate_bracket_structure_from_shape(&[2, 2, 3]), "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) } { ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }");
+        assert_eq!(
+            generate_bracket_structure_from_shape(&[1, 1, 1]),
+            "{ ( [ ] ) }"
+        );
+        assert_eq!(
+            generate_bracket_structure_from_shape(&[1, 1, 2]),
+            "{ ( [ ] [ ] ) }"
+        );
+        assert_eq!(
+            generate_bracket_structure_from_shape(&[1, 2, 3]),
+            "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }"
+        );
+        assert_eq!(
+            generate_bracket_structure_from_shape(&[2, 2, 3]),
+            "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) } { ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }"
+        );
 
         // 4D: brackets cycle back to { }
-        assert_eq!(generate_bracket_structure_from_shape(&[1, 1, 1, 1]), "{ ( [ { } ] ) }");
+        assert_eq!(
+            generate_bracket_structure_from_shape(&[1, 1, 1, 1]),
+            "{ ( [ { } ] ) }"
+        );
     }
 }

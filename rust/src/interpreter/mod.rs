@@ -1,34 +1,34 @@
-pub(crate) mod helpers;
-pub mod vector_ops;
-pub mod tensor_ops;
 pub mod arithmetic;
-pub mod comparison;
-pub mod logic;
-pub mod control;
-pub mod dictionary;
-pub mod io;
-pub mod higher_order;
-pub mod cast;
-pub mod datetime;
-pub mod sort;
-pub mod random;
-pub mod hash;
 pub mod audio;
-pub mod vector_exec;
+pub mod cast;
+pub mod comparison;
+pub mod control;
+pub mod datetime;
+pub mod dictionary;
+pub mod hash;
+pub(crate) mod helpers;
+pub mod higher_order;
+pub mod io;
 pub mod json;
+pub mod logic;
+pub mod random;
+pub mod sort;
+pub mod tensor_ops;
+pub mod vector_exec;
+pub mod vector_ops;
 
-use std::collections::{HashMap, HashSet};
-use std::borrow::Cow;
-use std::sync::Arc;
+use crate::types::{ExecutionLine, Stack, Token, Value, WordDefinition, MAX_VISIBLE_DIMENSIONS};
 use smallvec::SmallVec;
-use crate::types::{Stack, Token, Value, WordDefinition, ExecutionLine, MAX_VISIBLE_DIMENSIONS};
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 pub const MAX_CALL_DEPTH: usize = 4;
 
-use crate::types::fraction::Fraction;
-use crate::error::{Result, AjisaiError};
-use async_recursion::async_recursion;
 use self::helpers::wrap_number;
+use crate::error::{AjisaiError, Result};
+use crate::types::fraction::Fraction;
+use async_recursion::async_recursion;
 use gloo_timers::future::sleep;
 use std::time::Duration;
 
@@ -46,10 +46,7 @@ pub enum ConsumptionMode {
 
 #[derive(Debug, Clone)]
 pub enum AsyncAction {
-    Wait {
-        duration_ms: u64,
-        word_name: String,
-    },
+    Wait { duration_ms: u64, word_name: String },
 }
 
 pub struct Interpreter {
@@ -117,11 +114,20 @@ impl Interpreter {
         }
     }
 
-    fn collect_vector(&mut self, tokens: &[Token], start_index: usize) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector(
+        &mut self,
+        tokens: &[Token],
+        start_index: usize,
+    ) -> Result<(Vec<Value>, usize)> {
         self.collect_vector_with_depth(tokens, start_index, 1)
     }
 
-    fn collect_vector_with_depth(&mut self, tokens: &[Token], start_index: usize, depth: usize) -> Result<(Vec<Value>, usize)> {
+    fn collect_vector_with_depth(
+        &mut self,
+        tokens: &[Token],
+        start_index: usize,
+        depth: usize,
+    ) -> Result<(Vec<Value>, usize)> {
         if depth > MAX_VISIBLE_DIMENSIONS {
             return Err(AjisaiError::DimensionLimitExceeded { depth });
         }
@@ -136,25 +142,30 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart => {
-                    let (nested_values, consumed) = self.collect_vector_with_depth(tokens, i, depth + 1)?;
+                    let (nested_values, consumed) =
+                        self.collect_vector_with_depth(tokens, i, depth + 1)?;
                     // 空のベクターは許容しない
                     if nested_values.is_empty() {
-                        return Err(AjisaiError::from("Empty vector is not allowed. Use NIL for empty values."));
+                        return Err(AjisaiError::from(
+                            "Empty vector is not allowed. Use NIL for empty values.",
+                        ));
                     }
                     values.push(Value::from_vector(nested_values));
                     i += consumed;
-                },
+                }
                 Token::VectorEnd => {
                     return Ok((values, i - start_index + 1));
-                },
+                }
                 Token::Number(n) => {
-                    values.push(Value::from_number(Fraction::from_str_unreduced(n).map_err(AjisaiError::from)?));
+                    values.push(Value::from_number(
+                        Fraction::from_str_unreduced(n).map_err(AjisaiError::from)?,
+                    ));
                     i += 1;
-                },
+                }
                 Token::String(s) => {
                     values.push(Value::from_string(s));
                     i += 1;
-                },
+                }
                 Token::Symbol(s) => {
                     // TRUE/FALSE/NILは特別な値として処理
                     let upper = Self::normalize_symbol(s);
@@ -177,7 +188,8 @@ impl Interpreter {
                                 let output_backup = std::mem::take(&mut self.output_buffer);
                                 match self.execute_word_core(upper.as_ref()) {
                                     Ok(()) => {
-                                        let results = std::mem::replace(&mut self.stack, stack_backup);
+                                        let results =
+                                            std::mem::replace(&mut self.stack, stack_backup);
                                         self.output_buffer = output_backup;
                                         if results.is_empty() {
                                             values.push(Value::from_string(s));
@@ -197,7 +209,7 @@ impl Interpreter {
                         }
                     }
                     i += 1;
-                },
+                }
                 _ => {
                     i += 1;
                 }
@@ -206,10 +218,7 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
-    pub(crate) fn execute_guard_structure_sync(
-        &mut self,
-        lines: &[ExecutionLine]
-    ) -> Result<()> {
+    pub(crate) fn execute_guard_structure_sync(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         let action = self.execute_guard_structure_core(lines)?;
 
         if let Some(async_action) = action {
@@ -227,7 +236,10 @@ impl Interpreter {
         // sync コアで実行し、WAIT が発生した場合のみ async 処理
         match self.execute_guard_structure_core(lines)? {
             None => Ok(()),
-            Some(AsyncAction::Wait { duration_ms, word_name }) => {
+            Some(AsyncAction::Wait {
+                duration_ms,
+                word_name,
+            }) => {
                 sleep(Duration::from_millis(duration_ms)).await;
                 self.execute_word_async(&word_name).await
             }
@@ -237,7 +249,7 @@ impl Interpreter {
     fn prepare_wait_action(&mut self) -> Result<AsyncAction> {
         if self.stack.len() < 2 {
             return Err(AjisaiError::from(
-                "WAIT requires word name and delay. Usage: 'WORD' [ ms ] WAIT"
+                "WAIT requires word name and delay. Usage: 'WORD' [ ms ] WAIT",
             ));
         }
 
@@ -255,22 +267,23 @@ impl Interpreter {
 
         if let Some(def) = self.dictionary.get(&word_name) {
             if def.is_builtin {
-                return Err(AjisaiError::from(
-                    "WAIT can only be used with custom words"
-                ));
+                return Err(AjisaiError::from("WAIT can only be used with custom words"));
             }
         } else {
             return Err(AjisaiError::UnknownWord(word_name));
         }
 
-        Ok(AsyncAction::Wait { duration_ms, word_name })
+        Ok(AsyncAction::Wait {
+            duration_ms,
+            word_name,
+        })
     }
 
     /// Returns (next_index, Option<AsyncAction>).
     pub(crate) fn execute_section_core(
         &mut self,
         tokens: &[Token],
-        start_index: usize
+        start_index: usize,
     ) -> Result<(usize, Option<AsyncAction>)> {
         let mut i = start_index;
 
@@ -279,37 +292,39 @@ impl Interpreter {
                 Token::Number(n) => {
                     let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
                     self.stack.push(wrap_number(frac));
-                },
+                }
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
-                },
+                }
                 // TRUE/FALSE/NIL are recognized as Symbols and executed as builtin words
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(tokens, i)?;
                     // 空のベクターは許容しない
                     if values.is_empty() {
-                        return Err(AjisaiError::from("Empty vector is not allowed. Use NIL for empty values."));
+                        return Err(AjisaiError::from(
+                            "Empty vector is not allowed. Use NIL for empty values.",
+                        ));
                     }
                     self.stack.push(Value::from_vector(values));
                     i += consumed;
                     continue;
-                },
+                }
                 Token::Symbol(s) => {
-                    match s.as_str() {
+                    match s.as_ref() {
                         // ターゲット修飾子
                         ".." => {
                             self.set_operation_target_mode(OperationTargetMode::Stack);
-                        },
+                        }
                         "." => {
                             self.set_operation_target_mode(OperationTargetMode::StackTop);
-                        },
+                        }
                         // 消費修飾子
                         ",," => {
                             self.set_consumption_mode(ConsumptionMode::Keep);
-                        },
+                        }
                         "," => {
                             self.set_consumption_mode(ConsumptionMode::Consume);
-                        },
+                        }
                         _ => {
                             let upper = Self::normalize_symbol(s);
                             match upper.as_ref() {
@@ -317,7 +332,7 @@ impl Interpreter {
                                     let action = self.prepare_wait_action()?;
                                     self.reset_modes();
                                     return Ok((i + 1, Some(action)));
-                                },
+                                }
                                 _ => {
                                     if self.safe_mode {
                                         let stack_snapshot = self.stack.clone();
@@ -340,7 +355,7 @@ impl Interpreter {
                             }
                         }
                     }
-                },
+                }
                 Token::CodeBlockStart => {
                     // コードブロックのトークン列を収集してスタックにプッシュ
                     let mut code_tokens = Vec::new();
@@ -372,7 +387,7 @@ impl Interpreter {
 
                     // コードブロック値としてスタックにプッシュ
                     self.stack.push(Value::from_code_block(code_tokens));
-                    continue;  // i は既に進んでいるので、最後の i += 1 をスキップ
+                    continue; // i は既に進んでいるので、最後の i += 1 をスキップ
                 }
                 Token::Pipeline => {
                     // パイプライン演算子は視覚的マーカーのみ（no-op）
@@ -397,10 +412,13 @@ impl Interpreter {
                 Token::SafeMode => {
                     self.safe_mode = true;
                 }
-                Token::CodeBlockEnd | Token::ChevronBranch | Token::ChevronDefault | Token::LineBreak => {},
+                Token::CodeBlockEnd
+                | Token::ChevronBranch
+                | Token::ChevronDefault
+                | Token::LineBreak => {}
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
-                },
+                }
             }
             i += 1;
         }
@@ -410,7 +428,7 @@ impl Interpreter {
 
     fn execute_guard_structure_core(
         &mut self,
-        lines: &[ExecutionLine]
+        lines: &[ExecutionLine],
     ) -> Result<Option<AsyncAction>> {
         if lines.is_empty() {
             return Ok(None);
@@ -440,12 +458,13 @@ impl Interpreter {
         let last_line = lines.last().unwrap();
         if last_line.body_tokens.first() != Some(&Token::ChevronDefault) {
             return Err(AjisaiError::from(
-                "Chevron branch must end with >>> (default branch)"
+                "Chevron branch must end with >>> (default branch)",
             ));
         }
 
         let mut i = 0;
-        while i < lines.len() - 1 {  // 最後の行（デフォルト）は別処理
+        while i < lines.len() - 1 {
+            // 最後の行（デフォルト）は別処理
             let line = &lines[i];
 
             if line.body_tokens.first() != Some(&Token::ChevronBranch) {
@@ -517,12 +536,12 @@ impl Interpreter {
                 Token::LineBreak => {
                     if !current_line.is_empty() {
                         lines.push(ExecutionLine {
-                            body_tokens: current_line.clone(),
+                            body_tokens: current_line.clone().into(),
                         });
                         current_line.clear();
                     }
                     i += 1;
-                },
+                }
                 Token::CodeBlockStart => {
                     // Preserve code block tokens for execute_section_core to handle
                     // This allows the code block to be pushed as a CodeBlock value
@@ -547,7 +566,7 @@ impl Interpreter {
                         }
                         i += 1;
                     }
-                },
+                }
                 _ => {
                     current_line.push(tokens[i].clone());
                     i += 1;
@@ -557,7 +576,7 @@ impl Interpreter {
 
         if !current_line.is_empty() {
             lines.push(ExecutionLine {
-                body_tokens: current_line,
+                body_tokens: current_line.into(),
             });
         }
 
@@ -565,7 +584,10 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(name).map(Arc::clone)
+        let def = self
+            .dictionary
+            .get(name)
+            .map(Arc::clone)
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         // Native implementation (built-in words with no user-defined code)
@@ -592,7 +614,7 @@ impl Interpreter {
 
         if action.is_some() {
             return Err(AjisaiError::from(
-                "WAIT requires async execution context. Use execute() instead of execute_sync()."
+                "WAIT requires async execution context. Use execute() instead of execute_sync().",
             ));
         }
 
@@ -601,7 +623,10 @@ impl Interpreter {
 
     #[async_recursion(?Send)]
     pub(crate) async fn execute_word_async(&mut self, name: &str) -> Result<()> {
-        let def = self.dictionary.get(name).map(Arc::clone)
+        let def = self
+            .dictionary
+            .get(name)
+            .map(Arc::clone)
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         // Native implementation (built-in words with no user-defined code)
@@ -655,15 +680,15 @@ impl Interpreter {
             "TRUE" => {
                 self.stack.push(Value::from_bool(true));
                 Ok(())
-            },
+            }
             "FALSE" => {
                 self.stack.push(Value::from_bool(false));
                 Ok(())
-            },
+            }
             "NIL" => {
                 self.stack.push(Value::nil());
                 Ok(())
-            },
+            }
             // Control flow
             "TIMES" => control::execute_times(self),
             "EXEC" => control::op_exec(self),
@@ -675,7 +700,7 @@ impl Interpreter {
             "!" => {
                 self.force_flag = true;
                 Ok(())
-            },
+            }
             // I/O
             "PRINT" => io::op_print(self),
             // Vector operations
@@ -738,20 +763,18 @@ impl Interpreter {
             "JSON-KEYS" => json::op_json_keys(self),
             "JSON-SET" => json::op_json_set(self),
             "JSON-EXPORT" => json::op_json_export(self),
-            "WAIT" => {
-                Err(AjisaiError::from(
-                    "WAIT should be handled by execute_section_core, not execute_builtin"
-                ))
-            },
+            "WAIT" => Err(AjisaiError::from(
+                "WAIT should be handled by execute_section_core, not execute_builtin",
+            )),
             _ => Err(AjisaiError::UnknownWord(name.to_string())),
         }
     }
 
     fn token_to_string(&self, token: &Token) -> String {
         match token {
-            Token::Number(n) => n.clone(),
+            Token::Number(n) => n.to_string(),
             Token::String(s) => format!("'{}'", s),
-            Token::Symbol(s) => s.clone(),
+            Token::Symbol(s) => s.to_string(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
             Token::CodeBlockStart => ":".to_string(),
@@ -764,15 +787,17 @@ impl Interpreter {
             Token::LineBreak => "\n".to_string(),
         }
     }
-    
+
     pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
         if let Some(def) = self.dictionary.get(name) {
             if !def.is_builtin && !def.lines.is_empty() {
                 let mut result = String::new();
                 for (i, line) in def.lines.iter().enumerate() {
-                    if i > 0 { result.push('\n'); }
-                    
-                    for token in &line.body_tokens {
+                    if i > 0 {
+                        result.push('\n');
+                    }
+
+                    for token in line.body_tokens.iter() {
                         result.push_str(&self.token_to_string(token));
                         result.push(' ');
                     }
@@ -782,7 +807,7 @@ impl Interpreter {
         }
         None
     }
-    
+
     pub fn execute_reset(&mut self) -> Result<()> {
         self.stack.clear();
         self.dictionary.clear();
@@ -801,7 +826,7 @@ impl Interpreter {
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
         let tokens = crate::tokenizer::tokenize(code)?;
-        
+
         // トークンを行に分割
         let lines = self.tokens_to_lines(&tokens)?;
 
@@ -811,35 +836,40 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn get_output(&mut self) -> String { 
-        std::mem::take(&mut self.output_buffer) 
+    pub fn get_output(&mut self) -> String {
+        std::mem::take(&mut self.output_buffer)
     }
-    
-    pub fn get_stack(&self) -> &Stack { 
-        &self.stack 
+
+    pub fn get_stack(&self) -> &Stack {
+        &self.stack
     }
-    
-    pub fn set_stack(&mut self, stack: Stack) { 
-        self.stack = stack; 
+
+    pub fn set_stack(&mut self, stack: Stack) {
+        self.stack = stack;
     }
 
     pub fn rebuild_dependencies(&mut self) -> Result<()> {
         self.dependents.clear();
-        let custom_words: Vec<(String, Arc<WordDefinition>)> = self.dictionary.iter()
+        let custom_words: Vec<(String, Arc<WordDefinition>)> = self
+            .dictionary
+            .iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| (name.clone(), Arc::clone(def)))
             .collect();
 
         for (word_name, word_def) in custom_words {
             let mut dependencies = HashSet::new();
-            for line in &word_def.lines {
+            for line in word_def.lines.iter() {
                 for token in line.body_tokens.iter() {
                     if let Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
                         if let Some(dep_def) = self.dictionary.get(&upper_s) {
                             if !dep_def.is_builtin {
                                 dependencies.insert(upper_s.clone());
-                                self.dependents.entry(upper_s).or_default().insert(word_name.clone());
+                                self.dependents
+                                    .entry(upper_s)
+                                    .or_default()
+                                    .insert(word_name.clone());
                             }
                         }
                     }
@@ -882,7 +912,11 @@ mod tests {
 
         let result = interp.execute(code).await;
         assert!(result.is_ok());
-        assert_eq!(interp.stack.len(), 1, "Stack+Consume GET should consume stack and push result only");
+        assert_eq!(
+            interp.stack.len(),
+            1,
+            "Stack+Consume GET should consume stack and push result only"
+        );
     }
 
     #[tokio::test]
@@ -904,7 +938,10 @@ mod tests {
         // 最後の値が TRUE であることを確認
         let val = &interp.stack[3];
         assert_eq!(val.len(), 1, "Expected single element");
-        assert!(!val.as_scalar().expect("Expected scalar").is_zero(), "Expected TRUE from comparison");
+        assert!(
+            !val.as_scalar().expect("Expected scalar").is_zero(),
+            "Expected TRUE from comparison"
+        );
     }
 
     #[tokio::test]
@@ -915,7 +952,11 @@ mod tests {
         let code = "[2] [3] +";
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Simple addition should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Simple addition should succeed: {:?}",
+            result
+        );
 
         // Verify result
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
@@ -932,7 +973,11 @@ ADDTEST
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Definition and call should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Definition and call should succeed: {:?}",
+            result
+        );
 
         // Verify call stack is empty
     }
@@ -952,7 +997,10 @@ ADDTEST
     async fn test_force_flag_del_with_dependents_error() {
         let mut interp = Interpreter::new();
         interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
-        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
+        interp
+            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .await
+            .unwrap();
 
         // 依存ありで ! なしはエラー
         let result = interp.execute("'DOUBLE' DEL").await;
@@ -964,7 +1012,10 @@ ADDTEST
     async fn test_force_flag_del_with_dependents_forced() {
         let mut interp = Interpreter::new();
         interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
-        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
+        interp
+            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .await
+            .unwrap();
 
         // ! 付きなら削除可能
         let result = interp.execute("! 'DOUBLE' DEL").await;
@@ -977,7 +1028,10 @@ ADDTEST
     async fn test_force_flag_def_with_dependents_error() {
         let mut interp = Interpreter::new();
         interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
-        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
+        interp
+            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .await
+            .unwrap();
 
         // 依存ありで ! なしの再定義はエラー
         let result = interp.execute(": [ 3 ] * ; 'DOUBLE' DEF").await;
@@ -988,7 +1042,10 @@ ADDTEST
     async fn test_force_flag_def_with_dependents_forced() {
         let mut interp = Interpreter::new();
         interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
-        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
+        interp
+            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .await
+            .unwrap();
 
         // ! 付きなら再定義可能
         let result = interp.execute("! : [ 3 ] * ; 'DOUBLE' DEF").await;
@@ -1009,13 +1066,16 @@ ADDTEST
     async fn test_force_flag_reset_after_other_word() {
         let mut interp = Interpreter::new();
         interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
-        interp.execute(": DOUBLE DOUBLE ; 'QUAD' DEF").await.unwrap();
+        interp
+            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .await
+            .unwrap();
 
         // ! の後に別のワードを実行するとフラグがリセットされる
         interp.execute("!").await.unwrap();
-        interp.execute("[ 1 2 ] LENGTH").await.unwrap();  // 何か別のワード操作
+        interp.execute("[ 1 2 ] LENGTH").await.unwrap(); // 何か別のワード操作
         let result = interp.execute("'DOUBLE' DEL").await;
-        assert!(result.is_err());  // フラグがリセットされているのでエラー
+        assert!(result.is_err()); // フラグがリセットされているのでエラー
     }
 
     #[tokio::test]
@@ -1031,18 +1091,28 @@ ADDTEST
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Chevron with DEF should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Chevron with DEF should succeed: {:?}",
+            result
+        );
 
         // Verify ANSWER is defined
-        assert!(interp.dictionary.contains_key("ANSWER"), "ANSWER should be defined");
-        assert!(!interp.dictionary.contains_key("ZERO"), "ZERO should not be defined");
+        assert!(
+            interp.dictionary.contains_key("ANSWER"),
+            "ANSWER should be defined"
+        );
+        assert!(
+            !interp.dictionary.contains_key("ZERO"),
+            "ZERO should not be defined"
+        );
 
         // Debug: Print ANSWER definition
         if let Some(def) = interp.dictionary.get("ANSWER") {
             println!("ANSWER definition has {} lines", def.lines.len());
             for (i, line) in def.lines.iter().enumerate() {
                 println!("Line {}: {} tokens", i, line.body_tokens.len());
-                for token in &line.body_tokens {
+                for token in line.body_tokens.iter() {
                     println!("  Token: {}", interp.token_to_string(token));
                 }
             }
@@ -1071,16 +1141,30 @@ ADDTEST
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Chevron with DEF (false case) should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Chevron with DEF (false case) should succeed: {:?}",
+            result
+        );
 
         // Verify SMALL is defined
-        assert!(!interp.dictionary.contains_key("BIG"), "BIG should not be defined");
-        assert!(interp.dictionary.contains_key("SMALL"), "SMALL should be defined");
+        assert!(
+            !interp.dictionary.contains_key("BIG"),
+            "BIG should not be defined"
+        );
+        assert!(
+            interp.dictionary.contains_key("SMALL"),
+            "SMALL should be defined"
+        );
 
         // Call SMALL and verify result
         let call_code = "SMALL";
         let call_result = interp.execute(call_code).await;
-        assert!(call_result.is_ok(), "Calling SMALL should succeed: {:?}", call_result.err());
+        assert!(
+            call_result.is_ok(),
+            "Calling SMALL should succeed: {:?}",
+            call_result.err()
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
     }
 
@@ -1096,16 +1180,30 @@ ADDTEST
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Chevron default clause with DEF should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Chevron default clause with DEF should succeed: {:?}",
+            result
+        );
 
         // Verify DEFAULT is defined
-        assert!(!interp.dictionary.contains_key("HUNDRED"), "HUNDRED should not be defined");
-        assert!(interp.dictionary.contains_key("DEFAULT"), "DEFAULT should be defined");
+        assert!(
+            !interp.dictionary.contains_key("HUNDRED"),
+            "HUNDRED should not be defined"
+        );
+        assert!(
+            interp.dictionary.contains_key("DEFAULT"),
+            "DEFAULT should be defined"
+        );
 
         // Call DEFAULT and verify result
         let call_code = "DEFAULT";
         let call_result = interp.execute(call_code).await;
-        assert!(call_result.is_ok(), "Calling DEFAULT should succeed: {:?}", call_result.err());
+        assert!(
+            call_result.is_ok(),
+            "Calling DEFAULT should succeed: {:?}",
+            call_result.err()
+        );
     }
 
     #[tokio::test]
@@ -1115,7 +1213,11 @@ ADDTEST
         // Test: Define a word inside chevron that uses an existing custom word
         let def_code = ": [ 2 ] * ; 'DOUBLE' DEF";
         let result = interp.execute(def_code).await;
-        assert!(result.is_ok(), "DOUBLE definition should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "DOUBLE definition should succeed: {:?}",
+            result
+        );
 
         let chevron_code = r#"
 >> [ 5 ] [ 10 ] <
@@ -1123,16 +1225,30 @@ ADDTEST
 >>> : [ 0 ] ; 'NOPROCESS' DEF
 "#;
         let result = interp.execute(chevron_code).await;
-        assert!(result.is_ok(), "DEF with chevron using existing word should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "DEF with chevron using existing word should succeed: {:?}",
+            result
+        );
 
         // Verify PROCESS is defined
-        assert!(interp.dictionary.contains_key("PROCESS"), "PROCESS should be defined");
-        assert!(interp.dictionary.contains_key("DOUBLE"), "DOUBLE should exist");
+        assert!(
+            interp.dictionary.contains_key("PROCESS"),
+            "PROCESS should be defined"
+        );
+        assert!(
+            interp.dictionary.contains_key("DOUBLE"),
+            "DOUBLE should exist"
+        );
 
         // Call PROCESS and verify result
         let call_code = "PROCESS";
         let call_result = interp.execute(call_code).await;
-        assert!(call_result.is_ok(), "Calling PROCESS should succeed: {:?}", call_result.err());
+        assert!(
+            call_result.is_ok(),
+            "Calling PROCESS should succeed: {:?}",
+            call_result.err()
+        );
     }
 
     #[tokio::test]
@@ -1143,7 +1259,11 @@ ADDTEST
         let code = "[5] [3] +";
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Default line without colon should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Default line without colon should succeed: {:?}",
+            result
+        );
 
         // Verify result
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
@@ -1151,7 +1271,15 @@ ADDTEST
             // 結果は [ 8 ] というベクタ（単一要素ベクタ）
             if let ValueData::Vector(children) = &val.data {
                 assert_eq!(children.len(), 1, "Result should have one element");
-                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "8", "Result should be 8");
+                assert_eq!(
+                    children[0]
+                        .as_scalar()
+                        .expect("Expected scalar")
+                        .numerator
+                        .to_string(),
+                    "8",
+                    "Result should be 8"
+                );
             } else {
                 panic!("Expected vector result from addition");
             }
@@ -1166,10 +1294,17 @@ ADDTEST
         let code = ": [ 42 ] ; 'ANSWER' DEF";
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "DEF with new syntax should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "DEF with new syntax should succeed: {:?}",
+            result
+        );
 
         // Verify ANSWER is defined
-        assert!(interp.dictionary.contains_key("ANSWER"), "ANSWER should be defined");
+        assert!(
+            interp.dictionary.contains_key("ANSWER"),
+            "ANSWER should be defined"
+        );
 
         // Call ANSWER
         let call_result = interp.execute("ANSWER").await;
@@ -1188,14 +1323,26 @@ ADDTEST
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Multiple lines without colon should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Multiple lines without colon should succeed: {:?}",
+            result
+        );
 
         // Verify result: (1 + 2) * 3 = 9
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
                 assert_eq!(children.len(), 1, "Result should have one element");
-                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "9", "Result should be 9");
+                assert_eq!(
+                    children[0]
+                        .as_scalar()
+                        .expect("Expected scalar")
+                        .numerator
+                        .to_string(),
+                    "9",
+                    "Result should be 9"
+                );
             } else {
                 panic!("Expected vector result");
             }
@@ -1213,14 +1360,26 @@ ADDTEST
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Sequential lines should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Sequential lines should succeed: {:?}",
+            result
+        );
 
         // Verify result: (10 + 20) * 5 = 150
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
                 assert_eq!(children.len(), 1, "Result should have one element");
-                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "150", "Result should be 150");
+                assert_eq!(
+                    children[0]
+                        .as_scalar()
+                        .expect("Expected scalar")
+                        .numerator
+                        .to_string(),
+                    "150",
+                    "Result should be 150"
+                );
             } else {
                 panic!("Expected vector result");
             }
@@ -1239,14 +1398,26 @@ ADDTEST
 "#;
 
         let result = interp.execute(chevron_code).await;
-        assert!(result.is_ok(), "Chevron branch should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Chevron branch should succeed: {:?}",
+            result
+        );
 
         // Result should be [100] because 3 < 5 is true
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
                 assert_eq!(children.len(), 1, "Result should have one element");
-                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "100", "Result should be 100");
+                assert_eq!(
+                    children[0]
+                        .as_scalar()
+                        .expect("Expected scalar")
+                        .numerator
+                        .to_string(),
+                    "100",
+                    "Result should be 100"
+                );
             } else {
                 panic!("Expected vector result");
             }
@@ -1263,7 +1434,11 @@ ADDTEST
 "#;
 
         let result = interp.execute(sequential_code).await;
-        assert!(result.is_ok(), "Sequential lines should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Sequential lines should succeed: {:?}",
+            result
+        );
 
         // All lines executed, so we should have 3 items on stack
         assert_eq!(interp.stack.len(), 3, "Stack should have three elements");
@@ -1283,14 +1458,25 @@ ADDTEST
 "#;
 
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "Chevron with 5 lines should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Chevron with 5 lines should succeed: {:?}",
+            result
+        );
 
         // すべての条件がfalseなのでデフォルトの999
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
                 assert_eq!(children.len(), 1, "Result should have one element");
-                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "999");
+                assert_eq!(
+                    children[0]
+                        .as_scalar()
+                        .expect("Expected scalar")
+                        .numerator
+                        .to_string(),
+                    "999"
+                );
             } else {
                 panic!("Expected vector result");
             }
@@ -1301,17 +1487,47 @@ ADDTEST
     async fn test_map_with_increment() {
         let mut interp = Interpreter::new();
         // 統一分数アーキテクチャ: MAPワードはベクタ結果を返す必要がある
-        let result = interp.execute(": [ 1 ] + ; 'INC' DEF [ 1 2 3 ] 'INC' MAP").await;
-        assert!(result.is_ok(), "MAP with increment function should succeed: {:?}", result);
+        let result = interp
+            .execute(": [ 1 ] + ; 'INC' DEF [ 1 2 3 ] 'INC' MAP")
+            .await;
+        assert!(
+            result.is_ok(),
+            "MAP with increment function should succeed: {:?}",
+            result
+        );
 
         // 結果が [ 2 3 4 ] であることを確認
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
             if let ValueData::Vector(children) = &val.data {
                 assert_eq!(children.len(), 3, "Result should have 3 elements");
-                assert_eq!(children[0].as_scalar().expect("Expected scalar").numerator.to_string(), "2", "First element should be 2");
-                assert_eq!(children[1].as_scalar().expect("Expected scalar").numerator.to_string(), "3", "Second element should be 3");
-                assert_eq!(children[2].as_scalar().expect("Expected scalar").numerator.to_string(), "4", "Third element should be 4");
+                assert_eq!(
+                    children[0]
+                        .as_scalar()
+                        .expect("Expected scalar")
+                        .numerator
+                        .to_string(),
+                    "2",
+                    "First element should be 2"
+                );
+                assert_eq!(
+                    children[1]
+                        .as_scalar()
+                        .expect("Expected scalar")
+                        .numerator
+                        .to_string(),
+                    "3",
+                    "Second element should be 3"
+                );
+                assert_eq!(
+                    children[2]
+                        .as_scalar()
+                        .expect("Expected scalar")
+                        .numerator
+                        .to_string(),
+                    "4",
+                    "Third element should be 4"
+                );
             } else {
                 panic!("Expected vector result");
             }
@@ -1322,8 +1538,14 @@ ADDTEST
     async fn test_map_stack_mode() {
         let mut interp = Interpreter::new();
         // Stackモードでの動作確認
-        let result = interp.execute(": [ 2 ] * ; 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP").await;
-        assert!(result.is_ok(), "MAP in Stack mode should work: {:?}", result);
+        let result = interp
+            .execute(": [ 2 ] * ; 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP")
+            .await;
+        assert!(
+            result.is_ok(),
+            "MAP in Stack mode should work: {:?}",
+            result
+        );
 
         // スタックに3つの要素があること
         assert_eq!(interp.stack.len(), 3);
@@ -1376,7 +1598,11 @@ ADDTEST
 
         // Vectorは3要素を持つ（NILも1要素としてカウント）
         let vec_val = &interp.stack[0];
-        assert_eq!(vec_val.shape(), vec![3], "Vector should have 3 elements including NIL");
+        assert_eq!(
+            vec_val.shape(),
+            vec![3],
+            "Vector should have 3 elements including NIL"
+        );
         if let ValueData::Vector(children) = &vec_val.data {
             assert_eq!(children.len(), 3, "Data should have 3 elements");
             // 2番目の要素がNIL
@@ -1395,7 +1621,10 @@ ADDTEST
         assert!(nil.is_nil(), "Value::nil() should be NIL");
         assert!(nil.shape().is_empty(), "NIL should be scalar (empty shape)");
         // 新アーキテクチャでは ValueData::Nil なので直接確認
-        assert!(matches!(nil.data, ValueData::Nil), "NIL should be ValueData::Nil");
+        assert!(
+            matches!(nil.data, ValueData::Nil),
+            "NIL should be ValueData::Nil"
+        );
     }
 
     #[tokio::test]
@@ -1417,7 +1646,11 @@ ADDTEST
         let result = interp.execute("NIL TRUE AND").await;
         assert!(result.is_ok(), "NIL AND TRUE should work: {:?}", result);
         let val = interp.stack.pop().unwrap();
-        assert!(val.is_nil(), "NIL AND TRUE should return NIL, got {:?}", val);
+        assert!(
+            val.is_nil(),
+            "NIL AND TRUE should return NIL, got {:?}",
+            val
+        );
     }
 
     #[tokio::test]
@@ -1426,7 +1659,11 @@ ADDTEST
         let result = interp.execute("NIL FALSE OR").await;
         assert!(result.is_ok(), "NIL OR FALSE should work: {:?}", result);
         let val = interp.stack.pop().unwrap();
-        assert!(val.is_nil(), "NIL OR FALSE should return NIL, got {:?}", val);
+        assert!(
+            val.is_nil(),
+            "NIL OR FALSE should return NIL, got {:?}",
+            val
+        );
     }
 
     #[tokio::test]
@@ -1489,7 +1726,11 @@ ADDTEST
         let result = interp.execute("A").await;
         assert!(result.is_err(), "Call depth 5 should fail");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Call depth limit"), "Error message should mention call depth limit: {}", err_msg);
+        assert!(
+            err_msg.contains("Call depth limit"),
+            "Error message should mention call depth limit: {}",
+            err_msg
+        );
     }
 
     #[tokio::test]
@@ -1502,7 +1743,11 @@ ADDTEST
         let result = interp.execute("REC").await;
         assert!(result.is_err(), "Direct recursion should hit depth limit");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Call depth limit"), "Error message should mention call depth limit: {}", err_msg);
+        assert!(
+            err_msg.contains("Call depth limit"),
+            "Error message should mention call depth limit: {}",
+            err_msg
+        );
     }
 
     #[tokio::test]
@@ -1518,7 +1763,10 @@ ADDTEST
 
         // 2回目の呼び出し（call_stackがリセットされていることを確認）
         let result2 = interp.execute("A").await;
-        assert!(result2.is_ok(), "Second call should succeed (call_stack should reset)");
+        assert!(
+            result2.is_ok(),
+            "Second call should succeed (call_stack should reset)"
+        );
     }
 
     #[tokio::test]
@@ -1535,8 +1783,14 @@ ADDTEST
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         // エラーメッセージにスタックトレースが含まれる
-        assert!(err_msg.contains("A") && err_msg.contains("B") && err_msg.contains("C") && err_msg.contains("D"),
-            "Error message should show call trace: {}", err_msg);
+        assert!(
+            err_msg.contains("A")
+                && err_msg.contains("B")
+                && err_msg.contains("C")
+                && err_msg.contains("D"),
+            "Error message should show call trace: {}",
+            err_msg
+        );
     }
 
     // === 対称モードテスト ===
@@ -1547,10 +1801,18 @@ ADDTEST
         // Keepモード（,,）で加算：元の値が残り、結果が追加される
         // [1] [2] ,, + → [1] [2] [3]
         let result = interp.execute("[1] [2] ,, +").await;
-        assert!(result.is_ok(), "Keep mode addition should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Keep mode addition should succeed: {:?}",
+            result
+        );
 
         // スタックには3つの要素（元の[1], [2], 結果の[3]）
-        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode operation");
+        assert_eq!(
+            interp.stack.len(),
+            3,
+            "Stack should have 3 elements after keep mode operation"
+        );
     }
 
     #[tokio::test]
@@ -1561,20 +1823,32 @@ ADDTEST
 
         // 順序1: .. ,,
         let result1 = interp.execute("[1] [2] [3] [3] .. ,, +").await;
-        assert!(result1.is_ok(), "Stack+Keep mode (.. ,,) should succeed: {:?}", result1);
+        assert!(
+            result1.is_ok(),
+            "Stack+Keep mode (.. ,,) should succeed: {:?}",
+            result1
+        );
         let stack1 = interp.stack.clone();
 
         interp.execute_reset().unwrap();
 
         // 順序2: ,, ..
         let result2 = interp.execute("[1] [2] [3] [3] ,, .. +").await;
-        assert!(result2.is_ok(), "Stack+Keep mode (,, ..) should succeed: {:?}", result2);
+        assert!(
+            result2.is_ok(),
+            "Stack+Keep mode (,, ..) should succeed: {:?}",
+            result2
+        );
         let stack2 = interp.stack.clone();
 
         // 両方の結果が同じであることを確認
-        assert_eq!(stack1.len(), stack2.len(),
+        assert_eq!(
+            stack1.len(),
+            stack2.len(),
             "Both modifier orders should produce same stack length: {} vs {}",
-            stack1.len(), stack2.len());
+            stack1.len(),
+            stack2.len()
+        );
     }
 
     #[tokio::test]
@@ -1582,10 +1856,18 @@ ADDTEST
         let mut interp = Interpreter::new();
         // デフォルトはConsumeモード
         let result = interp.execute("[1] [2] +").await;
-        assert!(result.is_ok(), "Default consume mode should work: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Default consume mode should work: {:?}",
+            result
+        );
 
         // スタックには1つの要素（結果の[3]のみ）
-        assert_eq!(interp.stack.len(), 1, "Stack should have 1 element after consume mode operation");
+        assert_eq!(
+            interp.stack.len(),
+            1,
+            "Stack should have 1 element after consume mode operation"
+        );
     }
 
     #[tokio::test]
@@ -1593,10 +1875,18 @@ ADDTEST
         let mut interp = Interpreter::new();
         // 明示的なConsumeモード（,）
         let result = interp.execute("[1] [2] , +").await;
-        assert!(result.is_ok(), "Explicit consume mode should work: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Explicit consume mode should work: {:?}",
+            result
+        );
 
         // スタックには1つの要素（結果の[3]のみ）
-        assert_eq!(interp.stack.len(), 1, "Stack should have 1 element after explicit consume mode");
+        assert_eq!(
+            interp.stack.len(),
+            1,
+            "Stack should have 1 element after explicit consume mode"
+        );
     }
 
     #[tokio::test]
@@ -1610,33 +1900,54 @@ ADDTEST
 
         // [1] [2] ,, + → [1] [2] [3]
         // [1] [2] [3] [3] + → [1] [2] [6]  (consumeモードなので[3]が消費される)
-        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements: {:?}", interp.stack);
+        assert_eq!(
+            interp.stack.len(),
+            3,
+            "Stack should have 3 elements: {:?}",
+            interp.stack
+        );
     }
-
 
     #[test]
     fn test_wait_resets_modes_in_section_core() {
         let mut interp = Interpreter::new();
-        interp.execute_guard_structure_sync(&interp.tokens_to_lines(&crate::tokenizer::tokenize(": [9] ; 'NOP' DEF").unwrap()).unwrap()).unwrap();
+        interp
+            .execute_guard_structure_sync(
+                &interp
+                    .tokens_to_lines(&crate::tokenizer::tokenize(": [9] ; 'NOP' DEF").unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
 
         let tokens = crate::tokenizer::tokenize(".. ,, 'NOP' [0] WAIT").unwrap();
         let result = interp.execute_section_core(&tokens, 0);
-        assert!(result.is_ok(), "WAIT should be prepared in section core: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "WAIT should be prepared in section core: {:?}",
+            result
+        );
 
         assert_eq!(interp.operation_target_mode, OperationTargetMode::StackTop);
         assert_eq!(interp.consumption_mode, ConsumptionMode::Consume);
     }
-
 
     #[tokio::test]
     async fn test_keep_mode_with_mul() {
         let mut interp = Interpreter::new();
         // Keepモードで乗算
         let result = interp.execute("[3] [4] ,, *").await;
-        assert!(result.is_ok(), "Keep mode multiplication should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Keep mode multiplication should succeed: {:?}",
+            result
+        );
 
         // スタックには3つの要素（元の[3], [4], 結果の[12]）
-        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode multiplication");
+        assert_eq!(
+            interp.stack.len(),
+            3,
+            "Stack should have 3 elements after keep mode multiplication"
+        );
     }
 
     #[tokio::test]
@@ -1644,10 +1955,18 @@ ADDTEST
         let mut interp = Interpreter::new();
         // Keepモードで減算
         let result = interp.execute("[10] [3] ,, -").await;
-        assert!(result.is_ok(), "Keep mode subtraction should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Keep mode subtraction should succeed: {:?}",
+            result
+        );
 
         // スタックには3つの要素（元の[10], [3], 結果の[7]）
-        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode subtraction");
+        assert_eq!(
+            interp.stack.len(),
+            3,
+            "Stack should have 3 elements after keep mode subtraction"
+        );
     }
 
     #[tokio::test]
@@ -1655,10 +1974,18 @@ ADDTEST
         let mut interp = Interpreter::new();
         // Keepモードで除算
         let result = interp.execute("[12] [4] ,, /").await;
-        assert!(result.is_ok(), "Keep mode division should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Keep mode division should succeed: {:?}",
+            result
+        );
 
         // スタックには3つの要素（元の[12], [4], 結果の[3]）
-        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements after keep mode division");
+        assert_eq!(
+            interp.stack.len(),
+            3,
+            "Stack should have 3 elements after keep mode division"
+        );
     }
 
     // === セーフモード（~）テスト ===
@@ -1668,10 +1995,17 @@ ADDTEST
         let mut interp = Interpreter::new();
         // 正常時: ~ があっても通常通り結果を返す
         let result = interp.execute("[ 1 2 3 ] [ 1 ] ~ GET").await;
-        assert!(result.is_ok(), "Safe mode should not affect normal execution: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Safe mode should not affect normal execution: {:?}",
+            result
+        );
         // GET succeeds: consumes source [1 2 3] and pushes result (2)
         assert_eq!(interp.stack.len(), 1);
-        assert!(!interp.stack[0].is_nil(), "Result should not be NIL on success");
+        assert!(
+            !interp.stack[0].is_nil(),
+            "Result should not be NIL on success"
+        );
     }
 
     #[tokio::test]
@@ -1679,10 +2013,22 @@ ADDTEST
         let mut interp = Interpreter::new();
         // エラー時: スタック復元 + NILがプッシュされる
         let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ GET").await;
-        assert!(result.is_ok(), "Safe mode should suppress error: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Safe mode should suppress error: {:?}",
+            result
+        );
         // Stack restored to [[1,2,3], [10]] then NIL pushed → 3 items
-        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements (restored + NIL): {:?}", interp.stack);
-        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL on error");
+        assert_eq!(
+            interp.stack.len(),
+            3,
+            "Stack should have 3 elements (restored + NIL): {:?}",
+            interp.stack
+        );
+        assert!(
+            interp.stack.last().unwrap().is_nil(),
+            "Top should be NIL on error"
+        );
     }
 
     #[tokio::test]
@@ -1692,8 +2038,15 @@ ADDTEST
         // After ~ GET error: [[1,2,3], [10], NIL], push [0]: [[1,2,3], [10], NIL, [0]]
         // => pops [0] and NIL → NIL → push [0]: [[1,2,3], [10], [0]]
         let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ GET => [ 0 ]").await;
-        assert!(result.is_ok(), "Safe mode with nil coalesce should work: {:?}", result);
-        assert!(!interp.stack.last().unwrap().is_nil(), "Top should be the default value [0], not NIL");
+        assert!(
+            result.is_ok(),
+            "Safe mode with nil coalesce should work: {:?}",
+            result
+        );
+        assert!(
+            !interp.stack.last().unwrap().is_nil(),
+            "Top should be the default value [0], not NIL"
+        );
     }
 
     #[tokio::test]
@@ -1701,10 +2054,22 @@ ADDTEST
         let mut interp = Interpreter::new();
         // ゼロ除算のセーフモード: 復元 + NIL
         let result = interp.execute("[ 10 ] [ 0 ] ~ /").await;
-        assert!(result.is_ok(), "Safe mode should suppress division by zero: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Safe mode should suppress division by zero: {:?}",
+            result
+        );
         // Stack restored to [[10], [0]] then NIL pushed → 3 items
-        assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements: {:?}", interp.stack);
-        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL on division by zero");
+        assert_eq!(
+            interp.stack.len(),
+            3,
+            "Stack should have 3 elements: {:?}",
+            interp.stack
+        );
+        assert!(
+            interp.stack.last().unwrap().is_nil(),
+            "Top should be NIL on division by zero"
+        );
     }
 
     #[tokio::test]
@@ -1712,10 +2077,22 @@ ADDTEST
         let mut interp = Interpreter::new();
         // エラー時にスタックがワード実行前の状態に復元 + NILがプッシュされる
         let result = interp.execute("[ 100 ] [ 1 2 3 ] [ 10 ] ~ GET").await;
-        assert!(result.is_ok(), "Safe mode should suppress error: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Safe mode should suppress error: {:?}",
+            result
+        );
         // Stack: [100], [1,2,3], [10], NIL → 4 elements
-        assert_eq!(interp.stack.len(), 4, "Stack should have 4 elements: {:?}", interp.stack);
-        assert!(interp.stack.last().unwrap().is_nil(), "Top of stack should be NIL");
+        assert_eq!(
+            interp.stack.len(),
+            4,
+            "Stack should have 4 elements: {:?}",
+            interp.stack
+        );
+        assert!(
+            interp.stack.last().unwrap().is_nil(),
+            "Top of stack should be NIL"
+        );
     }
 
     #[tokio::test]
@@ -1735,7 +2112,11 @@ ADDTEST
         let mut interp = Interpreter::new();
         // ~ と ,, の組み合わせ
         let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ ,, GET").await;
-        assert!(result.is_ok(), "Safe mode with keep mode should work: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Safe mode with keep mode should work: {:?}",
+            result
+        );
         assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL");
     }
 
@@ -1744,10 +2125,22 @@ ADDTEST
         let mut interp = Interpreter::new();
         // 未知のワードのセーフモード: 復元 + NIL
         let result = interp.execute("[ 1 ] ~ NONEXISTENT").await;
-        assert!(result.is_ok(), "Safe mode should suppress unknown word error: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Safe mode should suppress unknown word error: {:?}",
+            result
+        );
         // Stack restored to [[1]], then NIL pushed → 2 elements
-        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements: {:?}", interp.stack);
-        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL for unknown word");
+        assert_eq!(
+            interp.stack.len(),
+            2,
+            "Stack should have 2 elements: {:?}",
+            interp.stack
+        );
+        assert!(
+            interp.stack.last().unwrap().is_nil(),
+            "Top should be NIL for unknown word"
+        );
     }
 
     #[tokio::test]
@@ -1755,9 +2148,21 @@ ADDTEST
         let mut interp = Interpreter::new();
         // 「変化なしはエラー」原則も ~ の対象: 復元 + NIL
         let result = interp.execute("[ 1 ] ~ REVERSE").await;
-        assert!(result.is_ok(), "Safe mode should suppress no-change error: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Safe mode should suppress no-change error: {:?}",
+            result
+        );
         // Stack restored to [[1]], then NIL pushed → 2 elements
-        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements: {:?}", interp.stack);
-        assert!(interp.stack.last().unwrap().is_nil(), "Top should be NIL for no-change error");
+        assert_eq!(
+            interp.stack.len(),
+            2,
+            "Stack should have 2 elements: {:?}",
+            interp.stack
+        );
+        assert!(
+            interp.stack.last().unwrap().is_nil(),
+            "Top should be NIL for no-change error"
+        );
     }
 }
