@@ -149,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
         footerEl.innerHTML = `
             <span>&copy; ${currentYear} ${c.project.author}</span>
             <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="index.html">Reference</a>
         `;
     }
 
