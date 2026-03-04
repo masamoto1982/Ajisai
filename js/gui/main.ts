@@ -148,6 +148,8 @@ export const createGUI = (): GUI => {
 
     const switchArea = (mode: ViewMode): void => {
         mobile.updateView(mode);
+        document.body.dataset.activeArea = mode;
+
         const isEditorMode = mode === 'input' || mode === 'output';
         elements.editorPanel.style.display = isEditorMode ? 'flex' : 'none';
         elements.statePanel.style.display = isEditorMode ? 'none' : 'flex';

@@ -104,6 +104,67 @@
     padding: 1rem 1rem 1rem 0.5rem;
 }
 
+
+/* アクティブエリアを広く使うためのレイアウト最適化 */
+#editor-panel,
+#state-panel,
+.input-area,
+.output-area,
+.stack-area,
+.dictionary-area {
+    min-height: 0;
+}
+
+#editor-panel .input-area,
+#editor-panel .output-area,
+#state-panel .stack-area,
+#state-panel .dictionary-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+#editor-panel .input-area,
+#editor-panel .output-area,
+#state-panel .stack-area,
+#state-panel .dictionary-area,
+.dictionary-container,
+.builtin-words-area,
+.custom-words-area,
+.words-display,
+.state-display,
+.display-area {
+    min-height: 0;
+}
+
+body[data-active-area] #editor-panel,
+body[data-active-area] #state-panel {
+    padding: 0.5rem;
+}
+
+body[data-active-area] .main-layout section {
+    margin-bottom: 0;
+    height: 100%;
+}
+
+body[data-active-area="dictionary"] .dictionary-container {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+body[data-active-area="dictionary"] .builtin-words-area,
+body[data-active-area="dictionary"] .custom-words-area {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body[data-active-area="dictionary"] .words-display {
+    flex: 1;
+    overflow-y: auto;
+}
+
 /* 入力・出力エリア */
 .output-area,
 .input-area {
