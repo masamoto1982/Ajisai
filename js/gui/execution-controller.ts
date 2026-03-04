@@ -3,6 +3,7 @@
 import { WORKER_MANAGER } from '../workers/worker-manager';
 import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-types';
 import { createStepExecutor, StepExecutor } from './step-executor';
+import type { ViewMode } from './mobile';
 
 export interface ExecutionCallbacks {
     readonly getEditorValue: () => string;
@@ -15,7 +16,7 @@ export interface ExecutionCallbacks {
     readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
     readonly fullReset: () => Promise<void>;
-    readonly updateView: (mode: 'input' | 'execution') => void;
+    readonly updateView: (mode: ViewMode) => void;
 }
 
 export interface ExecutionController {
@@ -113,7 +114,7 @@ export const createExecutionController = (
         }
 
         try {
-            updateView('execution');
+            updateView('output');
             showInfo('Executing...', false);
 
             const currentState = {

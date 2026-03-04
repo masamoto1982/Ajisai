@@ -7,7 +7,7 @@ export interface MobileElements {
     readonly dictionaryArea: HTMLElement;
 }
 
-export type ViewMode = 'input' | 'execution';
+export type ViewMode = 'input' | 'output' | 'stack' | 'dictionary';
 
 export interface MobileHandler {
     readonly isMobile: () => boolean;
@@ -17,6 +17,7 @@ export interface MobileHandler {
 
 const MOBILE_BREAKPOINT = 768;
 const SWIPE_THRESHOLD = 50;
+const VIEW_ORDER: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
 
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 
@@ -40,48 +41,56 @@ const detectSwipeDirection = (
     return null;
 };
 
-const toggleMode = (currentMode: ViewMode): ViewMode =>
-    currentMode === 'input' ? 'execution' : 'input';
+const getNextMode = (currentMode: ViewMode, direction: 'left' | 'right'): ViewMode => {
+    const currentIndex = VIEW_ORDER.indexOf(currentMode);
+    const nextIndex = direction === 'left'
+        ? (currentIndex + 1) % VIEW_ORDER.length
+        : (currentIndex - 1 + VIEW_ORDER.length) % VIEW_ORDER.length;
+    return VIEW_ORDER[nextIndex]!;
+};
 
 const getInputModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'block',
     outputArea: 'none',
     stackArea: 'none',
-    dictionaryArea: 'block'
+    dictionaryArea: 'none'
 });
 
-const getExecutionModeStyles = (): Record<keyof MobileElements, string> => ({
+const getOutputModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'block',
+    stackArea: 'none',
+    dictionaryArea: 'none'
+});
+
+const getStackModeStyles = (): Record<keyof MobileElements, string> => ({
+    inputArea: 'none',
+    outputArea: 'none',
     stackArea: 'block',
     dictionaryArea: 'none'
 });
 
+const getDictionaryModeStyles = (): Record<keyof MobileElements, string> => ({
+    inputArea: 'none',
+    outputArea: 'none',
+    stackArea: 'none',
+    dictionaryArea: 'block'
+});
+
 const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> =>
-    mode === 'input' ? getInputModeStyles() : getExecutionModeStyles();
+    ({
+        input: getInputModeStyles,
+        output: getOutputModeStyles,
+        stack: getStackModeStyles,
+        dictionary: getDictionaryModeStyles
+    }[mode]());
 
-const setElementDisplay = (element: HTMLElement, display: string): void => {
-    element.style.display = display;
-};
-
-const resetElementDisplay = (element: HTMLElement): void => {
-    element.style.display = '';
-};
-
-const applyMobileStyles = (
+const applyStyles = (
     elements: MobileElements,
     styles: Record<keyof MobileElements, string>
 ): void => {
     (Object.keys(styles) as Array<keyof MobileElements>).forEach(key => {
-        setElementDisplay(elements[key], styles[key]);
-    });
-};
-
-const resetAllStyles = (elements: MobileElements): void => {
-    Object.values(elements).forEach(el => {
-        if (el?.style) {
-            resetElementDisplay(el);
-        }
+        elements[key].style.display = styles[key];
     });
 };
 
@@ -90,18 +99,22 @@ export const createMobileHandler = (elements: MobileElements): MobileHandler => 
     let touchStartX = 0;
     let touchStartY = 0;
 
+    const updateView = (mode: ViewMode): void => {
+        currentMode = mode;
+        const styles = getStylesForMode(mode);
+        applyStyles(elements, styles);
+    };
+
     const handleSwipeGesture = (endX: number, endY: number): void => {
         const direction = detectSwipeDirection(touchStartX, touchStartY, endX, endY);
 
         if (direction === 'left' || direction === 'right') {
-            const newMode = toggleMode(currentMode);
+            const newMode = getNextMode(currentMode, direction);
             updateView(newMode);
         }
     };
 
     const setupSwipeGestures = (): void => {
-        if (!checkIsMobile()) return;
-
         const container = document.body;
 
         container.addEventListener('touchstart', (e: TouchEvent) => {
@@ -113,6 +126,7 @@ export const createMobileHandler = (elements: MobileElements): MobileHandler => 
         }, { passive: true });
 
         container.addEventListener('touchend', (e: TouchEvent) => {
+            if (!checkIsMobile()) return;
             const touch = e.changedTouches[0];
             if (touch) {
                 handleSwipeGesture(touch.screenX, touch.screenY);
@@ -122,23 +136,9 @@ export const createMobileHandler = (elements: MobileElements): MobileHandler => 
 
     setupSwipeGestures();
 
-    const isMobile = (): boolean => checkIsMobile();
-    const getCurrentMode = (): ViewMode => currentMode;
-
-    const updateView = (mode: ViewMode): void => {
-        if (!checkIsMobile()) {
-            resetAllStyles(elements);
-            return;
-        }
-
-        currentMode = mode;
-        const styles = getStylesForMode(mode);
-        applyMobileStyles(elements, styles);
-    };
-
     return {
-        isMobile,
-        getCurrentMode,
+        isMobile: () => checkIsMobile(),
+        getCurrentMode: () => currentMode,
         updateView
     };
 };
@@ -146,8 +146,9 @@ export const createMobileHandler = (elements: MobileElements): MobileHandler => 
 export const mobileUtils = {
     checkIsMobile,
     detectSwipeDirection,
-    toggleMode,
+    getNextMode,
     getStylesForMode,
+    VIEW_ORDER,
     MOBILE_BREAKPOINT,
     SWIPE_THRESHOLD
 };
