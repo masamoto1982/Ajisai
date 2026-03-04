@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 use crate::interpreter::{Interpreter, ConsumptionMode};
 use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::json::{from_json, to_json};
@@ -170,7 +171,7 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(Value::nil());
     } else {
         interp.stack.push(Value {
-            data: ValueData::Vector(keys),
+            data: ValueData::Vector(Rc::new(keys)),
             display_hint: DisplayHint::Auto,
             audio_hint: None,
         });
@@ -234,7 +235,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
                         new_pairs.push(Value {
-                            data: ValueData::Vector(vec![kv[0].clone(), new_value.clone()]),
+                            data: ValueData::Vector(Rc::new(vec![kv[0].clone(), new_value.clone()])),
                             display_hint: DisplayHint::Auto,
                             audio_hint: None,
                         });
@@ -248,10 +249,10 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         if found_idx.is_none() {
             new_index.insert(key_str.clone(), new_pairs.len());
             new_pairs.push(Value {
-                data: ValueData::Vector(vec![
+                data: ValueData::Vector(Rc::new(vec![
                     Value::from_string(&key_str),
                     new_value,
-                ]),
+                ])),
                 display_hint: DisplayHint::Auto,
                 audio_hint: None,
             });
@@ -271,21 +272,21 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         }
 
         interp.stack.push(Value {
-            data: ValueData::JsonObject { pairs: new_pairs, index: new_index },
+            data: ValueData::JsonObject { pairs: Rc::new(new_pairs), index: new_index },
             display_hint: DisplayHint::Auto,
             audio_hint: None,
         });
     } else {
         let mut index = HashMap::new();
         index.insert(key_str.clone(), 0);
-        let pairs = vec![Value {
-            data: ValueData::Vector(vec![
+        let pairs = Rc::new(vec![Value {
+            data: ValueData::Vector(Rc::new(vec![
                 Value::from_string(&key_str),
                 new_value,
-            ]),
+            ])),
             display_hint: DisplayHint::Auto,
             audio_hint: None,
-        }];
+        }]);
         interp.stack.push(Value {
             data: ValueData::JsonObject { pairs, index },
             display_hint: DisplayHint::Auto,

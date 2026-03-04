@@ -12,6 +12,7 @@ pub mod io;
 pub mod json;
 pub mod logic;
 pub mod random;
+pub(crate) mod simd_ops;
 pub mod sort;
 pub mod tensor_ops;
 pub mod vector_exec;

@@ -4,6 +4,7 @@
 //
 // 論理演算（0 = false、非0 = true）
 
+use std::rc::Rc;
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
@@ -47,7 +48,7 @@ fn apply_not_to_value(val: &Value) -> Value {
                 .map(|c| apply_not_to_value(c))
                 .collect();
             Value {
-                data: ValueData::Vector(new_children),
+                data: ValueData::Vector(Rc::new(new_children)),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
             }
@@ -92,7 +93,7 @@ where
                 .map(|bi| apply_binary_logic(&Value::from_bool(a_truthy), bi, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
             })
@@ -106,7 +107,7 @@ where
                 .map(|ai| apply_binary_logic(ai, &Value::from_bool(b_truthy), op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
             })
@@ -124,7 +125,7 @@ where
                 .map(|(ai, bi)| apply_binary_logic(ai, bi, op))
                 .collect();
             Ok(Value {
-                data: ValueData::Vector(new_children?),
+                data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Boolean,
                 audio_hint: None,
             })

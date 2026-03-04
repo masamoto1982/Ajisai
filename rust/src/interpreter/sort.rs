@@ -64,7 +64,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                             }
                             return Err(AjisaiError::NoChange { word: "SORT".into() });
                         }
-                        if sorted_v == *children {
+                        if sorted_v == **children {
                             if !is_keep_mode {
                                 interp.stack.push(Value::from_vector(sorted_v));
                             }
