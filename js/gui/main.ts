@@ -37,10 +37,10 @@ export interface GUIElements {
     readonly dictionaryArea: HTMLElement;
     readonly editorPanel: HTMLElement;
     readonly statePanel: HTMLElement;
-    readonly tabInputBtn: HTMLButtonElement;
-    readonly tabOutputBtn: HTMLButtonElement;
-    readonly tabStackBtn: HTMLButtonElement;
-    readonly tabDictionaryBtn: HTMLButtonElement;
+    readonly tabInputBtn: HTMLElement;
+    readonly tabOutputBtn: HTMLElement;
+    readonly tabStackBtn: HTMLElement;
+    readonly tabDictionaryBtn: HTMLElement;
 }
 
 export interface GUI {
@@ -77,10 +77,10 @@ const cacheElements = (): GUIElements => ({
     dictionaryArea: document.querySelector('.dictionary-area')!,
     editorPanel: document.getElementById('editor-panel')!,
     statePanel: document.getElementById('state-panel')!,
-    tabInputBtn: document.getElementById('tab-input') as HTMLButtonElement,
-    tabOutputBtn: document.getElementById('tab-output') as HTMLButtonElement,
-    tabStackBtn: document.getElementById('tab-stack') as HTMLButtonElement,
-    tabDictionaryBtn: document.getElementById('tab-dictionary') as HTMLButtonElement
+    tabInputBtn: document.getElementById('tab-input')!,
+    tabOutputBtn: document.getElementById('tab-output')!,
+    tabStackBtn: document.getElementById('tab-stack')!,
+    tabDictionaryBtn: document.getElementById('tab-dictionary')!
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -127,7 +127,7 @@ export const createGUI = (): GUI => {
     let executionController: ExecutionController;
     let currentMode: ViewMode = 'input';
 
-    const getTabButtons = (): Record<ViewMode, HTMLButtonElement> => ({
+    const getTabButtons = (): Record<ViewMode, HTMLElement> => ({
         input: elements.tabInputBtn,
         output: elements.tabOutputBtn,
         stack: elements.tabStackBtn,
@@ -135,12 +135,13 @@ export const createGUI = (): GUI => {
     });
 
     const updateTabState = (mode: ViewMode): void => {
-        const tabButtons = getTabButtons();
+        const tabs = getTabButtons();
         TAB_MODES.forEach((key) => {
-            const button = tabButtons[key];
+            const tab = tabs[key];
             const isActive = key === mode;
-            button.classList.toggle('active', isActive);
-            button.setAttribute('aria-selected', String(isActive));
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', String(isActive));
+            tab.setAttribute('tabindex', isActive ? '0' : '-1');
         });
     };
 
@@ -227,10 +228,16 @@ export const createGUI = (): GUI => {
 
         elements.clearBtn.addEventListener('click', () => editor.clear());
 
-        const tabButtons = getTabButtons();
+        const tabs = getTabButtons();
         TAB_MODES.forEach((mode) => {
-            const button = tabButtons[mode];
-            button.addEventListener('click', () => switchArea(mode));
+            const tab = tabs[mode];
+            tab.addEventListener('click', () => switchArea(mode));
+            tab.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    switchArea(mode);
+                }
+            });
         });
 
         elements.testBtn?.addEventListener('click', () => {
