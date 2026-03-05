@@ -314,14 +314,9 @@ body[data-active-area="dictionary"] .words-display {
 
 /* JSON読み込みボタン */
 .json-import-btn {
-    padding: 0.75rem 1rem;
     background: var(--color-light);
     color: var(--color-text);
     border: var(--border-main);
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: var(--radius-main);
     transition: background-color 0.2s ease;
 }
 
