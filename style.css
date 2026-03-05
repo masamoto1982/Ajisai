@@ -32,6 +32,7 @@
 .area-tabs {
     display: flex;
     align-items: stretch;
+    justify-content: space-between;
     gap: 0;
     padding: 0;
     border-top: 1px solid var(--color-medium, #ccc);
@@ -40,6 +41,12 @@
     border-bottom: none;
     background: var(--bg-article);
     position: relative;
+}
+
+.tab-group {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
 }
 
 /* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
@@ -609,6 +616,15 @@ body[data-active-area="dictionary"] .words-display {
  * 7. モバイル対応（アプリ固有）
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+    .area-tabs {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .tab-group {
+        width: 100%;
+    }
+
     .main-layout {
         flex-direction: column;
         padding: 0;

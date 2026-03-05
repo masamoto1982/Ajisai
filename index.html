@@ -65,11 +65,15 @@
             </div>
         </header>
 
-        <nav class="area-tabs" role="tablist" aria-label="Area tabs">
-            <h2 id="tab-input" class="area-tab active" role="tab" data-mode="input" aria-selected="true" tabindex="0">Input</h2>
-            <h2 id="tab-output" class="area-tab" role="tab" data-mode="output" aria-selected="false" tabindex="0">Output</h2>
-            <h2 id="tab-stack" class="area-tab" role="tab" data-mode="stack" aria-selected="false" tabindex="0">Stack</h2>
-            <h2 id="tab-dictionary" class="area-tab" role="tab" data-mode="dictionary" aria-selected="false" tabindex="0">Dictionary</h2>
+        <nav class="area-tabs" aria-label="Area tabs">
+            <div class="tab-group" role="tablist" aria-label="Editor tabs">
+                <h2 id="tab-input" class="area-tab active" role="tab" data-mode="input" aria-selected="true" tabindex="0">Input</h2>
+                <h2 id="tab-output" class="area-tab" role="tab" data-mode="output" aria-selected="false" tabindex="0">Output</h2>
+            </div>
+            <div class="tab-group" role="tablist" aria-label="State tabs">
+                <h2 id="tab-stack" class="area-tab active" role="tab" data-mode="stack" aria-selected="true" tabindex="0">Stack</h2>
+                <h2 id="tab-dictionary" class="area-tab" role="tab" data-mode="dictionary" aria-selected="false" tabindex="0">Dictionary</h2>
+            </div>
         </nav>
 
         <main class="main-layout">
