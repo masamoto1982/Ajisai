@@ -30,7 +30,8 @@
  * 1.1 エリアタブ（h2見出しタブ）
  * -------------------------------------------------------------------------- */
 .area-tabs {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
     justify-content: space-between;
     gap: 0;
@@ -46,7 +47,9 @@
 .tab-group {
     display: flex;
     align-items: stretch;
+    justify-content: flex-start;
     gap: 0;
+    min-width: 0;
 }
 
 /* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
@@ -617,6 +620,7 @@ body[data-active-area="dictionary"] .words-display {
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     .area-tabs {
+        display: flex;
         flex-wrap: wrap;
         justify-content: flex-start;
     }
