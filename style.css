@@ -120,12 +120,32 @@ h2.area-tab.active {
     box-shadow: inset 1px 0 0 0 var(--color-border, #ccc);
 }
 
-.input-area.active-sheet .textarea-wrapper,
-.output-area.active-sheet #output-display,
-.stack-area.active-sheet #stack-display,
-.dictionary-area.active-sheet .dictionary-container {
+.main-layout section {
+    position: relative;
+}
+
+.main-layout section.active-sheet::before {
+    content: '';
+    position: absolute;
+    inset: 0;
     border: var(--border-main);
     border-radius: 4px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.input-area.active-sheet::before {
+    display: none;
+}
+
+.input-area.active-sheet .textarea-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: var(--border-main);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 2;
 }
 #editor-panel,
 #state-panel {
