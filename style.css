@@ -117,13 +117,15 @@ h2.area-tab.active {
 /* 作業領域パネル / 状態表示パネル — 背景を透過して main-layout に委ねる */
 
 #state-panel {
-    border-left: var(--border-main);
+    box-shadow: inset 1px 0 0 0 var(--color-border, #ccc);
 }
 
-.main-layout section.active-sheet {
+.input-area.active-sheet .textarea-wrapper,
+.output-area.active-sheet #output-display,
+.stack-area.active-sheet #stack-display,
+.dictionary-area.active-sheet .dictionary-container {
     border: var(--border-main);
     border-radius: 4px;
-    background: var(--gradient-child, #fff);
 }
 #editor-panel,
 #state-panel {
