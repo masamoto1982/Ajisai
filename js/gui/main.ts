@@ -108,6 +108,8 @@ const checkStackHighlight = (content: string): boolean => {
 };
 
 const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
+const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
+const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 
 const getAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
@@ -126,6 +128,8 @@ export const createGUI = (): GUI => {
     let persistence: Persistence;
     let executionController: ExecutionController;
     let currentMode: ViewMode = 'input';
+    let currentLeftMode: ViewMode = 'input';
+    let currentRightMode: ViewMode = 'stack';
 
     const getTabButtons = (): Record<ViewMode, HTMLElement> => ({
         input: elements.tabInputBtn,
@@ -134,32 +138,49 @@ export const createGUI = (): GUI => {
         dictionary: elements.tabDictionaryBtn
     });
 
-    const updateTabState = (mode: ViewMode): void => {
+    const updateTabState = (activeModes: Set<ViewMode>): void => {
         const tabs = getTabButtons();
         TAB_MODES.forEach((key) => {
             const tab = tabs[key];
-            const isActive = key === mode;
+            const isActive = activeModes.has(key);
             tab.classList.toggle('active', isActive);
             tab.setAttribute('aria-selected', String(isActive));
             tab.setAttribute('tabindex', isActive ? '0' : '-1');
         });
     };
 
-    const syncPanelLayout = (mode: ViewMode): void => {
-        const isEditorMode = mode === 'input' || mode === 'output';
-        elements.editorPanel.style.display = isEditorMode ? 'flex' : 'none';
-        elements.statePanel.style.display = isEditorMode ? 'none' : 'flex';
-        // 表示中のパネルが main-layout 全体を占有する
+    const syncDesktopLayout = (): void => {
+        elements.editorPanel.style.display = 'flex';
+        elements.statePanel.style.display = 'flex';
         elements.editorPanel.style.flex = '1';
         elements.statePanel.style.flex = '1';
+
+        elements.inputArea.style.display = currentLeftMode === 'input' ? 'flex' : 'none';
+        elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
+        elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
+        elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
     };
 
     const switchArea = (mode: ViewMode): void => {
         currentMode = mode;
-        mobile.updateView(mode);
-        document.body.dataset.activeArea = mode;
-        syncPanelLayout(mode);
-        updateTabState(mode);
+
+        if (mobile.isMobile()) {
+            mobile.updateView(mode);
+            document.body.dataset.activeArea = mode;
+            updateTabState(new Set([mode]));
+            return;
+        }
+
+        if (LEFT_TAB_MODES.includes(mode)) {
+            currentLeftMode = mode;
+        }
+        if (RIGHT_TAB_MODES.includes(mode)) {
+            currentRightMode = mode;
+        }
+
+        syncDesktopLayout();
+        document.body.dataset.activeArea = currentRightMode;
+        updateTabState(new Set([currentLeftMode, currentRightMode]));
     };
 
     const updateHighlights = (content: string): void => {
