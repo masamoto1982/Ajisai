@@ -357,15 +357,29 @@ article h2 {
 /* --------------------------------------------------------------------------
  * 10. ボタン共通
  * -------------------------------------------------------------------------- */
+#run-btn,
+#json-import-btn,
+.header-btn,
+.reference-btn,
+.test-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.125rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    border-radius: var(--radius-main);
+    line-height: 1.2;
+    cursor: pointer;
+    text-decoration: none;
+}
+
 #run-btn {
-    padding: 0.75rem 1.5rem;
+    font-weight: 500;
     background: var(--color-primary);
     color: #fff;
     border: var(--border-main);
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: var(--radius-main);
     transition: background-color 0.2s ease;
 }
 
@@ -378,18 +392,10 @@ article h2 {
 .header-btn,
 .reference-btn,
 .test-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
     background-color: var(--gradient-menu);
     color: var(--menu-text);
-    text-decoration: none;
     border: none;
-    font-size: 0.875rem;
     font-weight: 400;
-    cursor: pointer;
-    border-radius: var(--radius-main);
     transition: all 0.2s ease;
 }
 
