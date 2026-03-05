@@ -25,11 +25,11 @@ export async function initWasm(): Promise<WasmModule | null> {
         const module = await import('./pkg/ajisai_core.js') as unknown as WasmModule;
 
         // コンパイル済みモジュールを渡して高速にインスタンス化
-        // (wasm-bindgenのdefault()はWebAssembly.Moduleを受け取れる)
+        // (wasm-bindgen の新APIはオブジェクト形式を要求する)
         if (module.default) {
-            await (module.default as (input?: unknown) => Promise<unknown>)(compiledModule);
+            await (module.default as (input?: unknown) => Promise<unknown>)({ module_or_path: compiledModule });
         } else if (module.init) {
-            await (module.init as (input?: unknown) => Promise<unknown>)(compiledModule);
+            await (module.init as (input?: unknown) => Promise<unknown>)({ module_or_path: compiledModule });
         }
 
         wasmModule = module;
