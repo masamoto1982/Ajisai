@@ -97,7 +97,8 @@ h2.area-tab:focus-visible {
 h2.area-tab.active {
     color: var(--heading-h2);
     background: var(--gradient-child, #fff);
-    border-color: var(--color-medium, #ccc);
+    border: var(--border-main);
+    border-bottom: none;
     /* アクティブタブの下端を消してコンテンツと繋げる */
     margin-bottom: -1px;
     padding-bottom: calc(0.45rem + 1px);
@@ -114,6 +115,18 @@ h2.area-tab.active {
 }
 
 /* 作業領域パネル / 状態表示パネル — 背景を透過して main-layout に委ねる */
+
+#state-panel {
+    box-shadow: inset 1px 0 0 0 var(--color-border, #ccc);
+}
+
+.input-area.active-sheet .textarea-wrapper,
+.output-area.active-sheet #output-display,
+.stack-area.active-sheet #stack-display,
+.dictionary-area.active-sheet .dictionary-container {
+    border: var(--border-main);
+    border-radius: 4px;
+}
 #editor-panel,
 #state-panel {
     flex: 1;

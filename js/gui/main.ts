@@ -149,6 +149,13 @@ export const createGUI = (): GUI => {
         });
     };
 
+    const syncActiveSheets = (): void => {
+        elements.inputArea.classList.toggle('active-sheet', currentLeftMode === 'input' || (mobile.isMobile() && currentMode === 'input'));
+        elements.outputArea.classList.toggle('active-sheet', currentLeftMode === 'output' || (mobile.isMobile() && currentMode === 'output'));
+        elements.stackArea.classList.toggle('active-sheet', currentRightMode === 'stack' || (mobile.isMobile() && currentMode === 'stack'));
+        elements.dictionaryArea.classList.toggle('active-sheet', currentRightMode === 'dictionary' || (mobile.isMobile() && currentMode === 'dictionary'));
+    };
+
     const syncDesktopLayout = (): void => {
         elements.editorPanel.style.display = 'flex';
         elements.statePanel.style.display = 'flex';
@@ -159,6 +166,7 @@ export const createGUI = (): GUI => {
         elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
         elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
         elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
+        syncActiveSheets();
     };
 
     const switchArea = (mode: ViewMode): void => {
@@ -168,6 +176,7 @@ export const createGUI = (): GUI => {
             mobile.updateView(mode);
             document.body.dataset.activeArea = mode;
             updateTabState(new Set([mode]));
+            syncActiveSheets();
             return;
         }
 
