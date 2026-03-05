@@ -120,25 +120,14 @@ h2.area-tab.active {
     box-shadow: inset 1px 0 0 0 var(--color-border, #ccc);
 }
 
-.main-layout section {
+/* アクティブシートを含むパネルにプライマリカラー枠線を付与 */
+#editor-panel:has(.active-sheet),
+#state-panel:has(.active-sheet) {
     position: relative;
 }
 
-.main-layout section.active-sheet::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border: 2px solid var(--color-primary);
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 2;
-}
-
-.input-area.active-sheet::before {
-    display: none;
-}
-
-.input-area.active-sheet .textarea-wrapper::before {
+#editor-panel:has(.active-sheet)::before,
+#state-panel:has(.active-sheet)::before {
     content: '';
     position: absolute;
     inset: 0;
