@@ -68,18 +68,10 @@
         </header>
 
         <nav class="area-tabs" role="tablist" aria-label="Area tabs">
-            <h2 id="tab-input" class="area-tab active" role="tab" data-mode="input" aria-selected="true" tabindex="0">Input
-                <span class="tooltip-icon">i<span class="area-tooltip">入力はタイピング中心です。Ctrl+Spaceでオートコンプリート候補を表示できます。<br><a href="docs/tutorial.html" target="_blank">Reference →</a></span></span>
-            </h2>
-            <h2 id="tab-output" class="area-tab" role="tab" data-mode="output" aria-selected="false" tabindex="0">Output
-                <span class="tooltip-icon">i<span class="area-tooltip">プログラム出力は青文字、エラーは赤文字、インフォメーションは灰文字で表します。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span></span>
-            </h2>
-            <h2 id="tab-stack" class="area-tab" role="tab" data-mode="stack" aria-selected="false" tabindex="0">Stack
-                <span class="tooltip-icon">i<span class="area-tooltip">スタックエリアはVectorの最外殻です。Vectorのネストは最外殻を含めて四次元までがサポートされます。<br><a href="docs/types.html" target="_blank">Reference →</a></span></span>
-            </h2>
-            <h2 id="tab-dictionary" class="area-tab" role="tab" data-mode="dictionary" aria-selected="false" tabindex="0">Dictionary
-                <span class="tooltip-icon">i<span class="area-tooltip">語彙の登録状況を確認するエリアです（入力はエディタのオートコンプリートを使用）。<br><a href="docs/higher-order.html" target="_blank">Reference →</a></span></span>
-            </h2>
+            <h2 id="tab-input" class="area-tab active" role="tab" data-mode="input" aria-selected="true" tabindex="0">Input</h2>
+            <h2 id="tab-output" class="area-tab" role="tab" data-mode="output" aria-selected="false" tabindex="0">Output</h2>
+            <h2 id="tab-stack" class="area-tab" role="tab" data-mode="stack" aria-selected="false" tabindex="0">Stack</h2>
+            <h2 id="tab-dictionary" class="area-tab" role="tab" data-mode="dictionary" aria-selected="false" tabindex="0">Dictionary</h2>
         </nav>
 
         <main class="main-layout">
@@ -115,18 +107,14 @@
                     <div class="dictionary-container">
                         <div class="builtin-words-area">
                             <div class="words-header">
-                                <h3>Built-in Words
-                                    <span class="tooltip-icon">i<span class="area-tooltip">赤枠のワードは意味の上書きや削除が出来ません。<br><a href="docs/words.html" target="_blank">Reference →</a></span></span>
-                                </h3>
+                                <h3>Built-in Words</h3>
                                 <span id="builtin-word-info" class="word-info-display"></span>
                             </div>
                             <div id="builtin-words-display" class="words-display"></div>
                         </div>
                         <div class="custom-words-area">
                             <div class="words-header">
-                                <h3>Custom Words
-                                    <span class="tooltip-icon">i<span class="area-tooltip">緑枠のワードは意味の上書きや削除が可能です。黄枠のワードは他のワードから参照を受けているため、意味の上書きや削除に一手間を要します。<br><a href="docs/syntax.html" target="_blank">Reference →</a></span></span>
-                                </h3>
+                                <h3>Custom Words</h3>
                                 <span id="custom-word-info" class="word-info-display"></span>
                             </div>
                             <div id="custom-words-display" class="words-display"></div>

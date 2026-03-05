@@ -9,13 +9,18 @@
  * 1. アプリ用レイアウト
  * -------------------------------------------------------------------------- */
 
-/* デスクトップレイアウト */
+/* デスクトップレイアウト — タブと一体化するシート枠 */
 .main-layout {
     display: flex;
     flex: 1;
     gap: 0;
     padding: 0;
     min-height: 0;
+    border-left: 1px solid var(--color-medium, #ccc);
+    border-right: 1px solid var(--color-medium, #ccc);
+    border-bottom: 1px solid var(--color-medium, #ccc);
+    margin: 0 0.5rem;
+    background: var(--gradient-child, #fff);
 }
 
 
@@ -36,13 +41,13 @@
     position: relative;
 }
 
-/* タブバー下端にラインを引く（アクティブタブで切り欠く） */
+/* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
 .area-tabs::after {
     content: '';
     position: absolute;
     bottom: 0;
-    left: 0;
-    right: 0;
+    left: 0.5rem;
+    right: 0.5rem;
     height: 1px;
     background: var(--color-medium, #ccc);
     z-index: 0;
@@ -587,73 +592,16 @@ body[data-active-area="dictionary"] .words-display {
 }
 
 /* --------------------------------------------------------------------------
- * 7. エリアツールチップ
- * -------------------------------------------------------------------------- */
-.tooltip-icon {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.1em;
-    height: 1.1em;
-    margin-left: 0.3em;
-    font-size: 0.55em;
-    font-weight: 600;
-    color: var(--color-text-light, #999);
-    border: 1.5px solid var(--color-text-light, #999);
-    border-radius: 50%;
-    vertical-align: middle;
-    line-height: 1;
-    cursor: default;
-}
-
-.area-tooltip {
-    display: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 100;
-    min-width: 220px;
-    max-width: 320px;
-    padding: 0.5rem 0.75rem;
-    background: var(--bg-article, #f5f3fa);
-    color: var(--color-text, #333);
-    border: 1px solid var(--color-secondary, #6b5b95);
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: normal;
-    line-height: 1.5;
-    white-space: normal;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.tooltip-icon:hover .area-tooltip {
-    display: block;
-}
-
-.area-tooltip a {
-    display: inline-block;
-    margin-top: 0.25rem;
-    color: var(--heading-h3, #6b5b95);
-    text-decoration: underline;
-    font-size: 0.75rem;
-}
-
-.area-tooltip a:hover {
-    opacity: 0.7;
-}
-
-/* --------------------------------------------------------------------------
- * 8. モバイル対応（アプリ固有）
+ * 7. モバイル対応（アプリ固有）
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
-    /* モバイルではホバーツールチップを非表示 */
-    .tooltip-icon {
-        display: none;
-    }
-
     .area-tabs {
         padding: 0 0.25rem;
+    }
+
+    .area-tabs::after {
+        left: 0.25rem;
+        right: 0.25rem;
     }
 
     .main-layout {
@@ -661,6 +609,7 @@ body[data-active-area="dictionary"] .words-display {
         padding: 0;
         height: auto;
         overflow: visible;
+        margin: 0 0.25rem;
     }
 
     #editor-panel,
