@@ -71,7 +71,7 @@ h2.area-tab {
     font-size: 0.85rem;
     font-weight: 500;
     color: var(--color-text-light);
-    background: transparent;
+    background: var(--color-medium, #ddd);
     border: 1px solid transparent;
     border-bottom: none;
     border-radius: 4px 4px 0 0;
@@ -97,7 +97,7 @@ h2.area-tab:focus-visible {
 h2.area-tab.active {
     color: var(--heading-h2);
     background: var(--gradient-child, #fff);
-    border: 1px solid var(--color-primary);
+    border: var(--border-main);
     border-bottom: none;
     /* アクティブタブの下端を消してコンテンツと繋げる */
     margin-bottom: -1px;
@@ -120,23 +120,6 @@ h2.area-tab.active {
     box-shadow: inset 1px 0 0 0 var(--color-border, #ccc);
 }
 
-/* アクティブシートを含むパネルにプライマリカラー枠線を付与 */
-#editor-panel:has(.active-sheet),
-#state-panel:has(.active-sheet) {
-    position: relative;
-}
-
-#editor-panel:has(.active-sheet)::before,
-#state-panel:has(.active-sheet)::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border: 1px solid var(--color-primary);
-    border-top: none;
-    border-radius: 0 0 4px 4px;
-    pointer-events: none;
-    z-index: 2;
-}
 #editor-panel,
 #state-panel {
     flex: 1;
