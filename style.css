@@ -98,10 +98,13 @@ h2.area-tab.active {
     color: var(--heading-h2);
     background: var(--gradient-child, #fff);
     border: var(--border-main);
+    border-top: 2px solid var(--color-primary);
     border-bottom: none;
     /* アクティブタブの下端を消してコンテンツと繋げる */
     margin-bottom: -1px;
     padding-bottom: calc(0.45rem + 1px);
+    /* 上辺が太くなった分、上パディングを調整して高さを揃える */
+    padding-top: calc(0.5rem - 1px);
 }
 
 /* アプリ内セクション — base.css の section ボーダーを打ち消し、
