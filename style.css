@@ -441,6 +441,13 @@ body[data-active-area="dictionary"] .words-display {
     min-height: 0;
 }
 
+.dictionary-actions {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
 .builtin-words-area,
 .custom-words-area {
     width: 100%;
