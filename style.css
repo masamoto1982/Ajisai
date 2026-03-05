@@ -97,7 +97,8 @@ h2.area-tab:focus-visible {
 h2.area-tab.active {
     color: var(--heading-h2);
     background: var(--gradient-child, #fff);
-    border-color: var(--color-medium, #ccc);
+    border: var(--border-main);
+    border-bottom: none;
     /* アクティブタブの下端を消してコンテンツと繋げる */
     margin-bottom: -1px;
     padding-bottom: calc(0.45rem + 1px);
@@ -114,6 +115,38 @@ h2.area-tab.active {
 }
 
 /* 作業領域パネル / 状態表示パネル — 背景を透過して main-layout に委ねる */
+
+#state-panel {
+    box-shadow: inset 1px 0 0 0 var(--color-border, #ccc);
+}
+
+.main-layout section {
+    position: relative;
+}
+
+.main-layout section.active-sheet::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: var(--border-main);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.input-area.active-sheet::before {
+    display: none;
+}
+
+.input-area.active-sheet .textarea-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: var(--border-main);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 2;
+}
 #editor-panel,
 #state-panel {
     flex: 1;
