@@ -19,7 +19,7 @@ const bindingsPromise = import('../pkg/ajisai_core.js');
 async function initFromCompiledModule(wasmModule: WebAssembly.Module): Promise<boolean> {
     try {
         const bindings = await bindingsPromise;
-        bindings.initSync(wasmModule);
+        bindings.initSync({ module: wasmModule });
         interpreter = new bindings.AjisaiInterpreter() as unknown as AjisaiInterpreter;
         console.log('[Worker] Initialized from pre-compiled module');
         return true;
@@ -37,7 +37,7 @@ async function initFallback(): Promise<boolean> {
     if (interpreter) return true;
     try {
         const bindings = await bindingsPromise;
-        await bindings.default();
+        await bindings.default({});
         interpreter = new bindings.AjisaiInterpreter() as unknown as AjisaiInterpreter;
         console.log('[Worker] Initialized via fallback (default init)');
         return true;
