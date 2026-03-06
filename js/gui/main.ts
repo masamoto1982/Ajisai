@@ -336,7 +336,7 @@ export const createGUI = (): GUI => {
 
         dictionary = createDictionary(extractDictionaryElements(elements), {
             onWordClick: (word) => {
-                display.showInfo(`Dictionary is now read-only. Type '${word}' in the editor or use autocomplete (Ctrl+Space).`, false);
+                editor.insertWord(word);
             },
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
