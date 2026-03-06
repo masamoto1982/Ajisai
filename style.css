@@ -667,7 +667,6 @@ body[data-active-area="dictionary"] .words-display {
 
     .builtin-words-area .words-display,
     .custom-words-area .words-display {
-        background-color: transparent;
         cursor: default;
     }
 
