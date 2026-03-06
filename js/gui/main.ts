@@ -317,7 +317,9 @@ export const createGUI = (): GUI => {
         console.log('[GUI] Initializing GUI...');
 
         elements = cacheElements();
-        mobile = createMobileHandler(extractMobileElements(elements));
+        mobile = createMobileHandler(extractMobileElements(elements), {
+            onModeChange: (mode) => switchArea(mode)
+        });
         display = createDisplay(extractDisplayElements(elements));
         display.init();
 
