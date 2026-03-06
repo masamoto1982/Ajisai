@@ -12,6 +12,7 @@ export interface Editor {
     readonly clear: (switchView?: boolean) => void;
     readonly insertWord: (word: string) => void;
     readonly insertText: (text: string) => void;
+    readonly deleteLastWord: () => void;
     readonly focus: () => void;
     readonly setOnContentChange: (callback: (content: string) => void) => void;
 }
@@ -280,6 +281,24 @@ export const createEditor = (
         notifyContentChange();
     };
 
+    const deleteLastWord = (): void => {
+        const { start } = getSelectionRange(element);
+        const before = element.value.substring(0, start);
+        const after = element.value.substring(start);
+
+        const trimmed = before.replace(/\S+\s*$/, '');
+        const newText = trimmed + after;
+
+        setElementValue(element, newText);
+        setSelectionRange(element, trimmed.length, trimmed.length);
+
+        if (!isMobile()) {
+            focusElement(element);
+        }
+        hideSuggestions();
+        notifyContentChange();
+    };
+
     const focus = (): void => {
         focusElement(element);
         switchToInputMode();
@@ -296,6 +315,7 @@ export const createEditor = (
         clear,
         insertWord,
         insertText,
+        deleteLastWord,
         focus,
         setOnContentChange
     };

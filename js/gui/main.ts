@@ -336,7 +336,19 @@ export const createGUI = (): GUI => {
 
         dictionary = createDictionary(extractDictionaryElements(elements), {
             onWordClick: (word) => {
-                editor.insertWord(word);
+                if (!mobile.isMobile()) {
+                    editor.insertWord(word);
+                }
+            },
+            onBackgroundClick: () => {
+                if (!mobile.isMobile()) {
+                    editor.insertWord(' ');
+                }
+            },
+            onBackgroundDoubleClick: () => {
+                if (!mobile.isMobile()) {
+                    editor.deleteLastWord();
+                }
             },
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
