@@ -15,6 +15,8 @@ export interface DictionaryElements {
 
 export interface DictionaryCallbacks {
     readonly onWordClick: (word: string) => void;
+    readonly onBackgroundClick?: () => void;
+    readonly onBackgroundDoubleClick?: () => void;
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (text: string, append: boolean) => void;
@@ -124,7 +126,39 @@ export const createDictionary = (
     elements: DictionaryElements,
     callbacks: DictionaryCallbacks
 ): Dictionary => {
-    const { onWordClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
+    const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
+
+    const isBackgroundClick = (e: MouseEvent): boolean => {
+        const target = e.target as HTMLElement;
+        return !target.closest('.word-button');
+    };
+
+    let clickTimer: ReturnType<typeof setTimeout> | null = null;
+
+    [elements.builtinWordsDisplay, elements.customWordsDisplay].forEach(container => {
+        if (onBackgroundClick) {
+            container.addEventListener('click', (e) => {
+                if (isBackgroundClick(e as MouseEvent)) {
+                    if (clickTimer) clearTimeout(clickTimer);
+                    clickTimer = setTimeout(() => {
+                        onBackgroundClick();
+                        clickTimer = null;
+                    }, 200);
+                }
+            });
+        }
+        if (onBackgroundDoubleClick) {
+            container.addEventListener('dblclick', (e) => {
+                if (isBackgroundClick(e as MouseEvent)) {
+                    if (clickTimer) {
+                        clearTimeout(clickTimer);
+                        clickTimer = null;
+                    }
+                    onBackgroundDoubleClick();
+                }
+            });
+        }
+    });
 
     // 検索フィルターとカスタムワードのキャッシュ
     let searchFilter = '';
