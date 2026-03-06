@@ -618,12 +618,14 @@ body[data-active-area="dictionary"] .words-display {
 @media (max-width: 768px) {
     .area-tabs {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: flex-start;
+        overflow-x: auto;
     }
 
     .tab-group {
-        width: 100%;
+        width: auto;
+        flex: 0 0 auto;
     }
 
     .main-layout {
