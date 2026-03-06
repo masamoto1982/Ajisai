@@ -15,6 +15,10 @@ export interface MobileHandler {
     readonly updateView: (mode: ViewMode) => void;
 }
 
+export interface MobileHandlerOptions {
+    readonly onModeChange?: (mode: ViewMode) => void;
+}
+
 const MOBILE_BREAKPOINT = 768;
 const SWIPE_THRESHOLD = 50;
 const VIEW_ORDER: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
@@ -94,7 +98,10 @@ const applyStyles = (
     });
 };
 
-export const createMobileHandler = (elements: MobileElements): MobileHandler => {
+export const createMobileHandler = (
+    elements: MobileElements,
+    options: MobileHandlerOptions = {}
+): MobileHandler => {
     let currentMode: ViewMode = 'input';
     let touchStartX = 0;
     let touchStartY = 0;
@@ -111,6 +118,7 @@ export const createMobileHandler = (elements: MobileElements): MobileHandler => 
         if (direction === 'left' || direction === 'right') {
             const newMode = getNextMode(currentMode, direction);
             updateView(newMode);
+            options.onModeChange?.(newMode);
         }
     };
 
