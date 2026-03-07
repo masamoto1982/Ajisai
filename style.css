@@ -283,13 +283,6 @@ body[data-active-area="dictionary"] .words-display {
 }
 
 
-.input-assist-hint {
-    margin-top: 0.5rem;
-    font-size: 0.72rem;
-    color: var(--color-text-light);
-    font-family: var(--font-stack-mono);
-}
-
 .editor-suggestions {
     position: absolute;
     /* top / left は JS が動的に設定 */
