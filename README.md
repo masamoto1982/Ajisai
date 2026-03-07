@@ -7,29 +7,43 @@
 
 # Ajisai
 
-> **"Ajisai is a vessel of water."**
+> **Manifesto: Data is not stored — it flows. Every operation consumes a fraction of the stream and hands the remainder forward. Computation is a chain of consumption, not a pile of copies.**
 
-**A Vector-oriented programming language**
+**A Fractional Dataflow programming language**
 
-Ajisai inherits **postfix notation** and the **dictionary system** from FORTH. The center of its data structure is not the stack but the **Vector**.
+Ajisai inherits **postfix notation** and the **dictionary system** from FORTH. Its execution model is built on **Fractional Dataflow**: every value is a fraction that streams through a pipeline of operations, each consuming what it needs and forwarding the remainder — like an unspent transaction output (UTXO) chain, or a TPU fused-execution pipeline that never materializes intermediates.
 
 **Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
 
 ---
 
-## Design Philosophy: The Vessel of Water
+## Design Philosophy: Fractional Dataflow
 
-The botanical name for hydrangea (Ajisai in Japanese) is *Hydrangea*, derived from the Greek words *hydor* (water) and *angos* (vessel) — literally meaning "vessel of water."
+The botanical name for hydrangea (Ajisai in Japanese) is *Hydrangea*, derived from the Greek words *hydor* (water) and *angos* (vessel) — literally "vessel of water." In Ajisai, data is water that **flows**, never standing still.
 
-This etymology captures the essence of Ajisai's architecture.
+### Core Principles
 
-| Concept | Metaphor | Technical Reality |
-|:--------|:---------|:------------------|
-| **Data** | Water | `Fraction` — the sole truth |
-| **Type** | Ripple | `DisplayHint` — interpretation for display only |
-| **Shape** | Vessel | Dimensional structure derived from nesting |
-| **NIL** | Bubble | `ValueData::Nil` — exists in water but is not water |
-| **CodeBlock** | How to pour water | Deferred code that produces water when executed |
+| Principle | Analogy | What It Means |
+|:----------|:--------|:--------------|
+| **Fraction as Truth** | Water | `Fraction` is the sole computational substance |
+| **Consume/Remainder** | UTXO | Each operation consumes what it needs; the remainder flows on |
+| **No Intermediates** | TPU | Pipeline stages fuse — no materialized intermediate collections |
+| **Conservation Law** | Physics | `initial_total = Sigma(consumed_i) + final_remainder` always holds |
+| **Display is a Ripple** | Ripple | `DisplayHint` is interpretation for display only — not a type |
+| **NIL is a Bubble** | Bubble | Exists in the flow but carries zero fraction mass |
+
+### The Consumed/Remainder Model
+
+Every operation in Ajisai follows this pattern:
+
+```
+input_flow -> operation -> (consumed, remainder_flow)
+```
+
+- The **remainder** is automatically inherited as the next operation's input.
+- **Over-consumption** (requesting more than remains) is a hard error.
+- At pipeline end, **complete consumption** (remainder = 0) is the goal.
+- The interpreter can verify the **conservation law** at any point.
 
 ---
 
@@ -52,9 +66,23 @@ pub enum ValueData {
 }
 ```
 
+### FlowToken: The UTXO of Computation
+
+Each value entering the pipeline is wrapped in a `FlowToken` that tracks its consumption chain:
+
+```rust
+pub struct FlowToken {
+    pub id: u64,              // Unique chain identifier
+    pub total: Fraction,      // Original total entering this chain
+    pub remaining: Fraction,  // Fraction still available for consumption
+    pub hint: DisplayHint,    // Carried along the flow
+    pub shape: Vec<usize>,    // Logical shape of the flow bundle
+}
+```
+
 ### Data Duality
 
-What users see as "types" are merely ripples on the surface:
+What users see as "types" are merely ripples on the surface of the fraction stream:
 
 | Appearance (Ripple) | Reality (Water) | Explanation |
 |:--------------------|:----------------|:------------|
@@ -62,7 +90,7 @@ What users see as "types" are merely ripples on the surface:
 | `TRUE` | `Scalar(1/1)` + Boolean hint | 1 is true, 0 is false |
 | `'A'` | `Scalar(65/1)` + String hint | Character code (Unicode) |
 | `'Hello'` | `Vector([72/1, 101/1, ...])` + String hint | Array of character codes |
-| `NIL` | `Nil` | Absence of value |
+| `NIL` | `Nil` | Absence of value (zero fraction mass) |
 
 ---
 
@@ -70,17 +98,19 @@ What users see as "types" are merely ripples on the surface:
 
 ### Language Design
 
-- **Vector-oriented with Reverse Polish Notation (RPN)**
+- **Fractional Dataflow with Reverse Polish Notation (RPN)**
   - FORTH-inherited postfix notation and dictionary system
   - No stack manipulation words (DUP, SWAP, ROT, OVER do not exist)
+  - Operations consume input fractions and pass remainders forward
 
-- **Exact Fraction Arithmetic**
+- **Exact Fraction Arithmetic with Conservation**
   - All numbers internally represented as fractions — no rounding errors
   - Arbitrary precision through `num-bigint`
+  - Conservation law verified: `total = consumed + remainder`
 
-- **Recursive Vector Structure**
-  - All container data represented as nestable Vectors
-  - Bracket `[ ]` nesting expresses dimensions
+- **Stream-First Vector Processing (TPU Analogy)**
+  - Vector operations process elements as a stream, not by materializing intermediate arrays
+  - Bracket `[ ]` nesting expresses dimensions of the flow bundle
   - Tensor operations (SHAPE, RESHAPE, TRANSPOSE, FILL)
   - NumPy/APL-style broadcasting
 
@@ -96,6 +126,14 @@ What users see as "types" are merely ripples on the surface:
 - **Built-in Word Protection**
   - Built-in words cannot be deleted or overwritten
 
+### Error Model (Fractional Dataflow)
+
+| Error | Meaning |
+|:------|:--------|
+| `OverConsumption` | Requested consumption exceeds remaining flow |
+| `UnconsumedLeak` | Non-zero remainder at a complete-consumption boundary |
+| `FlowBreak` | Flow chain ID discontinuity — remainder cannot be inherited |
+
 ### Technology Stack
 
 | Component | Technology |
@@ -110,14 +148,22 @@ What users see as "types" are merely ripples on the surface:
 
 ## Code Examples
 
-### Vector Operations
+### Fraction Flow Through Operations
 
 ```ajisai
-# Creating vectors
-[ 1 2 3 ]               # 1D vector: { 1 2 3 }
+# Each operation consumes its inputs and produces a remainder-ready output
+[ 5 ] [ 3 ] +     # 5/1 and 3/1 consumed -> 8/1 produced
+[ 10 ] [ 2 ] /    # 10/1 consumed by 2/1 -> 5/1 remainder flows on
+```
+
+### Vector Operations (Stream Processing)
+
+```ajisai
+# Creating vectors (flow bundles)
+[ 1 2 3 ]               # 1D flow bundle: { 1 2 3 }
 [ [ 1 2 ] [ 3 4 ] ]     # Nested: { ( 1 2 ) ( 3 4 ) }
 
-# Broadcasting arithmetic
+# Broadcasting: fraction flow distributes across the bundle
 [ 5 ] [ 1 2 3 ] +       # -> { 6 7 8 }
 [ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +
 # -> { ( 11 22 33 ) ( 14 25 36 ) }
@@ -126,7 +172,7 @@ What users see as "types" are merely ripples on the surface:
 ### Custom Word Definition
 
 ```ajisai
-# Define a word that doubles a value
+# Define a word that doubles a value (consumes input, produces 2x output)
 : [ 2 ] * ; 'DOUBLE' DEF
 
 # Usage
@@ -155,20 +201,20 @@ What users see as "types" are merely ripples on the surface:
 
 ### Pipeline Operator (`==`)
 
-The pipeline operator is a visual marker for data flow (no-op):
+The pipeline operator is a visual marker for the dataflow chain (no-op):
 
 ```ajisai
-# Readable data transformation pipeline
+# Readable fraction-flow transformation pipeline
 [ 1 2 3 4 5 ]
-  == : [ 2 ] * ; MAP           # Double each: { 2 4 6 8 10 }
-  == : [ 5 ] < NOT ; FILTER    # Keep >= 5:   { 6 8 10 }
-  == [ 0 ] : + ; FOLD          # Sum:         { 24 }
+  == : [ 2 ] * ; MAP           # Consume and double: { 2 4 6 8 10 }
+  == : [ 5 ] < NOT ; FILTER    # Consume and keep >= 5: { 6 8 10 }
+  == [ 0 ] : + ; FOLD          # Consume and sum: { 24 }
 ```
 
 ### Safe Mode and Nil Coalescing
 
 ```ajisai
-# Safe mode (~): convert errors to NIL
+# Safe mode (~): convert errors to NIL (zero-mass bubble in the flow)
 [ 1 2 3 ] [ 10 ] ~ GET           # -> NIL (index out of bounds)
 [ 1 2 3 ] [ 10 ] ~ GET => [ 0 ]  # -> { 0 } (with default)
 ```

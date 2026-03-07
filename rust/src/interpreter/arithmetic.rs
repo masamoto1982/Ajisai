@@ -4,7 +4,7 @@
 
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, get_operands, push_result};
+use crate::interpreter::helpers::{get_integer_from_value, get_operands, get_operands_with_flow, push_result, push_flow_result};
 use crate::interpreter::simd_ops;
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
@@ -119,8 +119,8 @@ where
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            // get_operands を使用してオペランドを取得
-            let operands = get_operands(interp, 2)?;
+            // get_operands を使用してオペランドを取得 (with flow tracking)
+            let (operands, flow_tokens) = get_operands_with_flow(interp, 2)?;
             let a_val = &operands[0];
             let b_val = &operands[1];
 
@@ -147,7 +147,13 @@ where
                 return Err(AjisaiError::NoChange { word: op_name.into() });
             }
 
-            push_result(interp, result);
+            // Fractional Dataflow: record full consumption of both operands
+            if let Some(ref tokens) = flow_tokens {
+                let consumed: Vec<Fraction> = tokens.iter().map(|t| t.total.clone()).collect();
+                push_flow_result(interp, result, Some(tokens), &consumed);
+            } else {
+                push_result(interp, result);
+            }
         },
 
         OperationTargetMode::Stack => {

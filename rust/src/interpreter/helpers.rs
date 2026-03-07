@@ -2,6 +2,8 @@ use crate::error::{AjisaiError, Result};
 use crate::types::{Value, ValueData, DisplayHint};
 use crate::types::fraction::Fraction;
 use crate::interpreter::{Interpreter, ConsumptionMode};
+#[allow(unused_imports)]
+use num_traits::Zero;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
@@ -163,6 +165,41 @@ pub(crate) fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec
 
 pub(crate) fn push_result(interp: &mut Interpreter, result: Value) {
     interp.stack.push(result);
+}
+
+// ── Fractional Dataflow helpers ──────────────────────────────────────
+
+use crate::types::FlowToken;
+
+/// Wrap `get_operands` with FlowToken creation when flow tracking is on.
+/// Returns (operands, Option<Vec<FlowToken>>).
+pub(crate) fn get_operands_with_flow(
+    interp: &mut Interpreter,
+    count: usize,
+) -> Result<(Vec<Value>, Option<Vec<FlowToken>>)> {
+    let operands = get_operands(interp, count)?;
+    let tokens = if interp.flow_tracking {
+        Some(operands.iter().map(|v| interp.begin_flow(v)).collect())
+    } else {
+        None
+    };
+    Ok((operands, tokens))
+}
+
+/// Push a result and record flow consumption when tracking is active.
+pub(crate) fn push_flow_result(
+    interp: &mut Interpreter,
+    result: Value,
+    input_flows: Option<&[FlowToken]>,
+    consumed_amounts: &[Fraction],
+) {
+    interp.stack.push(result);
+
+    if let Some(flows) = input_flows {
+        for (flow, consumed) in flows.iter().zip(consumed_amounts.iter()) {
+            let _ = interp.record_consumption(flow, consumed);
+        }
+    }
 }
 
 #[cfg(test)]

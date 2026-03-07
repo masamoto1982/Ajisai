@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
         primaryColor: '#6b5b95',
         meta: {
             title: "Ajisai",
-            subTitle: "FORTH-inspired Stack-based Language",
+            subTitle: "Fractional Dataflow Language",
             copyrightYear: new Date().getFullYear()
         },
         project: {

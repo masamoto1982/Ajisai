@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ajisai | Data Types</title>
-  <meta name="description" content="Ajisai data types reference">
+  <meta name="description" content="Ajisai Fractional Dataflow data types and FlowToken reference">
   <!-- 共通設定・テーマ（CSSより先に読み込み） -->
   <script src="../ajisai-config.js?v=20251230"></script>
   <script src="../ajisai-theme.js?v=20251230"></script>
@@ -32,11 +32,15 @@
       <nav id="js-side-nav" class="side-nav"></nav>
 
       <article id="main-content" class="main-content">
-        <h2>Data Types</h2>
+        <h2>Data Types &amp; FlowTokens</h2>
+
+        <section class="manifesto" style="background: var(--bg-secondary, #f0f4f8); border-left: 4px solid var(--accent, #6366f1); padding: 1em 1.5em; margin-bottom: 1.5em; border-radius: 4px;">
+          <p>In Ajisai's Fractional Dataflow model, every value on the stream is a <strong>FlowToken</strong> &mdash; a typed fraction that is consumed exactly once by an operation and produces a result plus a remainder. The types below describe the kinds of FlowTokens that flow through the consume/remainder chain.</p>
+        </section>
 
         <section>
-          <h3>Number</h3>
-          <p>All numbers are internally fractions - no rounding errors:</p>
+          <h3>Number (Fraction FlowToken)</h3>
+          <p>All numbers are internally fractions &mdash; no rounding errors. This conservation-preserving representation ensures that no value is lost as tokens flow through operations:</p>
 <pre><code># Integers
 42
 -17
@@ -59,7 +63,7 @@
         </section>
 
         <section>
-          <h3>String</h3>
+          <h3>String (Text FlowToken)</h3>
 <pre><code>'hello'
 '日本語'          # UTF-8 supported
 
@@ -71,7 +75,7 @@
         </section>
 
         <section>
-          <h3>Boolean</h3>
+          <h3>Boolean (Logic FlowToken)</h3>
 <pre><code>TRUE
 FALSE
 
@@ -86,8 +90,8 @@ FALSE
         </section>
 
         <section>
-          <h3>Vector</h3>
-          <p>Maximum 4 dimensions supported:</p>
+          <h3>Vector (Composite FlowToken)</h3>
+          <p>Vectors are composite FlowTokens that carry multiple values through the fraction flow. Maximum 4 dimensions supported:</p>
           <table>
             <tr><th>Dim</th><th>Example</th></tr>
             <tr><td>1D</td><td><code>[ 1 2 3 ]</code></td></tr>
@@ -104,7 +108,7 @@ FALSE
         </section>
 
         <section>
-          <h3>DateTime</h3>
+          <h3>DateTime (Temporal FlowToken)</h3>
 <pre><code># Current time
 NOW    # Result: [ @2024-11-25 14:00:00 ]
 
@@ -116,7 +120,7 @@ NOW 'LOCAL' DATETIME    # Result: [ [ 2024 11 25 14 0 0 ] ]
         </section>
 
         <section>
-          <h3>Type Conversion</h3>
+          <h3>Type Conversion (FlowToken Transform)</h3>
           <table>
             <tr><th>Word</th><th>Example</th></tr>
             <tr><td><code>STR</code></td><td><code>[ 42 ] STR</code> &rarr; <code>[ '42' ]</code></td></tr>
@@ -128,11 +132,12 @@ NOW 'LOCAL' DATETIME    # Result: [ [ 2024 11 25 14 0 0 ] ]
         </section>
 
         <section>
-          <h3>Broadcasting</h3>
-<pre><code># Scalar broadcast
+          <h3>Broadcasting (Fraction Flow Expansion)</h3>
+          <p>Broadcasting extends a FlowToken across dimensions via remainder passing &mdash; like a TPU distributing a single value across parallel lanes with no materialized intermediates:</p>
+<pre><code># Scalar broadcast — single fraction flows across the vector
 [ 5 ] [ 1 2 3 ] +    # Result: [ 6 7 8 ]
 
-# Row broadcast
+# Row broadcast — fraction flow expands along rows
 [ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +
 # Result: [ [ 11 22 33 ] [ 14 25 36 ] ]</code></pre>
         </section>

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ajisai | Philosophy</title>
-  <meta name="description" content="Ajisai design philosophy and core principles">
+  <meta name="description" content="Ajisai Fractional Dataflow design philosophy and core principles">
   <!-- 共通設定・テーマ（CSSより先に読み込み） -->
   <script src="../ajisai-config.js?v=20251230"></script>
   <script src="../ajisai-theme.js?v=20251230"></script>
@@ -34,30 +34,36 @@
       <article id="main-content" class="main-content">
         <h2>Design Philosophy</h2>
 
+        <section class="manifesto" style="background: var(--bg-secondary, #f0f4f8); border-left: 4px solid var(--accent, #6366f1); padding: 1em 1.5em; margin-bottom: 1.5em; border-radius: 4px;">
+          <p><strong>Manifesto:</strong> Ajisai is a <em>Fractional Dataflow</em> language. Every value flows through operations as a fraction &mdash; consumed and producing a remainder, like a TPU pipeline with no materialized intermediates. Each token is spent exactly once, like a UTXO: what enters must exit as result + remainder, preserving the conservation law.</p>
+        </section>
+
         <section>
           <h3>The Name "Ajisai"</h3>
-          <p>The name "Ajisai" (紫陽花, hydrangea) metaphorically represents FORTH's characteristic of small words coming together to form functionality, like how small flowers form a hydrangea cluster.</p>
+          <p>The name "Ajisai" (紫陽花, hydrangea) metaphorically represents how small words come together to form functionality, like how small flowers form a hydrangea cluster &mdash; each petal a fraction flowing into the whole.</p>
           <p><em>Note: What appears to be petals on a hydrangea are actually sepals.</em></p>
         </section>
 
         <section>
           <h3>Core Design Principles</h3>
 
-          <h4>1. Stack-based Computation</h4>
-          <p>Ajisai follows FORTH's stack-based paradigm with Reverse Polish Notation (RPN):</p>
+          <h4>1. Fractional Dataflow Computation</h4>
+          <p>Ajisai implements a Fractional Dataflow paradigm (FORTH-inherited postfix notation) with Reverse Polish Notation (RPN):</p>
           <ul>
             <li>Eliminates the need for parentheses to specify operation order</li>
-            <li>Makes data flow explicit and visible</li>
-            <li>Enables simple composition of operations</li>
+            <li>Makes fraction flow explicit and visible &mdash; every value enters, is consumed, and produces a remainder</li>
+            <li>Enables simple composition of operations via remainder passing</li>
+            <li><strong>TPU analogy:</strong> Data streams through operations with no materialized intermediates &mdash; each word consumes its input and forwards the remainder</li>
+            <li><strong>UTXO analogy:</strong> Each FlowToken is spent exactly once; the output is result + remainder, enforcing the conservation law</li>
           </ul>
 
           <h4>2. Vector-centric Data Model</h4>
-          <p>All container data is represented as nestable Vectors (similar to LISP's list structure):</p>
+          <p>All container data is represented as nestable Vectors (similar to LISP's list structure), serving as fraction flow carriers:</p>
           <ul>
             <li>Bracket <code>[ ]</code> nesting expresses dimensions</li>
             <li>Supports tensor-like operations (SHAPE, RESHAPE, TRANSPOSE)</li>
             <li>Allows heterogeneous data: <code>[ 1 'hello' TRUE [ 2 3 ] ]</code></li>
-            <li>NumPy/APL-style broadcasting</li>
+            <li>NumPy/APL-style broadcasting across fraction flows</li>
           </ul>
 
           <h4>3. Dimension Limit (Maximum 4D)</h4>
@@ -70,29 +76,43 @@
             <tr><td>4D</td><td>time, layer, row, col</td><td><code>[ [ [ [ 1 ] ] ] ]</code></td></tr>
           </table>
 
-          <h4>4. Exact Fraction Arithmetic</h4>
-          <p>All numbers are internally represented as fractions, eliminating rounding errors:</p>
+          <h4>4. Conservation-Preserving Fraction Arithmetic</h4>
+          <p>All numbers are internally represented as fractions, eliminating rounding errors and enforcing the conservation law:</p>
           <ul>
             <li><code>5</code> stored as <code>Fraction(5, 1)</code></li>
             <li><code>0.5</code> stored as <code>Fraction(1, 2)</code></li>
             <li>Capable of handling extremely large numbers</li>
+            <li>Every arithmetic operation preserves exact quantity &mdash; nothing is lost to rounding, upholding the Fractional Dataflow conservation guarantee</li>
           </ul>
 
           <h4>5. "No Change is an Error" Principle</h4>
-          <p>Operations that result in no change produce an error:</p>
+          <p>Operations that result in no change produce an error &mdash; in the Fractional Dataflow model, a no-op means the consume/remainder chain was not honored:</p>
           <ul>
             <li>Prevents silent no-ops that may hide bugs</li>
             <li>Examples: <code>[ 1 ] REVERSE</code>, <code>[ 1 2 3 ] SORT</code> (already sorted)</li>
           </ul>
 
           <h4>6. Built-in Word Protection</h4>
-          <p>Built-in words cannot be deleted or overwritten, ensuring consistent behavior.</p>
+          <p>Built-in words cannot be deleted or overwritten, ensuring consistent remainder forwarding behavior.</p>
+        </section>
+
+        <section>
+          <h3>The Consume/Remainder Model</h3>
+          <p>Every operation in Ajisai follows the consume/remainder pattern:</p>
+          <ol>
+            <li><strong>Consume:</strong> The operation takes its input FlowTokens from the stream</li>
+            <li><strong>Transform:</strong> The operation produces a result (no materialized intermediates, like a TPU)</li>
+            <li><strong>Remainder passing:</strong> Unconsumed values are forwarded as the remainder to the next operation</li>
+          </ol>
+          <p>This is analogous to the UTXO (Unspent Transaction Output) model: each value-token is spent exactly once, and the "change" is passed forward. The conservation law ensures that no value is created or destroyed &mdash; only transformed.</p>
         </section>
 
         <section>
           <h3>Influences</h3>
           <ul>
-            <li><strong>FORTH:</strong> Stack-based computation, word definitions</li>
+            <li><strong>FORTH:</strong> Postfix notation, word definitions (inherited as the syntactic foundation)</li>
+            <li><strong>TPU / Streaming architectures:</strong> No materialized intermediates; data flows through operations</li>
+            <li><strong>UTXO (Bitcoin):</strong> Consume/remainder model; each token spent exactly once</li>
             <li><strong>LISP:</strong> Nested list structures</li>
             <li><strong>APL/J:</strong> Array operations, broadcasting</li>
             <li><strong>NumPy:</strong> Broadcasting rules, shape operations</li>
