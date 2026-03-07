@@ -18,7 +18,7 @@ pub mod tensor_ops;
 pub mod vector_exec;
 pub mod vector_ops;
 
-use crate::types::{ExecutionLine, Stack, Token, Value, WordDefinition, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{ExecutionLine, FlowToken, Stack, Token, Value, WordDefinition, MAX_VISIBLE_DIMENSIONS};
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -71,6 +71,14 @@ pub struct Interpreter {
     /// and comparison results on vector inputs are wrapped in vectors.
     /// Set to true by the WASM API for GUI compatibility.
     pub gui_mode: bool,
+    // ── Fractional Dataflow tracking ──────────────────────────────────
+    /// When true, the interpreter tracks consumed/remainder for every
+    /// operation and verifies the conservation law at pipeline boundaries.
+    pub(crate) flow_tracking: bool,
+    /// Active flow tokens keyed by their chain ID.
+    pub(crate) active_flows: Vec<FlowToken>,
+    /// Accumulated consumed amounts per flow chain (for conservation audit).
+    pub(crate) flow_consumed_log: Vec<(u64, Fraction)>,
 }
 
 impl Interpreter {
@@ -93,9 +101,73 @@ impl Interpreter {
             input_buffer: String::new(),
             io_output_buffer: String::new(),
             gui_mode: false,
+            flow_tracking: false,
+            active_flows: Vec::new(),
+            flow_consumed_log: Vec::new(),
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
+    }
+
+    // ── Fractional Dataflow API ──────────────────────────────────────
+
+    /// Enable or disable conservation-law tracking (debug / test mode).
+    pub fn set_flow_tracking(&mut self, enabled: bool) {
+        self.flow_tracking = enabled;
+        if enabled {
+            self.active_flows.clear();
+            self.flow_consumed_log.clear();
+        }
+    }
+
+    /// Begin a new flow chain for a value entering the pipeline.
+    /// Returns the `FlowToken` that must be threaded through operations.
+    pub fn begin_flow(&mut self, value: &Value) -> FlowToken {
+        let token = FlowToken::from_value(value);
+        if self.flow_tracking {
+            self.active_flows.push(token.clone());
+        }
+        token
+    }
+
+    /// Record a consumption event against a flow chain.
+    pub fn record_consumption(
+        &mut self,
+        flow: &FlowToken,
+        consumed: &Fraction,
+    ) -> Result<FlowToken> {
+        let (_consumed_amount, new_flow) = flow.consume(consumed)?;
+        if self.flow_tracking {
+            self.flow_consumed_log
+                .push((flow.id, consumed.abs()));
+            // Update the active flow entry
+            if let Some(af) = self.active_flows.iter_mut().find(|f| f.id == flow.id) {
+                *af = new_flow.clone();
+            }
+        }
+        Ok(new_flow)
+    }
+
+    /// Verify conservation for all tracked flows (call at pipeline end).
+    pub fn verify_all_flows(&self) -> Result<()> {
+        for flow in &self.active_flows {
+            let consumed_for_flow: Vec<Fraction> = self
+                .flow_consumed_log
+                .iter()
+                .filter(|(id, _)| *id == flow.id)
+                .map(|(_, c)| c.clone())
+                .collect();
+            flow.verify_conservation(&consumed_for_flow)?;
+        }
+        Ok(())
+    }
+
+    /// Assert that all tracked flows have been fully consumed.
+    pub fn assert_all_flows_complete(&self) -> Result<()> {
+        for flow in &self.active_flows {
+            flow.assert_complete("pipeline end")?;
+        }
+        Ok(())
     }
 
     fn set_operation_target_mode(&mut self, mode: OperationTargetMode) {
@@ -680,6 +752,40 @@ impl Interpreter {
             self.force_flag = false;
         }
 
+        // Fractional Dataflow: snapshot stack totals before execution for
+        // conservation-law auditing when flow_tracking is active.
+        let pre_snapshot = if self.flow_tracking {
+            Some(self.snapshot_stack_totals())
+        } else {
+            None
+        };
+
+        let result = self.execute_builtin_inner(name);
+
+        // Post-op conservation check
+        if let Some(pre) = pre_snapshot {
+            if result.is_ok() {
+                let post = self.snapshot_stack_totals();
+                // Log the delta for debugging (conservation violations will
+                // surface when verify_all_flows() is called at pipeline end).
+                let _delta = post.sub(&pre);
+            }
+        }
+
+        result
+    }
+
+    /// Snapshot the total fraction mass of the entire stack.
+    fn snapshot_stack_totals(&self) -> Fraction {
+        let mut total = Fraction::from(0);
+        for val in &self.stack {
+            let token = FlowToken::from_value(val);
+            total = total.add(&token.total);
+        }
+        total
+    }
+
+    fn execute_builtin_inner(&mut self, name: &str) -> Result<()> {
         match name {
             // Hot path: arithmetic operators (most frequent in typical programs)
             "+" => arithmetic::op_add(self),

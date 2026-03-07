@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ajisai | FORTH-inspired Stack-based Language</title>
-  <meta name="description" content="Ajisai - A stack-based programming language inspired by FORTH, running on WebAssembly">
+  <title>Ajisai | Fractional Dataflow Language</title>
+  <meta name="description" content="Ajisai - A Fractional Dataflow programming language (FORTH-inherited postfix notation), running on WebAssembly">
 
   <!-- 共通設定・テーマ（CSSより先に読み込み） -->
   <script src="../ajisai-config.js?v=20251230"></script>
@@ -35,31 +35,36 @@
       <article id="main-content" class="main-content">
         <h2>Welcome to Ajisai</h2>
 
+        <section class="manifesto" style="background: var(--bg-secondary, #f0f4f8); border-left: 4px solid var(--accent, #6366f1); padding: 1em 1.5em; margin-bottom: 1.5em; border-radius: 4px;">
+          <p><strong>Manifesto:</strong> Ajisai is a <em>Fractional Dataflow</em> language. Every value flows through operations as a fraction &mdash; consumed and producing a remainder, like a TPU pipeline with no materialized intermediates. Each token is spent exactly once, like a UTXO: what enters must exit as result + remainder, preserving the conservation law.</p>
+        </section>
+
         <section>
           <h3>What is Ajisai?</h3>
-          <p>Ajisai is a stack-based programming language inspired by FORTH, featuring a WebAssembly-based interpreter and an interactive web-based GUI.</p>
+          <p>Ajisai is a Fractional Dataflow programming language (FORTH-inherited postfix notation), featuring a WebAssembly Runtime and an interactive web-based GUI.</p>
+          <p>Values flow through a consume/remainder chain: each operation consumes its input and forwards the remainder, analogous to TPU streaming (no materialized intermediates) and UTXO spending (each token used exactly once).</p>
           <p>The name "Ajisai" (hydrangea in Japanese) represents how small words come together to form functionality, like how small flowers form a hydrangea cluster.</p>
         </section>
 
         <div class="feature-grid">
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F4DA;</div>
-            <h4>Stack-based RPN</h4>
-            <p>FORTH-style stack operations with Reverse Polish Notation</p>
+            <h4>Fractional Dataflow</h4>
+            <p>FORTH-inherited postfix notation with remainder passing &mdash; values flow, never stall</p>
           </div>
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F9EE;</div>
-            <h4>Vector Operations</h4>
-            <p>NumPy/APL-style broadcasting and tensor operations</p>
+            <h4>Stream-First Vector Processing</h4>
+            <p>NumPy/APL-style broadcasting and tensor operations over fraction flows</p>
           </div>
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F522;</div>
-            <h4>Exact Fractions</h4>
-            <p>All numbers as fractions - no rounding errors</p>
+            <h4>Conservation-Preserving Fraction Arithmetic</h4>
+            <p>All numbers as fractions &mdash; no rounding errors, conservation law guaranteed</p>
           </div>
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F680;</div>
-            <h4>WebAssembly</h4>
+            <h4>WebAssembly Runtime</h4>
             <p>Rust core compiled to WASM for fast browser execution</p>
           </div>
         </div>

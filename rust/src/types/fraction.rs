@@ -518,6 +518,22 @@ impl Fraction {
         self.cmp(other) != std::cmp::Ordering::Less
     }
 
+    /// Absolute value: |a/b|
+    #[inline]
+    pub fn abs(&self) -> Fraction {
+        if self.is_nil() {
+            return self.clone();
+        }
+        Fraction {
+            numerator: if self.numerator < BigInt::zero() {
+                -self.numerator.clone()
+            } else {
+                self.numerator.clone()
+            },
+            denominator: self.denominator.clone(),
+        }
+    }
+
     /// Floor: rounds toward negative infinity.
     pub fn floor(&self) -> Fraction {
         if self.denominator.is_one() {

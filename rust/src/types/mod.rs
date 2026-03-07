@@ -537,3 +537,146 @@ pub struct WordDefinition {
 pub type Stack = Vec<Value>;
 
 pub const MAX_VISIBLE_DIMENSIONS: usize = 9;
+
+// ---------------------------------------------------------------------------
+// Fractional Dataflow: FlowToken
+// ---------------------------------------------------------------------------
+//
+// A FlowToken tracks the UTXO-style consumption chain for a value flowing
+// through the pipeline.  Each operation consumes some fraction and hands
+// the remainder to the next stage.
+//
+// Conservation law:  total == Σ consumed_i + remaining   (at every point)
+//
+// The interpreter creates a FlowToken when a value enters the pipeline and
+// threads it through successive operations.
+
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static FLOW_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+/// A token that tracks fraction consumption through the dataflow pipeline.
+///
+/// Modelled after the UTXO (Unspent Transaction Output) pattern:
+/// each operation consumes part of the remaining fraction, and the
+/// unconsumed remainder is forwarded to the next operation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FlowToken {
+    /// Unique identifier for this flow chain
+    pub id: u64,
+    /// The original total entering this chain
+    pub total: Fraction,
+    /// The fraction still available for consumption
+    pub remaining: Fraction,
+    /// Display interpretation hint (carried along the flow)
+    pub hint: DisplayHint,
+    /// Logical shape of the flow bundle
+    pub shape: Vec<usize>,
+}
+
+impl FlowToken {
+    /// Create a new flow token from a `Value`, starting a fresh chain.
+    pub fn from_value(value: &Value) -> Self {
+        let total = Self::value_total(value);
+        let shape = value.shape();
+        let hint = value.display_hint;
+        FlowToken {
+            id: FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
+            total: total.clone(),
+            remaining: total,
+            hint,
+            shape,
+        }
+    }
+
+    /// Compute the "total" fraction mass of a value (sum of all scalar leaves).
+    fn value_total(value: &Value) -> Fraction {
+        match &value.data {
+            ValueData::Nil => Fraction::from(0),
+            ValueData::Scalar(f) => {
+                if f.is_nil() {
+                    Fraction::from(0)
+                } else {
+                    f.clone()
+                }
+            }
+            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+                let mut acc = Fraction::from(0);
+                for child in v.iter() {
+                    let child_total = Self::value_total(child);
+                    // Use absolute values so mixed-sign vectors don't cancel out
+                    acc = acc.add(&child_total.abs());
+                }
+                acc
+            }
+            ValueData::CodeBlock(_) => Fraction::from(0),
+        }
+    }
+
+    /// Consume `amount` from this token, returning (consumed, remainder_token).
+    ///
+    /// Returns `Err(OverConsumption)` if `amount > remaining`.
+    pub fn consume(&self, amount: &Fraction) -> std::result::Result<(Fraction, FlowToken), crate::error::AjisaiError> {
+        if amount > &self.remaining {
+            return Err(crate::error::AjisaiError::OverConsumption {
+                requested: format!("{}", amount),
+                remaining: format!("{}", self.remaining),
+            });
+        }
+        let new_remaining = self.remaining.sub(amount);
+        Ok((
+            amount.clone(),
+            FlowToken {
+                id: self.id,
+                total: self.total.clone(),
+                remaining: new_remaining,
+                hint: self.hint,
+                shape: self.shape.clone(),
+            },
+        ))
+    }
+
+    /// Check that the conservation law holds for this token given a list of
+    /// consumed amounts.
+    pub fn verify_conservation(&self, consumed: &[Fraction]) -> std::result::Result<(), crate::error::AjisaiError> {
+        let mut sum = Fraction::from(0);
+        for c in consumed {
+            sum = sum.add(&c.abs());
+        }
+        let reconstructed = sum.add(&self.remaining);
+        if reconstructed != self.total {
+            return Err(crate::error::AjisaiError::Custom(format!(
+                "Conservation violation: total={}, Σconsumed + remaining = {}",
+                self.total, reconstructed,
+            )));
+        }
+        Ok(())
+    }
+
+    /// Assert that this token has been fully consumed (remainder == 0).
+    pub fn assert_complete(&self, context: &str) -> std::result::Result<(), crate::error::AjisaiError> {
+        if !self.remaining.is_zero() {
+            return Err(crate::error::AjisaiError::UnconsumedLeak {
+                remainder: format!("{}", self.remaining),
+                context: context.to_string(),
+            });
+        }
+        Ok(())
+    }
+
+    /// Whether this token has any remaining fraction to consume.
+    pub fn is_exhausted(&self) -> bool {
+        self.remaining.is_zero()
+    }
+}
+
+/// Result of a single operation in the consumed/remainder model.
+#[derive(Debug, Clone)]
+pub struct FlowResult {
+    /// The output value produced by the operation
+    pub output: Value,
+    /// The remainder token after consumption
+    pub remainder: FlowToken,
+    /// How much was consumed in this step
+    pub consumed: Fraction,
+}

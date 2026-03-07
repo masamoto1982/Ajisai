@@ -16,6 +16,12 @@ pub enum AjisaiError {
     ModeUnsupported { word: String, mode: String },
     BuiltinProtection { word: String, operation: String },
     Custom(String),
+    /// Fractional Dataflow: requested consumption exceeds remaining flow
+    OverConsumption { requested: String, remaining: String },
+    /// Fractional Dataflow: non-zero remainder at a complete-consumption boundary
+    UnconsumedLeak { remainder: String, context: String },
+    /// Fractional Dataflow: flow chain ID discontinuity — remainder cannot be inherited
+    FlowBreak { flow_id: u64, reason: String },
 }
 
 impl AjisaiError {
@@ -58,6 +64,15 @@ impl fmt::Display for AjisaiError {
                 write!(f, "Cannot {} built-in word: {}", operation, word)
             },
             AjisaiError::Custom(msg) => write!(f, "{}", msg),
+            AjisaiError::OverConsumption { requested, remaining } => {
+                write!(f, "Over-consumption: requested {} but only {} remaining", requested, remaining)
+            },
+            AjisaiError::UnconsumedLeak { remainder, context } => {
+                write!(f, "Unconsumed leak: remainder {} at {}", remainder, context)
+            },
+            AjisaiError::FlowBreak { flow_id, reason } => {
+                write!(f, "Flow break: chain {} broken — {}", flow_id, reason)
+            },
         }
     }
 }
