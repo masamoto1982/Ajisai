@@ -67,21 +67,23 @@
 
         <nav class="area-tabs" aria-label="Area tabs">
             <div class="tab-group" role="tablist" aria-label="Editor tabs">
-                <h2 id="tab-input" class="area-tab active" role="tab" data-mode="input" aria-selected="true" tabindex="0">Input</h2>
-                <h2 id="tab-output" class="area-tab" role="tab" data-mode="output" aria-selected="false" tabindex="0">Output</h2>
+                <button id="tab-input" class="area-tab active" type="button" role="tab" data-mode="input" aria-controls="input-panel" aria-selected="true">Input</button>
+                <button id="tab-output" class="area-tab" type="button" role="tab" data-mode="output" aria-controls="output-panel" aria-selected="false" tabindex="-1">Output</button>
             </div>
             <div class="tab-group" role="tablist" aria-label="State tabs">
-                <h2 id="tab-stack" class="area-tab active" role="tab" data-mode="stack" aria-selected="true" tabindex="0">Stack</h2>
-                <h2 id="tab-dictionary" class="area-tab" role="tab" data-mode="dictionary" aria-selected="false" tabindex="0">Dictionary</h2>
+                <button id="tab-stack" class="area-tab active" type="button" role="tab" data-mode="stack" aria-controls="stack-panel" aria-selected="true">Stack</button>
+                <button id="tab-dictionary" class="area-tab" type="button" role="tab" data-mode="dictionary" aria-controls="dictionary-panel" aria-selected="false" tabindex="-1">Dictionary</button>
             </div>
         </nav>
 
         <main class="main-layout">
             <div id="editor-panel" class="panel">
-                <section class="output-area" role="tabpanel" aria-labelledby="tab-output">
+                <section id="output-panel" class="output-area" role="tabpanel" aria-labelledby="tab-output" tabindex="0">
+                    <h2 class="visually-hidden">Output</h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                 </section>
-                <section class="input-area" role="tabpanel" aria-labelledby="tab-input">
+                <section id="input-panel" class="input-area" role="tabpanel" aria-labelledby="tab-input" tabindex="0">
+                    <h2 class="visually-hidden">Input</h2>
                     <div class="textarea-wrapper">
                         <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here&#10;&#10;Run → Shift+Enter&#10;Step → Ctrl+Enter&#10;Abort → Escape&#10;Reset → Ctrl+Alt+Enter"></textarea>
                         <button id="clear-btn" type="button" class="inline-clear-btn" aria-label="Clear input">&times;</button>
@@ -95,11 +97,13 @@
             </div>
             
             <div id="state-panel" class="panel">
-                <section class="stack-area" role="tabpanel" aria-labelledby="tab-stack">
+                <section id="stack-panel" class="stack-area" role="tabpanel" aria-labelledby="tab-stack" tabindex="0">
+                    <h2 class="visually-hidden">Stack</h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 
-                <section class="dictionary-area" role="tabpanel" aria-labelledby="tab-dictionary">
+                <section id="dictionary-panel" class="dictionary-area" role="tabpanel" aria-labelledby="tab-dictionary" tabindex="0">
+                    <h2 class="visually-hidden">Dictionary</h2>
                     <div class="dictionary-header">
                         <div class="search-wrapper">
                             <input type="text" id="word-search" placeholder="Search words..." aria-label="Search dictionary words">
