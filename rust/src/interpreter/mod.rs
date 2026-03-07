@@ -67,6 +67,10 @@ pub struct Interpreter {
     pub(crate) call_stack: SmallVec<[String; 5]>,
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
+    /// When true, Form-type operations (GET, LENGTH) preserve their source vector,
+    /// and comparison results on vector inputs are wrapped in vectors.
+    /// Set to true by the WASM API for GUI compatibility.
+    pub gui_mode: bool,
 }
 
 impl Interpreter {
@@ -88,6 +92,7 @@ impl Interpreter {
             call_stack: SmallVec::new(),
             input_buffer: String::new(),
             io_output_buffer: String::new(),
+            gui_mode: false,
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -396,19 +401,38 @@ impl Interpreter {
                 }
                 Token::NilCoalesce => {
                     // Nil Coalescing: value => default
-                    // valueがNILならdefaultを、そうでなければvalueを返す
-                    let default_val = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                    let value = self.stack.pop().ok_or_else(|| {
-                        // スタックアンダーフローの場合、defaultをプッシュバック
-                        self.stack.push(default_val.clone());
-                        AjisaiError::StackUnderflow
-                    })?;
+                    // valueがNILならdefaultを実行し、そうでなければvalueを保持してdefaultをスキップ
+                    let value = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-                    if value.is_nil() {
-                        self.stack.push(default_val);
-                    } else {
+                    if !value.is_nil() {
+                        // 値がNILでない場合、値を復元してdefault式をスキップ
                         self.stack.push(value);
+                        i += 1;
+                        // 次のトークンがVectorStartの場合、対応するVectorEndまでスキップ
+                        if i < tokens.len() {
+                            match &tokens[i] {
+                                Token::VectorStart => {
+                                    let mut depth = 1;
+                                    i += 1;
+                                    while i < tokens.len() && depth > 0 {
+                                        match &tokens[i] {
+                                            Token::VectorStart => depth += 1,
+                                            Token::VectorEnd => depth -= 1,
+                                            _ => {}
+                                        }
+                                        i += 1;
+                                    }
+                                    continue;
+                                }
+                                _ => {
+                                    // 単一トークン（数値、文字列など）をスキップ
+                                    i += 1;
+                                    continue;
+                                }
+                            }
+                        }
                     }
+                    // 値がNILの場合、何もしない（次のトークンが通常通り実行され、defaultがスタックにプッシュされる）
                 }
                 Token::SafeMode => {
                     self.safe_mode = true;

@@ -87,7 +87,11 @@ where
             };
 
             let result = op(a_scalar, b_scalar);
-            interp.stack.push(Value::from_bool(result));
+            if interp.gui_mode {
+                interp.stack.push(Value::from_vector(vec![Value::from_bool(result)]));
+            } else {
+                interp.stack.push(Value::from_bool(result));
+            }
             Ok(())
         },
 
@@ -192,7 +196,11 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
 
             // データが等しいかを比較（DisplayHintは無視）
             let result = a_val.data == b_val.data;
-            interp.stack.push(Value::from_bool(result));
+            if interp.gui_mode {
+                interp.stack.push(Value::from_vector(vec![Value::from_bool(result)]));
+            } else {
+                interp.stack.push(Value::from_bool(result));
+            }
             Ok(())
         },
 

@@ -101,8 +101,10 @@ pub struct AjisaiInterpreter {
 impl AjisaiInterpreter {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
+        let mut interp = Interpreter::new();
+        interp.gui_mode = true;
         AjisaiInterpreter {
-            interpreter: Interpreter::new(),
+            interpreter: interp,
             step_tokens: Vec::new(),
             step_position: 0,
             step_mode: false,

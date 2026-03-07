@@ -17,10 +17,12 @@ use super::reconstruct_vector_elements;
 /// - Keep（,,）: 対象ベクタを保持し、要素数を追加する
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    // In gui_mode, LENGTH always preserves the source vector (Form型)
+    let preserve_source = interp.gui_mode || is_keep_mode;
 
     let len = match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            if is_keep_mode {
+            if preserve_source {
                 let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
                 if target_val.is_nil() {
@@ -44,7 +46,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
             }
         }
         OperationTargetMode::Stack => {
-            if is_keep_mode {
+            if preserve_source {
                 interp.stack.len()
             } else {
                 let len = interp.stack.len();
