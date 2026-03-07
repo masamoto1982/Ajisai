@@ -111,6 +111,24 @@ const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 
+
+const DESKTOP_EDITOR_PLACEHOLDER = [
+    'Enter code here',
+    '',
+    'Run → Shift+Enter',
+    'Step → Ctrl+Enter',
+    'Abort → Escape',
+    'Reset → Ctrl+Alt+Enter',
+    'Autocomplete → Ctrl+Space / Tab / ↑↓'
+].join('\n');
+
+const MOBILE_EDITOR_PLACEHOLDER = [
+    'Enter code here',
+    '',
+    'Run → Tap the Run button',
+    'Autocomplete → Tap suggestions while typing'
+].join('\n');
+
 const getAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
@@ -130,6 +148,14 @@ export const createGUI = (): GUI => {
     let currentMode: ViewMode = 'input';
     let currentLeftMode: ViewMode = 'input';
     let currentRightMode: ViewMode = 'stack';
+
+
+    const updateEditorPlaceholder = (): void => {
+        if (!elements?.codeInput) return;
+        elements.codeInput.placeholder = mobile.isMobile()
+            ? MOBILE_EDITOR_PLACEHOLDER
+            : DESKTOP_EDITOR_PLACEHOLDER;
+    };
 
     const getTabButtons = (): Record<ViewMode, HTMLElement> => ({
         input: elements.tabInputBtn,
@@ -292,6 +318,7 @@ export const createGUI = (): GUI => {
 
         window.addEventListener('resize', () => {
             switchArea(currentMode);
+            updateEditorPlaceholder();
         });
 
         window.addEventListener('keydown', (e) => {
@@ -322,6 +349,7 @@ export const createGUI = (): GUI => {
         });
         display = createDisplay(extractDisplayElements(elements));
         display.init();
+        updateEditorPlaceholder();
 
         persistence = createPersistence({
             showError: (error) => display.showError(error),
