@@ -59,7 +59,21 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // 5. シェブロン記号の処理（>>>, >>, >）
+        // 5. < で始まる演算子の処理（<=, <）
+        if chars[i] == '<' {
+            // <= をチェック（小なりイコール比較演算子）
+            if i + 1 < chars.len() && chars[i + 1] == '=' {
+                tokens.push(Token::Symbol("<=".into()));
+                i += 2;
+                continue;
+            }
+            // 単独の < は比較演算子シンボル
+            tokens.push(Token::Symbol("<".into()));
+            i += 1;
+            continue;
+        }
+
+        // 6. シェブロン記号の処理（>>>, >>, >）
         if chars[i] == '>' {
             // >>> をチェック（デフォルト分岐）
             if i + 2 < chars.len() && chars[i + 1] == '>' && chars[i + 2] == '>' {
@@ -81,7 +95,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             return Err("The '>' operator has been removed. Use '< NOT' or reverse operands with '<' instead.".to_string());
         }
 
-        // 6. 引用文字列
+        // 7. 引用文字列
         match parse_quote(&chars[i..]) {
             QuoteParseResult::StringSuccess(token, consumed) => {
                 tokens.push(token);
@@ -97,7 +111,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             }
         }
 
-        // 7. トークンの読み取り（空白または特殊文字まで）
+        // 8. トークンの読み取り（空白または特殊文字まで）
         let start = i;
         while i < chars.len() && !chars[i].is_whitespace() && !is_special_char(chars[i]) {
             i += 1;
@@ -110,19 +124,19 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
         let token_str: String = chars[start..i].iter().collect();
 
-        // 8. キーワードチェック
+        // 9. キーワードチェック
         if let Some(token) = try_parse_keyword_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
 
-        // 9. 数値チェック
+        // 10. 数値チェック
         if let Some(token) = try_parse_number_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
 
-        // 10. シンボル（すべての残り - マルチバイト文字を含む）
+        // 11. シンボル（すべての残り - マルチバイト文字を含む）
         tokens.push(Token::Symbol(token_str.into()));
     }
 

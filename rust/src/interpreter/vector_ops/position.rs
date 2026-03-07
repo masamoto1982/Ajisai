@@ -24,10 +24,13 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
+    // In gui_mode, GET always preserves the source vector (Form型)
+    let preserve_source = interp.gui_mode || is_keep_mode;
+
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let target_val = if is_keep_mode {
-                // Keep mode: peek without removing
+            let target_val = if preserve_source {
+                // Preserve mode: peek without removing
                 interp.stack.last().cloned().ok_or_else(|| {
                     interp.stack.push(index_val.clone());
                     AjisaiError::StackUnderflow
@@ -43,7 +46,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             if target_val.is_vector() {
                 let len = target_val.len();
                 if len == 0 {
-                    if !is_keep_mode {
+                    if !preserve_source {
                         interp.stack.push(target_val);
                     }
                     interp.stack.push(index_val);
@@ -53,7 +56,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 let actual_index = match normalize_index(index, len) {
                     Some(idx) => idx,
                     None => {
-                        if !is_keep_mode {
+                        if !preserve_source {
                             interp.stack.push(target_val);
                         }
                         interp.stack.push(index_val);
@@ -68,7 +71,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(result_elem);
                 Ok(())
             } else {
-                if !is_keep_mode {
+                if !preserve_source {
                     interp.stack.push(target_val);
                 }
                 interp.stack.push(index_val);
@@ -91,7 +94,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             };
 
             let result_elem = interp.stack[actual_index].clone();
-            if !is_keep_mode {
+            if !preserve_source {
                 // Consume mode: スタック全体を消費し、取得した要素のみを残す
                 interp.stack.clear();
             }

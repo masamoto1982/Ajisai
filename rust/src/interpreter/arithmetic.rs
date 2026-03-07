@@ -367,13 +367,15 @@ fn apply_optimized_mul(a: &Value, b: &Value) -> Result<Value> {
         | (ValueData::Vector(va), ValueData::JsonObject { pairs: vb, .. })
         | (ValueData::JsonObject { pairs: va, .. }, ValueData::Vector(vb))
         | (ValueData::JsonObject { pairs: va, .. }, ValueData::JsonObject { pairs: vb, .. }) => {
-            if va.len() != vb.len() {
-                return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
+            if va.len() == vb.len() {
+                let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
+                    .map(|(ai, bi)| apply_optimized_mul(ai, bi))
+                    .collect();
+                Ok(Value::from_children(result?))
+            } else {
+                // 長さが異なる場合、broadcast_binary_opにフォールバック
+                broadcast_binary_op(a, b, |x, y| Ok(x.mul(y)))
             }
-            let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
-                .map(|(ai, bi)| apply_optimized_mul(ai, bi))
-                .collect();
-            Ok(Value::from_children(result?))
         }
         _ => Err(AjisaiError::from("Cannot multiply NIL")),
     }
@@ -487,13 +489,17 @@ fn apply_optimized_div(a: &Value, b: &Value) -> Result<Value> {
         | (ValueData::Vector(va), ValueData::JsonObject { pairs: vb, .. })
         | (ValueData::JsonObject { pairs: va, .. }, ValueData::Vector(vb))
         | (ValueData::JsonObject { pairs: va, .. }, ValueData::JsonObject { pairs: vb, .. }) => {
-            if va.len() != vb.len() {
-                return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
+            if va.len() == vb.len() {
+                let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
+                    .map(|(ai, bi)| apply_optimized_div(ai, bi))
+                    .collect();
+                Ok(Value::from_children(result?))
+            } else {
+                // 長さが異なる場合、broadcast_binary_opにフォールバック
+                broadcast_binary_op(a, b, |x, y| {
+                    if y.is_zero() { Err(AjisaiError::DivisionByZero) } else { Ok(x.div(y)) }
+                })
             }
-            let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
-                .map(|(ai, bi)| apply_optimized_div(ai, bi))
-                .collect();
-            Ok(Value::from_children(result?))
         }
         _ => Err(AjisaiError::from("Cannot divide NIL")),
     }
