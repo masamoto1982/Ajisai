@@ -392,6 +392,7 @@ mod tests {
     #[tokio::test]
     async fn test_cannot_override_builtin_word() {
         let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
         let result = interp.execute("[ [ [ 1 ] + ] ] 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
@@ -405,6 +406,7 @@ mod tests {
     #[tokio::test]
     async fn test_can_override_custom_word() {
         let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
         let result1 = interp.execute("[ [ 2 ] * ] 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
 
@@ -578,9 +580,10 @@ mod tests {
     #[tokio::test]
     async fn test_sample_words_in_vector_literal_play() {
         // Bug fix: sample custom words (C4, D4 etc.) should be resolved when
-        // placed inside a vector literal like [ C4 D4 E4 ] and played with PLAY.
+        // placed inside a vector literal like [ C4 D4 E4 ] and played with MUSIC::PLAY.
         // Previously they were interpreted as strings (lyrics) instead of sounds.
         let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
 
         let sample_words = vec![
             ("C4", "264", "純正律 C4"),
@@ -591,10 +594,10 @@ mod tests {
         let _ = interp.get_output();
 
         // Custom word names inside a vector literal should resolve to their values
-        let result = interp.execute("[ C4 D4 E4 ] SEQ PLAY").await;
+        let result = interp.execute("[ C4 D4 E4 ] MUSIC::SEQ MUSIC::PLAY").await;
         assert!(
             result.is_ok(),
-            "[ C4 D4 E4 ] SEQ PLAY should succeed: {:?}",
+            "[ C4 D4 E4 ] MUSIC::SEQ MUSIC::PLAY should succeed: {:?}",
             result.err()
         );
 
@@ -683,6 +686,7 @@ mod tests {
     async fn test_custom_word_resolved_in_nested_vector() {
         // Custom words should also resolve inside nested vectors
         let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
 
         let sample_words = vec![
             ("C4", "264", "純正律 C4"),
@@ -693,7 +697,9 @@ mod tests {
         let _ = interp.get_output();
 
         // Nested vector: [ [ C4 E4 G4 ] ] should create a vector of a vector of scalars
-        let result = interp.execute("[ [ C4 E4 G4 ] ] SIM PLAY").await;
+        let result = interp
+            .execute("[ [ C4 E4 G4 ] ] MUSIC::SIM MUSIC::PLAY")
+            .await;
         assert!(
             result.is_ok(),
             "Nested vector with custom words should work: {:?}",
