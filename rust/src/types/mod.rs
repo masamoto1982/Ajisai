@@ -560,6 +560,10 @@ static FLOW_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 /// Modelled after the UTXO (Unspent Transaction Output) pattern:
 /// each operation consumes part of the remaining fraction, and the
 /// unconsumed remainder is forwarded to the next operation.
+///
+/// Bifurcation: when `,,` is used, the flow mass is split into child
+/// branches rather than copied.  Each child carries a fraction of the
+/// parent mass (MVP: equal 1/2 : 1/2 split).
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlowToken {
     /// Unique identifier for this flow chain
@@ -572,6 +576,12 @@ pub struct FlowToken {
     pub hint: DisplayHint,
     /// Logical shape of the flow bundle
     pub shape: Vec<usize>,
+    /// If this token was created by bifurcation, the parent flow ID
+    pub parent_flow_id: Option<u64>,
+    /// Child flow IDs created by bifurcation from this token
+    pub child_flow_ids: Vec<u64>,
+    /// The mass ratio this branch received (numerator, denominator)
+    pub mass_ratio: (u64, u64),
 }
 
 impl FlowToken {
@@ -586,6 +596,9 @@ impl FlowToken {
             remaining: total,
             hint,
             shape,
+            parent_flow_id: None,
+            child_flow_ids: Vec::new(),
+            mass_ratio: (1, 1),
         }
     }
 
@@ -632,6 +645,9 @@ impl FlowToken {
                 remaining: new_remaining,
                 hint: self.hint,
                 shape: self.shape.clone(),
+                parent_flow_id: self.parent_flow_id,
+                child_flow_ids: self.child_flow_ids.clone(),
+                mass_ratio: self.mass_ratio,
             },
         ))
     }
@@ -667,6 +683,101 @@ impl FlowToken {
     /// Whether this token has any remaining fraction to consume.
     pub fn is_exhausted(&self) -> bool {
         self.remaining.is_zero()
+    }
+
+    /// Bifurcate this flow into `n` child branches with equal mass distribution.
+    ///
+    /// Each child receives `remaining / n` of the parent's remaining mass.
+    /// The parent token is updated to record the child flow IDs and its
+    /// remaining mass becomes zero (fully distributed to children).
+    ///
+    /// Returns `(updated_parent, Vec<child_tokens>)`.
+    pub fn bifurcate(&self, n: usize) -> std::result::Result<(FlowToken, Vec<FlowToken>), crate::error::AjisaiError> {
+        if n == 0 {
+            return Err(crate::error::AjisaiError::Custom(
+                "Bifurcation requires at least 1 branch".to_string(),
+            ));
+        }
+        if self.remaining.is_zero() {
+            let children: Vec<FlowToken> = (0..n)
+                .map(|_| {
+                    FlowToken {
+                        id: FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
+                        total: Fraction::from(0),
+                        remaining: Fraction::from(0),
+                        hint: self.hint,
+                        shape: self.shape.clone(),
+                        parent_flow_id: Some(self.id),
+                        child_flow_ids: Vec::new(),
+                        mass_ratio: (1, n as u64),
+                    }
+                })
+                .collect();
+            let child_ids: Vec<u64> = children.iter().map(|c| c.id).collect();
+            let parent = FlowToken {
+                id: self.id,
+                total: self.total.clone(),
+                remaining: Fraction::from(0),
+                hint: self.hint,
+                shape: self.shape.clone(),
+                parent_flow_id: self.parent_flow_id,
+                child_flow_ids: child_ids,
+                mass_ratio: self.mass_ratio,
+            };
+            return Ok((parent, children));
+        }
+
+        let denom = Fraction::from(n as i64);
+        let child_mass = self.remaining.div(&denom);
+
+        let mut children = Vec::with_capacity(n);
+        let mut child_ids = Vec::with_capacity(n);
+
+        for _ in 0..n {
+            let child_id = FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+            child_ids.push(child_id);
+            children.push(FlowToken {
+                id: child_id,
+                total: child_mass.clone(),
+                remaining: child_mass.clone(),
+                hint: self.hint,
+                shape: self.shape.clone(),
+                parent_flow_id: Some(self.id),
+                child_flow_ids: Vec::new(),
+                mass_ratio: (1, n as u64),
+            });
+        }
+
+        let parent = FlowToken {
+            id: self.id,
+            total: self.total.clone(),
+            remaining: Fraction::from(0),
+            hint: self.hint,
+            shape: self.shape.clone(),
+            parent_flow_id: self.parent_flow_id,
+            child_flow_ids: child_ids,
+            mass_ratio: self.mass_ratio,
+        };
+
+        Ok((parent, children))
+    }
+
+    /// Verify the bifurcation conservation law: sum of child masses == parent remaining.
+    pub fn verify_bifurcation_conservation(
+        parent_remaining: &Fraction,
+        children: &[FlowToken],
+    ) -> std::result::Result<(), crate::error::AjisaiError> {
+        let mut sum = Fraction::from(0);
+        for child in children {
+            sum = sum.add(&child.total);
+        }
+        if &sum != parent_remaining {
+            return Err(crate::error::AjisaiError::Custom(format!(
+                "Bifurcation conservation violation: parent remaining={}, sum of children={}",
+                parent_remaining, sum,
+            )));
+        }
+        Ok(())
     }
 }
 

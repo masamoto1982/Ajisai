@@ -22,6 +22,8 @@ pub enum AjisaiError {
     UnconsumedLeak { remainder: String, context: String },
     /// Fractional Dataflow: flow chain ID discontinuity — remainder cannot be inherited
     FlowBreak { flow_id: u64, reason: String },
+    /// Fractional Dataflow: bifurcation conservation violation
+    BifurcationViolation { parent_mass: String, children_sum: String },
 }
 
 impl AjisaiError {
@@ -72,6 +74,9 @@ impl fmt::Display for AjisaiError {
             },
             AjisaiError::FlowBreak { flow_id, reason } => {
                 write!(f, "Flow break: chain {} broken — {}", flow_id, reason)
+            },
+            AjisaiError::BifurcationViolation { parent_mass, children_sum } => {
+                write!(f, "Bifurcation conservation violation: parent mass {} != children sum {}", parent_mass, children_sum)
             },
         }
     }
