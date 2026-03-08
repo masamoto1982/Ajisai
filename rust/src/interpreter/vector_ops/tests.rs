@@ -17,7 +17,11 @@ async fn test_range_with_step() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 0 10 2 ] RANGE").await;
-    assert!(result.is_ok(), "RANGE with step should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "RANGE with step should succeed: {:?}",
+        result
+    );
 
     assert_eq!(interp.stack.len(), 1);
 }
@@ -27,7 +31,11 @@ async fn test_range_descending() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 0 -2 ] RANGE").await;
-    assert!(result.is_ok(), "RANGE descending should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "RANGE descending should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 }
 
@@ -36,7 +44,11 @@ async fn test_range_single_element() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 5 5 ] RANGE").await;
-    assert!(result.is_ok(), "RANGE single element should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "RANGE single element should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 }
 
@@ -45,7 +57,11 @@ async fn test_range_stack_mode() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 0 5 ] .. RANGE").await;
-    assert!(result.is_ok(), "RANGE stack mode should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "RANGE stack mode should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 }
 
@@ -56,7 +72,11 @@ async fn test_range_error_step_zero_restores_stack_stacktop() {
     let result = interp.execute("[ 0 10 0 ] RANGE").await;
     assert!(result.is_err(), "RANGE with step=0 should fail");
 
-    assert_eq!(interp.stack.len(), 1, "Arguments should be restored on error");
+    assert_eq!(
+        interp.stack.len(),
+        1,
+        "Arguments should be restored on error"
+    );
 }
 
 #[tokio::test]
@@ -66,7 +86,11 @@ async fn test_range_error_step_zero_restores_stack_stack_mode() {
     let result = interp.execute("[ 0 10 0 ] .. RANGE").await;
     assert!(result.is_err(), "RANGE stack mode with step=0 should fail");
 
-    assert_eq!(interp.stack.len(), 1, "Arguments should be restored on error in stack mode");
+    assert_eq!(
+        interp.stack.len(),
+        1,
+        "Arguments should be restored on error in stack mode"
+    );
 }
 
 #[tokio::test]
@@ -76,7 +100,11 @@ async fn test_range_error_infinite_restores_stack() {
     let result = interp.execute("[ 0 10 -1 ] RANGE").await;
     assert!(result.is_err(), "RANGE with infinite sequence should fail");
 
-    assert_eq!(interp.stack.len(), 1, "Arguments should be restored on infinite error");
+    assert_eq!(
+        interp.stack.len(),
+        1,
+        "Arguments should be restored on infinite error"
+    );
 }
 
 // ========================================================================
@@ -100,7 +128,11 @@ async fn test_reorder_duplicate_indices() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 20 30 ] [ 0 0 0 ] REORDER").await;
-    assert!(result.is_ok(), "REORDER with duplicate indices should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "REORDER with duplicate indices should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 
     let val = &interp.stack[0];
@@ -112,7 +144,11 @@ async fn test_reorder_negative_indices() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 20 30 ] [ -1 -2 -3 ] REORDER").await;
-    assert!(result.is_ok(), "REORDER with negative indices should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "REORDER with negative indices should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 }
 
@@ -121,7 +157,11 @@ async fn test_reorder_partial_selection() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 20 30 ] [ 1 ] REORDER").await;
-    assert!(result.is_ok(), "REORDER with partial selection should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "REORDER with partial selection should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 
     let val = &interp.stack[0];
@@ -133,7 +173,11 @@ async fn test_reorder_stack_mode_swap() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 ] [ 20 ] [ 1 0 ] .. REORDER").await;
-    assert!(result.is_ok(), "REORDER stack mode SWAP should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "REORDER stack mode SWAP should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements");
 }
 
@@ -141,8 +185,14 @@ async fn test_reorder_stack_mode_swap() {
 async fn test_reorder_stack_mode_rot() {
     let mut interp = Interpreter::new();
 
-    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 2 0 ] .. REORDER").await;
-    assert!(result.is_ok(), "REORDER stack mode ROT should succeed: {:?}", result);
+    let result = interp
+        .execute("[ 10 ] [ 20 ] [ 30 ] [ 1 2 0 ] .. REORDER")
+        .await;
+    assert!(
+        result.is_ok(),
+        "REORDER stack mode ROT should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements");
 }
 
@@ -156,7 +206,10 @@ async fn test_reorder_error_out_of_bounds() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 20 30 ] [ 5 ] REORDER").await;
-    assert!(result.is_err(), "REORDER with out of bounds index should fail");
+    assert!(
+        result.is_err(),
+        "REORDER with out of bounds index should fail"
+    );
 
     assert_eq!(interp.stack.len(), 2, "Stack should be restored on error");
 }
@@ -166,7 +219,10 @@ async fn test_reorder_error_negative_out_of_bounds() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 20 30 ] [ -5 ] REORDER").await;
-    assert!(result.is_err(), "REORDER with negative out of bounds index should fail");
+    assert!(
+        result.is_err(),
+        "REORDER with negative out of bounds index should fail"
+    );
 
     assert_eq!(interp.stack.len(), 2, "Stack should be restored on error");
 }
@@ -176,7 +232,10 @@ async fn test_reorder_error_non_vector() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 ] [ 0 ] REORDER").await;
-    assert!(result.is_ok(), "REORDER on scalar-like value should succeed");
+    assert!(
+        result.is_ok(),
+        "REORDER on scalar-like value should succeed"
+    );
 }
 
 #[tokio::test]
@@ -184,9 +243,16 @@ async fn test_reorder_stack_mode_error_out_of_bounds() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 ] [ 20 ] [ 5 ] .. REORDER").await;
-    assert!(result.is_err(), "REORDER stack mode with out of bounds should fail");
+    assert!(
+        result.is_err(),
+        "REORDER stack mode with out of bounds should fail"
+    );
 
-    assert_eq!(interp.stack.len(), 3, "Stack should have indices pushed back on error");
+    assert_eq!(
+        interp.stack.len(),
+        3,
+        "Stack should have indices pushed back on error"
+    );
 }
 
 #[tokio::test]
@@ -194,7 +260,11 @@ async fn test_reorder_single_element_index() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 10 20 30 ] [ 2 ] REORDER").await;
-    assert!(result.is_ok(), "REORDER with single index should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "REORDER with single index should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 
     let val = &interp.stack[0];
@@ -222,7 +292,11 @@ async fn test_collect_vectors_without_flattening() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 1 2 ] [ 3 4 ] 2 COLLECT").await;
-    assert!(result.is_ok(), "COLLECT vectors should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "COLLECT vectors should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 
     let val = &interp.stack[0];
@@ -232,9 +306,16 @@ async fn test_collect_vectors_without_flattening() {
 #[tokio::test]
 async fn test_collect_for_formant_synthesis() {
     let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
 
-    let result = interp.execute("[ 800 1200 ] CHORD [ 300 2500 ] CHORD 2 COLLECT").await;
-    assert!(result.is_ok(), "COLLECT for formant should succeed: {:?}", result);
+    let result = interp
+        .execute("[ 800 1200 ] MUSIC::CHORD [ 300 2500 ] MUSIC::CHORD 2 COLLECT")
+        .await;
+    assert!(
+        result.is_ok(),
+        "COLLECT for formant should succeed: {:?}",
+        result
+    );
     assert_eq!(interp.stack.len(), 1);
 
     let val = &interp.stack[0];
@@ -246,7 +327,10 @@ async fn test_collect_error_underflow() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("1 2 5 COLLECT").await;
-    assert!(result.is_err(), "COLLECT with insufficient stack should fail");
+    assert!(
+        result.is_err(),
+        "COLLECT with insufficient stack should fail"
+    );
 
     assert_eq!(interp.stack.len(), 3, "Stack should have count pushed back");
 }
@@ -279,7 +363,11 @@ async fn test_get_consume_mode() {
     let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
     assert!(result.is_ok(), "GET should succeed: {:?}", result);
     // 消費モードでは対象ベクタが消費され、結果のみ残る
-    assert_eq!(interp.stack.len(), 1, "GET in consume mode should leave only result");
+    assert_eq!(
+        interp.stack.len(),
+        1,
+        "GET in consume mode should leave only result"
+    );
 }
 
 #[tokio::test]
@@ -288,10 +376,18 @@ async fn test_get_keep_mode() {
 
     // 保持モード: 対象ベクタと引数ベクタの両方を保持（デフォルト消費原則）
     let result = interp.execute("[ 10 20 30 ] [ 0 ] ,, GET").await;
-    assert!(result.is_ok(), "GET with keep mode should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "GET with keep mode should succeed: {:?}",
+        result
+    );
     // 保持モードでは対象ベクタ・引数ベクタが残り、結果が追加される
     // [ 10 20 30 ] [ 0 ] ,, GET → [ 10 20 30 ] [ 0 ] [ 10 ]
-    assert_eq!(interp.stack.len(), 3, "GET in keep mode should preserve target, index, and add result");
+    assert_eq!(
+        interp.stack.len(),
+        3,
+        "GET in keep mode should preserve target, index, and add result"
+    );
 }
 
 #[tokio::test]
@@ -302,7 +398,11 @@ async fn test_length_consume_mode() {
     let result = interp.execute("[ 1 2 3 4 5 ] LENGTH").await;
     assert!(result.is_ok(), "LENGTH should succeed: {:?}", result);
     // 消費モードでは対象ベクタが消費され、長さのみ残る
-    assert_eq!(interp.stack.len(), 1, "LENGTH in consume mode should leave only result");
+    assert_eq!(
+        interp.stack.len(),
+        1,
+        "LENGTH in consume mode should leave only result"
+    );
 }
 
 #[tokio::test]
@@ -311,9 +411,17 @@ async fn test_length_keep_mode() {
 
     // 保持モード: 対象ベクタを保持
     let result = interp.execute("[ 1 2 3 4 5 ] ,, LENGTH").await;
-    assert!(result.is_ok(), "LENGTH with keep mode should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "LENGTH with keep mode should succeed: {:?}",
+        result
+    );
     // 保持モードでは対象ベクタが残り、長さが追加される
-    assert_eq!(interp.stack.len(), 2, "LENGTH in keep mode should preserve target and add result");
+    assert_eq!(
+        interp.stack.len(),
+        2,
+        "LENGTH in keep mode should preserve target and add result"
+    );
 }
 
 #[tokio::test]
@@ -321,8 +429,16 @@ async fn test_reverse_keep_mode() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 3 1 2 ] ,, REVERSE").await;
-    assert!(result.is_ok(), "REVERSE with keep mode should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 2, "REVERSE in keep mode should preserve original and add result");
+    assert!(
+        result.is_ok(),
+        "REVERSE with keep mode should succeed: {:?}",
+        result
+    );
+    assert_eq!(
+        interp.stack.len(),
+        2,
+        "REVERSE in keep mode should preserve original and add result"
+    );
 }
 
 #[tokio::test]
@@ -330,8 +446,16 @@ async fn test_take_keep_mode() {
     let mut interp = Interpreter::new();
 
     let result = interp.execute("[ 1 2 3 4 5 ] [ 3 ] ,, TAKE").await;
-    assert!(result.is_ok(), "TAKE with keep mode should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 3, "TAKE in keep mode should preserve target, args, and add result");
+    assert!(
+        result.is_ok(),
+        "TAKE with keep mode should succeed: {:?}",
+        result
+    );
+    assert_eq!(
+        interp.stack.len(),
+        3,
+        "TAKE in keep mode should preserve target, args, and add result"
+    );
 }
 
 // ============================================================================
@@ -353,7 +477,9 @@ async fn test_get_keep_mode_preserves_all_operands() {
     // stack[1] = [0] (引数Vector保持)
     assert!(interp.stack[1].is_vector());
     // stack[2] = [10] (結果)
-    let result_scalar = interp.stack[2].as_scalar().expect("result should be scalar");
+    let result_scalar = interp.stack[2]
+        .as_scalar()
+        .expect("result should be scalar");
     assert_eq!(result_scalar.to_i64(), Some(10));
 }
 
@@ -364,9 +490,16 @@ async fn test_get_stack_consume_drains_stack() {
     let mut interp = Interpreter::new();
     let result = interp.execute("[10] [20] [30] [1] .. GET").await;
     assert!(result.is_ok(), "Stack GET should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 1, "Stack+Consume GET should leave only the result");
+    assert_eq!(
+        interp.stack.len(),
+        1,
+        "Stack+Consume GET should leave only the result"
+    );
     // stack[1] の [20] がそのまま返される（ベクタ形式）
-    assert!(interp.stack[0].is_vector(), "result should be a vector [20]");
+    assert!(
+        interp.stack[0].is_vector(),
+        "result should be a vector [20]"
+    );
 }
 
 #[tokio::test]
@@ -375,10 +508,21 @@ async fn test_get_stack_keep_preserves_stack() {
     // [10] [20] [30] [1] ,, .. GET → [10] [20] [30] [20]
     let mut interp = Interpreter::new();
     let result = interp.execute("[10] [20] [30] [1] ,, .. GET").await;
-    assert!(result.is_ok(), "Stack Keep GET should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 4, "Stack+Keep GET should preserve stack and add result");
+    assert!(
+        result.is_ok(),
+        "Stack Keep GET should succeed: {:?}",
+        result
+    );
+    assert_eq!(
+        interp.stack.len(),
+        4,
+        "Stack+Keep GET should preserve stack and add result"
+    );
     // 最後の要素が [20] (ベクタ)であることを確認
-    assert!(interp.stack[3].is_vector(), "result should be a vector [20]");
+    assert!(
+        interp.stack[3].is_vector(),
+        "result should be a vector [20]"
+    );
 }
 
 #[tokio::test]
@@ -387,8 +531,15 @@ async fn test_print_keep_mode() {
     let mut interp = Interpreter::new();
     let result = interp.execute("[ 42 ] ,, PRINT").await;
     assert!(result.is_ok(), "PRINT ,, should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 1, "PRINT in keep mode should preserve value on stack");
-    assert!(interp.output_buffer.contains("42"), "PRINT should output the value");
+    assert_eq!(
+        interp.stack.len(),
+        1,
+        "PRINT in keep mode should preserve value on stack"
+    );
+    assert!(
+        interp.output_buffer.contains("42"),
+        "PRINT should output the value"
+    );
 }
 
 #[tokio::test]
@@ -397,7 +548,11 @@ async fn test_floor_keep_mode() {
     let mut interp = Interpreter::new();
     let result = interp.execute("[ 3.7 ] ,, FLOOR").await;
     assert!(result.is_ok(), "FLOOR ,, should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 2, "FLOOR in keep mode should preserve original and add result");
+    assert_eq!(
+        interp.stack.len(),
+        2,
+        "FLOOR in keep mode should preserve original and add result"
+    );
 }
 
 #[tokio::test]
@@ -406,7 +561,11 @@ async fn test_mod_keep_mode() {
     let mut interp = Interpreter::new();
     let result = interp.execute("[ 10 ] [ 3 ] ,, MOD").await;
     assert!(result.is_ok(), "MOD ,, should succeed: {:?}", result);
-    assert_eq!(interp.stack.len(), 3, "MOD in keep mode should preserve both operands and add result");
+    assert_eq!(
+        interp.stack.len(),
+        3,
+        "MOD in keep mode should preserve both operands and add result"
+    );
 }
 
 #[tokio::test]
@@ -420,8 +579,11 @@ async fn test_modifier_order_independence() {
     let result2 = interp2.execute("[1] [2] [3] [3] ,, .. +").await;
     assert!(result2.is_ok());
 
-    assert_eq!(interp1.stack.len(), interp2.stack.len(),
-        ".. ,, and ,, .. should produce same result");
+    assert_eq!(
+        interp1.stack.len(),
+        interp2.stack.len(),
+        ".. ,, and ,, .. should produce same result"
+    );
 }
 
 #[tokio::test]
@@ -439,5 +601,9 @@ async fn test_modes_auto_reset_after_execution() {
     // スタック: [1], [2], [3] → [2] + [3] = [5] → [1], [5]
     let result2 = interp.execute("+").await;
     assert!(result2.is_ok());
-    assert_eq!(interp.stack.len(), 2, "After auto-reset, + should consume operands");
+    assert_eq!(
+        interp.stack.len(),
+        2,
+        "After auto-reset, + should consume operands"
+    );
 }

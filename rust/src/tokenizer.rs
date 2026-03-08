@@ -153,7 +153,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | ':' | ';' | '#' | '\'' | '>' | '=' | '~'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~'
     )
 }
 
@@ -163,9 +163,6 @@ fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
         // 表示時に深さに応じて適切な括弧に変換される
         '[' | '{' | '(' => Some((Token::VectorStart, 1)),
         ']' | '}' | ')' => Some((Token::VectorEnd, 1)),
-        // コードブロック用
-        ':' => Some((Token::CodeBlockStart, 1)),
-        ';' => Some((Token::CodeBlockEnd, 1)),
         // セーフモード修飾子
         '~' => Some((Token::SafeMode, 1)),
         // > は特別処理が必要（>> と >>> のチェック）
@@ -238,6 +235,8 @@ fn try_parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
         "." => Some(Token::Symbol(".".into())),
         ".." => Some(Token::Symbol("..".into())),
+        ":" => Some(Token::CodeBlockStart),
+        ";" => Some(Token::CodeBlockEnd),
         _ => None,
     }
 }
