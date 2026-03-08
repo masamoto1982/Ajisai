@@ -11,6 +11,7 @@ pub mod higher_order;
 pub mod io;
 pub mod json;
 pub mod logic;
+pub mod modules;
 pub mod random;
 pub(crate) mod simd_ops;
 pub mod sort;
@@ -18,7 +19,9 @@ pub mod tensor_ops;
 pub mod vector_exec;
 pub mod vector_ops;
 
-use crate::types::{ExecutionLine, FlowToken, Stack, Token, Value, WordDefinition, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{
+    ExecutionLine, FlowToken, Stack, Token, Value, WordDefinition, MAX_VISIBLE_DIMENSIONS,
+};
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -64,6 +67,7 @@ pub struct Interpreter {
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
     pub(crate) play_mode: audio::PlayMode,
+    pub(crate) imported_modules: HashSet<String>,
     pub(crate) call_stack: SmallVec<[String; 5]>,
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
@@ -97,6 +101,7 @@ impl Interpreter {
             pending_tokens: None,
             pending_token_index: 0,
             play_mode: audio::PlayMode::default(),
+            imported_modules: HashSet::new(),
             call_stack: SmallVec::new(),
             input_buffer: String::new(),
             io_output_buffer: String::new(),
@@ -138,8 +143,7 @@ impl Interpreter {
     ) -> Result<FlowToken> {
         let (_consumed_amount, new_flow) = flow.consume(consumed)?;
         if self.flow_tracking {
-            self.flow_consumed_log
-                .push((flow.id, consumed.abs()));
+            self.flow_consumed_log.push((flow.id, consumed.abs()));
             // Update the active flow entry
             if let Some(af) = self.active_flows.iter_mut().find(|f| f.id == flow.id) {
                 *af = new_flow.clone();
@@ -174,11 +178,7 @@ impl Interpreter {
     ///
     /// Returns the child FlowTokens. The parent flow is marked as fully
     /// distributed (remaining = 0) and child flows are added to tracking.
-    pub fn record_bifurcation(
-        &mut self,
-        flow: &FlowToken,
-        n: usize,
-    ) -> Result<Vec<FlowToken>> {
+    pub fn record_bifurcation(&mut self, flow: &FlowToken, n: usize) -> Result<Vec<FlowToken>> {
         let (updated_parent, children) = flow.bifurcate(n)?;
         if self.flow_tracking {
             if let Some(af) = self.active_flows.iter_mut().find(|f| f.id == flow.id) {
@@ -447,7 +447,7 @@ impl Interpreter {
                                         self.execute_word_core(upper.as_ref())?;
                                     }
                                     // SEQ/SIM preserve modes for PLAY
-                                    if upper != "SEQ" && upper != "SIM" {
+                                    if !modules::preserves_modes(upper.as_ref()) {
                                         self.reset_modes();
                                     }
                                 }
@@ -849,6 +849,7 @@ impl Interpreter {
             "DEF" => dictionary::op_def(self),
             "DEL" => dictionary::op_del(self),
             "?" => dictionary::op_lookup(self),
+            "IMPORT" => modules::op_import(self),
             "!" => {
                 self.force_flag = true;
                 Ok(())
@@ -890,35 +891,11 @@ impl Interpreter {
             // Random/Hash
             "CSPRNG" => random::op_csprng(self),
             "HASH" => hash::op_hash(self),
-            // Audio
-            "SEQ" => audio::op_seq(self),
-            "SIM" => audio::op_sim(self),
-            "SLOT" => audio::op_slot(self),
-            "GAIN" => audio::op_gain(self),
-            "GAIN-RESET" => audio::op_gain_reset(self),
-            "PAN" => audio::op_pan(self),
-            "PAN-RESET" => audio::op_pan_reset(self),
-            "FX-RESET" => audio::op_fx_reset(self),
-            "PLAY" => audio::op_play(self),
-            "CHORD" => audio::op_chord(self),
-            "ADSR" => audio::op_adsr(self),
-            "SINE" => audio::op_sine(self),
-            "SQUARE" => audio::op_square(self),
-            "SAW" => audio::op_saw(self),
-            "TRI" => audio::op_tri(self),
-            // JSON
-            "PARSE" => json::op_parse(self),
-            "STRINGIFY" => json::op_stringify(self),
-            "INPUT" => json::op_input(self),
-            "OUTPUT" => json::op_output(self),
-            "JSON-GET" => json::op_json_get(self),
-            "JSON-KEYS" => json::op_json_keys(self),
-            "JSON-SET" => json::op_json_set(self),
-            "JSON-EXPORT" => json::op_json_export(self),
             "WAIT" => Err(AjisaiError::from(
                 "WAIT should be handled by execute_section_core, not execute_builtin",
             )),
-            _ => Err(AjisaiError::UnknownWord(name.to_string())),
+            _ => modules::execute_module_word(self, name)
+                .unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string()))),
         }
     }
 
@@ -972,6 +949,7 @@ impl Interpreter {
         self.pending_token_index = 0;
         self.play_mode = audio::PlayMode::default();
         self.call_stack.clear();
+        self.imported_modules.clear();
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }

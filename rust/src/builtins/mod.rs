@@ -8,7 +8,7 @@ use crate::types::WordDefinition;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-/// Registers all built-in words (including Music DSL) into the dictionary.
+/// Registers core built-in words into the dictionary.
 pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) {
     for (name, description, _, _) in get_builtin_definitions() {
         dictionary.insert(

@@ -5,25 +5,60 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
     StackUnderflow,
-    StructureError { expected: String, got: String },
+    StructureError {
+        expected: String,
+        got: String,
+    },
     UnknownWord(String),
+    UnknownModule(String),
     DivisionByZero,
-    IndexOutOfBounds { index: i64, length: usize },
-    VectorLengthMismatch { len1: usize, len2: usize },
-    DepthLimitExceeded { depth: usize, chain: String },
-    DimensionLimitExceeded { depth: usize },
-    NoChange { word: String },
-    ModeUnsupported { word: String, mode: String },
-    BuiltinProtection { word: String, operation: String },
+    IndexOutOfBounds {
+        index: i64,
+        length: usize,
+    },
+    VectorLengthMismatch {
+        len1: usize,
+        len2: usize,
+    },
+    DepthLimitExceeded {
+        depth: usize,
+        chain: String,
+    },
+    DimensionLimitExceeded {
+        depth: usize,
+    },
+    NoChange {
+        word: String,
+    },
+    ModeUnsupported {
+        word: String,
+        mode: String,
+    },
+    BuiltinProtection {
+        word: String,
+        operation: String,
+    },
     Custom(String),
     /// Fractional Dataflow: requested consumption exceeds remaining flow
-    OverConsumption { requested: String, remaining: String },
+    OverConsumption {
+        requested: String,
+        remaining: String,
+    },
     /// Fractional Dataflow: non-zero remainder at a complete-consumption boundary
-    UnconsumedLeak { remainder: String, context: String },
+    UnconsumedLeak {
+        remainder: String,
+        context: String,
+    },
     /// Fractional Dataflow: flow chain ID discontinuity — remainder cannot be inherited
-    FlowBreak { flow_id: u64, reason: String },
+    FlowBreak {
+        flow_id: u64,
+        reason: String,
+    },
     /// Fractional Dataflow: bifurcation conservation violation
-    BifurcationViolation { parent_mass: String, children_sum: String },
+    BifurcationViolation {
+        parent_mass: String,
+        children_sum: String,
+    },
 }
 
 impl AjisaiError {
@@ -41,43 +76,62 @@ impl fmt::Display for AjisaiError {
             AjisaiError::StackUnderflow => write!(f, "Stack underflow"),
             AjisaiError::StructureError { expected, got } => {
                 write!(f, "Structure error: expected {}, got {}", expected, got)
-            },
+            }
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
+            AjisaiError::UnknownModule(name) => write!(f, "Unknown module: {}", name),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
             AjisaiError::IndexOutOfBounds { index, length } => {
-                write!(f, "Index {} out of bounds for vector of length {}", index, length)
-            },
+                write!(
+                    f,
+                    "Index {} out of bounds for vector of length {}",
+                    index, length
+                )
+            }
             AjisaiError::VectorLengthMismatch { len1, len2 } => {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
-            },
+            }
             AjisaiError::DepthLimitExceeded { depth, chain } => {
                 write!(f, "Call depth limit ({}) exceeded: {}", depth, chain)
-            },
+            }
             AjisaiError::DimensionLimitExceeded { depth } => {
                 write!(f, "Nesting depth limit exceeded: Ajisai supports up to 10 dimensions. Nesting depth {} exceeds the limit.", depth)
-            },
+            }
             AjisaiError::NoChange { word } => {
                 write!(f, "No change: {} produced no effect", word)
-            },
+            }
             AjisaiError::ModeUnsupported { word, mode } => {
                 write!(f, "{} does not support {} mode (..)", word, mode)
-            },
+            }
             AjisaiError::BuiltinProtection { word, operation } => {
                 write!(f, "Cannot {} built-in word: {}", operation, word)
-            },
+            }
             AjisaiError::Custom(msg) => write!(f, "{}", msg),
-            AjisaiError::OverConsumption { requested, remaining } => {
-                write!(f, "Over-consumption: requested {} but only {} remaining", requested, remaining)
-            },
+            AjisaiError::OverConsumption {
+                requested,
+                remaining,
+            } => {
+                write!(
+                    f,
+                    "Over-consumption: requested {} but only {} remaining",
+                    requested, remaining
+                )
+            }
             AjisaiError::UnconsumedLeak { remainder, context } => {
                 write!(f, "Unconsumed leak: remainder {} at {}", remainder, context)
-            },
+            }
             AjisaiError::FlowBreak { flow_id, reason } => {
                 write!(f, "Flow break: chain {} broken — {}", flow_id, reason)
-            },
-            AjisaiError::BifurcationViolation { parent_mass, children_sum } => {
-                write!(f, "Bifurcation conservation violation: parent mass {} != children sum {}", parent_mass, children_sum)
-            },
+            }
+            AjisaiError::BifurcationViolation {
+                parent_mass,
+                children_sum,
+            } => {
+                write!(
+                    f,
+                    "Bifurcation conservation violation: parent mass {} != children sum {}",
+                    parent_mass, children_sum
+                )
+            }
         }
     }
 }
