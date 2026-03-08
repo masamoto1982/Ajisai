@@ -447,7 +447,7 @@ impl Interpreter {
                                         self.execute_word_core(upper.as_ref())?;
                                     }
                                     // SEQ/SIM preserve modes for PLAY
-                                    if upper != "MUSIC::SEQ" && upper != "MUSIC::SIM" {
+                                    if !modules::preserves_modes(upper.as_ref()) {
                                         self.reset_modes();
                                     }
                                 }
@@ -891,35 +891,11 @@ impl Interpreter {
             // Random/Hash
             "CSPRNG" => random::op_csprng(self),
             "HASH" => hash::op_hash(self),
-            // Audio module words
-            "MUSIC::SEQ" => audio::op_seq(self),
-            "MUSIC::SIM" => audio::op_sim(self),
-            "MUSIC::SLOT" => audio::op_slot(self),
-            "MUSIC::GAIN" => audio::op_gain(self),
-            "MUSIC::GAIN-RESET" => audio::op_gain_reset(self),
-            "MUSIC::PAN" => audio::op_pan(self),
-            "MUSIC::PAN-RESET" => audio::op_pan_reset(self),
-            "MUSIC::FX-RESET" => audio::op_fx_reset(self),
-            "MUSIC::PLAY" => audio::op_play(self),
-            "MUSIC::CHORD" => audio::op_chord(self),
-            "MUSIC::ADSR" => audio::op_adsr(self),
-            "MUSIC::SINE" => audio::op_sine(self),
-            "MUSIC::SQUARE" => audio::op_square(self),
-            "MUSIC::SAW" => audio::op_saw(self),
-            "MUSIC::TRI" => audio::op_tri(self),
-            // JSON / IO module words
-            "JSON::PARSE" => json::op_parse(self),
-            "JSON::STRINGIFY" => json::op_stringify(self),
-            "JSON::GET" => json::op_json_get(self),
-            "JSON::KEYS" => json::op_json_keys(self),
-            "JSON::SET" => json::op_json_set(self),
-            "JSON::EXPORT" => json::op_json_export(self),
-            "IO::INPUT" => json::op_input(self),
-            "IO::OUTPUT" => json::op_output(self),
             "WAIT" => Err(AjisaiError::from(
                 "WAIT should be handled by execute_section_core, not execute_builtin",
             )),
-            _ => Err(AjisaiError::UnknownWord(name.to_string())),
+            _ => modules::execute_module_word(self, name)
+                .unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string()))),
         }
     }
 
@@ -973,6 +949,7 @@ impl Interpreter {
         self.pending_token_index = 0;
         self.play_mode = audio::PlayMode::default();
         self.call_stack.clear();
+        self.imported_modules.clear();
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
