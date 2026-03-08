@@ -77,8 +77,21 @@ pub struct FlowToken {
     pub remaining: Fraction,  // Fraction still available for consumption
     pub hint: DisplayHint,    // Carried along the flow
     pub shape: Vec<usize>,    // Logical shape of the flow bundle
+    pub parent_flow_id: Option<u64>,  // Bifurcation: parent flow reference
+    pub child_flow_ids: Vec<u64>,     // Bifurcation: child branches
+    pub mass_ratio: (u64, u64),       // Mass ratio this branch received
 }
 ```
+
+### Bifurcation: Flow Splitting with `,,`
+
+The `,,` modifier is not a copy — it is a **bifurcation** of flow mass. When `,,` is used, the parent flow's mass is split equally among the retained operands and the result:
+
+```
+parent_mass = branch_a_mass + branch_b_mass + ...
+```
+
+This preserves the conservation law while allowing intermediate values to remain on the stack. The value data is shared (via `Rc`), but each branch carries its own fraction of the original mass.
 
 ### Data Duality
 
@@ -133,6 +146,7 @@ What users see as "types" are merely ripples on the surface of the fraction stre
 | `OverConsumption` | Requested consumption exceeds remaining flow |
 | `UnconsumedLeak` | Non-zero remainder at a complete-consumption boundary |
 | `FlowBreak` | Flow chain ID discontinuity — remainder cannot be inherited |
+| `BifurcationViolation` | Sum of child branch masses does not equal parent mass |
 
 ### Technology Stack
 
@@ -318,6 +332,24 @@ npx vite
 # Production build
 npx vite build
 ```
+
+---
+
+## Migration: `,,` Keep Mode to Bifurcation
+
+In previous versions, `,,` was described as "keep mode" — conceptually copying operands. Starting with v0.13.0, `,,` is redefined as **bifurcation**: the flow mass is split between retained values and the result.
+
+| Aspect | Old (Keep) | New (Bifurcation) |
+|:-------|:-----------|:------------------|
+| Concept | Copy values to stack | Split flow mass into branches |
+| Conservation | Not tracked | `parent_mass = Σ child_masses` |
+| Observability | No metadata | Parent/child flow IDs, mass ratios |
+| Runtime behavior | Identical output values | Identical output values |
+| Error detection | None | Over-consumption on bifurcated branches |
+
+**What changes for users:** Observable behavior is unchanged — `,,` still places original operands and results on the stack. The difference is semantic: each value now carries a fraction of the original mass, enabling the runtime to detect conservation law violations in bifurcation chains.
+
+**Debug mode:** Enable flow tracking to inspect bifurcation chains, parent-child relationships, and mass distribution across branches.
 
 ---
 

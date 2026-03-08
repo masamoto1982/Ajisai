@@ -368,3 +368,165 @@ async fn test_flow_token_shape_tracking() {
     // Total = 1+2+3+4+5+6 = 21
     assert_eq!(token.total, frac(21, 1));
 }
+
+// ──────────────────────────────────────────────
+// 6. Bifurcation tests (分流テスト)
+// ──────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_bifurcation_mass_sum_equals_parent() {
+    // Bifurcating a flow into 2 branches: child masses should sum to parent remaining
+    let val = Value::from_fraction(frac(100, 1));
+    let token = FlowToken::from_value(&val);
+    let parent_remaining = token.remaining.clone();
+
+    let (_parent, children) = token.bifurcate(2).unwrap();
+    assert_eq!(children.len(), 2);
+
+    // Each child gets half
+    assert_eq!(children[0].total, frac(50, 1));
+    assert_eq!(children[1].total, frac(50, 1));
+
+    // Sum of children == parent remaining
+    FlowToken::verify_bifurcation_conservation(&parent_remaining, &children).unwrap();
+}
+
+#[tokio::test]
+async fn test_bifurcation_three_branches() {
+    // Bifurcating into 3 branches (e.g., ,, on a Fold-type word with 2 operands + result)
+    let val = Value::from_fraction(frac(90, 1));
+    let token = FlowToken::from_value(&val);
+    let parent_remaining = token.remaining.clone();
+
+    let (_parent, children) = token.bifurcate(3).unwrap();
+    assert_eq!(children.len(), 3);
+
+    // Each child gets 30
+    assert_eq!(children[0].total, frac(30, 1));
+    assert_eq!(children[1].total, frac(30, 1));
+    assert_eq!(children[2].total, frac(30, 1));
+
+    FlowToken::verify_bifurcation_conservation(&parent_remaining, &children).unwrap();
+}
+
+#[tokio::test]
+async fn test_bifurcation_fractional_mass() {
+    // 1/3 bifurcated into 2: each child gets 1/6
+    let val = Value::from_fraction(frac(1, 3));
+    let token = FlowToken::from_value(&val);
+    let parent_remaining = token.remaining.clone();
+
+    let (_parent, children) = token.bifurcate(2).unwrap();
+    assert_eq!(children[0].total, frac(1, 6));
+    assert_eq!(children[1].total, frac(1, 6));
+
+    FlowToken::verify_bifurcation_conservation(&parent_remaining, &children).unwrap();
+}
+
+#[tokio::test]
+async fn test_bifurcation_parent_exhausted() {
+    // After bifurcation, parent's remaining should be 0
+    let val = Value::from_fraction(frac(42, 1));
+    let token = FlowToken::from_value(&val);
+
+    let (parent, _children) = token.bifurcate(2).unwrap();
+    assert!(parent.is_exhausted());
+    assert_eq!(parent.remaining, frac(0, 1));
+}
+
+#[tokio::test]
+async fn test_bifurcation_parent_child_ids() {
+    let val = Value::from_fraction(frac(10, 1));
+    let token = FlowToken::from_value(&val);
+
+    let (parent, children) = token.bifurcate(2).unwrap();
+
+    // Parent should record child IDs
+    assert_eq!(parent.child_flow_ids.len(), 2);
+    assert_eq!(parent.child_flow_ids[0], children[0].id);
+    assert_eq!(parent.child_flow_ids[1], children[1].id);
+
+    // Children should reference parent
+    assert_eq!(children[0].parent_flow_id, Some(parent.id));
+    assert_eq!(children[1].parent_flow_id, Some(parent.id));
+}
+
+#[tokio::test]
+async fn test_bifurcation_mass_ratio() {
+    let val = Value::from_fraction(frac(10, 1));
+    let token = FlowToken::from_value(&val);
+
+    let (_parent, children) = token.bifurcate(3).unwrap();
+    for child in &children {
+        assert_eq!(child.mass_ratio, (1, 3));
+    }
+}
+
+#[tokio::test]
+async fn test_bifurcation_child_overconsumption() {
+    // After bifurcation, each child has limited mass; consuming too much should fail
+    let val = Value::from_fraction(frac(10, 1));
+    let token = FlowToken::from_value(&val);
+
+    let (_parent, children) = token.bifurcate(2).unwrap();
+    // Each child has mass 5
+
+    let err = children[0].consume(&frac(6, 1)).unwrap_err();
+    let msg = format!("{}", err);
+    assert!(msg.contains("Over-consumption"), "Got: {}", msg);
+}
+
+#[tokio::test]
+async fn test_bifurcation_child_unconsumed_leak() {
+    // If a child is only partially consumed, assert_complete should fail
+    let val = Value::from_fraction(frac(10, 1));
+    let token = FlowToken::from_value(&val);
+
+    let (_parent, children) = token.bifurcate(2).unwrap();
+    // Each child has mass 5
+
+    let (_, child_after) = children[0].consume(&frac(3, 1)).unwrap();
+    let err = child_after.assert_complete("bifurcation branch end").unwrap_err();
+    let msg = format!("{}", err);
+    assert!(msg.contains("Unconsumed leak"), "Got: {}", msg);
+}
+
+#[tokio::test]
+async fn test_bifurcation_zero_mass() {
+    // NIL (zero mass) bifurcation should succeed with zero-mass children
+    let val = Value::nil();
+    let token = FlowToken::from_value(&val);
+
+    let (parent, children) = token.bifurcate(2).unwrap();
+    assert!(parent.is_exhausted());
+    assert_eq!(children[0].total, frac(0, 1));
+    assert_eq!(children[1].total, frac(0, 1));
+    assert!(children[0].is_exhausted());
+    assert!(children[1].is_exhausted());
+}
+
+#[tokio::test]
+async fn test_bifurcation_with_dot_dot_combined() {
+    // ,, with .. mode: the interpreter should still produce correct results
+    let result = run("[ 1 2 3 4 5 ] ,, LENGTH").await.unwrap();
+    assert_eq!(result.len(), 2); // original + length
+    assert_number(&result[1], 5, 1);
+}
+
+#[tokio::test]
+async fn test_bifurcation_interpreter_keep_mode() {
+    // ,, GET should produce 3 values on stack (original vec, index, result)
+    let result = run("[ 10 20 30 ] [ 1 ] ,, GET").await.unwrap();
+    assert_eq!(result.len(), 3);
+    assert_number(&result[2], 20, 1);
+}
+
+#[tokio::test]
+async fn test_bifurcation_interpreter_arithmetic() {
+    // ,, + should produce 3 values on stack
+    let result = run("[ 3 ] [ 4 ] ,, +").await.unwrap();
+    assert_eq!(result.len(), 3);
+    assert_number(&result[0], 3, 1);
+    assert_number(&result[1], 4, 1);
+    assert_number(&result[2], 7, 1);
+}

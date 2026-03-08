@@ -170,6 +170,27 @@ impl Interpreter {
         Ok(())
     }
 
+    /// Record a bifurcation event: split a parent flow into `n` child branches.
+    ///
+    /// Returns the child FlowTokens. The parent flow is marked as fully
+    /// distributed (remaining = 0) and child flows are added to tracking.
+    pub fn record_bifurcation(
+        &mut self,
+        flow: &FlowToken,
+        n: usize,
+    ) -> Result<Vec<FlowToken>> {
+        let (updated_parent, children) = flow.bifurcate(n)?;
+        if self.flow_tracking {
+            if let Some(af) = self.active_flows.iter_mut().find(|f| f.id == flow.id) {
+                *af = updated_parent;
+            }
+            for child in &children {
+                self.active_flows.push(child.clone());
+            }
+        }
+        Ok(children)
+    }
+
     fn set_operation_target_mode(&mut self, mode: OperationTargetMode) {
         self.operation_target_mode = mode;
     }
