@@ -102,7 +102,7 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
     let key_str = value_to_string_content(&key_val);
 
     let (pairs, index) = match &obj_val.data {
-        ValueData::JsonObject { pairs, index } => (pairs.as_slice(), Some(index)),
+        ValueData::Record { pairs, index } => (pairs.as_slice(), Some(index)),
         ValueData::Vector(v) => (v.as_slice(), None),
         _ => {
             interp.stack.push(Value::nil());
@@ -151,7 +151,7 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
     };
 
     let pairs = match &obj_val.data {
-        ValueData::JsonObject { pairs, .. } => pairs.as_slice(),
+        ValueData::Record { pairs, .. } => pairs.as_slice(),
         ValueData::Vector(v) => v.as_slice(),
         _ => {
             interp.stack.push(Value::nil());
@@ -173,7 +173,7 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(Value {
             data: ValueData::Vector(Rc::new(keys)),
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         });
     }
 
@@ -208,7 +208,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
     let key_str = value_to_string_content(&key_val);
 
     let (old_pairs, old_index) = match &obj_val.data {
-        ValueData::JsonObject { pairs, index } => (Some(pairs.as_slice()), Some(index)),
+        ValueData::Record { pairs, index } => (Some(pairs.as_slice()), Some(index)),
         ValueData::Vector(v) => (Some(v.as_slice()), None),
         _ => (None, None),
     };
@@ -237,7 +237,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                         new_pairs.push(Value {
                             data: ValueData::Vector(Rc::new(vec![kv[0].clone(), new_value.clone()])),
                             display_hint: DisplayHint::Auto,
-                            audio_hint: None,
+                            ext: None,
                         });
                         continue;
                     }
@@ -254,7 +254,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                     new_value,
                 ])),
                 display_hint: DisplayHint::Auto,
-                audio_hint: None,
+                ext: None,
             });
         }
 
@@ -272,9 +272,9 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         }
 
         interp.stack.push(Value {
-            data: ValueData::JsonObject { pairs: Rc::new(new_pairs), index: new_index },
+            data: ValueData::Record { pairs: Rc::new(new_pairs), index: new_index },
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         });
     } else {
         let mut index = HashMap::new();
@@ -285,12 +285,12 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 new_value,
             ])),
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         }]);
         interp.stack.push(Value {
-            data: ValueData::JsonObject { pairs, index },
+            data: ValueData::Record { pairs, index },
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         });
     }
 

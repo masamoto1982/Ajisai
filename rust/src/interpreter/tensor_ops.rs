@@ -164,7 +164,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
                 display_hint: hint,
-                audio_hint: None,
+                ext: None,
             };
         }
         // データが複数ある場合はベクタ
@@ -182,7 +182,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
         return Value {
             data: ValueData::Vector(Rc::new(children)),
             display_hint: hint,
-            audio_hint: None,
+            ext: None,
         };
     }
 
@@ -202,7 +202,7 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
     Value {
         data: ValueData::Vector(Rc::new(children)),
         display_hint: hint,
-        audio_hint: None,
+        ext: None,
     }
 }
 
@@ -306,16 +306,16 @@ where
         ValueData::Scalar(f) => Value {
             data: ValueData::Scalar(op(f)),
             display_hint: val.display_hint,
-            audio_hint: val.audio_hint.clone(),
+            ext: val.ext.clone(),
         },
-        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
+        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
             let new_children: Vec<Value> = children.iter()
                 .map(|c| apply_unary_to_value(c, op))
                 .collect();
             Value {
                 data: ValueData::Vector(Rc::new(new_children)),
                 display_hint: val.display_hint,
-                audio_hint: val.audio_hint.clone(),
+                ext: val.ext.clone(),
             }
         }
         ValueData::Nil => val.clone(),
@@ -431,7 +431,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Number,
-                audio_hint: None,
+                ext: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vector")),
@@ -444,14 +444,14 @@ where
 {
     match &val.data {
         ValueData::Scalar(f) => Ok(Value::from_fraction(op(scalar, f)?)),
-        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
+        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
             let new_children: Result<Vec<Value>> = children.iter()
                 .map(|c| apply_scalar_to_value(scalar, c, op))
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: val.display_hint,
-                audio_hint: val.audio_hint.clone(),
+                ext: val.ext.clone(),
             })
         }
         ValueData::Nil => Ok(val.clone()),
@@ -471,7 +471,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Number,
-                audio_hint: None,
+                ext: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vector")),
@@ -484,14 +484,14 @@ where
 {
     match &val.data {
         ValueData::Scalar(f) => Ok(Value::from_fraction(op(f, scalar)?)),
-        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
+        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
             let new_children: Result<Vec<Value>> = children.iter()
                 .map(|c| apply_value_to_scalar(c, scalar, op))
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: val.display_hint,
-                audio_hint: val.audio_hint.clone(),
+                ext: val.ext.clone(),
             })
         }
         ValueData::Nil => Ok(val.clone()),
@@ -505,9 +505,9 @@ where
 {
     match (&a.data, &b.data) {
         (ValueData::Vector(ca), ValueData::Vector(cb))
-        | (ValueData::Vector(ca), ValueData::JsonObject { pairs: cb, .. })
-        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::Vector(cb))
-        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::JsonObject { pairs: cb, .. }) => {
+        | (ValueData::Vector(ca), ValueData::Record { pairs: cb, .. })
+        | (ValueData::Record { pairs: ca, .. }, ValueData::Vector(cb))
+        | (ValueData::Record { pairs: ca, .. }, ValueData::Record { pairs: cb, .. }) => {
             if ca.len() != cb.len() {
                 return Err(AjisaiError::from(format!(
                     "Cannot broadcast shapes [{} elements] and [{} elements]",
@@ -520,7 +520,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Number,
-                audio_hint: None,
+                ext: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vectors")),
@@ -536,9 +536,9 @@ where
             Ok(Value::from_fraction(op(fa, fb)?))
         }
         (ValueData::Vector(ca), ValueData::Vector(cb))
-        | (ValueData::Vector(ca), ValueData::JsonObject { pairs: cb, .. })
-        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::Vector(cb))
-        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::JsonObject { pairs: cb, .. }) => {
+        | (ValueData::Vector(ca), ValueData::Record { pairs: cb, .. })
+        | (ValueData::Record { pairs: ca, .. }, ValueData::Vector(cb))
+        | (ValueData::Record { pairs: ca, .. }, ValueData::Record { pairs: cb, .. }) => {
             if ca.len() != cb.len() {
                 return Err(AjisaiError::from("Shape mismatch"));
             }
@@ -548,29 +548,29 @@ where
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: a.display_hint,
-                audio_hint: a.audio_hint.clone(),
+                ext: a.ext.clone(),
             })
         }
         (ValueData::Scalar(fa), ValueData::Vector(cb))
-        | (ValueData::Scalar(fa), ValueData::JsonObject { pairs: cb, .. }) => {
+        | (ValueData::Scalar(fa), ValueData::Record { pairs: cb, .. }) => {
             let new_children: Result<Vec<Value>> = cb.iter()
                 .map(|c| apply_scalar_to_value(fa, c, op))
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: b.display_hint,
-                audio_hint: b.audio_hint.clone(),
+                ext: b.ext.clone(),
             })
         }
         (ValueData::Vector(ca), ValueData::Scalar(fb))
-        | (ValueData::JsonObject { pairs: ca, .. }, ValueData::Scalar(fb)) => {
+        | (ValueData::Record { pairs: ca, .. }, ValueData::Scalar(fb)) => {
             let new_children: Result<Vec<Value>> = ca.iter()
                 .map(|c| apply_value_to_scalar(c, fb, op))
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: a.display_hint,
-                audio_hint: a.audio_hint.clone(),
+                ext: a.ext.clone(),
             })
         }
         _ => Err(AjisaiError::from("Cannot apply operation")),

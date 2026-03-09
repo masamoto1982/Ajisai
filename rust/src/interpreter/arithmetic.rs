@@ -43,7 +43,7 @@ where
         }
 
         (ValueData::Scalar(fa), ValueData::Vector(vb))
-        | (ValueData::Scalar(fa), ValueData::JsonObject { pairs: vb, .. }) => {
+        | (ValueData::Scalar(fa), ValueData::Record { pairs: vb, .. }) => {
             let result: Result<Vec<Value>> = vb.iter()
                 .map(|bi| broadcast_binary_op(&Value::from_fraction(fa.clone()), bi, op))
                 .collect();
@@ -51,7 +51,7 @@ where
         }
 
         (ValueData::Vector(va), ValueData::Scalar(fb))
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::Scalar(fb)) => {
+        | (ValueData::Record { pairs: va, .. }, ValueData::Scalar(fb)) => {
             let result: Result<Vec<Value>> = va.iter()
                 .map(|ai| broadcast_binary_op(ai, &Value::from_fraction(fb.clone()), op))
                 .collect();
@@ -59,9 +59,9 @@ where
         }
 
         (ValueData::Vector(va), ValueData::Vector(vb))
-        | (ValueData::Vector(va), ValueData::JsonObject { pairs: vb, .. })
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::Vector(vb))
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::JsonObject { pairs: vb, .. }) => {
+        | (ValueData::Vector(va), ValueData::Record { pairs: vb, .. })
+        | (ValueData::Record { pairs: va, .. }, ValueData::Vector(vb))
+        | (ValueData::Record { pairs: va, .. }, ValueData::Record { pairs: vb, .. }) => {
             if va.len() == vb.len() {
                 let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
                     .map(|(ai, bi)| broadcast_binary_op(ai, bi, op))
@@ -85,7 +85,7 @@ where
             }
 
             // 右揃えブロードキャスト（例: [2,3] と [3]）
-            if va.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::JsonObject { .. }))
+            if va.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::Record { .. }))
                 && vb.iter().all(|v| matches!(v.data, ValueData::Scalar(_)))
             {
                 let rhs = Value::from_children((**vb).clone());
@@ -95,7 +95,7 @@ where
                 return Ok(Value::from_children(result?));
             }
 
-            if vb.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::JsonObject { .. }))
+            if vb.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::Record { .. }))
                 && va.iter().all(|v| matches!(v.data, ValueData::Scalar(_)))
             {
                 let lhs = Value::from_children((**va).clone());
@@ -348,7 +348,7 @@ fn apply_optimized_mul(a: &Value, b: &Value) -> Result<Value> {
             Ok(Value::from_fraction(fa.mul(fb)))
         }
         (ValueData::Scalar(scalar), ValueData::Vector(vec))
-        | (ValueData::Scalar(scalar), ValueData::JsonObject { pairs: vec, .. }) => {
+        | (ValueData::Scalar(scalar), ValueData::Record { pairs: vec, .. }) => {
             if scalar.is_integer() {
                 let result: Vec<Value> = vec.iter()
                     .map(|v| apply_scalar_mul_to_value(scalar, v))
@@ -359,7 +359,7 @@ fn apply_optimized_mul(a: &Value, b: &Value) -> Result<Value> {
             }
         }
         (ValueData::Vector(vec), ValueData::Scalar(scalar))
-        | (ValueData::JsonObject { pairs: vec, .. }, ValueData::Scalar(scalar)) => {
+        | (ValueData::Record { pairs: vec, .. }, ValueData::Scalar(scalar)) => {
             if scalar.is_integer() {
                 let result: Vec<Value> = vec.iter()
                     .map(|v| apply_scalar_mul_to_value(scalar, v))
@@ -370,9 +370,9 @@ fn apply_optimized_mul(a: &Value, b: &Value) -> Result<Value> {
             }
         }
         (ValueData::Vector(va), ValueData::Vector(vb))
-        | (ValueData::Vector(va), ValueData::JsonObject { pairs: vb, .. })
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::Vector(vb))
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::JsonObject { pairs: vb, .. }) => {
+        | (ValueData::Vector(va), ValueData::Record { pairs: vb, .. })
+        | (ValueData::Record { pairs: va, .. }, ValueData::Vector(vb))
+        | (ValueData::Record { pairs: va, .. }, ValueData::Record { pairs: vb, .. }) => {
             if va.len() == vb.len() {
                 let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
                     .map(|(ai, bi)| apply_optimized_mul(ai, bi))
@@ -397,7 +397,7 @@ fn apply_scalar_mul_to_value(scalar: &Fraction, val: &Value) -> Value {
             }
         }
         ValueData::Vector(children)
-        | ValueData::JsonObject { pairs: children, .. } => {
+        | ValueData::Record { pairs: children, .. } => {
             let new_children: Vec<Value> = children.iter()
                 .map(|c| apply_scalar_mul_to_value(scalar, c))
                 .collect();
@@ -469,7 +469,7 @@ fn apply_optimized_div(a: &Value, b: &Value) -> Result<Value> {
             Ok(Value::from_fraction(fa.div(fb)))
         }
         (ValueData::Vector(vec), ValueData::Scalar(scalar))
-        | (ValueData::JsonObject { pairs: vec, .. }, ValueData::Scalar(scalar)) => {
+        | (ValueData::Record { pairs: vec, .. }, ValueData::Scalar(scalar)) => {
             if scalar.is_zero() {
                 return Err(AjisaiError::DivisionByZero);
             }
@@ -485,16 +485,16 @@ fn apply_optimized_div(a: &Value, b: &Value) -> Result<Value> {
             }
         }
         (ValueData::Scalar(scalar), ValueData::Vector(vec))
-        | (ValueData::Scalar(scalar), ValueData::JsonObject { pairs: vec, .. }) => {
+        | (ValueData::Scalar(scalar), ValueData::Record { pairs: vec, .. }) => {
             let result: Result<Vec<Value>> = vec.iter()
                 .map(|v| apply_div_scalar_by_value(scalar, v))
                 .collect();
             Ok(Value::from_children(result?))
         }
         (ValueData::Vector(va), ValueData::Vector(vb))
-        | (ValueData::Vector(va), ValueData::JsonObject { pairs: vb, .. })
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::Vector(vb))
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::JsonObject { pairs: vb, .. }) => {
+        | (ValueData::Vector(va), ValueData::Record { pairs: vb, .. })
+        | (ValueData::Record { pairs: va, .. }, ValueData::Vector(vb))
+        | (ValueData::Record { pairs: va, .. }, ValueData::Record { pairs: vb, .. }) => {
             if va.len() == vb.len() {
                 let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
                     .map(|(ai, bi)| apply_optimized_div(ai, bi))
@@ -521,7 +521,7 @@ fn apply_scalar_div_to_value(val: &Value, scalar: &Fraction) -> Result<Value> {
             }
         }
         ValueData::Vector(children)
-        | ValueData::JsonObject { pairs: children, .. } => {
+        | ValueData::Record { pairs: children, .. } => {
             let new_children: Result<Vec<Value>> = children.iter()
                 .map(|c| apply_scalar_div_to_value(c, scalar))
                 .collect();
@@ -541,7 +541,7 @@ fn apply_div_scalar_by_value(scalar: &Fraction, val: &Value) -> Result<Value> {
             Ok(Value::from_fraction(scalar.div(f)))
         }
         ValueData::Vector(children)
-        | ValueData::JsonObject { pairs: children, .. } => {
+        | ValueData::Record { pairs: children, .. } => {
             let new_children: Result<Vec<Value>> = children.iter()
                 .map(|c| apply_div_scalar_by_value(scalar, c))
                 .collect();

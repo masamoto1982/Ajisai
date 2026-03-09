@@ -25,9 +25,91 @@ use super::OperationTargetMode;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{is_string_value, is_vector_value, value_as_string};
 use crate::types::fraction::Fraction;
-use crate::types::{AudioHint, Envelope, Value, ValueData, WaveformType};
+use crate::types::{Value, ValueData, ValueExt};
 use num_traits::ToPrimitive;
 use serde::Serialize;
+
+// ============================================================================
+// Audio types (module-local, decoupled from core types)
+// ============================================================================
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WaveformType {
+    #[default]
+    Sine,
+    Square,
+    Sawtooth,
+    Triangle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Envelope {
+    pub attack: f64,
+    pub decay: f64,
+    pub sustain: f64,
+    pub release: f64,
+}
+
+impl Default for Envelope {
+    fn default() -> Self {
+        Self {
+            attack: 0.01,
+            decay: 0.0,
+            sustain: 1.0,
+            release: 0.01,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct AudioHint {
+    pub chord: bool,
+    pub envelope: Option<Envelope>,
+    pub waveform: WaveformType,
+}
+
+impl ValueExt for AudioHint {
+    fn clone_box(&self) -> Box<dyn ValueExt> {
+        Box::new(self.clone())
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
+// ============================================================================
+// Music module state (stored in interpreter's module_state)
+// ============================================================================
+
+pub(crate) struct MusicState {
+    pub play_mode: PlayMode,
+}
+
+pub(crate) fn get_play_mode(interp: &Interpreter) -> PlayMode {
+    interp
+        .module_state
+        .get("MUSIC")
+        .and_then(|s| s.downcast_ref::<MusicState>())
+        .map(|s| s.play_mode)
+        .unwrap_or_default()
+}
+
+fn set_play_mode(interp: &mut Interpreter, mode: PlayMode) {
+    if let Some(state) = interp.module_state.get_mut("MUSIC") {
+        if let Some(ms) = state.downcast_mut::<MusicState>() {
+            ms.play_mode = mode;
+            return;
+        }
+    }
+    interp.module_state.insert(
+        "MUSIC".to_string(),
+        Box::new(MusicState { play_mode: mode }),
+    );
+}
 
 // ============================================================================
 // PlayMode - 再生モード
@@ -100,7 +182,7 @@ struct PlayCommand {
 
 /// MUSIC::SEQ ワード - 順次再生モードを設定
 pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
-    interp.play_mode = PlayMode::Sequential;
+    set_play_mode(interp, PlayMode::Sequential);
     Ok(())
 }
 
@@ -110,7 +192,7 @@ pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
 
 /// MUSIC::SIM ワード - 同時再生モードを設定
 pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
-    interp.play_mode = PlayMode::Simultaneous;
+    set_play_mode(interp, PlayMode::Simultaneous);
     Ok(())
 }
 
@@ -272,8 +354,11 @@ pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
 
     // AudioHintを設定（既存のヒントがあればchordフラグを追加）
     let mut new_val = val;
-    let hint = new_val.audio_hint.get_or_insert(AudioHint::default());
-    hint.chord = true;
+    if let Some(h) = new_val.get_ext_mut::<AudioHint>() {
+        h.chord = true;
+    } else {
+        new_val.ext = Some(Box::new(AudioHint { chord: true, ..Default::default() }));
+    }
 
     interp.stack.push(new_val);
     Ok(())
@@ -357,13 +442,12 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
 
     // AudioHintを設定（対象ベクタに適用）
     let mut new_val = target;
-    let hint = new_val.audio_hint.get_or_insert(AudioHint::default());
-    hint.envelope = Some(Envelope {
-        attack,
-        decay,
-        sustain,
-        release,
-    });
+    let envelope = Some(Envelope { attack, decay, sustain, release });
+    if let Some(h) = new_val.get_ext_mut::<AudioHint>() {
+        h.envelope = envelope;
+    } else {
+        new_val.ext = Some(Box::new(AudioHint { envelope, ..Default::default() }));
+    }
 
     interp.stack.push(new_val);
     Ok(())
@@ -404,8 +488,11 @@ fn set_waveform(interp: &mut Interpreter, waveform: WaveformType) -> Result<()> 
 
     // AudioHintを設定
     let mut new_val = val;
-    let hint = new_val.audio_hint.get_or_insert(AudioHint::default());
-    hint.waveform = waveform;
+    if let Some(h) = new_val.get_ext_mut::<AudioHint>() {
+        h.waveform = waveform;
+    } else {
+        new_val.ext = Some(Box::new(AudioHint { waveform, ..Default::default() }));
+    }
 
     interp.stack.push(new_val);
     Ok(())
@@ -417,7 +504,7 @@ fn set_waveform(interp: &mut Interpreter, waveform: WaveformType) -> Result<()> 
 
 /// MUSIC::PLAY ワードのエントリポイント
 pub fn op_play(interp: &mut Interpreter) -> Result<()> {
-    let mode = interp.play_mode;
+    let mode = get_play_mode(interp);
     let target = interp.operation_target_mode;
 
     match target {
@@ -459,7 +546,7 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
     }
 
     // リセット
-    interp.play_mode = PlayMode::Sequential;
+    set_play_mode(interp, PlayMode::Sequential);
     interp.operation_target_mode = OperationTargetMode::StackTop;
 
     Ok(())
@@ -476,7 +563,7 @@ fn build_audio_structure(
     output: &mut String,
 ) -> Result<AudioStructure> {
     // AudioHintを取得
-    let audio_hint = value.get_audio_hint();
+    let audio_hint = value.get_ext::<AudioHint>();
     let envelope = audio_hint.and_then(|h| h.envelope);
     let waveform = audio_hint.map(|h| h.waveform).unwrap_or_default();
     let is_chord = audio_hint.map(|h| h.chord).unwrap_or(false);

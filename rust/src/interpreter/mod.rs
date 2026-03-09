@@ -66,7 +66,7 @@ pub struct Interpreter {
     pub(crate) safe_mode: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
-    pub(crate) play_mode: audio::PlayMode,
+    pub(crate) module_state: HashMap<String, Box<dyn std::any::Any>>,
     pub(crate) imported_modules: HashSet<String>,
     pub(crate) call_stack: SmallVec<[String; 5]>,
     pub(crate) input_buffer: String,
@@ -100,7 +100,7 @@ impl Interpreter {
             safe_mode: false,
             pending_tokens: None,
             pending_token_index: 0,
-            play_mode: audio::PlayMode::default(),
+            module_state: HashMap::new(),
             imported_modules: HashSet::new(),
             call_stack: SmallVec::new(),
             input_buffer: String::new(),
@@ -947,7 +947,7 @@ impl Interpreter {
         self.force_flag = false;
         self.pending_tokens = None;
         self.pending_token_index = 0;
-        self.play_mode = audio::PlayMode::default();
+        self.module_state.clear();
         self.call_stack.clear();
         self.imported_modules.clear();
         crate::builtins::register_builtins(&mut self.dictionary);

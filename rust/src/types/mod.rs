@@ -3,45 +3,28 @@ pub mod fraction;
 pub mod json;
 
 use self::fraction::Fraction;
-use serde::Serialize;
+use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum WaveformType {
-    #[default]
-    Sine,
-    Square,
-    Sawtooth,
-    Triangle,
+// ---------------------------------------------------------------------------
+// ValueExt: Generic extension trait for module-specific value metadata
+// ---------------------------------------------------------------------------
+
+/// Trait for module-specific metadata attached to values.
+/// Modules (e.g., MUSIC) can implement this to carry domain-specific
+/// information through the value pipeline without coupling the core types.
+pub trait ValueExt: std::fmt::Debug + 'static {
+    fn clone_box(&self) -> Box<dyn ValueExt>;
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct Envelope {
-    pub attack: f64,
-    pub decay: f64,
-    pub sustain: f64,
-    pub release: f64,
-}
-
-impl Default for Envelope {
-    fn default() -> Self {
-        Self {
-            attack: 0.01,
-            decay: 0.0,
-            sustain: 1.0,
-            release: 0.01,
-        }
+impl Clone for Box<dyn ValueExt> {
+    fn clone(&self) -> Self {
+        self.clone_box()
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct AudioHint {
-    pub chord: bool,
-    pub envelope: Option<Envelope>,
-    pub waveform: WaveformType,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -59,7 +42,7 @@ pub enum DisplayHint {
 pub enum ValueData {
     Scalar(Fraction),
     Vector(Rc<Vec<Value>>),
-    JsonObject {
+    Record {
         pairs: Rc<Vec<Value>>,
         index: HashMap<String, usize>,
     },
@@ -67,11 +50,27 @@ pub enum ValueData {
     CodeBlock(Vec<Token>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub struct Value {
     pub data: ValueData,
     pub display_hint: DisplayHint,
-    pub audio_hint: Option<AudioHint>,
+    pub ext: Option<Box<dyn ValueExt>>,
+}
+
+impl Clone for Value {
+    fn clone(&self) -> Self {
+        Value {
+            data: self.data.clone(),
+            display_hint: self.display_hint,
+            ext: self.ext.clone(),
+        }
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data && self.display_hint == other.display_hint
+    }
 }
 
 impl Value {
@@ -80,7 +79,7 @@ impl Value {
         Self {
             data: ValueData::Nil,
             display_hint: DisplayHint::Nil,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -89,7 +88,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(f),
             display_hint: DisplayHint::Number,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -98,7 +97,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(Fraction::from(n)),
             display_hint: DisplayHint::Number,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -107,7 +106,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
             display_hint: DisplayHint::Boolean,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -121,14 +120,14 @@ impl Value {
             return Self {
                 data: ValueData::Nil,
                 display_hint: DisplayHint::String,
-                audio_hint: None,
+                ext: None,
             };
         }
 
         Self {
             data: ValueData::Vector(Rc::new(children)),
             display_hint: DisplayHint::String,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -141,7 +140,7 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(children)),
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -153,7 +152,7 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(values)),
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -167,7 +166,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(f),
             display_hint: DisplayHint::DateTime,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -191,7 +190,7 @@ impl Value {
     pub fn is_vector(&self) -> bool {
         matches!(
             self.data,
-            ValueData::Vector(_) | ValueData::JsonObject { .. }
+            ValueData::Vector(_) | ValueData::Record { .. }
         )
     }
 
@@ -200,7 +199,7 @@ impl Value {
         match &self.data {
             ValueData::Nil => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 !v.is_empty() && !v.iter().all(|c| !c.is_truthy())
             }
             ValueData::CodeBlock(_) => true,
@@ -212,7 +211,7 @@ impl Value {
         match &self.data {
             ValueData::Nil => 0,
             ValueData::Scalar(_) => 1,
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.len(),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.len(),
             ValueData::CodeBlock(tokens) => tokens.len(),
         }
     }
@@ -224,7 +223,7 @@ impl Value {
 
     pub fn get_child(&self, index: usize) -> Option<&Value> {
         match &self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.get(index),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index),
             ValueData::Scalar(_) if index == 0 => Some(self),
             _ => None,
         }
@@ -232,7 +231,7 @@ impl Value {
 
     pub fn get_child_mut(&mut self, index: usize) -> Option<&mut Value> {
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Rc::make_mut(v).get_mut(index)
             }
             _ => None,
@@ -247,7 +246,7 @@ impl Value {
     #[inline]
     pub fn last(&self) -> Option<&Value> {
         match &self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => v.last(),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.last(),
             ValueData::Scalar(_) => Some(self),
             ValueData::Nil => None,
             ValueData::CodeBlock(_) => None,
@@ -256,7 +255,7 @@ impl Value {
 
     pub fn push_child(&mut self, child: Value) {
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Rc::make_mut(v).push(child);
             }
             ValueData::Nil => {
@@ -274,7 +273,7 @@ impl Value {
 
     pub fn pop_child(&mut self) -> Option<Value> {
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Rc::make_mut(v).pop()
             }
             _ => None,
@@ -283,7 +282,7 @@ impl Value {
 
     pub fn insert_child(&mut self, index: usize, child: Value) {
         let v = match &mut self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => Rc::make_mut(v),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
             _ => return,
         };
         if index <= v.len() {
@@ -293,7 +292,7 @@ impl Value {
 
     pub fn remove_child(&mut self, index: usize) -> Option<Value> {
         let v = match &mut self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => Rc::make_mut(v),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
             _ => return None,
         };
         if index < v.len() {
@@ -305,7 +304,7 @@ impl Value {
 
     pub fn replace_child(&mut self, index: usize, child: Value) -> Option<Value> {
         let v = match &mut self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => Rc::make_mut(v),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
             _ => return None,
         };
         if index < v.len() {
@@ -344,7 +343,7 @@ impl Value {
     #[inline]
     pub fn as_vector(&self) -> Option<&Vec<Value>> {
         match &self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => Some(v),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(v),
             _ => None,
         }
     }
@@ -352,7 +351,7 @@ impl Value {
     #[inline]
     pub fn as_vector_mut(&mut self) -> Option<&mut Vec<Value>> {
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Some(Rc::make_mut(v))
             }
             _ => None,
@@ -363,7 +362,7 @@ impl Value {
         match &self.data {
             ValueData::Nil => vec![Fraction::nil()],
             ValueData::Scalar(f) => vec![f.clone()],
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 v.iter().flat_map(|c| c.flatten_fractions()).collect()
             }
             ValueData::CodeBlock(_) => vec![],
@@ -374,7 +373,7 @@ impl Value {
         match &self.data {
             ValueData::Nil => vec![],
             ValueData::Scalar(_) => vec![],
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 if v.is_empty() {
                     vec![0]
                 } else {
@@ -402,13 +401,13 @@ impl Value {
             return Self {
                 data: ValueData::Scalar(v[0].clone()),
                 display_hint: DisplayHint::Number,
-                audio_hint: None,
+                ext: None,
             };
         }
         Self {
             data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect())),
             display_hint: DisplayHint::Number,
-            audio_hint: None,
+            ext: None,
         }
     }
 
@@ -421,30 +420,30 @@ impl Value {
             return Self {
                 data: ValueData::Scalar(v[0].clone()),
                 display_hint: DisplayHint::Auto,
-                audio_hint: None,
+                ext: None,
             };
         }
         Self {
             data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect())),
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         }
     }
 
     #[inline]
-    pub fn with_audio_hint(mut self, hint: AudioHint) -> Self {
-        self.audio_hint = Some(hint);
+    pub fn with_ext(mut self, ext: Box<dyn ValueExt>) -> Self {
+        self.ext = Some(ext);
         self
     }
 
     #[inline]
-    pub fn get_audio_hint(&self) -> Option<&AudioHint> {
-        self.audio_hint.as_ref()
+    pub fn get_ext<T: ValueExt>(&self) -> Option<&T> {
+        self.ext.as_ref()?.as_any().downcast_ref::<T>()
     }
 
     #[inline]
-    pub fn get_audio_hint_mut(&mut self) -> &mut Option<AudioHint> {
-        &mut self.audio_hint
+    pub fn get_ext_mut<T: ValueExt>(&mut self) -> Option<&mut T> {
+        self.ext.as_mut()?.as_any_mut().downcast_mut::<T>()
     }
 
     #[inline]
@@ -465,7 +464,7 @@ impl Value {
         Self {
             data: ValueData::CodeBlock(tokens),
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         }
     }
 }
@@ -613,7 +612,7 @@ impl FlowToken {
                     f.clone()
                 }
             }
-            ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 let mut acc = Fraction::from(0);
                 for child in v.iter() {
                     let child_total = Self::value_total(child);
