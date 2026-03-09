@@ -23,7 +23,7 @@ use crate::types::{Value, ValueData};
 
 pub(crate) fn reconstruct_vector_elements(val: &Value) -> &[Value] {
     match &val.data {
-        ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => children,
+        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => children,
         _ => &[],
     }
 }

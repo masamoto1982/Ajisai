@@ -857,7 +857,7 @@ fn value_to_string_repr(value: &Value) -> String {
         match &val.data {
             ValueData::Nil => vec!["NIL".to_string()],
             ValueData::Scalar(f) => vec![fraction_to_string(f)],
-            ValueData::Vector(children) | ValueData::JsonObject { pairs: children, .. } => {
+            ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
                 children.iter().flat_map(|c| collect_fractions(c)).collect()
             }
             ValueData::CodeBlock(_) => vec!["<code>".to_string()],

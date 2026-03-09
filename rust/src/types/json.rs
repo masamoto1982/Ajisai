@@ -46,7 +46,7 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
             Ok(Value {
                 data: ValueData::Vector(Rc::new(values)),
                 display_hint: DisplayHint::Auto,
-                audio_hint: None,
+                ext: None,
             })
         }
 
@@ -66,13 +66,13 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
                 pairs.push(Value {
                     data: ValueData::Vector(Rc::new(vec![key_val, val_val])),
                     display_hint: DisplayHint::Auto,
-                    audio_hint: None,
+                    ext: None,
                 });
             }
             Ok(Value {
-                data: ValueData::JsonObject { pairs: Rc::new(pairs), index },
+                data: ValueData::Record { pairs: Rc::new(pairs), index },
                 display_hint: DisplayHint::Auto,
-                audio_hint: None,
+                ext: None,
             })
         }
     }
@@ -100,7 +100,7 @@ pub fn to_json(val: &Value) -> serde_json::Value {
             serde_json::Value::Null
         }
 
-        ValueData::JsonObject { pairs, .. } => {
+        ValueData::Record { pairs, .. } => {
             let mut map = serde_json::Map::new();
             for pair in pairs.iter() {
                 if let ValueData::Vector(kv) = &pair.data {
@@ -241,7 +241,7 @@ mod tests {
     fn test_from_json_object() {
         let val = from_json(serde_json::json!({"name": "Ajisai"}), 1).unwrap();
         assert!(val.is_vector());
-        if let ValueData::JsonObject { pairs, .. } = &val.data {
+        if let ValueData::Record { pairs, .. } = &val.data {
             assert_eq!(pairs.len(), 1);
             if let ValueData::Vector(kv) = &pairs[0].data {
                 assert_eq!(kv.len(), 2);
@@ -294,7 +294,7 @@ mod tests {
                 Value::from_int(3),
             ])),
             display_hint: DisplayHint::Auto,
-            audio_hint: None,
+            ext: None,
         };
         assert_eq!(to_json(&val), serde_json::json!([1, 2, 3]));
     }

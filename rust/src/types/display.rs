@@ -25,7 +25,7 @@ fn auto_display(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
-        ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
             if v.len() > 1 && looks_like_string(v) {
                 return display_as_string(data);
             }
@@ -63,7 +63,7 @@ fn display_value(data: &ValueData, depth: usize) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
-        ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
             if v.is_empty() {
                 let bracket = BracketType::from_depth(depth);
                 return format!("{} {}", bracket.opening_char(), bracket.closing_char());
@@ -131,7 +131,7 @@ fn display_as_string(data: &ValueData) -> String {
             }
             format!("'{}'", format_fraction(f))
         }
-        ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
             if v.is_empty() {
                 return "''".to_string();
             }
@@ -171,7 +171,7 @@ fn display_as_boolean(data: &ValueData) -> String {
                 "TRUE".to_string()
             }
         }
-        ValueData::Vector(v) | ValueData::JsonObject { pairs: v, .. } => {
+        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
             if v.is_empty() {
                 return "FALSE".to_string();
             }
@@ -189,10 +189,10 @@ fn display_as_boolean(data: &ValueData) -> String {
                             "TRUE"
                         }
                     }
-                    ValueData::Vector(_) | ValueData::JsonObject { .. } => {
+                    ValueData::Vector(_) | ValueData::Record { .. } => {
                         let cv = match &child.data {
                             ValueData::Vector(v) => v,
-                            ValueData::JsonObject { pairs, .. } => pairs,
+                            ValueData::Record { pairs, .. } => pairs,
                             _ => unreachable!(),
                         };
                         if cv.is_empty() {
@@ -221,7 +221,7 @@ fn display_as_datetime(data: &ValueData) -> String {
                 format!("@{}/{}", f.numerator, f.denominator)
             }
         }
-        ValueData::Vector(_) | ValueData::JsonObject { .. } => display_value(data, 0),
+        ValueData::Vector(_) | ValueData::Record { .. } => display_value(data, 0),
         ValueData::CodeBlock(tokens) => display_code_block(tokens),
     }
 }

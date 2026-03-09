@@ -38,7 +38,7 @@ pub fn vector_to_source(val: &Value) -> Result<String> {
             }
 
             ValueData::Vector(children)
-            | ValueData::JsonObject {
+            | ValueData::Record {
                 pairs: children, ..
             } => {
                 // DisplayHint::String の場合はシンボルとして出力

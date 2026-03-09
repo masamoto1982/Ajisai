@@ -21,7 +21,7 @@ fn value_has_any_truthy(val: &Value) -> bool {
         ValueData::Nil => false,
         ValueData::Scalar(f) => !f.is_zero(),
         ValueData::Vector(children)
-        | ValueData::JsonObject { pairs: children, .. } => children.iter().any(|c| value_has_any_truthy(c)),
+        | ValueData::Record { pairs: children, .. } => children.iter().any(|c| value_has_any_truthy(c)),
         ValueData::CodeBlock(_) => true,  // コードブロックは常にtruthy
     }
 }
@@ -39,18 +39,18 @@ fn apply_not_to_value(val: &Value) -> Value {
             Value {
                 data: ValueData::Scalar(result),
                 display_hint: DisplayHint::Boolean,
-                audio_hint: None,
+                ext: None,
             }
         }
         ValueData::Vector(children)
-        | ValueData::JsonObject { pairs: children, .. } => {
+        | ValueData::Record { pairs: children, .. } => {
             let new_children: Vec<Value> = children.iter()
                 .map(|c| apply_not_to_value(c))
                 .collect();
             Value {
                 data: ValueData::Vector(Rc::new(new_children)),
                 display_hint: DisplayHint::Boolean,
-                audio_hint: None,
+                ext: None,
             }
         }
         ValueData::CodeBlock(_) => val.clone(),  // コードブロックにはNOTを適用しない
@@ -81,13 +81,13 @@ where
             Ok(Value {
                 data: ValueData::Scalar(Fraction::from(if result { 1 } else { 0 })),
                 display_hint: DisplayHint::Boolean,
-                audio_hint: None,
+                ext: None,
             })
         }
 
         // スカラー対ベクター（ブロードキャスト）
         (ValueData::Scalar(fa), ValueData::Vector(vb))
-        | (ValueData::Scalar(fa), ValueData::JsonObject { pairs: vb, .. }) => {
+        | (ValueData::Scalar(fa), ValueData::Record { pairs: vb, .. }) => {
             let a_truthy = !fa.is_zero();
             let new_children: Result<Vec<Value>> = vb.iter()
                 .map(|bi| apply_binary_logic(&Value::from_bool(a_truthy), bi, op))
@@ -95,13 +95,13 @@ where
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Boolean,
-                audio_hint: None,
+                ext: None,
             })
         }
 
         // ベクター対スカラー（ブロードキャスト）
         (ValueData::Vector(va), ValueData::Scalar(fb))
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::Scalar(fb)) => {
+        | (ValueData::Record { pairs: va, .. }, ValueData::Scalar(fb)) => {
             let b_truthy = !fb.is_zero();
             let new_children: Result<Vec<Value>> = va.iter()
                 .map(|ai| apply_binary_logic(ai, &Value::from_bool(b_truthy), op))
@@ -109,15 +109,15 @@ where
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Boolean,
-                audio_hint: None,
+                ext: None,
             })
         }
 
         // 両方ベクター
         (ValueData::Vector(va), ValueData::Vector(vb))
-        | (ValueData::Vector(va), ValueData::JsonObject { pairs: vb, .. })
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::Vector(vb))
-        | (ValueData::JsonObject { pairs: va, .. }, ValueData::JsonObject { pairs: vb, .. }) => {
+        | (ValueData::Vector(va), ValueData::Record { pairs: vb, .. })
+        | (ValueData::Record { pairs: va, .. }, ValueData::Vector(vb))
+        | (ValueData::Record { pairs: va, .. }, ValueData::Record { pairs: vb, .. }) => {
             if va.len() != vb.len() {
                 return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
             }
@@ -127,7 +127,7 @@ where
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
                 display_hint: DisplayHint::Boolean,
-                audio_hint: None,
+                ext: None,
             })
         }
     }
