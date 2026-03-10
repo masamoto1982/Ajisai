@@ -31,7 +31,7 @@ fn auto_display(data: &ValueData) -> String {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-            if v.len() > 1 && looks_like_string(v) {
+            if !v.is_empty() && looks_like_string(v) {
                 return display_as_string(data);
             }
             display_value(data, 0)

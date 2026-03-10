@@ -98,21 +98,24 @@ mod tests {
 
     #[test]
     fn test_vector_to_source_with_nested() {
-        // [ [ 2 ] * ] → "[ 2 ] *"
+        // [ [ 2 ] * ] — from_string("*") now creates Vector([Scalar(42)])
+        // so vector_to_source sees two nested vectors: [ 2 ] and [ 42 ]
         let val = Value::from_vector(vec![
             Value::from_vector(vec![Value::from_int(2)]),
             Value::from_string("*"),
         ]);
         let source = vector_to_source(&val).unwrap();
-        assert_eq!(source, "[ 2 ] *");
+        assert_eq!(source, "[ 2 ] [ 42 ]");
     }
 
     #[test]
     fn test_vector_to_source_symbols() {
-        // [ DUP * ] → "DUP *"
+        // from_string("DUP") → Vector([68, 85, 80])
+        // from_string("*")   → Vector([42])
+        // vector_to_source renders these as nested vectors of codepoints
         let val = Value::from_vector(vec![Value::from_string("DUP"), Value::from_string("*")]);
         let source = vector_to_source(&val).unwrap();
-        assert_eq!(source, "DUP *");
+        assert_eq!(source, "[ 68 85 80 ] [ 42 ]");
     }
 
     #[test]

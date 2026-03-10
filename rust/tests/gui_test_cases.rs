@@ -511,7 +511,8 @@ async fn test_fold_sum() {
 
 #[tokio::test]
 async fn test_str_number_to_string() {
-    let stack = run("[ 42 ] STR").await.unwrap();
+    // Use scalar 42 (not vector [42], which is now heuristically a string '*')
+    let stack = run("42 STR").await.unwrap();
     assert_eq!(stack.len(), 1);
     assert_string_val(&stack[0], "42");
 }

@@ -19,9 +19,32 @@ use crate::types::fraction::Fraction;
 // all scalars are treated as numbers. Cast operations still work structurally.
 
 fn is_string_value(val: &Value) -> bool {
-    // Structurally: a string is a Vector (of scalar codepoints)
-    // In the data plane, Vector = string representation
-    matches!(&val.data, ValueData::Vector(_))
+    // Without DisplayHint, use heuristic: a vector of printable Unicode codepoints
+    // is considered a string. Vectors with non-printable/control chars or
+    // non-scalar elements are treated as arrays.
+    if let ValueData::Vector(v) = &val.data {
+        !v.is_empty() && v.iter().all(|child| {
+            if let ValueData::Scalar(f) = &child.data {
+                if let Some(n) = f.to_i64() {
+                    if n >= 0 && n <= 0x10FFFF {
+                        if let Some(c) = char::from_u32(n as u32) {
+                            !c.is_control() || c == '\n' || c == '\r' || c == '\t'
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        })
+    } else {
+        false
+    }
 }
 
 /// 値が真偽値として扱えるかチェック
