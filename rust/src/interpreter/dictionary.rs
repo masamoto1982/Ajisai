@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_word_name_from_value;
 use crate::interpreter::vector_exec::vector_to_source;
 use crate::interpreter::{Interpreter, OperationTargetMode, WordDefinition};
-use crate::types::{DisplayHint, ExecutionLine, Token, Value, ValueData};
+use crate::types::{ExecutionLine, Token, Value, ValueData};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -40,10 +40,6 @@ fn value_to_string(val: &Value) -> Result<String> {
 fn is_string_like(val: &Value) -> bool {
     if val.is_nil() {
         return false;
-    }
-
-    if val.display_hint == DisplayHint::String {
-        return true;
     }
 
     fn check_codepoints(val: &Value) -> bool {

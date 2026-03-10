@@ -1,7 +1,7 @@
 use serde_json;
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::types::{Value, ValueData, DisplayHint, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{Value, ValueData, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
 use num_bigint::BigInt;
@@ -45,8 +45,6 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
             }
             Ok(Value {
                 data: ValueData::Vector(Rc::new(values)),
-                display_hint: DisplayHint::Auto,
-                ext: None,
             })
         }
 
@@ -65,14 +63,10 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
                 let val_val = from_json(val, depth + 1)?;
                 pairs.push(Value {
                     data: ValueData::Vector(Rc::new(vec![key_val, val_val])),
-                    display_hint: DisplayHint::Auto,
-                    ext: None,
                 });
             }
             Ok(Value {
                 data: ValueData::Record { pairs: Rc::new(pairs), index },
-                display_hint: DisplayHint::Auto,
-                ext: None,
             })
         }
     }
@@ -83,9 +77,6 @@ pub fn to_json(val: &Value) -> serde_json::Value {
         ValueData::Nil => serde_json::Value::Null,
 
         ValueData::Scalar(f) => {
-            if val.display_hint == DisplayHint::Boolean {
-                return serde_json::Value::Bool(!f.is_zero());
-            }
             if f.is_integer() {
                 if let Some(i) = f.to_i64() {
                     return serde_json::Value::Number(serde_json::Number::from(i));
@@ -115,7 +106,7 @@ pub fn to_json(val: &Value) -> serde_json::Value {
         }
 
         ValueData::Vector(children) => {
-            if val.display_hint == DisplayHint::String {
+            if looks_like_string(children) {
                 let s: String = children.iter().filter_map(|c| {
                     if let ValueData::Scalar(f) = &c.data {
                         f.to_i64().and_then(|n| {
@@ -160,11 +151,33 @@ fn is_json_object(children: &[Value]) -> bool {
     }
     children.iter().all(|child| {
         if let ValueData::Vector(kv) = &child.data {
-            kv.len() == 2 && matches!(kv[0].display_hint, DisplayHint::String)
+            kv.len() == 2 && is_string_value(&kv[0])
         } else {
             false
         }
     })
+}
+
+fn looks_like_string(children: &[Value]) -> bool {
+    !children.is_empty() && children.iter().all(|c| {
+        if let ValueData::Scalar(f) = &c.data {
+            if let Some(n) = f.to_i64() {
+                n >= 0 && n <= 0x10FFFF && char::from_u32(n as u32).is_some()
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    })
+}
+
+fn is_string_value(val: &Value) -> bool {
+    if let ValueData::Vector(chars) = &val.data {
+        looks_like_string(chars)
+    } else {
+        false
+    }
 }
 
 fn value_to_string_content(val: &Value) -> String {
@@ -200,7 +213,6 @@ mod tests {
     #[test]
     fn test_from_json_bool() {
         let val = from_json(serde_json::Value::Bool(true), 1).unwrap();
-        assert_eq!(val.display_hint, DisplayHint::Boolean);
         assert!(!val.as_scalar().unwrap().is_zero());
     }
 
@@ -220,7 +232,6 @@ mod tests {
     #[test]
     fn test_from_json_string() {
         let val = from_json(serde_json::json!("hello"), 1).unwrap();
-        assert_eq!(val.display_hint, DisplayHint::String);
         assert!(val.is_vector());
     }
 
@@ -245,7 +256,6 @@ mod tests {
             assert_eq!(pairs.len(), 1);
             if let ValueData::Vector(kv) = &pairs[0].data {
                 assert_eq!(kv.len(), 2);
-                assert_eq!(kv[0].display_hint, DisplayHint::String);
             }
         }
     }
@@ -293,8 +303,6 @@ mod tests {
                 Value::from_int(2),
                 Value::from_int(3),
             ])),
-            display_hint: DisplayHint::Auto,
-            ext: None,
         };
         assert_eq!(to_json(&val), serde_json::json!([1, 2, 3]));
     }

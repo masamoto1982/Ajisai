@@ -42,9 +42,10 @@
 // ============================================================================
 
 use crate::interpreter::{Interpreter, OperationTargetMode};
-use crate::interpreter::helpers::{is_string_value, value_as_string};
+#[allow(unused_imports)]
+use crate::interpreter::helpers::value_as_string;
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData, DisplayHint};
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive};
@@ -90,38 +91,6 @@ fn serialize_value_inner(val: &Value, bytes: &mut Vec<u8>) {
     if val.is_nil() {
         bytes.push(0x06);
         return;
-    }
-
-    // 文字列判定
-    if is_string_value(val) {
-        let s = value_as_string(val).unwrap_or_default();
-        bytes.push(0x02);
-        bytes.extend_from_slice(&(s.len() as u32).to_le_bytes());
-        bytes.extend_from_slice(s.as_bytes());
-        return;
-    }
-
-    // 真偽値判定
-    if val.display_hint == DisplayHint::Boolean && val.is_scalar() {
-        if let Some(f) = val.as_scalar() {
-            bytes.push(0x03);
-            bytes.push(if !f.is_zero() { 0x01 } else { 0x00 });
-            return;
-        }
-    }
-
-    // DateTime判定
-    if val.display_hint == DisplayHint::DateTime && val.is_scalar() {
-        if let Some(frac) = val.as_scalar() {
-            bytes.push(0x07);
-            let num_bytes = frac.numerator.to_bytes_le().1;
-            bytes.extend_from_slice(&(num_bytes.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&num_bytes);
-            let den_bytes = frac.denominator.to_bytes_le().1;
-            bytes.extend_from_slice(&(den_bytes.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&den_bytes);
-            return;
-        }
     }
 
     // 数値判定（単一スカラー）

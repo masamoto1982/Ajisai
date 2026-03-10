@@ -3,7 +3,7 @@
 
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::types::fraction::Fraction;
-use ajisai_core::types::{DisplayHint, Value, ValueData};
+use ajisai_core::types::{Value, ValueData};
 use num_bigint::BigInt;
 
 // Helper to run code and return the stack (gui_mode = true to match WASM API behavior)
@@ -29,7 +29,7 @@ fn assert_number(val: &Value, num: i64, denom: i64) {
 }
 
 fn assert_bool_val(val: &Value, expected: bool) {
-    assert_eq!(val.display_hint, DisplayHint::Boolean, "Expected Boolean hint, got {:?}", val.display_hint);
+    // TODO: DisplayHint check will use SemanticRegistry
     let frac = val.as_scalar().unwrap();
     if expected {
         assert!(!frac.is_zero(), "Expected TRUE but got FALSE");
@@ -39,7 +39,7 @@ fn assert_bool_val(val: &Value, expected: bool) {
 }
 
 fn assert_string_val(val: &Value, expected: &str) {
-    assert_eq!(val.display_hint, DisplayHint::String, "Expected String hint, got {:?}", val.display_hint);
+    // TODO: DisplayHint check will use SemanticRegistry
     // String is stored as vector of char codes
     if expected.is_empty() {
         assert!(val.is_nil(), "Expected NIL for empty string");

@@ -43,14 +43,14 @@
 use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{wrap_datetime, is_vector_value, is_string_value, value_as_string};
-use crate::types::{Value, DisplayHint};
+use crate::types::Value;
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_traits::{ToPrimitive, One, Zero};
 use wasm_bindgen::prelude::*;
 
 fn is_number_value(val: &Value) -> bool {
-    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto | DisplayHint::DateTime) && val.is_scalar()
+    val.is_scalar()
 }
 
 /// NOW - 現在のUnixタイムスタンプを取得

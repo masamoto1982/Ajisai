@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData, DisplayHint};
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 use crate::interpreter::{Interpreter, ConsumptionMode};
 #[allow(unused_imports)]
@@ -14,7 +14,8 @@ pub(crate) fn is_vector_value(val: &Value) -> bool {
 
 #[inline]
 pub(crate) fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && !val.is_nil()
+    // Structurally: a string is a Vector (of scalar codepoints)
+    matches!(&val.data, ValueData::Vector(_))
 }
 
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
@@ -135,7 +136,7 @@ pub(crate) fn wrap_number(fraction: Fraction) -> Value {
 }
 
 pub(crate) fn wrap_datetime(fraction: Fraction) -> Value {
-    Value::from_datetime(fraction)
+    Value::from_fraction(fraction)
 }
 
 pub(crate) fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {

@@ -352,15 +352,9 @@ pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("CHORD requires a vector"));
     }
 
-    // AudioHintを設定（既存のヒントがあればchordフラグを追加）
-    let mut new_val = val;
-    if let Some(h) = new_val.get_ext_mut::<AudioHint>() {
-        h.chord = true;
-    } else {
-        new_val.ext = Some(Box::new(AudioHint { chord: true, ..Default::default() }));
-    }
-
-    interp.stack.push(new_val);
+    // TODO: AudioHint metadata will be managed by SemanticRegistry
+    // For now, chord marking is a no-op on the value itself
+    interp.stack.push(val);
     Ok(())
 }
 
@@ -440,16 +434,9 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    // AudioHintを設定（対象ベクタに適用）
-    let mut new_val = target;
-    let envelope = Some(Envelope { attack, decay, sustain, release });
-    if let Some(h) = new_val.get_ext_mut::<AudioHint>() {
-        h.envelope = envelope;
-    } else {
-        new_val.ext = Some(Box::new(AudioHint { envelope, ..Default::default() }));
-    }
-
-    interp.stack.push(new_val);
+    // TODO: AudioHint metadata (envelope) will be managed by SemanticRegistry
+    // For now, ADSR setting is a no-op on the value itself
+    interp.stack.push(target);
     Ok(())
 }
 
@@ -478,7 +465,7 @@ pub fn op_tri(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// 波形を設定するヘルパー関数
-fn set_waveform(interp: &mut Interpreter, waveform: WaveformType) -> Result<()> {
+fn set_waveform(interp: &mut Interpreter, _waveform: WaveformType) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // ベクタでなければエラー
@@ -486,15 +473,9 @@ fn set_waveform(interp: &mut Interpreter, waveform: WaveformType) -> Result<()> 
         return Err(AjisaiError::from("Waveform word requires a vector"));
     }
 
-    // AudioHintを設定
-    let mut new_val = val;
-    if let Some(h) = new_val.get_ext_mut::<AudioHint>() {
-        h.waveform = waveform;
-    } else {
-        new_val.ext = Some(Box::new(AudioHint { waveform, ..Default::default() }));
-    }
-
-    interp.stack.push(new_val);
+    // TODO: AudioHint metadata (waveform) will be managed by SemanticRegistry
+    // For now, waveform setting is a no-op on the value itself
+    interp.stack.push(val);
     Ok(())
 }
 
@@ -562,11 +543,11 @@ fn build_audio_structure(
     mode: PlayMode,
     output: &mut String,
 ) -> Result<AudioStructure> {
-    // AudioHintを取得
-    let audio_hint = value.get_ext::<AudioHint>();
-    let envelope = audio_hint.and_then(|h| h.envelope);
-    let waveform = audio_hint.map(|h| h.waveform).unwrap_or_default();
-    let is_chord = audio_hint.map(|h| h.chord).unwrap_or(false);
+    // TODO: AudioHint metadata will be read from SemanticRegistry
+    // For now, use defaults since ext is no longer on Value
+    let envelope: Option<Envelope> = None;
+    let waveform = WaveformType::default();
+    let is_chord = false;
 
     // NIL判定
     if value.is_nil() {

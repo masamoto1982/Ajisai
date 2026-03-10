@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::Interpreter;
-use crate::types::{DisplayHint, Value, ValueData};
+use crate::types::{Value, ValueData};
 
 pub fn vector_to_source(val: &Value) -> Result<String> {
     fn value_to_code(val: &Value, depth: usize) -> Result<String> {
@@ -41,20 +41,6 @@ pub fn vector_to_source(val: &Value) -> Result<String> {
             | ValueData::Record {
                 pairs: children, ..
             } => {
-                // DisplayHint::String の場合はシンボルとして出力
-                if val.display_hint == DisplayHint::String {
-                    // 文字列をシンボル名として解釈
-                    let chars: String = children
-                        .iter()
-                        .filter_map(|c| {
-                            c.as_scalar()
-                                .and_then(|f| f.to_i64())
-                                .and_then(|n| char::from_u32(n as u32))
-                        })
-                        .collect();
-                    return Ok(chars);
-                }
-
                 // 通常のVector: 再帰的に処理
                 // depth > 0 の場合は括弧で囲む
                 let inner: Vec<String> = children

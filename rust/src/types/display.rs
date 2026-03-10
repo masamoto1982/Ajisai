@@ -4,20 +4,25 @@ use std::fmt;
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.display_hint {
-            DisplayHint::Nil => {
-                if matches!(self.data, ValueData::Nil) {
-                    write!(f, "NIL")
-                } else {
-                    write!(f, "{}", display_value(&self.data, 0))
-                }
+        write!(f, "{}", auto_display(&self.data))
+    }
+}
+
+/// Format a value using a specific display hint (for SemanticRegistry-aware formatting).
+pub fn format_with_hint(value: &Value, hint: DisplayHint) -> String {
+    match hint {
+        DisplayHint::Nil => {
+            if matches!(value.data, ValueData::Nil) {
+                "NIL".to_string()
+            } else {
+                display_value(&value.data, 0)
             }
-            DisplayHint::Auto => write!(f, "{}", auto_display(&self.data)),
-            DisplayHint::Number => write!(f, "{}", display_value(&self.data, 0)),
-            DisplayHint::String => write!(f, "{}", display_as_string(&self.data)),
-            DisplayHint::Boolean => write!(f, "{}", display_as_boolean(&self.data)),
-            DisplayHint::DateTime => write!(f, "{}", display_as_datetime(&self.data)),
         }
+        DisplayHint::Auto => auto_display(&value.data),
+        DisplayHint::Number => display_value(&value.data, 0),
+        DisplayHint::String => display_as_string(&value.data),
+        DisplayHint::Boolean => display_as_boolean(&value.data),
+        DisplayHint::DateTime => display_as_datetime(&value.data),
     }
 }
 

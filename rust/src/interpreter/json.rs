@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::interpreter::{Interpreter, ConsumptionMode};
-use crate::types::{Value, ValueData, DisplayHint};
+use crate::types::{Value, ValueData};
 use crate::types::json::{from_json, to_json};
 use crate::error::{AjisaiError, Result};
 
@@ -172,8 +172,6 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
     } else {
         interp.stack.push(Value {
             data: ValueData::Vector(Rc::new(keys)),
-            display_hint: DisplayHint::Auto,
-            ext: None,
         });
     }
 
@@ -236,8 +234,6 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                     if kv.len() == 2 {
                         new_pairs.push(Value {
                             data: ValueData::Vector(Rc::new(vec![kv[0].clone(), new_value.clone()])),
-                            display_hint: DisplayHint::Auto,
-                            ext: None,
                         });
                         continue;
                     }
@@ -253,8 +249,6 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                     Value::from_string(&key_str),
                     new_value,
                 ])),
-                display_hint: DisplayHint::Auto,
-                ext: None,
             });
         }
 
@@ -273,8 +267,6 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
 
         interp.stack.push(Value {
             data: ValueData::Record { pairs: Rc::new(new_pairs), index: new_index },
-            display_hint: DisplayHint::Auto,
-            ext: None,
         });
     } else {
         let mut index = HashMap::new();
@@ -284,13 +276,9 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 Value::from_string(&key_str),
                 new_value,
             ])),
-            display_hint: DisplayHint::Auto,
-            ext: None,
         }]);
         interp.stack.push(Value {
             data: ValueData::Record { pairs, index },
-            display_hint: DisplayHint::Auto,
-            ext: None,
         });
     }
 
@@ -314,7 +302,7 @@ pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
 
 fn value_to_string_content(val: &Value) -> String {
     if let ValueData::Vector(chars) = &val.data {
-        if val.display_hint == DisplayHint::String || chars.iter().all(|c| matches!(c.data, ValueData::Scalar(_))) {
+        if chars.iter().all(|c| matches!(c.data, ValueData::Scalar(_))) {
             return chars.iter().filter_map(|c| {
                 if let ValueData::Scalar(f) = &c.data {
                     f.to_i64().and_then(|n| {
