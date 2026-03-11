@@ -1,11 +1,8 @@
-// rust/src/interpreter/arithmetic.rs
-//
-// Unified Fraction Architecture: all values are fractions. No type checking.
-
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, get_operands, get_operands_with_flow, push_result, push_flow_result};
+use crate::interpreter::helpers::{get_integer_from_value, get_operands_with_flow, push_result, push_flow_result};
 use crate::interpreter::simd_ops;
+use crate::interpreter::tensor_ops::apply_binary_broadcast;
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
@@ -23,94 +20,6 @@ fn is_single_scalar(val: &Value) -> bool {
     extract_single_scalar(val).is_some()
 }
 
-fn broadcast_binary_op<F>(a: &Value, b: &Value, op: F) -> Result<Value>
-where
-    F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
-{
-    match (&a.data, &b.data) {
-        (ValueData::Nil, ValueData::Nil) => Ok(Value::nil()),
-
-        (ValueData::Nil, _) | (_, ValueData::Nil) => {
-            Err(AjisaiError::from("Cannot operate with NIL"))
-        }
-
-        (ValueData::CodeBlock(_), _) | (_, ValueData::CodeBlock(_)) => {
-            Err(AjisaiError::from("Cannot perform arithmetic on code blocks"))
-        }
-
-        (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
-            Ok(Value::from_fraction(op(fa, fb)?))
-        }
-
-        (ValueData::Scalar(fa), ValueData::Vector(vb))
-        | (ValueData::Scalar(fa), ValueData::Record { pairs: vb, .. }) => {
-            let result: Result<Vec<Value>> = vb.iter()
-                .map(|bi| broadcast_binary_op(&Value::from_fraction(fa.clone()), bi, op))
-                .collect();
-            Ok(Value::from_children(result?))
-        }
-
-        (ValueData::Vector(va), ValueData::Scalar(fb))
-        | (ValueData::Record { pairs: va, .. }, ValueData::Scalar(fb)) => {
-            let result: Result<Vec<Value>> = va.iter()
-                .map(|ai| broadcast_binary_op(ai, &Value::from_fraction(fb.clone()), op))
-                .collect();
-            Ok(Value::from_children(result?))
-        }
-
-        (ValueData::Vector(va), ValueData::Vector(vb))
-        | (ValueData::Vector(va), ValueData::Record { pairs: vb, .. })
-        | (ValueData::Record { pairs: va, .. }, ValueData::Vector(vb))
-        | (ValueData::Record { pairs: va, .. }, ValueData::Record { pairs: vb, .. }) => {
-            if va.len() == vb.len() {
-                let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
-                    .map(|(ai, bi)| broadcast_binary_op(ai, bi, op))
-                    .collect();
-                return Ok(Value::from_children(result?));
-            }
-
-            // 次元サイズ1の通常ブロードキャスト
-            if va.len() == 1 {
-                let result: Result<Vec<Value>> = vb.iter()
-                    .map(|bi| broadcast_binary_op(&va[0], bi, op))
-                    .collect();
-                return Ok(Value::from_children(result?));
-            }
-
-            if vb.len() == 1 {
-                let result: Result<Vec<Value>> = va.iter()
-                    .map(|ai| broadcast_binary_op(ai, &vb[0], op))
-                    .collect();
-                return Ok(Value::from_children(result?));
-            }
-
-            // 右揃えブロードキャスト（例: [2,3] と [3]）
-            if va.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::Record { .. }))
-                && vb.iter().all(|v| matches!(v.data, ValueData::Scalar(_)))
-            {
-                let rhs = Value::from_children((**vb).clone());
-                let result: Result<Vec<Value>> = va.iter()
-                    .map(|ai| broadcast_binary_op(ai, &rhs, op))
-                    .collect();
-                return Ok(Value::from_children(result?));
-            }
-
-            if vb.iter().all(|v| matches!(v.data, ValueData::Vector(_) | ValueData::Record { .. }))
-                && va.iter().all(|v| matches!(v.data, ValueData::Scalar(_)))
-            {
-                let lhs = Value::from_children((**va).clone());
-                let result: Result<Vec<Value>> = vb.iter()
-                    .map(|bi| broadcast_binary_op(&lhs, bi, op))
-                    .collect();
-                return Ok(Value::from_children(result?));
-            }
-
-            Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() })
-        }
-
-    }
-}
-
 fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
@@ -119,15 +28,13 @@ where
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            // get_operands を使用してオペランドを取得 (with flow tracking)
             let (operands, flow_tokens) = get_operands_with_flow(interp, 2)?;
             let a_val = &operands[0];
             let b_val = &operands[1];
 
-            let result = match broadcast_binary_op(a_val, b_val, op) {
+            let result = match apply_binary_broadcast(a_val, b_val, op) {
                 Ok(r) => r,
                 Err(e) => {
-                    // エラー時、Consume モードの場合は値を復元
                     if !is_keep_mode {
                         for val in operands {
                             interp.stack.push(val);
@@ -138,7 +45,6 @@ where
             };
 
             if !interp.disable_no_change_check && (result == *a_val || result == *b_val) {
-                // エラー時、Consume モードの場合は値を復元
                 if !is_keep_mode {
                     for val in operands {
                         interp.stack.push(val);
@@ -147,7 +53,6 @@ where
                 return Err(AjisaiError::NoChange { word: op_name.into() });
             }
 
-            // Fractional Dataflow: record full consumption of both operands
             if let Some(ref tokens) = flow_tokens {
                 let consumed: Vec<Fraction> = tokens.iter().map(|t| t.total.clone()).collect();
                 push_flow_result(interp, result, Some(tokens), &consumed);
@@ -157,16 +62,10 @@ where
         },
 
         OperationTargetMode::Stack => {
-            // Stack モードでは、カウント値は常に消費する
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = get_integer_from_value(&count_val)? as usize;
 
-            if count == 0 {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::NoChange { word: op_name.into() });
-            }
-
-            if count == 1 {
+            if count == 0 || count == 1 {
                 interp.stack.push(count_val);
                 return Err(AjisaiError::NoChange { word: op_name.into() });
             }
@@ -176,7 +75,6 @@ where
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            // Keep モードの場合は peek、Consume モードの場合は drain
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
                 interp.stack[stack_len - count..].iter().cloned().collect()
@@ -217,13 +115,11 @@ where
 }
 
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
-    // SIMD fast path for integer vector addition
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a = &interp.stack[stack_len - 2];
         let b = &interp.stack[stack_len - 1];
 
-        // Try vector + vector SIMD
         if let Some(result) = simd_ops::try_simd_add(a, b) {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
@@ -233,7 +129,6 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        // Try scalar + vector or vector + scalar SIMD
         if let Some(result) = simd_ops::try_simd_scalar_add(a, b)
             .or_else(|| simd_ops::try_simd_scalar_add(b, a))
         {
@@ -249,7 +144,6 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
-    // SIMD fast path for integer vector subtraction
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a = &interp.stack[stack_len - 2];
@@ -268,17 +162,13 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
-    // SIMD fast path for integer vector multiplication
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a = &interp.stack[stack_len - 2];
         let b = &interp.stack[stack_len - 1];
 
-        // Try vector * vector SIMD
         if let Some(result) = simd_ops::try_simd_mul(a, b) {
-            if !is_keep_mode {
+            if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
             }
@@ -286,11 +176,10 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        // Try scalar * vector or vector * scalar SIMD
         if let Some(result) = simd_ops::try_simd_scalar_mul(a, b)
             .or_else(|| simd_ops::try_simd_scalar_mul(b, a))
         {
-            if !is_keep_mode {
+            if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
             }
@@ -298,159 +187,10 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
-
-    if interp.operation_target_mode == OperationTargetMode::StackTop {
-        let operands = get_operands(interp, 2)?;
-        let a_val = &operands[0];
-        let b_val = &operands[1];
-
-        if a_val.is_nil() || b_val.is_nil() {
-            if !is_keep_mode {
-                for val in operands {
-                    interp.stack.push(val);
-                }
-            }
-            return Err(AjisaiError::from("Cannot operate with NIL"));
-        }
-
-        let result = apply_optimized_mul(a_val, b_val);
-
-        match result {
-            Ok(r) => {
-                if !interp.disable_no_change_check && (r == *a_val || r == *b_val) {
-                    if !is_keep_mode {
-                        for val in operands {
-                            interp.stack.push(val);
-                        }
-                    }
-                    return Err(AjisaiError::NoChange { word: "*".into() });
-                }
-                push_result(interp, r);
-                return Ok(());
-            }
-            Err(e) => {
-                if !is_keep_mode {
-                    for val in operands {
-                        interp.stack.push(val);
-                    }
-                }
-                return Err(e);
-            }
-        }
-    }
-
     binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)), "*")
 }
 
-fn apply_optimized_mul(a: &Value, b: &Value) -> Result<Value> {
-    match (&a.data, &b.data) {
-        (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
-            Ok(Value::from_fraction(fa.mul(fb)))
-        }
-        (ValueData::Scalar(scalar), ValueData::Vector(vec))
-        | (ValueData::Scalar(scalar), ValueData::Record { pairs: vec, .. }) => {
-            if scalar.is_integer() {
-                let result: Vec<Value> = vec.iter()
-                    .map(|v| apply_scalar_mul_to_value(scalar, v))
-                    .collect();
-                Ok(Value::from_children(result))
-            } else {
-                broadcast_binary_op(a, b, |x, y| Ok(x.mul(y)))
-            }
-        }
-        (ValueData::Vector(vec), ValueData::Scalar(scalar))
-        | (ValueData::Record { pairs: vec, .. }, ValueData::Scalar(scalar)) => {
-            if scalar.is_integer() {
-                let result: Vec<Value> = vec.iter()
-                    .map(|v| apply_scalar_mul_to_value(scalar, v))
-                    .collect();
-                Ok(Value::from_children(result))
-            } else {
-                broadcast_binary_op(a, b, |x, y| Ok(x.mul(y)))
-            }
-        }
-        (ValueData::Vector(va), ValueData::Vector(vb))
-        | (ValueData::Vector(va), ValueData::Record { pairs: vb, .. })
-        | (ValueData::Record { pairs: va, .. }, ValueData::Vector(vb))
-        | (ValueData::Record { pairs: va, .. }, ValueData::Record { pairs: vb, .. }) => {
-            if va.len() == vb.len() {
-                let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
-                    .map(|(ai, bi)| apply_optimized_mul(ai, bi))
-                    .collect();
-                Ok(Value::from_children(result?))
-            } else {
-                // 長さが異なる場合、broadcast_binary_opにフォールバック
-                broadcast_binary_op(a, b, |x, y| Ok(x.mul(y)))
-            }
-        }
-        _ => Err(AjisaiError::from("Cannot multiply NIL")),
-    }
-}
-
-fn apply_scalar_mul_to_value(scalar: &Fraction, val: &Value) -> Value {
-    match &val.data {
-        ValueData::Scalar(f) => {
-            if scalar.is_integer() {
-                Value::from_fraction(f.mul_by_integer(scalar))
-            } else {
-                Value::from_fraction(f.mul(scalar))
-            }
-        }
-        ValueData::Vector(children)
-        | ValueData::Record { pairs: children, .. } => {
-            let new_children: Vec<Value> = children.iter()
-                .map(|c| apply_scalar_mul_to_value(scalar, c))
-                .collect();
-            Value::from_children(new_children)
-        }
-        ValueData::Nil => val.clone(),
-        ValueData::CodeBlock(_) => val.clone(),
-    }
-}
-
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
-    if interp.operation_target_mode == OperationTargetMode::StackTop {
-        let operands = get_operands(interp, 2)?;
-        let a_val = &operands[0];
-        let b_val = &operands[1];
-
-        if a_val.is_nil() || b_val.is_nil() {
-            if !is_keep_mode {
-                for val in operands {
-                    interp.stack.push(val);
-                }
-            }
-            return Err(AjisaiError::from("Cannot operate with NIL"));
-        }
-
-        let result = apply_optimized_div(a_val, b_val);
-
-        match result {
-            Ok(r) => {
-                if !interp.disable_no_change_check && (r == *a_val || r == *b_val) {
-                    if !is_keep_mode {
-                        for val in operands {
-                            interp.stack.push(val);
-                        }
-                    }
-                    return Err(AjisaiError::NoChange { word: "/".into() });
-                }
-                push_result(interp, r);
-                return Ok(());
-            }
-            Err(e) => {
-                if !is_keep_mode {
-                    for val in operands {
-                        interp.stack.push(val);
-                    }
-                }
-                return Err(e);
-            }
-        }
-    }
-
     binary_arithmetic_op(interp, |a, b| {
         if b.is_zero() {
             Err(AjisaiError::DivisionByZero)
@@ -458,96 +198,4 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
             Ok(a.div(b))
         }
     }, "/")
-}
-
-fn apply_optimized_div(a: &Value, b: &Value) -> Result<Value> {
-    match (&a.data, &b.data) {
-        (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
-            if fb.is_zero() {
-                return Err(AjisaiError::DivisionByZero);
-            }
-            Ok(Value::from_fraction(fa.div(fb)))
-        }
-        (ValueData::Vector(vec), ValueData::Scalar(scalar))
-        | (ValueData::Record { pairs: vec, .. }, ValueData::Scalar(scalar)) => {
-            if scalar.is_zero() {
-                return Err(AjisaiError::DivisionByZero);
-            }
-            if scalar.is_integer() {
-                let result: Result<Vec<Value>> = vec.iter()
-                    .map(|v| apply_scalar_div_to_value(v, scalar))
-                    .collect();
-                Ok(Value::from_children(result?))
-            } else {
-                broadcast_binary_op(a, b, |x, y| {
-                    if y.is_zero() { Err(AjisaiError::DivisionByZero) } else { Ok(x.div(y)) }
-                })
-            }
-        }
-        (ValueData::Scalar(scalar), ValueData::Vector(vec))
-        | (ValueData::Scalar(scalar), ValueData::Record { pairs: vec, .. }) => {
-            let result: Result<Vec<Value>> = vec.iter()
-                .map(|v| apply_div_scalar_by_value(scalar, v))
-                .collect();
-            Ok(Value::from_children(result?))
-        }
-        (ValueData::Vector(va), ValueData::Vector(vb))
-        | (ValueData::Vector(va), ValueData::Record { pairs: vb, .. })
-        | (ValueData::Record { pairs: va, .. }, ValueData::Vector(vb))
-        | (ValueData::Record { pairs: va, .. }, ValueData::Record { pairs: vb, .. }) => {
-            if va.len() == vb.len() {
-                let result: Result<Vec<Value>> = va.iter().zip(vb.iter())
-                    .map(|(ai, bi)| apply_optimized_div(ai, bi))
-                    .collect();
-                Ok(Value::from_children(result?))
-            } else {
-                // 長さが異なる場合、broadcast_binary_opにフォールバック
-                broadcast_binary_op(a, b, |x, y| {
-                    if y.is_zero() { Err(AjisaiError::DivisionByZero) } else { Ok(x.div(y)) }
-                })
-            }
-        }
-        _ => Err(AjisaiError::from("Cannot divide NIL")),
-    }
-}
-
-fn apply_scalar_div_to_value(val: &Value, scalar: &Fraction) -> Result<Value> {
-    match &val.data {
-        ValueData::Scalar(f) => {
-            if scalar.is_integer() {
-                Ok(Value::from_fraction(f.div_by_integer(scalar)))
-            } else {
-                Ok(Value::from_fraction(f.div(scalar)))
-            }
-        }
-        ValueData::Vector(children)
-        | ValueData::Record { pairs: children, .. } => {
-            let new_children: Result<Vec<Value>> = children.iter()
-                .map(|c| apply_scalar_div_to_value(c, scalar))
-                .collect();
-            Ok(Value::from_children(new_children?))
-        }
-        ValueData::Nil => Ok(val.clone()),
-        ValueData::CodeBlock(_) => Ok(val.clone()),
-    }
-}
-
-fn apply_div_scalar_by_value(scalar: &Fraction, val: &Value) -> Result<Value> {
-    match &val.data {
-        ValueData::Scalar(f) => {
-            if f.is_zero() {
-                return Err(AjisaiError::DivisionByZero);
-            }
-            Ok(Value::from_fraction(scalar.div(f)))
-        }
-        ValueData::Vector(children)
-        | ValueData::Record { pairs: children, .. } => {
-            let new_children: Result<Vec<Value>> = children.iter()
-                .map(|c| apply_div_scalar_by_value(scalar, c))
-                .collect();
-            Ok(Value::from_children(new_children?))
-        }
-        ValueData::Nil => Ok(val.clone()),
-        ValueData::CodeBlock(_) => Ok(val.clone()),
-    }
 }

@@ -8,14 +8,14 @@ use std::rc::Rc;
 use num_traits::Zero;
 
 #[derive(Debug, Clone)]
-struct FlatTensor {
-    data: Vec<Fraction>,
-    shape: Vec<usize>,
-    strides: Vec<usize>,
+pub(crate) struct FlatTensor {
+    pub(crate) data: Vec<Fraction>,
+    pub(crate) shape: Vec<usize>,
+    pub(crate) strides: Vec<usize>,
 }
 
 impl FlatTensor {
-    fn from_value(value: &Value) -> Result<Self> {
+    pub(crate) fn from_value(value: &Value) -> Result<Self> {
         match &value.data {
             ValueData::Nil => Err(AjisaiError::from(
                 "Tensor conversion requires non-NIL value",
@@ -41,7 +41,7 @@ impl FlatTensor {
         }
     }
 
-    fn from_shape_and_data(shape: Vec<usize>, data: Vec<Fraction>) -> Result<Self> {
+    pub(crate) fn from_shape_and_data(shape: Vec<usize>, data: Vec<Fraction>) -> Result<Self> {
         let expected: usize = if shape.is_empty() {
             1
         } else {
@@ -63,7 +63,7 @@ impl FlatTensor {
         })
     }
 
-    fn to_value(&self) -> Value {
+    pub(crate) fn to_value(&self) -> Value {
         if self.shape.is_empty() {
             return Value::from_fraction(self.data[0].clone());
         }
@@ -71,7 +71,7 @@ impl FlatTensor {
     }
 }
 
-fn compute_strides(shape: &[usize]) -> Vec<usize> {
+pub(crate) fn compute_strides(shape: &[usize]) -> Vec<usize> {
     if shape.is_empty() {
         return Vec::new();
     }
@@ -119,7 +119,7 @@ fn project_broadcast_index(
     projected
 }
 
-fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
+pub(crate) fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
     let rank = a.len().max(b.len());
     let mut out = vec![1; rank];
 
@@ -318,7 +318,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
+pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
     if shape.is_empty() {
         // スカラー
         if data.len() == 1 {
@@ -434,7 +434,6 @@ where
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
 
-    // NILの場合
     if val.is_nil() {
         if !is_keep_mode {
             interp.stack.push(val);
@@ -445,7 +444,6 @@ where
         )));
     }
 
-    // 単一数値の場合
     if val.is_scalar() {
         if let Some(f) = val.as_scalar() {
             let result = op(f);
@@ -454,11 +452,22 @@ where
         }
     }
 
-    // ベクタの場合
     if val.is_vector() {
-        let result = apply_unary_to_value(&val, &op);
-        interp.stack.push(result);
-        return Ok(());
+        match apply_unary_flat(&val, op) {
+            Ok(result) => {
+                interp.stack.push(result);
+                return Ok(());
+            }
+            Err(_) => {
+                if !is_keep_mode {
+                    interp.stack.push(val);
+                }
+                return Err(AjisaiError::from(format!(
+                    "{} requires number or vector",
+                    op_name
+                )));
+            }
+        }
     }
 
     if !is_keep_mode {
@@ -468,31 +477,6 @@ where
         "{} requires number or vector",
         op_name
     )))
-}
-
-fn apply_unary_to_value<F>(val: &Value, op: &F) -> Value
-where
-    F: Fn(&Fraction) -> Fraction,
-{
-    match &val.data {
-        ValueData::Scalar(f) => Value {
-            data: ValueData::Scalar(op(f)),
-        },
-        ValueData::Vector(children)
-        | ValueData::Record {
-            pairs: children, ..
-        } => {
-            let new_children: Vec<Value> = children
-                .iter()
-                .map(|c| apply_unary_to_value(c, op))
-                .collect();
-            Value {
-                data: ValueData::Vector(Rc::new(new_children)),
-            }
-        }
-        ValueData::Nil => val.clone(),
-        ValueData::CodeBlock(_) => val.clone(), // コードブロックには演算を適用しない
-    }
 }
 
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
@@ -570,7 +554,7 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-fn apply_binary_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
+pub(crate) fn apply_binary_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
@@ -605,6 +589,16 @@ where
 
     let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
     Ok(out_tensor.to_value())
+}
+
+pub(crate) fn apply_unary_flat<F>(val: &Value, op: F) -> Result<Value>
+where
+    F: Fn(&Fraction) -> Fraction,
+{
+    let tensor = FlatTensor::from_value(val)?;
+    let result_data: Vec<Fraction> = tensor.data.iter().map(&op).collect();
+    let result_tensor = FlatTensor::from_shape_and_data(tensor.shape, result_data)?;
+    Ok(result_tensor.to_value())
 }
 
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
