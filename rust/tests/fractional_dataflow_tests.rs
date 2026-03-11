@@ -11,9 +11,8 @@
 
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::types::fraction::Fraction;
-use ajisai_core::types::{FlowToken, Value, ValueData};
+use ajisai_core::types::{FlowToken, Value};
 use num_bigint::BigInt;
-use num_traits::One;
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -51,7 +50,11 @@ fn assert_number(val: &Value, num: i64, denom: i64) {
                 .unwrap_or_else(|| panic!("Expected scalar in vector, got {:?}", vec[0]));
             assert_eq!(f, &expected, "Expected {}/{}, got {}", num, denom, f);
         } else {
-            panic!("Expected single scalar, got vector of length {}: {:?}", vec.len(), val);
+            panic!(
+                "Expected single scalar, got vector of length {}: {:?}",
+                vec.len(),
+                val
+            );
         }
     } else {
         panic!("Expected scalar, got {:?}", val);
@@ -157,7 +160,10 @@ async fn test_over_consumption_error() {
 
     // Try to consume more than available
     let result = token.consume(&frac(10, 1));
-    assert!(result.is_err(), "Should fail when consuming more than available");
+    assert!(
+        result.is_err(),
+        "Should fail when consuming more than available"
+    );
 }
 
 #[tokio::test]
@@ -210,10 +216,26 @@ async fn test_remainder_chain_id_preserved() {
     let original_id = token.id;
 
     let (_, t1) = token.consume(&frac(5, 1)).unwrap();
-    assert_eq!(t1.id, original_id, "Chain ID must be preserved after consumption");
+    assert_eq!(
+        t1.id, original_id,
+        "Chain ID must be preserved after consumption"
+    );
 
     let (_, t2) = t1.consume(&frac(8, 1)).unwrap();
-    assert_eq!(t2.id, original_id, "Chain ID must be preserved across multiple consumptions");
+    assert_eq!(
+        t2.id, original_id,
+        "Chain ID must be preserved across multiple consumptions"
+    );
+}
+
+#[tokio::test]
+async fn test_linear_reuse_hint() {
+    let val = Value::from_fraction(frac(20, 1));
+    let token = FlowToken::from_value(&val);
+    assert!(token.can_reuse_allocation_hint());
+
+    let (_, consumed_once) = token.consume(&frac(1, 1)).unwrap();
+    assert!(!consumed_once.can_reuse_allocation_hint());
 }
 
 #[tokio::test]
@@ -244,7 +266,11 @@ async fn test_remainder_hint_preserved() {
     let token = FlowToken::from_value(&val);
 
     let (_, t1) = token.consume(&frac(1, 1)).unwrap();
-    assert_eq!(t1.remaining, frac(0, 1), "Remaining must be zero after full consumption");
+    assert_eq!(
+        t1.remaining,
+        frac(0, 1),
+        "Remaining must be zero after full consumption"
+    );
 }
 
 #[tokio::test]
@@ -330,7 +356,9 @@ async fn test_interpreter_flow_tracking_simple_addition() {
 
 #[tokio::test]
 async fn test_interpreter_flow_tracking_vector_ops() {
-    let (stack, interp) = run_with_flow_tracking("[ 1 2 3 ] [ 10 ] ! +").await.unwrap();
+    let (stack, interp) = run_with_flow_tracking("[ 1 2 3 ] [ 10 ] ! +")
+        .await
+        .unwrap();
     assert_eq!(stack.len(), 1);
     // [1,2,3] + [10] broadcasts to [11,12,13]
     let vec = stack[0].as_vector().unwrap();
@@ -340,7 +368,9 @@ async fn test_interpreter_flow_tracking_vector_ops() {
 
 #[tokio::test]
 async fn test_interpreter_flow_tracking_chained_ops() {
-    let (stack, interp) = run_with_flow_tracking("[ 5 ] [ 3 ] ! + [ 2 ] ! *").await.unwrap();
+    let (stack, interp) = run_with_flow_tracking("[ 5 ] [ 3 ] ! + [ 2 ] ! *")
+        .await
+        .unwrap();
     assert_eq!(stack.len(), 1);
     // (5 + 3) * 2 = 16
     assert_number(&stack[0], 16, 1);
@@ -485,7 +515,9 @@ async fn test_bifurcation_child_unconsumed_leak() {
     // Each child has mass 5
 
     let (_, child_after) = children[0].consume(&frac(3, 1)).unwrap();
-    let err = child_after.assert_complete("bifurcation branch end").unwrap_err();
+    let err = child_after
+        .assert_complete("bifurcation branch end")
+        .unwrap_err();
     let msg = format!("{}", err);
     assert!(msg.contains("Unconsumed leak"), "Got: {}", msg);
 }
