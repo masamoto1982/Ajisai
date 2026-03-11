@@ -41,14 +41,13 @@
 //
 // ============================================================================
 
-use crate::interpreter::{Interpreter, OperationTargetMode};
-#[allow(unused_imports)]
-use crate::interpreter::helpers::value_as_string;
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData};
+use crate::interpreter::tensor_ops::FlatTensor;
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::{Value, ValueData};
 use num_bigint::BigInt;
-use num_traits::{Zero, One, ToPrimitive};
+use num_traits::{One, ToPrimitive, Zero};
 
 /// デフォルトのハッシュビット数
 const DEFAULT_HASH_BITS: u32 = 256;
@@ -177,17 +176,31 @@ fn multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
 
 /// スタックから整数を抽出（単一要素Vectorの数値）
 fn extract_positive_integer(val: &Value) -> Option<u32> {
-    // Vectorの場合、最初の要素をチェック
-    if let ValueData::Vector(children) = &val.data {
-        if children.len() == 1 {
-            if let Some(f) = children[0].as_scalar() {
-                if f.denominator == BigInt::one() && f.numerator > BigInt::from(0) {
-                    return f.numerator.to_u32();
-                }
-            }
+    let tensor = FlatTensor::from_value(val).ok()?;
+    if tensor.data.len() != 1 {
+        return None;
+    }
+    let scalar = &tensor.data[0];
+    if scalar.denominator != BigInt::one() || scalar.numerator <= BigInt::from(0) {
+        return None;
+    }
+    scalar.numerator.to_u32()
+}
+
+fn parse_hash_args_keep(interp: &Interpreter) -> Result<(u32, Value)> {
+    let target = interp
+        .stack
+        .last()
+        .cloned()
+        .ok_or_else(|| AjisaiError::from("HASH requires a value to hash"))?;
+
+    if interp.stack.len() >= 2 {
+        if let Some(bits) = extract_positive_integer(&interp.stack[interp.stack.len() - 2]) {
+            return Ok((bits, target));
         }
     }
-    None
+
+    Ok((DEFAULT_HASH_BITS, target))
 }
 
 /// HASH - 任意のAjisai値を決定論的にハッシュ化
@@ -220,22 +233,27 @@ fn extract_positive_integer(val: &Value) -> Option<u32> {
 pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
     // HASHはStackモード(..)をサポートしない
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "HASH".into(), mode: "Stack".into() });
+        return Err(AjisaiError::ModeUnsupported {
+            word: "HASH".into(),
+            mode: "Stack".into(),
+        });
     }
 
     if interp.stack.is_empty() {
         return Err(AjisaiError::from("HASH requires a value to hash"));
     }
 
-    // スタックから引数を解析
-    // パターン1: 値のみ → デフォルト256ビット
-    // パターン2: [ bits ] 値 → 指定ビット数
-    let (output_bits, target_value) = parse_hash_args(interp)?;
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    let (output_bits, target_value) = if is_keep_mode {
+        parse_hash_args_keep(interp)?
+    } else {
+        parse_hash_args(interp)?
+    };
 
     // ビット数の検証
     if output_bits < 32 || output_bits > 1024 {
         return Err(AjisaiError::from(
-            "HASH: output bits must be between 32 and 1024"
+            "HASH: output bits must be between 32 and 1024",
         ));
     }
 
@@ -250,33 +268,29 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
     let result_fraction = Fraction::new(hash_value, denominator);
 
     // 結果をスタックにプッシュ
-    interp.stack.push(Value::from_vector(vec![
-        Value::from_number(result_fraction)
-    ]));
+    interp
+        .stack
+        .push(Value::from_vector(vec![Value::from_number(
+            result_fraction,
+        )]));
 
     Ok(())
 }
 
 /// HASHの引数を解析
 fn parse_hash_args(interp: &mut Interpreter) -> Result<(u32, Value)> {
-    // スタックトップを確認
-    let target = interp.stack.pop().unwrap();
+    let target = interp
+        .stack
+        .pop()
+        .ok_or_else(|| AjisaiError::from("HASH requires a value to hash"))?;
 
-    // スタックが空なら、targetがハッシュ対象
-    if interp.stack.is_empty() {
-        return Ok((DEFAULT_HASH_BITS, target));
-    }
-
-    // 次の要素が整数（ビット数指定）かチェック
     if let Some(bits_val) = interp.stack.last() {
         if let Some(bits) = extract_positive_integer(bits_val) {
-            // ビット数指定あり
             interp.stack.pop();
             return Ok((bits, target));
         }
     }
 
-    // 整数でなければ、ビット数指定なし
     Ok((DEFAULT_HASH_BITS, target))
 }
 
@@ -291,8 +305,11 @@ mod tests {
         let result = interp.execute("'hello' .. HASH").await;
         assert!(result.is_err(), "HASH should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("HASH") && err_msg.contains("Stack mode"),
-                "Expected Stack mode error for HASH, got: {}", err_msg);
+        assert!(
+            err_msg.contains("HASH") && err_msg.contains("Stack mode"),
+            "Expected Stack mode error for HASH, got: {}",
+            err_msg
+        );
     }
 
     #[tokio::test]
@@ -304,7 +321,10 @@ mod tests {
 
         // 結果がベクタであることを確認
         let val = &interp.stack[0];
-        assert!(matches!(&val.data, ValueData::Vector(_)), "Hash result should be a vector");
+        assert!(
+            matches!(&val.data, ValueData::Vector(_)),
+            "Hash result should be a vector"
+        );
     }
 
     #[tokio::test]
@@ -318,7 +338,10 @@ mod tests {
         interp.execute("'hello' HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_eq!(hash1.data, hash2.data, "Same input should produce same hash");
+        assert_eq!(
+            hash1.data, hash2.data,
+            "Same input should produce same hash"
+        );
     }
 
     #[tokio::test]
@@ -331,14 +354,21 @@ mod tests {
         interp.execute("'world' HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_ne!(hash1.data, hash2.data, "Different inputs should produce different hashes");
+        assert_ne!(
+            hash1.data, hash2.data,
+            "Different inputs should produce different hashes"
+        );
     }
 
     #[tokio::test]
     async fn test_hash_vector() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1 2 3 ] HASH").await;
-        assert!(result.is_ok(), "HASH on vector should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "HASH on vector should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -353,8 +383,10 @@ mod tests {
         interp.execute("[ 2/4 ] HASH").await.unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
-        assert_eq!(hash1.data, hash2.data,
-                   "Equivalent fractions should produce same hash (1/2 = 2/4)");
+        assert_eq!(
+            hash1.data, hash2.data,
+            "Equivalent fractions should produce same hash (1/2 = 2/4)"
+        );
     }
 
     #[tokio::test]
@@ -363,11 +395,18 @@ mod tests {
 
         // 128ビット出力
         let result = interp.execute("[ 128 ] 'hello' HASH").await;
-        assert!(result.is_ok(), "HASH with bit spec should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "HASH with bit spec should succeed: {:?}",
+            result
+        );
 
         // 結果がベクタであることを確認
         let val = &interp.stack[0];
-        assert!(matches!(&val.data, ValueData::Vector(_)), "Hash result should be a vector");
+        assert!(
+            matches!(&val.data, ValueData::Vector(_)),
+            "Hash result should be a vector"
+        );
     }
 
     #[tokio::test]
@@ -380,15 +419,21 @@ mod tests {
         interp.execute("[ FALSE ] HASH").await.unwrap();
         let hash_false = interp.stack.pop().unwrap();
 
-        assert_ne!(hash_true.data, hash_false.data,
-                   "TRUE and FALSE should have different hashes");
+        assert_ne!(
+            hash_true.data, hash_false.data,
+            "TRUE and FALSE should have different hashes"
+        );
     }
 
     #[tokio::test]
     async fn test_hash_nested_vector() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ [ 1 2 ] [ 3 4 ] ] HASH").await;
-        assert!(result.is_ok(), "HASH on nested vector should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "HASH on nested vector should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -396,7 +441,11 @@ mod tests {
     async fn test_hash_empty_string() {
         let mut interp = Interpreter::new();
         let result = interp.execute("'' HASH").await;
-        assert!(result.is_ok(), "HASH on empty string should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "HASH on empty string should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -430,6 +479,20 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_hash_keep_mode_preserves_operand() {
+        let mut interp = Interpreter::new();
+        interp.execute("'hello' ,, HASH").await.unwrap();
+        assert_eq!(interp.stack.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_hash_scalar_bits_supported() {
+        let mut interp = Interpreter::new();
+        interp.execute("128 'hello' HASH").await.unwrap();
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
     async fn test_hash_invalid_bits() {
         let mut interp = Interpreter::new();
 
@@ -457,9 +520,11 @@ mod tests {
 
         // すべて異なることを確認
         for i in 0..hashes.len() {
-            for j in (i+1)..hashes.len() {
-                assert_ne!(hashes[i].data, hashes[j].data,
-                           "Different inputs should have different hashes");
+            for j in (i + 1)..hashes.len() {
+                assert_ne!(
+                    hashes[i].data, hashes[j].data,
+                    "Different inputs should have different hashes"
+                );
             }
         }
     }
