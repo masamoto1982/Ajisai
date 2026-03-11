@@ -1,135 +1,25 @@
-// rust/src/interpreter/logic.rs
-//
-// 統一Value宇宙アーキテクチャ版の論理演算
-//
-// 論理演算（0 = false、非0 = true）
-
-use std::rc::Rc;
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
+use crate::interpreter::tensor_ops::{apply_binary_broadcast, apply_unary_flat, FlatTensor};
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
-// ============================================================================
-// ヘルパー関数
-// ============================================================================
-
-/// Valueが「truthy」かどうかを判定（再帰的に任意の非ゼロ要素があるか）
 fn value_has_any_truthy(val: &Value) -> bool {
     match &val.data {
         ValueData::Nil => false,
         ValueData::Scalar(f) => !f.is_zero(),
-        ValueData::Vector(children)
-        | ValueData::Record { pairs: children, .. } => children.iter().any(|c| value_has_any_truthy(c)),
-        ValueData::CodeBlock(_) => true,  // コードブロックは常にtruthy
-    }
-}
-
-/// Valueの全要素にNOT演算を適用（再帰的）
-fn apply_not_to_value(val: &Value) -> Value {
-    match &val.data {
-        ValueData::Nil => Value::nil(),
-        ValueData::Scalar(f) => {
-            let result = if f.is_zero() {
-                Fraction::from(1)
+        ValueData::CodeBlock(_) => true,
+        ValueData::Vector(_) | ValueData::Record { .. } => {
+            if let Ok(tensor) = FlatTensor::from_value(val) {
+                tensor.data.iter().any(|f| !f.is_zero())
             } else {
-                Fraction::from(0)
-            };
-            Value {
-                data: ValueData::Scalar(result),
+                false
             }
-        }
-        ValueData::Vector(children)
-        | ValueData::Record { pairs: children, .. } => {
-            let new_children: Vec<Value> = children.iter()
-                .map(|c| apply_not_to_value(c))
-                .collect();
-            Value {
-                data: ValueData::Vector(Rc::new(new_children)),
-            }
-        }
-        ValueData::CodeBlock(_) => val.clone(),  // コードブロックにはNOTを適用しない
-    }
-}
-
-/// 二項論理演算をブロードキャスト付きで適用（再帰的）
-fn apply_binary_logic<F>(a: &Value, b: &Value, op: F) -> Result<Value>
-where
-    F: Fn(bool, bool) -> bool + Copy,
-{
-    match (&a.data, &b.data) {
-        // NIL処理は呼び出し元で処理済み
-        (ValueData::Nil, _) | (_, ValueData::Nil) => {
-            Err(AjisaiError::from("Cannot apply logic operation with NIL"))
-        }
-
-        // CodeBlock処理
-        (ValueData::CodeBlock(_), _) | (_, ValueData::CodeBlock(_)) => {
-            Err(AjisaiError::from("Cannot apply logic operation with code blocks"))
-        }
-
-        // 両方スカラー
-        (ValueData::Scalar(fa), ValueData::Scalar(fb)) => {
-            let a_truthy = !fa.is_zero();
-            let b_truthy = !fb.is_zero();
-            let result = op(a_truthy, b_truthy);
-            Ok(Value {
-                data: ValueData::Scalar(Fraction::from(if result { 1 } else { 0 })),
-            })
-        }
-
-        // スカラー対ベクター（ブロードキャスト）
-        (ValueData::Scalar(fa), ValueData::Vector(vb))
-        | (ValueData::Scalar(fa), ValueData::Record { pairs: vb, .. }) => {
-            let a_truthy = !fa.is_zero();
-            let new_children: Result<Vec<Value>> = vb.iter()
-                .map(|bi| apply_binary_logic(&Value::from_bool(a_truthy), bi, op))
-                .collect();
-            Ok(Value {
-                data: ValueData::Vector(Rc::new(new_children?)),
-            })
-        }
-
-        // ベクター対スカラー（ブロードキャスト）
-        (ValueData::Vector(va), ValueData::Scalar(fb))
-        | (ValueData::Record { pairs: va, .. }, ValueData::Scalar(fb)) => {
-            let b_truthy = !fb.is_zero();
-            let new_children: Result<Vec<Value>> = va.iter()
-                .map(|ai| apply_binary_logic(ai, &Value::from_bool(b_truthy), op))
-                .collect();
-            Ok(Value {
-                data: ValueData::Vector(Rc::new(new_children?)),
-            })
-        }
-
-        // 両方ベクター
-        (ValueData::Vector(va), ValueData::Vector(vb))
-        | (ValueData::Vector(va), ValueData::Record { pairs: vb, .. })
-        | (ValueData::Record { pairs: va, .. }, ValueData::Vector(vb))
-        | (ValueData::Record { pairs: va, .. }, ValueData::Record { pairs: vb, .. }) => {
-            if va.len() != vb.len() {
-                return Err(AjisaiError::VectorLengthMismatch { len1: va.len(), len2: vb.len() });
-            }
-            let new_children: Result<Vec<Value>> = va.iter().zip(vb.iter())
-                .map(|(ai, bi)| apply_binary_logic(ai, bi, op))
-                .collect();
-            Ok(Value {
-                data: ValueData::Vector(Rc::new(new_children?)),
-            })
         }
     }
 }
 
-// ============================================================================
-// 論理演算子
-// ============================================================================
-
-/// NOT 演算子 - 論理否定（Map型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: オペランドを消費し、結果をプッシュ
-/// - Keep（,,）: オペランドを保持し、結果を追加
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -141,37 +31,54 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            // NILの場合はNILを返す（Kleene三値論理: NOT NIL = NIL）
             if val.is_nil() {
                 interp.stack.push(Value::nil());
                 return Ok(());
             }
 
-            // 再帰的にNOT演算を適用
-            let result = apply_not_to_value(&val);
+            if val.is_scalar() {
+                if let Some(f) = val.as_scalar() {
+                    let result = if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) };
+                    interp.stack.push(Value::from_fraction(result));
+                    return Ok(());
+                }
+            }
+
+            let result = apply_unary_flat(&val, |f| {
+                if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) }
+            })?;
             interp.stack.push(result);
             Ok(())
         },
         OperationTargetMode::Stack => {
             if is_keep_mode {
-                // Keep mode: preserve original stack, push NOT results
                 let original: Vec<Value> = interp.stack.iter().cloned().collect();
                 let results: Vec<Value> = original.iter().map(|v| {
                     if v.is_nil() {
                         Value::nil()
+                    } else if let Some(f) = v.as_scalar() {
+                        let r = if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) };
+                        Value::from_fraction(r)
                     } else {
-                        apply_not_to_value(v)
+                        apply_unary_flat(v, |f| {
+                            if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) }
+                        }).unwrap_or_else(|_| v.clone())
                     }
                 }).collect();
                 interp.stack.extend(results);
             } else {
-                // Consume mode: replace each element with its NOT
                 let elements: Vec<Value> = interp.stack.drain(..).collect();
                 for v in elements {
                     if v.is_nil() {
                         interp.stack.push(Value::nil());
+                    } else if let Some(f) = v.as_scalar() {
+                        let r = if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) };
+                        interp.stack.push(Value::from_fraction(r));
                     } else {
-                        interp.stack.push(apply_not_to_value(&v));
+                        let result = apply_unary_flat(&v, |f| {
+                            if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) }
+                        }).unwrap_or_else(|_| v.clone());
+                        interp.stack.push(result);
                     }
                 }
             }
@@ -180,11 +87,6 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// AND 演算子 - 論理積（Fold型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: オペランドを消費し、結果をプッシュ
-/// - Keep（,,）: オペランドを保持し、結果を追加
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -206,21 +108,18 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             let a_is_nil = a_val.is_nil();
             let b_is_nil = b_val.is_nil();
 
-            // Kleene三値論理でのAND処理
             if a_is_nil && b_is_nil {
                 interp.stack.push(Value::nil());
                 return Ok(());
             } else if a_is_nil {
-                let b_has_any_truthy = value_has_any_truthy(&b_val);
-                if b_has_any_truthy {
+                if value_has_any_truthy(&b_val) {
                     interp.stack.push(Value::nil());
                 } else {
                     interp.stack.push(Value::from_bool(false));
                 }
                 return Ok(());
             } else if b_is_nil {
-                let a_has_any_truthy = value_has_any_truthy(&a_val);
-                if a_has_any_truthy {
+                if value_has_any_truthy(&a_val) {
                     interp.stack.push(Value::nil());
                 } else {
                     interp.stack.push(Value::from_bool(false));
@@ -228,7 +127,11 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let result = apply_binary_logic(&a_val, &b_val, |a, b| a && b)?;
+            let result = apply_binary_broadcast(&a_val, &b_val, |a, b| {
+                let a_truthy = !a.is_zero();
+                let b_truthy = !b.is_zero();
+                Ok(Fraction::from(if a_truthy && b_truthy { 1 } else { 0 }))
+            })?;
             interp.stack.push(result);
             Ok(())
         },
@@ -272,11 +175,6 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// OR 演算子 - 論理和（Fold型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: オペランドを消費し、結果をプッシュ
-/// - Keep（,,）: オペランドを保持し、結果を追加
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -298,21 +196,18 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             let a_is_nil = a_val.is_nil();
             let b_is_nil = b_val.is_nil();
 
-            // Kleene三値論理でのOR処理
             if a_is_nil && b_is_nil {
                 interp.stack.push(Value::nil());
                 return Ok(());
             } else if a_is_nil {
-                let b_has_any_truthy = value_has_any_truthy(&b_val);
-                if b_has_any_truthy {
+                if value_has_any_truthy(&b_val) {
                     interp.stack.push(Value::from_bool(true));
                 } else {
                     interp.stack.push(Value::nil());
                 }
                 return Ok(());
             } else if b_is_nil {
-                let a_has_any_truthy = value_has_any_truthy(&a_val);
-                if a_has_any_truthy {
+                if value_has_any_truthy(&a_val) {
                     interp.stack.push(Value::from_bool(true));
                 } else {
                     interp.stack.push(Value::nil());
@@ -320,7 +215,11 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let result = apply_binary_logic(&a_val, &b_val, |a, b| a || b)?;
+            let result = apply_binary_broadcast(&a_val, &b_val, |a, b| {
+                let a_truthy = !a.is_zero();
+                let b_truthy = !b.is_zero();
+                Ok(Fraction::from(if a_truthy || b_truthy { 1 } else { 0 }))
+            })?;
             interp.stack.push(result);
             Ok(())
         },
