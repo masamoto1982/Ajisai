@@ -3,7 +3,7 @@
 
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::types::fraction::Fraction;
-use ajisai_core::types::{Value, ValueData};
+use ajisai_core::types::Value;
 use num_bigint::BigInt;
 
 // Helper to run code and return the stack (gui_mode = true to match WASM API behavior)
@@ -23,9 +23,15 @@ async fn run_expect_error(code: &str) -> bool {
 
 // Helper: check a scalar value on the stack
 fn assert_number(val: &Value, num: i64, denom: i64) {
-    let frac = val.as_scalar().unwrap_or_else(|| panic!("Expected scalar, got {:?}", val));
+    let frac = val
+        .as_scalar()
+        .unwrap_or_else(|| panic!("Expected scalar, got {:?}", val));
     let expected = Fraction::new(BigInt::from(num), BigInt::from(denom));
-    assert_eq!(frac, &expected, "Expected {}/{}, got {:?}", num, denom, frac);
+    assert_eq!(
+        frac, &expected,
+        "Expected {}/{}, got {:?}",
+        num, denom, frac
+    );
 }
 
 fn assert_bool_val(val: &Value, expected: bool) {
@@ -45,11 +51,16 @@ fn assert_string_val(val: &Value, expected: &str) {
         assert!(val.is_nil(), "Expected NIL for empty string");
         return;
     }
-    let vec = val.as_vector().unwrap_or_else(|| panic!("Expected vector for string, got {:?}", val));
-    let chars: String = vec.iter().map(|v| {
-        let code = v.as_i64().unwrap() as u32;
-        char::from_u32(code).unwrap()
-    }).collect();
+    let vec = val
+        .as_vector()
+        .unwrap_or_else(|| panic!("Expected vector for string, got {:?}", val));
+    let chars: String = vec
+        .iter()
+        .map(|v| {
+            let code = v.as_i64().unwrap() as u32;
+            char::from_u32(code).unwrap()
+        })
+        .collect();
     assert_eq!(chars, expected, "String mismatch");
 }
 
@@ -61,7 +72,13 @@ fn assert_nil(val: &Value) {
 fn assert_vector_numbers(val: &Value, nums: &[(i64, i64)]) {
     assert!(val.is_vector(), "Expected vector, got {:?}", val);
     let vec = val.as_vector().unwrap();
-    assert_eq!(vec.len(), nums.len(), "Vector length mismatch: expected {}, got {}", nums.len(), vec.len());
+    assert_eq!(
+        vec.len(),
+        nums.len(),
+        "Vector length mismatch: expected {}, got {}",
+        nums.len(),
+        vec.len()
+    );
     for (i, (num, denom)) in nums.iter().enumerate() {
         assert_number(&vec[i], *num, *denom);
     }
@@ -332,7 +349,7 @@ async fn test_not_false() {
 async fn test_length() {
     let stack = run("[ 1 2 3 4 5 ] LENGTH").await.unwrap();
     assert_eq!(stack.len(), 2);
-    assert_vector_numbers(&stack[0], &[(1,1),(2,1),(3,1),(4,1),(5,1)]);
+    assert_vector_numbers(&stack[0], &[(1, 1), (2, 1), (3, 1), (4, 1), (5, 1)]);
     // LENGTH returns a scalar number
     assert_number(&stack[1], 5, 1);
 }
@@ -341,7 +358,7 @@ async fn test_length() {
 async fn test_get_first_element() {
     let stack = run("[ 10 20 30 ] [ 0 ] GET").await.unwrap();
     assert_eq!(stack.len(), 2);
-    assert_vector_numbers(&stack[0], &[(10,1),(20,1),(30,1)]);
+    assert_vector_numbers(&stack[0], &[(10, 1), (20, 1), (30, 1)]);
     assert_number(&stack[1], 10, 1);
 }
 
@@ -349,7 +366,7 @@ async fn test_get_first_element() {
 async fn test_get_negative_index() {
     let stack = run("[ 10 20 30 ] [ -1 ] GET").await.unwrap();
     assert_eq!(stack.len(), 2);
-    assert_vector_numbers(&stack[0], &[(10,1),(20,1),(30,1)]);
+    assert_vector_numbers(&stack[0], &[(10, 1), (20, 1), (30, 1)]);
     assert_number(&stack[1], 30, 1);
 }
 
@@ -357,49 +374,49 @@ async fn test_get_negative_index() {
 async fn test_take_positive() {
     let stack = run("[ 1 2 3 4 5 ] [ 3 ] TAKE").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(1,1),(2,1),(3,1)]);
+    assert_vector_numbers(&stack[0], &[(1, 1), (2, 1), (3, 1)]);
 }
 
 #[tokio::test]
 async fn test_take_negative() {
     let stack = run("[ 1 2 3 4 5 ] [ -2 ] TAKE").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(4,1),(5,1)]);
+    assert_vector_numbers(&stack[0], &[(4, 1), (5, 1)]);
 }
 
 #[tokio::test]
 async fn test_reverse() {
     let stack = run("[ 1 2 3 ] REVERSE").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(3,1),(2,1),(1,1)]);
+    assert_vector_numbers(&stack[0], &[(3, 1), (2, 1), (1, 1)]);
 }
 
 #[tokio::test]
 async fn test_concat() {
     let stack = run("[ 1 2 ] [ 3 4 ] CONCAT").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(1,1),(2,1),(3,1),(4,1)]);
+    assert_vector_numbers(&stack[0], &[(1, 1), (2, 1), (3, 1), (4, 1)]);
 }
 
 #[tokio::test]
 async fn test_insert() {
     let stack = run("[ 1 3 ] [ 1 2 ] INSERT").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(1,1),(2,1),(3,1)]);
+    assert_vector_numbers(&stack[0], &[(1, 1), (2, 1), (3, 1)]);
 }
 
 #[tokio::test]
 async fn test_replace() {
     let stack = run("[ 1 2 3 ] [ 1 9 ] REPLACE").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(1,1),(9,1),(3,1)]);
+    assert_vector_numbers(&stack[0], &[(1, 1), (9, 1), (3, 1)]);
 }
 
 #[tokio::test]
 async fn test_remove() {
     let stack = run("[ 1 2 3 ] [ 1 ] REMOVE").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(1,1),(3,1)]);
+    assert_vector_numbers(&stack[0], &[(1, 1), (3, 1)]);
 }
 
 // ============================================
@@ -440,9 +457,9 @@ async fn test_transpose() {
     assert_eq!(stack.len(), 1);
     let outer = stack[0].as_vector().unwrap();
     assert_eq!(outer.len(), 3);
-    assert_vector_numbers(&outer[0], &[(1,1),(4,1)]);
-    assert_vector_numbers(&outer[1], &[(2,1),(5,1)]);
-    assert_vector_numbers(&outer[2], &[(3,1),(6,1)]);
+    assert_vector_numbers(&outer[0], &[(1, 1), (4, 1)]);
+    assert_vector_numbers(&outer[1], &[(2, 1), (5, 1)]);
+    assert_vector_numbers(&outer[2], &[(3, 1), (6, 1)]);
 }
 
 #[tokio::test]
@@ -451,8 +468,8 @@ async fn test_reshape() {
     assert_eq!(stack.len(), 1);
     let outer = stack[0].as_vector().unwrap();
     assert_eq!(outer.len(), 2);
-    assert_vector_numbers(&outer[0], &[(1,1),(2,1),(3,1)]);
-    assert_vector_numbers(&outer[1], &[(4,1),(5,1),(6,1)]);
+    assert_vector_numbers(&outer[0], &[(1, 1), (2, 1), (3, 1)]);
+    assert_vector_numbers(&outer[1], &[(4, 1), (5, 1), (6, 1)]);
 }
 
 // ============================================
@@ -463,21 +480,31 @@ async fn test_reshape() {
 async fn test_broadcast_scalar_plus_vector() {
     let stack = run("[ 10 ] [ 1 2 3 ] +").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(11,1),(12,1),(13,1)]);
+    assert_vector_numbers(&stack[0], &[(11, 1), (12, 1), (13, 1)]);
 }
 
 #[tokio::test]
 async fn test_broadcast_vector_times_scalar() {
     let stack = run("[ 1 2 3 ] [ 2 ] *").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(2,1),(4,1),(6,1)]);
+    assert_vector_numbers(&stack[0], &[(2, 1), (4, 1), (6, 1)]);
 }
 
 #[tokio::test]
 async fn test_broadcast_vector_plus_vector() {
     let stack = run("[ 1 2 3 ] [ 10 20 30 ] +").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(11,1),(22,1),(33,1)]);
+    assert_vector_numbers(&stack[0], &[(11, 1), (22, 1), (33, 1)]);
+}
+
+#[tokio::test]
+async fn test_broadcast_matrix_plus_row_vector() {
+    let stack = run("[ [ 1 2 3 ] [ 4 5 6 ] ] [ 10 20 30 ] +").await.unwrap();
+    assert_eq!(stack.len(), 1);
+    let outer = stack[0].as_vector().unwrap();
+    assert_eq!(outer.len(), 2);
+    assert_vector_numbers(&outer[0], &[(11, 1), (22, 1), (33, 1)]);
+    assert_vector_numbers(&outer[1], &[(14, 1), (25, 1), (36, 1)]);
 }
 
 // ============================================
@@ -486,16 +513,20 @@ async fn test_broadcast_vector_plus_vector() {
 
 #[tokio::test]
 async fn test_map_double() {
-    let stack = run(": [ 2 ] * ; 'DBL' DEF\n[ 1 2 3 ] 'DBL' MAP").await.unwrap();
+    let stack = run(": [ 2 ] * ; 'DBL' DEF\n[ 1 2 3 ] 'DBL' MAP")
+        .await
+        .unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(2,1),(4,1),(6,1)]);
+    assert_vector_numbers(&stack[0], &[(2, 1), (4, 1), (6, 1)]);
 }
 
 #[tokio::test]
 async fn test_filter_positive() {
-    let stack = run(": [ 0 ] <= NOT ; 'POS' DEF\n[ -2 -1 0 1 2 ] 'POS' FILTER").await.unwrap();
+    let stack = run(": [ 0 ] <= NOT ; 'POS' DEF\n[ -2 -1 0 1 2 ] 'POS' FILTER")
+        .await
+        .unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(1,1),(2,1)]);
+    assert_vector_numbers(&stack[0], &[(1, 1), (2, 1)]);
 }
 
 #[tokio::test]
@@ -577,9 +608,9 @@ async fn test_join_strings() {
 async fn test_stack_mode_length() {
     let stack = run("[ 1 ] [ 2 ] [ 3 ] .. LENGTH").await.unwrap();
     assert_eq!(stack.len(), 4);
-    assert_vector_numbers(&stack[0], &[(1,1)]);
-    assert_vector_numbers(&stack[1], &[(2,1)]);
-    assert_vector_numbers(&stack[2], &[(3,1)]);
+    assert_vector_numbers(&stack[0], &[(1, 1)]);
+    assert_vector_numbers(&stack[1], &[(2, 1)]);
+    assert_vector_numbers(&stack[2], &[(3, 1)]);
     assert_number(&stack[3], 3, 1);
 }
 
@@ -603,9 +634,9 @@ async fn test_stack_mode_get() {
 async fn test_stack_mode_reverse() {
     let stack = run("[ 1 ] [ 2 ] [ 3 ] .. REVERSE").await.unwrap();
     assert_eq!(stack.len(), 3);
-    assert_vector_numbers(&stack[0], &[(3,1)]);
-    assert_vector_numbers(&stack[1], &[(2,1)]);
-    assert_vector_numbers(&stack[2], &[(1,1)]);
+    assert_vector_numbers(&stack[0], &[(3, 1)]);
+    assert_vector_numbers(&stack[1], &[(2, 1)]);
+    assert_vector_numbers(&stack[2], &[(1, 1)]);
 }
 
 // ============================================
@@ -621,7 +652,9 @@ async fn test_def_and_call() {
 
 #[tokio::test]
 async fn test_def_with_guard_clause() {
-    let stack = run(":\n>> [ 3 ] [ 1 ] <\n>> [ 99 ]\n>>> [ 0 ]\n; 'GUARD' DEF\nGUARD").await.unwrap();
+    let stack = run(":\n>> [ 3 ] [ 1 ] <\n>> [ 99 ]\n>>> [ 0 ]\n; 'GUARD' DEF\nGUARD")
+        .await
+        .unwrap();
     assert_eq!(stack.len(), 1);
     assert_vector_numbers(&stack[0], &[(0, 1)]);
 }
@@ -637,7 +670,9 @@ async fn test_del_delete_custom_word() {
 
 #[tokio::test]
 async fn test_times_repeat() {
-    let stack = run(": [ 1 ] + ; 'INC' DEF\n[ 0 ] 'INC' [ 5 ] TIMES").await.unwrap();
+    let stack = run(": [ 1 ] + ; 'INC' DEF\n[ 0 ] 'INC' [ 5 ] TIMES")
+        .await
+        .unwrap();
     assert_eq!(stack.len(), 1);
     assert_vector_numbers(&stack[0], &[(5, 1)]);
 }
@@ -650,7 +685,7 @@ async fn test_times_repeat() {
 async fn test_fill() {
     let stack = run("[ 3 7 ] FILL").await.unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(7,1),(7,1),(7,1)]);
+    assert_vector_numbers(&stack[0], &[(7, 1), (7, 1), (7, 1)]);
 }
 
 // ============================================

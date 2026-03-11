@@ -237,6 +237,33 @@ pub struct Interpreter {
 - [ ] 分流（`,,`）時にセマンティックメタデータが子フローに正しく継承される
 - [ ] README / public/docs が同じ用語体系（Fractional Dataflow, Data Plane, Semantic Plane）で統一されている
 
+### 0.10 Gemini提案の採用方針（実装決定事項）
+
+Gemini提案は以下を**採用済みの実装方針**として扱う。以降の実装は本節に従う。
+
+1. **テンソル内部表現の正準化（Flat Buffer + Shape + Stride）**
+   - `ValueData::Vector` の木構造は外部表現（言語I/O）として維持してよい。
+   - ただし `RESHAPE` / `TRANSPOSE` / ブロードキャスト演算などのテンソル計算は、内部で必ず
+     `FlatTensor { data: Vec<Fraction>, shape: Vec<usize>, strides: Vec<usize> }` 相当へ正規化して処理する。
+   - 目的はキャッシュ効率向上・SIMD/TPU最適化準備・AIによるコード変換容易性である。
+
+2. **Fractional Dataflow の線形消費最適化フック**
+   - `FlowToken` は「将来の線形型検証」の中間表現として扱う。
+   - 実装は段階導入とし、まず演算器に「安全なインプレース更新候補」を判断できるフックを導入する。
+   - フックは挙動変更ではなく、`remaining == total` かつエイリアスなしのケースを検出するための内部判定APIとする。
+
+3. **Fraction Small Value Optimization（段階導入）**
+   - `Fraction` の全面SVOは将来課題とするが、当面は**演算ホットパスをヒープ非依存に保つ**ことを必須とする。
+   - 特にテンソル演算経路では不要な `Value` 再帰クローンを禁止し、`Fraction` 配列の走査を優先する。
+
+4. **AIファースト実装規約（Ajisai全体に適用開始）**
+   - 「人間向けの技巧」よりも「生成AIが局所解析しやすい構造」を優先する。
+   - 具体的には以下を推奨する。
+     - 単機能ヘルパーを分離し、入出力型を固定する。
+     - テンソル処理は `flatten -> shape/stride計算 -> index変換 -> rebuild` の4段に統一する。
+     - 再帰より反復を優先し、エラー文言を機械判定しやすい定型にする。
+     - 暗黙仕様を避け、演算前提条件（rank, shape, total_size）を明示検証する。
+
 
 ---
 

@@ -102,7 +102,10 @@ impl SemanticRegistry {
 
     #[inline]
     pub fn hint_at(&self, index: usize) -> DisplayHint {
-        self.stack_hints.get(index).copied().unwrap_or(DisplayHint::Auto)
+        self.stack_hints
+            .get(index)
+            .copied()
+            .unwrap_or(DisplayHint::Auto)
     }
 
     #[inline]
@@ -114,7 +117,10 @@ impl SemanticRegistry {
 
     #[inline]
     pub fn last_hint(&self) -> DisplayHint {
-        self.stack_hints.last().copied().unwrap_or(DisplayHint::Auto)
+        self.stack_hints
+            .last()
+            .copied()
+            .unwrap_or(DisplayHint::Auto)
     }
 
     #[inline]
@@ -166,22 +172,30 @@ impl SemanticRegistry {
 impl Value {
     #[inline]
     pub fn nil() -> Self {
-        Self { data: ValueData::Nil }
+        Self {
+            data: ValueData::Nil,
+        }
     }
 
     #[inline]
     pub fn from_fraction(f: Fraction) -> Self {
-        Self { data: ValueData::Scalar(f) }
+        Self {
+            data: ValueData::Scalar(f),
+        }
     }
 
     #[inline]
     pub fn from_int(n: i64) -> Self {
-        Self { data: ValueData::Scalar(Fraction::from(n)) }
+        Self {
+            data: ValueData::Scalar(Fraction::from(n)),
+        }
     }
 
     #[inline]
     pub fn from_bool(b: bool) -> Self {
-        Self { data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })) }
+        Self {
+            data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
+        }
     }
 
     pub fn from_string(s: &str) -> Self {
@@ -192,7 +206,9 @@ impl Value {
         if children.is_empty() {
             return Self::nil();
         }
-        Self { data: ValueData::Vector(Rc::new(children)) }
+        Self {
+            data: ValueData::Vector(Rc::new(children)),
+        }
     }
 
     pub fn from_symbol(s: &str) -> Self {
@@ -201,14 +217,18 @@ impl Value {
 
     #[inline]
     pub fn from_children(children: Vec<Value>) -> Self {
-        Self { data: ValueData::Vector(Rc::new(children)) }
+        Self {
+            data: ValueData::Vector(Rc::new(children)),
+        }
     }
 
     pub fn from_vector(values: Vec<Value>) -> Self {
         if values.is_empty() {
             return Self::nil();
         }
-        Self { data: ValueData::Vector(Rc::new(values)) }
+        Self {
+            data: ValueData::Vector(Rc::new(values)),
+        }
     }
 
     #[inline]
@@ -233,10 +253,7 @@ impl Value {
 
     #[inline]
     pub fn is_vector(&self) -> bool {
-        matches!(
-            self.data,
-            ValueData::Vector(_) | ValueData::Record { .. }
-        )
+        matches!(self.data, ValueData::Vector(_) | ValueData::Record { .. })
     }
 
     #[inline]
@@ -316,9 +333,7 @@ impl Value {
 
     pub fn pop_child(&mut self) -> Option<Value> {
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                Rc::make_mut(v).pop()
-            }
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v).pop(),
             _ => None,
         }
     }
@@ -394,9 +409,7 @@ impl Value {
     #[inline]
     pub fn as_vector_mut(&mut self) -> Option<&mut Vec<Value>> {
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                Some(Rc::make_mut(v))
-            }
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Rc::make_mut(v)),
             _ => None,
         }
     }
@@ -441,7 +454,9 @@ impl Value {
             return Self::nil();
         }
         if v.len() == 1 {
-            return Self { data: ValueData::Scalar(v[0].clone()) };
+            return Self {
+                data: ValueData::Scalar(v[0].clone()),
+            };
         }
         Self {
             data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect())),
@@ -454,7 +469,9 @@ impl Value {
             return Self::nil();
         }
         if v.len() == 1 {
-            return Self { data: ValueData::Scalar(v[0].clone()) };
+            return Self {
+                data: ValueData::Scalar(v[0].clone()),
+            };
         }
         Self {
             data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect())),
@@ -476,7 +493,9 @@ impl Value {
     }
 
     pub fn from_code_block(tokens: Vec<Token>) -> Self {
-        Self { data: ValueData::CodeBlock(tokens) }
+        Self {
+            data: ValueData::CodeBlock(tokens),
+        }
     }
 
     /// Suggest a default DisplayHint based on the data structure.
@@ -647,7 +666,10 @@ impl FlowToken {
     /// Consume `amount` from this token, returning (consumed, remainder_token).
     ///
     /// Returns `Err(OverConsumption)` if `amount > remaining`.
-    pub fn consume(&self, amount: &Fraction) -> std::result::Result<(Fraction, FlowToken), crate::error::AjisaiError> {
+    pub fn consume(
+        &self,
+        amount: &Fraction,
+    ) -> std::result::Result<(Fraction, FlowToken), crate::error::AjisaiError> {
         if amount > &self.remaining {
             return Err(crate::error::AjisaiError::OverConsumption {
                 requested: format!("{}", amount),
@@ -671,7 +693,10 @@ impl FlowToken {
 
     /// Check that the conservation law holds for this token given a list of
     /// consumed amounts.
-    pub fn verify_conservation(&self, consumed: &[Fraction]) -> std::result::Result<(), crate::error::AjisaiError> {
+    pub fn verify_conservation(
+        &self,
+        consumed: &[Fraction],
+    ) -> std::result::Result<(), crate::error::AjisaiError> {
         let mut sum = Fraction::from(0);
         for c in consumed {
             sum = sum.add(&c.abs());
@@ -687,7 +712,10 @@ impl FlowToken {
     }
 
     /// Assert that this token has been fully consumed (remainder == 0).
-    pub fn assert_complete(&self, context: &str) -> std::result::Result<(), crate::error::AjisaiError> {
+    pub fn assert_complete(
+        &self,
+        context: &str,
+    ) -> std::result::Result<(), crate::error::AjisaiError> {
         if !self.remaining.is_zero() {
             return Err(crate::error::AjisaiError::UnconsumedLeak {
                 remainder: format!("{}", self.remaining),
@@ -702,6 +730,17 @@ impl FlowToken {
         self.remaining.is_zero()
     }
 
+    /// Linear-consumption optimization hook.
+    ///
+    /// Returns true when this flow appears uniquely owned and fully available,
+    /// allowing execution paths to consider safe in-place updates.
+    pub fn can_reuse_allocation_hint(&self) -> bool {
+        self.remaining == self.total
+            && self.parent_flow_id.is_none()
+            && self.child_flow_ids.is_empty()
+            && self.mass_ratio == (1, 1)
+    }
+
     /// Bifurcate this flow into `n` child branches with equal mass distribution.
     ///
     /// Each child receives `remaining / n` of the parent's remaining mass.
@@ -709,7 +748,10 @@ impl FlowToken {
     /// remaining mass becomes zero (fully distributed to children).
     ///
     /// Returns `(updated_parent, Vec<child_tokens>)`.
-    pub fn bifurcate(&self, n: usize) -> std::result::Result<(FlowToken, Vec<FlowToken>), crate::error::AjisaiError> {
+    pub fn bifurcate(
+        &self,
+        n: usize,
+    ) -> std::result::Result<(FlowToken, Vec<FlowToken>), crate::error::AjisaiError> {
         if n == 0 {
             return Err(crate::error::AjisaiError::Custom(
                 "Bifurcation requires at least 1 branch".to_string(),
@@ -717,16 +759,14 @@ impl FlowToken {
         }
         if self.remaining.is_zero() {
             let children: Vec<FlowToken> = (0..n)
-                .map(|_| {
-                    FlowToken {
-                        id: FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
-                        total: Fraction::from(0),
-                        remaining: Fraction::from(0),
-                        shape: self.shape.clone(),
-                        parent_flow_id: Some(self.id),
-                        child_flow_ids: Vec::new(),
-                        mass_ratio: (1, n as u64),
-                    }
+                .map(|_| FlowToken {
+                    id: FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
+                    total: Fraction::from(0),
+                    remaining: Fraction::from(0),
+                    shape: self.shape.clone(),
+                    parent_flow_id: Some(self.id),
+                    child_flow_ids: Vec::new(),
+                    mass_ratio: (1, n as u64),
                 })
                 .collect();
             let child_ids: Vec<u64> = children.iter().map(|c| c.id).collect();
