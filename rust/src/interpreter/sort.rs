@@ -7,14 +7,19 @@
 //
 // 統一Value宇宙アーキテクチャ版
 
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
-use crate::interpreter::helpers::is_vector_value;
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::{Value, ValueData};
 
 fn introsort_fractions(values: &mut [(usize, Fraction)]) {
     values.sort_unstable_by(|a, b| a.1.cmp(&b.1));
+}
+
+fn sorted_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value> {
+    perm.iter()
+        .map(|&orig_idx| source[orig_idx].clone())
+        .collect()
 }
 
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
@@ -23,76 +28,43 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+                interp
+                    .stack
+                    .last()
+                    .cloned()
+                    .ok_or(AjisaiError::StackUnderflow)?
             } else {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            if is_vector_value(&val) {
-                if let ValueData::Vector(children) = &val.data {
-                    if children.is_empty() {
-                        interp.stack.push(Value::nil());
-                        return Ok(());
+            let children = match &val.data {
+                ValueData::Vector(children) => children,
+                ValueData::Record {
+                    pairs: children, ..
+                } => children,
+                _ => {
+                    if !is_keep_mode {
+                        interp.stack.push(val);
                     }
-
-                    let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(children.len());
-                    for (i, elem) in children.iter().enumerate() {
-                        match elem.as_scalar() {
-                            Some(f) => indexed_fractions.push((i, f.clone())),
-                            None => {
-                                if !is_keep_mode {
-                                    interp.stack.push(val);
-                                }
-                                return Err(AjisaiError::from(
-                                    "SORT requires all elements to be numbers"
-                                ));
-                            }
-                        }
-                    }
-
-                    introsort_fractions(&mut indexed_fractions);
-
-                    let sorted_v: Vec<Value> = indexed_fractions
-                        .iter()
-                        .map(|(orig_idx, _)| children[*orig_idx].clone())
-                        .collect();
-
-                    if !interp.disable_no_change_check {
-                        if children.len() < 2 {
-                            if !is_keep_mode {
-                                interp.stack.push(Value::from_vector(sorted_v));
-                            }
-                            return Err(AjisaiError::NoChange { word: "SORT".into() });
-                        }
-                        if sorted_v == **children {
-                            if !is_keep_mode {
-                                interp.stack.push(Value::from_vector(sorted_v));
-                            }
-                            return Err(AjisaiError::NoChange { word: "SORT".into() });
-                        }
-                    }
-
-                    interp.stack.push(Value::from_vector(sorted_v));
-                    return Ok(());
+                    return Err(AjisaiError::structure_error("vector", "other format"));
                 }
-            }
-            if !is_keep_mode {
-                interp.stack.push(val);
-            }
-            Err(AjisaiError::structure_error("vector", "other format"))
-        }
-        OperationTargetMode::Stack => {
-            if interp.stack.is_empty() {
+            };
+
+            if children.is_empty() {
+                interp.stack.push(Value::nil());
                 return Ok(());
             }
 
-            let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(interp.stack.len());
-            for (i, elem) in interp.stack.iter().enumerate() {
+            let mut indexed_fractions: Vec<(usize, Fraction)> = Vec::with_capacity(children.len());
+            for (i, elem) in children.iter().enumerate() {
                 match elem.as_scalar() {
                     Some(f) => indexed_fractions.push((i, f.clone())),
                     None => {
+                        if !is_keep_mode {
+                            interp.stack.push(val);
+                        }
                         return Err(AjisaiError::from(
-                            "SORT requires all stack elements to be numbers"
+                            "SORT requires all elements to be numbers",
                         ));
                     }
                 }
@@ -100,37 +72,72 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
 
             introsort_fractions(&mut indexed_fractions);
 
-            let is_identity = indexed_fractions.iter().enumerate().all(|(i, (orig, _))| *orig == i);
+            let perm: Vec<usize> = indexed_fractions
+                .iter()
+                .map(|(orig_idx, _)| *orig_idx)
+                .collect();
+            let sorted_v = sorted_values_by_permutation(children, &perm);
+
+            if !interp.disable_no_change_check {
+                if children.len() < 2 {
+                    if !is_keep_mode {
+                        interp.stack.push(Value::from_vector(sorted_v));
+                    }
+                    return Err(AjisaiError::NoChange {
+                        word: "SORT".into(),
+                    });
+                }
+                if sorted_v == **children {
+                    if !is_keep_mode {
+                        interp.stack.push(Value::from_vector(sorted_v));
+                    }
+                    return Err(AjisaiError::NoChange {
+                        word: "SORT".into(),
+                    });
+                }
+            }
+
+            interp.stack.push(Value::from_vector(sorted_v));
+            Ok(())
+        }
+        OperationTargetMode::Stack => {
+            if interp.stack.is_empty() {
+                return Ok(());
+            }
+
+            let mut indexed_fractions: Vec<(usize, Fraction)> =
+                Vec::with_capacity(interp.stack.len());
+            for (i, elem) in interp.stack.iter().enumerate() {
+                match elem.as_scalar() {
+                    Some(f) => indexed_fractions.push((i, f.clone())),
+                    None => {
+                        return Err(AjisaiError::from(
+                            "SORT requires all stack elements to be numbers",
+                        ));
+                    }
+                }
+            }
+
+            introsort_fractions(&mut indexed_fractions);
+
+            let is_identity = indexed_fractions
+                .iter()
+                .enumerate()
+                .all(|(i, (orig, _))| *orig == i);
             if !interp.disable_no_change_check {
                 if interp.stack.len() < 2 || is_identity {
-                    return Err(AjisaiError::NoChange { word: "SORT".into() });
+                    return Err(AjisaiError::NoChange {
+                        word: "SORT".into(),
+                    });
                 }
             }
 
             let perm: Vec<usize> = indexed_fractions.iter().map(|(orig, _)| *orig).collect();
+            let sorted_stack = sorted_values_by_permutation(&interp.stack, &perm);
             if is_keep_mode {
-                let sorted_stack: Vec<Value> = perm.iter()
-                    .map(|&orig_idx| interp.stack[orig_idx].clone())
-                    .collect();
                 interp.stack.extend(sorted_stack);
             } else {
-                let mut placed = vec![false; perm.len()];
-                for i in 0..perm.len() {
-                    if placed[i] || perm[i] == i {
-                        continue;
-                    }
-                    let mut j = i;
-                    loop {
-                        let next = perm[j];
-                        if next == i {
-                            placed[j] = true;
-                            break;
-                        }
-                        interp.stack.swap(j, next);
-                        placed[j] = true;
-                        j = next;
-                    }
-                }
+                interp.stack = sorted_stack;
             }
             Ok(())
         }
