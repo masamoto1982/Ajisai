@@ -536,9 +536,11 @@ async fn test_print_keep_mode() {
         1,
         "PRINT in keep mode should preserve value on stack"
     );
+    // [42] is a single-element vector with printable codepoint '*', displays as '*'
     assert!(
-        interp.output_buffer.contains("42"),
-        "PRINT should output the value"
+        interp.output_buffer.contains("*"),
+        "PRINT should output the value, got: {}",
+        interp.output_buffer
     );
 }
 

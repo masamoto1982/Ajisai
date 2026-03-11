@@ -11,10 +11,9 @@ use std::sync::Arc;
 // ---------------------------------------------------------------------------
 // ValueExt: Generic extension trait for module-specific value metadata
 // ---------------------------------------------------------------------------
+// In the Data Plane / Semantic Plane architecture, ValueExt metadata lives
+// in the SemanticRegistry (semantic plane), NOT in the Value struct (data plane).
 
-/// Trait for module-specific metadata attached to values.
-/// Modules (e.g., MUSIC) can implement this to carry domain-specific
-/// information through the value pipeline without coupling the core types.
 pub trait ValueExt: std::fmt::Debug + 'static {
     fn clone_box(&self) -> Box<dyn ValueExt>;
     fn as_any(&self) -> &dyn Any;
@@ -50,64 +49,139 @@ pub enum ValueData {
     CodeBlock(Vec<Token>),
 }
 
-#[derive(Debug)]
+// ---------------------------------------------------------------------------
+// Value: Data Plane only — pure computation data, no metadata
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub data: ValueData,
-    pub display_hint: DisplayHint,
-    pub ext: Option<Box<dyn ValueExt>>,
 }
 
-impl Clone for Value {
-    fn clone(&self) -> Self {
-        Value {
-            data: self.data.clone(),
-            display_hint: self.display_hint,
-            ext: self.ext.clone(),
-        }
+// ---------------------------------------------------------------------------
+// SemanticRegistry: Semantic Plane — metadata managed separately from data
+// ---------------------------------------------------------------------------
+// DisplayHint and ValueExt are tracked here, keyed by stack index or FlowToken ID.
+// Pure computation words (arithmetic, comparison, structural ops) never access this.
+// Only display boundaries (PRINT, STR, GUI) and module side-effects consult it.
+
+pub struct SemanticRegistry {
+    pub stack_hints: Vec<DisplayHint>,
+    pub flow_hints: HashMap<u64, DisplayHint>,
+    pub flow_extensions: HashMap<u64, Box<dyn ValueExt>>,
+}
+
+impl std::fmt::Debug for SemanticRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SemanticRegistry")
+            .field("stack_hints_len", &self.stack_hints.len())
+            .field("flow_hints_len", &self.flow_hints.len())
+            .field("flow_extensions_len", &self.flow_extensions.len())
+            .finish()
     }
 }
 
-impl PartialEq for Value {
-    fn eq(&self, other: &Self) -> bool {
-        self.data == other.data && self.display_hint == other.display_hint
+impl SemanticRegistry {
+    pub fn new() -> Self {
+        Self {
+            stack_hints: Vec::new(),
+            flow_hints: HashMap::new(),
+            flow_extensions: HashMap::new(),
+        }
+    }
+
+    #[inline]
+    pub fn push_hint(&mut self, hint: DisplayHint) {
+        self.stack_hints.push(hint);
+    }
+
+    #[inline]
+    pub fn pop_hint(&mut self) -> DisplayHint {
+        self.stack_hints.pop().unwrap_or(DisplayHint::Auto)
+    }
+
+    #[inline]
+    pub fn hint_at(&self, index: usize) -> DisplayHint {
+        self.stack_hints.get(index).copied().unwrap_or(DisplayHint::Auto)
+    }
+
+    #[inline]
+    pub fn set_hint_at(&mut self, index: usize, hint: DisplayHint) {
+        if index < self.stack_hints.len() {
+            self.stack_hints[index] = hint;
+        }
+    }
+
+    #[inline]
+    pub fn last_hint(&self) -> DisplayHint {
+        self.stack_hints.last().copied().unwrap_or(DisplayHint::Auto)
+    }
+
+    #[inline]
+    pub fn truncate(&mut self, len: usize) {
+        self.stack_hints.truncate(len);
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.stack_hints.clear();
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.stack_hints.len()
+    }
+
+    pub fn sync_to_stack_len(&mut self, stack_len: usize) {
+        while self.stack_hints.len() < stack_len {
+            self.stack_hints.push(DisplayHint::Auto);
+        }
+        self.stack_hints.truncate(stack_len);
+    }
+
+    pub fn drain_last(&mut self, count: usize) -> Vec<DisplayHint> {
+        let start = self.stack_hints.len().saturating_sub(count);
+        self.stack_hints.drain(start..).collect()
+    }
+
+    pub fn extend_hints(&mut self, hints: impl IntoIterator<Item = DisplayHint>) {
+        self.stack_hints.extend(hints);
+    }
+
+    pub fn insert_hint(&mut self, index: usize, hint: DisplayHint) {
+        if index <= self.stack_hints.len() {
+            self.stack_hints.insert(index, hint);
+        }
+    }
+
+    pub fn remove_hint(&mut self, index: usize) -> DisplayHint {
+        if index < self.stack_hints.len() {
+            self.stack_hints.remove(index)
+        } else {
+            DisplayHint::Auto
+        }
     }
 }
 
 impl Value {
     #[inline]
     pub fn nil() -> Self {
-        Self {
-            data: ValueData::Nil,
-            display_hint: DisplayHint::Nil,
-            ext: None,
-        }
+        Self { data: ValueData::Nil }
     }
 
     #[inline]
     pub fn from_fraction(f: Fraction) -> Self {
-        Self {
-            data: ValueData::Scalar(f),
-            display_hint: DisplayHint::Number,
-            ext: None,
-        }
+        Self { data: ValueData::Scalar(f) }
     }
 
     #[inline]
     pub fn from_int(n: i64) -> Self {
-        Self {
-            data: ValueData::Scalar(Fraction::from(n)),
-            display_hint: DisplayHint::Number,
-            ext: None,
-        }
+        Self { data: ValueData::Scalar(Fraction::from(n)) }
     }
 
     #[inline]
     pub fn from_bool(b: bool) -> Self {
-        Self {
-            data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
-            display_hint: DisplayHint::Boolean,
-            ext: None,
-        }
+        Self { data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })) }
     }
 
     pub fn from_string(s: &str) -> Self {
@@ -115,20 +189,10 @@ impl Value {
         for c in s.chars() {
             children.push(Value::from_int(c as u32 as i64));
         }
-
         if children.is_empty() {
-            return Self {
-                data: ValueData::Nil,
-                display_hint: DisplayHint::String,
-                ext: None,
-            };
+            return Self::nil();
         }
-
-        Self {
-            data: ValueData::Vector(Rc::new(children)),
-            display_hint: DisplayHint::String,
-            ext: None,
-        }
+        Self { data: ValueData::Vector(Rc::new(children)) }
     }
 
     pub fn from_symbol(s: &str) -> Self {
@@ -137,23 +201,14 @@ impl Value {
 
     #[inline]
     pub fn from_children(children: Vec<Value>) -> Self {
-        Self {
-            data: ValueData::Vector(Rc::new(children)),
-            display_hint: DisplayHint::Auto,
-            ext: None,
-        }
+        Self { data: ValueData::Vector(Rc::new(children)) }
     }
 
     pub fn from_vector(values: Vec<Value>) -> Self {
         if values.is_empty() {
             return Self::nil();
         }
-
-        Self {
-            data: ValueData::Vector(Rc::new(values)),
-            display_hint: DisplayHint::Auto,
-            ext: None,
-        }
+        Self { data: ValueData::Vector(Rc::new(values)) }
     }
 
     #[inline]
@@ -163,17 +218,7 @@ impl Value {
 
     #[inline]
     pub fn from_datetime(f: Fraction) -> Self {
-        Self {
-            data: ValueData::Scalar(f),
-            display_hint: DisplayHint::DateTime,
-            ext: None,
-        }
-    }
-
-    #[inline]
-    pub fn with_hint(mut self, hint: DisplayHint) -> Self {
-        self.display_hint = hint;
-        self
+        Self::from_fraction(f)
     }
 
     #[inline]
@@ -260,12 +305,10 @@ impl Value {
             }
             ValueData::Nil => {
                 self.data = ValueData::Vector(Rc::new(vec![child]));
-                self.display_hint = DisplayHint::Auto;
             }
             ValueData::Scalar(f) => {
                 let old = Value::from_fraction(f.clone());
                 self.data = ValueData::Vector(Rc::new(vec![old, child]));
-                self.display_hint = DisplayHint::Auto;
             }
             ValueData::CodeBlock(_) => {}
         }
@@ -398,16 +441,10 @@ impl Value {
             return Self::nil();
         }
         if v.len() == 1 {
-            return Self {
-                data: ValueData::Scalar(v[0].clone()),
-                display_hint: DisplayHint::Number,
-                ext: None,
-            };
+            return Self { data: ValueData::Scalar(v[0].clone()) };
         }
         Self {
             data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect())),
-            display_hint: DisplayHint::Number,
-            ext: None,
         }
     }
 
@@ -417,33 +454,11 @@ impl Value {
             return Self::nil();
         }
         if v.len() == 1 {
-            return Self {
-                data: ValueData::Scalar(v[0].clone()),
-                display_hint: DisplayHint::Auto,
-                ext: None,
-            };
+            return Self { data: ValueData::Scalar(v[0].clone()) };
         }
         Self {
             data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect())),
-            display_hint: DisplayHint::Auto,
-            ext: None,
         }
-    }
-
-    #[inline]
-    pub fn with_ext(mut self, ext: Box<dyn ValueExt>) -> Self {
-        self.ext = Some(ext);
-        self
-    }
-
-    #[inline]
-    pub fn get_ext<T: ValueExt>(&self) -> Option<&T> {
-        self.ext.as_ref()?.as_any().downcast_ref::<T>()
-    }
-
-    #[inline]
-    pub fn get_ext_mut<T: ValueExt>(&mut self) -> Option<&mut T> {
-        self.ext.as_mut()?.as_any_mut().downcast_mut::<T>()
     }
 
     #[inline]
@@ -461,10 +476,18 @@ impl Value {
     }
 
     pub fn from_code_block(tokens: Vec<Token>) -> Self {
-        Self {
-            data: ValueData::CodeBlock(tokens),
-            display_hint: DisplayHint::Auto,
-            ext: None,
+        Self { data: ValueData::CodeBlock(tokens) }
+    }
+
+    /// Suggest a default DisplayHint based on the data structure.
+    /// This is a pure function — it does NOT store anything on Value.
+    /// Used by the interpreter when pushing values without explicit hints.
+    pub fn default_hint(&self) -> DisplayHint {
+        match &self.data {
+            ValueData::Nil => DisplayHint::Nil,
+            ValueData::Scalar(_) => DisplayHint::Number,
+            ValueData::Vector(_) | ValueData::Record { .. } => DisplayHint::Auto,
+            ValueData::CodeBlock(_) => DisplayHint::Auto,
         }
     }
 }
@@ -571,8 +594,6 @@ pub struct FlowToken {
     pub total: Fraction,
     /// The fraction still available for consumption
     pub remaining: Fraction,
-    /// Display interpretation hint (carried along the flow)
-    pub hint: DisplayHint,
     /// Logical shape of the flow bundle
     pub shape: Vec<usize>,
     /// If this token was created by bifurcation, the parent flow ID
@@ -588,12 +609,10 @@ impl FlowToken {
     pub fn from_value(value: &Value) -> Self {
         let total = Self::value_total(value);
         let shape = value.shape();
-        let hint = value.display_hint;
         FlowToken {
             id: FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
             total: total.clone(),
             remaining: total,
-            hint,
             shape,
             parent_flow_id: None,
             child_flow_ids: Vec::new(),
@@ -642,7 +661,6 @@ impl FlowToken {
                 id: self.id,
                 total: self.total.clone(),
                 remaining: new_remaining,
-                hint: self.hint,
                 shape: self.shape.clone(),
                 parent_flow_id: self.parent_flow_id,
                 child_flow_ids: self.child_flow_ids.clone(),
@@ -704,7 +722,6 @@ impl FlowToken {
                         id: FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
                         total: Fraction::from(0),
                         remaining: Fraction::from(0),
-                        hint: self.hint,
                         shape: self.shape.clone(),
                         parent_flow_id: Some(self.id),
                         child_flow_ids: Vec::new(),
@@ -717,7 +734,6 @@ impl FlowToken {
                 id: self.id,
                 total: self.total.clone(),
                 remaining: Fraction::from(0),
-                hint: self.hint,
                 shape: self.shape.clone(),
                 parent_flow_id: self.parent_flow_id,
                 child_flow_ids: child_ids,
@@ -739,7 +755,6 @@ impl FlowToken {
                 id: child_id,
                 total: child_mass.clone(),
                 remaining: child_mass.clone(),
-                hint: self.hint,
                 shape: self.shape.clone(),
                 parent_flow_id: Some(self.id),
                 child_flow_ids: Vec::new(),
@@ -751,7 +766,6 @@ impl FlowToken {
             id: self.id,
             total: self.total.clone(),
             remaining: Fraction::from(0),
-            hint: self.hint,
             shape: self.shape.clone(),
             parent_flow_id: self.parent_flow_id,
             child_flow_ids: child_ids,

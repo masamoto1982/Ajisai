@@ -3,27 +3,27 @@ use crate::interpreter;
 use crate::interpreter::Interpreter;
 use crate::tokenizer;
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, ExecutionLine, Token, Value, ValueData};
+use crate::types::{ExecutionLine, Token, Value, ValueData};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::to_value;
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
-fn is_string_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::String && val.is_vector()
+fn is_string_value(_val: &Value) -> bool {
+    false
 }
 
-fn is_boolean_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::Boolean && val.is_scalar()
+fn is_boolean_value(_val: &Value) -> bool {
+    false
 }
 
 fn is_number_value(val: &Value) -> bool {
-    matches!(val.display_hint, DisplayHint::Number | DisplayHint::Auto) && val.is_scalar()
+    val.is_scalar()
 }
 
-fn is_datetime_value(val: &Value) -> bool {
-    val.display_hint == DisplayHint::DateTime && val.is_scalar()
+fn is_datetime_value(_val: &Value) -> bool {
+    false
 }
 
 fn is_vector_value(val: &Value) -> bool {
@@ -626,13 +626,6 @@ fn value_to_js_value(value: &Value) -> JsValue {
     if value.is_nil() {
         js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
         js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
-        return obj.into();
-    }
-
-    if value.display_hint == DisplayHint::String && value.is_vector() {
-        js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
-        let s = value_as_string(value);
-        js_sys::Reflect::set(&obj, &"value".into(), &s.into()).unwrap();
         return obj.into();
     }
 

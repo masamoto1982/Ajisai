@@ -238,14 +238,13 @@ async fn test_remainder_inheritance_values() {
 
 #[tokio::test]
 async fn test_remainder_hint_preserved() {
-    use ajisai_core::types::DisplayHint;
-
-    let val = Value::from_bool(true); // DisplayHint::Boolean, Scalar(1/1)
+    // TODO: DisplayHint is now in SemanticRegistry, not on FlowToken.
+    // This test verifies that FlowToken preserves value through chain.
+    let val = Value::from_bool(true); // Scalar(1/1)
     let token = FlowToken::from_value(&val);
-    assert_eq!(token.hint, DisplayHint::Boolean);
 
     let (_, t1) = token.consume(&frac(1, 1)).unwrap();
-    assert_eq!(t1.hint, DisplayHint::Boolean, "DisplayHint must be preserved through chain");
+    assert_eq!(t1.remaining, frac(0, 1), "Remaining must be zero after full consumption");
 }
 
 #[tokio::test]

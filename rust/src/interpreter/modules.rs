@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{audio, json, Interpreter};
-use crate::types::{DisplayHint, Value, ValueData, WordDefinition};
+use crate::types::{Value, ValueData, WordDefinition};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -112,8 +112,9 @@ pub fn preserves_modes(name: &str) -> bool {
 }
 
 fn value_to_module_name(value: &Value) -> Option<String> {
-    if value.display_hint == DisplayHint::String {
-        return vector_to_string(value);
+    // Try to interpret the value as a string directly
+    if let Some(s) = vector_to_string(value) {
+        return Some(s);
     }
 
     match &value.data {

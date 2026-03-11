@@ -6,7 +6,7 @@
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, is_vector_value};
-use crate::types::{Value, DisplayHint, Token};
+use crate::types::{Value, ValueData, Token};
 
 enum ExecutableCode {
     WordName(String),
@@ -18,7 +18,8 @@ fn get_executable_code(val: &Value) -> Result<ExecutableCode> {
         return Ok(ExecutableCode::CodeBlock(tokens.clone()));
     }
 
-    if val.display_hint == DisplayHint::String {
+    // Try to interpret as a word name (vector of codepoints)
+    if matches!(&val.data, ValueData::Vector(_)) {
         return get_word_name_from_value(val).map(ExecutableCode::WordName);
     }
 
@@ -26,10 +27,8 @@ fn get_executable_code(val: &Value) -> Result<ExecutableCode> {
 }
 
 fn is_boolean_true(val: &Value) -> bool {
-    if val.display_hint == DisplayHint::Boolean {
-        if let Some(f) = val.as_scalar() {
-            return !f.is_zero();
-        }
+    if let Some(f) = val.as_scalar() {
+        return !f.is_zero();
     }
     false
 }

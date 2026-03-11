@@ -8,7 +8,7 @@ use std::rc::Rc;
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, ValueData, DisplayHint};
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
 // ============================================================================
@@ -38,8 +38,6 @@ fn apply_not_to_value(val: &Value) -> Value {
             };
             Value {
                 data: ValueData::Scalar(result),
-                display_hint: DisplayHint::Boolean,
-                ext: None,
             }
         }
         ValueData::Vector(children)
@@ -49,8 +47,6 @@ fn apply_not_to_value(val: &Value) -> Value {
                 .collect();
             Value {
                 data: ValueData::Vector(Rc::new(new_children)),
-                display_hint: DisplayHint::Boolean,
-                ext: None,
             }
         }
         ValueData::CodeBlock(_) => val.clone(),  // コードブロックにはNOTを適用しない
@@ -80,8 +76,6 @@ where
             let result = op(a_truthy, b_truthy);
             Ok(Value {
                 data: ValueData::Scalar(Fraction::from(if result { 1 } else { 0 })),
-                display_hint: DisplayHint::Boolean,
-                ext: None,
             })
         }
 
@@ -94,8 +88,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: DisplayHint::Boolean,
-                ext: None,
             })
         }
 
@@ -108,8 +100,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: DisplayHint::Boolean,
-                ext: None,
             })
         }
 
@@ -126,8 +116,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: DisplayHint::Boolean,
-                ext: None,
             })
         }
     }

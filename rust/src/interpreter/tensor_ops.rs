@@ -2,7 +2,7 @@ use std::rc::Rc;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::interpreter::helpers::wrap_number;
-use crate::types::{Value, ValueData, DisplayHint, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{Value, ValueData, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
 
 use num_traits::Zero;
@@ -145,7 +145,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 新しい値を作成（再帰的構造を構築）
-    let result = build_nested_value(&data_fractions, &new_shape, data_val.display_hint);
+    let result = build_nested_value(&data_fractions, &new_shape);
 
     // 保持モードの場合は元の値を戻す
     if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
@@ -157,14 +157,12 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> Value {
+fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
     if shape.is_empty() {
         // スカラー
         if data.len() == 1 {
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
-                display_hint: hint,
-                ext: None,
             };
         }
         // データが複数ある場合はベクタ
@@ -181,8 +179,6 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
             .collect();
         return Value {
             data: ValueData::Vector(Rc::new(children)),
-            display_hint: hint,
-            ext: None,
         };
     }
 
@@ -195,14 +191,12 @@ fn build_nested_value(data: &[Fraction], shape: &[usize], hint: DisplayHint) -> 
         .map(|i| {
             let start = i * inner_size;
             let end = start + inner_size;
-            build_nested_value(&data[start..end], inner_shape, hint)
+            build_nested_value(&data[start..end], inner_shape)
         })
         .collect();
 
     Value {
         data: ValueData::Vector(Rc::new(children)),
-        display_hint: hint,
-        ext: None,
     }
 }
 
@@ -241,7 +235,7 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 新しい形状で再構築
-    let result = build_nested_value(&transposed_data, &[cols, rows], val.display_hint);
+    let result = build_nested_value(&transposed_data, &[cols, rows]);
 
     // 保持モードの場合は元の値を戻す
     if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
@@ -305,8 +299,6 @@ where
     match &val.data {
         ValueData::Scalar(f) => Value {
             data: ValueData::Scalar(op(f)),
-            display_hint: val.display_hint,
-            ext: val.ext.clone(),
         },
         ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
             let new_children: Vec<Value> = children.iter()
@@ -314,8 +306,6 @@ where
                 .collect();
             Value {
                 data: ValueData::Vector(Rc::new(new_children)),
-                display_hint: val.display_hint,
-                ext: val.ext.clone(),
             }
         }
         ValueData::Nil => val.clone(),
@@ -430,8 +420,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: DisplayHint::Number,
-                ext: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vector")),
@@ -450,8 +438,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: val.display_hint,
-                ext: val.ext.clone(),
             })
         }
         ValueData::Nil => Ok(val.clone()),
@@ -470,8 +456,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: DisplayHint::Number,
-                ext: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vector")),
@@ -490,8 +474,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: val.display_hint,
-                ext: val.ext.clone(),
             })
         }
         ValueData::Nil => Ok(val.clone()),
@@ -519,8 +501,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: DisplayHint::Number,
-                ext: None,
             })
         }
         _ => Err(AjisaiError::from("Expected vectors")),
@@ -547,8 +527,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: a.display_hint,
-                ext: a.ext.clone(),
             })
         }
         (ValueData::Scalar(fa), ValueData::Vector(cb))
@@ -558,8 +536,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: b.display_hint,
-                ext: b.ext.clone(),
             })
         }
         (ValueData::Vector(ca), ValueData::Scalar(fb))
@@ -569,8 +545,6 @@ where
                 .collect();
             Ok(Value {
                 data: ValueData::Vector(Rc::new(new_children?)),
-                display_hint: a.display_hint,
-                ext: a.ext.clone(),
             })
         }
         _ => Err(AjisaiError::from("Cannot apply operation")),
@@ -636,7 +610,7 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
 
     // 再帰的構造を構築
-    let result = build_nested_value(&data, &shape, DisplayHint::Number);
+    let result = build_nested_value(&data, &shape);
 
     // 保持モードの場合は元の値を戻す
     if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
