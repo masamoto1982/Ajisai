@@ -2,13 +2,35 @@
 //
 // 量指定操作（1オリジン）: LENGTH, TAKE, SPLIT
 
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
-use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, get_bigint_from_value, wrap_number};
-use crate::types::{Value};
-use crate::types::fraction::Fraction;
-use num_traits::ToPrimitive;
 use super::reconstruct_vector_elements;
+use crate::error::{AjisaiError, Result};
+use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, wrap_number};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::fraction::Fraction;
+use crate::types::Value;
+use num_traits::ToPrimitive;
+
+fn take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, usize)> {
+    if count < 0 {
+        let take = (-count) as usize;
+        if take > len {
+            return Err(AjisaiError::from(format!(
+                "Take count exceeds {} length",
+                target
+            )));
+        }
+        return Ok((len - take, len));
+    }
+
+    let take = count as usize;
+    if take > len {
+        return Err(AjisaiError::from(format!(
+            "Take count exceeds {} length",
+            target
+        )));
+    }
+    Ok((0, take))
+}
 
 /// LENGTH - 要素数を取得する（Form型）
 ///
@@ -90,86 +112,54 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                 })?
             };
 
-            if vector_val.is_vector() {
-                let elements = reconstruct_vector_elements(&vector_val);
-                let len = elements.len();
-                let result = if count < 0 {
-                    let abs_count = (-count) as usize;
-                    if abs_count > len {
-                        if !is_keep_mode {
-                            interp.stack.push(vector_val);
-                        }
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::from("Take count exceeds vector length"));
-                    }
-                    elements[len - abs_count..].to_vec()
-                } else {
-                    let take_count = count as usize;
-                    if take_count > len {
-                        if !is_keep_mode {
-                            interp.stack.push(vector_val);
-                        }
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::from("Take count exceeds vector length"));
-                    }
-                    elements[..take_count].to_vec()
-                };
-
-                if is_keep_mode {
-                    interp.stack.push(count_val);
-                }
-                if result.is_empty() {
-                    interp.stack.push(Value::nil());
-                } else {
-                    interp.stack.push(Value::from_vector(result));
-                }
-                Ok(())
-            } else {
+            if !vector_val.is_vector() {
                 if !is_keep_mode {
                     interp.stack.push(vector_val);
                 }
                 interp.stack.push(count_val);
-                Err(AjisaiError::structure_error("vector", "other format"))
+                return Err(AjisaiError::structure_error("vector", "other format"));
             }
+
+            let elements = reconstruct_vector_elements(&vector_val);
+            let (start, end) = match take_bounds(elements.len(), count, "vector") {
+                Ok(bounds) => bounds,
+                Err(error) => {
+                    if !is_keep_mode {
+                        interp.stack.push(vector_val);
+                    }
+                    interp.stack.push(count_val);
+                    return Err(error);
+                }
+            };
+            let result = elements[start..end].to_vec();
+
+            if is_keep_mode {
+                interp.stack.push(count_val);
+            }
+            if result.is_empty() {
+                interp.stack.push(Value::nil());
+            } else {
+                interp.stack.push(Value::from_vector(result));
+            }
+            Ok(())
         }
         OperationTargetMode::Stack => {
+            let len = interp.stack.len();
+            let (start, end) = match take_bounds(len, count, "stack") {
+                Ok(bounds) => bounds,
+                Err(error) => {
+                    interp.stack.push(count_val);
+                    return Err(error);
+                }
+            };
+
             if is_keep_mode {
-                // Keep mode: preserve original stack, push taken elements
-                let len = interp.stack.len();
-                if count < 0 {
-                    let abs_count = (-count) as usize;
-                    if abs_count > len {
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::from("Take count exceeds stack length"));
-                    }
-                    let taken: Vec<Value> = interp.stack[len - abs_count..].to_vec();
-                    interp.stack.extend(taken);
-                } else {
-                    let take_count = count as usize;
-                    if take_count > len {
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::from("Take count exceeds stack length"));
-                    }
-                    let taken: Vec<Value> = interp.stack[..take_count].to_vec();
-                    interp.stack.extend(taken);
-                }
+                let taken: Vec<Value> = interp.stack[start..end].to_vec();
+                interp.stack.extend(taken);
+            } else if count < 0 {
+                interp.stack = interp.stack.split_off(start);
             } else {
-                let len = interp.stack.len();
-                if count < 0 {
-                    let abs_count = (-count) as usize;
-                    if abs_count > len {
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::from("Take count exceeds stack length"));
-                    }
-                    interp.stack = interp.stack.split_off(len - abs_count);
-                } else {
-                    let take_count = count as usize;
-                    if take_count > len {
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::from("Take count exceeds stack length"));
-                    }
-                    interp.stack.truncate(take_count);
-                }
+                interp.stack.truncate(end);
             }
             Ok(())
         }
@@ -198,15 +188,13 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
         let mut sizes = Vec::with_capacity(n);
         for i in 0..n {
             match get_bigint_from_value(args_val.get_child(i).unwrap()) {
-                Ok(bi) => {
-                    match bi.to_usize() {
-                        Some(s) => sizes.push(s),
-                        None => {
-                            interp.stack.push(args_val);
-                            return Err(AjisaiError::from("Split size is too large"));
-                        }
+                Ok(bi) => match bi.to_usize() {
+                    Some(s) => sizes.push(s),
+                    None => {
+                        interp.stack.push(args_val);
+                        return Err(AjisaiError::from("Split size is too large"));
                     }
-                }
+                },
                 Err(_) => {
                     interp.stack.push(args_val);
                     return Err(AjisaiError::from("Split sizes must be integers"));

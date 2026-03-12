@@ -187,9 +187,16 @@ export const createGUI = (): GUI => {
         elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
     };
 
-    const switchArea = (mode: ViewMode): void => {
-        currentMode = mode;
+    const setDesktopModes = (mode: ViewMode): void => {
+        if (LEFT_TAB_MODES.includes(mode)) {
+            currentLeftMode = mode;
+        }
+        if (RIGHT_TAB_MODES.includes(mode)) {
+            currentRightMode = mode;
+        }
+    };
 
+    const applyAreaState = (mode: ViewMode): void => {
         if (mobile.isMobile()) {
             mobile.updateView(mode);
             document.body.dataset.activeArea = mode;
@@ -197,16 +204,15 @@ export const createGUI = (): GUI => {
             return;
         }
 
-        if (LEFT_TAB_MODES.includes(mode)) {
-            currentLeftMode = mode;
-        }
-        if (RIGHT_TAB_MODES.includes(mode)) {
-            currentRightMode = mode;
-        }
-
+        setDesktopModes(mode);
         syncDesktopLayout();
         document.body.dataset.activeArea = currentRightMode;
         updateTabState(new Set([currentLeftMode, currentRightMode]));
+    };
+
+    const switchArea = (mode: ViewMode): void => {
+        currentMode = mode;
+        applyAreaState(mode);
     };
 
     const updateHighlights = (content: string): void => {
@@ -317,7 +323,7 @@ export const createGUI = (): GUI => {
         });
 
         window.addEventListener('resize', () => {
-            switchArea(currentMode);
+            applyAreaState(currentMode);
             updateEditorPlaceholder();
         });
 

@@ -1,9 +1,9 @@
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
 use crate::interpreter::tensor_ops::{apply_binary_broadcast, apply_unary_flat, FlatTensor};
-use crate::types::{Value, ValueData};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::{Value, ValueData};
 
 fn value_has_any_truthy(val: &Value) -> bool {
     match &val.data {
@@ -20,67 +20,63 @@ fn value_has_any_truthy(val: &Value) -> bool {
     }
 }
 
+fn invert_fraction(f: &Fraction) -> Fraction {
+    if f.is_zero() {
+        Fraction::from(1)
+    } else {
+        Fraction::from(0)
+    }
+}
+
+fn invert_value(val: &Value) -> Result<Value> {
+    if val.is_nil() {
+        return Ok(Value::nil());
+    }
+    if let Some(f) = val.as_scalar() {
+        return Ok(Value::from_fraction(invert_fraction(f)));
+    }
+    apply_unary_flat(val, invert_fraction)
+}
+
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+                interp
+                    .stack
+                    .last()
+                    .cloned()
+                    .ok_or(AjisaiError::StackUnderflow)?
             } else {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            if val.is_nil() {
-                interp.stack.push(Value::nil());
-                return Ok(());
-            }
-
-            if val.is_scalar() {
-                if let Some(f) = val.as_scalar() {
-                    let result = if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) };
-                    interp.stack.push(Value::from_fraction(result));
-                    return Ok(());
+            let result = match invert_value(&val) {
+                Ok(v) => v,
+                Err(e) => {
+                    if !is_keep_mode {
+                        interp.stack.push(val);
+                    }
+                    return Err(e);
                 }
-            }
+            };
 
-            let result = apply_unary_flat(&val, |f| {
-                if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) }
-            })?;
             interp.stack.push(result);
             Ok(())
-        },
+        }
         OperationTargetMode::Stack => {
+            let source: Vec<Value> = interp.stack.iter().cloned().collect();
+            let mut results = Vec::with_capacity(source.len());
+            for value in &source {
+                results.push(invert_value(value)?);
+            }
+
             if is_keep_mode {
-                let original: Vec<Value> = interp.stack.iter().cloned().collect();
-                let results: Vec<Value> = original.iter().map(|v| {
-                    if v.is_nil() {
-                        Value::nil()
-                    } else if let Some(f) = v.as_scalar() {
-                        let r = if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) };
-                        Value::from_fraction(r)
-                    } else {
-                        apply_unary_flat(v, |f| {
-                            if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) }
-                        }).unwrap_or_else(|_| v.clone())
-                    }
-                }).collect();
                 interp.stack.extend(results);
             } else {
-                let elements: Vec<Value> = interp.stack.drain(..).collect();
-                for v in elements {
-                    if v.is_nil() {
-                        interp.stack.push(Value::nil());
-                    } else if let Some(f) = v.as_scalar() {
-                        let r = if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) };
-                        interp.stack.push(Value::from_fraction(r));
-                    } else {
-                        let result = apply_unary_flat(&v, |f| {
-                            if f.is_zero() { Fraction::from(1) } else { Fraction::from(0) }
-                        }).unwrap_or_else(|_| v.clone());
-                        interp.stack.push(result);
-                    }
-                }
+                interp.stack = results;
             }
             Ok(())
         }
@@ -98,7 +94,10 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
             let (a_val, b_val) = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                (interp.stack[stack_len - 2].clone(), interp.stack[stack_len - 1].clone())
+                (
+                    interp.stack[stack_len - 2].clone(),
+                    interp.stack[stack_len - 1].clone(),
+                )
             } else {
                 let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
                 let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -134,7 +133,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             })?;
             interp.stack.push(result);
             Ok(())
-        },
+        }
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -186,7 +185,10 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
             let (a_val, b_val) = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                (interp.stack[stack_len - 2].clone(), interp.stack[stack_len - 1].clone())
+                (
+                    interp.stack[stack_len - 2].clone(),
+                    interp.stack[stack_len - 1].clone(),
+                )
             } else {
                 let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
                 let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -222,7 +224,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             })?;
             interp.stack.push(result);
             Ok(())
-        },
+        }
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;

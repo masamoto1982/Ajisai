@@ -1,10 +1,10 @@
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
-use crate::interpreter::{Interpreter, ConsumptionMode};
+use crate::types::{Value, ValueData};
+use num_bigint::BigInt;
 #[allow(unused_imports)]
 use num_traits::Zero;
-use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
 #[inline]
@@ -22,18 +22,21 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
             ValueData::Nil => vec![],
-            ValueData::Scalar(f) => {
-                f.to_i64().and_then(|n| {
+            ValueData::Scalar(f) => f
+                .to_i64()
+                .and_then(|n| {
                     if n >= 0 && n <= 0x10FFFF {
                         char::from_u32(n as u32)
                     } else {
                         None
                     }
-                }).map(|c| vec![c]).unwrap_or_default()
-            }
-            ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
-                children.iter().flat_map(|c| collect_chars(c)).collect()
-            }
+                })
+                .map(|c| vec![c])
+                .unwrap_or_default(),
+            ValueData::Vector(children)
+            | ValueData::Record {
+                pairs: children, ..
+            } => children.iter().flat_map(|c| collect_chars(c)).collect(),
             ValueData::CodeBlock(_) => vec![],
         }
     }
@@ -46,30 +49,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     }
 }
 
-pub(crate) fn get_integer_from_value(value: &Value) -> Result<i64> {
-    match &value.data {
-        ValueData::Scalar(f) => {
-            if f.denominator != BigInt::one() {
-                return Err(AjisaiError::structure_error("integer", "fraction"));
-            }
-            f.numerator.to_i64().ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
-        }
-        ValueData::Nil => {
-            Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
-        }
-        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } if children.len() == 1 => {
-            get_integer_from_value(&children[0])
-        }
-        ValueData::Vector(_) | ValueData::Record { .. } => {
-            Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
-        }
-        ValueData::CodeBlock(_) => {
-            Err(AjisaiError::structure_error("single-element value with integer", "code block"))
-        }
-    }
-}
-
-pub(crate) fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
+fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
     match &value.data {
         ValueData::Scalar(f) => {
             if f.denominator != BigInt::one() {
@@ -77,19 +57,33 @@ pub(crate) fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
             }
             Ok(f.numerator.clone())
         }
-        ValueData::Nil => {
-            Err(AjisaiError::structure_error("single-element value with integer", "NIL"))
-        }
-        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } if children.len() == 1 => {
-            get_bigint_from_value(&children[0])
-        }
-        ValueData::Vector(_) | ValueData::Record { .. } => {
-            Err(AjisaiError::structure_error("single-element value with integer", "multi-element vector"))
-        }
-        ValueData::CodeBlock(_) => {
-            Err(AjisaiError::structure_error("single-element value with integer", "code block"))
-        }
+        ValueData::Nil => Err(AjisaiError::structure_error(
+            "single-element value with integer",
+            "NIL",
+        )),
+        ValueData::Vector(children)
+        | ValueData::Record {
+            pairs: children, ..
+        } if children.len() == 1 => extract_integer_bigint(&children[0]),
+        ValueData::Vector(_) | ValueData::Record { .. } => Err(AjisaiError::structure_error(
+            "single-element value with integer",
+            "multi-element vector",
+        )),
+        ValueData::CodeBlock(_) => Err(AjisaiError::structure_error(
+            "single-element value with integer",
+            "code block",
+        )),
     }
+}
+
+pub(crate) fn get_integer_from_value(value: &Value) -> Result<i64> {
+    let n = extract_integer_bigint(value)?;
+    n.to_i64()
+        .ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
+}
+
+pub(crate) fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
+    extract_integer_bigint(value)
 }
 
 pub(crate) fn get_word_name_from_value(value: &Value) -> Result<String> {
@@ -98,7 +92,8 @@ pub(crate) fn get_word_name_from_value(value: &Value) -> Result<String> {
     }
 
     let fractions = value.flatten_fractions();
-    let chars: String = fractions.iter()
+    let chars: String = fractions
+        .iter()
         .filter_map(|f| {
             f.to_i64().and_then(|n| {
                 if n >= 0 && n <= 0x10FFFF {
@@ -146,19 +141,15 @@ pub(crate) fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec
 
     match interp.consumption_mode {
         ConsumptionMode::Consume => {
-            let mut values = Vec::with_capacity(count);
-            for _ in 0..count {
-                values.push(interp.stack.pop().unwrap());
+            let values: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+            if values.len() != count {
+                return Err(AjisaiError::StackUnderflow);
             }
-            values.reverse();
             Ok(values)
         }
         ConsumptionMode::Keep => {
             let stack_len = interp.stack.len();
-            let values: Vec<Value> = interp.stack[stack_len - count..]
-                .iter()
-                .cloned()
-                .collect();
+            let values: Vec<Value> = interp.stack[stack_len - count..].iter().cloned().collect();
             Ok(values)
         }
     }
