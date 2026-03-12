@@ -4,29 +4,53 @@
 //
 // 比較演算の結果は Boolean ヒント付きの値として返す
 
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::get_integer_from_value;
-use crate::types::{Value, ValueData};
+use crate::interpreter::tensor_ops::FlatTensor;
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::{Value, ValueData};
 
 // ============================================================================
 // ヘルパー関数
 // ============================================================================
 
-/// 値からスカラー（Fraction）を抽出
-/// - Scalar: そのままFractionを返す
-/// - 単一要素Vector: 内部のスカラーを抽出
-/// - それ以外: None
-fn extract_scalar_for_comparison(val: &Value) -> Option<&Fraction> {
+fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
     match &val.data {
-        ValueData::Scalar(f) => Some(f),
-        ValueData::Vector(children) if children.len() == 1 => {
-            // 単一要素ベクタの場合、その中のスカラーを取り出す
-            extract_scalar_for_comparison(&children[0])
-        },
-        _ => None
+        ValueData::Scalar(f) => Ok(f.clone()),
+        ValueData::Vector(_) | ValueData::Record { .. } => {
+            let tensor = FlatTensor::from_value(val)?;
+            if tensor.data.len() != 1 {
+                return Err(AjisaiError::structure_error(
+                    "scalar value",
+                    "non-scalar value",
+                ));
+            }
+            Ok(tensor.data[0].clone())
+        }
+        _ => Err(AjisaiError::structure_error(
+            "scalar value",
+            "non-scalar value",
+        )),
     }
+}
+
+fn all_adjacent_pairs_match<F>(items: &[Value], op: F) -> Result<bool>
+where
+    F: Fn(&Fraction, &Fraction) -> bool,
+{
+    for pair in items.windows(2) {
+        let a_scalar = extract_scalar_for_comparison(&pair[0])?;
+        let b_scalar = extract_scalar_for_comparison(&pair[1])?;
+        if !op(&a_scalar, &b_scalar) {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn all_adjacent_data_equal(items: &[Value]) -> bool {
+    items.windows(2).all(|pair| pair[0].data == pair[1].data)
 }
 
 // ============================================================================
@@ -66,34 +90,36 @@ where
 
             // スカラーを抽出（単一要素ベクタも許容）
             let a_scalar = match extract_scalar_for_comparison(&a_val) {
-                Some(f) => f,
-                None => {
+                Ok(f) => f,
+                Err(e) => {
                     if !is_keep_mode {
                         interp.stack.push(a_val);
                         interp.stack.push(b_val);
                     }
-                    return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
+                    return Err(e);
                 }
             };
             let b_scalar = match extract_scalar_for_comparison(&b_val) {
-                Some(f) => f,
-                None => {
+                Ok(f) => f,
+                Err(e) => {
                     if !is_keep_mode {
                         interp.stack.push(a_val);
                         interp.stack.push(b_val);
                     }
-                    return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
+                    return Err(e);
                 }
             };
 
-            let result = op(a_scalar, b_scalar);
+            let result = op(&a_scalar, &b_scalar);
             if interp.gui_mode {
-                interp.stack.push(Value::from_vector(vec![Value::from_bool(result)]));
+                interp
+                    .stack
+                    .push(Value::from_vector(vec![Value::from_bool(result)]));
             } else {
                 interp.stack.push(Value::from_bool(result));
             }
             Ok(())
-        },
+        }
 
         // Stackモード: N個の要素を順に比較
         OperationTargetMode::Stack => {
@@ -103,7 +129,9 @@ where
             // カウント0, 1はエラー（"No change is an error"原則）
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::NoChange { word: op_name.into() });
+                return Err(AjisaiError::NoChange {
+                    word: op_name.into(),
+                });
             }
 
             if interp.stack.len() < count {
@@ -121,35 +149,16 @@ where
             };
 
             // 全ての隣接ペアをチェック
-            let mut all_true = true;
-            for i in 0..items.len() - 1 {
-                // スカラーを抽出（単一要素ベクタも許容）
-                let a_scalar = match extract_scalar_for_comparison(&items[i]) {
-                    Some(f) => f,
-                    None => {
-                        if !is_keep_mode {
-                            interp.stack.extend(items);
-                        }
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
+            let all_true = match all_adjacent_pairs_match(&items, op) {
+                Ok(v) => v,
+                Err(e) => {
+                    if !is_keep_mode {
+                        interp.stack.extend(items);
                     }
-                };
-                let b_scalar = match extract_scalar_for_comparison(&items[i + 1]) {
-                    Some(f) => f,
-                    None => {
-                        if !is_keep_mode {
-                            interp.stack.extend(items);
-                        }
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::structure_error("scalar value", "non-scalar value"));
-                    }
-                };
-
-                if !op(a_scalar, b_scalar) {
-                    all_true = false;
-                    break;
+                    interp.stack.push(count_val);
+                    return Err(e);
                 }
-            }
+            };
 
             interp.stack.push(Value::from_bool(all_true));
             Ok(())
@@ -197,12 +206,14 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
             // データが等しいかを比較（DisplayHintは無視）
             let result = a_val.data == b_val.data;
             if interp.gui_mode {
-                interp.stack.push(Value::from_vector(vec![Value::from_bool(result)]));
+                interp
+                    .stack
+                    .push(Value::from_vector(vec![Value::from_bool(result)]));
             } else {
                 interp.stack.push(Value::from_bool(result));
             }
             Ok(())
-        },
+        }
 
         // Stackモード: N個の要素を順に比較
         OperationTargetMode::Stack => {
@@ -227,15 +238,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            // 全ての隣接ペアをチェック（データのみ比較）
-            let mut all_equal = true;
-            for i in 0..items.len() - 1 {
-                if items[i].data != items[i + 1].data {
-                    all_equal = false;
-                    break;
-                }
-            }
-
+            let all_equal = all_adjacent_data_equal(&items);
             interp.stack.push(Value::from_bool(all_equal));
             Ok(())
         }

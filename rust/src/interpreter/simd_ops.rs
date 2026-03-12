@@ -24,12 +24,10 @@ pub fn try_extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
     let mut result = Vec::with_capacity(children.len());
     for child in children.iter() {
         match &child.data {
-            ValueData::Scalar(f) if f.denominator.is_one() => {
-                match f.numerator.to_i64() {
-                    Some(n) => result.push(n),
-                    None => return None,
-                }
-            }
+            ValueData::Scalar(f) if f.denominator.is_one() => match f.numerator.to_i64() {
+                Some(n) => result.push(n),
+                None => return None,
+            },
             _ => return None,
         }
     }
@@ -38,10 +36,24 @@ pub fn try_extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
 
 /// Build a Value vector from i64 values (all as integer fractions).
 pub fn integer_vector_to_value(values: Vec<i64>) -> Value {
-    let children: Vec<Value> = values.into_iter()
-        .map(Value::from_int)
-        .collect();
+    let children: Vec<Value> = values.into_iter().map(Value::from_int).collect();
     Value::from_children(children)
+}
+
+fn extract_integer_scalar(value: &Value) -> Option<i64> {
+    match &value.data {
+        ValueData::Scalar(f) if f.denominator.is_one() => f.numerator.to_i64(),
+        _ => None,
+    }
+}
+
+fn try_simd_binary_op(a: &Value, b: &Value, op: fn(&[i64], &[i64]) -> Vec<i64>) -> Option<Value> {
+    let va = try_extract_integer_vector(a)?;
+    let vb = try_extract_integer_vector(b)?;
+    if va.len() != vb.len() {
+        return None;
+    }
+    Some(integer_vector_to_value(op(&va, &vb)))
 }
 
 // --- WASM SIMD implementations ---
@@ -212,54 +224,36 @@ mod wasm_impl {
 /// Try to perform SIMD-accelerated addition on two values.
 /// Returns Some(result) if both are integer vectors of sufficient length, None otherwise.
 pub fn try_simd_add(a: &Value, b: &Value) -> Option<Value> {
-    let va = try_extract_integer_vector(a)?;
-    let vb = try_extract_integer_vector(b)?;
-    if va.len() != vb.len() {
-        return None;
-    }
-    Some(integer_vector_to_value(wasm_impl::simd_add(&va, &vb)))
+    try_simd_binary_op(a, b, wasm_impl::simd_add)
 }
 
 /// Try to perform SIMD-accelerated subtraction on two values.
 pub fn try_simd_sub(a: &Value, b: &Value) -> Option<Value> {
-    let va = try_extract_integer_vector(a)?;
-    let vb = try_extract_integer_vector(b)?;
-    if va.len() != vb.len() {
-        return None;
-    }
-    Some(integer_vector_to_value(wasm_impl::simd_sub(&va, &vb)))
+    try_simd_binary_op(a, b, wasm_impl::simd_sub)
 }
 
 /// Try to perform SIMD-accelerated multiplication on two values.
 pub fn try_simd_mul(a: &Value, b: &Value) -> Option<Value> {
-    let va = try_extract_integer_vector(a)?;
-    let vb = try_extract_integer_vector(b)?;
-    if va.len() != vb.len() {
-        return None;
-    }
-    Some(integer_vector_to_value(wasm_impl::simd_mul(&va, &vb)))
+    try_simd_binary_op(a, b, wasm_impl::simd_mul)
 }
 
 /// Try to perform SIMD-accelerated scalar addition (vector + scalar or scalar + vector).
 pub fn try_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
     let va = try_extract_integer_vector(vec_val)?;
-    let scalar = match &scalar_val.data {
-        ValueData::Scalar(f) if f.denominator.is_one() => f.numerator.to_i64()?,
-        _ => return None,
-    };
-    Some(integer_vector_to_value(wasm_impl::simd_scalar_add(&va, scalar)))
+    let scalar = extract_integer_scalar(scalar_val)?;
+    Some(integer_vector_to_value(wasm_impl::simd_scalar_add(
+        &va, scalar,
+    )))
 }
 
 /// Try to perform SIMD-accelerated scalar multiplication (vector * scalar or scalar * vector).
 pub fn try_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
     let va = try_extract_integer_vector(vec_val)?;
-    let scalar = match &scalar_val.data {
-        ValueData::Scalar(f) if f.denominator.is_one() => f.numerator.to_i64()?,
-        _ => return None,
-    };
-    Some(integer_vector_to_value(wasm_impl::simd_scalar_mul(&va, scalar)))
+    let scalar = extract_integer_scalar(scalar_val)?;
+    Some(integer_vector_to_value(wasm_impl::simd_scalar_mul(
+        &va, scalar,
+    )))
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -3,10 +3,12 @@
 // Higher-order functions: MAP, FILTER, FOLD, UNFOLD.
 // Supports code blocks (: ... ;) and word names.
 
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_word_name_from_value, get_integer_from_value, is_vector_value};
-use crate::types::{Value, ValueData, Token};
+use crate::interpreter::helpers::{
+    get_integer_from_value, get_word_name_from_value, is_vector_value,
+};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::{Token, Value, ValueData};
 
 enum ExecutableCode {
     WordName(String),
@@ -23,7 +25,9 @@ fn get_executable_code(val: &Value) -> Result<ExecutableCode> {
         return get_word_name_from_value(val).map(ExecutableCode::WordName);
     }
 
-    Err(AjisaiError::from("Expected code block (: ... ;) or word name"))
+    Err(AjisaiError::from(
+        "Expected code block (: ... ;) or word name",
+    ))
 }
 
 fn is_boolean_true(val: &Value) -> bool {
@@ -33,6 +37,15 @@ fn is_boolean_true(val: &Value) -> bool {
     false
 }
 
+fn execute_executable_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
+    match exec {
+        ExecutableCode::CodeBlock(tokens) => {
+            let (_, _) = interp.execute_section_core(tokens, 0)?;
+            Ok(())
+        }
+        ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
+    }
+}
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -49,17 +62,6 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         if !interp.dictionary.contains_key(word_name) {
             interp.stack.push(code_val);
             return Err(AjisaiError::UnknownWord(word_name.clone()));
-        }
-    }
-
-    fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
-        match exec {
-            ExecutableCode::CodeBlock(tokens) => {
-                // トークン列を直接実行
-                let (_, _) = interp.execute_section_core(tokens, 0)?;
-                Ok(())
-            }
-            ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
         }
     }
 
@@ -109,22 +111,20 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 let elem = target_val.get_child(i).unwrap().clone();
                 interp.stack.clear();
                 interp.stack.push(elem);
-                match execute_code(interp, &executable) {
-                    Ok(_) => {
-                        match interp.stack.pop() {
-                            Some(result_val) => {
-                                if is_vector_value(&result_val) && result_val.len() == 1 {
-                                    results.push(result_val.get_child(0).unwrap().clone());
-                                } else {
-                                    results.push(result_val);
-                                }
-                            },
-                            None => {
-                                error = Some(AjisaiError::from("MAP code must return a value"));
-                                break;
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => match interp.stack.pop() {
+                        Some(result_val) => {
+                            if is_vector_value(&result_val) && result_val.len() == 1 {
+                                results.push(result_val.get_child(0).unwrap().clone());
+                            } else {
+                                results.push(result_val);
                             }
                         }
-                    }
+                        None => {
+                            error = Some(AjisaiError::from("MAP code must return a value"));
+                            break;
+                        }
+                    },
                     Err(e) => {
                         error = Some(e);
                         break;
@@ -145,7 +145,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             }
 
             interp.stack.push(Value::from_vector(results));
-        },
+        }
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = match get_integer_from_value(&count_val) {
@@ -179,7 +179,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item.clone());
-                match execute_code(interp, &executable) {
+                match execute_executable_code(interp, &executable) {
                     Ok(_) => {
                         match interp.stack.pop() {
                             Some(result) => results.push(result),
@@ -236,17 +236,6 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
-        match exec {
-            ExecutableCode::CodeBlock(tokens) => {
-                // トークン列を直接実行
-                let (_, _) = interp.execute_section_core(tokens, 0)?;
-                Ok(())
-            }
-            ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
-        }
-    }
-
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
@@ -293,12 +282,14 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 let elem = target_val.get_child(i).unwrap().clone();
                 interp.stack.clear();
                 interp.stack.push(elem.clone());
-                match execute_code(interp, &executable) {
+                match execute_executable_code(interp, &executable) {
                     Ok(_) => {
                         let condition_result = match interp.stack.pop() {
                             Some(r) => r,
                             None => {
-                                error = Some(AjisaiError::from("FILTER code must return a boolean value"));
+                                error = Some(AjisaiError::from(
+                                    "FILTER code must return a boolean value",
+                                ));
                                 break;
                             }
                         };
@@ -307,11 +298,17 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             if condition_result.len() == 1 {
                                 is_boolean_true(condition_result.get_child(0).unwrap())
                             } else {
-                                error = Some(AjisaiError::structure_error("boolean result from FILTER code", "other format"));
+                                error = Some(AjisaiError::structure_error(
+                                    "boolean result from FILTER code",
+                                    "other format",
+                                ));
                                 break;
                             }
                         } else {
-                            error = Some(AjisaiError::structure_error("boolean vector result from FILTER code", "other format"));
+                            error = Some(AjisaiError::structure_error(
+                                "boolean vector result from FILTER code",
+                                "other format",
+                            ));
                             break;
                         };
 
@@ -343,7 +340,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             } else {
                 interp.stack.push(Value::from_vector(results));
             }
-        },
+        }
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count = match get_integer_from_value(&count_val) {
@@ -376,7 +373,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                 // スタックをクリアして単一要素を処理
                 interp.stack.clear();
                 interp.stack.push(item.clone());
-                match execute_code(interp, &executable) {
+                match execute_executable_code(interp, &executable) {
                     Ok(_) => {
                         // 条件判定結果を取得
                         let condition_result = match interp.stack.pop() {
@@ -389,7 +386,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                                 interp.stack.extend(targets);
                                 interp.stack.push(count_val);
                                 interp.stack.push(code_val);
-                                return Err(AjisaiError::from("FILTER code must return a boolean value"));
+                                return Err(AjisaiError::from(
+                                    "FILTER code must return a boolean value",
+                                ));
                             }
                         };
 
@@ -438,17 +437,6 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         if !interp.dictionary.contains_key(word_name) {
             interp.stack.push(code_val);
             return Err(AjisaiError::UnknownWord(word_name.clone()));
-        }
-    }
-
-    fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
-        match exec {
-            ExecutableCode::CodeBlock(tokens) => {
-                // トークン列を直接実行
-                let (_, _) = interp.execute_section_core(tokens, 0)?;
-                Ok(())
-            }
-            ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
         }
     }
 
@@ -507,16 +495,16 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(accumulator.clone());
                 interp.stack.push(elem);
 
-                match execute_code(interp, &executable) {
-                    Ok(_) => {
-                        match interp.stack.pop() {
-                            Some(result) => { accumulator = result; }
-                            None => {
-                                error = Some(AjisaiError::from("FOLD: code must return a value"));
-                                break;
-                            }
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => match interp.stack.pop() {
+                        Some(result) => {
+                            accumulator = result;
                         }
-                    }
+                        None => {
+                            error = Some(AjisaiError::from("FOLD: code must return a value"));
+                            break;
+                        }
+                    },
                     Err(e) => {
                         error = Some(e);
                         break;
@@ -570,9 +558,11 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(accumulator);
                 interp.stack.push(item);
 
-                match execute_code(interp, &executable) {
+                match execute_executable_code(interp, &executable) {
                     Ok(_) => {
-                        let result = interp.stack.pop()
+                        let result = interp
+                            .stack
+                            .pop()
                             .ok_or_else(|| AjisaiError::from("FOLD: code must return a value"))?;
                         accumulator = result;
                     }
@@ -614,17 +604,6 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    fn execute_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
-        match exec {
-            ExecutableCode::CodeBlock(tokens) => {
-                // トークン列を直接実行
-                let (_, _) = interp.execute_section_core(tokens, 0)?;
-                Ok(())
-            }
-            ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
-        }
-    }
-
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let init_state = interp.stack.pop().ok_or_else(|| {
@@ -654,7 +633,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(init_state);
                     interp.stack.push(code_val);
                     return Err(AjisaiError::from(
-                        "UNFOLD: maximum iterations (10000) exceeded - possible infinite loop"
+                        "UNFOLD: maximum iterations (10000) exceeded - possible infinite loop",
                     ));
                 }
                 iteration_count += 1;
@@ -663,7 +642,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.clear();
                 interp.stack.push(state.clone());
 
-                if let Err(e) = execute_code(interp, &executable) {
+                if let Err(e) = execute_executable_code(interp, &executable) {
                     // エラー時にスタックを復元
                     interp.operation_target_mode = saved_target;
                     interp.disable_no_change_check = saved_no_change_check;
@@ -674,12 +653,11 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 }
 
                 // ワードは入力と出力の両方をスタックに残すので、両方ポップする
-                let result = interp.stack.pop()
-                    .ok_or_else(|| {
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        AjisaiError::from("UNFOLD: code must return a value")
-                    })?;
+                let result = interp.stack.pop().ok_or_else(|| {
+                    interp.operation_target_mode = saved_target;
+                    interp.disable_no_change_check = saved_no_change_check;
+                    AjisaiError::from("UNFOLD: code must return a value")
+                })?;
                 let _input = interp.stack.pop(); // 入力状態を破棄
 
                 // 単一要素ベクタの場合はアンラップ
@@ -712,7 +690,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(init_state);
                 interp.stack.push(code_val);
                 return Err(AjisaiError::from(
-                    "UNFOLD: code must return [element, next_state] or NIL"
+                    "UNFOLD: code must return [element, next_state] or NIL",
                 ));
             }
 
@@ -755,7 +733,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(init_state);
                     interp.stack.push(code_val);
                     return Err(AjisaiError::from(
-                        "UNFOLD: maximum iterations (10000) exceeded - possible infinite loop"
+                        "UNFOLD: maximum iterations (10000) exceeded - possible infinite loop",
                     ));
                 }
                 iteration_count += 1;
@@ -763,10 +741,12 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.clear();
                 interp.stack.push(state.clone());
 
-                match execute_code(interp, &executable) {
+                match execute_executable_code(interp, &executable) {
                     Ok(_) => {
                         // ワードは入力と出力の両方をスタックに残すので、両方ポップする
-                        let result = interp.stack.pop()
+                        let result = interp
+                            .stack
+                            .pop()
                             .ok_or_else(|| AjisaiError::from("UNFOLD: code must return a value"))?;
                         let _input = interp.stack.pop(); // 入力状態を破棄
 
@@ -797,7 +777,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         interp.stack.push(init_state);
                         interp.stack.push(code_val);
                         return Err(AjisaiError::from(
-                            "UNFOLD: code must return [element, next_state] or NIL"
+                            "UNFOLD: code must return [element, next_state] or NIL",
                         ));
                     }
                     Err(e) => {
@@ -841,7 +821,11 @@ mod tests {
         let mut interp = Interpreter::new();
         let code = r#"NIL [ 42 ] '+' FOLD"#;
         let result = interp.execute(code).await;
-        assert!(result.is_ok(), "FOLD on NIL should return initial value: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "FOLD on NIL should return initial value: {:?}",
+            result
+        );
 
         // 結果は初期値 [42]
         assert_eq!(interp.stack.len(), 1);
@@ -862,9 +846,18 @@ mod tests {
         let map_code = "[ 1 2 1 3 1 ] 'CHECK_ONE' MAP";
         let result = interp.execute(map_code).await;
 
-        assert!(result.is_ok(), "MAP with guarded word should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "MAP with guarded word should succeed: {:?}",
+            result
+        );
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        assert_eq!(
+            interp.stack.len(),
+            1,
+            "Stack should have exactly 1 element, got {}",
+            interp.stack.len()
+        );
     }
 
     #[tokio::test]
@@ -880,9 +873,18 @@ mod tests {
         let map_code = "[ 1 2 3 ] 'DOUBLE_PLUS_ONE' MAP";
         let result = interp.execute(map_code).await;
 
-        assert!(result.is_ok(), "MAP with multiline word should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "MAP with multiline word should succeed: {:?}",
+            result
+        );
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        assert_eq!(
+            interp.stack.len(),
+            1,
+            "Stack should have exactly 1 element, got {}",
+            interp.stack.len()
+        );
     }
 
     #[tokio::test]
@@ -895,7 +897,11 @@ mod tests {
         let code = "[ 100 ] [ 1 2 3 ] 'DOUBLE' MAP";
         let result = interp.execute(code).await;
 
-        assert!(result.is_ok(), "MAP should preserve stack below: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "MAP should preserve stack below: {:?}",
+            result
+        );
 
         assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements");
     }
@@ -906,9 +912,18 @@ mod tests {
         let code = "[ 100 ] [ 1 2 3 4 ] [ 0 ] '+' FOLD";
         let result = interp.execute(code).await;
 
-        assert!(result.is_ok(), "FOLD should preserve stack below: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "FOLD should preserve stack below: {:?}",
+            result
+        );
 
-        assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements, got {}", interp.stack.len());
+        assert_eq!(
+            interp.stack.len(),
+            2,
+            "Stack should have 2 elements, got {}",
+            interp.stack.len()
+        );
     }
 
     #[tokio::test]
@@ -921,8 +936,17 @@ mod tests {
         let fold_code = "[ 1 2 3 4 ] [ 0 ] 'MYSUM' FOLD";
         let result = interp.execute(fold_code).await;
 
-        assert!(result.is_ok(), "FOLD with custom word should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "FOLD with custom word should succeed: {:?}",
+            result
+        );
 
-        assert_eq!(interp.stack.len(), 1, "Stack should have exactly 1 element, got {}", interp.stack.len());
+        assert_eq!(
+            interp.stack.len(),
+            1,
+            "Stack should have exactly 1 element, got {}",
+            interp.stack.len()
+        );
     }
 }
