@@ -2,64 +2,63 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueData};
 
-pub fn vector_to_source(val: &Value) -> Result<String> {
-    fn value_to_code(val: &Value, depth: usize) -> Result<String> {
-        match &val.data {
-            ValueData::Nil => Ok("NIL".to_string()),
+fn scalar_to_source(val: &Value) -> Result<String> {
+    if let Some(f) = val.as_scalar() {
+        if f.is_integer() {
+            return Ok(f.numerator.to_string());
+        }
+        return Ok(format!("{}/{}", f.numerator, f.denominator));
+    }
+    Err(AjisaiError::structure_error("scalar", "non-scalar value"))
+}
 
-            ValueData::Scalar(f) => {
-                // 数値として出力
-                if f.is_integer() {
-                    Ok(f.numerator.to_string())
-                } else {
-                    Ok(format!("{}/{}", f.numerator, f.denominator))
-                }
-            }
+fn token_to_source(token: &crate::types::Token) -> String {
+    use crate::types::Token;
+    match token {
+        Token::Number(n) => n.to_string(),
+        Token::String(s) => format!("'{}'", s),
+        Token::Symbol(s) => s.to_string(),
+        Token::VectorStart => "[".to_string(),
+        Token::VectorEnd => "]".to_string(),
+        Token::CodeBlockStart => ":".to_string(),
+        Token::CodeBlockEnd => ";".to_string(),
+        Token::Pipeline => "==".to_string(),
+        Token::NilCoalesce => "=>".to_string(),
+        Token::ChevronBranch => ">>".to_string(),
+        Token::ChevronDefault => ">>>".to_string(),
+        Token::SafeMode => "~".to_string(),
+        Token::LineBreak => "\n".to_string(),
+    }
+}
 
-            ValueData::CodeBlock(tokens) => {
-                // CodeBlockはソースコードとして表示
-                use crate::types::Token;
-                let token_strs: Vec<String> = tokens
-                    .iter()
-                    .map(|t| match t {
-                        Token::Number(n) => n.to_string(),
-                        Token::String(s) => format!("'{}'", s),
-                        Token::Symbol(s) => s.to_string(),
-                        Token::VectorStart => "[".to_string(),
-                        Token::VectorEnd => "]".to_string(),
-                        Token::CodeBlockStart => ":".to_string(),
-                        Token::CodeBlockEnd => ";".to_string(),
-                        Token::Pipeline => "==".to_string(),
-                        Token::NilCoalesce => "=>".to_string(),
-                        _ => String::new(),
-                    })
-                    .collect();
-                Ok(format!(": {} ;", token_strs.join(" ")))
-            }
-
-            ValueData::Vector(children)
-            | ValueData::Record {
-                pairs: children, ..
-            } => {
-                // 通常のVector: 再帰的に処理
-                // depth > 0 の場合は括弧で囲む
-                let inner: Vec<String> = children
-                    .iter()
-                    .map(|c| value_to_code(c, depth + 1))
-                    .collect::<Result<Vec<_>>>()?;
-
-                let joined = inner.join(" ");
-
-                if depth > 0 {
-                    Ok(format!("[ {} ]", joined))
-                } else {
-                    Ok(joined)
-                }
+fn value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
+    match &val.data {
+        ValueData::Nil => Ok("NIL".to_string()),
+        ValueData::Scalar(_) => scalar_to_source(val),
+        ValueData::CodeBlock(tokens) => {
+            let token_strs: Vec<String> = tokens.iter().map(token_to_source).collect();
+            Ok(format!(": {} ;", token_strs.join(" ")))
+        }
+        ValueData::Vector(children)
+        | ValueData::Record {
+            pairs: children, ..
+        } => {
+            let inner: Vec<String> = children
+                .iter()
+                .map(|c| value_to_source_inner(c, depth + 1))
+                .collect::<Result<Vec<_>>>()?;
+            let joined = inner.join(" ");
+            if depth > 0 {
+                Ok(format!("[ {} ]", joined))
+            } else {
+                Ok(joined)
             }
         }
     }
+}
 
-    value_to_code(val, 0)
+pub fn vector_to_source(val: &Value) -> Result<String> {
+    value_to_source_inner(val, 0)
 }
 
 pub fn execute_vector_as_code(interp: &mut Interpreter, val: &Value) -> Result<()> {
