@@ -2,11 +2,25 @@
 //
 // 位置指定操作（0オリジン）: GET, INSERT, REPLACE, REMOVE
 
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
+use super::reconstruct_vector_elements;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_integer_from_value, normalize_index};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::Value;
-use super::reconstruct_vector_elements;
+
+fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)> {
+    if !args_val.is_vector() || args_val.len() != 2 {
+        return Err(AjisaiError::from(format!(
+            "{} requires [index element]",
+            word
+        )));
+    }
+
+    let index = get_integer_from_value(args_val.get_child(0).unwrap())
+        .map_err(|_| AjisaiError::from(format!("{} index must be an integer", word)))?;
+    let element = args_val.get_child(1).unwrap().clone();
+    Ok((index, element))
+}
 
 /// GET - 指定位置の要素を取得する（Form型）
 ///
@@ -89,7 +103,10 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                 Some(idx) => idx,
                 None => {
                     interp.stack.push(index_val);
-                    return Err(AjisaiError::IndexOutOfBounds { index, length: stack_len });
+                    return Err(AjisaiError::IndexOutOfBounds {
+                        index,
+                        length: stack_len,
+                    });
                 }
             };
 
@@ -116,25 +133,12 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 引数から index と element を抽出
-    let (index, element) = if args_val.is_vector() {
-        if args_val.len() != 2 {
+    let (index, element) = match parse_index_element_args("INSERT", &args_val) {
+        Ok(parsed) => parsed,
+        Err(error) => {
             interp.stack.push(args_val);
-            return Err(AjisaiError::from("INSERT requires [index element]"));
+            return Err(error);
         }
-
-        let index = match get_integer_from_value(args_val.get_child(0).unwrap()) {
-            Ok(i) => i,
-            Err(_) => {
-                interp.stack.push(args_val);
-                return Err(AjisaiError::from("INSERT index must be an integer"));
-            }
-        };
-
-        let element = args_val.get_child(1).unwrap().clone();
-        (index, element)
-    } else {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::from("INSERT requires [index element]"));
     };
 
     match interp.operation_target_mode {
@@ -198,25 +202,12 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     // 引数ベクタ [index new_element] を取得
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let (index, new_element) = if args_val.is_vector() {
-        if args_val.len() != 2 {
+    let (index, new_element) = match parse_index_element_args("REPLACE", &args_val) {
+        Ok(parsed) => parsed,
+        Err(error) => {
             interp.stack.push(args_val);
-            return Err(AjisaiError::from("REPLACE requires [index element]"));
+            return Err(error);
         }
-
-        let index = match get_integer_from_value(args_val.get_child(0).unwrap()) {
-            Ok(i) => i,
-            Err(_) => {
-                interp.stack.push(args_val);
-                return Err(AjisaiError::from("REPLACE index must be an integer"));
-            }
-        };
-
-        let new_element = args_val.get_child(1).unwrap().clone();
-        (index, new_element)
-    } else {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::from("REPLACE requires [index element]"));
     };
 
     match interp.operation_target_mode {

@@ -57,6 +57,23 @@ fn is_string_like(val: &Value) -> bool {
     check_codepoints(val)
 }
 
+fn is_custom_word_defined(interp: &Interpreter, symbol: &str) -> bool {
+    let upper_symbol = symbol.to_uppercase();
+    match interp.dictionary.get(&upper_symbol) {
+        Some(def) => !def.is_builtin,
+        None => false,
+    }
+}
+
+fn has_definition_description(stack: &[Value]) -> bool {
+    if stack.len() < 3 {
+        return false;
+    }
+    let last = &stack[stack.len() - 1];
+    let second_last = &stack[stack.len() - 2];
+    is_string_like(last) && is_string_like(second_last)
+}
+
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported {
@@ -71,23 +88,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     let mut description = None;
 
-    let has_description = if interp.stack.len() >= 3 {
-        if let Some(top_val) = interp.stack.last() {
-            if is_string_like(top_val) {
-                if let Some(second_val) = interp.stack.get(interp.stack.len() - 2) {
-                    is_string_like(second_val)
-                } else {
-                    false
-                }
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    } else {
-        false
-    };
+    let has_description = has_definition_description(&interp.stack);
 
     if has_description {
         if let Some(desc_val) = interp.stack.pop() {
@@ -186,9 +187,7 @@ pub(crate) fn op_def_inner(
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = s.to_uppercase();
-                if interp.dictionary.contains_key(&upper_s)
-                    && !interp.dictionary.get(&upper_s).unwrap().is_builtin
-                {
+                if is_custom_word_defined(interp, s) {
                     new_dependencies.insert(upper_s);
                 }
             }

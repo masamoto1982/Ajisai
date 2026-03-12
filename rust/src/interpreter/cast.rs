@@ -7,11 +7,11 @@
 // DisplayHint は表示目的のみに使用し、演算には使用しない。
 // 「型変換」は実質的に DisplayHint の変更と、表示形式の変換である。
 
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{wrap_number, value_as_string};
-use crate::types::{Value, ValueData};
+use crate::interpreter::helpers::{value_as_string, wrap_number};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::{Value, ValueData};
 
 // TODO: Type checks will consult SemanticRegistry for DisplayHint.
 // For now, use structural checks on ValueData only.
@@ -23,12 +23,16 @@ fn is_string_value(val: &Value) -> bool {
     // is considered a string. Vectors with non-printable/control chars or
     // non-scalar elements are treated as arrays.
     if let ValueData::Vector(v) = &val.data {
-        !v.is_empty() && v.iter().all(|child| {
-            if let ValueData::Scalar(f) = &child.data {
-                if let Some(n) = f.to_i64() {
-                    if n >= 0 && n <= 0x10FFFF {
-                        if let Some(c) = char::from_u32(n as u32) {
-                            !c.is_control() || c == '\n' || c == '\r' || c == '\t'
+        !v.is_empty()
+            && v.iter().all(|child| {
+                if let ValueData::Scalar(f) = &child.data {
+                    if let Some(n) = f.to_i64() {
+                        if n >= 0 && n <= 0x10FFFF {
+                            if let Some(c) = char::from_u32(n as u32) {
+                                !c.is_control() || c == '\n' || c == '\r' || c == '\t'
+                            } else {
+                                false
+                            }
                         } else {
                             false
                         }
@@ -38,10 +42,7 @@ fn is_string_value(val: &Value) -> bool {
                 } else {
                     false
                 }
-            } else {
-                false
-            }
-        })
+            })
     } else {
         false
     }
@@ -108,27 +109,31 @@ fn str_convert_single(val: &Value) -> Result<Value> {
     Ok(Value::from_string(&string_repr))
 }
 
-pub fn op_str(interp: &mut Interpreter) -> Result<()> {
+fn apply_cast_unary(interp: &mut Interpreter, convert: fn(&Value) -> Result<Value>) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+            let value = if is_keep_mode {
+                interp
+                    .stack
+                    .last()
+                    .cloned()
+                    .ok_or(AjisaiError::StackUnderflow)?
             } else {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            match str_convert_single(&val) {
+            match convert(&value) {
                 Ok(result) => {
                     interp.stack.push(result);
                     Ok(())
                 }
-                Err(e) => {
+                Err(error) => {
                     if !is_keep_mode {
-                        interp.stack.push(val);
+                        interp.stack.push(value);
                     }
-                    Err(e)
+                    Err(error)
                 }
             }
         }
@@ -138,33 +143,36 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
             }
 
             if is_keep_mode {
-                // Keep mode: preserve originals, push converted results
-                let originals: Vec<Value> = interp.stack.iter().cloned().collect();
-                let mut results = Vec::with_capacity(originals.len());
-                for val in &originals {
-                    match str_convert_single(val) {
-                        Ok(result) => results.push(result),
-                        Err(e) => return Err(e),
-                    }
+                let originals: Vec<Value> = interp.stack.to_vec();
+                let mut converted = Vec::with_capacity(originals.len());
+                for value in &originals {
+                    converted.push(convert(value)?);
                 }
-                interp.stack.extend(results);
+                interp.stack.extend(converted);
+                Ok(())
             } else {
-                // Consume mode: replace each element
-                let elements: Vec<Value> = interp.stack.drain(..).collect();
-                for val in &elements {
-                    match str_convert_single(val) {
-                        Ok(result) => interp.stack.push(result),
-                        Err(e) => {
-                            // Restore remaining elements on error
-                            interp.stack.extend(elements);
-                            return Err(e);
+                let originals: Vec<Value> = interp.stack.drain(..).collect();
+                let mut converted = Vec::with_capacity(originals.len());
+
+                for value in &originals {
+                    match convert(value) {
+                        Ok(result) => converted.push(result),
+                        Err(error) => {
+                            interp.stack = originals;
+                            return Err(error);
                         }
                     }
                 }
+
+                interp.stack = converted;
+                Ok(())
             }
-            Ok(())
         }
     }
+}
+
+pub fn op_str(interp: &mut Interpreter) -> Result<()> {
+    apply_cast_unary(interp, str_convert_single)
 }
 
 /// 分数を文字列に変換するヘルパー
@@ -209,7 +217,9 @@ fn num_convert_single(val: &Value) -> Result<Value> {
         return Err(AjisaiError::NoChange { word: "NUM".into() });
     }
     if is_boolean_value(val) {
-        return Err(AjisaiError::from("NUM: cannot parse Boolean (expected String)"));
+        return Err(AjisaiError::from(
+            "NUM: cannot parse Boolean (expected String)",
+        ));
     }
     if val.is_nil() {
         return Err(AjisaiError::from("NUM: cannot parse Nil (expected String)"));
@@ -218,59 +228,7 @@ fn num_convert_single(val: &Value) -> Result<Value> {
 }
 
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-            } else {
-                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-            };
-
-            match num_convert_single(&val) {
-                Ok(result) => {
-                    interp.stack.push(result);
-                    Ok(())
-                }
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.push(val);
-                    }
-                    Err(e)
-                }
-            }
-        }
-        OperationTargetMode::Stack => {
-            if interp.stack.is_empty() {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            if is_keep_mode {
-                let originals: Vec<Value> = interp.stack.iter().cloned().collect();
-                let mut results = Vec::with_capacity(originals.len());
-                for val in &originals {
-                    match num_convert_single(val) {
-                        Ok(result) => results.push(result),
-                        Err(e) => return Err(e),
-                    }
-                }
-                interp.stack.extend(results);
-            } else {
-                let elements: Vec<Value> = interp.stack.drain(..).collect();
-                for val in &elements {
-                    match num_convert_single(val) {
-                        Ok(result) => interp.stack.push(result),
-                        Err(e) => {
-                            interp.stack.extend(elements);
-                            return Err(e);
-                        }
-                    }
-                }
-            }
-            Ok(())
-        }
-    }
+    apply_cast_unary(interp, num_convert_single)
 }
 
 /// BOOL - 文字列または数値を真偽値に正規化（Parse/Normalize Boolean）
@@ -298,7 +256,9 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 /// BOOL の単一値変換（内部ヘルパー）
 fn bool_convert_single(val: &Value) -> Result<Value> {
     if is_boolean_value(val) {
-        return Err(AjisaiError::NoChange { word: "BOOL".into() });
+        return Err(AjisaiError::NoChange {
+            word: "BOOL".into(),
+        });
     }
     if is_string_value(val) {
         let s = value_as_string(val).unwrap_or_default();
@@ -317,65 +277,15 @@ fn bool_convert_single(val: &Value) -> Result<Value> {
         }
     }
     if val.is_nil() {
-        return Err(AjisaiError::from("BOOL: cannot convert Nil (expected String or Number)"));
+        return Err(AjisaiError::from(
+            "BOOL: cannot convert Nil (expected String or Number)",
+        ));
     }
     Err(AjisaiError::from("BOOL: expected String or Number input"))
 }
 
 pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-            } else {
-                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-            };
-
-            match bool_convert_single(&val) {
-                Ok(result) => {
-                    interp.stack.push(result);
-                    Ok(())
-                }
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.push(val);
-                    }
-                    Err(e)
-                }
-            }
-        }
-        OperationTargetMode::Stack => {
-            if interp.stack.is_empty() {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            if is_keep_mode {
-                let originals: Vec<Value> = interp.stack.iter().cloned().collect();
-                let mut results = Vec::with_capacity(originals.len());
-                for val in &originals {
-                    match bool_convert_single(val) {
-                        Ok(result) => results.push(result),
-                        Err(e) => return Err(e),
-                    }
-                }
-                interp.stack.extend(results);
-            } else {
-                let elements: Vec<Value> = interp.stack.drain(..).collect();
-                for val in &elements {
-                    match bool_convert_single(val) {
-                        Ok(result) => interp.stack.push(result),
-                        Err(e) => {
-                            interp.stack.extend(elements);
-                            return Err(e);
-                        }
-                    }
-                }
-            }
-            Ok(())
-        }
-    }
+    apply_cast_unary(interp, bool_convert_single)
 }
 
 /// NIL - 文字列をNilに変換
@@ -393,7 +303,10 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 /// - Nil型（同型変換）
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "NIL".into(), mode: "Stack".into() });
+        return Err(AjisaiError::ModeUnsupported {
+            word: "NIL".into(),
+            mode: "Stack".into(),
+        });
     }
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -421,13 +334,17 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     // 真偽値の場合
     if is_boolean_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NIL: cannot convert boolean format to nil"));
+        return Err(AjisaiError::from(
+            "NIL: cannot convert boolean format to nil",
+        ));
     }
 
     // 数値の場合
     if is_number_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from("NIL: cannot convert number format to nil"));
+        return Err(AjisaiError::from(
+            "NIL: cannot convert number format to nil",
+        ));
     }
 
     // その他はエラー
@@ -464,7 +381,8 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                     return Err(AjisaiError::from("CHARS: empty string has no characters"));
                 }
 
-                let chars: Vec<Value> = s.chars()
+                let chars: Vec<Value> = s
+                    .chars()
                     .map(|c| Value::from_string(&c.to_string()))
                     .collect();
 
@@ -475,13 +393,17 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
             // 数値の場合
             if is_number_value(&val) {
                 interp.stack.push(val);
-                return Err(AjisaiError::from("CHARS: cannot convert Number to characters"));
+                return Err(AjisaiError::from(
+                    "CHARS: cannot convert Number to characters",
+                ));
             }
 
             // 真偽値の場合
             if is_boolean_value(&val) {
                 interp.stack.push(val);
-                return Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"));
+                return Err(AjisaiError::from(
+                    "CHARS: cannot convert Boolean to characters",
+                ));
             }
 
             // その他はエラー
@@ -514,7 +436,8 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                         interp.stack.push(elem);
                         return Err(AjisaiError::from("CHARS: empty string has no characters"));
                     }
-                    let chars: Vec<Value> = s.chars()
+                    let chars: Vec<Value> = s
+                        .chars()
                         .map(|c| Value::from_string(&c.to_string()))
                         .collect();
                     results.push(Value::from_vector(chars));
@@ -525,14 +448,18 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                 if is_number_value(&elem) {
                     interp.stack = results;
                     interp.stack.push(elem);
-                    return Err(AjisaiError::from("CHARS: cannot convert Number to characters"));
+                    return Err(AjisaiError::from(
+                        "CHARS: cannot convert Number to characters",
+                    ));
                 }
 
                 // 真偽値の場合
                 if is_boolean_value(&elem) {
                     interp.stack = results;
                     interp.stack.push(elem);
-                    return Err(AjisaiError::from("CHARS: cannot convert Boolean to characters"));
+                    return Err(AjisaiError::from(
+                        "CHARS: cannot convert Boolean to characters",
+                    ));
                 }
 
                 // その他はエラー
@@ -572,7 +499,9 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             if let ValueData::Vector(children) = &val.data {
                 if children.is_empty() {
                     interp.stack.push(val);
-                    return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
+                    return Err(AjisaiError::from(
+                        "JOIN: empty vector has no strings to join",
+                    ));
                 }
 
                 let mut result = String::new();
@@ -599,7 +528,8 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         }
                         interp.stack.push(val);
                         return Err(AjisaiError::from(format!(
-                            "JOIN: invalid character code at index {}", i
+                            "JOIN: invalid character code at index {}",
+                            i
                         )));
                     }
 
@@ -635,7 +565,10 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 "other format"
             };
             interp.stack.push(val);
-            Err(AjisaiError::from(format!("JOIN: requires vector format, got {}", type_name)))
+            Err(AjisaiError::from(format!(
+                "JOIN: requires vector format, got {}",
+                type_name
+            )))
         }
         OperationTargetMode::Stack => {
             // スタック上の各ベクタに対してJOINを適用
@@ -660,7 +593,9 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     if children.is_empty() {
                         interp.stack = results;
                         interp.stack.push(elem);
-                        return Err(AjisaiError::from("JOIN: empty vector has no strings to join"));
+                        return Err(AjisaiError::from(
+                            "JOIN: empty vector has no strings to join",
+                        ));
                     }
 
                     let mut result_str = String::new();
@@ -688,7 +623,8 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                             interp.stack = results;
                             interp.stack.push(elem);
                             return Err(AjisaiError::from(format!(
-                                "JOIN: invalid character code at index {}", i
+                                "JOIN: invalid character code at index {}",
+                                i
                             )));
                         }
 
@@ -726,7 +662,10 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 };
                 interp.stack = results;
                 interp.stack.push(elem);
-                return Err(AjisaiError::from(format!("JOIN: requires vector format, got {}", type_name)));
+                return Err(AjisaiError::from(format!(
+                    "JOIN: requires vector format, got {}",
+                    type_name
+                )));
             }
 
             interp.stack = results;
@@ -786,59 +725,7 @@ fn chr_convert_single(val: &Value) -> Result<Value> {
 }
 
 pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-            } else {
-                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-            };
-
-            match chr_convert_single(&val) {
-                Ok(result) => {
-                    interp.stack.push(result);
-                    Ok(())
-                }
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.push(val);
-                    }
-                    Err(e)
-                }
-            }
-        }
-        OperationTargetMode::Stack => {
-            if interp.stack.is_empty() {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            if is_keep_mode {
-                let originals: Vec<Value> = interp.stack.iter().cloned().collect();
-                let mut results = Vec::with_capacity(originals.len());
-                for val in &originals {
-                    match chr_convert_single(val) {
-                        Ok(result) => results.push(result),
-                        Err(e) => return Err(e),
-                    }
-                }
-                interp.stack.extend(results);
-            } else {
-                let elements: Vec<Value> = interp.stack.drain(..).collect();
-                for val in &elements {
-                    match chr_convert_single(val) {
-                        Ok(result) => interp.stack.push(result),
-                        Err(e) => {
-                            interp.stack.extend(elements);
-                            return Err(e);
-                        }
-                    }
-                }
-            }
-            Ok(())
-        }
-    }
+    apply_cast_unary(interp, chr_convert_single)
 }
 
 /// 値を文字列表現に変換する（内部ヘルパー）
@@ -849,7 +736,11 @@ fn value_to_string_repr(value: &Value) -> String {
 
     if is_boolean_value(value) {
         if let Some(f) = value.as_scalar() {
-            return if !f.is_zero() { "TRUE".to_string() } else { "FALSE".to_string() };
+            return if !f.is_zero() {
+                "TRUE".to_string()
+            } else {
+                "FALSE".to_string()
+            };
         }
     }
 
@@ -874,9 +765,10 @@ fn value_to_string_repr(value: &Value) -> String {
         match &val.data {
             ValueData::Nil => vec!["NIL".to_string()],
             ValueData::Scalar(f) => vec![fraction_to_string(f)],
-            ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
-                children.iter().flat_map(|c| collect_fractions(c)).collect()
-            }
+            ValueData::Vector(children)
+            | ValueData::Record {
+                pairs: children, ..
+            } => children.iter().flat_map(|c| collect_fractions(c)).collect(),
             ValueData::CodeBlock(_) => vec!["<code>".to_string()],
         }
     }
@@ -910,9 +802,9 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Number → String
-        interp.stack.push(wrap_number(
-            Fraction::new(BigInt::from(42), BigInt::one())
-        ));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(42), BigInt::one())));
         op_str(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
@@ -961,7 +853,9 @@ mod tests {
 
         // 既に数値 → エラー (変化なしはエラー原則)
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(123), BigInt::one())));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(123), BigInt::one())));
         let result = op_num(&mut interp);
         assert!(result.is_err());
 
@@ -1026,7 +920,9 @@ mod tests {
 
         // Number 100 → Boolean TRUE (Truthiness: 0以外はTRUE)
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(100), BigInt::one())));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(100), BigInt::one())));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(val.is_scalar());
@@ -1037,7 +933,9 @@ mod tests {
 
         // Number 0 → Boolean FALSE
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(0), BigInt::one())));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(0), BigInt::one())));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(val.is_scalar());
@@ -1048,7 +946,9 @@ mod tests {
 
         // 分数 1/2 → Boolean TRUE (0以外はTRUE)
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(2))));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(2))));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(val.is_scalar());
@@ -1092,7 +992,10 @@ mod tests {
     #[tokio::test]
     async fn test_join_basic() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 'h' 'e' 'l' 'l' 'o' ] JOIN").await.unwrap();
+        interp
+            .execute("[ 'h' 'e' 'l' 'l' 'o' ] JOIN")
+            .await
+            .unwrap();
         assert_eq!(interp.stack.len(), 1);
 
         if let Some(val) = interp.stack.last() {
@@ -1170,7 +1073,9 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // 65 → 'A'
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(65), BigInt::one())));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(65), BigInt::one())));
         op_chr(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -1180,7 +1085,9 @@ mod tests {
 
         // 97 → 'a'
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(97), BigInt::one())));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(97), BigInt::one())));
         op_chr(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -1190,7 +1097,9 @@ mod tests {
 
         // 10 → 改行
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(10), BigInt::one())));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(10), BigInt::one())));
         op_chr(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -1200,7 +1109,9 @@ mod tests {
 
         // 48 → '0'
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(48), BigInt::one())));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(48), BigInt::one())));
         op_chr(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -1224,19 +1135,26 @@ mod tests {
 
         // 分数 → エラー (整数のみ)
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(2))));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(2))));
         let result = op_chr(&mut interp);
         assert!(result.is_err());
 
         // 負の数 → エラー
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(-1), BigInt::one())));
+        interp
+            .stack
+            .push(wrap_number(Fraction::new(BigInt::from(-1), BigInt::one())));
         let result = op_chr(&mut interp);
         assert!(result.is_err());
 
         // 範囲外 (0x110000) → エラー
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(BigInt::from(0x110000), BigInt::one())));
+        interp.stack.push(wrap_number(Fraction::new(
+            BigInt::from(0x110000),
+            BigInt::one(),
+        )));
         let result = op_chr(&mut interp);
         assert!(result.is_err());
     }

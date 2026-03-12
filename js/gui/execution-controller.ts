@@ -27,6 +27,11 @@ export interface ExecutionController {
     readonly abortExecution: () => void;
 }
 
+interface ExecutionSnapshot {
+    readonly stack: ReturnType<AjisaiInterpreter['get_stack']>;
+    readonly customWords: CustomWord[];
+}
+
 const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     const customWordsInfo = interpreter.get_custom_words_info();
     return customWordsInfo.map(wordData => ({
@@ -56,6 +61,24 @@ const isResetCommand = (code: string): boolean =>
 
 const isAbortError = (error: Error): boolean =>
     error.message.includes('aborted');
+
+const createExecutionSnapshot = (interpreter: AjisaiInterpreter): ExecutionSnapshot => ({
+    stack: interpreter.get_stack(),
+    customWords: getCustomWords(interpreter)
+});
+
+const handleExecutionException = (
+    error: unknown,
+    showInfo: (text: string, append: boolean) => void,
+    showError: (error: Error | string) => void
+): void => {
+    console.error('[ExecController] Code execution failed:', error);
+    if (error instanceof Error && isAbortError(error)) {
+        showInfo('Execution aborted', true);
+        return;
+    }
+    showError(error as Error);
+};
 
 export const createExecutionController = (
     interpreter: AjisaiInterpreter,
@@ -117,11 +140,7 @@ export const createExecutionController = (
             updateView('output');
             showInfo('Executing...', false);
 
-            const currentState = {
-                stack: interpreter.get_stack(),
-                customWords: getCustomWords(interpreter),
-            };
-
+            const currentState = createExecutionSnapshot(interpreter);
             const result = await WORKER_MANAGER.execute(code, currentState);
 
             try {
@@ -134,12 +153,7 @@ export const createExecutionController = (
             handleResult(result, code);
 
         } catch (error) {
-            console.error('[ExecController] Code execution failed:', error);
-            if (error instanceof Error && isAbortError(error)) {
-                showInfo('Execution aborted', true);
-            } else {
-                showError(error as Error);
-            }
+            handleExecutionException(error, showInfo, showError);
         }
 
         updateDisplays();
@@ -190,5 +204,7 @@ export const executionControllerUtils = {
     getCustomWords,
     syncInterpreterState,
     isResetCommand,
-    isAbortError
+    isAbortError,
+    createExecutionSnapshot,
+    handleExecutionException
 };

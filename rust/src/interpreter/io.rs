@@ -4,8 +4,21 @@
 // 入出力操作（PRINT）を実装する。
 // スタックの値を出力バッファに書き込む機能を提供する。
 
-use crate::interpreter::Interpreter;
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::types::Value;
+use std::fmt::Write;
+
+fn read_print_value(interp: &mut Interpreter, keep_mode: bool) -> Result<Value> {
+    if keep_mode {
+        return interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow);
+    }
+    interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
+}
 
 /// PRINT - スタックトップの値を出力する
 ///
@@ -26,13 +39,9 @@ use crate::error::{AjisaiError, Result};
 /// 【エラー】
 /// - スタックが空の場合
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
-
-    let val = if is_keep_mode {
-        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
-    interp.output_buffer.push_str(&format!("{} ", val));
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    let val = read_print_value(interp, is_keep_mode)?;
+    write!(&mut interp.output_buffer, "{} ", val)
+        .map_err(|e| AjisaiError::from(format!("PRINT failed: {}", e)))?;
     Ok(())
 }

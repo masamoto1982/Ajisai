@@ -7,10 +7,10 @@
 // TIMES、WAIT などの制御フロー操作を実装する。
 // カスタムワードの繰り返し実行や遅延実行をサポートする。
 
-use crate::interpreter::Interpreter;
-use crate::interpreter::OperationTargetMode;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{get_integer_from_value, is_string_value, value_as_string};
+use crate::interpreter::Interpreter;
+use crate::interpreter::OperationTargetMode;
 use crate::types::Value;
 
 /// TIMES - コードブロックまたはワード名をN回繰り返し実行する
@@ -36,67 +36,61 @@ use crate::types::Value;
 pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::from(
-            "TIMES requires code and count. Usage: : code ; [ n ] TIMES"
+            "TIMES requires code and count. Usage: : code ; [ n ] TIMES",
         ));
     }
 
-    let count_val = interp.stack.pop().unwrap();
-    let code_val = interp.stack.pop().unwrap();
+    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let count = get_integer_from_value(&count_val)?;
 
-    // TIMES内のループでは「変化なしエラー」チェックを無効化
     let saved_no_change_check = interp.disable_no_change_check;
     interp.disable_no_change_check = true;
 
-    // コードブロックまたは文字列（ワード名）を取得
-    let result = if let Some(tokens) = code_val.as_code_block() {
-        // コードブロックの場合
+    let execution_result: Result<()> = if let Some(tokens) = code_val.as_code_block() {
         let tokens = tokens.clone();
-        (|| {
+        (|| -> Result<()> {
             for _ in 0..count {
                 let (_, _) = interp.execute_section_core(&tokens, 0)?;
             }
             Ok(())
         })()
     } else if is_string_value(&code_val) {
-        // 文字列の場合はワード名として扱う
-        let word_name = value_as_string(&code_val)
-            .ok_or_else(|| AjisaiError::structure_error("code block (: ... ;) or word name", "other format"))?;
+        let word_name = value_as_string(&code_val).ok_or_else(|| {
+            AjisaiError::structure_error("code block (: ... ;) or word name", "other format")
+        })?;
         let upper_word_name = word_name.to_uppercase();
 
-        // ワード名として辞書を検索
-        if let Some(def) = interp.dictionary.get(&upper_word_name) {
-            if def.is_builtin {
-                interp.disable_no_change_check = saved_no_change_check;
-                return Err(AjisaiError::from("TIMES can only be used with custom words, not builtin words"));
-            }
-
-            // カスタムワードを繰り返し実行
-            (|| {
-                for _ in 0..count {
-                    interp.execute_word_core(&upper_word_name)?;
-                }
-                Ok(())
-            })()
-        } else {
-            // 辞書にない場合はエラー
+        let Some(def) = interp.dictionary.get(&upper_word_name) else {
             interp.disable_no_change_check = saved_no_change_check;
             return Err(AjisaiError::UnknownWord(upper_word_name));
+        };
+
+        if def.is_builtin {
+            interp.disable_no_change_check = saved_no_change_check;
+            return Err(AjisaiError::from(
+                "TIMES can only be used with custom words, not builtin words",
+            ));
         }
+
+        (|| -> Result<()> {
+            for _ in 0..count {
+                interp.execute_word_core(&upper_word_name)?;
+            }
+            Ok(())
+        })()
     } else {
         interp.disable_no_change_check = saved_no_change_check;
         interp.stack.push(code_val);
         interp.stack.push(count_val);
         return Err(AjisaiError::from(
-            "TIMES requires a code block (: ... ;) or word name. Usage: : code ; [ n ] TIMES"
+            "TIMES requires a code block (: ... ;) or word name. Usage: : code ; [ n ] TIMES",
         ));
     };
 
-    // フラグを復元
     interp.disable_no_change_check = saved_no_change_check;
-
-    result
+    execution_result
 }
 
 /// EXEC - ベクタ（またはスタック）をコードとして実行する
@@ -118,9 +112,7 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
 pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
     // 実行対象のValueを取得
     let target_vector = match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-        },
+        OperationTargetMode::StackTop => interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?,
         OperationTargetMode::Stack => {
             // スタック全体を取り出して一つのVectorにする
             let all_elements: Vec<Value> = interp.stack.drain(..).collect();
@@ -160,12 +152,14 @@ pub(crate) fn op_eval(interp: &mut Interpreter) -> Result<()> {
             // ヘルパー関数を用いてValue -> String変換
             value_as_string(&val)
                 .ok_or_else(|| AjisaiError::from("EVAL requires a string value"))?
-        },
+        }
         OperationTargetMode::Stack => {
             // スタック全体を文字コード列として結合
             let all_elements: Vec<Value> = interp.stack.drain(..).collect();
             if all_elements.is_empty() {
-                return Err(AjisaiError::from("EVAL requires at least one character on stack"));
+                return Err(AjisaiError::from(
+                    "EVAL requires at least one character on stack",
+                ));
             }
             // Vector化してから文字列変換
             let temp_vec = Value::from_vector(all_elements);
@@ -286,7 +280,11 @@ mod tests {
         // Start with 0, call 2 times -> 0 +2 +2 = 4
         let result = interp.execute("[ 0 ] 'ADD_TWO' [ 2 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with multiline word should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "TIMES with multiline word should succeed: {:?}",
+            result
+        );
 
         // Check the value is [ 4 ] (Vector containing scalar 4)
         if let Some(val) = interp.stack.last() {
@@ -314,7 +312,11 @@ mod tests {
         // Start with 5, add 10 three times: 5 -> 15 -> 25 -> 35
         let result = interp.execute("[ 5 ] 'ADD10' [ 3 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with ADD10 should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "TIMES with ADD10 should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         // Check the value is [ 35 ] (Vector containing scalar 35)
@@ -340,12 +342,20 @@ mod tests {
         // [ 0 ] : [ 1 ] + ; [ 5 ] TIMES -> [ 5 ]
         let result = interp.execute("[ 0 ] : [ 1 ] + ; [ 5 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with code block should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "TIMES with code block should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
             let debug_str = format!("{:?}", val);
-            assert!(debug_str.contains("5"), "Result should be 5, got: {}", debug_str);
+            assert!(
+                debug_str.contains("5"),
+                "Result should be 5, got: {}",
+                debug_str
+            );
         }
     }
 
@@ -357,12 +367,20 @@ mod tests {
         // [ 1 ] : [ 2 ] * ; [ 4 ] TIMES -> [ 16 ] (1 * 2 * 2 * 2 * 2 = 16)
         let result = interp.execute("[ 1 ] : [ 2 ] * ; [ 4 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with code block multiplication should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "TIMES with code block multiplication should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
             let debug_str = format!("{:?}", val);
-            assert!(debug_str.contains("16"), "Result should be 16, got: {}", debug_str);
+            assert!(
+                debug_str.contains("16"),
+                "Result should be 16, got: {}",
+                debug_str
+            );
         }
     }
 
@@ -404,8 +422,15 @@ mod tests {
         let result = interp.execute("[ 0 ] : [ 1 ] + ;").await;
 
         assert!(result.is_ok(), "Code block should parse successfully");
-        assert_eq!(interp.stack.len(), 2, "Should have 2 items on stack: [0] and code block");
-        assert!(interp.stack[1].as_code_block().is_some(), "Second item should be a code block");
+        assert_eq!(
+            interp.stack.len(),
+            2,
+            "Should have 2 items on stack: [0] and code block"
+        );
+        assert!(
+            interp.stack[1].as_code_block().is_some(),
+            "Second item should be a code block"
+        );
     }
 
     #[tokio::test]
@@ -416,7 +441,11 @@ mod tests {
         // : [ 1 ] + ; means: push 1, then add
         let result = interp.execute("[ 0 ] : [ 1 ] + ; [ 5 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with code block should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "TIMES with code block should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1);
 
         // Check the value is [ 5 ] (Vector containing scalar 5)
@@ -442,7 +471,11 @@ mod tests {
         // [ 1 ] : [ 2 ] * ; [ 4 ] TIMES -> [ 16 ] (1 * 2 * 2 * 2 * 2 = 16)
         let result = interp.execute("[ 1 ] : [ 2 ] * ; [ 4 ] TIMES").await;
 
-        assert!(result.is_ok(), "TIMES with code block multiplication should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "TIMES with code block multiplication should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1);
 
         // Check the value is [ 16 ] (Vector containing scalar 16)
@@ -493,7 +526,11 @@ mod tests {
         // '[ 2 ] [ 3 ] *' EVAL → [ 6 ]
         let result = interp.execute("'[ 2 ] [ 3 ] *' EVAL").await;
 
-        assert!(result.is_ok(), "EXEC with vectors should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "EXEC with vectors should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
@@ -544,7 +581,11 @@ mod tests {
         // '[ 2 ] [ 3 ] *' EVAL → [ 6 ]
         let result = interp.execute("'[ 2 ] [ 3 ] *' EVAL").await;
 
-        assert!(result.is_ok(), "EVAL multiplication should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "EVAL multiplication should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
@@ -590,7 +631,11 @@ mod tests {
         // '[ 2 ] [ 3 ] *' EVAL → [ 6 ]
         let result = interp.execute("'[ 2 ] [ 3 ] *' EVAL").await;
 
-        assert!(result.is_ok(), "EVAL with vectors should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "EVAL with vectors should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
@@ -613,9 +658,15 @@ mod tests {
 
         // ASCII: 49='1', 32=' ', 50='2', 32=' ', 43='+'
         // "1 2 +" → Scalar(3)
-        let result = interp.execute("[ 49 ] [ 32 ] [ 50 ] [ 32 ] [ 43 ] .. EVAL").await;
+        let result = interp
+            .execute("[ 49 ] [ 32 ] [ 50 ] [ 32 ] [ 43 ] .. EVAL")
+            .await;
 
-        assert!(result.is_ok(), "EVAL in Stack mode should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "EVAL in Stack mode should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
@@ -635,7 +686,11 @@ mod tests {
         // "[5]" → [ 5 ]
         let result = interp.execute("[ 91 ] [ 53 ] [ 93 ] .. EVAL").await;
 
-        assert!(result.is_ok(), "EVAL in Stack mode with brackets should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "EVAL in Stack mode with brackets should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
@@ -664,7 +719,11 @@ mod tests {
         // '[ 3 ] DOUBLE' EVAL → [ 6 ]
         let result = interp.execute("'[ 3 ] DOUBLE' EVAL").await;
 
-        assert!(result.is_ok(), "EXEC with custom word should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "EXEC with custom word should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
@@ -691,7 +750,11 @@ mod tests {
         // '[ 3 ] DOUBLE' EVAL → [ 6 ]
         let result = interp.execute("'[ 3 ] DOUBLE' EVAL").await;
 
-        assert!(result.is_ok(), "EVAL with custom word should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "EVAL with custom word should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
 
         if let Some(val) = interp.stack.last() {
