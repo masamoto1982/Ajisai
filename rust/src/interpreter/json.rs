@@ -1,44 +1,57 @@
+use crate::error::{AjisaiError, Result};
+use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::types::json::{from_json, to_json};
+use crate::types::{Value, ValueData};
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::interpreter::{Interpreter, ConsumptionMode};
-use crate::types::{Value, ValueData};
-use crate::types::json::{from_json, to_json};
-use crate::error::{AjisaiError, Result};
+
+fn read_stack_value(interp: &mut Interpreter, keep_mode: bool, from_top: usize) -> Result<Value> {
+    if keep_mode {
+        if interp.stack.len() <= from_top {
+            return Err(AjisaiError::StackUnderflow);
+        }
+        Ok(interp.stack[interp.stack.len() - 1 - from_top].clone())
+    } else {
+        if from_top != 0 {
+            return Err(AjisaiError::from("Internal error: invalid consume access"));
+        }
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
+    }
+}
 
 pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let val = if is_keep {
-        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let val = read_stack_value(interp, is_keep, 0)?;
 
     let json_str = value_to_string_content(&val);
 
     match serde_json::from_str::<serde_json::Value>(&json_str) {
-        Ok(json_val) => {
-            match from_json(json_val, 1) {
-                Ok(parsed) => {
-                    interp.stack.push(parsed);
-                    Ok(())
-                }
-                Err(AjisaiError::DimensionLimitExceeded { depth }) => {
-                    interp.output_buffer.push_str(
-                        &format!("PARSE error: ネスト上限（10次元）を超過しました (depth {})\n", depth)
-                    );
-                    interp.stack.push(Value::nil());
-                    Ok(())
-                }
-                Err(e) => {
-                    interp.output_buffer.push_str(&format!("PARSE error: {}\n", e));
-                    interp.stack.push(Value::nil());
-                    Ok(())
-                }
+        Ok(json_val) => match from_json(json_val, 1) {
+            Ok(parsed) => {
+                interp.stack.push(parsed);
+                Ok(())
             }
-        }
+            Err(AjisaiError::DimensionLimitExceeded { depth }) => {
+                interp.output_buffer.push_str(&format!(
+                    "PARSE error: ネスト上限（10次元）を超過しました (depth {})\n",
+                    depth
+                ));
+                interp.stack.push(Value::nil());
+                Ok(())
+            }
+            Err(e) => {
+                interp
+                    .output_buffer
+                    .push_str(&format!("PARSE error: {}\n", e));
+                interp.stack.push(Value::nil());
+                Ok(())
+            }
+        },
         Err(e) => {
-            interp.output_buffer.push_str(&format!("PARSE error: {}\n", e));
+            interp
+                .output_buffer
+                .push_str(&format!("PARSE error: {}\n", e));
             interp.stack.push(Value::nil());
             Ok(())
         }
@@ -48,11 +61,7 @@ pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
 pub fn op_stringify(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let val = if is_keep {
-        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let val = read_stack_value(interp, is_keep, 0)?;
 
     let json_val = to_json(&val);
     let json_str = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
@@ -69,11 +78,7 @@ pub fn op_input(interp: &mut Interpreter) -> Result<()> {
 pub fn op_output(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let val = if is_keep {
-        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let val = read_stack_value(interp, is_keep, 0)?;
 
     let text = format!("{}", val);
     interp.io_output_buffer.push_str(&text);
@@ -87,16 +92,11 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let key_val = if is_keep {
-        interp.stack[interp.stack.len() - 1].clone()
-    } else {
-        interp.stack.pop().unwrap()
-    };
-
+    let key_val = read_stack_value(interp, is_keep, 0)?;
     let obj_val = if is_keep {
-        interp.stack[interp.stack.len() - if is_keep { 2 } else { 1 }].clone()
+        read_stack_value(interp, true, 1)?
     } else {
-        interp.stack.pop().unwrap()
+        read_stack_value(interp, false, 0)?
     };
 
     let key_str = value_to_string_content(&key_val);
@@ -144,11 +144,7 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
 pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let obj_val = if is_keep {
-        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let obj_val = read_stack_value(interp, is_keep, 0)?;
 
     let pairs = match &obj_val.data {
         ValueData::Record { pairs, .. } => pairs.as_slice(),
@@ -185,22 +181,16 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let new_value = if is_keep {
-        interp.stack[interp.stack.len() - 1].clone()
-    } else {
-        interp.stack.pop().unwrap()
-    };
-
+    let new_value = read_stack_value(interp, is_keep, 0)?;
     let key_val = if is_keep {
-        interp.stack[interp.stack.len() - if is_keep { 2 } else { 1 }].clone()
+        read_stack_value(interp, true, 1)?
     } else {
-        interp.stack.pop().unwrap()
+        read_stack_value(interp, false, 0)?
     };
-
     let obj_val = if is_keep {
-        interp.stack[interp.stack.len() - if is_keep { 3 } else { 1 }].clone()
+        read_stack_value(interp, true, 2)?
     } else {
-        interp.stack.pop().unwrap()
+        read_stack_value(interp, false, 0)?
     };
 
     let key_str = value_to_string_content(&key_val);
@@ -233,7 +223,10 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
                         new_pairs.push(Value {
-                            data: ValueData::Vector(Rc::new(vec![kv[0].clone(), new_value.clone()])),
+                            data: ValueData::Vector(Rc::new(vec![
+                                kv[0].clone(),
+                                new_value.clone(),
+                            ])),
                         });
                         continue;
                     }
@@ -245,10 +238,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         if found_idx.is_none() {
             new_index.insert(key_str.clone(), new_pairs.len());
             new_pairs.push(Value {
-                data: ValueData::Vector(Rc::new(vec![
-                    Value::from_string(&key_str),
-                    new_value,
-                ])),
+                data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
             });
         }
 
@@ -266,16 +256,16 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         }
 
         interp.stack.push(Value {
-            data: ValueData::Record { pairs: Rc::new(new_pairs), index: new_index },
+            data: ValueData::Record {
+                pairs: Rc::new(new_pairs),
+                index: new_index,
+            },
         });
     } else {
         let mut index = HashMap::new();
         index.insert(key_str.clone(), 0);
         let pairs = Rc::new(vec![Value {
-            data: ValueData::Vector(Rc::new(vec![
-                Value::from_string(&key_str),
-                new_value,
-            ])),
+            data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
         }]);
         interp.stack.push(Value {
             data: ValueData::Record { pairs, index },
@@ -288,34 +278,35 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
 pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let val = if is_keep {
-        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
+    let val = read_stack_value(interp, is_keep, 0)?;
 
     let json_val = to_json(&val);
     let json_compact = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
-    interp.output_buffer.push_str(&format!("JSONEXPORT:{}\n", json_compact));
+    interp
+        .output_buffer
+        .push_str(&format!("JSONEXPORT:{}\n", json_compact));
     Ok(())
 }
 
 fn value_to_string_content(val: &Value) -> String {
     if let ValueData::Vector(chars) = &val.data {
         if chars.iter().all(|c| matches!(c.data, ValueData::Scalar(_))) {
-            return chars.iter().filter_map(|c| {
-                if let ValueData::Scalar(f) = &c.data {
-                    f.to_i64().and_then(|n| {
-                        if n >= 0 && n <= 0x10FFFF {
-                            char::from_u32(n as u32)
-                        } else {
-                            None
-                        }
-                    })
-                } else {
-                    None
-                }
-            }).collect();
+            return chars
+                .iter()
+                .filter_map(|c| {
+                    if let ValueData::Scalar(f) = &c.data {
+                        f.to_i64().and_then(|n| {
+                            if n >= 0 && n <= 0x10FFFF {
+                                char::from_u32(n as u32)
+                            } else {
+                                None
+                            }
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
         }
     }
     format!("{}", val)

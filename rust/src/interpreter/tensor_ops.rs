@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::wrap_number;
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData, MAX_VISIBLE_DIMENSIONS};
 use std::rc::Rc;
@@ -147,86 +147,70 @@ pub(crate) fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
     Ok(out)
 }
 
-pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
+fn apply_tensor_metadata_op(
+    interp: &mut Interpreter,
+    word: &str,
+    mapper: fn(&Value) -> Value,
+) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported {
-            word: "SHAPE".into(),
+            word: word.into(),
             mode: "Stack".into(),
         });
     }
 
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    let value = if is_keep_mode {
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
 
-    // NILの場合: Map型 → NIL伝播
-    if val.is_nil() {
-        interp.stack.push(Value::nil());
-        return Ok(());
-    }
-
-    // ベクタの場合
-    if val.is_vector() {
-        let shape_vec = val.shape();
-
-        let shape_values: Vec<Value> = shape_vec
-            .iter()
-            .map(|&n| Value::from_number(Fraction::from(n as i64)))
-            .collect();
-
-        // 保持モードの場合は元の値を戻す
-        if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
-            interp.stack.push(val);
-        }
-
-        interp.stack.push(Value::from_vector(shape_values));
-        return Ok(());
-    }
-
-    // スカラーの場合: 形状は空（0次元）
-    if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
-        interp.stack.push(val);
-    }
-    interp.stack.push(Value::from_vector(vec![]));
+    let result = mapper(&value);
+    interp.stack.push(result);
     Ok(())
 }
 
+fn shape_value(value: &Value) -> Value {
+    if value.is_nil() {
+        return Value::nil();
+    }
+
+    if !value.is_vector() {
+        return Value::from_vector(vec![]);
+    }
+
+    let shape_values: Vec<Value> = value
+        .shape()
+        .iter()
+        .map(|&n| Value::from_number(Fraction::from(n as i64)))
+        .collect();
+    Value::from_vector(shape_values)
+}
+
+fn rank_value(value: &Value) -> Value {
+    if value.is_nil() {
+        return Value::nil();
+    }
+
+    let rank = if value.is_vector() {
+        value.shape().len() as i64
+    } else {
+        0
+    };
+    wrap_number(Fraction::from(rank))
+}
+
+pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
+    apply_tensor_metadata_op(interp, "SHAPE", shape_value)
+}
+
 pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::ModeUnsupported {
-            word: "RANK".into(),
-            mode: "Stack".into(),
-        });
-    }
-
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    // NILの場合: Map型 → NIL伝播
-    if val.is_nil() {
-        interp.stack.push(Value::nil());
-        return Ok(());
-    }
-
-    // ベクタの場合
-    if val.is_vector() {
-        let shape = val.shape();
-        let r = shape.len();
-        let rank_frac = Fraction::from(r as i64);
-
-        // 保持モードの場合は元の値を戻す
-        if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
-            interp.stack.push(val);
-        }
-
-        interp.stack.push(wrap_number(rank_frac));
-        return Ok(());
-    }
-
-    // スカラーの場合: ランクは0
-    let rank_frac = Fraction::from(0i64);
-    if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
-        interp.stack.push(val);
-    }
-    interp.stack.push(wrap_number(rank_frac));
-    Ok(())
+    apply_tensor_metadata_op(interp, "RANK", rank_value)
 }
 
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {

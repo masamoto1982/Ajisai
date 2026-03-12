@@ -21,12 +21,13 @@
 //
 // ============================================================================
 
-use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
-use crate::types::{Value, ValueData};
+use crate::interpreter::tensor_ops::FlatTensor;
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::Value;
 use num_bigint::{BigInt, Sign};
-use num_traits::{ToPrimitive, One};
+use num_traits::{One, ToPrimitive};
 
 /// デフォルトの分母（2^32）
 const DEFAULT_DENOMINATOR_BITS: u32 = 32;
@@ -45,45 +46,74 @@ fn generate_uniform(denominator: &BigInt) -> Result<BigInt> {
     let total_bits = denom_bits + 64;
     let bytes = (total_bits + 7) / 8;
 
-    const MAX_ATTEMPTS: usize = 10;
+    let mut buf = vec![0u8; bytes];
+    getrandom::getrandom(&mut buf).map_err(|e| {
+        AjisaiError::from(format!("CSPRNG: failed to generate random bytes: {}", e))
+    })?;
 
-    for _ in 0..MAX_ATTEMPTS {
-        let mut buf = vec![0u8; bytes];
-        getrandom::getrandom(&mut buf)
-            .map_err(|e| AjisaiError::from(format!("CSPRNG: failed to generate random bytes: {}", e)))?;
-
-        let random_value = BigInt::from_bytes_le(Sign::Plus, &buf);
-        let result = &random_value % denominator;
-        return Ok(result);
-    }
-
-    Err(AjisaiError::from("CSPRNG: failed to generate random number"))
+    let random_value = BigInt::from_bytes_le(Sign::Plus, &buf);
+    Ok(&random_value % denominator)
 }
 
 /// スタックから正の整数を抽出（単一要素Vectorの数値）
 fn extract_positive_integer(val: &Value) -> Option<BigInt> {
-    // Vectorの場合、最初の要素をチェック
-    if let ValueData::Vector(children) = &val.data {
-        if children.len() == 1 {
-            if let Some(frac) = children[0].as_scalar() {
-                // 整数かつ正数かチェック
-                if frac.denominator == BigInt::one() && frac.numerator > BigInt::from(0) {
-                    return Some(frac.numerator.clone());
-                }
-            }
+    let tensor = FlatTensor::from_value(val).ok()?;
+    if tensor.data.len() != 1 {
+        return None;
+    }
+    let scalar = &tensor.data[0];
+    if scalar.denominator != BigInt::one() || scalar.numerator <= BigInt::from(0) {
+        return None;
+    }
+    Some(scalar.numerator.clone())
+}
+
+fn parse_csprng_args_keep(interp: &Interpreter) -> Result<(BigInt, usize)> {
+    let default_denom = BigInt::from(1u64 << DEFAULT_DENOMINATOR_BITS);
+
+    if interp.stack.is_empty() {
+        return Ok((default_denom, 1));
+    }
+
+    let top = interp
+        .stack
+        .last()
+        .ok_or_else(|| AjisaiError::from("CSPRNG requires stack value"))?;
+    let Some(first_int) = extract_positive_integer(top) else {
+        return Ok((default_denom, 1));
+    };
+
+    if interp.stack.len() >= 2 {
+        if let Some(second_int) = extract_positive_integer(&interp.stack[interp.stack.len() - 2]) {
+            let count = first_int
+                .to_usize()
+                .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
+            return Ok((second_int, count));
         }
     }
-    None
+
+    let count = first_int
+        .to_usize()
+        .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
+    Ok((default_denom, count))
 }
 
 /// CSPRNG - 暗号論的疑似乱数を生成（分母指定モード対応）
 pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
     // CSPRNGはStackモード(..)をサポートしない
     if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported { word: "CSPRNG".into(), mode: "Stack".into() });
+        return Err(AjisaiError::ModeUnsupported {
+            word: "CSPRNG".into(),
+            mode: "Stack".into(),
+        });
     }
 
-    let (denominator, count) = parse_csprng_args(interp)?;
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    let (denominator, count) = if is_keep_mode {
+        parse_csprng_args_keep(interp)?
+    } else {
+        parse_csprng_args(interp)?
+    };
 
     if denominator <= BigInt::from(0) {
         return Err(AjisaiError::from("CSPRNG: denominator must be positive"));
@@ -111,7 +141,10 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
     }
 
     // スタックトップを確認
-    let top = interp.stack.last().unwrap();
+    let top = interp
+        .stack
+        .last()
+        .ok_or_else(|| AjisaiError::from("CSPRNG requires stack value"))?;
 
     // 整数でない場合：デフォルト分母で1個（スタックはそのまま）
     let Some(first_int) = extract_positive_integer(top) else {
@@ -126,14 +159,16 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
         if let Some(second_int) = extract_positive_integer(second) {
             // パターン3: [ denom ] [ count ]
             interp.stack.pop();
-            let count = first_int.to_usize()
+            let count = first_int
+                .to_usize()
                 .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
             return Ok((second_int, count));
         }
     }
 
     // パターン2: [ count ]
-    let count = first_int.to_usize()
+    let count = first_int
+        .to_usize()
         .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
 
     Ok((default_denom, count))
@@ -150,8 +185,11 @@ mod tests {
         let result = interp.execute(".. CSPRNG").await;
         assert!(result.is_err(), "CSPRNG should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("CSPRNG") && err_msg.contains("Stack mode"),
-                "Expected Stack mode error for CSPRNG, got: {}", err_msg);
+        assert!(
+            err_msg.contains("CSPRNG") && err_msg.contains("Stack mode"),
+            "Expected Stack mode error for CSPRNG, got: {}",
+            err_msg
+        );
     }
 
     #[tokio::test]
@@ -173,7 +211,11 @@ mod tests {
     async fn test_csprng_generates_multiple_values() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 5 ] CSPRNG").await;
-        assert!(result.is_ok(), "CSPRNG with count should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "CSPRNG with count should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1);
         // Check it's a vector with 5 elements
         let val = &interp.stack[0];
@@ -189,7 +231,11 @@ mod tests {
         let mut interp = Interpreter::new();
         // 分母6で3個生成（サイコロのような用途）
         let result = interp.execute("[ 6 ] [ 3 ] CSPRNG").await;
-        assert!(result.is_ok(), "CSPRNG with denominator should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "CSPRNG with denominator should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1);
         // Check it's a vector with 3 elements
         let val = &interp.stack[0];
@@ -208,6 +254,21 @@ mod tests {
         assert!(result.is_ok());
         // スタックには [ 1/2 ] と CSPRNG結果の2つがあるはず
         assert_eq!(interp.stack.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_csprng_keep_mode_preserves_operand() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 5 ] ,, CSPRNG").await.unwrap();
+        assert_eq!(interp.stack.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_csprng_scalar_args_supported() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("6 3 CSPRNG").await;
+        assert!(result.is_ok());
+        assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
