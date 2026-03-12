@@ -52,6 +52,62 @@ fn concat_values(values: Vec<Value>, is_reversed: bool) -> Value {
     Value::from_vector(result_vec)
 }
 
+fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
+    let bigint = get_bigint_from_value(args_val.get_child(index).unwrap())
+        .map_err(|_| AjisaiError::from(format!("RANGE {} must be an integer", label)))?;
+    bigint
+        .to_i64()
+        .ok_or_else(|| AjisaiError::from(format!("RANGE {} is too large", label)))
+}
+
+fn parse_range_args(args_val: &Value) -> Result<(i64, i64, i64)> {
+    if !args_val.is_vector() {
+        return Err(AjisaiError::from(
+            "RANGE requires [start end] or [start end step]",
+        ));
+    }
+
+    let n = args_val.len();
+    if n < 2 || n > 3 {
+        return Err(AjisaiError::from(
+            "RANGE requires [start end] or [start end step]",
+        ));
+    }
+
+    let start = parse_range_bound(args_val, 0, "start")?;
+    let end = parse_range_bound(args_val, 1, "end")?;
+    let step = if n == 3 {
+        parse_range_bound(args_val, 2, "step")?
+    } else if start <= end {
+        1
+    } else {
+        -1
+    };
+
+    Ok((start, end, step))
+}
+
+fn parse_reorder_indices(indices_val: &Value) -> Result<Vec<i64>> {
+    if indices_val.is_vector() {
+        let n = indices_val.len();
+        if n == 0 {
+            return Err(AjisaiError::from("REORDER requires non-empty index list"));
+        }
+
+        let mut indices = Vec::with_capacity(n);
+        for i in 0..n {
+            let idx = get_integer_from_value(indices_val.get_child(i).unwrap())
+                .map_err(|_| AjisaiError::from("REORDER indices must be integers"))?;
+            indices.push(idx);
+        }
+        return Ok(indices);
+    }
+
+    let single = get_integer_from_value(indices_val)
+        .map_err(|_| AjisaiError::from("REORDER requires index list"))?;
+    Ok(vec![single])
+}
+
 /// CONCAT - 複数のベクタを連結する（Form型）
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
@@ -197,71 +253,12 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 引数ベクタから start, end, step を抽出
-    let (start, end, step) = if args_val.is_vector() {
-        let n = args_val.len();
-        if n < 2 || n > 3 {
+    let (start, end, step) = match parse_range_args(&args_val) {
+        Ok(values) => values,
+        Err(error) => {
             interp.stack.push(args_val);
-            return Err(AjisaiError::from(
-                "RANGE requires [start end] or [start end step]",
-            ));
+            return Err(error);
         }
-
-        let start = match get_bigint_from_value(args_val.get_child(0).unwrap()) {
-            Ok(bi) => match bi.to_i64() {
-                Some(i) => i,
-                None => {
-                    interp.stack.push(args_val);
-                    return Err(AjisaiError::from("RANGE start is too large"));
-                }
-            },
-            Err(_) => {
-                interp.stack.push(args_val);
-                return Err(AjisaiError::from("RANGE start must be an integer"));
-            }
-        };
-
-        let end = match get_bigint_from_value(args_val.get_child(1).unwrap()) {
-            Ok(bi) => match bi.to_i64() {
-                Some(i) => i,
-                None => {
-                    interp.stack.push(args_val);
-                    return Err(AjisaiError::from("RANGE end is too large"));
-                }
-            },
-            Err(_) => {
-                interp.stack.push(args_val);
-                return Err(AjisaiError::from("RANGE end must be an integer"));
-            }
-        };
-
-        let step = if n == 3 {
-            match get_bigint_from_value(args_val.get_child(2).unwrap()) {
-                Ok(bi) => match bi.to_i64() {
-                    Some(i) => i,
-                    None => {
-                        interp.stack.push(args_val);
-                        return Err(AjisaiError::from("RANGE step is too large"));
-                    }
-                },
-                Err(_) => {
-                    interp.stack.push(args_val);
-                    return Err(AjisaiError::from("RANGE step must be an integer"));
-                }
-            }
-        } else {
-            if start <= end {
-                1
-            } else {
-                -1
-            }
-        };
-
-        (start, end, step)
-    } else {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::from(
-            "RANGE requires [start end] or [start end step]",
-        ));
     };
 
     if step == 0 {
@@ -308,31 +305,11 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
     let indices_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // インデックスリストを抽出
-    let indices = if indices_val.is_vector() {
-        let n = indices_val.len();
-        if n == 0 {
+    let indices = match parse_reorder_indices(&indices_val) {
+        Ok(values) => values,
+        Err(error) => {
             interp.stack.push(indices_val);
-            return Err(AjisaiError::from("REORDER requires non-empty index list"));
-        }
-
-        let mut indices = Vec::with_capacity(n);
-        for i in 0..n {
-            match get_integer_from_value(indices_val.get_child(i).unwrap()) {
-                Ok(idx) => indices.push(idx),
-                Err(_) => {
-                    interp.stack.push(indices_val);
-                    return Err(AjisaiError::from("REORDER indices must be integers"));
-                }
-            }
-        }
-        indices
-    } else {
-        match get_integer_from_value(&indices_val) {
-            Ok(i) => vec![i],
-            Err(_) => {
-                interp.stack.push(indices_val);
-                return Err(AjisaiError::from("REORDER requires index list"));
-            }
+            return Err(error);
         }
     };
 
