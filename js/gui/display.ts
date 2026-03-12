@@ -35,33 +35,50 @@ const getBrackets = (depth: number): [string, string] => {
     }
 };
 
+const asFractionObject = (value: unknown): Record<string, unknown> | null => {
+    if (!value || typeof value !== 'object') return null;
+    const candidate = value as Record<string, unknown>;
+    if (!('numerator' in candidate) || !('denominator' in candidate)) return null;
+    return candidate;
+};
+
+const fractionText = (fraction: Record<string, unknown>): string => {
+    const numerator = String(fraction.numerator);
+    const denominator = String(fraction.denominator);
+    return denominator === '1' ? numerator : `${numerator}/${denominator}`;
+};
+
+const parseFractionNumber = (fraction: Record<string, unknown>): number | null => {
+    const numerator = parseInt(String(fraction.numerator || '0'), 10);
+    const denominator = parseInt(String(fraction.denominator || '1'), 10);
+    if (Number.isNaN(numerator) || Number.isNaN(denominator) || denominator === 0) return null;
+    return denominator === 1 ? numerator : Math.floor(numerator / denominator);
+};
+
 const formatNumber = (value: unknown): string => {
-    if (!value || typeof value !== 'object') return '?';
-    const v = value as Record<string, unknown>;
-    if (!('numerator' in v) || !('denominator' in v)) return '?';
-    return formatFractionScientific(String(v.numerator), String(v.denominator));
+    const fraction = asFractionObject(value);
+    if (!fraction) return '?';
+    return formatFractionScientific(String(fraction.numerator), String(fraction.denominator));
 };
 
 const formatFraction = (frac: unknown): string => {
-    if (!frac || typeof frac !== 'object') return '?';
-    const f = frac as Record<string, unknown>;
-    if (!('numerator' in f) || !('denominator' in f)) return '?';
-    return formatFractionScientific(String(f.numerator), String(f.denominator));
+    const fraction = asFractionObject(frac);
+    if (!fraction) return '?';
+    return formatFractionScientific(String(fraction.numerator), String(fraction.denominator));
 };
 
 const formatDateTime = (value: unknown): string => {
-    if (!value || typeof value !== 'object') return '@?';
-    const v = value as Record<string, unknown>;
-    if (!('numerator' in v) || !('denominator' in v)) return '@?';
+    const fraction = asFractionObject(value);
+    if (!fraction) return '@?';
 
     try {
-        const numer = BigInt(v.numerator as string);
-        const denom = BigInt(v.denominator as string);
+        const numer = BigInt(String(fraction.numerator));
+        const denom = BigInt(String(fraction.denominator));
         const timestampMs = Number((numer * 1000n) / denom);
         const date = new Date(timestampMs);
 
         if (isNaN(date.getTime())) {
-            return `@${v.numerator}${v.denominator === '1' ? '' : '/' + v.denominator}`;
+            return `@${fractionText(fraction)}`;
         }
 
         const pad = (n: number) => String(n).padStart(2, '0');
@@ -76,18 +93,18 @@ const formatDateTime = (value: unknown): string => {
         const dateStr = `@${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         return ms > 0 ? `${dateStr}.${String(ms).padStart(3, '0')}` : dateStr;
     } catch {
-        return `@${v.numerator}${v.denominator === '1' ? '' : '/' + v.denominator}`;
+        return `@${fractionText(fraction)}`;
     }
 };
 
 const bytesToString = (data: unknown[]): string => {
-    const bytes = data.map(frac => {
-        if (!frac || typeof frac !== 'object') return 0;
-        const f = frac as Record<string, unknown>;
-        const num = parseInt(String(f.numerator || '0'), 10);
-        const den = parseInt(String(f.denominator || '1'), 10);
-        return den === 1 ? num : Math.floor(num / den);
-    }).filter(n => n >= 0 && n <= 255);
+    const bytes = data
+        .map(frac => {
+            const fraction = asFractionObject(frac);
+            if (!fraction) return null;
+            return parseFractionNumber(fraction);
+        })
+        .filter((value): value is number => value !== null && value >= 0 && value <= 255);
 
     try {
         return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
