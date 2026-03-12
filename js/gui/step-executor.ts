@@ -18,6 +18,11 @@ export interface StepExecutorCallbacks {
     readonly saveState: () => Promise<void>;
 }
 
+interface StepExecutionSnapshot {
+    readonly stack: ReturnType<AjisaiInterpreter['get_stack']>;
+    readonly customWords: CustomWord[];
+}
+
 export interface StepExecutor {
     readonly isActive: () => boolean;
     readonly reset: () => void;
@@ -62,6 +67,26 @@ const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
         definition: interpreter.get_word_definition(wordData[0]),
         description: wordData[1]
     }));
+};
+
+const createStepExecutionSnapshot = (
+    interpreter: AjisaiInterpreter
+): StepExecutionSnapshot => ({
+    stack: interpreter.get_stack(),
+    customWords: getCustomWords(interpreter)
+});
+
+const handleStepExecutionException = (
+    error: unknown,
+    showInfo: (text: string, append: boolean) => void,
+    showError: (error: Error | string) => void
+): void => {
+    console.error('[StepExecutor] Step execution failed:', error);
+    if (error instanceof Error && error.message.includes('aborted')) {
+        showInfo('Step execution aborted', true);
+        return;
+    }
+    showError(error as Error);
 };
 
 const syncInterpreterState = (
@@ -142,11 +167,7 @@ export const createStepExecutor = (
                 false
             );
 
-            const currentState = {
-                stack: interpreter.get_stack(),
-                customWords: getCustomWords(interpreter),
-            };
-
+            const currentState = createStepExecutionSnapshot(interpreter);
             const result = await WORKER_MANAGER.execute(token, currentState);
 
             try {
@@ -174,12 +195,7 @@ export const createStepExecutor = (
             }
 
         } catch (error) {
-            console.error('[StepExecutor] Step execution failed:', error);
-            if (error instanceof Error && error.message.includes('aborted')) {
-                showInfo('Step execution aborted', true);
-            } else {
-                showError(error as Error);
-            }
+            handleStepExecutionException(error, showInfo, showError);
             reset();
         }
 
@@ -210,5 +226,7 @@ export const stepExecutorUtils = {
     createActiveState,
     advanceState,
     formatStepMessage,
-    getCustomWords
+    getCustomWords,
+    createStepExecutionSnapshot,
+    handleStepExecutionException
 };
