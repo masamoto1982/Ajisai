@@ -2,132 +2,92 @@
 //
 // ベクタ構造操作: CONCAT, REVERSE, RANGE, REORDER, COLLECT
 
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
-use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, get_bigint_from_value, normalize_index};
-use crate::types::{Value};
-use crate::types::fraction::Fraction;
-use num_traits::ToPrimitive;
 use super::reconstruct_vector_elements;
+use crate::error::{AjisaiError, Result};
+use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::fraction::Fraction;
+use crate::types::Value;
+use num_traits::ToPrimitive;
+
+fn parse_concat_count(
+    interp: &mut Interpreter,
+    default_count: i64,
+) -> Result<(i64, Option<Value>)> {
+    let Some(top) = interp.stack.last() else {
+        return Err(AjisaiError::StackUnderflow);
+    };
+
+    let Ok(count_bigint) = get_bigint_from_value(top) else {
+        return Ok((default_count, None));
+    };
+
+    let count_value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let count = match count_bigint.to_i64() {
+        Some(value) => value,
+        None => {
+            interp.stack.push(count_value);
+            return Err(AjisaiError::from("Count is too large"));
+        }
+    };
+
+    Ok((count, Some(count_value)))
+}
+
+fn concat_values(values: Vec<Value>, is_reversed: bool) -> Value {
+    let mut ordered = values;
+    if is_reversed {
+        ordered.reverse();
+    }
+
+    let mut result_vec = Vec::new();
+    for value in ordered {
+        if value.is_vector() {
+            result_vec.extend_from_slice(reconstruct_vector_elements(&value));
+        } else {
+            result_vec.push(value);
+        }
+    }
+
+    Value::from_vector(result_vec)
+}
 
 /// CONCAT - 複数のベクタを連結する（Form型）
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let (count_i64, count_value_opt) = if let Some(top) = interp.stack.last() {
-                if let Ok(count_bigint) = get_bigint_from_value(top) {
-                    let count_val = interp.stack.pop().unwrap();
-                    if let Some(c) = count_bigint.to_i64() {
-                        (c, Some(count_val))
-                    } else {
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::from("Count is too large"));
-                    }
-                } else {
-                    (2, None)
-                }
-            } else {
-                return Err(AjisaiError::StackUnderflow);
-            };
+    let default_count = match interp.operation_target_mode {
+        OperationTargetMode::StackTop => 2,
+        OperationTargetMode::Stack => interp.stack.len() as i64,
+    };
+    let (count_i64, count_value_opt) = parse_concat_count(interp, default_count)?;
 
-            let abs_count = count_i64.unsigned_abs() as usize;
-            let is_reversed = count_i64 < 0;
+    let abs_count = count_i64.unsigned_abs() as usize;
+    let is_reversed = count_i64 < 0;
 
-            if interp.stack.len() < abs_count {
-                if let Some(count_val) = count_value_opt {
-                    interp.stack.push(count_val);
-                }
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let vecs_to_concat: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack[stack_len - abs_count..].iter().cloned().collect()
-            } else {
-                interp.stack.split_off(interp.stack.len() - abs_count)
-            };
-
-            let mut ordered = vecs_to_concat;
-            if is_reversed {
-                ordered.reverse();
-            }
-
-            let mut result_vec = Vec::new();
-            for val in ordered {
-                if val.is_vector() {
-                    result_vec.extend_from_slice(reconstruct_vector_elements(&val));
-                } else {
-                    result_vec.push(val);
-                }
-            }
-
-            if is_keep_mode {
-                if let Some(count_val) = count_value_opt {
-                    interp.stack.push(count_val);
-                }
-            }
-            interp.stack.push(Value::from_vector(result_vec));
-            Ok(())
+    if interp.stack.len() < abs_count {
+        if let Some(count_val) = count_value_opt {
+            interp.stack.push(count_val);
         }
-        OperationTargetMode::Stack => {
-            let (count_i64, count_value_opt) = if let Some(top) = interp.stack.last() {
-                if let Ok(count_bigint) = get_bigint_from_value(top) {
-                    let count_val = interp.stack.pop().unwrap();
-                    if let Some(c) = count_bigint.to_i64() {
-                        (c, Some(count_val))
-                    } else {
-                        interp.stack.push(count_val);
-                        return Err(AjisaiError::from("Count is too large"));
-                    }
-                } else {
-                    (interp.stack.len() as i64, None)
-                }
-            } else {
-                return Err(AjisaiError::StackUnderflow);
-            };
+        return Err(AjisaiError::StackUnderflow);
+    }
 
-            let abs_count = count_i64.unsigned_abs() as usize;
-            let is_reversed = count_i64 < 0;
+    let values_to_concat: Vec<Value> = if is_keep_mode {
+        let stack_len = interp.stack.len();
+        interp.stack[stack_len - abs_count..].to_vec()
+    } else {
+        interp.stack.split_off(interp.stack.len() - abs_count)
+    };
 
-            if interp.stack.len() < abs_count {
-                if let Some(count_val) = count_value_opt {
-                    interp.stack.push(count_val);
-                }
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let vecs_to_concat: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack[stack_len - abs_count..].iter().cloned().collect()
-            } else {
-                interp.stack.split_off(interp.stack.len() - abs_count)
-            };
-
-            let mut ordered = vecs_to_concat;
-            if is_reversed {
-                ordered.reverse();
-            }
-
-            let mut result_vec = Vec::new();
-            for val in ordered {
-                if val.is_vector() {
-                    result_vec.extend_from_slice(reconstruct_vector_elements(&val));
-                } else {
-                    result_vec.push(val);
-                }
-            }
-
-            if is_keep_mode {
-                if let Some(count_val) = count_value_opt {
-                    interp.stack.push(count_val);
-                }
-            }
-            interp.stack.push(Value::from_vector(result_vec));
-            Ok(())
+    if is_keep_mode {
+        if let Some(count_val) = count_value_opt {
+            interp.stack.push(count_val);
         }
     }
+    interp
+        .stack
+        .push(concat_values(values_to_concat, is_reversed));
+    Ok(())
 }
 
 /// REVERSE - 要素の順序を反転する（Form型）
@@ -141,7 +101,11 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+                interp
+                    .stack
+                    .last()
+                    .cloned()
+                    .ok_or(AjisaiError::StackUnderflow)?
             } else {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
@@ -153,7 +117,9 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
                         if !is_keep_mode {
                             interp.stack.push(Value::from_vector(v));
                         }
-                        return Err(AjisaiError::NoChange { word: "REVERSE".into() });
+                        return Err(AjisaiError::NoChange {
+                            word: "REVERSE".into(),
+                        });
                     }
                     let original_v = v.clone();
                     v.reverse();
@@ -161,7 +127,9 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
                         if !is_keep_mode {
                             interp.stack.push(Value::from_vector(original_v));
                         }
-                        return Err(AjisaiError::NoChange { word: "REVERSE".into() });
+                        return Err(AjisaiError::NoChange {
+                            word: "REVERSE".into(),
+                        });
                     }
                     interp.stack.push(Value::from_vector(v));
                 } else {
@@ -182,12 +150,16 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
                 let original = interp.stack.clone();
                 if !interp.disable_no_change_check {
                     if original.len() < 2 {
-                        return Err(AjisaiError::NoChange { word: "REVERSE".into() });
+                        return Err(AjisaiError::NoChange {
+                            word: "REVERSE".into(),
+                        });
                     }
                     let mut reversed = original.clone();
                     reversed.reverse();
                     if reversed == original {
-                        return Err(AjisaiError::NoChange { word: "REVERSE".into() });
+                        return Err(AjisaiError::NoChange {
+                            word: "REVERSE".into(),
+                        });
                     }
                     interp.stack.extend(reversed);
                 } else {
@@ -198,13 +170,17 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
             } else {
                 if !interp.disable_no_change_check {
                     if interp.stack.len() < 2 {
-                        return Err(AjisaiError::NoChange { word: "REVERSE".into() });
+                        return Err(AjisaiError::NoChange {
+                            word: "REVERSE".into(),
+                        });
                     }
                     let original_stack = interp.stack.clone();
                     interp.stack.reverse();
                     if interp.stack == original_stack {
                         interp.stack = original_stack;
-                        return Err(AjisaiError::NoChange { word: "REVERSE".into() });
+                        return Err(AjisaiError::NoChange {
+                            word: "REVERSE".into(),
+                        });
                     }
                 } else {
                     interp.stack.reverse();
@@ -225,7 +201,9 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         let n = args_val.len();
         if n < 2 || n > 3 {
             interp.stack.push(args_val);
-            return Err(AjisaiError::from("RANGE requires [start end] or [start end step]"));
+            return Err(AjisaiError::from(
+                "RANGE requires [start end] or [start end step]",
+            ));
         }
 
         let start = match get_bigint_from_value(args_val.get_child(0).unwrap()) {
@@ -271,13 +249,19 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
                 }
             }
         } else {
-            if start <= end { 1 } else { -1 }
+            if start <= end {
+                1
+            } else {
+                -1
+            }
         };
 
         (start, end, step)
     } else {
         interp.stack.push(args_val);
-        return Err(AjisaiError::from("RANGE requires [start end] or [start end step]"));
+        return Err(AjisaiError::from(
+            "RANGE requires [start end] or [start end step]",
+        ));
     };
 
     if step == 0 {
@@ -287,7 +271,9 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
     if (start < end && step < 0) || (start > end && step > 0) {
         interp.stack.push(args_val);
-        return Err(AjisaiError::from("RANGE would create an infinite sequence (check start, end, and step values)"));
+        return Err(AjisaiError::from(
+            "RANGE would create an infinite sequence (check start, end, and step values)",
+        ));
     }
 
     let mut range_vec = Vec::new();
@@ -384,7 +370,10 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                                 interp.stack.push(target_val);
                             }
                             interp.stack.push(indices_val);
-                            return Err(AjisaiError::IndexOutOfBounds { index: idx, length: len });
+                            return Err(AjisaiError::IndexOutOfBounds {
+                                index: idx,
+                                length: len,
+                            });
                         }
                     };
                     result.push(target_val.get_child(actual).unwrap().clone());
@@ -421,7 +410,10 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                     Some(i) => i,
                     None => {
                         interp.stack.push(indices_val);
-                        return Err(AjisaiError::IndexOutOfBounds { index: idx, length: len });
+                        return Err(AjisaiError::IndexOutOfBounds {
+                            index: idx,
+                            length: len,
+                        });
                     }
                 };
                 result.push(interp.stack[actual].clone());
@@ -452,7 +444,9 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
         Some(c) if c > 0 => c,
         _ => {
             interp.stack.push(count_val);
-            return Err(AjisaiError::from("COLLECT count must be a positive integer"));
+            return Err(AjisaiError::from(
+                "COLLECT count must be a positive integer",
+            ));
         }
     };
 
