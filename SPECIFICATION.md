@@ -237,9 +237,9 @@ pub struct Interpreter {
 - [ ] 分流（`,,`）時にセマンティックメタデータが子フローに正しく継承される
 - [ ] README / public/docs が同じ用語体系（Fractional Dataflow, Data Plane, Semantic Plane）で統一されている
 
-### 0.10 Gemini提案の採用方針（実装決定事項）
+### 0.10 採用方針（実装決定事項）
 
-Gemini提案は以下を**採用済みの実装方針**として扱う。以降の実装は本節に従う。
+以下を**採用済みの実装方針**として扱う。以降の実装は本節に従う。
 
 1. **テンソル内部表現の正準化（Flat Buffer + Shape + Stride）**
    - `ValueData::Vector` の木構造は外部表現（言語I/O）として維持してよい。
