@@ -11,26 +11,32 @@
 
 **A Fractional Dataflow programming language**
 
-Ajisai inherits **postfix notation** and the **dictionary system** from FORTH. Its execution model is built on **Fractional Dataflow**: every value is a fraction that streams through a pipeline of operations, each consuming what it needs and forwarding the remainder — like an unspent transaction output (UTXO) chain, or a TPU fused-execution pipeline that never materializes intermediates.
+Ajisai inherits **postfix notation** and the **dictionary system** from FORTH. Its execution model is **Fractional Dataflow**: every value is a fraction that streams through a pipeline of operations, each consuming what it needs and forwarding the remainder.
 
 **Demo:** [https://masamoto1982.github.io/Ajisai/](https://masamoto1982.github.io/Ajisai/)
 
 ---
 
-## Design Philosophy: Fractional Dataflow
+## Documentation Scope
 
-The botanical name for hydrangea (Ajisai in Japanese) is *Hydrangea*, derived from the Greek words *hydor* (water) and *angos* (vessel) — literally "vessel of water." In Ajisai, data is water that **flows**, never standing still.
+- This README and `SPECIFICATION.md` describe **only the current Ajisai model**.
+- Historical migration notes and old-model comparisons are intentionally excluded from the main specification documents.
+- Abstract metaphors are limited to the manifesto; all other sections focus on concrete implementation behavior.
+
+---
+
+## Design Philosophy: Fractional Dataflow
 
 ### Core Principles
 
-| Principle | Analogy | What It Means |
-|:----------|:--------|:--------------|
-| **Fraction as Truth** | Water | `Fraction` is the sole computational substance |
-| **Consume/Remainder** | UTXO | Each operation consumes what it needs; the remainder flows on |
-| **No Intermediates** | TPU | Pipeline stages fuse — no materialized intermediate collections |
-| **Conservation Law** | Physics | `initial_total = Sigma(consumed_i) + final_remainder` always holds |
-| **Display is a Ripple** | Ripple | `DisplayHint` is interpretation for display only — not a type |
-| **NIL is a Bubble** | Bubble | Exists in the flow but carries zero fraction mass |
+| Principle | What It Means |
+|:----------|:--------------|
+| **Fraction as Truth** | `Fraction` is the sole computational substance |
+| **Consume/Remainder** | Each operation consumes what it needs; the remainder flows on |
+| **No Intermediates** | Pipeline stages fuse — no materialized intermediate collections |
+| **Conservation Law** | `initial_total = Sigma(consumed_i) + final_remainder` always holds |
+| **Display Hint Separation** | `DisplayHint` is metadata for display only — not a type |
+| **NIL Semantics** | `NIL` represents absence of value in evaluation |
 
 ### The Consumed/Remainder Model
 
@@ -53,20 +59,25 @@ In Ajisai, all computational data exists as a single substance: **fractions**. T
 
 ```rust
 pub struct Value {
-    pub data: ValueData,            // Water (recursive data structure)
-    pub display_hint: DisplayHint,  // Ripple (display interpretation)
-    pub audio_hint: Option<AudioHint>, // Music DSL metadata
+    pub data: ValueData, // Data plane: pure computational value
 }
 
 pub enum ValueData {
-    Scalar(Fraction),       // A single fraction
-    Vector(Vec<Value>),     // Array of Values (recursively nestable)
-    Nil,                    // Absence of value (bubble)
-    CodeBlock(Vec<Token>),  // Deferred code (not a fraction)
+    Scalar(Fraction),
+    Vector(Vec<Value>),
+    Record { pairs: Vec<Value>, index: HashMap<String, usize> },
+    Nil,
+    CodeBlock(Vec<Token>),
+}
+
+pub struct SemanticRegistry {
+    hints: HashMap<u64, DisplayHint>,
+    extensions: HashMap<u64, Box<dyn ValueExt>>,
+    stack_hints: Vec<Option<DisplayHint>>,
 }
 ```
 
-### FlowToken: The UTXO of Computation
+### FlowToken: Computation Flow Tracker
 
 Each value entering the pipeline is wrapped in a `FlowToken` that tracks its consumption chain:
 
@@ -75,7 +86,6 @@ pub struct FlowToken {
     pub id: u64,              // Unique chain identifier
     pub total: Fraction,      // Original total entering this chain
     pub remaining: Fraction,  // Fraction still available for consumption
-    pub hint: DisplayHint,    // Carried along the flow
     pub shape: Vec<usize>,    // Logical shape of the flow bundle
     pub parent_flow_id: Option<u64>,  // Bifurcation: parent flow reference
     pub child_flow_ids: Vec<u64>,     // Bifurcation: child branches
@@ -93,12 +103,12 @@ parent_mass = branch_a_mass + branch_b_mass + ...
 
 This preserves the conservation law while allowing intermediate values to remain on the stack. The value data is shared (via `Rc`), but each branch carries its own fraction of the original mass.
 
-### Data Duality
+### Data Representation
 
-What users see as "types" are merely ripples on the surface of the fraction stream:
+User-facing notation is represented internally as fraction-based values with semantic hints:
 
-| Appearance (Ripple) | Reality (Water) | Explanation |
-|:--------------------|:----------------|:------------|
+| Appearance | Internal Representation | Explanation |
+|:-----------|:------------------------|:------------|
 | `42` | `Scalar(42/1)` | Integers are fractions |
 | `TRUE` | `Scalar(1/1)` + Boolean hint | 1 is true, 0 is false |
 | `'A'` | `Scalar(65/1)` + String hint | Character code (Unicode) |
@@ -332,24 +342,6 @@ npx vite
 # Production build
 npx vite build
 ```
-
----
-
-## Migration: `,,` Keep Mode to Bifurcation
-
-In previous versions, `,,` was described as "keep mode" — conceptually copying operands. Starting with v0.13.0, `,,` is redefined as **bifurcation**: the flow mass is split between retained values and the result.
-
-| Aspect | Old (Keep) | New (Bifurcation) |
-|:-------|:-----------|:------------------|
-| Concept | Copy values to stack | Split flow mass into branches |
-| Conservation | Not tracked | `parent_mass = Σ child_masses` |
-| Observability | No metadata | Parent/child flow IDs, mass ratios |
-| Runtime behavior | Identical output values | Identical output values |
-| Error detection | None | Over-consumption on bifurcated branches |
-
-**What changes for users:** Observable behavior is unchanged — `,,` still places original operands and results on the stack. The difference is semantic: each value now carries a fraction of the original mass, enabling the runtime to detect conservation law violations in bifurcation chains.
-
-**Debug mode:** Enable flow tracking to inspect bifurcation chains, parent-child relationships, and mass distribution across branches.
 
 ---
 
