@@ -239,6 +239,7 @@ const AjisaiTheme = {
             "--color-dependency": "#E69500",
             "--color-non-dependency": "#009B68",
             "--color-stack": "#990099",
+            "--color-module": "#0277BD",
 
             // シグネチャ型背景色（固定・色覚配慮）
             "--color-signature-map": "#DFEBFD",

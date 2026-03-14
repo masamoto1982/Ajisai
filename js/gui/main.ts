@@ -4,6 +4,7 @@ import { createDisplay, Display, DisplayElements } from './display';
 import { createDictionary, Dictionary, DictionaryElements } from './dictionary';
 import { createEditor, Editor } from './editor';
 import { createMobileHandler, MobileHandler, MobileElements, ViewMode } from './mobile';
+import { createModuleTabManager, ModuleTabManager } from './module-tabs';
 import { createPersistence, Persistence } from './persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
 import { WORKER_MANAGER } from '../workers/worker-manager';
@@ -145,6 +146,7 @@ export const createGUI = (): GUI => {
     let mobile: MobileHandler;
     let persistence: Persistence;
     let executionController: ExecutionController;
+    let moduleTabManager: ModuleTabManager;
     let currentMode: ViewMode = 'input';
     let currentLeftMode: ViewMode = 'input';
     let currentRightMode: ViewMode = 'stack';
@@ -157,7 +159,7 @@ export const createGUI = (): GUI => {
             : DESKTOP_EDITOR_PLACEHOLDER;
     };
 
-    const getTabButtons = (): Record<ViewMode, HTMLElement> => ({
+    const getTabButtons = (): Record<string, HTMLElement> => ({
         input: elements.tabInputBtn,
         output: elements.tabOutputBtn,
         stack: elements.tabStackBtn,
@@ -167,12 +169,20 @@ export const createGUI = (): GUI => {
     const updateTabState = (activeModes: Set<ViewMode>): void => {
         const tabs = getTabButtons();
         TAB_MODES.forEach((key) => {
-            const tab = tabs[key];
+            const tab = tabs[key]!;
             const isActive = activeModes.has(key);
             tab.classList.toggle('active', isActive);
             tab.setAttribute('aria-selected', String(isActive));
             tab.setAttribute('tabindex', isActive ? '0' : '-1');
         });
+
+        // Update module tab states
+        for (const modTab of moduleTabManager.getTabs()) {
+            const isActive = activeModes.has(modTab.viewMode);
+            modTab.tabBtn.classList.toggle('active', isActive);
+            modTab.tabBtn.setAttribute('aria-selected', String(isActive));
+            modTab.tabBtn.setAttribute('tabindex', isActive ? '0' : '-1');
+        }
     };
 
     const syncDesktopLayout = (): void => {
@@ -185,26 +195,55 @@ export const createGUI = (): GUI => {
         elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
         elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
         elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
+
+        // Module tab areas
+        for (const tab of moduleTabManager.getTabs()) {
+            const isActive = currentRightMode === tab.viewMode;
+            tab.areaEl.style.display = isActive ? 'flex' : 'none';
+        }
     };
+
+    const isRightMode = (mode: ViewMode): boolean =>
+        RIGHT_TAB_MODES.includes(mode) || mode.startsWith('module:');
 
     const setDesktopModes = (mode: ViewMode): void => {
         if (LEFT_TAB_MODES.includes(mode)) {
             currentLeftMode = mode;
         }
-        if (RIGHT_TAB_MODES.includes(mode)) {
+        if (isRightMode(mode)) {
             currentRightMode = mode;
+        }
+    };
+
+    const fallbackIfModuleTabRemoved = (): void => {
+        if (currentRightMode.startsWith('module:') && !moduleTabManager.getModuleArea(currentRightMode)) {
+            currentRightMode = 'dictionary';
         }
     };
 
     const applyAreaState = (mode: ViewMode): void => {
         if (mobile.isMobile()) {
-            mobile.updateView(mode);
+            // For module modes on mobile, show the module area
+            if (mode.startsWith('module:')) {
+                mobile.updateView(mode);
+                // Show the module area
+                for (const tab of moduleTabManager.getTabs()) {
+                    tab.areaEl.style.display = tab.viewMode === mode ? 'flex' : 'none';
+                }
+            } else {
+                mobile.updateView(mode);
+                // Hide all module areas
+                for (const tab of moduleTabManager.getTabs()) {
+                    tab.areaEl.style.display = 'none';
+                }
+            }
             document.body.dataset.activeArea = mode;
             updateTabState(new Set([mode]));
             return;
         }
 
         setDesktopModes(mode);
+        fallbackIfModuleTabRemoved();
         syncDesktopLayout();
         document.body.dataset.activeArea = currentRightMode;
         updateTabState(new Set([currentLeftMode, currentRightMode]));
@@ -231,6 +270,10 @@ export const createGUI = (): GUI => {
         try {
             display.updateStack(window.ajisaiInterpreter.get_stack());
             dictionary.updateCustomWords(window.ajisaiInterpreter.get_custom_words_info());
+
+            // Sync module tabs based on imported modules
+            moduleTabManager.syncModuleTabs();
+
             updateHighlights(elements.codeInput.value);
         } catch (error) {
             console.error('Failed to update display:', error);
@@ -268,7 +311,9 @@ export const createGUI = (): GUI => {
 
         // 辞書検索: デバウンス付きでフィルタリング
         const handleSearchInput = debounce(() => {
-            dictionary.setSearchFilter(elements.wordSearch.value);
+            const filter = elements.wordSearch.value;
+            dictionary.setSearchFilter(filter);
+            moduleTabManager.setSearchFilter(filter);
         }, 150);
 
         elements.wordSearch.addEventListener('input', handleSearchInput);
@@ -277,13 +322,14 @@ export const createGUI = (): GUI => {
         elements.searchClearBtn.addEventListener('click', () => {
             elements.wordSearch.value = '';
             dictionary.setSearchFilter('');
+            moduleTabManager.setSearchFilter('');
         });
 
         elements.clearBtn.addEventListener('click', () => editor.clear());
 
         const tabs = getTabButtons();
         TAB_MODES.forEach((mode) => {
-            const tab = tabs[mode];
+            const tab = tabs[mode]!;
             tab.addEventListener('click', () => switchArea(mode));
             tab.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -356,6 +402,18 @@ export const createGUI = (): GUI => {
         display = createDisplay(extractDisplayElements(elements));
         display.init();
         updateEditorPlaceholder();
+
+        moduleTabManager = createModuleTabManager({
+            tabGroupEl: elements.tabDictionaryBtn.parentElement!,
+            areaContainerEl: elements.statePanel,
+            onWordClick: (word: string) => {
+                if (!mobile.isMobile()) {
+                    editor.insertWord(word);
+                }
+            },
+            onTabClick: (mode: ViewMode) => switchArea(mode),
+            dictionaryTabBtn: elements.tabDictionaryBtn
+        });
 
         persistence = createPersistence({
             showError: (error) => display.showError(error),

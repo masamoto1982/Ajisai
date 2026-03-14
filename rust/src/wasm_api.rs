@@ -409,6 +409,40 @@ impl AjisaiInterpreter {
         to_value(&builtins::get_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
 
+    /// IMPORT済みモジュール名の一覧を返す。
+    /// 例: ["MUSIC", "JSON"]
+    #[wasm_bindgen]
+    pub fn get_imported_modules(&self) -> JsValue {
+        let arr = js_sys::Array::new();
+        for name in &self.interpreter.imported_modules {
+            arr.push(&JsValue::from_str(name));
+        }
+        arr.into()
+    }
+
+    /// 指定モジュールが公開するワード情報を返す。
+    /// 返却形式は Array<[name, description]>
+    #[wasm_bindgen]
+    pub fn get_module_words_info(&self, module_name: &str) -> JsValue {
+        let upper = module_name.to_uppercase();
+        let prefix = format!("{}::", upper);
+        let arr = js_sys::Array::new();
+        for (name, def) in &self.interpreter.dictionary {
+            if name.starts_with(&prefix) {
+                let item = js_sys::Array::new();
+                item.push(&JsValue::from_str(name));
+                item.push(
+                    &def.description
+                        .clone()
+                        .map(JsValue::from)
+                        .unwrap_or(JsValue::NULL),
+                );
+                arr.push(&item);
+            }
+        }
+        arr.into()
+    }
+
     #[wasm_bindgen]
     pub fn get_word_definition(&self, name: &str) -> JsValue {
         let upper_name = name.to_uppercase();
