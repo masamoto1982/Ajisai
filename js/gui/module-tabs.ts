@@ -198,7 +198,7 @@ export const createModuleTabManager = (
                 button.textContent = shortName;
                 button.className = 'word-button module';
                 button.title = description;
-                button.addEventListener('click', () => onWordClick(name));
+                button.addEventListener('click', () => onWordClick(shortName));
                 button.addEventListener('mouseenter', () => {
                     (wordInfo as HTMLElement).textContent = description;
                 });
