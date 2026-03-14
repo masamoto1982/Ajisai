@@ -411,7 +411,22 @@ export const createGUI = (): GUI => {
                     editor.insertWord(word);
                 }
             },
+            onBackgroundClick: () => {
+                if (!mobile.isMobile()) {
+                    editor.insertWord(' ');
+                }
+            },
+            onBackgroundDoubleClick: () => {
+                if (!mobile.isMobile()) {
+                    editor.deleteLastWord();
+                }
+            },
             onTabClick: (mode: ViewMode) => switchArea(mode),
+            onSearchInput: (filter: string) => {
+                elements.wordSearch.value = filter;
+                dictionary.setSearchFilter(filter);
+                moduleTabManager.setSearchFilter(filter);
+            },
             dictionaryTabBtn: elements.tabDictionaryBtn
         });
 

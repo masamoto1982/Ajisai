@@ -21,7 +21,10 @@ export interface ModuleTabManagerOptions {
     readonly tabGroupEl: HTMLElement;
     readonly areaContainerEl: HTMLElement;
     readonly onWordClick: (word: string) => void;
+    readonly onBackgroundClick: () => void;
+    readonly onBackgroundDoubleClick: () => void;
     readonly onTabClick: (mode: ViewMode) => void;
+    readonly onSearchInput: (filter: string) => void;
     readonly dictionaryTabBtn: HTMLElement;
 }
 
@@ -41,7 +44,11 @@ const matchesFilter = (wordName: string, filter: string): boolean => {
 export const createModuleTabManager = (
     options: ModuleTabManagerOptions
 ): ModuleTabManager => {
-    const { tabGroupEl, areaContainerEl, onWordClick, onTabClick } = options;
+    const {
+        tabGroupEl, areaContainerEl, onWordClick,
+        onBackgroundClick, onBackgroundDoubleClick,
+        onTabClick, onSearchInput
+    } = options;
 
     const tabs: ModuleTab[] = [];
     let searchFilter = '';
@@ -67,6 +74,35 @@ export const createModuleTabManager = (
         return btn;
     };
 
+    const isBackgroundClick = (e: MouseEvent): boolean => {
+        const target = e.target as HTMLElement;
+        return !target.closest('.word-button');
+    };
+
+    const setupBackgroundClickHandlers = (wordsDisplay: HTMLElement): void => {
+        let clickTimer: ReturnType<typeof setTimeout> | null = null;
+
+        wordsDisplay.addEventListener('click', (e) => {
+            if (isBackgroundClick(e as MouseEvent)) {
+                if (clickTimer) clearTimeout(clickTimer);
+                clickTimer = setTimeout(() => {
+                    onBackgroundClick();
+                    clickTimer = null;
+                }, 200);
+            }
+        });
+
+        wordsDisplay.addEventListener('dblclick', (e) => {
+            if (isBackgroundClick(e as MouseEvent)) {
+                if (clickTimer) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                }
+                onBackgroundDoubleClick();
+            }
+        });
+    };
+
     const createAreaElement = (moduleName: string): HTMLElement => {
         const section = document.createElement('section');
         section.className = 'dictionary-area module-tab-area';
@@ -75,11 +111,33 @@ export const createModuleTabManager = (
         section.setAttribute('tabindex', '0');
         section.style.display = 'none';
 
+        // Search bar (mirrors the dictionary's search bar)
         const header = document.createElement('div');
         header.className = 'dictionary-header';
-        const h2 = document.createElement('h2');
-        h2.textContent = moduleName;
-        header.appendChild(h2);
+        const searchWrapper = document.createElement('div');
+        searchWrapper.className = 'search-wrapper';
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'module-search-input';
+        searchInput.placeholder = 'Search words...';
+        searchInput.setAttribute('aria-label', `Search ${moduleName} words`);
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'inline-clear-btn';
+        clearBtn.setAttribute('aria-label', 'Clear search');
+        clearBtn.textContent = '\u00d7';
+        searchWrapper.appendChild(searchInput);
+        searchWrapper.appendChild(clearBtn);
+        header.appendChild(searchWrapper);
+
+        // Wire search events
+        searchInput.addEventListener('input', () => {
+            onSearchInput(searchInput.value);
+        });
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            onSearchInput('');
+        });
 
         const wordInfoDisplay = document.createElement('span');
         wordInfoDisplay.className = 'word-info-display module-word-info';
@@ -98,6 +156,9 @@ export const createModuleTabManager = (
         const wordsDisplay = document.createElement('div');
         wordsDisplay.className = 'words-display module-words-display';
         wordsArea.appendChild(wordsDisplay);
+
+        // Background click/dblclick handlers
+        setupBackgroundClickHandlers(wordsDisplay);
 
         const container = document.createElement('div');
         container.className = 'dictionary-container';
@@ -126,12 +187,15 @@ export const createModuleTabManager = (
 
             const matched = sorted.filter(wd => matchesFilter(wd[0], searchFilter));
 
+            const prefix = `${tab.moduleName}::`;
+
             matched.forEach(wordData => {
                 const name = wordData[0];
+                const shortName = name.startsWith(prefix) ? name.slice(prefix.length) : name;
                 const description = wordData[1] || name;
 
                 const button = document.createElement('button');
-                button.textContent = name;
+                button.textContent = shortName;
                 button.className = 'word-button module';
                 button.title = description;
                 button.addEventListener('click', () => onWordClick(name));
@@ -158,6 +222,16 @@ export const createModuleTabManager = (
 
     const findTab = (moduleName: string): ModuleTab | undefined =>
         tabs.find(t => t.moduleName === moduleName);
+
+    /** Sync search input values across all module tab areas */
+    const syncSearchInputValues = (): void => {
+        for (const tab of tabs) {
+            const input = tab.areaEl.querySelector('.module-search-input') as HTMLInputElement | null;
+            if (input && input.value !== searchFilter) {
+                input.value = searchFilter;
+            }
+        }
+    };
 
     const syncModuleTabs = (): void => {
         if (!window.ajisaiInterpreter) return;
@@ -217,6 +291,7 @@ export const createModuleTabManager = (
 
     const setSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
+        syncSearchInputValues();
         for (const tab of tabs) {
             renderModuleWords(tab);
         }
