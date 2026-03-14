@@ -22,6 +22,8 @@ export interface AjisaiInterpreter {
     restore_custom_words(words: CustomWord[]): void;
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
+    get_imported_modules(): string[];
+    get_module_words_info(module_name: string): Array<[string, string | null]>;
 }
 
 export interface ExecuteResult {

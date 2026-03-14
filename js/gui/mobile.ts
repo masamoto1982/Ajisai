@@ -7,7 +7,7 @@ export interface MobileElements {
     readonly dictionaryArea: HTMLElement;
 }
 
-export type ViewMode = 'input' | 'output' | 'stack' | 'dictionary';
+export type ViewMode = 'input' | 'output' | 'stack' | 'dictionary' | `module:${string}`;
 
 export interface MobileHandler {
     readonly isMobile: () => boolean;
@@ -81,13 +81,23 @@ const getDictionaryModeStyles = (): Record<keyof MobileElements, string> => ({
     dictionaryArea: 'flex'
 });
 
-const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> =>
-    ({
+const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> => {
+    const modeMap: Record<string, () => Record<keyof MobileElements, string>> = {
         input: getInputModeStyles,
         output: getOutputModeStyles,
         stack: getStackModeStyles,
         dictionary: getDictionaryModeStyles
-    }[mode]());
+    };
+    const fn = modeMap[mode];
+    if (fn) return fn();
+    // module:* modes — hide all built-in areas (module area is managed externally)
+    return {
+        inputArea: 'none',
+        outputArea: 'none',
+        stackArea: 'none',
+        dictionaryArea: 'none'
+    };
+};
 
 const applyStyles = (
     elements: MobileElements,

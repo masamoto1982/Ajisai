@@ -146,14 +146,16 @@
 .input-area,
 .output-area,
 .stack-area,
-.dictionary-area {
+.dictionary-area,
+.module-tab-area {
     min-height: 0;
 }
 
 #editor-panel .input-area,
 #editor-panel .output-area,
 #state-panel .stack-area,
-#state-panel .dictionary-area {
+#state-panel .dictionary-area,
+#state-panel .module-tab-area {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -575,6 +577,20 @@ body[data-active-area="dictionary"] .words-display {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
+/* モジュールワードボタン */
+.word-button.module {
+    border-color: var(--color-module, #0277BD);
+    background: #fff;
+    color: var(--color-module, #0277BD);
+    box-shadow: 0 2px 0 var(--color-medium);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.word-button.module:hover {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--color-medium);
+}
+
 /* シグネチャ型背景色 */
 .word-button.signature-map {
     background: var(--color-signature-map);
@@ -657,7 +673,8 @@ body[data-active-area="dictionary"] .words-display {
     .output-area,
     .input-area,
     .stack-area,
-    .dictionary-area {
+    .dictionary-area,
+    .module-tab-area {
         height: auto;
         flex: none;
     }
