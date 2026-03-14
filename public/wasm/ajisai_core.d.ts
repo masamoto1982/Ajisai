@@ -27,6 +27,11 @@ export class AjisaiInterpreter {
     remove_word(name: string): void;
     reset(): any;
     restore_custom_words(words_js: any): void;
+    /**
+     * JS側からモジュール状態を復元する。
+     * 配列 ["MUSIC", "JSON"] のような形式で受け取り、各モジュールを再登録する。
+     */
+    restore_imported_modules(modules_js: any): void;
     restore_stack(stack_js: any): void;
     set_input_buffer(text: string): void;
 }
@@ -51,6 +56,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_reset: (a: number) => any;
     readonly ajisaiinterpreter_restore_custom_words: (a: number, b: any) => [number, number];
+    readonly ajisaiinterpreter_restore_imported_modules: (a: number, b: any) => void;
     readonly ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_set_input_buffer: (a: number, b: number, c: number) => void;
     readonly wasm_bindgen__closure__destroy__h881c6ff590a92e5d: (a: number, b: number) => void;

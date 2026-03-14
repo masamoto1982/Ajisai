@@ -17,6 +17,7 @@ export const ajisaiinterpreter_push_json_string: (a: number, b: number, c: numbe
 export const ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
 export const ajisaiinterpreter_reset: (a: number) => any;
 export const ajisaiinterpreter_restore_custom_words: (a: number, b: any) => [number, number];
+export const ajisaiinterpreter_restore_imported_modules: (a: number, b: any) => void;
 export const ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
 export const ajisaiinterpreter_set_input_buffer: (a: number, b: number, c: number) => void;
 export const wasm_bindgen__closure__destroy__h881c6ff590a92e5d: (a: number, b: number) => void;

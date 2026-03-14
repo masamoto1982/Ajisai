@@ -30,6 +30,7 @@ export interface ExecutionController {
 interface ExecutionSnapshot {
     readonly stack: ReturnType<AjisaiInterpreter['get_stack']>;
     readonly customWords: CustomWord[];
+    readonly importedModules: string[];
 }
 
 const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
@@ -48,6 +49,9 @@ const syncInterpreterState = (
     if (!result || result.error) return;
 
     interpreter.reset();
+    if (result.importedModules?.length) {
+        interpreter.restore_imported_modules(result.importedModules);
+    }
     if (result.stack) {
         interpreter.restore_stack(result.stack);
     }
@@ -64,7 +68,8 @@ const isAbortError = (error: Error): boolean =>
 
 const createExecutionSnapshot = (interpreter: AjisaiInterpreter): ExecutionSnapshot => ({
     stack: interpreter.get_stack(),
-    customWords: getCustomWords(interpreter)
+    customWords: getCustomWords(interpreter),
+    importedModules: interpreter.get_imported_modules()
 });
 
 const handleExecutionException = (

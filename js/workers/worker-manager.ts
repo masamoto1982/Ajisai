@@ -9,6 +9,7 @@ interface WorkerTask {
     state: {
         stack: Value[];
         customWords: CustomWord[];
+        importedModules?: string[];
     };
     resolve: (result: any) => void;
     reject: (error: any) => void;
@@ -146,7 +147,7 @@ export class WorkerManager {
         return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     }
 
-    execute(code: string, state: { stack: Value[], customWords: CustomWord[] }): Promise<ExecuteResult> {
+    execute(code: string, state: { stack: Value[], customWords: CustomWord[], importedModules?: string[] }): Promise<ExecuteResult> {
         this.ensureWorkers();
         return new Promise((resolve, reject) => {
             const task: WorkerTask = {

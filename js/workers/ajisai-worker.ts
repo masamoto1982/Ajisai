@@ -82,6 +82,9 @@ self.onmessage = async (event: MessageEvent) => {
     try {
         // 実行前に状態を復元
         interpreter!.reset();
+        if (event.data.state?.importedModules?.length) {
+            interpreter!.restore_imported_modules(event.data.state.importedModules);
+        }
         if (event.data.state?.stack) {
             interpreter!.restore_stack(event.data.state.stack);
         }

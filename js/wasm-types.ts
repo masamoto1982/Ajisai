@@ -24,6 +24,7 @@ export interface AjisaiInterpreter {
     push_json_string(json: string): { status: string; message?: string };
     get_imported_modules(): string[];
     get_module_words_info(module_name: string): Array<[string, string | null]>;
+    restore_imported_modules(modules: string[]): void;
 }
 
 export interface ExecuteResult {
@@ -38,6 +39,7 @@ export interface ExecuteResult {
     // Workerから返されるインタプリタの状態
     stack?: Value[];
     customWords?: CustomWord[];
+    importedModules?: string[];
 }
 
 export interface Fraction {
