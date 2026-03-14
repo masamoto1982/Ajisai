@@ -226,6 +226,22 @@ pub fn op_import(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// Re-import a module by name without requiring a stack value.
+/// Used for restoring module state from JS side.
+pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
+    let upper = module_name.to_uppercase();
+    if interp.imported_modules.contains(&upper) {
+        return true;
+    }
+    if let Some(module) = MODULE_SPECS.iter().find(|m| m.name == upper) {
+        register_words(interp, module.words);
+        interp.imported_modules.insert(upper);
+        true
+    } else {
+        false
+    }
+}
+
 pub fn execute_module_word(interp: &mut Interpreter, name: &str) -> Option<Result<()>> {
     for module in MODULE_SPECS {
         for word in module.words {

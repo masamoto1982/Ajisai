@@ -192,6 +192,7 @@ impl AjisaiInterpreter {
                         &self.get_custom_words_for_state(),
                     )
                     .unwrap();
+                    js_sys::Reflect::set(&obj, &"importedModules".into(), &self.get_imported_modules_array()).unwrap();
                     return Ok(obj.into());
                 } else {
                     js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -214,6 +215,7 @@ impl AjisaiInterpreter {
                     &self.get_custom_words_for_state(),
                 )
                 .unwrap();
+                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.get_imported_modules_array()).unwrap();
 
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
                     js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into())
@@ -305,6 +307,7 @@ impl AjisaiInterpreter {
                     &self.get_custom_words_for_state(),
                 )
                 .unwrap();
+                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.get_imported_modules_array()).unwrap();
             }
             Err(e) => {
                 self.step_mode = false;
@@ -339,6 +342,7 @@ impl AjisaiInterpreter {
                     &self.get_custom_words_for_state(),
                 )
                 .unwrap();
+                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.get_imported_modules_array()).unwrap();
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -387,6 +391,14 @@ impl AjisaiInterpreter {
         }
 
         js_array.into()
+    }
+
+    fn get_imported_modules_array(&self) -> JsValue {
+        let arr = js_sys::Array::new();
+        for name in &self.interpreter.imported_modules {
+            arr.push(&JsValue::from_str(name));
+        }
+        arr.into()
     }
 
     fn get_custom_words_for_state(&self) -> JsValue {
@@ -441,6 +453,18 @@ impl AjisaiInterpreter {
             }
         }
         arr.into()
+    }
+
+    /// JS側からモジュール状態を復元する。
+    /// 配列 ["MUSIC", "JSON"] のような形式で受け取り、各モジュールを再登録する。
+    #[wasm_bindgen]
+    pub fn restore_imported_modules(&mut self, modules_js: JsValue) {
+        let arr = js_sys::Array::from(&modules_js);
+        for i in 0..arr.length() {
+            if let Some(name) = arr.get(i).as_string() {
+                interpreter::modules::restore_module(&mut self.interpreter, &name);
+            }
+        }
     }
 
     #[wasm_bindgen]

@@ -145,6 +145,14 @@ export class AjisaiInterpreter {
         }
     }
     /**
+     * JS側からモジュール状態を復元する。
+     * 配列 ["MUSIC", "JSON"] のような形式で受け取り、各モジュールを再登録する。
+     * @param {any} modules_js
+     */
+    restore_imported_modules(modules_js) {
+        wasm.ajisaiinterpreter_restore_imported_modules(this.__wbg_ptr, modules_js);
+    }
+    /**
      * @param {any} stack_js
      */
     restore_stack(stack_js) {
