@@ -135,7 +135,21 @@ const getAutocompleteWords = (): string[] => {
 
     const builtinWords = window.ajisaiInterpreter.get_builtin_words_info().map(word => word[0]);
     const customWords = window.ajisaiInterpreter.get_custom_words_info().map(word => word[0]);
-    return Array.from(new Set([...builtinWords, ...customWords])).sort((a, b) => a.localeCompare(b));
+
+    const moduleWords: string[] = [];
+    try {
+        const importedModules = window.ajisaiInterpreter.get_imported_modules();
+        for (const moduleName of importedModules) {
+            const words = window.ajisaiInterpreter.get_module_words_info(moduleName);
+            const prefix = `${moduleName}::`;
+            for (const word of words) {
+                const name = word[0];
+                moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);
+            }
+        }
+    } catch { /* no modules imported */ }
+
+    return Array.from(new Set([...builtinWords, ...customWords, ...moduleWords])).sort((a, b) => a.localeCompare(b));
 };
 
 export const createGUI = (): GUI => {
