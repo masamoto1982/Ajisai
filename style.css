@@ -434,8 +434,36 @@ body[data-active-area="dictionary"] .words-display {
     transform: translateY(-50%);
 }
 
-#word-search:placeholder-shown ~ #search-clear-btn {
+#word-search:placeholder-shown ~ #search-clear-btn,
+.module-search-input:placeholder-shown ~ .inline-clear-btn {
     display: none;
+}
+
+/* Module tab search input (mirrors #word-search) */
+.module-search-input {
+    padding: 0.25rem 1.75rem 0.25rem 0.5rem;
+    border: none;
+    border-radius: 0;
+    font-size: 0.85rem;
+    font-family: var(--font-stack-mono);
+    background-color: var(--code-bg);
+    color: var(--code-text);
+    min-width: 120px;
+    max-width: 200px;
+}
+
+.module-search-input:focus {
+    outline: none;
+}
+
+.module-search-input::placeholder {
+    color: var(--code-comment);
+}
+
+.module-tab-area .inline-clear-btn {
+    right: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 /* 検索結果なしメッセージ */
