@@ -164,11 +164,13 @@ export const createDictionary = (
     let searchFilter = '';
     let cachedCustomWords: Array<[string, string | null, boolean]> = [];
 
-    const confirmAndDeleteWord = async (wordName: string): Promise<void> => {
-        if (!confirm(`Delete word '${wordName}'?`)) return;
+    const deleteWord = async (wordName: string, forceDelete: boolean): Promise<void> => {
+        const deleteCode = forceDelete
+            ? `! '${wordName}' DEL`
+            : `'${wordName}' DEL`;
 
         try {
-            const result = await window.ajisaiInterpreter.execute(`'${wordName}' DEL`);
+            const result = await window.ajisaiInterpreter.execute(deleteCode);
             if (result.status === 'ERROR') {
                 alert(`Failed to delete word: ${result.message}`);
             } else {
@@ -179,6 +181,23 @@ export const createDictionary = (
         } catch (error) {
             alert(`Error deleting word: ${error}`);
         }
+    };
+
+    const confirmAndDeleteWord = async (wordInfo: WordInfo): Promise<void> => {
+        if (wordInfo.protected) {
+            const confirmed = confirm(
+                `Word '${wordInfo.name}' is referenced by other custom words. Force delete with ! ?`
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            await deleteWord(wordInfo.name, true);
+            return;
+        }
+
+        await deleteWord(wordInfo.name, false);
     };
 
     const renderBuiltinWordsSorted = (
@@ -254,7 +273,7 @@ export const createDictionary = (
                 wordInfo.description || '',
                 className,
                 () => onWordClick(wordInfo.name),
-                () => confirmAndDeleteWord(wordInfo.name),
+                () => confirmAndDeleteWord(wordInfo),
                 () => {
                     // Show word definition on hover
                     const definition = window.ajisaiInterpreter?.get_word_definition(wordInfo.name);
