@@ -37,14 +37,14 @@ export class AjisaiInterpreter {
     /**
      * @returns {any}
      */
-    get_builtin_words_info() {
+    get_core_words_info() {
         const ret = wasm.ajisaiinterpreter_get_builtin_words_info(this.__wbg_ptr);
         return ret;
     }
     /**
      * @returns {any}
      */
-    get_custom_words_info() {
+    get_idiolect_words_info() {
         const ret = wasm.ajisaiinterpreter_get_custom_words_info(this.__wbg_ptr);
         return ret;
     }
@@ -138,7 +138,7 @@ export class AjisaiInterpreter {
     /**
      * @param {any} words_js
      */
-    restore_custom_words(words_js) {
+    restore_idiolect(words_js) {
         const ret = wasm.ajisaiinterpreter_restore_custom_words(this.__wbg_ptr, words_js);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
