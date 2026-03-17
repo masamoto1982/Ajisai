@@ -55,8 +55,8 @@ pub enum AsyncAction {
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
-    pub(crate) builtin_dictionary: HashMap<String, Arc<WordDefinition>>,
-    pub(crate) dictionary: HashMap<String, Arc<WordDefinition>>,
+    pub(crate) core_vocabulary: HashMap<String, Arc<WordDefinition>>,
+    pub(crate) idiolect: HashMap<String, Arc<WordDefinition>>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
@@ -94,8 +94,8 @@ impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
             stack: Vec::new(),
-            builtin_dictionary: HashMap::new(),
-            dictionary: HashMap::new(),
+            core_vocabulary: HashMap::new(),
+            idiolect: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
             definition_to_load: None,
@@ -117,7 +117,7 @@ impl Interpreter {
             flow_consumed_log: Vec::new(),
             module_samples: HashMap::new(),
         };
-        crate::builtins::register_builtins(&mut interpreter.builtin_dictionary);
+        crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
     }
 
@@ -226,7 +226,7 @@ impl Interpreter {
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
         // Fully qualified names (MODULE::WORD) are always highest priority
         if name.contains("::") {
-            return self.builtin_dictionary.get(name).cloned();
+            return self.core_vocabulary.get(name).cloned();
         }
 
         // 1. Specialized Vocabulary: module sample words (all imported modules)
@@ -237,20 +237,20 @@ impl Interpreter {
         }
 
         // 2. Idiolect: user-defined words
-        if let Some(def) = self.dictionary.get(name) {
+        if let Some(def) = self.idiolect.get(name) {
             return Some(def.clone());
         }
 
         // 3. Core Vocabulary: built-in words
-        self.builtin_dictionary.get(name).cloned()
+        self.core_vocabulary.get(name).cloned()
     }
 
     /// Check if a word exists in any layer (for dependency tracking etc.)
     pub(crate) fn word_exists(&self, name: &str) -> bool {
-        if self.dictionary.contains_key(name) {
+        if self.idiolect.contains_key(name) {
             return true;
         }
-        if self.builtin_dictionary.contains_key(name) {
+        if self.core_vocabulary.contains_key(name) {
             return true;
         }
         for module_dict in self.module_samples.values() {
@@ -263,7 +263,7 @@ impl Interpreter {
 
     /// Check if a word is a non-builtin custom word (user-defined or module sample)
     pub(crate) fn is_custom_word(&self, name: &str) -> bool {
-        if self.dictionary.contains_key(name) {
+        if self.idiolect.contains_key(name) {
             return true;
         }
         for module_dict in self.module_samples.values() {
@@ -976,7 +976,7 @@ impl Interpreter {
 
     pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
         // Check dictionary first, then module_samples
-        let def = if let Some(d) = self.dictionary.get(name) {
+        let def = if let Some(d) = self.idiolect.get(name) {
             if d.is_builtin || d.lines.is_empty() {
                 return None;
             }
@@ -1008,8 +1008,8 @@ impl Interpreter {
 
     pub fn execute_reset(&mut self) -> Result<()> {
         self.stack.clear();
-        self.builtin_dictionary.clear();
-        self.dictionary.clear();
+        self.core_vocabulary.clear();
+        self.idiolect.clear();
         self.dependents.clear();
         self.output_buffer.clear();
         self.definition_to_load = None;
@@ -1021,7 +1021,7 @@ impl Interpreter {
         self.call_stack.clear();
         self.imported_modules.clear();
         self.module_samples.clear();
-        crate::builtins::register_builtins(&mut self.builtin_dictionary);
+        crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }
 
@@ -1052,9 +1052,9 @@ impl Interpreter {
     pub fn rebuild_dependencies(&mut self) -> Result<()> {
         self.dependents.clear();
 
-        // Collect all custom words: user-defined from dictionary + module samples
+        // Collect all custom words: user-defined from idiolect + module samples
         let mut custom_words: Vec<(String, Arc<WordDefinition>)> = self
-            .dictionary
+            .idiolect
             .iter()
             .map(|(name, def)| (name.clone(), Arc::clone(def)))
             .collect();
@@ -1082,7 +1082,7 @@ impl Interpreter {
                 }
             }
             // Update dependencies on the definition
-            if let Some(def) = self.dictionary.get_mut(word_name) {
+            if let Some(def) = self.idiolect.get_mut(word_name) {
                 Arc::make_mut(def).dependencies = dependencies;
             } else {
                 // Check module samples
@@ -1100,7 +1100,7 @@ impl Interpreter {
     /// 指定されたワードを参照している他のワードの集合を取得
     pub fn get_dependents(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
-        for (name, def) in &self.dictionary {
+        for (name, def) in &self.idiolect {
             if def.dependencies.contains(word_name) {
                 result.insert(name.clone());
             }
@@ -1212,7 +1212,7 @@ ADDTEST
         // 依存なしなら ! 不要で削除可能
         let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_ok());
-        assert!(!interp.dictionary.contains_key("DOUBLE"));
+        assert!(!interp.idiolect.contains_key("DOUBLE"));
     }
 
     #[tokio::test]
@@ -1227,7 +1227,7 @@ ADDTEST
         // 依存ありで ! なしはエラー
         let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_err());
-        assert!(interp.dictionary.contains_key("DOUBLE"));
+        assert!(interp.idiolect.contains_key("DOUBLE"));
     }
 
     #[tokio::test]
@@ -1242,7 +1242,7 @@ ADDTEST
         // ! 付きなら削除可能
         let result = interp.execute("! 'DOUBLE' DEL").await;
         assert!(result.is_ok());
-        assert!(!interp.dictionary.contains_key("DOUBLE"));
+        assert!(!interp.idiolect.contains_key("DOUBLE"));
         assert!(interp.output_buffer.contains("Warning"));
     }
 
@@ -1321,16 +1321,16 @@ ADDTEST
 
         // Verify ANSWER is defined
         assert!(
-            interp.dictionary.contains_key("ANSWER"),
+            interp.idiolect.contains_key("ANSWER"),
             "ANSWER should be defined"
         );
         assert!(
-            !interp.dictionary.contains_key("ZERO"),
+            !interp.idiolect.contains_key("ZERO"),
             "ZERO should not be defined"
         );
 
         // Debug: Print ANSWER definition
-        if let Some(def) = interp.dictionary.get("ANSWER") {
+        if let Some(def) = interp.idiolect.get("ANSWER") {
             println!("ANSWER definition has {} lines", def.lines.len());
             for (i, line) in def.lines.iter().enumerate() {
                 println!("Line {}: {} tokens", i, line.body_tokens.len());
@@ -1371,11 +1371,11 @@ ADDTEST
 
         // Verify SMALL is defined
         assert!(
-            !interp.dictionary.contains_key("BIG"),
+            !interp.idiolect.contains_key("BIG"),
             "BIG should not be defined"
         );
         assert!(
-            interp.dictionary.contains_key("SMALL"),
+            interp.idiolect.contains_key("SMALL"),
             "SMALL should be defined"
         );
 
@@ -1410,11 +1410,11 @@ ADDTEST
 
         // Verify DEFAULT is defined
         assert!(
-            !interp.dictionary.contains_key("HUNDRED"),
+            !interp.idiolect.contains_key("HUNDRED"),
             "HUNDRED should not be defined"
         );
         assert!(
-            interp.dictionary.contains_key("DEFAULT"),
+            interp.idiolect.contains_key("DEFAULT"),
             "DEFAULT should be defined"
         );
 
@@ -1455,11 +1455,11 @@ ADDTEST
 
         // Verify PROCESS is defined
         assert!(
-            interp.dictionary.contains_key("PROCESS"),
+            interp.idiolect.contains_key("PROCESS"),
             "PROCESS should be defined"
         );
         assert!(
-            interp.dictionary.contains_key("DOUBLE"),
+            interp.idiolect.contains_key("DOUBLE"),
             "DOUBLE should exist"
         );
 
@@ -1524,7 +1524,7 @@ ADDTEST
 
         // Verify ANSWER is defined
         assert!(
-            interp.dictionary.contains_key("ANSWER"),
+            interp.idiolect.contains_key("ANSWER"),
             "ANSWER should be defined"
         );
 

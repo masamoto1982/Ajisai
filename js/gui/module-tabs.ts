@@ -32,7 +32,7 @@ export interface ModuleTabManagerOptions {
     readonly onBackgroundDoubleClick: () => void;
     readonly onTabClick: (mode: ViewMode) => void;
     readonly onSearchInput: (filter: string) => void;
-    readonly dictionaryTabBtn: HTMLElement;
+    readonly coreTabBtn: HTMLElement;
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (msg: string, clear: boolean) => void;
@@ -77,24 +77,24 @@ export const createModuleTabManager = (
 
     const createAreaElement = (moduleName: string): HTMLElement => {
         const section = document.createElement('section');
-        section.className = 'dictionary-area module-tab-area';
+        section.className = 'vocabulary-area module-tab-area';
         section.setAttribute('data-module', moduleName);
         section.setAttribute('role', 'tabpanel');
         section.setAttribute('tabindex', '0');
         section.style.display = 'none';
 
         const header = document.createElement('div');
-        header.className = 'dictionary-header';
+        header.className = 'vocabulary-header';
         const searchWrapper = document.createElement('div');
         searchWrapper.className = 'search-wrapper';
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
-        searchInput.className = 'dictionary-search-input module-search-input';
+        searchInput.className = 'vocabulary-search-input module-search-input';
         searchInput.placeholder = 'Search words...';
         searchInput.setAttribute('aria-label', `Search ${moduleName} words`);
         const clearBtn = document.createElement('button');
         clearBtn.type = 'button';
-        clearBtn.className = 'inline-clear-btn dictionary-search-clear-btn';
+        clearBtn.className = 'inline-clear-btn vocabulary-search-clear-btn';
         clearBtn.setAttribute('aria-label', 'Clear search');
         clearBtn.textContent = '×';
         searchWrapper.appendChild(searchInput);
@@ -112,12 +112,12 @@ export const createModuleTabManager = (
         const wordsHeader = document.createElement('div');
         wordsHeader.className = 'words-header';
         const h3 = document.createElement('h3');
-        h3.textContent = 'Built-in Words';
+        h3.textContent = 'Module Words';
         wordsHeader.appendChild(h3);
         wordsHeader.appendChild(wordInfoDisplay);
 
         const wordsArea = document.createElement('div');
-        wordsArea.className = 'builtin-words-area';
+        wordsArea.className = 'core-words-area';
         wordsArea.appendChild(wordsHeader);
 
         const wordsDisplay = document.createElement('div');
@@ -126,7 +126,7 @@ export const createModuleTabManager = (
         setupBackgroundClickHandlers(wordsDisplay, onBackgroundClick, onBackgroundDoubleClick);
 
         const container = document.createElement('div');
-        container.className = 'dictionary-container';
+        container.className = 'vocabulary-container';
         container.appendChild(wordsArea);
 
         section.appendChild(header);

@@ -146,7 +146,7 @@
 .input-area,
 .output-area,
 .stack-area,
-.dictionary-area,
+.vocabulary-area,
 .module-tab-area {
     min-height: 0;
 }
@@ -154,7 +154,7 @@
 #editor-panel .input-area,
 #editor-panel .output-area,
 #state-panel .stack-area,
-#state-panel .dictionary-area,
+#state-panel .vocabulary-area,
 #state-panel .module-tab-area {
     flex: 1;
     display: flex;
@@ -164,10 +164,10 @@
 #editor-panel .input-area,
 #editor-panel .output-area,
 #state-panel .stack-area,
-#state-panel .dictionary-area,
-.dictionary-container,
-.builtin-words-area,
-.custom-words-area,
+#state-panel .vocabulary-area,
+.vocabulary-container,
+.core-words-area,
+.idiolect-words-area,
 .words-display,
 .state-display,
 .display-area {
@@ -185,20 +185,20 @@ body[data-active-area] .main-layout section {
     min-height: 0;
 }
 
-body[data-active-area="dictionary"] .dictionary-container {
+body[data-active-area="core"] .vocabulary-container {
     display: grid;
     grid-template-rows: 1fr 1fr;
     gap: 0.75rem;
 }
 
-body[data-active-area="dictionary"] .builtin-words-area,
-body[data-active-area="dictionary"] .custom-words-area {
+body[data-active-area="core"] .core-words-area,
+body[data-active-area="core"] .idiolect-words-area {
     overflow: hidden;
     display: flex;
     flex-direction: column;
 }
 
-body[data-active-area="dictionary"] .words-display {
+body[data-active-area="core"] .words-display {
     flex: 1;
     overflow-y: auto;
 }
@@ -393,7 +393,7 @@ body[data-active-area="dictionary"] .words-display {
 }
 
 /* 辞書ヘッダー（検索窓） */
-.dictionary-header {
+.vocabulary-header {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -407,7 +407,7 @@ body[data-active-area="dictionary"] .words-display {
     align-items: center;
 }
 
-.dictionary-search-input {
+.vocabulary-search-input {
     padding: 0.25rem 1.75rem 0.25rem 0.5rem;
     border: none;
     border-radius: 0;
@@ -419,21 +419,21 @@ body[data-active-area="dictionary"] .words-display {
     max-width: 200px;
 }
 
-.dictionary-search-input:focus {
+.vocabulary-search-input:focus {
     outline: none;
 }
 
-.dictionary-search-input::placeholder {
+.vocabulary-search-input::placeholder {
     color: var(--code-comment);
 }
 
-.dictionary-search-clear-btn {
+.vocabulary-search-clear-btn {
     right: 0.25rem;
     top: 50%;
     transform: translateY(-50%);
 }
 
-.dictionary-search-input:placeholder-shown ~ .dictionary-search-clear-btn {
+.vocabulary-search-input:placeholder-shown ~ .vocabulary-search-clear-btn {
     display: none;
 }
 
@@ -445,7 +445,7 @@ body[data-active-area="dictionary"] .words-display {
     text-align: center;
 }
 
-.dictionary-container {
+.vocabulary-container {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -453,15 +453,15 @@ body[data-active-area="dictionary"] .words-display {
     min-height: 0;
 }
 
-.dictionary-actions {
+.vocabulary-actions {
     margin-top: 0.75rem;
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
 }
 
-.builtin-words-area,
-.custom-words-area {
+.core-words-area,
+.idiolect-words-area {
     width: 100%;
     background: var(--gradient-child);
     padding: 0.75rem;
@@ -472,16 +472,16 @@ body[data-active-area="dictionary"] .words-display {
     overflow: hidden;
 }
 
-.builtin-words-area .words-display,
-.custom-words-area .words-display {
+.core-words-area .words-display,
+.idiolect-words-area .words-display {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
 }
 
 /* words-display自体の背景・パディングを除去（親が担当） */
-.builtin-words-area .words-display,
-.custom-words-area .words-display {
+.core-words-area .words-display,
+.idiolect-words-area .words-display {
     background-color: rgba(0, 0, 0, 0.06);
     border-radius: 6px;
     padding: 4px;
@@ -535,15 +535,15 @@ body[data-active-area="dictionary"] .words-display {
 }
 
 /* 組み込みワード - 色覚配慮カラー */
-.word-button.builtin {
-    border-color: var(--color-builtin);
+.word-button.core {
+    border-color: var(--color-core);
     background: #fff;
-    color: var(--color-builtin);
+    color: var(--color-core);
     box-shadow: 0 2px 0 var(--color-medium);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
-.word-button.builtin:hover {
+.word-button.core:hover {
     transform: translateY(2px);
     box-shadow: 0 0 0 var(--color-medium);
 }
@@ -672,7 +672,7 @@ body[data-active-area="dictionary"] .words-display {
     .output-area,
     .input-area,
     .stack-area,
-    .dictionary-area,
+    .vocabulary-area,
     .module-tab-area {
         height: auto;
         flex: none;
@@ -689,8 +689,8 @@ body[data-active-area="dictionary"] .words-display {
         min-height: 80px;
     }
 
-    .builtin-words-area .words-display,
-    .custom-words-area .words-display {
+    .core-words-area .words-display,
+    .idiolect-words-area .words-display {
         cursor: default;
     }
 
@@ -705,7 +705,7 @@ body[data-active-area="dictionary"] .words-display {
     }
 
     .input-area,
-    .dictionary-area {
+    .vocabulary-area {
         cursor: default;
     }
 }

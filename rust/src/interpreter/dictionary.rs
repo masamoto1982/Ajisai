@@ -142,7 +142,7 @@ pub(crate) fn op_def_inner(
 ) -> Result<()> {
     let upper_name = name.to_uppercase();
 
-    if interp.builtin_dictionary.contains_key(&upper_name) {
+    if interp.core_vocabulary.contains_key(&upper_name) {
         interp.force_flag = false;
         return Err(AjisaiError::BuiltinProtection {
             word: upper_name,
@@ -162,7 +162,7 @@ pub(crate) fn op_def_inner(
         }
     }
 
-    if let Some(existing) = interp.dictionary.get(&upper_name) {
+    if let Some(existing) = interp.idiolect.get(&upper_name) {
         let dependents = interp.get_dependents(&upper_name);
 
         if !dependents.is_empty() && !interp.force_flag {
@@ -220,7 +220,7 @@ pub(crate) fn op_def_inner(
     };
 
     interp
-        .dictionary
+        .idiolect
         .insert(upper_name.clone(), Arc::new(new_def));
     interp
         .output_buffer
@@ -289,7 +289,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name.to_uppercase();
 
-    if interp.builtin_dictionary.contains_key(&upper_name) {
+    if interp.core_vocabulary.contains_key(&upper_name) {
         interp.force_flag = false;
         return Err(AjisaiError::BuiltinProtection {
             word: upper_name.clone(),
@@ -297,8 +297,8 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    // Check if word exists in dictionary (user-defined)
-    let in_dictionary = interp.dictionary.contains_key(&upper_name);
+    // Check if word exists in idiolect (user-defined)
+    let in_idiolect = interp.idiolect.contains_key(&upper_name);
 
     // Check if word exists in module samples
     let in_module_samples = interp
@@ -306,7 +306,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         .values()
         .any(|md| md.contains_key(&upper_name));
 
-    if !in_dictionary && !in_module_samples {
+    if !in_idiolect && !in_module_samples {
         interp.force_flag = false;
         return Err(AjisaiError::from(format!(
             "Word '{}' is not defined",
@@ -315,7 +315,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     }
 
     // Module sample words require force flag
-    if !in_dictionary && in_module_samples && !interp.force_flag {
+    if !in_idiolect && in_module_samples && !interp.force_flag {
         interp.force_flag = false;
         return Err(AjisaiError::from(format!(
             "Word '{}' is a module sample word. Use ! '{}' DEL to force delete.",
@@ -334,7 +334,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     }
 
     // Delete from dictionary (user-defined)
-    if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
+    if let Some(removed_def) = interp.idiolect.remove(&upper_name) {
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
                 deps.remove(&upper_name);
@@ -586,20 +586,20 @@ mod tests {
         ];
         restore_sample_words(&mut interp, &sample_words);
 
-        assert!(interp.dictionary.contains_key("C4"));
-        assert!(interp.dictionary.contains_key("D4"));
-        assert!(interp.dictionary.contains_key("E4"));
+        assert!(interp.idiolect.contains_key("C4"));
+        assert!(interp.idiolect.contains_key("D4"));
+        assert!(interp.idiolect.contains_key("E4"));
 
         let result = interp.execute("'D4' DEL").await;
         assert!(result.is_ok(), "Should delete D4: {:?}", result.err());
-        assert!(!interp.dictionary.contains_key("D4"));
+        assert!(!interp.idiolect.contains_key("D4"));
 
         let result = interp.execute("'C4' DEL").await;
         assert!(result.is_err(), "Should not delete C4 (has dependents)");
 
         let result = interp.execute("! 'C4' DEL").await;
         assert!(result.is_ok(), "Should force delete C4: {:?}", result.err());
-        assert!(!interp.dictionary.contains_key("C4"));
+        assert!(!interp.idiolect.contains_key("C4"));
     }
 
     #[tokio::test]

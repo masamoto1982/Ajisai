@@ -7,8 +7,8 @@ export class AjisaiInterpreter {
     clear_io_output_buffer(): void;
     execute(code: string): Promise<any>;
     execute_step(code: string): any;
-    get_builtin_words_info(): any;
-    get_custom_words_info(): any;
+    get_core_words_info(): any;
+    get_idiolect_words_info(): any;
     /**
      * IMPORT済みモジュール名の一覧を返す。
      * 例: ["MUSIC", "JSON"]
@@ -26,7 +26,7 @@ export class AjisaiInterpreter {
     push_json_string(json_string: string): any;
     remove_word(name: string): void;
     reset(): any;
-    restore_custom_words(words_js: any): void;
+    restore_idiolect(words_js: any): void;
     /**
      * JS側からモジュール状態を復元する。
      * 配列 ["MUSIC", "JSON"] のような形式で受け取り、各モジュールを再登録する。

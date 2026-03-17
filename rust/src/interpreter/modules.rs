@@ -204,7 +204,7 @@ const MODULE_SPECS: &[ModuleSpec] = &[
 
 fn register_words(interp: &mut Interpreter, words: &[ModuleWord]) {
     for word in words {
-        interp.builtin_dictionary.insert(
+        interp.core_vocabulary.insert(
             word.name.to_string(),
             Arc::new(WordDefinition {
                 lines: Arc::from([]),
@@ -260,9 +260,9 @@ fn register_sample_words(
     // First pass: remove conflicting user-defined words (module-first principle)
     for sample in sample_words {
         let upper_name = sample.name.to_uppercase();
-        if interp.dictionary.contains_key(&upper_name) {
+        if interp.idiolect.contains_key(&upper_name) {
             // Clean up dependency tracking for the removed word
-            if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
+            if let Some(removed_def) = interp.idiolect.remove(&upper_name) {
                 for dep_name in &removed_def.dependencies {
                     if let Some(dependents) = interp.dependents.get_mut(dep_name) {
                         dependents.remove(&upper_name);
@@ -272,7 +272,7 @@ fn register_sample_words(
             if let Some(dependents) = interp.dependents.remove(&upper_name) {
                 // Clear reverse references
                 for dep in &dependents {
-                    if let Some(def) = interp.dictionary.get(dep) {
+                    if let Some(def) = interp.idiolect.get(dep) {
                         let mut new_deps = def.dependencies.clone();
                         new_deps.remove(&upper_name);
                         let new_def = WordDefinition {
@@ -282,7 +282,7 @@ fn register_sample_words(
                             dependencies: new_deps,
                             original_source: def.original_source.clone(),
                         };
-                        interp.dictionary.insert(dep.clone(), Arc::new(new_def));
+                        interp.idiolect.insert(dep.clone(), Arc::new(new_def));
                     }
                 }
             }

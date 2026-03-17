@@ -235,7 +235,7 @@ const AjisaiTheme = {
             "--code-inline-bg": `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`,
 
             // 色覚配慮カラー（固定）
-            "--color-builtin": "#E65100",
+            "--color-core": "#E65100",
             "--color-dependency": "#E69500",
             "--color-non-dependency": "#009B68",
             "--color-stack": "#990099",

@@ -34,7 +34,7 @@ interface ExecutionSnapshot {
 }
 
 const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
-    const customWordsInfo = interpreter.get_custom_words_info();
+    const customWordsInfo = interpreter.get_idiolect_words_info();
     return customWordsInfo.map(wordData => ({
         name: wordData[0],
         definition: interpreter.get_word_definition(wordData[0]),
@@ -56,7 +56,7 @@ const syncInterpreterState = (
         interpreter.restore_stack(result.stack);
     }
     if (result.customWords) {
-        interpreter.restore_custom_words(result.customWords);
+        interpreter.restore_idiolect(result.customWords);
     }
 };
 
