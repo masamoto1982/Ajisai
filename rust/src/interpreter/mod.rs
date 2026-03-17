@@ -55,6 +55,7 @@ pub enum AsyncAction {
 
 pub struct Interpreter {
     pub(crate) stack: Stack,
+    pub(crate) builtin_dictionary: HashMap<String, Arc<WordDefinition>>,
     pub(crate) dictionary: HashMap<String, Arc<WordDefinition>>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
@@ -95,6 +96,7 @@ impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
             stack: Vec::new(),
+            builtin_dictionary: HashMap::new(),
             dictionary: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
@@ -118,7 +120,7 @@ impl Interpreter {
             module_samples: HashMap::new(),
             current_scope: None,
         };
-        crate::builtins::register_builtins(&mut interpreter.dictionary);
+        crate::builtins::register_builtins(&mut interpreter.builtin_dictionary);
         interpreter
     }
 
@@ -228,7 +230,11 @@ impl Interpreter {
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
         // Fully qualified names (MODULE::WORD) bypass scope
         if name.contains("::") {
-            return self.dictionary.get(name).cloned();
+            return self
+                .dictionary
+                .get(name)
+                .cloned()
+                .or_else(|| self.builtin_dictionary.get(name).cloned());
         }
 
         match &self.current_scope {
@@ -239,12 +245,18 @@ impl Interpreter {
                         return Some(def.clone());
                     }
                 }
-                // Then user-defined + builtins
-                self.dictionary.get(name).cloned()
+                // Then shared custom words and built-ins
+                self.dictionary
+                    .get(name)
+                    .cloned()
+                    .or_else(|| self.builtin_dictionary.get(name).cloned())
             }
             None => {
-                // DICTIONARY scope: only user-defined + builtins
-                self.dictionary.get(name).cloned()
+                // DICTIONARY scope: shared custom words + built-ins
+                self.dictionary
+                    .get(name)
+                    .cloned()
+                    .or_else(|| self.builtin_dictionary.get(name).cloned())
             }
         }
     }
@@ -252,6 +264,9 @@ impl Interpreter {
     /// Check if a word exists in any layer (for dependency tracking etc.)
     pub(crate) fn word_exists(&self, name: &str) -> bool {
         if self.dictionary.contains_key(name) {
+            return true;
+        }
+        if self.builtin_dictionary.contains_key(name) {
             return true;
         }
         for module_dict in self.module_samples.values() {
@@ -264,10 +279,8 @@ impl Interpreter {
 
     /// Check if a word is a non-builtin custom word (user-defined or module sample)
     pub(crate) fn is_custom_word(&self, name: &str) -> bool {
-        if let Some(def) = self.dictionary.get(name) {
-            if !def.is_builtin {
-                return true;
-            }
+        if self.dictionary.contains_key(name) {
+            return true;
         }
         for module_dict in self.module_samples.values() {
             if module_dict.contains_key(name) {
@@ -1028,6 +1041,7 @@ impl Interpreter {
 
     pub fn execute_reset(&mut self) -> Result<()> {
         self.stack.clear();
+        self.builtin_dictionary.clear();
         self.dictionary.clear();
         self.dependents.clear();
         self.output_buffer.clear();
@@ -1041,7 +1055,7 @@ impl Interpreter {
         self.imported_modules.clear();
         self.module_samples.clear();
         self.current_scope = None;
-        crate::builtins::register_builtins(&mut self.dictionary);
+        crate::builtins::register_builtins(&mut self.builtin_dictionary);
         Ok(())
     }
 
@@ -1076,7 +1090,6 @@ impl Interpreter {
         let mut custom_words: Vec<(String, Arc<WordDefinition>)> = self
             .dictionary
             .iter()
-            .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| (name.clone(), Arc::clone(def)))
             .collect();
 
@@ -1122,7 +1135,7 @@ impl Interpreter {
     pub fn get_dependents(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
         for (name, def) in &self.dictionary {
-            if !def.is_builtin && def.dependencies.contains(word_name) {
+            if def.dependencies.contains(word_name) {
                 result.insert(name.clone());
             }
         }

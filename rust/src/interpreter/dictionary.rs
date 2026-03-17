@@ -143,15 +143,15 @@ pub(crate) fn op_def_inner(
 ) -> Result<()> {
     let upper_name = name.to_uppercase();
 
-    if let Some(existing) = interp.dictionary.get(&upper_name) {
-        if existing.is_builtin {
-            interp.force_flag = false;
-            return Err(AjisaiError::BuiltinProtection {
-                word: upper_name,
-                operation: "redefine".into(),
-            });
-        }
+    if interp.builtin_dictionary.contains_key(&upper_name) {
+        interp.force_flag = false;
+        return Err(AjisaiError::BuiltinProtection {
+            word: upper_name,
+            operation: "redefine".into(),
+        });
+    }
 
+    if let Some(existing) = interp.dictionary.get(&upper_name) {
         let dependents = interp.get_dependents(&upper_name);
 
         if !dependents.is_empty() && !interp.force_flag {
@@ -278,19 +278,16 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name.to_uppercase();
 
+    if interp.builtin_dictionary.contains_key(&upper_name) {
+        interp.force_flag = false;
+        return Err(AjisaiError::BuiltinProtection {
+            word: upper_name.clone(),
+            operation: "delete".into(),
+        });
+    }
+
     // Check if word exists in dictionary (user-defined)
-    let in_dictionary = if let Some(def) = interp.dictionary.get(&upper_name) {
-        if def.is_builtin {
-            interp.force_flag = false;
-            return Err(AjisaiError::BuiltinProtection {
-                word: upper_name.clone(),
-                operation: "delete".into(),
-            });
-        }
-        true
-    } else {
-        false
-    };
+    let in_dictionary = interp.dictionary.contains_key(&upper_name);
 
     // Check if word exists in module samples
     let in_module_samples = interp

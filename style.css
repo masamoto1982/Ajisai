@@ -407,7 +407,7 @@ body[data-active-area="dictionary"] .words-display {
     align-items: center;
 }
 
-#word-search {
+.dictionary-search-input {
     padding: 0.25rem 1.75rem 0.25rem 0.5rem;
     border: none;
     border-radius: 0;
@@ -419,51 +419,22 @@ body[data-active-area="dictionary"] .words-display {
     max-width: 200px;
 }
 
-#word-search:focus {
+.dictionary-search-input:focus {
     outline: none;
 }
 
-#word-search::placeholder {
+.dictionary-search-input::placeholder {
     color: var(--code-comment);
 }
 
-/* 検索窓用×ボタン配置 */
-#search-clear-btn {
+.dictionary-search-clear-btn {
     right: 0.25rem;
     top: 50%;
     transform: translateY(-50%);
 }
 
-#word-search:placeholder-shown ~ #search-clear-btn,
-.module-search-input:placeholder-shown ~ .inline-clear-btn {
+.dictionary-search-input:placeholder-shown ~ .dictionary-search-clear-btn {
     display: none;
-}
-
-/* Module tab search input (mirrors #word-search) */
-.module-search-input {
-    padding: 0.25rem 1.75rem 0.25rem 0.5rem;
-    border: none;
-    border-radius: 0;
-    font-size: 0.85rem;
-    font-family: var(--font-stack-mono);
-    background-color: var(--code-bg);
-    color: var(--code-text);
-    min-width: 120px;
-    max-width: 200px;
-}
-
-.module-search-input:focus {
-    outline: none;
-}
-
-.module-search-input::placeholder {
-    color: var(--code-comment);
-}
-
-.module-tab-area .inline-clear-btn {
-    right: 0.25rem;
-    top: 50%;
-    transform: translateY(-50%);
 }
 
 /* 検索結果なしメッセージ */
