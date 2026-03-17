@@ -49,8 +49,6 @@ export const createModuleTabManager = (
         onBackgroundDoubleClick,
         onTabClick,
         onSearchInput,
-        onUpdateDisplays,
-        onSaveState,
     } = options;
 
     const tabs: ModuleTab[] = [];
@@ -127,28 +125,9 @@ export const createModuleTabManager = (
         wordsArea.appendChild(wordsDisplay);
         setupBackgroundClickHandlers(wordsDisplay, onBackgroundClick, onBackgroundDoubleClick);
 
-        const customWordsHeader = document.createElement('div');
-        customWordsHeader.className = 'words-header';
-        const customH3 = document.createElement('h3');
-        customH3.textContent = 'Custom Words';
-        const customWordInfo = document.createElement('span');
-        customWordInfo.className = 'word-info-display module-custom-word-info';
-        customWordsHeader.appendChild(customH3);
-        customWordsHeader.appendChild(customWordInfo);
-
-        const customWordsArea = document.createElement('div');
-        customWordsArea.className = 'custom-words-area';
-        customWordsArea.appendChild(customWordsHeader);
-
-        const customWordsDisplay = document.createElement('div');
-        customWordsDisplay.className = 'words-display module-custom-words-display';
-        customWordsArea.appendChild(customWordsDisplay);
-        setupBackgroundClickHandlers(customWordsDisplay, onBackgroundClick, onBackgroundDoubleClick);
-
         const container = document.createElement('div');
         container.className = 'dictionary-container';
         container.appendChild(wordsArea);
-        container.appendChild(customWordsArea);
 
         section.appendChild(header);
         section.appendChild(container);
@@ -198,63 +177,6 @@ export const createModuleTabManager = (
         }
     };
 
-    const confirmAndDeleteModuleWord = async (wordName: string): Promise<void> => {
-        if (!confirm(`Delete word '${wordName}'?`)) return;
-
-        try {
-            const result = await window.ajisaiInterpreter.execute(`! '${wordName}' DEL`);
-            if (result.status === 'ERROR') {
-                alert(`Failed to delete word: ${result.message}`);
-            } else {
-                onUpdateDisplays?.();
-                await onSaveState?.();
-            }
-        } catch (error) {
-            alert(`Error deleting word: ${error}`);
-        }
-    };
-
-    const renderModuleCustomWords = (tab: ModuleTab): void => {
-        if (!window.ajisaiInterpreter) return;
-
-        const customWordsDisplay = tab.areaEl.querySelector('.module-custom-words-display');
-        const customWordInfo = tab.areaEl.querySelector('.module-custom-word-info');
-        if (!customWordsDisplay || !customWordInfo) return;
-
-        customWordsDisplay.innerHTML = '';
-
-        try {
-            const sampleWords: Array<[string, string | null]> =
-                window.ajisaiInterpreter.get_module_sample_words_info(tab.moduleName);
-
-            const sorted = [...sampleWords].sort((a, b) => sortWordName(a[0], b[0]));
-            const matched = sorted.filter(wd => matchesFilter(wd[0], searchFilter));
-
-            matched.forEach(wordData => {
-                const name = wordData[0];
-                const description = wordData[1] || name;
-
-                const button = createWordButton(
-                    name,
-                    description,
-                    'word-button custom',
-                    () => onWordClick(name),
-                    () => { (customWordInfo as HTMLElement).textContent = description; },
-                    () => { (customWordInfo as HTMLElement).textContent = ''; },
-                    () => confirmAndDeleteModuleWord(name)
-                );
-
-                customWordsDisplay.appendChild(button);
-            });
-
-            if (searchFilter && matched.length === 0) {
-                customWordsDisplay.appendChild(createNoResultsMessage());
-            }
-        } catch (error) {
-            console.error(`Failed to render module custom words for ${tab.moduleName}:`, error);
-        }
-    };
-
     const findTab = (moduleName: string): ModuleTab | undefined =>
         tabs.find(t => t.moduleName === moduleName);
 
@@ -299,7 +221,6 @@ export const createModuleTabManager = (
 
             for (const tab of tabs) {
                 renderModuleWords(tab);
-                renderModuleCustomWords(tab);
             }
         } catch (error) {
             console.error('Failed to sync module tabs:', error);
@@ -326,7 +247,6 @@ export const createModuleTabManager = (
         syncSearchInputValues();
         for (const tab of tabs) {
             renderModuleWords(tab);
-            renderModuleCustomWords(tab);
         }
     };
 
