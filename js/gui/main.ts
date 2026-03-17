@@ -242,6 +242,10 @@ export const createGUI = (): GUI => {
         }
         if (isRightMode(mode)) {
             currentRightMode = mode;
+            // When a non-stack right tab is selected, switch left to Input
+            if (mode !== 'stack') {
+                currentLeftMode = 'input';
+            }
         }
     };
 
@@ -302,7 +306,12 @@ export const createGUI = (): GUI => {
             vocabulary.updateIdiolectWords(window.ajisaiInterpreter.get_idiolect_words_info());
 
             // Sync module tabs based on imported modules
-            moduleTabManager.syncModuleTabs();
+            const newModules = moduleTabManager.syncModuleTabs();
+
+            // Focus the newly imported module tab
+            if (newModules.length > 0) {
+                switchArea(newModules[newModules.length - 1]!);
+            }
 
             updateHighlights(elements.codeInput.value);
         } catch (error) {

@@ -17,7 +17,7 @@ export interface ModuleTab {
 }
 
 export interface ModuleTabManager {
-    readonly syncModuleTabs: () => void;
+    readonly syncModuleTabs: () => ViewMode[];
     readonly clearModuleTabs: () => void;
     readonly getModuleArea: (viewMode: string) => HTMLElement | null;
     readonly getTabs: () => ModuleTab[];
@@ -189,8 +189,10 @@ export const createModuleTabManager = (
         }
     };
 
-    const syncModuleTabs = (): void => {
-        if (!window.ajisaiInterpreter) return;
+    const syncModuleTabs = (): ViewMode[] => {
+        if (!window.ajisaiInterpreter) return [];
+
+        const newViewModes: ViewMode[] = [];
 
         try {
             const importedModules: string[] = window.ajisaiInterpreter.get_imported_modules();
@@ -216,6 +218,7 @@ export const createModuleTabManager = (
 
                     const tab: ModuleTab = { moduleName, viewMode, tabBtn, areaEl };
                     tabs.push(tab);
+                    newViewModes.push(viewMode);
                 }
             }
 
@@ -225,6 +228,8 @@ export const createModuleTabManager = (
         } catch (error) {
             console.error('Failed to sync module tabs:', error);
         }
+
+        return newViewModes;
     };
 
     const clearModuleTabs = (): void => {
