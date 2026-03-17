@@ -204,7 +204,7 @@ const MODULE_SPECS: &[ModuleSpec] = &[
 
 fn register_words(interp: &mut Interpreter, words: &[ModuleWord]) {
     for word in words {
-        interp.dictionary.insert(
+        interp.builtin_dictionary.insert(
             word.name.to_string(),
             Arc::new(WordDefinition {
                 lines: Arc::from([]),
