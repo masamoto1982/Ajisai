@@ -32,20 +32,20 @@ export interface GUIElements {
     readonly customWordInfo: HTMLElement;
     readonly wordSearch: HTMLInputElement;
     readonly searchClearBtn: HTMLButtonElement;
-    readonly commonWordSearch: HTMLInputElement;
-    readonly commonSearchClearBtn: HTMLButtonElement;
+    readonly idiolectWordSearch: HTMLInputElement;
+    readonly idiolectSearchClearBtn: HTMLButtonElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
     readonly dictionaryArea: HTMLElement;
-    readonly commonDictionaryArea: HTMLElement;
+    readonly idiolectArea: HTMLElement;
     readonly editorPanel: HTMLElement;
     readonly statePanel: HTMLElement;
     readonly tabInputBtn: HTMLElement;
     readonly tabOutputBtn: HTMLElement;
     readonly tabStackBtn: HTMLElement;
     readonly tabDictionaryBtn: HTMLElement;
-    readonly tabCommonDictionaryBtn: HTMLElement;
+    readonly tabIdiolectBtn: HTMLElement;
 }
 
 export interface GUI {
@@ -76,20 +76,20 @@ const cacheElements = (): GUIElements => ({
     customWordInfo: document.getElementById('custom-word-info')!,
     wordSearch: document.getElementById('word-search') as HTMLInputElement,
     searchClearBtn: document.getElementById('search-clear-btn') as HTMLButtonElement,
-    commonWordSearch: document.getElementById('common-word-search') as HTMLInputElement,
-    commonSearchClearBtn: document.getElementById('common-search-clear-btn') as HTMLButtonElement,
+    idiolectWordSearch: document.getElementById('idiolect-word-search') as HTMLInputElement,
+    idiolectSearchClearBtn: document.getElementById('idiolect-search-clear-btn') as HTMLButtonElement,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
     dictionaryArea: document.getElementById('dictionary-panel')!,
-    commonDictionaryArea: document.getElementById('common-dictionary-panel')!,
+    idiolectArea: document.getElementById('idiolect-panel')!,
     editorPanel: document.getElementById('editor-panel')!,
     statePanel: document.getElementById('state-panel')!,
     tabInputBtn: document.getElementById('tab-input')!,
     tabOutputBtn: document.getElementById('tab-output')!,
     tabStackBtn: document.getElementById('tab-stack')!,
     tabDictionaryBtn: document.getElementById('tab-dictionary')!,
-    tabCommonDictionaryBtn: document.getElementById('tab-common-dictionary')!
+    tabIdiolectBtn: document.getElementById('tab-idiolect')!
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -109,7 +109,7 @@ const extractMobileElements = (elements: GUIElements): MobileElements => ({
     outputArea: elements.outputArea,
     stackArea: elements.stackArea,
     dictionaryArea: elements.dictionaryArea,
-    commonDictionaryArea: elements.commonDictionaryArea
+    idiolectArea: elements.idiolectArea
 });
 
 const checkStackHighlight = (content: string): boolean => {
@@ -117,9 +117,9 @@ const checkStackHighlight = (content: string): boolean => {
     return stackRegex.test(content);
 };
 
-const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary', 'common'];
+const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary', 'idiolect'];
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
-const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary', 'common'];
+const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary', 'idiolect'];
 
 
 const DESKTOP_EDITOR_PLACEHOLDER = [
@@ -178,7 +178,6 @@ export const createGUI = (): GUI => {
     let currentMode: ViewMode = 'input';
     let currentLeftMode: ViewMode = 'input';
     let currentRightMode: ViewMode = 'stack';
-    let currentEditorScope: string = 'DICTIONARY';
 
 
     const updateEditorPlaceholder = (): void => {
@@ -193,7 +192,7 @@ export const createGUI = (): GUI => {
         output: elements.tabOutputBtn,
         stack: elements.tabStackBtn,
         dictionary: elements.tabDictionaryBtn,
-        common: elements.tabCommonDictionaryBtn
+        idiolect: elements.tabIdiolectBtn
     });
 
     const updateTabState = (activeModes: Set<ViewMode>): void => {
@@ -225,7 +224,7 @@ export const createGUI = (): GUI => {
         elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
         elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
         elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
-        elements.commonDictionaryArea.style.display = currentRightMode === 'common' ? 'flex' : 'none';
+        elements.idiolectArea.style.display = currentRightMode === 'idiolect' ? 'flex' : 'none';
 
         // Module tab areas
         for (const tab of moduleTabManager.getTabs()) {
@@ -280,31 +279,9 @@ export const createGUI = (): GUI => {
         updateTabState(new Set([currentLeftMode, currentRightMode]));
     };
 
-    const insertScopeDirective = (mode: ViewMode): void => {
-        // Only insert directives for dictionary and module tabs
-        let scopeName: string | null = null;
-
-        if (mode === 'dictionary' || mode === 'common') {
-            scopeName = 'DICTIONARY';
-        } else if (mode.startsWith('module:')) {
-            scopeName = mode.replace('module:', '');
-        }
-
-        if (scopeName === null) return; // input, output, stack tabs: no directive
-
-        // Don't insert if scope hasn't changed
-        if (scopeName === currentEditorScope) return;
-
-        // Insert directive at cursor position
-        const directive = `@${scopeName}\n`;
-        editor.insertText(directive);
-        currentEditorScope = scopeName;
-    };
-
     const switchArea = (mode: ViewMode): void => {
         currentMode = mode;
         applyAreaState(mode);
-        insertScopeDirective(mode);
     };
 
     const updateHighlights = (content: string): void => {
@@ -365,7 +342,7 @@ export const createGUI = (): GUI => {
         // 辞書検索: デバウンス付きでフィルタリング
         const applySearchFilter = (filter: string): void => {
             elements.wordSearch.value = filter;
-            elements.commonWordSearch.value = filter;
+            elements.idiolectWordSearch.value = filter;
             dictionary.setSearchFilter(filter);
             moduleTabManager.setSearchFilter(filter);
         };
@@ -373,24 +350,23 @@ export const createGUI = (): GUI => {
         const handleBuiltinSearchInput = debounce(() => {
             applySearchFilter(elements.wordSearch.value);
         }, 150);
-        const handleCommonSearchInput = debounce(() => {
-            applySearchFilter(elements.commonWordSearch.value);
+        const handleIdiolectSearchInput = debounce(() => {
+            applySearchFilter(elements.idiolectWordSearch.value);
         }, 150);
 
         elements.wordSearch.addEventListener('input', handleBuiltinSearchInput);
-        elements.commonWordSearch.addEventListener('input', handleCommonSearchInput);
+        elements.idiolectWordSearch.addEventListener('input', handleIdiolectSearchInput);
 
         // 検索窓の×ボタンでクリア
         elements.searchClearBtn.addEventListener('click', () => {
             applySearchFilter('');
         });
-        elements.commonSearchClearBtn.addEventListener('click', () => {
+        elements.idiolectSearchClearBtn.addEventListener('click', () => {
             applySearchFilter('');
         });
 
         elements.clearBtn.addEventListener('click', () => {
             editor.clear();
-            currentEditorScope = 'DICTIONARY';
         });
 
         const tabs = getTabButtons();
@@ -490,7 +466,7 @@ export const createGUI = (): GUI => {
             onTabClick: (mode: ViewMode) => switchArea(mode),
             onSearchInput: (filter: string) => {
                 elements.wordSearch.value = filter;
-                elements.commonWordSearch.value = filter;
+                elements.idiolectWordSearch.value = filter;
                 dictionary.setSearchFilter(filter);
                 moduleTabManager.setSearchFilter(filter);
             },
@@ -536,7 +512,7 @@ export const createGUI = (): GUI => {
 
         executionController = createExecutionController(window.ajisaiInterpreter, {
             getEditorValue: () => editor.getValue(),
-            clearEditor: (switchView) => { editor.clear(switchView); currentEditorScope = 'DICTIONARY'; },
+            clearEditor: (switchView) => { editor.clear(switchView); },
             setEditorValue: (value) => editor.setValue(value),
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.showInfo(text, append),

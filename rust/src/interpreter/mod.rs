@@ -86,10 +86,8 @@ pub struct Interpreter {
     pub(crate) flow_consumed_log: Vec<(u64, Fraction)>,
     // ── Module-scoped sample words ───────────────────────────────────
     /// Per-module sample word dictionaries (e.g. MUSIC → {C4, D4, ...}).
-    /// These are registered at IMPORT time and resolved via scope directives.
+    /// These are registered at IMPORT time and follow module-first resolution.
     pub(crate) module_samples: HashMap<String, HashMap<String, Arc<WordDefinition>>>,
-    /// Current scope directive: None = DICTIONARY, Some("MUSIC") = MUSIC scope.
-    pub current_scope: Option<String>,
 }
 
 impl Interpreter {
@@ -118,7 +116,6 @@ impl Interpreter {
             active_flows: Vec::new(),
             flow_consumed_log: Vec::new(),
             module_samples: HashMap::new(),
-            current_scope: None,
         };
         crate::builtins::register_builtins(&mut interpreter.builtin_dictionary);
         interpreter
@@ -223,42 +220,29 @@ impl Interpreter {
         }
     }
 
-    /// Scope-aware word resolution.
-    /// Fully qualified names (MODULE::WORD) bypass scope and go to dictionary.
-    /// In module scope: module_samples → dictionary (user + builtins).
-    /// In DICTIONARY scope: dictionary only (no module samples).
+    /// Module-first word resolution (flat priority).
+    /// Fully qualified names (MODULE::WORD) always take highest priority.
+    /// Resolution order: module samples → user dictionary → core builtins.
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
-        // Fully qualified names (MODULE::WORD) bypass scope
+        // Fully qualified names (MODULE::WORD) are always highest priority
         if name.contains("::") {
-            return self
-                .dictionary
-                .get(name)
-                .cloned()
-                .or_else(|| self.builtin_dictionary.get(name).cloned());
+            return self.builtin_dictionary.get(name).cloned();
         }
 
-        match &self.current_scope {
-            Some(module_name) => {
-                // Module scope: check module samples first
-                if let Some(module_dict) = self.module_samples.get(module_name.as_str()) {
-                    if let Some(def) = module_dict.get(name) {
-                        return Some(def.clone());
-                    }
-                }
-                // Then shared custom words and built-ins
-                self.dictionary
-                    .get(name)
-                    .cloned()
-                    .or_else(|| self.builtin_dictionary.get(name).cloned())
-            }
-            None => {
-                // DICTIONARY scope: shared custom words + built-ins
-                self.dictionary
-                    .get(name)
-                    .cloned()
-                    .or_else(|| self.builtin_dictionary.get(name).cloned())
+        // 1. Specialized Vocabulary: module sample words (all imported modules)
+        for module_dict in self.module_samples.values() {
+            if let Some(def) = module_dict.get(name) {
+                return Some(def.clone());
             }
         }
+
+        // 2. Idiolect: user-defined words
+        if let Some(def) = self.dictionary.get(name) {
+            return Some(def.clone());
+        }
+
+        // 3. Core Vocabulary: built-in words
+        self.builtin_dictionary.get(name).cloned()
     }
 
     /// Check if a word exists in any layer (for dependency tracking etc.)
@@ -606,22 +590,6 @@ impl Interpreter {
                 }
                 Token::SafeMode => {
                     self.safe_mode = true;
-                }
-                Token::ScopeDirective(scope_name) => {
-                    let name = scope_name.to_uppercase();
-                    if name == "DICTIONARY" {
-                        self.current_scope = None;
-                    } else {
-                        // Verify module is imported
-                        if !self.imported_modules.contains(&name) {
-                            return Err(AjisaiError::from(format!(
-                                "Module '{}' is not imported. Use '{}' IMPORT first.",
-                                name,
-                                name.to_lowercase()
-                            )));
-                        }
-                        self.current_scope = Some(name);
-                    }
                 }
                 Token::CodeBlockEnd
                 | Token::ChevronBranch
@@ -1003,7 +971,6 @@ impl Interpreter {
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),
             Token::LineBreak => "\n".to_string(),
-            Token::ScopeDirective(name) => format!("@{}", name),
         }
     }
 
@@ -1054,7 +1021,6 @@ impl Interpreter {
         self.call_stack.clear();
         self.imported_modules.clear();
         self.module_samples.clear();
-        self.current_scope = None;
         crate::builtins::register_builtins(&mut self.builtin_dictionary);
         Ok(())
     }
