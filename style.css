@@ -185,13 +185,6 @@ body[data-active-area] .main-layout section {
     min-height: 0;
 }
 
-body[data-active-area="core"] .vocabulary-container {
-    display: grid;
-    grid-template-rows: 1fr 1fr;
-    gap: 0.75rem;
-}
-
-
 /* 入力・出力エリア */
 .output-area,
 .input-area {
