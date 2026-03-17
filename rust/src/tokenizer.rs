@@ -111,6 +111,21 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             }
         }
 
+        // 7.5. スコープディレクティブ (@MODULE_NAME)
+        if chars[i] == '@' {
+            i += 1;
+            let start = i;
+            while i < chars.len() && !chars[i].is_whitespace() && !is_special_char(chars[i]) {
+                i += 1;
+            }
+            let name: String = chars[start..i].iter().collect();
+            if name.is_empty() {
+                return Err("Empty scope directive: '@' must be followed by a module name".to_string());
+            }
+            tokens.push(Token::ScopeDirective(name.to_uppercase().into()));
+            continue;
+        }
+
         // 8. トークンの読み取り（空白または特殊文字まで）
         let start = i;
         while i < chars.len() && !chars[i].is_whitespace() && !is_special_char(chars[i]) {
@@ -153,7 +168,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~' | '@'
     )
 }
 

@@ -146,6 +146,11 @@ const getAutocompleteWords = (): string[] => {
                 const name = word[0];
                 moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);
             }
+            // Also include module sample words
+            const sampleWords = window.ajisaiInterpreter.get_module_sample_words_info(moduleName);
+            for (const word of sampleWords) {
+                moduleWords.push(word[0]);
+            }
         }
     } catch { /* no modules imported */ }
 
@@ -164,6 +169,7 @@ export const createGUI = (): GUI => {
     let currentMode: ViewMode = 'input';
     let currentLeftMode: ViewMode = 'input';
     let currentRightMode: ViewMode = 'stack';
+    let currentEditorScope: string = 'DICTIONARY';
 
 
     const updateEditorPlaceholder = (): void => {
@@ -263,9 +269,31 @@ export const createGUI = (): GUI => {
         updateTabState(new Set([currentLeftMode, currentRightMode]));
     };
 
+    const insertScopeDirective = (mode: ViewMode): void => {
+        // Only insert directives for dictionary and module tabs
+        let scopeName: string | null = null;
+
+        if (mode === 'dictionary') {
+            scopeName = 'DICTIONARY';
+        } else if (mode.startsWith('module:')) {
+            scopeName = mode.replace('module:', '');
+        }
+
+        if (scopeName === null) return; // input, output, stack tabs: no directive
+
+        // Don't insert if scope hasn't changed
+        if (scopeName === currentEditorScope) return;
+
+        // Insert directive at cursor position
+        const directive = `@${scopeName}\n`;
+        editor.insertText(directive);
+        currentEditorScope = scopeName;
+    };
+
     const switchArea = (mode: ViewMode): void => {
         currentMode = mode;
         applyAreaState(mode);
+        insertScopeDirective(mode);
     };
 
     const updateHighlights = (content: string): void => {
@@ -339,7 +367,10 @@ export const createGUI = (): GUI => {
             moduleTabManager.setSearchFilter('');
         });
 
-        elements.clearBtn.addEventListener('click', () => editor.clear());
+        elements.clearBtn.addEventListener('click', () => {
+            editor.clear();
+            currentEditorScope = 'DICTIONARY';
+        });
 
         const tabs = getTabButtons();
         TAB_MODES.forEach((mode) => {
@@ -441,7 +472,10 @@ export const createGUI = (): GUI => {
                 dictionary.setSearchFilter(filter);
                 moduleTabManager.setSearchFilter(filter);
             },
-            dictionaryTabBtn: elements.tabDictionaryBtn
+            dictionaryTabBtn: elements.tabDictionaryBtn,
+            onUpdateDisplays: () => updateAllDisplays(),
+            onSaveState: () => persistence.saveCurrentState(),
+            showInfo: (text: string, append: boolean) => display.showInfo(text, append)
         });
 
         persistence = createPersistence({
@@ -480,7 +514,7 @@ export const createGUI = (): GUI => {
 
         executionController = createExecutionController(window.ajisaiInterpreter, {
             getEditorValue: () => editor.getValue(),
-            clearEditor: (switchView) => editor.clear(switchView),
+            clearEditor: (switchView) => { editor.clear(switchView); currentEditorScope = 'DICTIONARY'; },
             setEditorValue: (value) => editor.setValue(value),
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.showInfo(text, append),

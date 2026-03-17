@@ -208,11 +208,19 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     let wordsToRestore = state.customWords;
 
                     if (savedVersion < SAMPLE_WORDS_VERSION) {
-                        const sampleWordNames = new Set(
+                        // v3→v4: 旧音階サンプルをユーザー定義から除去（Rust側モジュールサンプルに移行）
+                        const oldMusicSampleNames = new Set(
+                            ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5']
+                        );
+                        const newSampleWordNames = new Set(
                             SAMPLE_CUSTOM_WORDS.map(w => w.name.toUpperCase())
                         );
+
+                        // 旧音階サンプルと旧サンプルワード名を除去し、ユーザー定義のみ残す
                         const userWords = state.customWords.filter(
-                            (w: CustomWord) => !sampleWordNames.has(w.name.toUpperCase())
+                            (w: CustomWord) =>
+                                !oldMusicSampleNames.has(w.name.toUpperCase()) &&
+                                !newSampleWordNames.has(w.name.toUpperCase())
                         );
                         wordsToRestore = [...SAMPLE_CUSTOM_WORDS, ...userWords];
                         console.log(`Sample words migrated: v${savedVersion} → v${SAMPLE_WORDS_VERSION}`);

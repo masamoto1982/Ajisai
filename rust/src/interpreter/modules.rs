@@ -14,9 +14,16 @@ struct ModuleWord {
     preserves_modes: bool,
 }
 
+struct SampleWord {
+    name: &'static str,
+    definition: &'static str,
+    description: &'static str,
+}
+
 struct ModuleSpec {
     name: &'static str,
     words: &'static [ModuleWord],
+    sample_words: &'static [SampleWord],
 }
 
 const MUSIC_WORDS: &[ModuleWord] = &[
@@ -166,18 +173,32 @@ const IO_WORDS: &[ModuleWord] = &[
     },
 ];
 
+const MUSIC_SAMPLES: &[SampleWord] = &[
+    SampleWord { name: "C4", definition: "264", description: "純正律 C4 / ド (264Hz)" },
+    SampleWord { name: "D4", definition: "C4 9 * 8 /", description: "純正律 D4 / レ (297Hz)" },
+    SampleWord { name: "E4", definition: "C4 5 * 4 /", description: "純正律 E4 / ミ (330Hz)" },
+    SampleWord { name: "F4", definition: "C4 4 * 3 /", description: "純正律 F4 / ファ (352Hz)" },
+    SampleWord { name: "G4", definition: "C4 3 * 2 /", description: "純正律 G4 / ソ (396Hz)" },
+    SampleWord { name: "A4", definition: "C4 5 * 3 /", description: "純正律 A4 / ラ (440Hz)" },
+    SampleWord { name: "B4", definition: "C4 15 * 8 /", description: "純正律 B4 / シ (495Hz)" },
+    SampleWord { name: "C5", definition: "C4 2 *", description: "純正律 C5 / 高いド (528Hz)" },
+];
+
 const MODULE_SPECS: &[ModuleSpec] = &[
     ModuleSpec {
         name: "MUSIC",
         words: MUSIC_WORDS,
+        sample_words: MUSIC_SAMPLES,
     },
     ModuleSpec {
         name: "JSON",
         words: JSON_WORDS,
+        sample_words: &[],
     },
     ModuleSpec {
         name: "IO",
         words: IO_WORDS,
+        sample_words: &[],
     },
 ];
 
@@ -222,8 +243,122 @@ pub fn op_import(interp: &mut Interpreter) -> Result<()> {
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.clone()))?;
 
     register_words(interp, module.words);
+    register_sample_words(interp, &module_name, module.sample_words)?;
     interp.imported_modules.insert(module_name);
     Ok(())
+}
+
+fn register_sample_words(
+    interp: &mut Interpreter,
+    module_name: &str,
+    sample_words: &[SampleWord],
+) -> Result<()> {
+    if sample_words.is_empty() {
+        return Ok(());
+    }
+
+    let module_dict = interp.module_samples
+        .entry(module_name.to_string())
+        .or_default();
+
+    for sample in sample_words {
+        let tokens = crate::tokenizer::tokenize(sample.definition)
+            .map_err(|e| AjisaiError::from(format!(
+                "Failed to tokenize sample word '{}': {}", sample.name, e
+            )))?;
+        let lines = parse_sample_definition_body(&tokens)?;
+        let def = WordDefinition {
+            lines: lines.into(),
+            is_builtin: false,
+            description: Some(sample.description.to_string()),
+            dependencies: HashSet::new(),
+            original_source: None,
+        };
+        module_dict.insert(sample.name.to_uppercase(), Arc::new(def));
+    }
+
+    // Rebuild dependencies for module sample words
+    rebuild_module_sample_dependencies(interp, module_name);
+
+    Ok(())
+}
+
+fn parse_sample_definition_body(
+    tokens: &[crate::types::Token],
+) -> Result<Vec<crate::types::ExecutionLine>> {
+    let mut lines = Vec::new();
+    let mut current_tokens = Vec::new();
+
+    for token in tokens {
+        match token {
+            crate::types::Token::LineBreak => {
+                if !current_tokens.is_empty() {
+                    lines.push(crate::types::ExecutionLine {
+                        body_tokens: current_tokens.clone().into(),
+                    });
+                    current_tokens.clear();
+                }
+            }
+            _ => {
+                current_tokens.push(token.clone());
+            }
+        }
+    }
+
+    if !current_tokens.is_empty() {
+        lines.push(crate::types::ExecutionLine {
+            body_tokens: current_tokens.into(),
+        });
+    }
+
+    if lines.is_empty() {
+        return Err(AjisaiError::from("Sample word definition cannot be empty"));
+    }
+
+    Ok(lines)
+}
+
+fn rebuild_module_sample_dependencies(interp: &mut Interpreter, module_name: &str) {
+    if let Some(module_dict) = interp.module_samples.get(module_name) {
+        let word_names: Vec<String> = module_dict.keys().cloned().collect();
+        let word_name_set: HashSet<String> = word_names.iter().cloned().collect();
+
+        let mut updates: Vec<(String, HashSet<String>)> = Vec::new();
+
+        for (word_name, def) in module_dict {
+            let mut dependencies = HashSet::new();
+            for line in def.lines.iter() {
+                for token in line.body_tokens.iter() {
+                    if let crate::types::Token::Symbol(s) = token {
+                        let upper_s = s.to_uppercase();
+                        if word_name_set.contains(&upper_s) {
+                            dependencies.insert(upper_s.clone());
+                        }
+                    }
+                }
+            }
+            updates.push((word_name.clone(), dependencies));
+        }
+
+        // Apply dependency updates
+        if let Some(module_dict) = interp.module_samples.get_mut(module_name) {
+            for (word_name, dependencies) in &updates {
+                if let Some(def) = module_dict.get_mut(word_name) {
+                    Arc::make_mut(def).dependencies = dependencies.clone();
+                }
+            }
+        }
+
+        // Update dependents map
+        for (word_name, dependencies) in updates {
+            for dep in dependencies {
+                interp.dependents
+                    .entry(dep)
+                    .or_default()
+                    .insert(word_name.clone());
+            }
+        }
+    }
 }
 
 /// Re-import a module by name without requiring a stack value.
@@ -235,6 +370,9 @@ pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
     }
     if let Some(module) = MODULE_SPECS.iter().find(|m| m.name == upper) {
         register_words(interp, module.words);
+        if register_sample_words(interp, &upper, module.sample_words).is_err() {
+            return false;
+        }
         interp.imported_modules.insert(upper);
         true
     } else {
