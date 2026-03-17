@@ -1,5 +1,13 @@
 // js/gui/dictionary.ts
 
+import {
+    createNoResultsMessage,
+    createWordButton,
+    matchesFilter,
+    setupBackgroundClickHandlers,
+    sortWordName,
+} from './dictionary-ui';
+
 export interface WordInfo {
     readonly name: string;
     readonly description?: string | null;
@@ -55,72 +63,14 @@ const toWordInfo = (wordData: [string, string | null, boolean]): WordInfo => ({
     protected: wordData[2] || false
 });
 
-const sortWordName = (a: string, b: string): number => {
-    const aIsAlpha = /^[A-Za-z]/.test(a);
-    const bIsAlpha = /^[A-Za-z]/.test(b);
-
-    // Symbols first, alphabetic after
-    if (!aIsAlpha && bIsAlpha) return -1;
-    if (aIsAlpha && !bIsAlpha) return 1;
-
-    // Within same group, sort by localeCompare
-    return a.localeCompare(b);
-};
 
 const clearElement = (element: HTMLElement): void => {
     element.innerHTML = '';
 };
 
-const createButton = (
-    text: string,
-    title: string,
-    className: string,
-    onClick: () => void,
-    onHover?: () => void,
-    onLeave?: () => void
-): HTMLButtonElement => {
-    const button = document.createElement('button');
-    button.textContent = text;
-    button.className = className;
-    button.title = title;
-    button.addEventListener('click', onClick);
-    if (onHover) {
-        button.addEventListener('mouseenter', onHover);
-    }
-    if (onLeave) {
-        button.addEventListener('mouseleave', onLeave);
-    }
-    return button;
-};
 
-const createButtonWithContextMenu = (
-    text: string,
-    title: string,
-    className: string,
-    onClick: () => void,
-    onContextMenu: () => void,
-    onHover?: () => void,
-    onLeave?: () => void
-): HTMLButtonElement => {
-    const button = createButton(text, title, className, onClick, onHover, onLeave);
-    button.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        onContextMenu();
-    });
-    return button;
-};
 
-const matchesFilter = (wordName: string, filter: string): boolean => {
-    if (!filter) return true;
-    return wordName.toLowerCase().includes(filter.toLowerCase());
-};
 
-const createNoResultsMessage = (): HTMLElement => {
-    const message = document.createElement('div');
-    message.className = 'no-results-message';
-    message.textContent = 'No matching words found';
-    return message;
-};
 
 export const createDictionary = (
     elements: DictionaryElements,
@@ -128,36 +78,8 @@ export const createDictionary = (
 ): Dictionary => {
     const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
 
-    const isBackgroundClick = (e: MouseEvent): boolean => {
-        const target = e.target as HTMLElement;
-        return !target.closest('.word-button');
-    };
-
-    let clickTimer: ReturnType<typeof setTimeout> | null = null;
-
     [elements.builtinWordsDisplay, elements.customWordsDisplay].forEach(container => {
-        if (onBackgroundClick) {
-            container.addEventListener('click', (e) => {
-                if (isBackgroundClick(e as MouseEvent)) {
-                    if (clickTimer) clearTimeout(clickTimer);
-                    clickTimer = setTimeout(() => {
-                        onBackgroundClick();
-                        clickTimer = null;
-                    }, 200);
-                }
-            });
-        }
-        if (onBackgroundDoubleClick) {
-            container.addEventListener('dblclick', (e) => {
-                if (isBackgroundClick(e as MouseEvent)) {
-                    if (clickTimer) {
-                        clearTimeout(clickTimer);
-                        clickTimer = null;
-                    }
-                    onBackgroundDoubleClick();
-                }
-            });
-        }
+        setupBackgroundClickHandlers(container, onBackgroundClick, onBackgroundDoubleClick);
     });
 
     // 検索フィルターとカスタムワードのキャッシュ
@@ -230,7 +152,7 @@ export const createDictionary = (
             const signatureType = (wordData[3] as string) || 'none';
             const sigClass = signatureType !== 'none' ? ` signature-${signatureType}` : '';
 
-            const button = createButton(
+            const button = createWordButton(
                 name,
                 description,
                 `word-button builtin${sigClass}`,
@@ -268,18 +190,17 @@ export const createDictionary = (
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
 
-            const button = createButtonWithContextMenu(
+            const button = createWordButton(
                 wordInfo.name,
                 wordInfo.description || '',
                 className,
                 () => onWordClick(wordInfo.name),
-                () => confirmAndDeleteWord(wordInfo),
                 () => {
-                    // Show word definition on hover
                     const definition = window.ajisaiInterpreter?.get_word_definition(wordInfo.name);
                     elements.customWordInfo.textContent = definition || '';
                 },
-                () => { elements.customWordInfo.textContent = ''; }
+                () => { elements.customWordInfo.textContent = ''; },
+                () => confirmAndDeleteWord(wordInfo)
             );
 
             container.appendChild(button);

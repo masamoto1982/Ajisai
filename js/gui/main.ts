@@ -32,16 +32,20 @@ export interface GUIElements {
     readonly customWordInfo: HTMLElement;
     readonly wordSearch: HTMLInputElement;
     readonly searchClearBtn: HTMLButtonElement;
+    readonly commonWordSearch: HTMLInputElement;
+    readonly commonSearchClearBtn: HTMLButtonElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
     readonly dictionaryArea: HTMLElement;
+    readonly commonDictionaryArea: HTMLElement;
     readonly editorPanel: HTMLElement;
     readonly statePanel: HTMLElement;
     readonly tabInputBtn: HTMLElement;
     readonly tabOutputBtn: HTMLElement;
     readonly tabStackBtn: HTMLElement;
     readonly tabDictionaryBtn: HTMLElement;
+    readonly tabCommonDictionaryBtn: HTMLElement;
 }
 
 export interface GUI {
@@ -72,16 +76,20 @@ const cacheElements = (): GUIElements => ({
     customWordInfo: document.getElementById('custom-word-info')!,
     wordSearch: document.getElementById('word-search') as HTMLInputElement,
     searchClearBtn: document.getElementById('search-clear-btn') as HTMLButtonElement,
+    commonWordSearch: document.getElementById('common-word-search') as HTMLInputElement,
+    commonSearchClearBtn: document.getElementById('common-search-clear-btn') as HTMLButtonElement,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
-    dictionaryArea: document.querySelector('.dictionary-area')!,
+    dictionaryArea: document.getElementById('dictionary-panel')!,
+    commonDictionaryArea: document.getElementById('common-dictionary-panel')!,
     editorPanel: document.getElementById('editor-panel')!,
     statePanel: document.getElementById('state-panel')!,
     tabInputBtn: document.getElementById('tab-input')!,
     tabOutputBtn: document.getElementById('tab-output')!,
     tabStackBtn: document.getElementById('tab-stack')!,
-    tabDictionaryBtn: document.getElementById('tab-dictionary')!
+    tabDictionaryBtn: document.getElementById('tab-dictionary')!,
+    tabCommonDictionaryBtn: document.getElementById('tab-common-dictionary')!
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -100,7 +108,8 @@ const extractMobileElements = (elements: GUIElements): MobileElements => ({
     inputArea: elements.inputArea,
     outputArea: elements.outputArea,
     stackArea: elements.stackArea,
-    dictionaryArea: elements.dictionaryArea
+    dictionaryArea: elements.dictionaryArea,
+    commonDictionaryArea: elements.commonDictionaryArea
 });
 
 const checkStackHighlight = (content: string): boolean => {
@@ -108,9 +117,9 @@ const checkStackHighlight = (content: string): boolean => {
     return stackRegex.test(content);
 };
 
-const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
+const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary', 'common'];
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
-const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
+const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary', 'common'];
 
 
 const DESKTOP_EDITOR_PLACEHOLDER = [
@@ -183,7 +192,8 @@ export const createGUI = (): GUI => {
         input: elements.tabInputBtn,
         output: elements.tabOutputBtn,
         stack: elements.tabStackBtn,
-        dictionary: elements.tabDictionaryBtn
+        dictionary: elements.tabDictionaryBtn,
+        common: elements.tabCommonDictionaryBtn
     });
 
     const updateTabState = (activeModes: Set<ViewMode>): void => {
@@ -215,6 +225,7 @@ export const createGUI = (): GUI => {
         elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
         elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
         elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
+        elements.commonDictionaryArea.style.display = currentRightMode === 'common' ? 'flex' : 'none';
 
         // Module tab areas
         for (const tab of moduleTabManager.getTabs()) {
@@ -273,7 +284,7 @@ export const createGUI = (): GUI => {
         // Only insert directives for dictionary and module tabs
         let scopeName: string | null = null;
 
-        if (mode === 'dictionary') {
+        if (mode === 'dictionary' || mode === 'common') {
             scopeName = 'DICTIONARY';
         } else if (mode.startsWith('module:')) {
             scopeName = mode.replace('module:', '');
@@ -352,19 +363,29 @@ export const createGUI = (): GUI => {
         });
 
         // 辞書検索: デバウンス付きでフィルタリング
-        const handleSearchInput = debounce(() => {
-            const filter = elements.wordSearch.value;
+        const applySearchFilter = (filter: string): void => {
+            elements.wordSearch.value = filter;
+            elements.commonWordSearch.value = filter;
             dictionary.setSearchFilter(filter);
             moduleTabManager.setSearchFilter(filter);
+        };
+
+        const handleBuiltinSearchInput = debounce(() => {
+            applySearchFilter(elements.wordSearch.value);
+        }, 150);
+        const handleCommonSearchInput = debounce(() => {
+            applySearchFilter(elements.commonWordSearch.value);
         }, 150);
 
-        elements.wordSearch.addEventListener('input', handleSearchInput);
+        elements.wordSearch.addEventListener('input', handleBuiltinSearchInput);
+        elements.commonWordSearch.addEventListener('input', handleCommonSearchInput);
 
         // 検索窓の×ボタンでクリア
         elements.searchClearBtn.addEventListener('click', () => {
-            elements.wordSearch.value = '';
-            dictionary.setSearchFilter('');
-            moduleTabManager.setSearchFilter('');
+            applySearchFilter('');
+        });
+        elements.commonSearchClearBtn.addEventListener('click', () => {
+            applySearchFilter('');
         });
 
         elements.clearBtn.addEventListener('click', () => {
@@ -469,6 +490,7 @@ export const createGUI = (): GUI => {
             onTabClick: (mode: ViewMode) => switchArea(mode),
             onSearchInput: (filter: string) => {
                 elements.wordSearch.value = filter;
+                elements.commonWordSearch.value = filter;
                 dictionary.setSearchFilter(filter);
                 moduleTabManager.setSearchFilter(filter);
             },
