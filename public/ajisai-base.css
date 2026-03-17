@@ -322,25 +322,12 @@ section h3:first-child {
 }
 
 /* --------------------------------------------------------------------------
- * 9.1 ワードヘッダーと詳細表示
+ * 9.1 ワード情報表示
  * -------------------------------------------------------------------------- */
-.words-header {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.words-header h3 {
-    margin: 0;
-    flex-shrink: 0;
-}
-
 .word-info-display {
     font-size: 0.85rem;
     font-weight: normal;
     color: var(--color-text-light, #666);
-    margin-left: 0.5rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -730,15 +717,7 @@ small {
         font-size: 1rem;
     }
 
-    /* ワードヘッダー（モバイル対応） */
-    .words-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-    }
-
     .word-info-display {
-        margin-left: 0;
         max-width: 100%;
         font-size: 0.8rem;
     }

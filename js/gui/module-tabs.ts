@@ -109,16 +109,10 @@ export const createModuleTabManager = (
 
         const wordInfoDisplay = document.createElement('span');
         wordInfoDisplay.className = 'word-info-display module-word-info';
-        const wordsHeader = document.createElement('div');
-        wordsHeader.className = 'words-header';
-        const h3 = document.createElement('h3');
-        h3.textContent = 'Module Words';
-        wordsHeader.appendChild(h3);
-        wordsHeader.appendChild(wordInfoDisplay);
 
         const wordsArea = document.createElement('div');
         wordsArea.className = 'core-words-area';
-        wordsArea.appendChild(wordsHeader);
+        wordsArea.appendChild(wordInfoDisplay);
 
         const wordsDisplay = document.createElement('div');
         wordsDisplay.className = 'words-display module-words-display';
