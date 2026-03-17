@@ -449,16 +449,6 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    /// 現在のスコープを設定する（GUI からの呼び出し用）
-    #[wasm_bindgen]
-    pub fn set_scope(&mut self, scope: &str) {
-        if scope == "DICTIONARY" || scope.is_empty() {
-            self.interpreter.current_scope = None;
-        } else {
-            self.interpreter.current_scope = Some(scope.to_uppercase());
-        }
-    }
-
     /// 指定モジュールが公開するワード情報を返す。
     /// 返却形式は Array<[name, description]>
     #[wasm_bindgen]

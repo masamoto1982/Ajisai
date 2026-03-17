@@ -117,7 +117,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 Token::NilCoalesce => "=>".to_string(),
                 Token::SafeMode => "~".to_string(),
                 Token::LineBreak => "\n".to_string(),
-                Token::ScopeDirective(name) => format!("@{}", name),
             })
             .collect::<Vec<_>>()
             .join(" "),
@@ -149,6 +148,18 @@ pub(crate) fn op_def_inner(
             word: upper_name,
             operation: "redefine".into(),
         });
+    }
+
+    // Module sample collision check (module-first principle)
+    for (module_name, module_dict) in &interp.module_samples {
+        if module_dict.contains_key(&upper_name) {
+            interp.force_flag = false;
+            return Err(AjisaiError::from(format!(
+                "Cannot define '{}': name is reserved by module {}. \
+                 Use ! '{}' DEL to remove the module sample first.",
+                upper_name, module_name, upper_name
+            )));
+        }
     }
 
     if let Some(existing) = interp.dictionary.get(&upper_name) {
@@ -620,19 +631,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_sample_words_in_vector_literal_play() {
-        // Custom words (C4, D4 etc.) resolve to scalars inside vector literals.
+        // Module sample words (C4, D4 etc.) resolve to scalars inside vector literals.
         // Without DisplayHint, is_string_value treats all vectors as strings,
         // so the audio system interprets scalar elements as lyrics (codepoints).
         // The AUDIO command is still emitted but with an empty seq structure.
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-
-        let sample_words = vec![
-            ("C4", "264", "純正律 C4"),
-            ("D4", "C4 9 * 8 /", "純正律 D4"),
-            ("E4", "C4 5 * 4 /", "純正律 E4"),
-        ];
-        restore_sample_words(&mut interp, &sample_words);
         let _ = interp.get_output();
 
         // Custom word names inside a vector literal resolve to their scalar values
@@ -718,16 +722,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_custom_word_resolved_in_nested_vector() {
-        // Custom words should also resolve inside nested vectors
+        // Module sample words should also resolve inside nested vectors
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-
-        let sample_words = vec![
-            ("C4", "264", "純正律 C4"),
-            ("E4", "330", "純正律 E4"),
-            ("G4", "396", "純正律 G4"),
-        ];
-        restore_sample_words(&mut interp, &sample_words);
         let _ = interp.get_output();
 
         // Nested vector: [ [ C4 E4 G4 ] ] should create a vector of a vector of scalars.

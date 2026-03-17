@@ -107,7 +107,6 @@ fn display_code_block(tokens: &[super::Token]) -> String {
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),
             Token::LineBreak => "\n".to_string(),
-            Token::ScopeDirective(name) => format!("@{}", name),
         })
         .collect();
     format!(": {} ;", token_strs.join(" "))

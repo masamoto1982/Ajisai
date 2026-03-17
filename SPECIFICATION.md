@@ -945,6 +945,61 @@ Ajisaiの組み込みワードは、**言語コアとして常に利用可能で
 - 音楽DSL（`SEQ`, `SIM`, `PLAY`, `CHORD`, `SLOT`, `GAIN`, `PAN`, `ADSR` 等）
 - JSON/外部連携（`PARSE`, `STRINGIFY`, `INPUT`, `OUTPUT`, `JSON-GET` 等）
 
+### モジュールファースト原則
+
+Ajisaiのモジュールエコシステムの発展のため、名前衝突が生じた場合は
+**常にモジュール側を優先する**。ユーザーは衝突を認識したうえで自ら対処する。
+
+#### 辞書の命名体系
+
+| 層 | 日本語名 | 英語名 | GUI タブ名 | 探索優先度 |
+|---|---|---|---|---|
+| コア組み込みワード | 基礎語彙 | Core Vocabulary | **Dictionary** | 3（最低） |
+| モジュールワード＋サンプル | 専門語彙 | Specialized Vocabulary | **MUSIC**, **JSON** 等 | 1（最高） |
+| ユーザー定義ワード | 個人言語 | Idiolect | **Idiolect** | 2（中間） |
+
+#### ワード名の探索順序
+
+ワード名の解決は以下の優先順位で行う:
+
+1. **専門語彙（Specialized Vocabulary）** — インポート済みモジュールの組み込みワード
+   およびサンプルワード。完全修飾名（`MUSIC::PLAY`）は常に最優先。
+   短縮名（`C4` 等のサンプルワード）もモジュール組み込みと同等に優先される。
+2. **個人言語（Idiolect）** — ユーザーが `DEF` で定義したカスタムワード。
+3. **基礎語彙（Core Vocabulary）** — 言語コアの組み込みワード（`GET`, `SORT`, `+` 等）。
+
+#### DEF 時の衝突
+
+ユーザーがモジュールサンプルワードまたはモジュール組み込みワードと同名の
+カスタムワードを `DEF` しようとした場合、エラーとなる。
+
+```ajisai
+'music' IMPORT
+: 100 ; 'C4' DEF
+# → Error: Cannot define 'C4': name is reserved by module MUSIC.
+#   Use ! 'C4' DEL to remove the module sample first.
+```
+
+`!` フラグでモジュールサンプルを強制削除した後であれば、同名の
+カスタムワードを定義できる。
+
+#### IMPORT 時の衝突
+
+モジュールのサンプルワードがユーザー定義のカスタムワードと同名の場合、
+モジュールサンプルが優先的に登録され、ユーザー定義は自動的に削除される。
+警告メッセージが出力される。
+
+```ajisai
+: 100 ; 'C4' DEF
+'music' IMPORT
+# → Warning: User word 'C4' was removed (conflicts with MUSIC module sample).
+```
+
+#### コア組み込みワードの保護
+
+コア組み込みワード（基礎語彙）は、モジュールワード・ユーザー定義を問わず
+上書き・削除ができない（既存の BuiltinProtection エラー）。
+
 ### 6.2 コア組み込みワード一覧
 
 以下に機能カテゴリとシグネチャ型の二軸で分類する。

@@ -28,7 +28,6 @@ fn token_to_source(token: &crate::types::Token) -> String {
         Token::ChevronDefault => ">>>".to_string(),
         Token::SafeMode => "~".to_string(),
         Token::LineBreak => "\n".to_string(),
-        Token::ScopeDirective(name) => format!("@{}", name),
     }
 }
 
