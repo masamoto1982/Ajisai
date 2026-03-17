@@ -5,9 +5,10 @@ export interface MobileElements {
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
     readonly dictionaryArea: HTMLElement;
+    readonly commonDictionaryArea: HTMLElement;
 }
 
-export type ViewMode = 'input' | 'output' | 'stack' | 'dictionary' | `module:${string}`;
+export type ViewMode = 'input' | 'output' | 'stack' | 'dictionary' | 'common' | `module:${string}`;
 
 export interface MobileHandler {
     readonly isMobile: () => boolean;
@@ -21,7 +22,7 @@ export interface MobileHandlerOptions {
 
 const MOBILE_BREAKPOINT = 768;
 const SWIPE_THRESHOLD = 50;
-const VIEW_ORDER: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
+const VIEW_ORDER: ViewMode[] = ['input', 'output', 'stack', 'dictionary', 'common'];
 
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 
@@ -57,28 +58,41 @@ const getInputModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'flex',
     outputArea: 'none',
     stackArea: 'none',
-    dictionaryArea: 'none'
+    dictionaryArea: 'none',
+    commonDictionaryArea: 'none'
 });
 
 const getOutputModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'flex',
     stackArea: 'none',
-    dictionaryArea: 'none'
+    dictionaryArea: 'none',
+    commonDictionaryArea: 'none'
 });
 
 const getStackModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'none',
     stackArea: 'flex',
-    dictionaryArea: 'none'
+    dictionaryArea: 'none',
+    commonDictionaryArea: 'none'
 });
 
 const getDictionaryModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'none',
     stackArea: 'none',
-    dictionaryArea: 'flex'
+    dictionaryArea: 'flex',
+    commonDictionaryArea: 'none'
+});
+
+
+const getCommonDictionaryModeStyles = (): Record<keyof MobileElements, string> => ({
+    inputArea: 'none',
+    outputArea: 'none',
+    stackArea: 'none',
+    dictionaryArea: 'none',
+    commonDictionaryArea: 'flex'
 });
 
 const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> => {
@@ -86,7 +100,8 @@ const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> 
         input: getInputModeStyles,
         output: getOutputModeStyles,
         stack: getStackModeStyles,
-        dictionary: getDictionaryModeStyles
+        dictionary: getDictionaryModeStyles,
+        common: getCommonDictionaryModeStyles
     };
     const fn = modeMap[mode];
     if (fn) return fn();
@@ -95,7 +110,8 @@ const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> 
         inputArea: 'none',
         outputArea: 'none',
         stackArea: 'none',
-        dictionaryArea: 'none'
+        dictionaryArea: 'none',
+        commonDictionaryArea: 'none'
     };
 };
 

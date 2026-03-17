@@ -367,10 +367,6 @@ impl AjisaiInterpreter {
         let js_array = js_sys::Array::new();
 
         for (name, def) in self.interpreter.dictionary.iter() {
-            if def.is_builtin {
-                continue;
-            }
-
             let is_protected = self
                 .interpreter
                 .dependents
@@ -406,7 +402,6 @@ impl AjisaiInterpreter {
             .interpreter
             .dictionary
             .iter()
-            .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| CustomWordData {
                 name: name.clone(),
                 definition: self.interpreter.get_word_definition_tokens(name),
@@ -471,7 +466,7 @@ impl AjisaiInterpreter {
         let upper = module_name.to_uppercase();
         let prefix = format!("{}::", upper);
         let arr = js_sys::Array::new();
-        for (name, def) in &self.interpreter.dictionary {
+        for (name, def) in &self.interpreter.builtin_dictionary {
             if name.starts_with(&prefix) {
                 let item = js_sys::Array::new();
                 item.push(&JsValue::from_str(name));
