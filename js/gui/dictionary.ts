@@ -14,14 +14,14 @@ export interface WordInfo {
     readonly protected?: boolean;
 }
 
-export interface DictionaryElements {
-    readonly builtinWordsDisplay: HTMLElement;
-    readonly customWordsDisplay: HTMLElement;
-    readonly builtinWordInfo: HTMLElement;
-    readonly customWordInfo: HTMLElement;
+export interface VocabularyElements {
+    readonly coreWordsDisplay: HTMLElement;
+    readonly idiolectWordsDisplay: HTMLElement;
+    readonly coreWordInfo: HTMLElement;
+    readonly idiolectWordInfo: HTMLElement;
 }
 
-export interface DictionaryCallbacks {
+export interface VocabularyCallbacks {
     readonly onWordClick: (word: string) => void;
     readonly onBackgroundClick?: () => void;
     readonly onBackgroundDoubleClick?: () => void;
@@ -30,9 +30,9 @@ export interface DictionaryCallbacks {
     readonly showInfo?: (text: string, append: boolean) => void;
 }
 
-export interface Dictionary {
-    readonly renderBuiltinWords: () => void;
-    readonly updateCustomWords: (customWordsInfo: Array<[string, string | null, boolean]>) => void;
+export interface VocabularyManager {
+    readonly renderCoreWords: () => void;
+    readonly updateIdiolectWords: (customWordsInfo: Array<[string, string | null, boolean]>) => void;
     readonly setSearchFilter: (filter: string) => void;
 }
 
@@ -72,13 +72,13 @@ const clearElement = (element: HTMLElement): void => {
 
 
 
-export const createDictionary = (
-    elements: DictionaryElements,
-    callbacks: DictionaryCallbacks
-): Dictionary => {
+export const createVocabularyManager = (
+    elements: VocabularyElements,
+    callbacks: VocabularyCallbacks
+): VocabularyManager => {
     const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
 
-    [elements.builtinWordsDisplay, elements.customWordsDisplay].forEach(container => {
+    [elements.coreWordsDisplay, elements.idiolectWordsDisplay].forEach(container => {
         setupBackgroundClickHandlers(container, onBackgroundClick, onBackgroundDoubleClick);
     });
 
@@ -122,14 +122,14 @@ export const createDictionary = (
         await deleteWord(wordInfo.name, false);
     };
 
-    const renderBuiltinWordsSorted = (
+    const renderCoreWordsSorted = (
         container: HTMLElement,
-        builtinWords: unknown[][]
+        coreWords: unknown[][]
     ): void => {
         clearElement(container);
 
         // Filter out ';' and '"'
-        const filtered = builtinWords.filter(
+        const filtered = coreWords.filter(
             (wd): wd is unknown[] =>
                 Array.isArray(wd) && wd[0] !== ';' && wd[0] !== '"'
         );
@@ -155,10 +155,10 @@ export const createDictionary = (
             const button = createWordButton(
                 name,
                 description,
-                `word-button builtin${sigClass}`,
+                `word-button core${sigClass}`,
                 () => onWordClick(name),
-                () => { elements.builtinWordInfo.textContent = syntaxExample; },
-                () => { elements.builtinWordInfo.textContent = ''; }
+                () => { elements.coreWordInfo.textContent = syntaxExample; },
+                () => { elements.coreWordInfo.textContent = ''; }
             );
 
             container.appendChild(button);
@@ -197,9 +197,9 @@ export const createDictionary = (
                 () => onWordClick(wordInfo.name),
                 () => {
                     const definition = window.ajisaiInterpreter?.get_word_definition(wordInfo.name);
-                    elements.customWordInfo.textContent = definition || '';
+                    elements.idiolectWordInfo.textContent = definition || '';
                 },
-                () => { elements.customWordInfo.textContent = ''; },
+                () => { elements.idiolectWordInfo.textContent = ''; },
                 () => confirmAndDeleteWord(wordInfo)
             );
 
@@ -213,37 +213,37 @@ export const createDictionary = (
         }
     };
 
-    const renderBuiltinWords = (): void => {
+    const renderCoreWords = (): void => {
         if (!window.ajisaiInterpreter) return;
 
         try {
-            const builtinWords = window.ajisaiInterpreter.get_builtin_words_info();
-            renderBuiltinWordsSorted(elements.builtinWordsDisplay, builtinWords);
+            const coreWords = window.ajisaiInterpreter.get_core_words_info();
+            renderCoreWordsSorted(elements.coreWordsDisplay, coreWords);
         } catch (error) {
-            console.error('Failed to render builtin words:', error);
+            console.error('Failed to render core words:', error);
         }
     };
 
-    const updateCustomWords = (
+    const updateIdiolectWords = (
         customWordsInfo: Array<[string, string | null, boolean]>
     ): void => {
         // キャッシュを更新
         cachedCustomWords = customWordsInfo || [];
         const words = cachedCustomWords.map(toWordInfo);
-        renderCustomWordButtons(elements.customWordsDisplay, words);
+        renderCustomWordButtons(elements.idiolectWordsDisplay, words);
     };
 
     const setSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
         // 両方のワードリストを再レンダリング
-        renderBuiltinWords();
+        renderCoreWords();
         const words = cachedCustomWords.map(toWordInfo);
-        renderCustomWordButtons(elements.customWordsDisplay, words);
+        renderCustomWordButtons(elements.idiolectWordsDisplay, words);
     };
 
     return {
-        renderBuiltinWords,
-        updateCustomWords,
+        renderCoreWords,
+        updateIdiolectWords,
         setSearchFilter
     };
 };

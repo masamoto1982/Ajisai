@@ -15,11 +15,11 @@ export interface AjisaiInterpreter {
     execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
     get_stack(): Value[];
-    get_custom_words_info(): Array<[string, string | null, boolean]>;
-    get_builtin_words_info(): Array<[string, string, string]>;
+    get_idiolect_words_info(): Array<[string, string | null, boolean]>;
+    get_core_words_info(): Array<[string, string, string]>;
     get_word_definition(name: string): string | null;
     restore_stack(stack_js: Value[]): void;
-    restore_custom_words(words: CustomWord[]): void;
+    restore_idiolect(words: CustomWord[]): void;
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
     get_imported_modules(): string[];
