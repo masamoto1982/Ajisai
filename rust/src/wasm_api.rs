@@ -432,6 +432,38 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
+    /// 指定モジュールのサンプルワード情報を返す。
+    /// 返却形式は Array<[name, description]>
+    #[wasm_bindgen]
+    pub fn get_module_sample_words_info(&self, module_name: &str) -> JsValue {
+        let upper = module_name.to_uppercase();
+        let arr = js_sys::Array::new();
+        if let Some(module_dict) = self.interpreter.module_samples.get(&upper) {
+            for (name, def) in module_dict {
+                let item = js_sys::Array::new();
+                item.push(&JsValue::from_str(name));
+                item.push(
+                    &def.description
+                        .clone()
+                        .map(JsValue::from)
+                        .unwrap_or(JsValue::NULL),
+                );
+                arr.push(&item);
+            }
+        }
+        arr.into()
+    }
+
+    /// 現在のスコープを設定する（GUI からの呼び出し用）
+    #[wasm_bindgen]
+    pub fn set_scope(&mut self, scope: &str) {
+        if scope == "DICTIONARY" || scope.is_empty() {
+            self.interpreter.current_scope = None;
+        } else {
+            self.interpreter.current_scope = Some(scope.to_uppercase());
+        }
+    }
+
     /// 指定モジュールが公開するワード情報を返す。
     /// 返却形式は Array<[name, description]>
     #[wasm_bindgen]
@@ -488,6 +520,22 @@ impl AjisaiInterpreter {
             self.interpreter.dependents.remove(&upper_name);
             for deps in self.interpreter.dependents.values_mut() {
                 deps.remove(&upper_name);
+            }
+        } else {
+            // Also check module samples
+            for module_dict in self.interpreter.module_samples.values_mut() {
+                if let Some(removed_def) = module_dict.remove(&upper_name) {
+                    for dep_name in &removed_def.dependencies {
+                        if let Some(deps) = self.interpreter.dependents.get_mut(dep_name) {
+                            deps.remove(&upper_name);
+                        }
+                    }
+                    self.interpreter.dependents.remove(&upper_name);
+                    for deps in self.interpreter.dependents.values_mut() {
+                        deps.remove(&upper_name);
+                    }
+                    break;
+                }
             }
         }
     }

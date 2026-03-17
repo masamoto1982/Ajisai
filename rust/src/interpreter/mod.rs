@@ -83,6 +83,12 @@ pub struct Interpreter {
     pub(crate) active_flows: Vec<FlowToken>,
     /// Accumulated consumed amounts per flow chain (for conservation audit).
     pub(crate) flow_consumed_log: Vec<(u64, Fraction)>,
+    // ── Module-scoped sample words ───────────────────────────────────
+    /// Per-module sample word dictionaries (e.g. MUSIC → {C4, D4, ...}).
+    /// These are registered at IMPORT time and resolved via scope directives.
+    pub(crate) module_samples: HashMap<String, HashMap<String, Arc<WordDefinition>>>,
+    /// Current scope directive: None = DICTIONARY, Some("MUSIC") = MUSIC scope.
+    pub current_scope: Option<String>,
 }
 
 impl Interpreter {
@@ -109,6 +115,8 @@ impl Interpreter {
             flow_tracking: false,
             active_flows: Vec::new(),
             flow_consumed_log: Vec::new(),
+            module_samples: HashMap::new(),
+            current_scope: None,
         };
         crate::builtins::register_builtins(&mut interpreter.dictionary);
         interpreter
@@ -213,6 +221,62 @@ impl Interpreter {
         }
     }
 
+    /// Scope-aware word resolution.
+    /// Fully qualified names (MODULE::WORD) bypass scope and go to dictionary.
+    /// In module scope: module_samples → dictionary (user + builtins).
+    /// In DICTIONARY scope: dictionary only (no module samples).
+    pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
+        // Fully qualified names (MODULE::WORD) bypass scope
+        if name.contains("::") {
+            return self.dictionary.get(name).cloned();
+        }
+
+        match &self.current_scope {
+            Some(module_name) => {
+                // Module scope: check module samples first
+                if let Some(module_dict) = self.module_samples.get(module_name.as_str()) {
+                    if let Some(def) = module_dict.get(name) {
+                        return Some(def.clone());
+                    }
+                }
+                // Then user-defined + builtins
+                self.dictionary.get(name).cloned()
+            }
+            None => {
+                // DICTIONARY scope: only user-defined + builtins
+                self.dictionary.get(name).cloned()
+            }
+        }
+    }
+
+    /// Check if a word exists in any layer (for dependency tracking etc.)
+    pub(crate) fn word_exists(&self, name: &str) -> bool {
+        if self.dictionary.contains_key(name) {
+            return true;
+        }
+        for module_dict in self.module_samples.values() {
+            if module_dict.contains_key(name) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if a word is a non-builtin custom word (user-defined or module sample)
+    pub(crate) fn is_custom_word(&self, name: &str) -> bool {
+        if let Some(def) = self.dictionary.get(name) {
+            if !def.is_builtin {
+                return true;
+            }
+        }
+        for module_dict in self.module_samples.values() {
+            if module_dict.contains_key(name) {
+                return true;
+            }
+        }
+        false
+    }
+
     fn collect_vector(
         &mut self,
         tokens: &[Token],
@@ -276,7 +340,7 @@ impl Interpreter {
                             // カスタムワード（非組み込み）の場合、実行して結果を取得する。
                             // 安全性のため、スタックを退避し空の状態でワードを実行する。
                             // 実行に失敗した場合は文字列として扱う（Vector Duality用）。
-                            let resolved = if let Some(def) = self.dictionary.get(upper.as_ref()) {
+                            let resolved = if let Some(def) = self.resolve_word(upper.as_ref()) {
                                 !def.is_builtin
                             } else {
                                 false
@@ -364,7 +428,7 @@ impl Interpreter {
 
         let word_name = helpers::get_word_name_from_value(&name_val)?;
 
-        if let Some(def) = self.dictionary.get(&word_name) {
+        if let Some(def) = self.resolve_word(&word_name) {
             if def.is_builtin {
                 return Err(AjisaiError::from("WAIT can only be used with custom words"));
             }
@@ -529,6 +593,22 @@ impl Interpreter {
                 }
                 Token::SafeMode => {
                     self.safe_mode = true;
+                }
+                Token::ScopeDirective(scope_name) => {
+                    let name = scope_name.to_uppercase();
+                    if name == "DICTIONARY" {
+                        self.current_scope = None;
+                    } else {
+                        // Verify module is imported
+                        if !self.imported_modules.contains(&name) {
+                            return Err(AjisaiError::from(format!(
+                                "Module '{}' is not imported. Use '{}' IMPORT first.",
+                                name,
+                                name.to_lowercase()
+                            )));
+                        }
+                        self.current_scope = Some(name);
+                    }
                 }
                 Token::CodeBlockEnd
                 | Token::ChevronBranch
@@ -703,9 +783,7 @@ impl Interpreter {
 
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
         let def = self
-            .dictionary
-            .get(name)
-            .map(Arc::clone)
+            .resolve_word(name)
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         // Native implementation (built-in words with no user-defined code)
@@ -742,9 +820,7 @@ impl Interpreter {
     #[async_recursion(?Send)]
     pub(crate) async fn execute_word_async(&mut self, name: &str) -> Result<()> {
         let def = self
-            .dictionary
-            .get(name)
-            .map(Arc::clone)
+            .resolve_word(name)
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         // Native implementation (built-in words with no user-defined code)
@@ -914,27 +990,40 @@ impl Interpreter {
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),
             Token::LineBreak => "\n".to_string(),
+            Token::ScopeDirective(name) => format!("@{}", name),
         }
     }
 
     pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
-        if let Some(def) = self.dictionary.get(name) {
-            if !def.is_builtin && !def.lines.is_empty() {
-                let mut result = String::new();
-                for (i, line) in def.lines.iter().enumerate() {
-                    if i > 0 {
-                        result.push('\n');
-                    }
-
-                    for token in line.body_tokens.iter() {
-                        result.push_str(&self.token_to_string(token));
-                        result.push(' ');
-                    }
+        // Check dictionary first, then module_samples
+        let def = if let Some(d) = self.dictionary.get(name) {
+            if d.is_builtin || d.lines.is_empty() {
+                return None;
+            }
+            d.clone()
+        } else {
+            // Check module samples
+            let mut found = None;
+            for module_dict in self.module_samples.values() {
+                if let Some(d) = module_dict.get(name) {
+                    found = Some(d.clone());
+                    break;
                 }
-                return Some(result.trim().to_string());
+            }
+            found?
+        };
+
+        let mut result = String::new();
+        for (i, line) in def.lines.iter().enumerate() {
+            if i > 0 {
+                result.push('\n');
+            }
+            for token in line.body_tokens.iter() {
+                result.push_str(&self.token_to_string(token));
+                result.push(' ');
             }
         }
-        None
+        Some(result.trim().to_string())
     }
 
     pub fn execute_reset(&mut self) -> Result<()> {
@@ -950,6 +1039,8 @@ impl Interpreter {
         self.module_state.clear();
         self.call_stack.clear();
         self.imported_modules.clear();
+        self.module_samples.clear();
+        self.current_scope = None;
         crate::builtins::register_builtins(&mut self.dictionary);
         Ok(())
     }
@@ -980,33 +1071,48 @@ impl Interpreter {
 
     pub fn rebuild_dependencies(&mut self) -> Result<()> {
         self.dependents.clear();
-        let custom_words: Vec<(String, Arc<WordDefinition>)> = self
+
+        // Collect all custom words: user-defined from dictionary + module samples
+        let mut custom_words: Vec<(String, Arc<WordDefinition>)> = self
             .dictionary
             .iter()
             .filter(|(_, def)| !def.is_builtin)
             .map(|(name, def)| (name.clone(), Arc::clone(def)))
             .collect();
 
-        for (word_name, word_def) in custom_words {
+        for module_dict in self.module_samples.values() {
+            for (name, def) in module_dict {
+                custom_words.push((name.clone(), Arc::clone(def)));
+            }
+        }
+
+        for (word_name, word_def) in &custom_words {
             let mut dependencies = HashSet::new();
             for line in word_def.lines.iter() {
                 for token in line.body_tokens.iter() {
                     if let Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
-                        if let Some(dep_def) = self.dictionary.get(&upper_s) {
-                            if !dep_def.is_builtin {
-                                dependencies.insert(upper_s.clone());
-                                self.dependents
-                                    .entry(upper_s)
-                                    .or_default()
-                                    .insert(word_name.clone());
-                            }
+                        if self.is_custom_word(&upper_s) {
+                            dependencies.insert(upper_s.clone());
+                            self.dependents
+                                .entry(upper_s)
+                                .or_default()
+                                .insert(word_name.clone());
                         }
                     }
                 }
             }
-            if let Some(def) = self.dictionary.get_mut(&word_name) {
+            // Update dependencies on the definition
+            if let Some(def) = self.dictionary.get_mut(word_name) {
                 Arc::make_mut(def).dependencies = dependencies;
+            } else {
+                // Check module samples
+                for module_dict in self.module_samples.values_mut() {
+                    if let Some(def) = module_dict.get_mut(word_name) {
+                        Arc::make_mut(def).dependencies = dependencies;
+                        break;
+                    }
+                }
             }
         }
         Ok(())
@@ -1018,6 +1124,13 @@ impl Interpreter {
         for (name, def) in &self.dictionary {
             if !def.is_builtin && def.dependencies.contains(word_name) {
                 result.insert(name.clone());
+            }
+        }
+        for module_dict in self.module_samples.values() {
+            for (name, def) in module_dict {
+                if def.dependencies.contains(word_name) {
+                    result.insert(name.clone());
+                }
             }
         }
         result

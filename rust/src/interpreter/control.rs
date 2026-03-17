@@ -62,7 +62,7 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
         })?;
         let upper_word_name = word_name.to_uppercase();
 
-        let Some(def) = interp.dictionary.get(&upper_word_name) else {
+        let Some(def) = interp.resolve_word(&upper_word_name) else {
             interp.disable_no_change_check = saved_no_change_check;
             return Err(AjisaiError::UnknownWord(upper_word_name));
         };

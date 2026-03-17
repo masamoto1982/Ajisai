@@ -24,6 +24,8 @@ export interface AjisaiInterpreter {
     push_json_string(json: string): { status: string; message?: string };
     get_imported_modules(): string[];
     get_module_words_info(module_name: string): Array<[string, string | null]>;
+    get_module_sample_words_info(module_name: string): Array<[string, string | null]>;
+    set_scope(scope: string): void;
     restore_imported_modules(modules: string[]): void;
 }
 

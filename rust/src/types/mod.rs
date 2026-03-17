@@ -526,6 +526,7 @@ pub enum Token {
     NilCoalesce,
     SafeMode,
     LineBreak,
+    ScopeDirective(Arc<str>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -59,10 +59,7 @@ fn is_string_like(val: &Value) -> bool {
 
 fn is_custom_word_defined(interp: &Interpreter, symbol: &str) -> bool {
     let upper_symbol = symbol.to_uppercase();
-    match interp.dictionary.get(&upper_symbol) {
-        Some(def) => !def.is_builtin,
-        None => false,
-    }
+    interp.is_custom_word(&upper_symbol)
 }
 
 fn has_definition_description(stack: &[Value]) -> bool {
@@ -120,6 +117,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 Token::NilCoalesce => "=>".to_string(),
                 Token::SafeMode => "~".to_string(),
                 Token::LineBreak => "\n".to_string(),
+                Token::ScopeDirective(name) => format!("@{}", name),
             })
             .collect::<Vec<_>>()
             .join(" "),
@@ -280,7 +278,8 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name.to_uppercase();
 
-    if let Some(def) = interp.dictionary.get(&upper_name) {
+    // Check if word exists in dictionary (user-defined)
+    let in_dictionary = if let Some(def) = interp.dictionary.get(&upper_name) {
         if def.is_builtin {
             interp.force_flag = false;
             return Err(AjisaiError::BuiltinProtection {
@@ -288,11 +287,31 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
                 operation: "delete".into(),
             });
         }
+        true
     } else {
+        false
+    };
+
+    // Check if word exists in module samples
+    let in_module_samples = interp
+        .module_samples
+        .values()
+        .any(|md| md.contains_key(&upper_name));
+
+    if !in_dictionary && !in_module_samples {
         interp.force_flag = false;
         return Err(AjisaiError::from(format!(
             "Word '{}' is not defined",
             upper_name
+        )));
+    }
+
+    // Module sample words require force flag
+    if !in_dictionary && in_module_samples && !interp.force_flag {
+        interp.force_flag = false;
+        return Err(AjisaiError::from(format!(
+            "Word '{}' is a module sample word. Use ! '{}' DEL to force delete.",
+            upper_name, upper_name
         )));
     }
 
@@ -306,6 +325,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
+    // Delete from dictionary (user-defined)
     if let Some(removed_def) = interp.dictionary.remove(&upper_name) {
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
@@ -316,6 +336,34 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
         for deps in interp.dependents.values_mut() {
             deps.remove(&upper_name);
+        }
+
+        if !dependents.is_empty() {
+            let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
+            interp.output_buffer.push_str(&format!(
+                "Warning: '{}' was deleted. Affected words: {}\n",
+                upper_name, dep_list
+            ));
+        }
+
+        interp
+            .output_buffer
+            .push_str(&format!("Deleted word: {}\n", name));
+    } else if in_module_samples {
+        // Delete from module samples (force flag required, already checked)
+        for module_dict in interp.module_samples.values_mut() {
+            if let Some(removed_def) = module_dict.remove(&upper_name) {
+                for dep_name in &removed_def.dependencies {
+                    if let Some(deps) = interp.dependents.get_mut(dep_name) {
+                        deps.remove(&upper_name);
+                    }
+                }
+                interp.dependents.remove(&upper_name);
+                for deps in interp.dependents.values_mut() {
+                    deps.remove(&upper_name);
+                }
+                break;
+            }
         }
 
         if !dependents.is_empty() {
@@ -349,7 +397,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name_str.to_uppercase();
 
-    if let Some(def) = interp.dictionary.get(&upper_name) {
+    if let Some(def) = interp.resolve_word(&upper_name) {
         if def.is_builtin {
             let detailed_info = crate::builtins::get_builtin_detail(&upper_name);
             interp.definition_to_load = Some(detailed_info);
