@@ -409,6 +409,35 @@ article h2 {
     gap: 0.5rem;
 }
 
+
+.word-context-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 7rem;
+    padding: 0.25rem;
+    background: var(--bg-menu);
+    border: 1px solid var(--border-on-menu);
+    border-radius: var(--radius-main);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.word-context-menu__item {
+    width: 100%;
+    display: block;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: var(--text-on-menu);
+    border: none;
+    border-radius: calc(var(--radius-main) - 2px);
+    text-align: left;
+    cursor: pointer;
+}
+
+.word-context-menu__item:hover {
+    background: var(--bg-menu-hover);
+    color: var(--text-on-menu-hover);
+}
+
 /* --------------------------------------------------------------------------
  * 11. コードブロック
  * -------------------------------------------------------------------------- */
