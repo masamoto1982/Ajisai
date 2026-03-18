@@ -68,9 +68,16 @@ const clearElement = (element: HTMLElement): void => {
     element.innerHTML = '';
 };
 
+const DEFAULT_WORD_INFO_MESSAGE = 'Hover over a word button to view its usage.';
 
+const setWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
+    element.textContent = text;
+    element.classList.toggle('is-placeholder', isPlaceholder);
+};
 
-
+const resetWordInfo = (element: HTMLElement): void => {
+    setWordInfo(element, DEFAULT_WORD_INFO_MESSAGE, true);
+};
 
 export const createVocabularyManager = (
     elements: VocabularyElements,
@@ -81,6 +88,8 @@ export const createVocabularyManager = (
     [elements.builtInWordsDisplay, elements.customWordsDisplay].forEach(container => {
         setupBackgroundClickHandlers(container, onBackgroundClick, onBackgroundDoubleClick);
     });
+
+    [elements.builtInWordInfo, elements.customWordInfo].forEach(resetWordInfo);
 
     // 検索フィルターとカスタムワードのキャッシュ
     let searchFilter = '';
@@ -157,8 +166,8 @@ export const createVocabularyManager = (
                 description,
                 `word-button core${sigClass}`,
                 () => onWordClick(name),
-                () => { elements.builtInWordInfo.textContent = syntaxExample; },
-                () => { elements.builtInWordInfo.textContent = ''; }
+                () => { setWordInfo(elements.builtInWordInfo, syntaxExample || DEFAULT_WORD_INFO_MESSAGE, !syntaxExample); },
+                () => { resetWordInfo(elements.builtInWordInfo); }
             );
 
             container.appendChild(button);
@@ -197,9 +206,9 @@ export const createVocabularyManager = (
                 () => onWordClick(wordInfo.name),
                 () => {
                     const definition = window.ajisaiInterpreter?.get_word_definition(wordInfo.name);
-                    elements.customWordInfo.textContent = definition || '';
+                    setWordInfo(elements.customWordInfo, definition || DEFAULT_WORD_INFO_MESSAGE, !definition);
                 },
-                () => { elements.customWordInfo.textContent = ''; },
+                () => { resetWordInfo(elements.customWordInfo); },
                 () => confirmAndDeleteWord(wordInfo)
             );
 
