@@ -454,8 +454,10 @@ body[data-active-area] .main-layout section {
 }
 
 .words-area .word-info-display {
-    flex: 0 0 auto;
-    min-height: 1.25rem;
+    display: block;
+    flex: 0 0 1.25rem;
+    height: 1.25rem;
+    line-height: 1.25rem;
     max-width: 100%;
     margin-bottom: 0.5rem;
 }
