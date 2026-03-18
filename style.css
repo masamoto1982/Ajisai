@@ -52,11 +52,6 @@
     min-width: 0;
 }
 
-/* 左タブグループと右タブグループの間に仕切り線 */
-.tab-group:first-child {
-    border-right: 1px solid var(--color-border-strong, #999);
-}
-
 /* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
 .area-tabs::after {
     content: '';
