@@ -166,8 +166,7 @@
 #state-panel .stack-area,
 #state-panel .vocabulary-area,
 .vocabulary-container,
-.core-words-area,
-.idiolect-words-area,
+.words-area,
 .words-display,
 .state-display,
 .display-area {
@@ -442,8 +441,7 @@ body[data-active-area] .main-layout section {
     gap: 0.5rem;
 }
 
-.core-words-area,
-.idiolect-words-area {
+.words-area {
     width: 100%;
     background: var(--gradient-child);
     padding: 0.75rem;
@@ -454,16 +452,10 @@ body[data-active-area] .main-layout section {
     overflow: hidden;
 }
 
-.core-words-area .words-display,
-.idiolect-words-area .words-display {
+.words-area .words-display {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-}
-
-/* words-display自体の背景・パディングを除去（親が担当） */
-.core-words-area .words-display,
-.idiolect-words-area .words-display {
     background-color: rgba(0, 0, 0, 0.06);
     border-radius: 6px;
     padding: 4px;
@@ -668,8 +660,7 @@ body[data-active-area] .main-layout section {
         min-height: 80px;
     }
 
-    .core-words-area .words-display,
-    .idiolect-words-area .words-display {
+    .words-area .words-display {
         cursor: default;
     }
 
