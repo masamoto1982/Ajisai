@@ -86,7 +86,7 @@ pub struct Interpreter {
     pub(crate) flow_consumed_log: Vec<(u64, Fraction)>,
     // ── Module-scoped sample words ───────────────────────────────────
     /// Per-module sample word dictionaries (e.g. MUSIC → {C4, D4, ...}).
-    /// These are registered at IMPORT time and follow module-first resolution.
+    /// These are registered at IMPORT time with lowest resolution priority (core-first).
     pub(crate) module_samples: HashMap<String, HashMap<String, Arc<WordDefinition>>>,
 }
 
@@ -220,20 +220,18 @@ impl Interpreter {
         }
     }
 
-    /// Module-first word resolution (flat priority).
-    /// Fully qualified names (MODULE::WORD) always take highest priority.
-    /// Resolution order: module samples → user dictionary → core builtins.
+    /// Core-first word resolution.
+    /// Fully qualified names (MODULE::WORD) are resolved via core_vocabulary.
+    /// Resolution order: core builtins → user dictionary → module samples.
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
-        // Fully qualified names (MODULE::WORD) are always highest priority
+        // Fully qualified names (MODULE::WORD) are resolved via core_vocabulary
         if name.contains("::") {
             return self.core_vocabulary.get(name).cloned();
         }
 
-        // 1. Specialized Vocabulary: module sample words (all imported modules)
-        for module_dict in self.module_samples.values() {
-            if let Some(def) = module_dict.get(name) {
-                return Some(def.clone());
-            }
+        // 1. Core Vocabulary: built-in words (highest priority)
+        if let Some(def) = self.core_vocabulary.get(name) {
+            return Some(def.clone());
         }
 
         // 2. Idiolect: user-defined words
@@ -241,8 +239,14 @@ impl Interpreter {
             return Some(def.clone());
         }
 
-        // 3. Core Vocabulary: built-in words
-        self.core_vocabulary.get(name).cloned()
+        // 3. Specialized Vocabulary: module sample words (lowest priority)
+        for module_dict in self.module_samples.values() {
+            if let Some(def) = module_dict.get(name) {
+                return Some(def.clone());
+            }
+        }
+
+        None
     }
 
     /// Check if a word exists in any layer (for dependency tracking etc.)
