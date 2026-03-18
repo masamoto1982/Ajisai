@@ -111,7 +111,7 @@ export const createModuleTabManager = (
         wordInfoDisplay.className = 'word-info-display module-word-info';
 
         const wordsArea = document.createElement('div');
-        wordsArea.className = 'core-words-area';
+        wordsArea.className = 'words-area';
         wordsArea.appendChild(wordInfoDisplay);
 
         const wordsDisplay = document.createElement('div');
