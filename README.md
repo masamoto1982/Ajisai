@@ -35,7 +35,7 @@ Ajisai inherits **postfix notation** and the **dictionary system** from FORTH. I
 | **Consume/Remainder** | Each operation consumes what it needs; the remainder flows on |
 | **No Change is Error** | If a word's output equals its input, it is an error — detect meaningless operations early |
 | **Default Consumption** | All words consume their operands by default; use `,,` to bifurcate |
-| **Core-First** | Name resolution prioritizes core built-ins, then user words, then module words |
+| **Module-First** | Name resolution prioritizes module words, then user words, then core built-ins |
 | **No Intermediates** | Pipeline stages fuse — no materialized intermediate collections |
 | **Conservation Law** | `initial_total = Sigma(consumed_i) + final_remainder` always holds |
 | **Display Hint Separation** | `DisplayHint` is metadata for display only — not a type |

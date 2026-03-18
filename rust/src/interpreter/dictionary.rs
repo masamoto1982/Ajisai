@@ -150,6 +150,18 @@ pub(crate) fn op_def_inner(
         });
     }
 
+    // Module sample collision check (module-first principle)
+    for (module_name, module_dict) in &interp.module_samples {
+        if module_dict.contains_key(&upper_name) {
+            interp.force_flag = false;
+            return Err(AjisaiError::from(format!(
+                "Cannot define '{}': name is reserved by module {}. \
+                 Use ! '{}' DEL to remove the module sample first.",
+                upper_name, module_name, upper_name
+            )));
+        }
+    }
+
     if let Some(existing) = interp.idiolect.get(&upper_name) {
         let dependents = interp.get_dependents(&upper_name);
 
@@ -766,76 +778,38 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_core_first_user_def_overrides_module_sample() {
-        // Core-first: user-defined word takes priority over module sample shorthand
+    async fn test_module_first_def_blocked_by_module_sample() {
+        // Module-first: DEF of a name reserved by a module sample is an error
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.get_output();
 
-        // Define a user word with the same name as a module sample (C4)
         let result = interp.execute(": [ 999 ] ; 'C4' DEF").await;
-        assert!(result.is_ok(), "Should be able to define C4 (core-first): {:?}", result.err());
-
-        // User definition should take priority
-        let result = interp.execute("C4").await;
-        assert!(result.is_ok(), "Executing C4 should succeed");
-        if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 1);
-                assert_eq!(children[0].as_scalar().unwrap().to_i64().unwrap(), 999,
-                    "User-defined C4 should return 999, not the module sample value");
-            } else {
-                panic!("Expected vector result");
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_core_first_qualified_name_still_works() {
-        // Core-first: fully qualified name should still access module word even with user override
-        let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.get_output();
-
-        // Define user word C4
-        interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
-        let _ = interp.get_output();
-
-        // Fully qualified MUSIC::C4 should still work (resolved via module samples)
-        // Note: MUSIC::C4 is not a module builtin word, it's a sample word,
-        // so it's accessed via its shorthand name in module_samples dict.
-        // The qualified name MUSIC::PLAY etc. are in core_vocabulary.
-        // For sample words, user must use the shorthand or the sample is accessible
-        // only if no user word shadows it. This test verifies the user word takes priority.
-        let result = interp.execute("C4").await;
-        assert!(result.is_ok());
-        if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children[0].as_scalar().unwrap().to_i64().unwrap(), 999,
-                    "User-defined C4 should still take priority");
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_core_first_builtin_still_protected() {
-        // Core-first: core built-in words are still protected from override
-        let mut interp = Interpreter::new();
-        let result = interp.execute(": [ 1 ] ; 'GET' DEF").await;
-        assert!(result.is_err(), "Should not be able to override built-in GET");
+        assert!(result.is_err(), "Should not be able to define C4 (module-first)");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Cannot redefine built-in word"),
-            "Expected BuiltinProtection error, got: {}", err_msg);
+        assert!(err_msg.contains("reserved by module"),
+            "Expected module reservation error, got: {}", err_msg);
     }
 
     #[tokio::test]
-    async fn test_core_first_module_sample_works_without_user_override() {
-        // Core-first: module sample shorthand works when no user word shadows it
+    async fn test_module_first_import_removes_user_word() {
+        // Module-first: IMPORT removes conflicting user-defined words
         let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.get_output();
 
-        // C4 should resolve to the module sample (264Hz)
+        // Define C4 before importing music
+        interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
+        assert!(interp.idiolect.contains_key("C4"));
+
+        // Import music module — user word should be removed
+        interp.execute("'music' IMPORT").await.unwrap();
+        let output = interp.get_output();
+
+        assert!(!interp.idiolect.contains_key("C4"),
+            "User word C4 should be removed after IMPORT");
+        assert!(output.contains("Warning"),
+            "Should warn about removal: {}", output);
+
+        // C4 now resolves to the module sample (264Hz)
         let result = interp.execute("C4").await;
         assert!(result.is_ok(), "C4 should work: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
@@ -845,34 +819,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_core_first_import_preserves_user_words() {
-        // Core-first: IMPORT should not remove existing user words
+    async fn test_module_first_sample_takes_priority() {
+        // Module-first: module sample shorthand takes highest priority
         let mut interp = Interpreter::new();
-
-        // Define C4 before importing music
-        interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
+        interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.get_output();
 
-        // Import music module
-        interp.execute("'music' IMPORT").await.unwrap();
-        let output = interp.get_output();
-
-        // User word should still exist
-        assert!(interp.idiolect.contains_key("C4"),
-            "User word C4 should be preserved after IMPORT");
-
-        // Warning should be emitted
-        assert!(output.contains("Warning"),
-            "Should warn about conflict: {}", output);
-
-        // User definition should still take priority
         let result = interp.execute("C4").await;
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "C4 should work: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children[0].as_scalar().unwrap().to_i64().unwrap(), 999,
-                    "User-defined C4 should still return 999 after IMPORT");
-            }
+            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264,
+                "C4 should be 264 (module sample)");
         }
+    }
+
+    #[tokio::test]
+    async fn test_module_first_builtin_still_protected() {
+        // Module-first: core built-in words are still protected from override
+        let mut interp = Interpreter::new();
+        let result = interp.execute(": [ 1 ] ; 'GET' DEF").await;
+        assert!(result.is_err(), "Should not be able to override built-in GET");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Cannot redefine built-in word"),
+            "Expected BuiltinProtection error, got: {}", err_msg);
     }
 }
