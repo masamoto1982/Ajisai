@@ -420,6 +420,7 @@ body[data-active-area] .main-layout section {
 
 /* 検索結果なしメッセージ */
 .no-results-message {
+    width: 100%;
     color: var(--color-text-light);
     font-style: italic;
     padding: 0.5rem;
@@ -452,8 +453,18 @@ body[data-active-area] .main-layout section {
     overflow: hidden;
 }
 
+.words-area .word-info-display {
+    flex: 0 0 auto;
+    min-height: 1.25rem;
+    max-width: 100%;
+    margin-bottom: 0.5rem;
+}
+
 .words-area .words-display {
     flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
     min-height: 0;
     overflow-y: auto;
     background-color: rgba(0, 0, 0, 0.06);
@@ -462,14 +473,6 @@ body[data-active-area] .main-layout section {
     cursor: pointer;
 }
 
-
-.words-display > div {
-    margin-bottom: 4px;
-}
-
-.words-display > div:last-child {
-    margin-bottom: 0;
-}
 
 /* empty表示 */
 .state-display {
