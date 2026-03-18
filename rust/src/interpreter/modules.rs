@@ -257,13 +257,47 @@ fn register_sample_words(
         return Ok(());
     }
 
+    // First pass: remove conflicting user-defined words (module-first principle)
+    for sample in sample_words {
+        let upper_name = sample.name.to_uppercase();
+        if interp.idiolect.contains_key(&upper_name) {
+            // Clean up dependency tracking for the removed word
+            if let Some(removed_def) = interp.idiolect.remove(&upper_name) {
+                for dep_name in &removed_def.dependencies {
+                    if let Some(dependents) = interp.dependents.get_mut(dep_name) {
+                        dependents.remove(&upper_name);
+                    }
+                }
+            }
+            if let Some(dependents) = interp.dependents.remove(&upper_name) {
+                // Clear reverse references
+                for dep in &dependents {
+                    if let Some(def) = interp.idiolect.get(dep) {
+                        let mut new_deps = def.dependencies.clone();
+                        new_deps.remove(&upper_name);
+                        let new_def = WordDefinition {
+                            lines: def.lines.clone(),
+                            is_builtin: def.is_builtin,
+                            description: def.description.clone(),
+                            dependencies: new_deps,
+                            original_source: def.original_source.clone(),
+                        };
+                        interp.idiolect.insert(dep.clone(), Arc::new(new_def));
+                    }
+                }
+            }
+            interp.output_buffer.push_str(&format!(
+                "Warning: User word '{}' was removed (conflicts with {} module sample).\n",
+                upper_name, module_name
+            ));
+        }
+    }
+
     let module_dict = interp.module_samples
         .entry(module_name.to_string())
         .or_default();
 
     for sample in sample_words {
-        let upper_name = sample.name.to_uppercase();
-
         let tokens = crate::tokenizer::tokenize(sample.definition)
             .map_err(|e| AjisaiError::from(format!(
                 "Failed to tokenize sample word '{}': {}", sample.name, e
@@ -276,18 +310,7 @@ fn register_sample_words(
             dependencies: HashSet::new(),
             original_source: None,
         };
-        module_dict.insert(upper_name.clone(), Arc::new(def));
-    }
-
-    // Core-first: warn about conflicts with user-defined words (but do not remove them)
-    for sample in sample_words {
-        let upper_name = sample.name.to_uppercase();
-        if interp.idiolect.contains_key(&upper_name) {
-            interp.output_buffer.push_str(&format!(
-                "Warning: Module sample '{}' not registered as shorthand (conflicts with user word). Use {}::{} instead.\n",
-                upper_name, module_name, upper_name
-            ));
-        }
+        module_dict.insert(sample.name.to_uppercase(), Arc::new(def));
     }
 
     // Rebuild dependencies for module sample words
