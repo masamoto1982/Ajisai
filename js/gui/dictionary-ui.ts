@@ -62,7 +62,7 @@ export const createWordButton = (
     onClick: () => void,
     onHover?: () => void,
     onLeave?: () => void,
-    onContextMenu?: () => void
+    onContextMenu?: (event: MouseEvent) => void
 ): HTMLButtonElement => {
     const button = document.createElement('button');
     button.textContent = text;
@@ -75,7 +75,7 @@ export const createWordButton = (
     if (onContextMenu) {
         button.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            onContextMenu();
+            onContextMenu(e);
         });
     }
 
