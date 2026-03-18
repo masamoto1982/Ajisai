@@ -226,6 +226,7 @@ const AjisaiTheme = {
             "--menu-text-hover": this.isLight(bg.menu) ? '#000000' : '#ffffff',
             "--color-light": bg.body,
             "--color-medium": this.darken(bg.body, 0.1),
+            "--color-border-strong": this.darken(bg.body, 0.25),
             "--color-dark": bg.article,
             "--color-text": this.getTextColor(bg.body),
             "--color-text-light": this.getTextColorSecondary(bg.body),
