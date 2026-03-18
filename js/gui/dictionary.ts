@@ -85,13 +85,36 @@ const createDeleteContextMenu = (
     onDelete: () => void
 ): HTMLDivElement => {
     const menu = document.createElement('div');
-    menu.className = 'word-context-menu';
     menu.hidden = true;
+    Object.assign(menu.style, {
+        position: 'fixed',
+        zIndex: '1000',
+        minWidth: '7rem',
+        padding: '0.125rem',
+        backgroundColor: '#ffffff',
+        border: '1px solid #c0c0c0',
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
+    } satisfies Partial<CSSStyleDeclaration>);
 
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
-    deleteButton.className = 'word-context-menu__item';
     deleteButton.textContent = 'Delete';
+    Object.assign(deleteButton.style, {
+        display: 'block',
+        width: '100%',
+        padding: '0.375rem 0.75rem',
+        backgroundColor: 'transparent',
+        color: '#000000',
+        border: 'none',
+        textAlign: 'left',
+        cursor: 'pointer'
+    } satisfies Partial<CSSStyleDeclaration>);
+    deleteButton.addEventListener('mouseenter', () => {
+        deleteButton.style.backgroundColor = '#e8e8e8';
+    });
+    deleteButton.addEventListener('mouseleave', () => {
+        deleteButton.style.backgroundColor = 'transparent';
+    });
     deleteButton.addEventListener('click', (event) => {
         event.stopPropagation();
         onDelete();
