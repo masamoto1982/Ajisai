@@ -15,10 +15,10 @@ export interface WordInfo {
 }
 
 export interface VocabularyElements {
-    readonly coreWordsDisplay: HTMLElement;
-    readonly idiolectWordsDisplay: HTMLElement;
-    readonly coreWordInfo: HTMLElement;
-    readonly idiolectWordInfo: HTMLElement;
+    readonly builtInWordsDisplay: HTMLElement;
+    readonly customWordsDisplay: HTMLElement;
+    readonly builtInWordInfo: HTMLElement;
+    readonly customWordInfo: HTMLElement;
 }
 
 export interface VocabularyCallbacks {
@@ -31,8 +31,8 @@ export interface VocabularyCallbacks {
 }
 
 export interface VocabularyManager {
-    readonly renderCoreWords: () => void;
-    readonly updateIdiolectWords: (customWordsInfo: Array<[string, string | null, boolean]>) => void;
+    readonly renderBuiltInWords: () => void;
+    readonly updateCustomWords: (customWordsInfo: Array<[string, string | null, boolean]>) => void;
     readonly setSearchFilter: (filter: string) => void;
 }
 
@@ -78,7 +78,7 @@ export const createVocabularyManager = (
 ): VocabularyManager => {
     const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
 
-    [elements.coreWordsDisplay, elements.idiolectWordsDisplay].forEach(container => {
+    [elements.builtInWordsDisplay, elements.customWordsDisplay].forEach(container => {
         setupBackgroundClickHandlers(container, onBackgroundClick, onBackgroundDoubleClick);
     });
 
@@ -122,7 +122,7 @@ export const createVocabularyManager = (
         await deleteWord(wordInfo.name, false);
     };
 
-    const renderCoreWordsSorted = (
+    const renderBuiltInWordsSorted = (
         container: HTMLElement,
         coreWords: unknown[][]
     ): void => {
@@ -157,8 +157,8 @@ export const createVocabularyManager = (
                 description,
                 `word-button core${sigClass}`,
                 () => onWordClick(name),
-                () => { elements.coreWordInfo.textContent = syntaxExample; },
-                () => { elements.coreWordInfo.textContent = ''; }
+                () => { elements.builtInWordInfo.textContent = syntaxExample; },
+                () => { elements.builtInWordInfo.textContent = ''; }
             );
 
             container.appendChild(button);
@@ -197,9 +197,9 @@ export const createVocabularyManager = (
                 () => onWordClick(wordInfo.name),
                 () => {
                     const definition = window.ajisaiInterpreter?.get_word_definition(wordInfo.name);
-                    elements.idiolectWordInfo.textContent = definition || '';
+                    elements.customWordInfo.textContent = definition || '';
                 },
-                () => { elements.idiolectWordInfo.textContent = ''; },
+                () => { elements.customWordInfo.textContent = ''; },
                 () => confirmAndDeleteWord(wordInfo)
             );
 
@@ -213,37 +213,37 @@ export const createVocabularyManager = (
         }
     };
 
-    const renderCoreWords = (): void => {
+    const renderBuiltInWords = (): void => {
         if (!window.ajisaiInterpreter) return;
 
         try {
             const coreWords = window.ajisaiInterpreter.get_core_words_info();
-            renderCoreWordsSorted(elements.coreWordsDisplay, coreWords);
+            renderBuiltInWordsSorted(elements.builtInWordsDisplay, coreWords);
         } catch (error) {
             console.error('Failed to render core words:', error);
         }
     };
 
-    const updateIdiolectWords = (
+    const updateCustomWords = (
         customWordsInfo: Array<[string, string | null, boolean]>
     ): void => {
         // キャッシュを更新
         cachedCustomWords = customWordsInfo || [];
         const words = cachedCustomWords.map(toWordInfo);
-        renderCustomWordButtons(elements.idiolectWordsDisplay, words);
+        renderCustomWordButtons(elements.customWordsDisplay, words);
     };
 
     const setSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
         // 両方のワードリストを再レンダリング
-        renderCoreWords();
+        renderBuiltInWords();
         const words = cachedCustomWords.map(toWordInfo);
-        renderCustomWordButtons(elements.idiolectWordsDisplay, words);
+        renderCustomWordButtons(elements.customWordsDisplay, words);
     };
 
     return {
-        renderCoreWords,
-        updateIdiolectWords,
+        renderBuiltInWords,
+        updateCustomWords,
         setSearchFilter
     };
 };

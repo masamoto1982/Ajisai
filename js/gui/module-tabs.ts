@@ -62,7 +62,7 @@ export const createModuleTabManager = (
         btn.setAttribute('data-mode', viewMode);
         btn.setAttribute('aria-selected', 'false');
         btn.setAttribute('tabindex', '-1');
-        btn.textContent = moduleName;
+        btn.textContent = `${moduleName} word`; 
 
         btn.addEventListener('click', () => onTabClick(viewMode));
         btn.addEventListener('keydown', (e) => {
@@ -90,7 +90,7 @@ export const createModuleTabManager = (
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.className = 'vocabulary-search-input module-search-input';
-        searchInput.placeholder = 'Search words...';
+        searchInput.placeholder = 'Search word';
         searchInput.setAttribute('aria-label', `Search ${moduleName} words`);
         const clearBtn = document.createElement('button');
         clearBtn.type = 'button';

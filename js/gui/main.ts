@@ -26,26 +26,26 @@ export interface GUIElements {
     readonly jsonImportBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
-    readonly coreWordsDisplay: HTMLElement;
-    readonly idiolectWordsDisplay: HTMLElement;
-    readonly coreWordInfo: HTMLElement;
-    readonly idiolectWordInfo: HTMLElement;
-    readonly wordSearch: HTMLInputElement;
-    readonly searchClearBtn: HTMLButtonElement;
-    readonly idiolectWordSearch: HTMLInputElement;
-    readonly idiolectSearchClearBtn: HTMLButtonElement;
+    readonly builtInWordsDisplay: HTMLElement;
+    readonly customWordsDisplay: HTMLElement;
+    readonly builtInWordInfo: HTMLElement;
+    readonly customWordInfo: HTMLElement;
+    readonly builtInWordSearch: HTMLInputElement;
+    readonly builtInSearchClearBtn: HTMLButtonElement;
+    readonly customWordSearch: HTMLInputElement;
+    readonly customSearchClearBtn: HTMLButtonElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
-    readonly coreArea: HTMLElement;
-    readonly idiolectArea: HTMLElement;
+    readonly builtInArea: HTMLElement;
+    readonly customArea: HTMLElement;
     readonly editorPanel: HTMLElement;
     readonly statePanel: HTMLElement;
     readonly tabInputBtn: HTMLElement;
     readonly tabOutputBtn: HTMLElement;
     readonly tabStackBtn: HTMLElement;
-    readonly tabCoreBtn: HTMLElement;
-    readonly tabIdiolectBtn: HTMLElement;
+    readonly tabBuiltInBtn: HTMLElement;
+    readonly tabCustomBtn: HTMLElement;
 }
 
 export interface GUI {
@@ -70,26 +70,26 @@ const cacheElements = (): GUIElements => ({
     jsonImportBtn: document.getElementById('json-import-btn') as HTMLButtonElement,
     outputDisplay: document.getElementById('output-display')!,
     stackDisplay: document.getElementById('stack-display')!,
-    coreWordsDisplay: document.getElementById('core-words-display')!,
-    idiolectWordsDisplay: document.getElementById('idiolect-words-display')!,
-    coreWordInfo: document.getElementById('core-word-info')!,
-    idiolectWordInfo: document.getElementById('idiolect-word-info')!,
-    wordSearch: document.getElementById('word-search') as HTMLInputElement,
-    searchClearBtn: document.getElementById('search-clear-btn') as HTMLButtonElement,
-    idiolectWordSearch: document.getElementById('idiolect-word-search') as HTMLInputElement,
-    idiolectSearchClearBtn: document.getElementById('idiolect-search-clear-btn') as HTMLButtonElement,
+    builtInWordsDisplay: document.getElementById('core-words-display')!,
+    customWordsDisplay: document.getElementById('idiolect-words-display')!,
+    builtInWordInfo: document.getElementById('core-word-info')!,
+    customWordInfo: document.getElementById('idiolect-word-info')!,
+    builtInWordSearch: document.getElementById('word-search') as HTMLInputElement,
+    builtInSearchClearBtn: document.getElementById('search-clear-btn') as HTMLButtonElement,
+    customWordSearch: document.getElementById('idiolect-word-search') as HTMLInputElement,
+    customSearchClearBtn: document.getElementById('idiolect-search-clear-btn') as HTMLButtonElement,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
-    coreArea: document.getElementById('core-panel')!,
-    idiolectArea: document.getElementById('idiolect-panel')!,
+    builtInArea: document.getElementById('core-panel')!,
+    customArea: document.getElementById('idiolect-panel')!,
     editorPanel: document.getElementById('editor-panel')!,
     statePanel: document.getElementById('state-panel')!,
     tabInputBtn: document.getElementById('tab-input')!,
     tabOutputBtn: document.getElementById('tab-output')!,
     tabStackBtn: document.getElementById('tab-stack')!,
-    tabCoreBtn: document.getElementById('tab-core')!,
-    tabIdiolectBtn: document.getElementById('tab-idiolect')!
+    tabBuiltInBtn: document.getElementById('tab-core')!,
+    tabCustomBtn: document.getElementById('tab-idiolect')!
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -98,18 +98,18 @@ const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
 });
 
 const extractVocabularyElements = (elements: GUIElements): VocabularyElements => ({
-    coreWordsDisplay: elements.coreWordsDisplay,
-    idiolectWordsDisplay: elements.idiolectWordsDisplay,
-    coreWordInfo: elements.coreWordInfo,
-    idiolectWordInfo: elements.idiolectWordInfo
+    builtInWordsDisplay: elements.builtInWordsDisplay,
+    customWordsDisplay: elements.customWordsDisplay,
+    builtInWordInfo: elements.builtInWordInfo,
+    customWordInfo: elements.customWordInfo
 });
 
 const extractMobileElements = (elements: GUIElements): MobileElements => ({
     inputArea: elements.inputArea,
     outputArea: elements.outputArea,
     stackArea: elements.stackArea,
-    coreArea: elements.coreArea,
-    idiolectArea: elements.idiolectArea
+    builtInArea: elements.builtInArea,
+    customArea: elements.customArea
 });
 
 const checkStackHighlight = (content: string): boolean => {
@@ -191,8 +191,8 @@ export const createGUI = (): GUI => {
         input: elements.tabInputBtn,
         output: elements.tabOutputBtn,
         stack: elements.tabStackBtn,
-        core: elements.tabCoreBtn,
-        idiolect: elements.tabIdiolectBtn
+        core: elements.tabBuiltInBtn,
+        idiolect: elements.tabCustomBtn
     });
 
     const updateTabState = (activeModes: Set<ViewMode>): void => {
@@ -223,8 +223,8 @@ export const createGUI = (): GUI => {
         elements.inputArea.style.display = currentLeftMode === 'input' ? 'flex' : 'none';
         elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
         elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
-        elements.coreArea.style.display = currentRightMode === 'core' ? 'flex' : 'none';
-        elements.idiolectArea.style.display = currentRightMode === 'idiolect' ? 'flex' : 'none';
+        elements.builtInArea.style.display = currentRightMode === 'core' ? 'flex' : 'none';
+        elements.customArea.style.display = currentRightMode === 'idiolect' ? 'flex' : 'none';
 
         // Module tab areas
         for (const tab of moduleTabManager.getTabs()) {
@@ -303,7 +303,7 @@ export const createGUI = (): GUI => {
 
         try {
             display.updateStack(window.ajisaiInterpreter.get_stack());
-            vocabulary.updateIdiolectWords(window.ajisaiInterpreter.get_idiolect_words_info());
+            vocabulary.updateCustomWords(window.ajisaiInterpreter.get_idiolect_words_info());
 
             // Sync module tabs based on imported modules
             const newModules = moduleTabManager.syncModuleTabs();
@@ -350,27 +350,27 @@ export const createGUI = (): GUI => {
 
         // 辞書検索: デバウンス付きでフィルタリング
         const applySearchFilter = (filter: string): void => {
-            elements.wordSearch.value = filter;
-            elements.idiolectWordSearch.value = filter;
+            elements.builtInWordSearch.value = filter;
+            elements.customWordSearch.value = filter;
             vocabulary.setSearchFilter(filter);
             moduleTabManager.setSearchFilter(filter);
         };
 
         const handleCoreSearchInput = debounce(() => {
-            applySearchFilter(elements.wordSearch.value);
+            applySearchFilter(elements.builtInWordSearch.value);
         }, 150);
         const handleIdiolectSearchInput = debounce(() => {
-            applySearchFilter(elements.idiolectWordSearch.value);
+            applySearchFilter(elements.customWordSearch.value);
         }, 150);
 
-        elements.wordSearch.addEventListener('input', handleCoreSearchInput);
-        elements.idiolectWordSearch.addEventListener('input', handleIdiolectSearchInput);
+        elements.builtInWordSearch.addEventListener('input', handleCoreSearchInput);
+        elements.customWordSearch.addEventListener('input', handleIdiolectSearchInput);
 
         // 検索窓の×ボタンでクリア
-        elements.searchClearBtn.addEventListener('click', () => {
+        elements.builtInSearchClearBtn.addEventListener('click', () => {
             applySearchFilter('');
         });
-        elements.idiolectSearchClearBtn.addEventListener('click', () => {
+        elements.customSearchClearBtn.addEventListener('click', () => {
             applySearchFilter('');
         });
 
@@ -455,7 +455,7 @@ export const createGUI = (): GUI => {
         updateEditorPlaceholder();
 
         moduleTabManager = createModuleTabManager({
-            tabGroupEl: elements.tabCoreBtn.parentElement!,
+            tabGroupEl: elements.tabBuiltInBtn.parentElement!,
             areaContainerEl: elements.statePanel,
             onWordClick: (word: string) => {
                 if (!mobile.isMobile()) {
@@ -474,12 +474,12 @@ export const createGUI = (): GUI => {
             },
             onTabClick: (mode: ViewMode) => switchArea(mode),
             onSearchInput: (filter: string) => {
-                elements.wordSearch.value = filter;
-                elements.idiolectWordSearch.value = filter;
+                elements.builtInWordSearch.value = filter;
+                elements.customWordSearch.value = filter;
                 vocabulary.setSearchFilter(filter);
                 moduleTabManager.setSearchFilter(filter);
             },
-            coreTabBtn: elements.tabCoreBtn,
+            coreTabBtn: elements.tabBuiltInBtn,
             onUpdateDisplays: () => updateAllDisplays(),
             onSaveState: () => persistence.saveCurrentState(),
             showInfo: (text: string, append: boolean) => display.showInfo(text, append)
@@ -534,7 +534,7 @@ export const createGUI = (): GUI => {
         });
 
         setupEventListeners();
-        vocabulary.renderCoreWords();
+        vocabulary.renderBuiltInWords();
         updateAllDisplays();
         switchArea('input');
 
