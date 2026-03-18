@@ -4,8 +4,8 @@ export interface MobileElements {
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
-    readonly coreArea: HTMLElement;
-    readonly idiolectArea: HTMLElement;
+    readonly builtInArea: HTMLElement;
+    readonly customArea: HTMLElement;
 }
 
 export type ViewMode = 'input' | 'output' | 'stack' | 'core' | 'idiolect' | `module:${string}`;
@@ -58,32 +58,32 @@ const getInputModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'flex',
     outputArea: 'none',
     stackArea: 'none',
-    coreArea: 'none',
-    idiolectArea: 'none'
+    builtInArea: 'none',
+    customArea: 'none'
 });
 
 const getOutputModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'flex',
     stackArea: 'none',
-    coreArea: 'none',
-    idiolectArea: 'none'
+    builtInArea: 'none',
+    customArea: 'none'
 });
 
 const getStackModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'none',
     stackArea: 'flex',
-    coreArea: 'none',
-    idiolectArea: 'none'
+    builtInArea: 'none',
+    customArea: 'none'
 });
 
 const getCoreModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'none',
     stackArea: 'none',
-    coreArea: 'flex',
-    idiolectArea: 'none'
+    builtInArea: 'flex',
+    customArea: 'none'
 });
 
 
@@ -91,8 +91,8 @@ const getIdiolectModeStyles = (): Record<keyof MobileElements, string> => ({
     inputArea: 'none',
     outputArea: 'none',
     stackArea: 'none',
-    coreArea: 'none',
-    idiolectArea: 'flex'
+    builtInArea: 'none',
+    customArea: 'flex'
 });
 
 const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> => {
@@ -110,8 +110,8 @@ const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> 
         inputArea: 'none',
         outputArea: 'none',
         stackArea: 'none',
-        coreArea: 'none',
-        idiolectArea: 'none'
+        builtInArea: 'none',
+        customArea: 'none'
     };
 };
 

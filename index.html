@@ -72,8 +72,8 @@
             </div>
             <div class="tab-group" role="tablist" aria-label="State tabs">
                 <button id="tab-stack" class="area-tab active" type="button" role="tab" data-mode="stack" aria-controls="stack-panel" aria-selected="true">Stack</button>
-                <button id="tab-core" class="area-tab" type="button" role="tab" data-mode="core" aria-controls="core-panel" aria-selected="false" tabindex="-1">Core</button>
-                <button id="tab-idiolect" class="area-tab" type="button" role="tab" data-mode="idiolect" aria-controls="idiolect-panel" aria-selected="false" tabindex="-1">Idiolect</button>
+                <button id="tab-core" class="area-tab" type="button" role="tab" data-mode="core" aria-controls="core-panel" aria-selected="false" tabindex="-1">Built-in word</button>
+                <button id="tab-idiolect" class="area-tab" type="button" role="tab" data-mode="idiolect" aria-controls="idiolect-panel" aria-selected="false" tabindex="-1">Custom word</button>
             </div>
         </nav>
 
@@ -103,10 +103,10 @@
                 </section>
                 
                 <section id="core-panel" class="vocabulary-area" role="tabpanel" aria-labelledby="tab-core" tabindex="0">
-                    <h2 class="visually-hidden">Core Vocabulary</h2>
+                    <h2 class="visually-hidden">Built-in word</h2>
                     <div class="vocabulary-header">
                         <div class="search-wrapper">
-                            <input type="text" id="word-search" class="vocabulary-search-input" placeholder="Search core vocabulary..." aria-label="Search core vocabulary">
+                            <input type="text" id="word-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search built-in word">
                             <button id="search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
                         </div>
                     </div>
@@ -119,10 +119,10 @@
                 </section>
 
                 <section id="idiolect-panel" class="vocabulary-area" role="tabpanel" aria-labelledby="tab-idiolect" tabindex="0" style="display:none;">
-                    <h2 class="visually-hidden">Idiolect</h2>
+                    <h2 class="visually-hidden">Custom word</h2>
                     <div class="vocabulary-header">
                         <div class="search-wrapper">
-                            <input type="text" id="idiolect-word-search" class="vocabulary-search-input" placeholder="Search custom words..." aria-label="Search custom words">
+                            <input type="text" id="idiolect-word-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search custom word">
                             <button id="idiolect-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear custom word search">&times;</button>
                         </div>
                     </div>
