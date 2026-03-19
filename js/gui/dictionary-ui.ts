@@ -20,6 +20,13 @@ export const createNoResultsMessage = (): HTMLElement => {
     return message;
 };
 
+export const createEmptyWordsMessage = (text: string): HTMLElement => {
+    const message = document.createElement('div');
+    message.className = 'empty-words-message';
+    message.textContent = text;
+    return message;
+};
+
 export const setupBackgroundClickHandlers = (
     container: HTMLElement,
     onBackgroundClick?: () => void,

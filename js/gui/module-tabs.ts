@@ -2,6 +2,7 @@
 
 import type { ViewMode } from './mobile';
 import {
+    createEmptyWordsMessage,
     createNoResultsMessage,
     createWordButton,
     matchesFilter,
@@ -164,8 +165,18 @@ export const createModuleTabManager = (
             });
 
             if (searchFilter && matched.length === 0) {
+                wordsDisplay.classList.add('is-empty');
                 wordsDisplay.appendChild(createNoResultsMessage());
+                return;
             }
+
+            if (!searchFilter && sorted.length === 0) {
+                wordsDisplay.classList.add('is-empty');
+                wordsDisplay.appendChild(createEmptyWordsMessage('No words available in this module.'));
+                return;
+            }
+
+            wordsDisplay.classList.toggle('is-empty', matched.length === 0);
         } catch (error) {
             console.error(`Failed to render module words for ${tab.moduleName}:`, error);
         }

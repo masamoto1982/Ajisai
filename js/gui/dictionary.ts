@@ -1,6 +1,7 @@
 // js/gui/dictionary.ts
 
 import {
+    createEmptyWordsMessage,
     createNoResultsMessage,
     createWordButton,
     matchesFilter,
@@ -299,8 +300,18 @@ export const createVocabularyManager = (
         // フィルターが設定されているが結果がない場合
         // (ただし、元のワードリストが空の場合は表示しない)
         if (searchFilter && words.length > 0 && filteredWords.length === 0) {
+            container.classList.add('is-empty');
             container.appendChild(createNoResultsMessage());
+            return;
         }
+
+        if (!searchFilter && words.length === 0) {
+            container.classList.add('is-empty');
+            container.appendChild(createEmptyWordsMessage('No custom words defined yet.'));
+            return;
+        }
+
+        container.classList.toggle('is-empty', sortedFiltered.length === 0);
     };
 
     const renderBuiltInWords = (): void => {

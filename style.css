@@ -519,12 +519,26 @@ body[data-active-area] .main-layout section {
     display: flex;
     flex-wrap: wrap;
     align-content: flex-start;
-    min-height: 0;
+    min-height: 7rem;
     overflow-y: auto;
     background-color: rgba(0, 0, 0, 0.06);
     border-radius: 6px;
     padding: 4px;
     cursor: pointer;
+}
+
+.words-area .words-display.is-empty {
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+}
+
+.empty-words-message {
+    width: 100%;
+    padding: 0.75rem;
+    text-align: center;
+    color: var(--color-text-light);
+    font-style: italic;
 }
 
 
@@ -687,18 +701,19 @@ body[data-active-area] .main-layout section {
     }
 
     .main-layout {
+        flex: 1;
         flex-direction: column;
         padding: 0;
-        height: auto;
-        overflow: visible;
+        min-height: 0;
+        overflow: hidden;
     }
 
     #editor-panel,
     #state-panel {
-        flex: none;
+        flex: 1 1 auto;
         width: 100%;
-        height: auto;
-        overflow-y: visible;
+        min-height: 0;
+        overflow: hidden;
         padding: 1rem;
     }
 
@@ -720,8 +735,9 @@ body[data-active-area] .main-layout section {
     .stack-area,
     .vocabulary-area,
     .module-tab-area {
-        height: auto;
-        flex: none;
+        height: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
     }
 
     #code-input {
