@@ -217,6 +217,15 @@ body[data-active-area] .main-layout section {
             inset -1px 0 0 var(--color-border-strong, #999),
             inset 0 -1px 0 var(--color-border-strong, #999);
     }
+
+    body[data-active-area="input"] #state-panel,
+    body[data-active-area="output"] #state-panel,
+    body[data-active-area="stack"] #editor-panel,
+    body[data-active-area="core"] #editor-panel,
+    body[data-active-area="idiolect"] #editor-panel,
+    body[data-active-area^="module:"] #editor-panel {
+        display: none;
+    }
 }
 
 /* 入力・出力エリア */
