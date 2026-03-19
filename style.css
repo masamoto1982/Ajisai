@@ -137,6 +137,7 @@
     padding: 0.75rem;
     overflow: hidden;
     background: transparent;
+    position: relative;
 }
 
 /* 左パネルと右パネルの間に仕切り線（タブグループの仕切りと連続） */
@@ -187,6 +188,35 @@ body[data-active-area] .main-layout section {
     margin-bottom: 0;
     flex: 1;
     min-height: 0;
+}
+
+/* アクティブシートの縦線・下辺をパネル枠として補完する */
+@media (min-width: 769px) {
+    body[data-active-area] #editor-panel {
+        box-shadow:
+            inset 1px 0 0 var(--color-border-strong, #999),
+            inset 0 -1px 0 var(--color-border-strong, #999);
+    }
+
+    body[data-active-area] #state-panel {
+        box-shadow:
+            inset -1px 0 0 var(--color-border-strong, #999),
+            inset 0 -1px 0 var(--color-border-strong, #999);
+    }
+}
+
+@media (max-width: 768px) {
+    body[data-active-area="input"] #editor-panel,
+    body[data-active-area="output"] #editor-panel,
+    body[data-active-area="stack"] #state-panel,
+    body[data-active-area="core"] #state-panel,
+    body[data-active-area="idiolect"] #state-panel,
+    body[data-active-area^="module:"] #state-panel {
+        box-shadow:
+            inset 1px 0 0 var(--color-border-strong, #999),
+            inset -1px 0 0 var(--color-border-strong, #999),
+            inset 0 -1px 0 var(--color-border-strong, #999);
+    }
 }
 
 /* 入力・出力エリア */
