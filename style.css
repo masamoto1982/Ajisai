@@ -571,7 +571,7 @@ body[data-active-area] .main-layout section {
 }
 
 .dictionary-sheet-selector {
-    flex: 0 0 auto;
+    flex: 1.618 1 0%;
 }
 
 .dictionary-sheet-selector select {
@@ -582,11 +582,12 @@ body[data-active-area] .main-layout section {
     border-radius: 3px;
     background: var(--gradient-child, #fff);
     color: var(--color-text);
+    width: 100%;
     cursor: pointer;
 }
 
 .dictionary-toolbar .search-wrapper {
-    flex: 1 1 auto;
+    flex: 1 1 0%;
     min-width: 0;
 }
 
