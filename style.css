@@ -137,6 +137,7 @@
     padding: 0.75rem;
     overflow: hidden;
     background: transparent;
+    position: relative;
 }
 
 /* 左パネルと右パネルの間に仕切り線（タブグループの仕切りと連続） */
@@ -187,6 +188,44 @@ body[data-active-area] .main-layout section {
     margin-bottom: 0;
     flex: 1;
     min-height: 0;
+}
+
+/* アクティブシートの縦線・下辺をパネル枠として補完する */
+@media (min-width: 769px) {
+    body[data-active-area] #editor-panel {
+        box-shadow:
+            inset 1px 0 0 var(--color-border-strong, #999),
+            inset 0 -1px 0 var(--color-border-strong, #999);
+    }
+
+    body[data-active-area] #state-panel {
+        box-shadow:
+            inset -1px 0 0 var(--color-border-strong, #999),
+            inset 0 -1px 0 var(--color-border-strong, #999);
+    }
+}
+
+@media (max-width: 768px) {
+    body[data-active-area="input"] #editor-panel,
+    body[data-active-area="output"] #editor-panel,
+    body[data-active-area="stack"] #state-panel,
+    body[data-active-area="core"] #state-panel,
+    body[data-active-area="idiolect"] #state-panel,
+    body[data-active-area^="module:"] #state-panel {
+        box-shadow:
+            inset 1px 0 0 var(--color-border-strong, #999),
+            inset -1px 0 0 var(--color-border-strong, #999),
+            inset 0 -1px 0 var(--color-border-strong, #999);
+    }
+
+    body[data-active-area="input"] #state-panel,
+    body[data-active-area="output"] #state-panel,
+    body[data-active-area="stack"] #editor-panel,
+    body[data-active-area="core"] #editor-panel,
+    body[data-active-area="idiolect"] #editor-panel,
+    body[data-active-area^="module:"] #editor-panel {
+        display: none;
+    }
 }
 
 /* 入力・出力エリア */
@@ -480,12 +519,26 @@ body[data-active-area] .main-layout section {
     display: flex;
     flex-wrap: wrap;
     align-content: flex-start;
-    min-height: 0;
+    min-height: 7rem;
     overflow-y: auto;
     background-color: rgba(0, 0, 0, 0.06);
     border-radius: 6px;
     padding: 4px;
     cursor: pointer;
+}
+
+.words-area .words-display.is-empty {
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+}
+
+.empty-words-message {
+    width: 100%;
+    padding: 0.75rem;
+    text-align: center;
+    color: var(--color-text-light);
+    font-style: italic;
 }
 
 
@@ -631,6 +684,15 @@ body[data-active-area] .main-layout section {
         flex-wrap: nowrap;
         justify-content: flex-start;
         overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .area-tabs::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
     }
 
     .tab-group {
@@ -639,18 +701,19 @@ body[data-active-area] .main-layout section {
     }
 
     .main-layout {
+        flex: 1;
         flex-direction: column;
         padding: 0;
-        height: auto;
-        overflow: visible;
+        min-height: 0;
+        overflow: hidden;
     }
 
     #editor-panel,
     #state-panel {
-        flex: none;
+        flex: 1 1 auto;
         width: 100%;
-        height: auto;
-        overflow-y: visible;
+        min-height: 0;
+        overflow: hidden;
         padding: 1rem;
     }
 
@@ -672,8 +735,9 @@ body[data-active-area] .main-layout section {
     .stack-area,
     .vocabulary-area,
     .module-tab-area {
-        height: auto;
-        flex: none;
+        height: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
     }
 
     #code-input {
