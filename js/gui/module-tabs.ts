@@ -1,6 +1,5 @@
 // js/gui/module-tabs.ts
 
-import type { ViewMode } from './mobile';
 import {
     createEmptyWordsMessage,
     createNoResultsMessage,
@@ -10,30 +9,29 @@ import {
     sortWordName,
 } from './dictionary-ui';
 
-export interface ModuleTab {
+export interface ModuleSheet {
     readonly moduleName: string;
-    readonly viewMode: ViewMode;
-    readonly tabBtn: HTMLElement;
-    readonly areaEl: HTMLElement;
+    readonly sheetId: string;
+    readonly optionEl: HTMLOptionElement;
+    readonly sheetEl: HTMLElement;
 }
 
 export interface ModuleTabManager {
-    readonly syncModuleTabs: () => ViewMode[];
+    readonly syncModuleTabs: () => string[];
     readonly clearModuleTabs: () => void;
-    readonly getModuleArea: (viewMode: string) => HTMLElement | null;
-    readonly getTabs: () => ModuleTab[];
+    readonly getModuleArea: (sheetId: string) => HTMLElement | null;
+    readonly getSheets: () => ModuleSheet[];
     readonly setSearchFilter: (filter: string) => void;
 }
 
 export interface ModuleTabManagerOptions {
-    readonly tabGroupEl: HTMLElement;
-    readonly areaContainerEl: HTMLElement;
+    readonly selectEl: HTMLSelectElement;
+    readonly sheetContainerEl: HTMLElement;
     readonly onWordClick: (word: string) => void;
     readonly onBackgroundClick: () => void;
     readonly onBackgroundDoubleClick: () => void;
-    readonly onTabClick: (mode: ViewMode) => void;
+    readonly onSheetChange: (sheetId: string) => void;
     readonly onSearchInput: (filter: string) => void;
-    readonly coreTabBtn: HTMLElement;
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (msg: string, clear: boolean) => void;
@@ -43,70 +41,33 @@ export const createModuleTabManager = (
     options: ModuleTabManagerOptions
 ): ModuleTabManager => {
     const {
-        tabGroupEl,
-        areaContainerEl,
+        selectEl,
+        sheetContainerEl,
         onWordClick,
         onBackgroundClick,
         onBackgroundDoubleClick,
-        onTabClick,
-        onSearchInput,
     } = options;
 
-    const tabs: ModuleTab[] = [];
+    const sheets: ModuleSheet[] = [];
     let searchFilter = '';
 
-    const createTabButton = (moduleName: string, viewMode: ViewMode): HTMLElement => {
-        const btn = document.createElement('button');
-        btn.className = 'area-tab';
-        btn.type = 'button';
-        btn.role = 'tab';
-        btn.setAttribute('data-mode', viewMode);
-        btn.setAttribute('aria-selected', 'false');
-        btn.setAttribute('tabindex', '-1');
-        btn.textContent = `${moduleName} word`; 
-
-        btn.addEventListener('click', () => onTabClick(viewMode));
-        btn.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onTabClick(viewMode);
-            }
-        });
-
-        return btn;
+    const createOption = (moduleName: string, sheetId: string): HTMLOptionElement => {
+        const option = document.createElement('option');
+        option.value = sheetId;
+        option.textContent = `${moduleName} word`;
+        return option;
     };
 
-    const createAreaElement = (moduleName: string): HTMLElement => {
-        const section = document.createElement('section');
-        section.className = 'vocabulary-area module-tab-area';
-        section.setAttribute('data-module', moduleName);
-        section.setAttribute('role', 'tabpanel');
-        section.setAttribute('tabindex', '0');
-        section.style.display = 'none';
+    const createSheetElement = (moduleName: string, sheetId: string): HTMLElement => {
+        const sheet = document.createElement('div');
+        sheet.className = 'dictionary-sheet';
+        sheet.id = `dictionary-sheet-${sheetId}`;
+        sheet.style.display = 'none';
 
-        const header = document.createElement('div');
-        header.className = 'vocabulary-header';
-        const searchWrapper = document.createElement('div');
-        searchWrapper.className = 'search-wrapper';
-        const searchInput = document.createElement('input');
-        searchInput.type = 'text';
-        searchInput.className = 'vocabulary-search-input module-search-input';
-        searchInput.placeholder = 'Search word';
-        searchInput.setAttribute('aria-label', `Search ${moduleName} words`);
-        const clearBtn = document.createElement('button');
-        clearBtn.type = 'button';
-        clearBtn.className = 'inline-clear-btn vocabulary-search-clear-btn';
-        clearBtn.setAttribute('aria-label', 'Clear search');
-        clearBtn.textContent = '×';
-        searchWrapper.appendChild(searchInput);
-        searchWrapper.appendChild(clearBtn);
-        header.appendChild(searchWrapper);
-
-        searchInput.addEventListener('input', () => onSearchInput(searchInput.value));
-        clearBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            onSearchInput('');
-        });
+        const title = document.createElement('h3');
+        title.className = 'dictionary-sheet-title';
+        title.textContent = `${moduleName} word`;
+        sheet.appendChild(title);
 
         const wordInfoDisplay = document.createElement('span');
         wordInfoDisplay.className = 'word-info-display module-word-info';
@@ -124,28 +85,27 @@ export const createModuleTabManager = (
         container.className = 'vocabulary-container';
         container.appendChild(wordsArea);
 
-        section.appendChild(header);
-        section.appendChild(container);
+        sheet.appendChild(container);
 
-        return section;
+        return sheet;
     };
 
-    const renderModuleWords = (tab: ModuleTab): void => {
+    const renderModuleWords = (moduleSheet: ModuleSheet): void => {
         if (!window.ajisaiInterpreter) return;
 
-        const wordsDisplay = tab.areaEl.querySelector('.module-words-display');
-        const wordInfo = tab.areaEl.querySelector('.module-word-info');
+        const wordsDisplay = moduleSheet.sheetEl.querySelector('.module-words-display');
+        const wordInfo = moduleSheet.sheetEl.querySelector('.module-word-info');
         if (!wordsDisplay || !wordInfo) return;
 
         wordsDisplay.innerHTML = '';
 
         try {
             const moduleWords: Array<[string, string | null]> =
-                window.ajisaiInterpreter.get_module_words_info(tab.moduleName);
+                window.ajisaiInterpreter.get_module_words_info(moduleSheet.moduleName);
 
             const sorted = [...moduleWords].sort((a, b) => sortWordName(a[0], b[0]));
             const matched = sorted.filter(wd => matchesFilter(wd[0], searchFilter));
-            const prefix = `${tab.moduleName}::`;
+            const prefix = `${moduleSheet.moduleName}::`;
 
             matched.forEach(wordData => {
                 const name = wordData[0];
@@ -178,93 +138,83 @@ export const createModuleTabManager = (
 
             wordsDisplay.classList.toggle('is-empty', matched.length === 0);
         } catch (error) {
-            console.error(`Failed to render module words for ${tab.moduleName}:`, error);
+            console.error(`Failed to render module words for ${moduleSheet.moduleName}:`, error);
         }
     };
 
-    const findTab = (moduleName: string): ModuleTab | undefined =>
-        tabs.find(t => t.moduleName === moduleName);
+    const findSheet = (moduleName: string): ModuleSheet | undefined =>
+        sheets.find(s => s.moduleName === moduleName);
 
-    const syncSearchInputValues = (): void => {
-        for (const tab of tabs) {
-            const input = tab.areaEl.querySelector('.module-search-input') as HTMLInputElement | null;
-            if (input && input.value !== searchFilter) {
-                input.value = searchFilter;
-            }
-        }
-    };
-
-    const syncModuleTabs = (): ViewMode[] => {
+    const syncModuleTabs = (): string[] => {
         if (!window.ajisaiInterpreter) return [];
 
-        const newViewModes: ViewMode[] = [];
+        const newSheetIds: string[] = [];
 
         try {
             const importedModules: string[] = window.ajisaiInterpreter.get_imported_modules();
             const importedSet = new Set(importedModules);
 
-            for (let i = tabs.length - 1; i >= 0; i--) {
-                const tab = tabs[i]!;
-                if (!importedSet.has(tab.moduleName)) {
-                    tab.tabBtn.remove();
-                    tab.areaEl.remove();
-                    tabs.splice(i, 1);
+            for (let i = sheets.length - 1; i >= 0; i--) {
+                const sheet = sheets[i]!;
+                if (!importedSet.has(sheet.moduleName)) {
+                    sheet.optionEl.remove();
+                    sheet.sheetEl.remove();
+                    sheets.splice(i, 1);
                 }
             }
 
             for (const moduleName of importedModules) {
-                if (!findTab(moduleName)) {
-                    const viewMode: ViewMode = `module:${moduleName}`;
-                    const tabBtn = createTabButton(moduleName, viewMode);
-                    const areaEl = createAreaElement(moduleName);
+                if (!findSheet(moduleName)) {
+                    const sheetId = `module-${moduleName}`;
+                    const optionEl = createOption(moduleName, sheetId);
+                    const sheetEl = createSheetElement(moduleName, sheetId);
 
-                    tabGroupEl.appendChild(tabBtn);
-                    areaContainerEl.appendChild(areaEl);
+                    selectEl.appendChild(optionEl);
+                    sheetContainerEl.appendChild(sheetEl);
 
-                    const tab: ModuleTab = { moduleName, viewMode, tabBtn, areaEl };
-                    tabs.push(tab);
-                    newViewModes.push(viewMode);
+                    const moduleSheet: ModuleSheet = { moduleName, sheetId, optionEl, sheetEl };
+                    sheets.push(moduleSheet);
+                    newSheetIds.push(sheetId);
                 }
             }
 
-            for (const tab of tabs) {
-                renderModuleWords(tab);
+            for (const sheet of sheets) {
+                renderModuleWords(sheet);
             }
         } catch (error) {
-            console.error('Failed to sync module tabs:', error);
+            console.error('Failed to sync module sheets:', error);
         }
 
-        return newViewModes;
+        return newSheetIds;
     };
 
     const clearModuleTabs = (): void => {
-        for (const tab of tabs) {
-            tab.tabBtn.remove();
-            tab.areaEl.remove();
+        for (const sheet of sheets) {
+            sheet.optionEl.remove();
+            sheet.sheetEl.remove();
         }
-        tabs.length = 0;
+        sheets.length = 0;
     };
 
-    const getModuleArea = (viewMode: string): HTMLElement | null => {
-        const tab = tabs.find(t => t.viewMode === viewMode);
-        return tab?.areaEl ?? null;
+    const getModuleSheet = (sheetId: string): HTMLElement | null => {
+        const sheet = sheets.find(s => s.sheetId === sheetId);
+        return sheet?.sheetEl ?? null;
     };
 
-    const getTabs = (): ModuleTab[] => tabs;
+    const getSheets = (): ModuleSheet[] => sheets;
 
     const setSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
-        syncSearchInputValues();
-        for (const tab of tabs) {
-            renderModuleWords(tab);
+        for (const sheet of sheets) {
+            renderModuleWords(sheet);
         }
     };
 
     return {
         syncModuleTabs,
         clearModuleTabs,
-        getModuleArea,
-        getTabs,
+        getModuleArea: getModuleSheet,
+        getSheets,
         setSearchFilter,
     };
 };
