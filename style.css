@@ -562,9 +562,16 @@ body[data-active-area] .main-layout section {
     min-height: 0;
 }
 
-.dictionary-sheet-selector {
+.dictionary-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0 0 0.5rem 0;
     flex-shrink: 0;
+}
+
+.dictionary-sheet-selector {
+    flex: 0 0 auto;
 }
 
 .dictionary-sheet-selector select {
@@ -575,17 +582,17 @@ body[data-active-area] .main-layout section {
     border-radius: 3px;
     background: var(--gradient-child, #fff);
     color: var(--color-text);
-    width: 100%;
     cursor: pointer;
 }
 
-.dictionary-sheet-title {
-    font-family: var(--font-stack-mono);
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--heading-h3);
-    margin: 0 0 0.25rem 0;
-    padding: 0;
+.dictionary-toolbar .search-wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dictionary-toolbar .vocabulary-search-input {
+    width: 100%;
+    max-width: none;
 }
 
 .dictionary-sheet {

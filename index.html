@@ -102,21 +102,20 @@
                 </section>
                 
                 <section id="dictionary-panel" class="dictionary-area" role="tabpanel" aria-labelledby="tab-dictionary" tabindex="0" style="display:none;">
-                    <div class="dictionary-sheet-selector">
-                        <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
-                        <select id="dictionary-sheet-select">
-                            <option value="core">Built-in word</option>
-                            <option value="idiolect">Custom word</option>
-                        </select>
-                    </div>
-                    <div class="vocabulary-header">
+                    <div class="dictionary-toolbar">
+                        <div class="dictionary-sheet-selector">
+                            <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
+                            <select id="dictionary-sheet-select">
+                                <option value="core">Built-in word</option>
+                                <option value="idiolect">Custom word</option>
+                            </select>
+                        </div>
                         <div class="search-wrapper">
                             <input type="text" id="dictionary-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search word">
                             <button id="dictionary-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
                         </div>
                     </div>
                     <div id="dictionary-sheet-core" class="dictionary-sheet active">
-                        <h3 class="dictionary-sheet-title">Built-in word</h3>
                         <div class="vocabulary-container">
                             <div class="words-area">
                                 <span id="core-word-info" class="word-info-display"></span>
@@ -125,7 +124,6 @@
                         </div>
                     </div>
                     <div id="dictionary-sheet-idiolect" class="dictionary-sheet" style="display:none;">
-                        <h3 class="dictionary-sheet-title">Custom word</h3>
                         <div class="vocabulary-container">
                             <div class="words-area">
                                 <span id="idiolect-word-info" class="word-info-display"></span>

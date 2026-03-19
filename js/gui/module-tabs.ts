@@ -58,16 +58,11 @@ export const createModuleTabManager = (
         return option;
     };
 
-    const createSheetElement = (moduleName: string, sheetId: string): HTMLElement => {
+    const createSheetElement = (sheetId: string): HTMLElement => {
         const sheet = document.createElement('div');
         sheet.className = 'dictionary-sheet';
         sheet.id = `dictionary-sheet-${sheetId}`;
         sheet.style.display = 'none';
-
-        const title = document.createElement('h3');
-        title.className = 'dictionary-sheet-title';
-        title.textContent = `${moduleName} word`;
-        sheet.appendChild(title);
 
         const wordInfoDisplay = document.createElement('span');
         wordInfoDisplay.className = 'word-info-display module-word-info';
@@ -167,7 +162,7 @@ export const createModuleTabManager = (
                 if (!findSheet(moduleName)) {
                     const sheetId = `module-${moduleName}`;
                     const optionEl = createOption(moduleName, sheetId);
-                    const sheetEl = createSheetElement(moduleName, sheetId);
+                    const sheetEl = createSheetElement(sheetId);
 
                     selectEl.appendChild(optionEl);
                     sheetContainerEl.appendChild(sheetEl);
