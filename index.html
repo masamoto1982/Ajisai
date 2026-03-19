@@ -72,8 +72,7 @@
             </div>
             <div class="tab-group" role="tablist" aria-label="State tabs">
                 <button id="tab-stack" class="area-tab active" type="button" role="tab" data-mode="stack" aria-controls="stack-panel" aria-selected="true">Stack</button>
-                <button id="tab-core" class="area-tab" type="button" role="tab" data-mode="core" aria-controls="core-panel" aria-selected="false" tabindex="-1">Built-in word</button>
-                <button id="tab-idiolect" class="area-tab" type="button" role="tab" data-mode="idiolect" aria-controls="idiolect-panel" aria-selected="false" tabindex="-1">Custom word</button>
+                <button id="tab-dictionary" class="area-tab" type="button" role="tab" data-mode="dictionary" aria-controls="dictionary-panel" aria-selected="false" tabindex="-1">Dictionary</button>
             </div>
         </nav>
 
@@ -102,39 +101,41 @@
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 
-                <section id="core-panel" class="vocabulary-area" role="tabpanel" aria-labelledby="tab-core" tabindex="0">
-                    <h2 class="visually-hidden">Built-in word</h2>
+                <section id="dictionary-panel" class="dictionary-area" role="tabpanel" aria-labelledby="tab-dictionary" tabindex="0" style="display:none;">
+                    <div class="dictionary-sheet-selector">
+                        <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
+                        <select id="dictionary-sheet-select">
+                            <option value="core">Built-in word</option>
+                            <option value="idiolect">Custom word</option>
+                        </select>
+                    </div>
                     <div class="vocabulary-header">
                         <div class="search-wrapper">
-                            <input type="text" id="word-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search built-in word">
-                            <button id="search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
+                            <input type="text" id="dictionary-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search word">
+                            <button id="dictionary-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
                         </div>
                     </div>
-                    <div class="vocabulary-container">
-                        <div class="words-area">
-                            <span id="core-word-info" class="word-info-display"></span>
-                            <div id="core-words-display" class="words-display"></div>
+                    <div id="dictionary-sheet-core" class="dictionary-sheet active">
+                        <h3 class="dictionary-sheet-title">Built-in word</h3>
+                        <div class="vocabulary-container">
+                            <div class="words-area">
+                                <span id="core-word-info" class="word-info-display"></span>
+                                <div id="core-words-display" class="words-display"></div>
+                            </div>
                         </div>
                     </div>
-                </section>
-
-                <section id="idiolect-panel" class="vocabulary-area" role="tabpanel" aria-labelledby="tab-idiolect" tabindex="0" style="display:none;">
-                    <h2 class="visually-hidden">Custom word</h2>
-                    <div class="vocabulary-header">
-                        <div class="search-wrapper">
-                            <input type="text" id="idiolect-word-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search custom word">
-                            <button id="idiolect-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear custom word search">&times;</button>
+                    <div id="dictionary-sheet-idiolect" class="dictionary-sheet" style="display:none;">
+                        <h3 class="dictionary-sheet-title">Custom word</h3>
+                        <div class="vocabulary-container">
+                            <div class="words-area">
+                                <span id="idiolect-word-info" class="word-info-display"></span>
+                                <div id="idiolect-words-display" class="words-display"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="vocabulary-container">
-                        <div class="words-area">
-                            <span id="idiolect-word-info" class="word-info-display"></span>
-                            <div id="idiolect-words-display" class="words-display"></div>
+                        <div class="vocabulary-actions">
+                            <button id="export-btn" class="header-btn" type="button">Export</button>
+                            <button id="import-btn" class="header-btn" type="button">Import</button>
                         </div>
-                    </div>
-                    <div class="vocabulary-actions">
-                        <button id="export-btn" class="header-btn" type="button">Export</button>
-                        <button id="import-btn" class="header-btn" type="button">Import</button>
                     </div>
                 </section>
             </div>

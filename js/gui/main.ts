@@ -30,22 +30,19 @@ export interface GUIElements {
     readonly customWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
     readonly customWordInfo: HTMLElement;
-    readonly builtInWordSearch: HTMLInputElement;
-    readonly builtInSearchClearBtn: HTMLButtonElement;
-    readonly customWordSearch: HTMLInputElement;
-    readonly customSearchClearBtn: HTMLButtonElement;
+    readonly dictionarySearch: HTMLInputElement;
+    readonly dictionarySearchClearBtn: HTMLButtonElement;
+    readonly dictionarySheetSelect: HTMLSelectElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
-    readonly builtInArea: HTMLElement;
-    readonly customArea: HTMLElement;
+    readonly dictionaryArea: HTMLElement;
     readonly editorPanel: HTMLElement;
     readonly statePanel: HTMLElement;
     readonly tabInputBtn: HTMLElement;
     readonly tabOutputBtn: HTMLElement;
     readonly tabStackBtn: HTMLElement;
-    readonly tabBuiltInBtn: HTMLElement;
-    readonly tabCustomBtn: HTMLElement;
+    readonly tabDictionaryBtn: HTMLElement;
 }
 
 export interface GUI {
@@ -74,22 +71,19 @@ const cacheElements = (): GUIElements => ({
     customWordsDisplay: document.getElementById('idiolect-words-display')!,
     builtInWordInfo: document.getElementById('core-word-info')!,
     customWordInfo: document.getElementById('idiolect-word-info')!,
-    builtInWordSearch: document.getElementById('word-search') as HTMLInputElement,
-    builtInSearchClearBtn: document.getElementById('search-clear-btn') as HTMLButtonElement,
-    customWordSearch: document.getElementById('idiolect-word-search') as HTMLInputElement,
-    customSearchClearBtn: document.getElementById('idiolect-search-clear-btn') as HTMLButtonElement,
+    dictionarySearch: document.getElementById('dictionary-search') as HTMLInputElement,
+    dictionarySearchClearBtn: document.getElementById('dictionary-search-clear-btn') as HTMLButtonElement,
+    dictionarySheetSelect: document.getElementById('dictionary-sheet-select') as HTMLSelectElement,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
-    builtInArea: document.getElementById('core-panel')!,
-    customArea: document.getElementById('idiolect-panel')!,
+    dictionaryArea: document.getElementById('dictionary-panel')!,
     editorPanel: document.getElementById('editor-panel')!,
     statePanel: document.getElementById('state-panel')!,
     tabInputBtn: document.getElementById('tab-input')!,
     tabOutputBtn: document.getElementById('tab-output')!,
     tabStackBtn: document.getElementById('tab-stack')!,
-    tabBuiltInBtn: document.getElementById('tab-core')!,
-    tabCustomBtn: document.getElementById('tab-idiolect')!
+    tabDictionaryBtn: document.getElementById('tab-dictionary')!
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -108,8 +102,7 @@ const extractMobileElements = (elements: GUIElements): MobileElements => ({
     inputArea: elements.inputArea,
     outputArea: elements.outputArea,
     stackArea: elements.stackArea,
-    builtInArea: elements.builtInArea,
-    customArea: elements.customArea
+    dictionaryArea: elements.dictionaryArea
 });
 
 const checkStackHighlight = (content: string): boolean => {
@@ -117,9 +110,9 @@ const checkStackHighlight = (content: string): boolean => {
     return stackRegex.test(content);
 };
 
-const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'core', 'idiolect'];
+const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
-const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'core', 'idiolect'];
+const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 
 
 const DESKTOP_EDITOR_PLACEHOLDER = [
@@ -191,8 +184,7 @@ export const createGUI = (): GUI => {
         input: elements.tabInputBtn,
         output: elements.tabOutputBtn,
         stack: elements.tabStackBtn,
-        core: elements.tabBuiltInBtn,
-        idiolect: elements.tabCustomBtn
+        dictionary: elements.tabDictionaryBtn
     });
 
     const updateTabState = (activeModes: Set<ViewMode>): void => {
@@ -204,13 +196,19 @@ export const createGUI = (): GUI => {
             tab.setAttribute('aria-selected', String(isActive));
             tab.setAttribute('tabindex', isActive ? '0' : '-1');
         });
+    };
 
-        // Update module tab states
-        for (const modTab of moduleTabManager.getTabs()) {
-            const isActive = activeModes.has(modTab.viewMode);
-            modTab.tabBtn.classList.toggle('active', isActive);
-            modTab.tabBtn.setAttribute('aria-selected', String(isActive));
-            modTab.tabBtn.setAttribute('tabindex', isActive ? '0' : '-1');
+    const switchDictionarySheet = (sheetId: string): void => {
+        const allSheets = elements.dictionaryArea.querySelectorAll('.dictionary-sheet');
+        allSheets.forEach(sheet => {
+            (sheet as HTMLElement).style.display = 'none';
+            sheet.classList.remove('active');
+        });
+
+        const target = document.getElementById(`dictionary-sheet-${sheetId}`);
+        if (target) {
+            target.style.display = 'flex';
+            target.classList.add('active');
         }
     };
 
@@ -223,18 +221,11 @@ export const createGUI = (): GUI => {
         elements.inputArea.style.display = currentLeftMode === 'input' ? 'flex' : 'none';
         elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
         elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
-        elements.builtInArea.style.display = currentRightMode === 'core' ? 'flex' : 'none';
-        elements.customArea.style.display = currentRightMode === 'idiolect' ? 'flex' : 'none';
-
-        // Module tab areas
-        for (const tab of moduleTabManager.getTabs()) {
-            const isActive = currentRightMode === tab.viewMode;
-            tab.areaEl.style.display = isActive ? 'flex' : 'none';
-        }
+        elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
     };
 
     const isRightMode = (mode: ViewMode): boolean =>
-        RIGHT_TAB_MODES.includes(mode) || mode.startsWith('module:');
+        RIGHT_TAB_MODES.includes(mode);
 
     const setDesktopModes = (mode: ViewMode): void => {
         if (LEFT_TAB_MODES.includes(mode)) {
@@ -242,35 +233,24 @@ export const createGUI = (): GUI => {
         }
         if (isRightMode(mode)) {
             currentRightMode = mode;
-            // When a non-stack right tab is selected, switch left to Input
-            if (mode !== 'stack') {
+            if (mode === 'dictionary') {
                 currentLeftMode = 'input';
             }
         }
     };
 
     const fallbackIfModuleTabRemoved = (): void => {
-        if (currentRightMode.startsWith('module:') && !moduleTabManager.getModuleArea(currentRightMode)) {
-            currentRightMode = 'core';
+        // If current dictionary sheet is a module sheet that was removed, fallback to core
+        const currentSheet = elements.dictionarySheetSelect?.value;
+        if (currentSheet?.startsWith('module-') && !moduleTabManager.getModuleArea(currentSheet)) {
+            elements.dictionarySheetSelect.value = 'core';
+            switchDictionarySheet('core');
         }
     };
 
     const applyAreaState = (mode: ViewMode): void => {
         if (mobile.isMobile()) {
-            // For module modes on mobile, show the module area
-            if (mode.startsWith('module:')) {
-                mobile.updateView(mode);
-                // Show the module area
-                for (const tab of moduleTabManager.getTabs()) {
-                    tab.areaEl.style.display = tab.viewMode === mode ? 'flex' : 'none';
-                }
-            } else {
-                mobile.updateView(mode);
-                // Hide all module areas
-                for (const tab of moduleTabManager.getTabs()) {
-                    tab.areaEl.style.display = 'none';
-                }
-            }
+            mobile.updateView(mode);
             document.body.dataset.activeArea = mode;
             updateTabState(new Set([mode]));
             return;
@@ -305,12 +285,19 @@ export const createGUI = (): GUI => {
             display.updateStack(window.ajisaiInterpreter.get_stack());
             vocabulary.updateCustomWords(window.ajisaiInterpreter.get_idiolect_words_info());
 
-            // Sync module tabs based on imported modules
-            const newModules = moduleTabManager.syncModuleTabs();
+            // Sync module sheets based on imported modules
+            const newSheetIds = moduleTabManager.syncModuleTabs();
 
-            // Focus the newly imported module tab
-            if (newModules.length > 0) {
-                switchArea(newModules[newModules.length - 1]!);
+            // Focus the newly imported module's sheet
+            if (newSheetIds.length > 0) {
+                const lastSheetId = newSheetIds[newSheetIds.length - 1]!;
+                // Switch to Dictionary tab if not already there
+                if (currentRightMode !== 'dictionary' || (mobile.isMobile() && currentMode !== 'dictionary')) {
+                    switchArea('dictionary');
+                }
+                // Switch to the new module sheet
+                elements.dictionarySheetSelect.value = lastSheetId;
+                switchDictionarySheet(lastSheetId);
             }
 
             updateHighlights(elements.codeInput.value);
@@ -350,27 +337,19 @@ export const createGUI = (): GUI => {
 
         // 辞書検索: デバウンス付きでフィルタリング
         const applySearchFilter = (filter: string): void => {
-            elements.builtInWordSearch.value = filter;
-            elements.customWordSearch.value = filter;
+            elements.dictionarySearch.value = filter;
             vocabulary.setSearchFilter(filter);
             moduleTabManager.setSearchFilter(filter);
         };
 
-        const handleCoreSearchInput = debounce(() => {
-            applySearchFilter(elements.builtInWordSearch.value);
-        }, 150);
-        const handleIdiolectSearchInput = debounce(() => {
-            applySearchFilter(elements.customWordSearch.value);
+        const handleSearchInput = debounce(() => {
+            applySearchFilter(elements.dictionarySearch.value);
         }, 150);
 
-        elements.builtInWordSearch.addEventListener('input', handleCoreSearchInput);
-        elements.customWordSearch.addEventListener('input', handleIdiolectSearchInput);
+        elements.dictionarySearch.addEventListener('input', handleSearchInput);
 
         // 検索窓の×ボタンでクリア
-        elements.builtInSearchClearBtn.addEventListener('click', () => {
-            applySearchFilter('');
-        });
-        elements.customSearchClearBtn.addEventListener('click', () => {
+        elements.dictionarySearchClearBtn.addEventListener('click', () => {
             applySearchFilter('');
         });
 
@@ -388,6 +367,12 @@ export const createGUI = (): GUI => {
                     switchArea(mode);
                 }
             });
+        });
+
+        // Dictionary sheet selector
+        elements.dictionarySheetSelect.addEventListener('change', () => {
+            const selectedValue = elements.dictionarySheetSelect.value;
+            switchDictionarySheet(selectedValue);
         });
 
         elements.testBtn?.addEventListener('click', () => {
@@ -455,8 +440,8 @@ export const createGUI = (): GUI => {
         updateEditorPlaceholder();
 
         moduleTabManager = createModuleTabManager({
-            tabGroupEl: elements.tabBuiltInBtn.parentElement!,
-            areaContainerEl: elements.statePanel,
+            selectEl: elements.dictionarySheetSelect,
+            sheetContainerEl: elements.dictionaryArea,
             onWordClick: (word: string) => {
                 if (!mobile.isMobile()) {
                     editor.insertWord(word);
@@ -472,14 +457,12 @@ export const createGUI = (): GUI => {
                     editor.deleteLastWord();
                 }
             },
-            onTabClick: (mode: ViewMode) => switchArea(mode),
+            onSheetChange: (sheetId: string) => switchDictionarySheet(sheetId),
             onSearchInput: (filter: string) => {
-                elements.builtInWordSearch.value = filter;
-                elements.customWordSearch.value = filter;
+                elements.dictionarySearch.value = filter;
                 vocabulary.setSearchFilter(filter);
                 moduleTabManager.setSearchFilter(filter);
             },
-            coreTabBtn: elements.tabBuiltInBtn,
             onUpdateDisplays: () => updateAllDisplays(),
             onSaveState: () => persistence.saveCurrentState(),
             showInfo: (text: string, append: boolean) => display.showInfo(text, append)
