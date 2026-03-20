@@ -101,6 +101,11 @@
     padding-bottom: calc(0.45rem + 1px);
 }
 
+.tab-group + .tab-group .area-tab:first-child.active {
+    margin-left: -1px;
+    z-index: 2;
+}
+
 .visually-hidden {
     position: absolute;
     width: 1px;
