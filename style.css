@@ -47,6 +47,12 @@
     display: contents;
 }
 
+.tab-group + .tab-group {
+    margin-left: -1px;
+    position: relative;
+    z-index: 1;
+}
+
 /* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
 .area-tabs::after {
     content: '';
