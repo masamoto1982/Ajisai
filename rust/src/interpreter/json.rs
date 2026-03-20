@@ -1,11 +1,11 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::types::json::{from_json, to_json};
+use crate::types::json::{deserialize_json_to_value, serialize_value_to_json};
 use crate::types::{Value, ValueData};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-fn read_stack_value(interp: &mut Interpreter, keep_mode: bool, from_top: usize) -> Result<Value> {
+fn extract_stack_value(interp: &mut Interpreter, keep_mode: bool, from_top: usize) -> Result<Value> {
     if keep_mode {
         if interp.stack.len() <= from_top {
             return Err(AjisaiError::StackUnderflow);
@@ -22,12 +22,12 @@ fn read_stack_value(interp: &mut Interpreter, keep_mode: bool, from_top: usize) 
 pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let val = read_stack_value(interp, is_keep, 0)?;
+    let val = extract_stack_value(interp, is_keep, 0)?;
 
-    let json_str = value_to_string_content(&val);
+    let json_str = extract_string_content_from_value(&val);
 
     match serde_json::from_str::<serde_json::Value>(&json_str) {
-        Ok(json_val) => match from_json(json_val, 1) {
+        Ok(json_val) => match deserialize_json_to_value(json_val, 1) {
             Ok(parsed) => {
                 interp.stack.push(parsed);
                 Ok(())
@@ -61,9 +61,9 @@ pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
 pub fn op_stringify(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let val = read_stack_value(interp, is_keep, 0)?;
+    let val = extract_stack_value(interp, is_keep, 0)?;
 
-    let json_val = to_json(&val);
+    let json_val = serialize_value_to_json(&val);
     let json_str = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
     interp.stack.push(Value::from_string(&json_str));
     Ok(())
@@ -78,7 +78,7 @@ pub fn op_input(interp: &mut Interpreter) -> Result<()> {
 pub fn op_output(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let val = read_stack_value(interp, is_keep, 0)?;
+    let val = extract_stack_value(interp, is_keep, 0)?;
 
     let text = format!("{}", val);
     interp.io_output_buffer.push_str(&text);
@@ -92,14 +92,14 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let key_val = read_stack_value(interp, is_keep, 0)?;
+    let key_val = extract_stack_value(interp, is_keep, 0)?;
     let obj_val = if is_keep {
-        read_stack_value(interp, true, 1)?
+        extract_stack_value(interp, true, 1)?
     } else {
-        read_stack_value(interp, false, 0)?
+        extract_stack_value(interp, false, 0)?
     };
 
-    let key_str = value_to_string_content(&key_val);
+    let key_str = extract_string_content_from_value(&key_val);
 
     let (pairs, index) = match &obj_val.data {
         ValueData::Record { pairs, index } => (pairs.as_slice(), Some(index)),
@@ -127,7 +127,7 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
         for pair in pairs {
             if let ValueData::Vector(kv) = &pair.data {
                 if kv.len() == 2 {
-                    let k = value_to_string_content(&kv[0]);
+                    let k = extract_string_content_from_value(&kv[0]);
                     if k == key_str {
                         interp.stack.push(kv[1].clone());
                         return Ok(());
@@ -144,7 +144,7 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
 pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let obj_val = read_stack_value(interp, is_keep, 0)?;
+    let obj_val = extract_stack_value(interp, is_keep, 0)?;
 
     let pairs = match &obj_val.data {
         ValueData::Record { pairs, .. } => pairs.as_slice(),
@@ -181,19 +181,19 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let new_value = read_stack_value(interp, is_keep, 0)?;
+    let new_value = extract_stack_value(interp, is_keep, 0)?;
     let key_val = if is_keep {
-        read_stack_value(interp, true, 1)?
+        extract_stack_value(interp, true, 1)?
     } else {
-        read_stack_value(interp, false, 0)?
+        extract_stack_value(interp, false, 0)?
     };
     let obj_val = if is_keep {
-        read_stack_value(interp, true, 2)?
+        extract_stack_value(interp, true, 2)?
     } else {
-        read_stack_value(interp, false, 0)?
+        extract_stack_value(interp, false, 0)?
     };
 
-    let key_str = value_to_string_content(&key_val);
+    let key_str = extract_string_content_from_value(&key_val);
 
     let (old_pairs, old_index) = match &obj_val.data {
         ValueData::Record { pairs, index } => (Some(pairs.as_slice()), Some(index)),
@@ -211,7 +211,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             old_pairs.iter().position(|pair| {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
-                        return value_to_string_content(&kv[0]) == key_str;
+                        return extract_string_content_from_value(&kv[0]) == key_str;
                     }
                 }
                 false
@@ -248,7 +248,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             for (i, pair) in new_pairs.iter().enumerate() {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
-                        let k = value_to_string_content(&kv[0]);
+                        let k = extract_string_content_from_value(&kv[0]);
                         new_index.insert(k, i);
                     }
                 }
@@ -278,9 +278,9 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
 pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let val = read_stack_value(interp, is_keep, 0)?;
+    let val = extract_stack_value(interp, is_keep, 0)?;
 
-    let json_val = to_json(&val);
+    let json_val = serialize_value_to_json(&val);
     let json_compact = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
     interp
         .output_buffer
@@ -288,7 +288,7 @@ pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn value_to_string_content(val: &Value) -> String {
+fn extract_string_content_from_value(val: &Value) -> String {
     if let ValueData::Vector(chars) = &val.data {
         if chars.iter().all(|c| matches!(c.data, ValueData::Scalar(_))) {
             return chars

@@ -42,7 +42,7 @@
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{
-    is_string_value, is_vector_value, value_as_string, wrap_datetime,
+    is_string_value, is_vector_value, value_as_string, create_datetime_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
@@ -51,7 +51,7 @@ use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive, Zero};
 use wasm_bindgen::prelude::*;
 
-fn parse_timezone_local(tz_val: &Value, word: &str) -> Result<String> {
+fn parse_timezone_from_value(tz_val: &Value, word: &str) -> Result<String> {
     if !is_vector_value(tz_val) {
         return Err(AjisaiError::from(format!(
             "{}: timezone must be a String (e.g., 'LOCAL')",
@@ -110,7 +110,7 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
     let timestamp = Fraction::new(ms_bigint, thousand);
 
     // DateTime結果を単一要素Vectorとして返す
-    interp.stack.push(wrap_datetime(timestamp));
+    interp.stack.push(create_datetime_value(timestamp));
 
     Ok(())
 }
@@ -166,7 +166,7 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
         (tz_val, val)
     };
 
-    let timezone = match parse_timezone_local(&tz_val, "DATETIME") {
+    let timezone = match parse_timezone_from_value(&tz_val, "DATETIME") {
         Ok(tz) => tz,
         Err(e) => {
             if !is_keep_mode {
@@ -321,7 +321,7 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
         (tz_val, val)
     };
 
-    if let Err(e) = parse_timezone_local(&tz_val, "TIMESTAMP") {
+    if let Err(e) = parse_timezone_from_value(&tz_val, "TIMESTAMP") {
         if !is_keep_mode {
             interp.stack.push(val);
             interp.stack.push(tz_val);
@@ -485,7 +485,7 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
         timestamp = timestamp.add(&subsec_frac);
     }
 
-    interp.stack.push(wrap_datetime(timestamp));
+    interp.stack.push(create_datetime_value(timestamp));
 
     Ok(())
 }

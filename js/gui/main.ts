@@ -282,7 +282,7 @@ export const createGUI = (): GUI => {
         if (!window.ajisaiInterpreter) return;
 
         try {
-            display.updateStack(window.ajisaiInterpreter.get_stack());
+            display.renderStack(window.ajisaiInterpreter.get_stack());
             vocabulary.updateCustomWords(window.ajisaiInterpreter.get_idiolect_words_info());
 
             // Sync module sheets based on imported modules
@@ -303,18 +303,18 @@ export const createGUI = (): GUI => {
             updateHighlights(elements.codeInput.value);
         } catch (error) {
             console.error('Failed to update display:', error);
-            display.showError(new Error('Failed to update display.'));
+            display.renderError(new Error('Failed to update display.'));
         }
     };
 
     const initializeWorkers = async (): Promise<void> => {
         try {
-            display.showInfo('Initializing...', false);
+            display.renderInfo('Initializing...', false);
             await WORKER_MANAGER.init();
-            display.showInfo('Ready', true);
+            display.renderInfo('Ready', true);
         } catch (error) {
             console.error('[GUI] Failed to initialize workers:', error);
-            display.showError(new Error(`Failed to initialize parallel execution: ${error}`));
+            display.renderError(new Error(`Failed to initialize parallel execution: ${error}`));
         }
     };
 
@@ -332,7 +332,7 @@ export const createGUI = (): GUI => {
 
     const setupEventListeners = (): void => {
         elements.runBtn.addEventListener('click', () => {
-            executionController.runCode(editor.getValue());
+            executionController.executeCode(editor.getValue());
         });
 
         // 辞書検索: デバウンス付きでフィルタリング
@@ -379,8 +379,8 @@ export const createGUI = (): GUI => {
             switchArea('output');
             import('./test').then(({ createTestRunner }) => {
                 const testRunner = createTestRunner({
-                    showInfo: (text, append) => display.showInfo(text, append),
-                    showError: (error) => display.showError(error),
+                    showInfo: (text, append) => display.renderInfo(text, append),
+                    showError: (error) => display.renderError(error),
                     updateDisplays: updateAllDisplays
                 });
                 testRunner.runAllTests();
@@ -395,7 +395,7 @@ export const createGUI = (): GUI => {
             // Shift+Enter: run
             if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
-                executionController.runCode(editor.getValue());
+                executionController.executeCode(editor.getValue());
             }
             // Ctrl+Enter: step execution
             if (e.key === 'Enter' && e.ctrlKey && !e.altKey && !e.shiftKey) {
@@ -454,7 +454,7 @@ export const createGUI = (): GUI => {
             },
             onBackgroundDoubleClick: () => {
                 if (!mobile.isMobile()) {
-                    editor.deleteLastWord();
+                    editor.removeLastWord();
                 }
             },
             onSheetChange: (sheetId: string) => switchDictionarySheet(sheetId),
@@ -465,13 +465,13 @@ export const createGUI = (): GUI => {
             },
             onUpdateDisplays: () => updateAllDisplays(),
             onSaveState: () => persistence.saveCurrentState(),
-            showInfo: (text: string, append: boolean) => display.showInfo(text, append)
+            showInfo: (text: string, append: boolean) => display.renderInfo(text, append)
         });
 
         persistence = createPersistence({
-            showError: (error) => display.showError(error),
+            showError: (error) => display.renderError(error),
             updateDisplays: updateAllDisplays,
-            showInfo: (text, append) => display.showInfo(text, append)
+            showInfo: (text, append) => display.renderInfo(text, append)
         });
         await persistence.init();
 
@@ -494,12 +494,12 @@ export const createGUI = (): GUI => {
             },
             onBackgroundDoubleClick: () => {
                 if (!mobile.isMobile()) {
-                    editor.deleteLastWord();
+                    editor.removeLastWord();
                 }
             },
             onUpdateDisplays: updateAllDisplays,
             onSaveState: () => persistence.saveCurrentState(),
-            showInfo: (text, append) => display.showInfo(text, append)
+            showInfo: (text, append) => display.renderInfo(text, append)
         });
 
         executionController = createExecutionController(window.ajisaiInterpreter, {
@@ -507,9 +507,9 @@ export const createGUI = (): GUI => {
             clearEditor: (switchView) => { editor.clear(switchView); },
             setEditorValue: (value) => editor.setValue(value),
             insertEditorText: (text) => editor.insertText(text),
-            showInfo: (text, append) => display.showInfo(text, append),
-            showError: (error) => display.showError(error),
-            showExecutionResult: (result) => display.showExecutionResult(result),
+            showInfo: (text, append) => display.renderInfo(text, append),
+            showError: (error) => display.renderError(error),
+            showExecutionResult: (result) => display.renderExecutionResult(result),
             updateDisplays: updateAllDisplays,
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),

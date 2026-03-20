@@ -232,10 +232,10 @@ async fn test_remainder_chain_id_preserved() {
 async fn test_linear_reuse_hint() {
     let val = Value::from_fraction(frac(20, 1));
     let token = FlowToken::from_value(&val);
-    assert!(token.can_reuse_allocation_hint());
+    assert!(token.is_reusable_allocation());
 
     let (_, consumed_once) = token.consume(&frac(1, 1)).unwrap();
-    assert!(!consumed_once.can_reuse_allocation_hint());
+    assert!(!consumed_once.is_reusable_allocation());
 }
 
 #[tokio::test]

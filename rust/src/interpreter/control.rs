@@ -8,7 +8,7 @@
 // カスタムワードの繰り返し実行や遅延実行をサポートする。
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, is_string_value, value_as_string};
+use crate::interpreter::helpers::{extract_integer_from_value, is_string_value, value_as_string};
 use crate::interpreter::Interpreter;
 use crate::interpreter::OperationTargetMode;
 use crate::types::Value;
@@ -43,7 +43,7 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let count = get_integer_from_value(&count_val)?;
+    let count = extract_integer_from_value(&count_val)?;
 
     let saved_no_change_check = interp.disable_no_change_check;
     interp.disable_no_change_check = true;
@@ -58,7 +58,7 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
         })()
     } else if is_string_value(&code_val) {
         let word_name = value_as_string(&code_val).ok_or_else(|| {
-            AjisaiError::structure_error("code block (: ... ;) or word name", "other format")
+            AjisaiError::create_structure_error("code block (: ... ;) or word name", "other format")
         })?;
         let upper_word_name = word_name.to_uppercase();
 

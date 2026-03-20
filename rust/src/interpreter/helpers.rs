@@ -53,11 +53,11 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
     match &value.data {
         ValueData::Scalar(f) => {
             if f.denominator != BigInt::one() {
-                return Err(AjisaiError::structure_error("integer", "fraction"));
+                return Err(AjisaiError::create_structure_error("integer", "fraction"));
             }
             Ok(f.numerator.clone())
         }
-        ValueData::Nil => Err(AjisaiError::structure_error(
+        ValueData::Nil => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "NIL",
         )),
@@ -65,33 +65,33 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
         | ValueData::Record {
             pairs: children, ..
         } if children.len() == 1 => extract_integer_bigint(&children[0]),
-        ValueData::Vector(_) | ValueData::Record { .. } => Err(AjisaiError::structure_error(
+        ValueData::Vector(_) | ValueData::Record { .. } => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "multi-element vector",
         )),
-        ValueData::CodeBlock(_) => Err(AjisaiError::structure_error(
+        ValueData::CodeBlock(_) => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "code block",
         )),
     }
 }
 
-pub(crate) fn get_integer_from_value(value: &Value) -> Result<i64> {
+pub(crate) fn extract_integer_from_value(value: &Value) -> Result<i64> {
     let n = extract_integer_bigint(value)?;
     n.to_i64()
         .ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
 }
 
-pub(crate) fn get_bigint_from_value(value: &Value) -> Result<BigInt> {
+pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
     extract_integer_bigint(value)
 }
 
-pub(crate) fn get_word_name_from_value(value: &Value) -> Result<String> {
+pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
         return Err(AjisaiError::from("Cannot get word name from NIL"));
     }
 
-    let fractions = value.flatten_fractions();
+    let fractions = value.collect_fractions_flat();
     let chars: String = fractions
         .iter()
         .filter_map(|f| {
@@ -126,15 +126,15 @@ pub(crate) fn normalize_index(index: i64, length: usize) -> Option<usize> {
     }
 }
 
-pub(crate) fn wrap_number(fraction: Fraction) -> Value {
+pub(crate) fn create_number_value(fraction: Fraction) -> Value {
     Value::from_fraction(fraction)
 }
 
-pub(crate) fn wrap_datetime(fraction: Fraction) -> Value {
+pub(crate) fn create_datetime_value(fraction: Fraction) -> Value {
     Value::from_fraction(fraction)
 }
 
-pub(crate) fn get_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
+pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
     if interp.stack.len() < count {
         return Err(AjisaiError::StackUnderflow);
     }
@@ -163,13 +163,13 @@ pub(crate) fn push_result(interp: &mut Interpreter, result: Value) {
 
 use crate::types::FlowToken;
 
-/// Wrap `get_operands` with FlowToken creation when flow tracking is on.
+/// Wrap `extract_operands` with FlowToken creation when flow tracking is on.
 /// Returns (operands, Option<Vec<FlowToken>>).
-pub(crate) fn get_operands_with_flow(
+pub(crate) fn extract_operands_with_flow(
     interp: &mut Interpreter,
     count: usize,
 ) -> Result<(Vec<Value>, Option<Vec<FlowToken>>)> {
-    let operands = get_operands(interp, count)?;
+    let operands = extract_operands(interp, count)?;
     let tokens = if interp.flow_tracking {
         Some(operands.iter().map(|v| interp.begin_flow(v)).collect())
     } else {
@@ -213,17 +213,17 @@ mod tests {
     }
 
     #[test]
-    fn test_wrap_number() {
+    fn test_create_number_value() {
         let frac = Fraction::new(BigInt::from(42), BigInt::one());
-        let wrapped = wrap_number(frac.clone());
+        let wrapped = create_number_value(frac.clone());
         assert!(wrapped.is_scalar());
         assert_eq!(wrapped.as_scalar(), Some(&frac));
     }
 
     #[test]
-    fn test_get_integer_from_value() {
-        let wrapped = wrap_number(Fraction::new(BigInt::from(42), BigInt::one()));
-        let result = get_integer_from_value(&wrapped).unwrap();
+    fn test_extract_integer_from_value() {
+        let wrapped = create_number_value(Fraction::new(BigInt::from(42), BigInt::one()));
+        let result = extract_integer_from_value(&wrapped).unwrap();
         assert_eq!(result, 42);
     }
 }

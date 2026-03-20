@@ -5,7 +5,7 @@
 /// Returns the list of all built-in word definitions.
 /// Each tuple contains: (word_name, description, syntax_example, signature_type)
 /// signature_type: "map" | "form" | "fold" | "none"
-pub fn get_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
+pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
     vec![
         // Target specification (Operation Target Mode)
         (

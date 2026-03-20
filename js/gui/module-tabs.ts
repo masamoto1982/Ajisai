@@ -1,12 +1,12 @@
 // js/gui/module-tabs.ts
 
 import {
-    createEmptyWordsMessage,
-    createNoResultsMessage,
-    createWordButton,
-    matchesFilter,
-    setupBackgroundClickHandlers,
-    sortWordName,
+    createEmptyWordsElement,
+    createNoResultsElement,
+    createWordButtonElement,
+    checkWordMatchesFilter,
+    registerBackgroundClickListeners,
+    compareWordName,
 } from './dictionary-ui';
 
 export interface ModuleSheet {
@@ -51,7 +51,7 @@ export const createModuleTabManager = (
     const sheets: ModuleSheet[] = [];
     let searchFilter = '';
 
-    const createOption = (moduleName: string, sheetId: string): HTMLOptionElement => {
+    const createOptionElement = (moduleName: string, sheetId: string): HTMLOptionElement => {
         const option = document.createElement('option');
         option.value = sheetId;
         option.textContent = `${moduleName} word`;
@@ -74,7 +74,7 @@ export const createModuleTabManager = (
         const wordsDisplay = document.createElement('div');
         wordsDisplay.className = 'words-display module-words-display';
         wordsArea.appendChild(wordsDisplay);
-        setupBackgroundClickHandlers(wordsDisplay, onBackgroundClick, onBackgroundDoubleClick);
+        registerBackgroundClickListeners(wordsDisplay, onBackgroundClick, onBackgroundDoubleClick);
 
         const container = document.createElement('div');
         container.className = 'vocabulary-container';
@@ -98,8 +98,8 @@ export const createModuleTabManager = (
             const moduleWords: Array<[string, string | null]> =
                 window.ajisaiInterpreter.get_module_words_info(moduleSheet.moduleName);
 
-            const sorted = [...moduleWords].sort((a, b) => sortWordName(a[0], b[0]));
-            const matched = sorted.filter(wd => matchesFilter(wd[0], searchFilter));
+            const sorted = [...moduleWords].sort((a, b) => compareWordName(a[0], b[0]));
+            const matched = sorted.filter(wd => checkWordMatchesFilter(wd[0], searchFilter));
             const prefix = `${moduleSheet.moduleName}::`;
 
             matched.forEach(wordData => {
@@ -107,7 +107,7 @@ export const createModuleTabManager = (
                 const shortName = name.startsWith(prefix) ? name.slice(prefix.length) : name;
                 const description = wordData[1] || name;
 
-                const button = createWordButton(
+                const button = createWordButtonElement(
                     shortName,
                     description,
                     'word-button module',
@@ -121,13 +121,13 @@ export const createModuleTabManager = (
 
             if (searchFilter && matched.length === 0) {
                 wordsDisplay.classList.add('is-empty');
-                wordsDisplay.appendChild(createNoResultsMessage());
+                wordsDisplay.appendChild(createNoResultsElement());
                 return;
             }
 
             if (!searchFilter && sorted.length === 0) {
                 wordsDisplay.classList.add('is-empty');
-                wordsDisplay.appendChild(createEmptyWordsMessage('No words available in this module.'));
+                wordsDisplay.appendChild(createEmptyWordsElement('No words available in this module.'));
                 return;
             }
 
@@ -161,7 +161,7 @@ export const createModuleTabManager = (
             for (const moduleName of importedModules) {
                 if (!findSheet(moduleName)) {
                     const sheetId = `module-${moduleName}`;
-                    const optionEl = createOption(moduleName, sheetId);
+                    const optionEl = createOptionElement(moduleName, sheetId);
                     const sheetEl = createSheetElement(sheetId);
 
                     selectEl.appendChild(optionEl);

@@ -62,7 +62,7 @@ pub enum AjisaiError {
 }
 
 impl AjisaiError {
-    pub fn structure_error(expected: &str, got: &str) -> Self {
+    pub fn create_structure_error(expected: &str, got: &str) -> Self {
         AjisaiError::StructureError {
             expected: expected.to_string(),
             got: got.to_string(),

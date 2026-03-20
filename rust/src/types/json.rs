@@ -7,7 +7,7 @@ use crate::error::{Result, AjisaiError};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
-pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
+pub fn deserialize_json_to_value(json_val: serde_json::Value, depth: usize) -> Result<Value> {
     match json_val {
         serde_json::Value::Null => Ok(Value::nil()),
 
@@ -41,7 +41,7 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
             }
             let mut values = Vec::with_capacity(arr.len());
             for item in arr {
-                values.push(from_json(item, depth + 1)?);
+                values.push(deserialize_json_to_value(item, depth + 1)?);
             }
             Ok(Value {
                 data: ValueData::Vector(Rc::new(values)),
@@ -60,7 +60,7 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
             for (key, val) in map {
                 index.insert(key.clone(), pairs.len());
                 let key_val = Value::from_string(&key);
-                let val_val = from_json(val, depth + 1)?;
+                let val_val = deserialize_json_to_value(val, depth + 1)?;
                 pairs.push(Value {
                     data: ValueData::Vector(Rc::new(vec![key_val, val_val])),
                 });
@@ -72,7 +72,7 @@ pub fn from_json(json_val: serde_json::Value, depth: usize) -> Result<Value> {
     }
 }
 
-pub fn to_json(val: &Value) -> serde_json::Value {
+pub fn serialize_value_to_json(val: &Value) -> serde_json::Value {
     match &val.data {
         ValueData::Nil => serde_json::Value::Null,
 
@@ -96,8 +96,8 @@ pub fn to_json(val: &Value) -> serde_json::Value {
             for pair in pairs.iter() {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
-                        let key = value_to_string_content(&kv[0]);
-                        let val_json = to_json(&kv[1]);
+                        let key = extract_string_content_from_value(&kv[0]);
+                        let val_json = serialize_value_to_json(&kv[1]);
                         map.insert(key, val_json);
                     }
                 }
@@ -106,7 +106,7 @@ pub fn to_json(val: &Value) -> serde_json::Value {
         }
 
         ValueData::Vector(children) => {
-            if looks_like_string(children) {
+            if is_string_like(children) {
                 let s: String = children.iter().filter_map(|c| {
                     if let ValueData::Scalar(f) = &c.data {
                         f.to_i64().and_then(|n| {
@@ -128,8 +128,8 @@ pub fn to_json(val: &Value) -> serde_json::Value {
                 for pair in children.iter() {
                     if let ValueData::Vector(kv) = &pair.data {
                         if kv.len() == 2 {
-                            let key = value_to_string_content(&kv[0]);
-                            let val_json = to_json(&kv[1]);
+                            let key = extract_string_content_from_value(&kv[0]);
+                            let val_json = serialize_value_to_json(&kv[1]);
                             map.insert(key, val_json);
                         }
                     }
@@ -137,7 +137,7 @@ pub fn to_json(val: &Value) -> serde_json::Value {
                 return serde_json::Value::Object(map);
             }
 
-            let arr: Vec<serde_json::Value> = children.iter().map(|c| to_json(c)).collect();
+            let arr: Vec<serde_json::Value> = children.iter().map(|c| serialize_value_to_json(c)).collect();
             serde_json::Value::Array(arr)
         }
 
@@ -158,7 +158,7 @@ fn is_json_object(children: &[Value]) -> bool {
     })
 }
 
-fn looks_like_string(children: &[Value]) -> bool {
+fn is_string_like(children: &[Value]) -> bool {
     children.len() > 1 && children.iter().all(|c| {
         if let ValueData::Scalar(f) = &c.data {
             if let Some(n) = f.to_i64() {
@@ -182,13 +182,13 @@ fn looks_like_string(children: &[Value]) -> bool {
 
 fn is_string_value(val: &Value) -> bool {
     if let ValueData::Vector(chars) = &val.data {
-        looks_like_string(chars)
+        is_string_like(chars)
     } else {
         false
     }
 }
 
-fn value_to_string_content(val: &Value) -> String {
+fn extract_string_content_from_value(val: &Value) -> String {
     if let ValueData::Vector(chars) = &val.data {
         chars.iter().filter_map(|c| {
             if let ValueData::Scalar(f) = &c.data {
@@ -213,52 +213,52 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_from_json_null() {
-        let val = from_json(serde_json::Value::Null, 1).unwrap();
+    fn test_deserialize_json_to_value_null() {
+        let val = deserialize_json_to_value(serde_json::Value::Null, 1).unwrap();
         assert!(val.is_nil());
     }
 
     #[test]
-    fn test_from_json_bool() {
-        let val = from_json(serde_json::Value::Bool(true), 1).unwrap();
+    fn test_deserialize_json_to_value_bool() {
+        let val = deserialize_json_to_value(serde_json::Value::Bool(true), 1).unwrap();
         assert!(!val.as_scalar().unwrap().is_zero());
     }
 
     #[test]
-    fn test_from_json_integer() {
-        let val = from_json(serde_json::json!(42), 1).unwrap();
+    fn test_deserialize_json_to_value_integer() {
+        let val = deserialize_json_to_value(serde_json::json!(42), 1).unwrap();
         assert_eq!(val.as_scalar().unwrap().to_i64(), Some(42));
     }
 
     #[test]
-    fn test_from_json_float() {
-        let val = from_json(serde_json::json!(1.5), 1).unwrap();
+    fn test_deserialize_json_to_value_float() {
+        let val = deserialize_json_to_value(serde_json::json!(1.5), 1).unwrap();
         let f = val.as_scalar().unwrap();
         assert!(f.is_integer() == false);
     }
 
     #[test]
-    fn test_from_json_string() {
-        let val = from_json(serde_json::json!("hello"), 1).unwrap();
+    fn test_deserialize_json_to_value_string() {
+        let val = deserialize_json_to_value(serde_json::json!("hello"), 1).unwrap();
         assert!(val.is_vector());
     }
 
     #[test]
-    fn test_from_json_array() {
-        let val = from_json(serde_json::json!([1, 2, 3]), 1).unwrap();
+    fn test_deserialize_json_to_value_array() {
+        let val = deserialize_json_to_value(serde_json::json!([1, 2, 3]), 1).unwrap();
         assert!(val.is_vector());
         assert_eq!(val.len(), 3);
     }
 
     #[test]
-    fn test_from_json_empty_array() {
-        let val = from_json(serde_json::json!([]), 1).unwrap();
+    fn test_deserialize_json_to_value_empty_array() {
+        let val = deserialize_json_to_value(serde_json::json!([]), 1).unwrap();
         assert!(val.is_nil());
     }
 
     #[test]
-    fn test_from_json_object() {
-        let val = from_json(serde_json::json!({"name": "Ajisai"}), 1).unwrap();
+    fn test_deserialize_json_to_value_object() {
+        let val = deserialize_json_to_value(serde_json::json!({"name": "Ajisai"}), 1).unwrap();
         assert!(val.is_vector());
         if let ValueData::Record { pairs, .. } = &val.data {
             assert_eq!(pairs.len(), 1);
@@ -269,45 +269,45 @@ mod tests {
     }
 
     #[test]
-    fn test_from_json_nest_limit() {
+    fn test_deserialize_json_to_value_nest_limit() {
         let deep = serde_json::json!([[[[[[[[[[1]]]]]]]]]]);
-        let result = from_json(deep, 1);
+        let result = deserialize_json_to_value(deep, 1);
         assert!(result.is_ok());
 
         let too_deep = serde_json::json!([[[[[[[[[[[1]]]]]]]]]]]);
-        let result = from_json(too_deep, 1);
+        let result = deserialize_json_to_value(too_deep, 1);
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_to_json_nil() {
+    fn test_serialize_value_to_json_nil() {
         let val = Value::nil();
-        assert_eq!(to_json(&val), serde_json::Value::Null);
+        assert_eq!(serialize_value_to_json(&val), serde_json::Value::Null);
     }
 
     #[test]
-    fn test_to_json_integer() {
+    fn test_serialize_value_to_json_integer() {
         let val = Value::from_int(42);
-        assert_eq!(to_json(&val), serde_json::json!(42));
+        assert_eq!(serialize_value_to_json(&val), serde_json::json!(42));
     }
 
     #[test]
-    fn test_to_json_bool() {
-        // from_bool(true) creates Scalar(1) — no DisplayHint, so to_json
+    fn test_serialize_value_to_json_bool() {
+        // from_bool(true) creates Scalar(1) — no DisplayHint, so serialize_value_to_json
         // produces Number(1) rather than Bool(true).
         let val = Value::from_bool(true);
-        assert_eq!(to_json(&val), serde_json::json!(1));
+        assert_eq!(serialize_value_to_json(&val), serde_json::json!(1));
     }
 
     #[test]
-    fn test_to_json_string() {
+    fn test_serialize_value_to_json_string() {
         let val = Value::from_string("hello");
-        assert_eq!(to_json(&val), serde_json::json!("hello"));
+        assert_eq!(serialize_value_to_json(&val), serde_json::json!("hello"));
     }
 
     #[test]
-    fn test_to_json_array() {
-        // Use negative numbers to avoid the looks_like_string heuristic
+    fn test_serialize_value_to_json_array() {
+        // Use negative numbers to avoid the is_string_like heuristic
         // (all-valid-codepoint vectors are now serialized as strings).
         let val = Value {
             data: ValueData::Vector(Rc::new(vec![
@@ -316,25 +316,25 @@ mod tests {
                 Value::from_int(-3),
             ])),
         };
-        assert_eq!(to_json(&val), serde_json::json!([-1, -2, -3]));
+        assert_eq!(serialize_value_to_json(&val), serde_json::json!([-1, -2, -3]));
     }
 
     #[test]
     fn test_roundtrip_array() {
-        // Use negative numbers so looks_like_string doesn't kick in;
+        // Use negative numbers so is_string_like doesn't kick in;
         // small positive integers are valid codepoints and round-trip
         // as a JSON string instead of an array.
         let json = serde_json::json!([-1, -2, -3]);
-        let val = from_json(json.clone(), 1).unwrap();
-        let back = to_json(&val);
+        let val = deserialize_json_to_value(json.clone(), 1).unwrap();
+        let back = serialize_value_to_json(&val);
         assert_eq!(back, json);
     }
 
     #[test]
     fn test_roundtrip_object() {
         let json = serde_json::json!({"name": "Ajisai", "version": 1});
-        let val = from_json(json.clone(), 1).unwrap();
-        let back = to_json(&val);
+        let val = deserialize_json_to_value(json.clone(), 1).unwrap();
+        let back = serialize_value_to_json(&val);
         let back_obj = back.as_object().unwrap();
         assert_eq!(back_obj.get("name"), Some(&serde_json::json!("Ajisai")));
         assert_eq!(back_obj.get("version"), Some(&serde_json::json!(1)));

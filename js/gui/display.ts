@@ -16,17 +16,17 @@ export interface DisplayState {
 
 export interface Display {
     readonly init: () => void;
-    readonly showExecutionResult: (result: ExecuteResult) => void;
+    readonly renderExecutionResult: (result: ExecuteResult) => void;
     readonly appendExecutionResult: (result: ExecuteResult) => void;
-    readonly showOutput: (text: string) => void;
-    readonly showError: (error: Error | { message?: string } | string) => void;
-    readonly showInfo: (text: string, append?: boolean) => void;
-    readonly updateStack: (stack: Value[]) => void;
+    readonly renderOutput: (text: string) => void;
+    readonly renderError: (error: Error | { message?: string } | string) => void;
+    readonly renderInfo: (text: string, append?: boolean) => void;
+    readonly renderStack: (stack: Value[]) => void;
     readonly getState: () => DisplayState;
 }
 
 // Bracket cycling: depth 0 → {}, depth 1 → (), depth 2 → []
-const getBrackets = (depth: number): [string, string] => {
+const lookupBracketsAtDepth = (depth: number): [string, string] => {
     switch (depth % 3) {
         case 0: return ['{', '}'];
         case 1: return ['(', ')'];
@@ -35,20 +35,20 @@ const getBrackets = (depth: number): [string, string] => {
     }
 };
 
-const asFractionObject = (value: unknown): Record<string, unknown> | null => {
+const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
     if (!value || typeof value !== 'object') return null;
     const candidate = value as Record<string, unknown>;
     if (!('numerator' in candidate) || !('denominator' in candidate)) return null;
     return candidate;
 };
 
-const fractionText = (fraction: Record<string, unknown>): string => {
+const formatFractionToText = (fraction: Record<string, unknown>): string => {
     const numerator = String(fraction.numerator);
     const denominator = String(fraction.denominator);
     return denominator === '1' ? numerator : `${numerator}/${denominator}`;
 };
 
-const parseFractionNumber = (fraction: Record<string, unknown>): number | null => {
+const parseFractionToNumber = (fraction: Record<string, unknown>): number | null => {
     const numerator = parseInt(String(fraction.numerator || '0'), 10);
     const denominator = parseInt(String(fraction.denominator || '1'), 10);
     if (Number.isNaN(numerator) || Number.isNaN(denominator) || denominator === 0) return null;
@@ -56,19 +56,19 @@ const parseFractionNumber = (fraction: Record<string, unknown>): number | null =
 };
 
 const formatNumber = (value: unknown): string => {
-    const fraction = asFractionObject(value);
+    const fraction = checkFractionObject(value);
     if (!fraction) return '?';
     return formatFractionScientific(String(fraction.numerator), String(fraction.denominator));
 };
 
 const formatFraction = (frac: unknown): string => {
-    const fraction = asFractionObject(frac);
+    const fraction = checkFractionObject(frac);
     if (!fraction) return '?';
     return formatFractionScientific(String(fraction.numerator), String(fraction.denominator));
 };
 
 const formatDateTime = (value: unknown): string => {
-    const fraction = asFractionObject(value);
+    const fraction = checkFractionObject(value);
     if (!fraction) return '@?';
 
     try {
@@ -78,7 +78,7 @@ const formatDateTime = (value: unknown): string => {
         const date = new Date(timestampMs);
 
         if (isNaN(date.getTime())) {
-            return `@${fractionText(fraction)}`;
+            return `@${formatFractionToText(fraction)}`;
         }
 
         const pad = (n: number) => String(n).padStart(2, '0');
@@ -93,16 +93,16 @@ const formatDateTime = (value: unknown): string => {
         const dateStr = `@${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         return ms > 0 ? `${dateStr}.${String(ms).padStart(3, '0')}` : dateStr;
     } catch {
-        return `@${fractionText(fraction)}`;
+        return `@${formatFractionToText(fraction)}`;
     }
 };
 
-const bytesToString = (data: unknown[]): string => {
+const deserializeBytesToString = (data: unknown[]): string => {
     const bytes = data
         .map(frac => {
-            const fraction = asFractionObject(frac);
+            const fraction = checkFractionObject(frac);
             if (!fraction) return null;
-            return parseFractionNumber(fraction);
+            return parseFractionToNumber(fraction);
         })
         .filter((value): value is number => value !== null && value >= 0 && value <= 255);
 
@@ -114,7 +114,7 @@ const bytesToString = (data: unknown[]): string => {
 };
 
 const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, displayHint?: string): string => {
-    const [open, close] = getBrackets(depth);
+    const [open, close] = lookupBracketsAtDepth(depth);
 
     if (shape.length === 0) {
         if (data.length === 0) return `${open}${close}`;
@@ -124,7 +124,7 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, 
     if (shape.length === 1) {
         if (data.length === 0) return `${open}${close}`;
         if (displayHint === 'string') {
-            const str = bytesToString(data);
+            const str = deserializeBytesToString(data);
             return `'${str}'`;
         }
         const elements = data.map(frac => formatFraction(frac)).join(' ');
@@ -153,7 +153,7 @@ const formatTensor = (value: unknown, depth: number): string => {
 };
 
 const formatVector = (value: unknown, depth: number): string => {
-    const [open, close] = getBrackets(depth);
+    const [open, close] = lookupBracketsAtDepth(depth);
 
     if (Array.isArray(value)) {
         if (value.length === 0) {
@@ -216,20 +216,20 @@ const extractJsonExportCommands = (output: string): string[] =>
         .filter(line => line.startsWith('JSONEXPORT:'))
         .map(line => line.substring(11));
 
-const isSpecialCommand = (line: string): boolean =>
+const checkIsSpecialCommand = (line: string): boolean =>
     line.startsWith('AUDIO:') || line.startsWith('CONFIG:') ||
     line.startsWith('EFFECT:') || line.startsWith('JSONEXPORT:');
 
-const filterAudioCommands = (output: string): string =>
+const removeSpecialCommandLines = (output: string): string =>
     output.split('\n')
-        .filter(line => !isSpecialCommand(line))
+        .filter(line => !checkIsSpecialCommand(line))
         .join('\n');
 
 const formatExecutionOutput = (result: ExecuteResult): { debug: string; program: string } => ({
     debug: (result.debugOutput || '').trim(),
     program: pipe(
         (result.output || '').trim(),
-        filterAudioCommands
+        removeSpecialCommandLines
     )
 });
 
@@ -238,7 +238,7 @@ const formatErrorMessage = (error: Error | { message?: string } | string): strin
         ? `Error: ${error}`
         : `Error: ${(error as Error).message || error}`;
 
-const createSpan = (text: string, color: string): HTMLSpanElement => {
+const createSpanElement = (text: string, color: string): HTMLSpanElement => {
     const span = document.createElement('span');
     span.style.color = color;
     span.textContent = text;
@@ -253,7 +253,7 @@ const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
     parent.appendChild(child);
 };
 
-const processEffectCommands = (output: string): void => {
+const applyEffectCommands = (output: string): void => {
     extractEffectCommands(output).forEach(commandStr => {
         try {
             const effect = JSON.parse(commandStr);
@@ -269,7 +269,7 @@ const processEffectCommands = (output: string): void => {
     });
 };
 
-const processConfigCommands = (output: string): void => {
+const applyConfigCommands = (output: string): void => {
     extractConfigCommands(output).forEach(commandStr => {
         try {
             const config = JSON.parse(commandStr);
@@ -283,11 +283,11 @@ const processConfigCommands = (output: string): void => {
     });
 };
 
-const processAudioCommands = (output: string): void => {
+const executeAudioCommands = (output: string): void => {
     // Process EFFECT commands first (they set gain/pan before playback)
-    processEffectCommands(output);
+    applyEffectCommands(output);
     // Process CONFIG commands (they may affect audio playback)
-    processConfigCommands(output);
+    applyConfigCommands(output);
 
     extractAudioCommands(output).forEach(commandStr => {
         try {
@@ -299,7 +299,7 @@ const processAudioCommands = (output: string): void => {
     });
 };
 
-const createJsonDownloadLink = (jsonCompact: string): HTMLAnchorElement => {
+const createJsonDownloadLinkElement = (jsonCompact: string): HTMLAnchorElement => {
     // Pretty-print for download file
     let prettyJson: string;
     try {
@@ -322,9 +322,9 @@ const createJsonDownloadLink = (jsonCompact: string): HTMLAnchorElement => {
     return a;
 };
 
-const processJsonExportCommands = (output: string, outputDisplay: HTMLElement): void => {
+const renderJsonExportLinks = (output: string, outputDisplay: HTMLElement): void => {
     extractJsonExportCommands(output).forEach(jsonCompact => {
-        const link = createJsonDownloadLink(jsonCompact);
+        const link = createJsonDownloadLinkElement(jsonCompact);
         appendToElement(outputDisplay, document.createElement('br'));
         appendToElement(outputDisplay, link);
     });
@@ -339,15 +339,15 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const appendSpan = (text: string, color: string): HTMLSpanElement => {
-        const span = createSpan(text.replace(/\\n/g, '\n'), color);
+        const span = createSpanElement(text.replace(/\\n/g, '\n'), color);
         appendToElement(elements.outputDisplay, span);
         return span;
     };
 
-    const showExecutionResult = (result: ExecuteResult): void => {
+    const renderExecutionResult = (result: ExecuteResult): void => {
         const { debug, program } = formatExecutionOutput(result);
         const rawOutput = result.output || '';
-        processAudioCommands(rawOutput);
+        executeAudioCommands(rawOutput);
 
         mainOutput = `${debug}\n${program}`;
         clearElement(elements.outputDisplay);
@@ -365,7 +365,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
 
         // JSON export download links
-        processJsonExportCommands(rawOutput, elements.outputDisplay);
+        renderJsonExportLinks(rawOutput, elements.outputDisplay);
 
         if (!debug && !program && !extractJsonExportCommands(rawOutput).length && result.status === 'OK') {
             appendSpan('OK', '#333');
@@ -374,24 +374,24 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const appendExecutionResult = (result: ExecuteResult): void => {
         const programOutput = (result.output || '').trim();
-        processAudioCommands(programOutput);
-        const filteredOutput = filterAudioCommands(programOutput);
+        executeAudioCommands(programOutput);
+        const filteredOutput = removeSpecialCommandLines(programOutput);
 
         if (filteredOutput) {
             appendSpan(filteredOutput, '#4DC4FF');
         }
     };
 
-    const showOutput = (text: string): void => {
-        processAudioCommands(text);
-        const filteredText = filterAudioCommands(text);
+    const renderOutput = (text: string): void => {
+        executeAudioCommands(text);
+        const filteredText = removeSpecialCommandLines(text);
 
         mainOutput = filteredText;
         clearElement(elements.outputDisplay);
         appendSpan(filteredText, '#4DC4FF');
     };
 
-    const showError = (error: Error | { message?: string } | string): void => {
+    const renderError = (error: Error | { message?: string } | string): void => {
         const errorMessage = formatErrorMessage(error);
 
         mainOutput = errorMessage;
@@ -402,7 +402,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     // Show info message
-    const showInfo = (text: string, append = false): void => {
+    const renderInfo = (text: string, append = false): void => {
         if (append && elements.outputDisplay.innerHTML.trim() !== '') {
             mainOutput = `${mainOutput}\n${text}`;
             appendSpan('\n' + text, '#666');
@@ -413,7 +413,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
-    const updateStack = (stack: Value[]): void => {
+    const renderStack = (stack: Value[]): void => {
         const display = elements.stackDisplay;
         clearElement(display);
 
@@ -446,12 +446,12 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     return {
         init,
-        showExecutionResult,
+        renderExecutionResult,
         appendExecutionResult,
-        showOutput,
-        showError,
-        showInfo,
-        updateStack,
+        renderOutput,
+        renderError,
+        renderInfo,
+        renderStack,
         getState
     };
 };
@@ -462,7 +462,7 @@ export const displayUtils = {
     formatDateTime,
     formatTensor,
     formatVector,
-    getBrackets,
-    filterAudioCommands,
+    lookupBracketsAtDepth,
+    removeSpecialCommandLines,
     formatErrorMessage
 };

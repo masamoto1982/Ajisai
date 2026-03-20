@@ -5,7 +5,7 @@
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::helpers::{
-    get_integer_from_value, get_word_name_from_value, is_vector_value,
+    extract_integer_from_value, extract_word_name_from_value, is_vector_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::{Token, Value, ValueData};
@@ -15,14 +15,14 @@ enum ExecutableCode {
     CodeBlock(Vec<Token>),
 }
 
-fn get_executable_code(val: &Value) -> Result<ExecutableCode> {
+fn extract_executable_code(val: &Value) -> Result<ExecutableCode> {
     if let Some(tokens) = val.as_code_block() {
         return Ok(ExecutableCode::CodeBlock(tokens.clone()));
     }
 
     // Try to interpret as a word name (vector of codepoints)
     if matches!(&val.data, ValueData::Vector(_)) {
-        return get_word_name_from_value(val).map(ExecutableCode::WordName);
+        return extract_word_name_from_value(val).map(ExecutableCode::WordName);
     }
 
     Err(AjisaiError::from(
@@ -30,7 +30,7 @@ fn get_executable_code(val: &Value) -> Result<ExecutableCode> {
     ))
 }
 
-fn is_boolean_true(val: &Value) -> bool {
+fn is_truthy_boolean(val: &Value) -> bool {
     if let Some(f) = val.as_scalar() {
         return !f.is_zero();
     }
@@ -50,7 +50,7 @@ fn execute_executable_code(interp: &mut Interpreter, exec: &ExecutableCode) -> R
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable = match get_executable_code(&code_val) {
+    let executable = match extract_executable_code(&code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -88,7 +88,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(target_val);
                 }
                 interp.stack.push(code_val);
-                return Err(AjisaiError::structure_error("vector", "other format"));
+                return Err(AjisaiError::create_structure_error("vector", "other format"));
             }
 
             let n_elements = target_val.len();
@@ -148,7 +148,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = match get_integer_from_value(&count_val) {
+            let count = match extract_integer_from_value(&count_val) {
                 Ok(v) => v as usize,
                 Err(e) => {
                     interp.stack.push(count_val);
@@ -221,7 +221,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable = match get_executable_code(&code_val) {
+    let executable = match extract_executable_code(&code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -259,7 +259,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(target_val);
                 }
                 interp.stack.push(code_val);
-                return Err(AjisaiError::structure_error("vector", "other format"));
+                return Err(AjisaiError::create_structure_error("vector", "other format"));
             }
 
             let n_elements = target_val.len();
@@ -296,16 +296,16 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
                         let is_true = if is_vector_value(&condition_result) {
                             if condition_result.len() == 1 {
-                                is_boolean_true(condition_result.get_child(0).unwrap())
+                                is_truthy_boolean(condition_result.get_child(0).unwrap())
                             } else {
-                                error = Some(AjisaiError::structure_error(
+                                error = Some(AjisaiError::create_structure_error(
                                     "boolean result from FILTER code",
                                     "other format",
                                 ));
                                 break;
                             }
                         } else {
-                            error = Some(AjisaiError::structure_error(
+                            error = Some(AjisaiError::create_structure_error(
                                 "boolean vector result from FILTER code",
                                 "other format",
                             ));
@@ -343,7 +343,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = match get_integer_from_value(&count_val) {
+            let count = match extract_integer_from_value(&count_val) {
                 Ok(v) => v as usize,
                 Err(e) => {
                     interp.stack.push(count_val);
@@ -394,7 +394,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
                         if is_vector_value(&condition_result)
                             && condition_result.len() == 1
-                            && is_boolean_true(condition_result.get_child(0).unwrap())
+                            && is_truthy_boolean(condition_result.get_child(0).unwrap())
                         {
                             results.push(item.clone());
                         }
@@ -425,7 +425,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable = match get_executable_code(&code_val) {
+    let executable = match extract_executable_code(&code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -470,7 +470,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 }
                 interp.stack.push(init_val);
                 interp.stack.push(code_val);
-                return Err(AjisaiError::structure_error("vector", "other format"));
+                return Err(AjisaiError::create_structure_error("vector", "other format"));
             }
 
             let n_elements = target_val.len();
@@ -533,7 +533,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             // [要素...] [個数] [初期値] [ code ] .. FOLD
             let init_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count = extract_integer_from_value(&count_val)? as usize;
 
             if interp.stack.len() < count {
                 interp.stack.push(count_val);
@@ -589,7 +589,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
     let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable = match get_executable_code(&code_val) {
+    let executable = match extract_executable_code(&code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);

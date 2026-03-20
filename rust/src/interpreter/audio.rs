@@ -89,7 +89,7 @@ pub(crate) struct MusicState {
     pub play_mode: PlayMode,
 }
 
-pub(crate) fn get_play_mode(interp: &Interpreter) -> PlayMode {
+pub(crate) fn lookup_play_mode(interp: &Interpreter) -> PlayMode {
     interp
         .module_state
         .get("MUSIC")
@@ -98,7 +98,7 @@ pub(crate) fn get_play_mode(interp: &Interpreter) -> PlayMode {
         .unwrap_or_default()
 }
 
-fn set_play_mode(interp: &mut Interpreter, mode: PlayMode) {
+fn update_play_mode(interp: &mut Interpreter, mode: PlayMode) {
     if let Some(state) = interp.module_state.get_mut("MUSIC") {
         if let Some(ms) = state.downcast_mut::<MusicState>() {
             ms.play_mode = mode;
@@ -182,7 +182,7 @@ struct PlayCommand {
 
 /// MUSIC::SEQ ワード - 順次再生モードを設定
 pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
-    set_play_mode(interp, PlayMode::Sequential);
+    update_play_mode(interp, PlayMode::Sequential);
     Ok(())
 }
 
@@ -192,7 +192,7 @@ pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
 
 /// MUSIC::SIM ワード - 同時再生モードを設定
 pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
-    set_play_mode(interp, PlayMode::Simultaneous);
+    update_play_mode(interp, PlayMode::Simultaneous);
     Ok(())
 }
 
@@ -201,10 +201,10 @@ pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
 // ============================================================================
 
 /// ヘルパー関数: 値からスカラー値を取得（単一要素ベクタからも再帰的に取得）
-fn get_scalar_value(val: &Value) -> Option<Fraction> {
+fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     match &val.data {
         ValueData::Scalar(f) => Some(f.clone()),
-        ValueData::Vector(children) if children.len() == 1 => get_scalar_value(&children[0]),
+        ValueData::Vector(children) if children.len() == 1 => extract_scalar_from_value(&children[0]),
         _ => None,
     }
 }
@@ -217,7 +217,7 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
 
     // スカラー値を取得（単一要素ベクタからも取得可能）
     let frac =
-        get_scalar_value(&val).ok_or_else(|| AjisaiError::from("SLOT requires a single number"))?;
+        extract_scalar_from_value(&val).ok_or_else(|| AjisaiError::from("SLOT requires a single number"))?;
 
     // f64に変換
     let seconds = frac
@@ -261,7 +261,7 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
 pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let frac = get_scalar_value(&val).ok_or_else(|| AjisaiError::from("GAIN requires a number"))?;
+    let frac = extract_scalar_from_value(&val).ok_or_else(|| AjisaiError::from("GAIN requires a number"))?;
 
     let gain = frac
         .to_f64()
@@ -301,7 +301,7 @@ pub fn op_gain_reset(interp: &mut Interpreter) -> Result<()> {
 pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let frac = get_scalar_value(&val).ok_or_else(|| AjisaiError::from("PAN requires a number"))?;
+    let frac = extract_scalar_from_value(&val).ok_or_else(|| AjisaiError::from("PAN requires a number"))?;
 
     let pan = frac
         .to_f64()
@@ -446,26 +446,26 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
 
 /// MUSIC::SINE ワード - 正弦波を設定
 pub fn op_sine(interp: &mut Interpreter) -> Result<()> {
-    set_waveform(interp, WaveformType::Sine)
+    update_waveform_in_hint(interp, WaveformType::Sine)
 }
 
 /// MUSIC::SQUARE ワード - 矩形波を設定
 pub fn op_square(interp: &mut Interpreter) -> Result<()> {
-    set_waveform(interp, WaveformType::Square)
+    update_waveform_in_hint(interp, WaveformType::Square)
 }
 
 /// MUSIC::SAW ワード - のこぎり波を設定
 pub fn op_saw(interp: &mut Interpreter) -> Result<()> {
-    set_waveform(interp, WaveformType::Sawtooth)
+    update_waveform_in_hint(interp, WaveformType::Sawtooth)
 }
 
 /// MUSIC::TRI ワード - 三角波を設定
 pub fn op_tri(interp: &mut Interpreter) -> Result<()> {
-    set_waveform(interp, WaveformType::Triangle)
+    update_waveform_in_hint(interp, WaveformType::Triangle)
 }
 
 /// 波形を設定するヘルパー関数
-fn set_waveform(interp: &mut Interpreter, _waveform: WaveformType) -> Result<()> {
+fn update_waveform_in_hint(interp: &mut Interpreter, _waveform: WaveformType) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // ベクタでなければエラー
@@ -485,7 +485,7 @@ fn set_waveform(interp: &mut Interpreter, _waveform: WaveformType) -> Result<()>
 
 /// MUSIC::PLAY ワードのエントリポイント
 pub fn op_play(interp: &mut Interpreter) -> Result<()> {
-    let mode = get_play_mode(interp);
+    let mode = lookup_play_mode(interp);
     let target = interp.operation_target_mode;
 
     match target {
@@ -493,7 +493,7 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
             // スタックトップのベクタを処理
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let structure = build_audio_structure(&val, mode, &mut interp.output_buffer)?;
-            output_play_command(&structure, &mut interp.output_buffer);
+            emit_play_command(&structure, &mut interp.output_buffer);
         }
         OperationTargetMode::Stack => {
             // スタック全体の各要素を処理
@@ -522,12 +522,12 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
                 },
             };
 
-            output_play_command(&combined, &mut interp.output_buffer);
+            emit_play_command(&combined, &mut interp.output_buffer);
         }
     }
 
     // リセット
-    set_play_mode(interp, PlayMode::Sequential);
+    update_play_mode(interp, PlayMode::Sequential);
     interp.operation_target_mode = OperationTargetMode::StackTop;
 
     Ok(())
@@ -666,7 +666,7 @@ fn check_audible_range(freq: f64, output: &mut String) {
 }
 
 /// PlayCommand を JSON として output_buffer に出力
-fn output_play_command(structure: &AudioStructure, output: &mut String) {
+fn emit_play_command(structure: &AudioStructure, output: &mut String) {
     let command = PlayCommand {
         command_type: "play".to_string(),
         structure: structure.clone(),
@@ -698,7 +698,7 @@ mod tests {
     }
 
     fn make_fraction(num: i64, den: i64) -> Value {
-        Value::from_fraction(Fraction::new_unreduced(
+        Value::from_fraction(Fraction::create_unreduced(
             BigInt::from(num),
             BigInt::from(den),
         ))
@@ -934,7 +934,7 @@ mod tests {
         let result = interp.execute("[ 440 ] MUSIC::PLAY").await;
         assert!(result.is_ok(), "PLAY should succeed: {:?}", result);
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         // Without DisplayHint, is_string_value treats all vectors as strings,
         // so [440] is treated as lyrics (codepoint Ƹ). AUDIO command is emitted
         // with an empty structure.
@@ -964,7 +964,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("\"type\":\"seq\""),
             "Should contain seq structure"
@@ -986,7 +986,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         // Without DisplayHint, is_string_value treats the vector as lyrics.
         // MUSIC::SIM sets mode but build_audio_structure hits the string path first,
         // producing an empty seq. The outer play command still emits AUDIO.
@@ -1011,7 +1011,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("\"type\":\"sim\""),
             "Should contain sim structure for multitrack"
@@ -1040,7 +1040,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("\"type\":\"seq\""),
             "Should contain seq structure for multitrack"
@@ -1092,7 +1092,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command"
@@ -1114,7 +1114,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command"
@@ -1142,7 +1142,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command"
@@ -1176,7 +1176,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         // AUDIO command is emitted but without envelope data (ADSR is no-op).
         assert!(
             output.contains("AUDIO:"),
@@ -1222,7 +1222,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command"
@@ -1243,7 +1243,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command"
@@ -1264,7 +1264,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command"
@@ -1285,7 +1285,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         // Default sine should not appear in output (skip_serializing_if)
         assert!(
             !output.contains("\"waveform\":\"sine\""),
@@ -1308,7 +1308,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command"
@@ -1328,7 +1328,7 @@ mod tests {
         let result = interp.execute("[ 0.25 ] MUSIC::SLOT").await;
         assert!(result.is_ok(), "SLOT should succeed: {:?}", result);
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("CONFIG:"), "Should contain CONFIG command");
         assert!(
             output.contains("\"slot_duration\":0.25"),
@@ -1349,7 +1349,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("\"slot_duration\":0.25"),
             "1/4 should become 0.25"
@@ -1389,7 +1389,7 @@ mod tests {
             "Very short MUSIC::SLOT should succeed with warning"
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("Warning:"),
             "Should contain warning for very short duration"
@@ -1412,7 +1412,7 @@ mod tests {
             "Very long MUSIC::SLOT should succeed with warning"
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("Warning:"),
             "Should contain warning for very long duration"
@@ -1432,7 +1432,7 @@ mod tests {
         let result = interp.execute("[ 1 ] MUSIC::SLOT").await;
         assert!(result.is_ok(), "1 MUSIC::SLOT should succeed: {:?}", result);
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("CONFIG:"), "Should contain CONFIG command");
         assert!(
             output.contains("\"slot_duration\":1"),
@@ -1461,7 +1461,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         // CHORD is no-op and vectors are treated as lyrics, so AUDIO has empty structure
         assert!(
             output.contains("AUDIO:"),
@@ -1482,7 +1482,7 @@ mod tests {
         let result = interp.execute("0.5 MUSIC::GAIN").await;
         assert!(result.is_ok(), "GAIN should succeed: {:?}", result);
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("EFFECT:"), "Should contain EFFECT command");
         assert!(output.contains("\"gain\":0.5"), "Should set gain to 0.5");
     }
@@ -1496,7 +1496,7 @@ mod tests {
         let result = interp.execute("1.5 MUSIC::GAIN").await;
         assert!(result.is_ok(), "GAIN should succeed with clamping");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("\"gain\":1"), "Should clamp to 1.0");
         assert!(output.contains("Warning:"), "Should warn about clamping");
     }
@@ -1511,7 +1511,7 @@ mod tests {
         let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC::GAIN").await;
         assert!(result.is_ok(), "GAIN should succeed with clamping");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("\"gain\":0"), "Should clamp to 0.0");
     }
 
@@ -1524,7 +1524,7 @@ mod tests {
         let result = interp.execute("1/2 MUSIC::GAIN").await;
         assert!(result.is_ok(), "GAIN with fraction should succeed");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("\"gain\":0.5"), "1/2 should become 0.5");
     }
 
@@ -1537,7 +1537,7 @@ mod tests {
         let result = interp.execute("MUSIC::GAIN-RESET").await;
         assert!(result.is_ok(), "GAIN-RESET should succeed");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("\"gain\":1"), "Should reset to 1.0");
     }
 
@@ -1551,7 +1551,7 @@ mod tests {
         let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC::PAN").await;
         assert!(result.is_ok(), "PAN should succeed");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("EFFECT:"), "Should contain EFFECT command");
         assert!(output.contains("\"pan\":-0.5"), "Should set pan to -0.5");
     }
@@ -1565,7 +1565,7 @@ mod tests {
         let result = interp.execute("2 MUSIC::PAN").await;
         assert!(result.is_ok(), "PAN should succeed with clamping");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("\"pan\":1"), "Should clamp to 1.0");
         assert!(output.contains("Warning:"), "Should warn about clamping");
     }
@@ -1579,7 +1579,7 @@ mod tests {
         let result = interp.execute("MUSIC::PAN-RESET").await;
         assert!(result.is_ok(), "PAN-RESET should succeed");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("\"pan\":0"), "Should reset to 0.0");
     }
 
@@ -1592,7 +1592,7 @@ mod tests {
         let result = interp.execute("MUSIC::FX-RESET").await;
         assert!(result.is_ok(), "FX-RESET should succeed");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("\"gain\":1"), "Should reset gain to 1.0");
         assert!(output.contains("\"pan\":0"), "Should reset pan to 0.0");
     }
@@ -1606,7 +1606,7 @@ mod tests {
         let result = interp.execute("0.5 MUSIC::GAIN [ 440 ] MUSIC::PLAY").await;
         assert!(result.is_ok(), "GAIN then MUSIC::PLAY should succeed");
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("EFFECT:"), "Should have EFFECT command");
         assert!(output.contains("AUDIO:"), "Should have AUDIO command");
     }
@@ -1625,7 +1625,7 @@ mod tests {
             "Combined MUSIC::GAIN MUSIC::PAN MUSIC::PLAY should succeed"
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("\"gain\":0.5"), "Should have gain 0.5");
         assert!(output.contains("\"pan\":0.7"), "Should have pan 0.7");
         assert!(output.contains("AUDIO:"), "Should have AUDIO command");
@@ -1653,7 +1653,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         // AUDIO command is emitted (with empty seq structure)
         assert!(
             output.contains("AUDIO:"),
@@ -1676,7 +1676,7 @@ mod tests {
             result
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command"

@@ -12,11 +12,11 @@ use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
-fn introsort_fractions(values: &mut [(usize, Fraction)]) {
+fn sort_fractions_by_introsort(values: &mut [(usize, Fraction)]) {
     values.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 }
 
-fn sorted_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value> {
+fn reorder_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value> {
     perm.iter()
         .map(|&orig_idx| source[orig_idx].clone())
         .collect()
@@ -46,7 +46,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                     if !is_keep_mode {
                         interp.stack.push(val);
                     }
-                    return Err(AjisaiError::structure_error("vector", "other format"));
+                    return Err(AjisaiError::create_structure_error("vector", "other format"));
                 }
             };
 
@@ -70,13 +70,13 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            introsort_fractions(&mut indexed_fractions);
+            sort_fractions_by_introsort(&mut indexed_fractions);
 
             let perm: Vec<usize> = indexed_fractions
                 .iter()
                 .map(|(orig_idx, _)| *orig_idx)
                 .collect();
-            let sorted_v = sorted_values_by_permutation(children, &perm);
+            let sorted_v = reorder_values_by_permutation(children, &perm);
 
             if !interp.disable_no_change_check {
                 if children.len() < 2 {
@@ -118,7 +118,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            introsort_fractions(&mut indexed_fractions);
+            sort_fractions_by_introsort(&mut indexed_fractions);
 
             let is_identity = indexed_fractions
                 .iter()
@@ -133,7 +133,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             }
 
             let perm: Vec<usize> = indexed_fractions.iter().map(|(orig, _)| *orig).collect();
-            let sorted_stack = sorted_values_by_permutation(&interp.stack, &perm);
+            let sorted_stack = reorder_values_by_permutation(&interp.stack, &perm);
             if is_keep_mode {
                 interp.stack.extend(sorted_stack);
             } else {
@@ -171,7 +171,7 @@ mod tests {
             (2, make_fraction(2, 1)),
             (3, make_fraction(18, 1)),
         ];
-        introsort_fractions(&mut values);
+        sort_fractions_by_introsort(&mut values);
 
         assert_eq!(values[0].1, make_fraction(2, 1));
         assert_eq!(values[1].1, make_fraction(8, 1));
@@ -180,13 +180,13 @@ mod tests {
     }
 
     #[test]
-    fn test_introsort_fractions() {
+    fn test_sort_fractions_by_introsort() {
         let mut values = vec![
             (0, make_fraction(1, 2)),
             (1, make_fraction(1, 3)),
             (2, make_fraction(2, 3)),
         ];
-        introsort_fractions(&mut values);
+        sort_fractions_by_introsort(&mut values);
 
         assert_eq!(values[0].1, make_fraction(1, 3));
         assert_eq!(values[1].1, make_fraction(1, 2));
@@ -201,7 +201,7 @@ mod tests {
             (2, make_fraction(2, 1)),
             (3, make_fraction(1, 4)),
         ];
-        introsort_fractions(&mut values);
+        sort_fractions_by_introsort(&mut values);
 
         assert_eq!(values[0].1, make_fraction(1, 4));
         assert_eq!(values[1].1, make_fraction(1, 2));

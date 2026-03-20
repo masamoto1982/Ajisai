@@ -29,7 +29,7 @@ use std::sync::Arc;
 
 pub const MAX_CALL_DEPTH: usize = 4;
 
-use self::helpers::wrap_number;
+use self::helpers::create_number_value;
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
 use async_recursion::async_recursion;
@@ -198,15 +198,15 @@ impl Interpreter {
         Ok(children)
     }
 
-    fn set_operation_target_mode(&mut self, mode: OperationTargetMode) {
+    fn update_operation_target_mode(&mut self, mode: OperationTargetMode) {
         self.operation_target_mode = mode;
     }
 
-    fn set_consumption_mode(&mut self, mode: ConsumptionMode) {
+    fn update_consumption_mode(&mut self, mode: ConsumptionMode) {
         self.consumption_mode = mode;
     }
 
-    fn reset_modes(&mut self) {
+    fn reset_execution_modes(&mut self) {
         self.operation_target_mode = OperationTargetMode::StackTop;
         self.consumption_mode = ConsumptionMode::Consume;
         self.safe_mode = false;
@@ -318,7 +318,7 @@ impl Interpreter {
                 }
                 Token::Number(n) => {
                     values.push(Value::from_number(
-                        Fraction::from_str_unreduced(n).map_err(AjisaiError::from)?,
+                        Fraction::parse_unreduced_from_str(n).map_err(AjisaiError::from)?,
                     ));
                     i += 1;
                 }
@@ -379,7 +379,7 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_guard_structure_sync(&mut self, lines: &[ExecutionLine]) -> Result<()> {
-        let action = self.execute_guard_structure_core(lines)?;
+        let action = self.execute_guard_structure(lines)?;
 
         if let Some(async_action) = action {
             return Err(AjisaiError::from(format!(
@@ -392,9 +392,9 @@ impl Interpreter {
     }
 
     #[async_recursion(?Send)]
-    pub(crate) async fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
+    pub(crate) async fn execute_guard_structure_async(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         // sync コアで実行し、WAIT が発生した場合のみ async 処理
-        match self.execute_guard_structure_core(lines)? {
+        match self.execute_guard_structure(lines)? {
             None => Ok(()),
             Some(AsyncAction::Wait {
                 duration_ms,
@@ -406,7 +406,7 @@ impl Interpreter {
         }
     }
 
-    fn prepare_wait_action(&mut self) -> Result<AsyncAction> {
+    fn build_wait_action(&mut self) -> Result<AsyncAction> {
         if self.stack.len() < 2 {
             return Err(AjisaiError::from(
                 "WAIT requires word name and delay. Usage: 'WORD' [ ms ] WAIT",
@@ -416,14 +416,14 @@ impl Interpreter {
         let delay_val = self.stack.pop().unwrap();
         let name_val = self.stack.pop().unwrap();
 
-        let n = helpers::get_integer_from_value(&delay_val)?;
+        let n = helpers::extract_integer_from_value(&delay_val)?;
         let duration_ms = if n < 0 {
             return Err(AjisaiError::from("Delay must be non-negative"));
         } else {
             n as u64
         };
 
-        let word_name = helpers::get_word_name_from_value(&name_val)?;
+        let word_name = helpers::extract_word_name_from_value(&name_val)?;
 
         if let Some(def) = self.resolve_word(&word_name) {
             if def.is_builtin {
@@ -451,7 +451,7 @@ impl Interpreter {
             match &tokens[i] {
                 Token::Number(n) => {
                     let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
-                    self.stack.push(wrap_number(frac));
+                    self.stack.push(create_number_value(frac));
                 }
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
@@ -473,24 +473,24 @@ impl Interpreter {
                     match s.as_ref() {
                         // ターゲット修飾子
                         ".." => {
-                            self.set_operation_target_mode(OperationTargetMode::Stack);
+                            self.update_operation_target_mode(OperationTargetMode::Stack);
                         }
                         "." => {
-                            self.set_operation_target_mode(OperationTargetMode::StackTop);
+                            self.update_operation_target_mode(OperationTargetMode::StackTop);
                         }
                         // 消費修飾子
                         ",," => {
-                            self.set_consumption_mode(ConsumptionMode::Keep);
+                            self.update_consumption_mode(ConsumptionMode::Keep);
                         }
                         "," => {
-                            self.set_consumption_mode(ConsumptionMode::Consume);
+                            self.update_consumption_mode(ConsumptionMode::Consume);
                         }
                         _ => {
                             let upper = Self::normalize_symbol(s);
                             match upper.as_ref() {
                                 "WAIT" => {
-                                    let action = self.prepare_wait_action()?;
-                                    self.reset_modes();
+                                    let action = self.build_wait_action()?;
+                                    self.reset_execution_modes();
                                     return Ok((i + 1, Some(action)));
                                 }
                                 _ => {
@@ -508,8 +508,8 @@ impl Interpreter {
                                         self.execute_word_core(upper.as_ref())?;
                                     }
                                     // SEQ/SIM preserve modes for PLAY
-                                    if !modules::preserves_modes(upper.as_ref()) {
-                                        self.reset_modes();
+                                    if !modules::is_mode_preserving_word(upper.as_ref()) {
+                                        self.reset_execution_modes();
                                     }
                                 }
                             }
@@ -605,7 +605,7 @@ impl Interpreter {
         Ok((i, None))
     }
 
-    fn execute_guard_structure_core(
+    fn execute_guard_structure(
         &mut self,
         lines: &[ExecutionLine],
     ) -> Result<Option<AsyncAction>> {
@@ -659,7 +659,7 @@ impl Interpreter {
                     return Ok(action);
                 }
 
-                if self.is_condition_true()? {
+                if self.check_condition_on_stack()? {
                     // 次の行はアクション行
                     i += 1;
                     let action_line = &lines[i];
@@ -678,7 +678,7 @@ impl Interpreter {
                     return Ok(action);
                 }
 
-                if self.is_condition_true()? {
+                if self.check_condition_on_stack()? {
                     // デフォルト行を実行
                     let default_tokens = &lines[lines.len() - 1].body_tokens[1..];
                     let (_, action) = self.execute_section_core(default_tokens, 0)?;
@@ -696,7 +696,7 @@ impl Interpreter {
     }
 
     /// NIL and all-zero vectors are falsy; everything else is truthy.
-    fn is_condition_true(&mut self) -> Result<bool> {
+    fn check_condition_on_stack(&mut self) -> Result<bool> {
         if self.stack.is_empty() {
             return Ok(false);
         }
@@ -705,7 +705,7 @@ impl Interpreter {
         Ok(top.is_truthy())
     }
 
-    fn tokens_to_lines(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
+    fn split_tokens_to_lines(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
         let mut i = 0;
@@ -783,7 +783,7 @@ impl Interpreter {
 
         self.call_stack.push(name.to_string());
 
-        let action = self.execute_guard_structure_core(&def.lines);
+        let action = self.execute_guard_structure(&def.lines);
 
         self.call_stack.pop();
 
@@ -819,7 +819,7 @@ impl Interpreter {
         }
 
         self.call_stack.push(name.to_string());
-        let result = self.execute_guard_structure(&def.lines).await;
+        let result = self.execute_guard_structure_async(&def.lines).await;
         self.call_stack.pop();
 
         result
@@ -833,17 +833,17 @@ impl Interpreter {
         // Fractional Dataflow: snapshot stack totals before execution for
         // conservation-law auditing when flow_tracking is active.
         let pre_snapshot = if self.flow_tracking {
-            Some(self.snapshot_stack_totals())
+            Some(self.collect_stack_totals_snapshot())
         } else {
             None
         };
 
-        let result = self.execute_builtin_inner(name);
+        let result = self.execute_builtin_with_conservation(name);
 
         // Post-op conservation check
         if let Some(pre) = pre_snapshot {
             if result.is_ok() {
-                let post = self.snapshot_stack_totals();
+                let post = self.collect_stack_totals_snapshot();
                 // Log the delta for debugging (conservation violations will
                 // surface when verify_all_flows() is called at pipeline end).
                 let _delta = post.sub(&pre);
@@ -854,7 +854,7 @@ impl Interpreter {
     }
 
     /// Snapshot the total fraction mass of the entire stack.
-    fn snapshot_stack_totals(&self) -> Fraction {
+    fn collect_stack_totals_snapshot(&self) -> Fraction {
         let mut total = Fraction::from(0);
         for val in &self.stack {
             let token = FlowToken::from_value(val);
@@ -863,7 +863,7 @@ impl Interpreter {
         total
     }
 
-    fn execute_builtin_inner(&mut self, name: &str) -> Result<()> {
+    fn execute_builtin_with_conservation(&mut self, name: &str) -> Result<()> {
         match name {
             // Hot path: arithmetic operators (most frequent in typical programs)
             "+" => arithmetic::op_add(self),
@@ -956,7 +956,7 @@ impl Interpreter {
         }
     }
 
-    fn token_to_string(&self, token: &Token) -> String {
+    fn format_token_to_string(&self, token: &Token) -> String {
         match token {
             Token::Number(n) => n.to_string(),
             Token::String(s) => format!("'{}'", s),
@@ -974,7 +974,7 @@ impl Interpreter {
         }
     }
 
-    pub fn get_word_definition_tokens(&self, name: &str) -> Option<String> {
+    pub fn lookup_word_definition_tokens(&self, name: &str) -> Option<String> {
         // Check dictionary first, then module_samples
         let def = if let Some(d) = self.idiolect.get(name) {
             if d.is_builtin || d.lines.is_empty() {
@@ -999,7 +999,7 @@ impl Interpreter {
                 result.push('\n');
             }
             for token in line.body_tokens.iter() {
-                result.push_str(&self.token_to_string(token));
+                result.push_str(&self.format_token_to_string(token));
                 result.push(' ');
             }
         }
@@ -1013,7 +1013,7 @@ impl Interpreter {
         self.dependents.clear();
         self.output_buffer.clear();
         self.definition_to_load = None;
-        self.reset_modes();
+        self.reset_execution_modes();
         self.force_flag = false;
         self.pending_tokens = None;
         self.pending_token_index = 0;
@@ -1029,15 +1029,15 @@ impl Interpreter {
         let tokens = crate::tokenizer::tokenize(code)?;
 
         // トークンを行に分割
-        let lines = self.tokens_to_lines(&tokens)?;
+        let lines = self.split_tokens_to_lines(&tokens)?;
 
         // 行の配列としてガード構造を処理
-        self.execute_guard_structure(&lines).await?;
+        self.execute_guard_structure_async(&lines).await?;
 
         Ok(())
     }
 
-    pub fn get_output(&mut self) -> String {
+    pub fn collect_output(&mut self) -> String {
         std::mem::take(&mut self.output_buffer)
     }
 
@@ -1045,7 +1045,7 @@ impl Interpreter {
         &self.stack
     }
 
-    pub fn set_stack(&mut self, stack: Stack) {
+    pub fn update_stack(&mut self, stack: Stack) {
         self.stack = stack;
     }
 
@@ -1098,7 +1098,7 @@ impl Interpreter {
     }
 
     /// 指定されたワードを参照している他のワードの集合を取得
-    pub fn get_dependents(&self, word_name: &str) -> HashSet<String> {
+    pub fn collect_dependents(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
         for (name, def) in &self.idiolect {
             if def.dependencies.contains(word_name) {
@@ -1335,7 +1335,7 @@ ADDTEST
             for (i, line) in def.lines.iter().enumerate() {
                 println!("Line {}: {} tokens", i, line.body_tokens.len());
                 for token in line.body_tokens.iter() {
-                    println!("  Token: {}", interp.token_to_string(token));
+                    println!("  Token: {}", interp.format_token_to_string(token));
                 }
             }
         }
@@ -2136,7 +2136,7 @@ ADDTEST
         interp
             .execute_guard_structure_sync(
                 &interp
-                    .tokens_to_lines(&crate::tokenizer::tokenize(": [9] ; 'NOP' DEF").unwrap())
+                    .split_tokens_to_lines(&crate::tokenizer::tokenize(": [9] ; 'NOP' DEF").unwrap())
                     .unwrap(),
             )
             .unwrap();

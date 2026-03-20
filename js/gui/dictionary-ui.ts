@@ -1,4 +1,4 @@
-export const sortWordName = (a: string, b: string): number => {
+export const compareWordName = (a: string, b: string): number => {
     const aIsAlpha = /^[A-Za-z]/.test(a);
     const bIsAlpha = /^[A-Za-z]/.test(b);
 
@@ -8,26 +8,26 @@ export const sortWordName = (a: string, b: string): number => {
     return a.localeCompare(b);
 };
 
-export const matchesFilter = (wordName: string, filter: string): boolean => {
+export const checkWordMatchesFilter = (wordName: string, filter: string): boolean => {
     if (!filter) return true;
     return wordName.toLowerCase().includes(filter.toLowerCase());
 };
 
-export const createNoResultsMessage = (): HTMLElement => {
+export const createNoResultsElement = (): HTMLElement => {
     const message = document.createElement('div');
     message.className = 'no-results-message';
     message.textContent = 'No matching words found';
     return message;
 };
 
-export const createEmptyWordsMessage = (text: string): HTMLElement => {
+export const createEmptyWordsElement = (text: string): HTMLElement => {
     const message = document.createElement('div');
     message.className = 'empty-words-message';
     message.textContent = text;
     return message;
 };
 
-export const setupBackgroundClickHandlers = (
+export const registerBackgroundClickListeners = (
     container: HTMLElement,
     onBackgroundClick?: () => void,
     onBackgroundDoubleClick?: () => void
@@ -62,7 +62,7 @@ export const setupBackgroundClickHandlers = (
     }
 };
 
-export const createWordButton = (
+export const createWordButtonElement = (
     text: string,
     title: string,
     className: string,

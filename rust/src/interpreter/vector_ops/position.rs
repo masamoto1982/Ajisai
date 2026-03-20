@@ -2,9 +2,9 @@
 //
 // 位置指定操作（0オリジン）: GET, INSERT, REPLACE, REMOVE
 
-use super::reconstruct_vector_elements;
+use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, normalize_index};
+use crate::interpreter::helpers::{extract_integer_from_value, normalize_index};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::Value;
 
@@ -16,7 +16,7 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
         )));
     }
 
-    let index = get_integer_from_value(args_val.get_child(0).unwrap())
+    let index = extract_integer_from_value(args_val.get_child(0).unwrap())
         .map_err(|_| AjisaiError::from(format!("{} index must be an integer", word)))?;
     let element = args_val.get_child(1).unwrap().clone();
     Ok((index, element))
@@ -30,7 +30,7 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index = match get_integer_from_value(&index_val) {
+    let index = match extract_integer_from_value(&index_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(index_val);
@@ -89,7 +89,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(target_val);
                 }
                 interp.stack.push(index_val);
-                Err(AjisaiError::structure_error("vector", "other format"))
+                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
         }
         OperationTargetMode::Stack => {
@@ -156,7 +156,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let mut v = reconstruct_vector_elements(&vector_val).to_vec();
+                let mut v = extract_vector_elements(&vector_val).to_vec();
                 let len = v.len() as i64;
                 let insert_index = if index < 0 {
                     (len + index).max(0) as usize
@@ -175,7 +175,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(vector_val);
                 }
                 interp.stack.push(args_val);
-                Err(AjisaiError::structure_error("vector", "other format"))
+                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
         }
         OperationTargetMode::Stack => {
@@ -225,7 +225,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let mut v = reconstruct_vector_elements(&vector_val).to_vec();
+                let mut v = extract_vector_elements(&vector_val).to_vec();
                 let len = v.len();
                 let actual_index = match normalize_index(index, len) {
                     Some(idx) => idx,
@@ -249,7 +249,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(vector_val);
                 }
                 interp.stack.push(args_val);
-                Err(AjisaiError::structure_error("vector", "other format"))
+                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
         }
         OperationTargetMode::Stack => {
@@ -287,7 +287,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index = match get_integer_from_value(&index_val) {
+    let index = match extract_integer_from_value(&index_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(index_val);
@@ -310,7 +310,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let mut v = reconstruct_vector_elements(&vector_val).to_vec();
+                let mut v = extract_vector_elements(&vector_val).to_vec();
                 let len = v.len();
                 let actual_index = match normalize_index(index, len) {
                     Some(idx) => idx,
@@ -338,7 +338,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(vector_val);
                 }
                 interp.stack.push(index_val);
-                Err(AjisaiError::structure_error("vector", "other format"))
+                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
         }
         OperationTargetMode::Stack => {

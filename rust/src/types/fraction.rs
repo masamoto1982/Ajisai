@@ -4,7 +4,7 @@ use num_integer::Integer;
 use std::str::FromStr;
 
 #[inline]
-fn gcd_i64(mut a: i64, mut b: i64) -> i64 {
+fn compute_gcd_i64(mut a: i64, mut b: i64) -> i64 {
     a = a.abs();
     b = b.abs();
     while b != 0 {
@@ -16,7 +16,7 @@ fn gcd_i64(mut a: i64, mut b: i64) -> i64 {
 }
 
 #[inline]
-fn bigint_from_i128(n: i128) -> BigInt {
+fn create_bigint_from_i128(n: i128) -> BigInt {
     if n >= i64::MIN as i128 && n <= i64::MAX as i128 {
         BigInt::from(n as i64)
     } else {
@@ -51,7 +51,7 @@ impl PartialEq for Fraction {
             return self.numerator == other.numerator;
         }
         if let (Some((a, b)), Some((c, d))) =
-            (self.try_as_i64_pair(), other.try_as_i64_pair())
+            (self.extract_i64_pair(), other.extract_i64_pair())
         {
             if b == d { return a == c; }
             return (a as i128) * (d as i128) == (c as i128) * (b as i128);
@@ -95,7 +95,7 @@ impl Fraction {
         }
 
         if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
-            let g = gcd_i64(n, d);
+            let g = compute_gcd_i64(n, d);
             let mut num = n / g;
             let mut den = d / g;
             if den < 0 {
@@ -121,7 +121,7 @@ impl Fraction {
     /// Constructs a fraction without GCD reduction. Only normalizes sign.
     /// Used for music DSL where n/d represents frequency/duration as independent parameters.
     #[inline]
-    pub fn new_unreduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
+    pub fn create_unreduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
         if denominator.is_zero() { panic!("Division by zero"); }
         if denominator < BigInt::zero() {
             numerator = -numerator;
@@ -132,7 +132,7 @@ impl Fraction {
 
     /// Constructs a fraction that is already in lowest terms. Only normalizes sign.
     #[inline]
-    fn new_already_reduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
+    fn create_already_reduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
         debug_assert!(!denominator.is_zero());
         if denominator < BigInt::zero() {
             numerator = -numerator;
@@ -151,20 +151,20 @@ impl Fraction {
     pub fn mul_by_integer(&self, n: &Fraction) -> Fraction {
         debug_assert!(n.denominator.is_one());
 
-        if let Some((a, b)) = self.try_as_i64_pair() {
+        if let Some((a, b)) = self.extract_i64_pair() {
             if let Some(n_val) = n.numerator.to_i64() {
-                let g = gcd_i64(n_val, b);
+                let g = compute_gcd_i64(n_val, b);
                 let n_r = (n_val / g) as i128;
                 let b_r = (b / g) as i128;
                 let num = (a as i128) * n_r;
-                return Self::new_from_i128(num, b_r);
+                return Self::create_from_i128(num, b_r);
             }
         }
 
         let g = n.numerator.gcd(&self.denominator);
         let n_reduced = &n.numerator / &g;
         let b_reduced = &self.denominator / &g;
-        Self::new_already_reduced(
+        Self::create_already_reduced(
             &self.numerator * n_reduced,
             b_reduced,
         )
@@ -176,29 +176,29 @@ impl Fraction {
         debug_assert!(n.denominator.is_one());
         debug_assert!(!n.numerator.is_zero());
 
-        if let Some((a, b)) = self.try_as_i64_pair() {
+        if let Some((a, b)) = self.extract_i64_pair() {
             if let Some(n_val) = n.numerator.to_i64() {
-                let g = gcd_i64(a, n_val);
+                let g = compute_gcd_i64(a, n_val);
                 let a_r = (a / g) as i128;
                 let n_r = (n_val / g) as i128;
                 let den = (b as i128) * n_r;
-                return Self::new_from_i128(a_r, den);
+                return Self::create_from_i128(a_r, den);
             }
         }
 
         let g = self.numerator.gcd(&n.numerator);
         let a_reduced = &self.numerator / &g;
         let n_reduced = &n.numerator / &g;
-        Self::new_already_reduced(
+        Self::create_already_reduced(
             a_reduced,
             &self.denominator * n_reduced,
         )
     }
 
     #[inline]
-    fn new_from_i128(num: i128, den: i128) -> Self {
+    fn create_from_i128(num: i128, den: i128) -> Self {
         debug_assert!(den != 0);
-        fn gcd_i128(mut a: i128, mut b: i128) -> i128 {
+        fn compute_gcd_i128(mut a: i128, mut b: i128) -> i128 {
             a = a.abs();
             b = b.abs();
             while b != 0 {
@@ -208,7 +208,7 @@ impl Fraction {
             }
             a
         }
-        let g = gcd_i128(num, den);
+        let g = compute_gcd_i128(num, den);
         let mut n = num / g;
         let mut d = den / g;
         if d < 0 {
@@ -225,13 +225,13 @@ impl Fraction {
             };
         }
         Fraction {
-            numerator: bigint_from_i128(n),
-            denominator: bigint_from_i128(d),
+            numerator: create_bigint_from_i128(n),
+            denominator: create_bigint_from_i128(d),
         }
     }
 
     #[inline]
-    fn try_as_i64_pair(&self) -> Option<(i64, i64)> {
+    fn extract_i64_pair(&self) -> Option<(i64, i64)> {
         let n = self.numerator.to_i64()?;
         let d = self.denominator.to_i64()?;
         Some((n, d))
@@ -278,7 +278,7 @@ impl Fraction {
     /// Parses a fraction string without GCD reduction for explicit a/b forms.
     /// Integers and decimals are still reduced (they represent single mathematical values).
     /// Used for vector construction where a/b may represent frequency/duration.
-    pub fn from_str_unreduced(s: &str) -> std::result::Result<Self, String> {
+    pub fn parse_unreduced_from_str(s: &str) -> std::result::Result<Self, String> {
         if s.is_empty() { return Err("Empty string".to_string()); }
 
         // Scientific notation: delegate to from_str (reduction is appropriate)
@@ -290,7 +290,7 @@ impl Fraction {
         if let Some(pos) = s.find('/') {
             let num = BigInt::from_str(&s[..pos]).map_err(|e| e.to_string())?;
             let den = BigInt::from_str(&s[pos+1..]).map_err(|e| e.to_string())?;
-            Ok(Self::new_unreduced(num, den))
+            Ok(Self::create_unreduced(num, den))
         } else {
             // Integer or decimal: regular parsing (reduction is fine for single values)
             Self::from_str(s)
@@ -303,18 +303,18 @@ impl Fraction {
             return Self::nil();
         }
 
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
             if b == 1 && d == 1 {
-                return Self::new_from_i128((a as i128) + (c as i128), 1);
+                return Self::create_from_i128((a as i128) + (c as i128), 1);
             }
             if b == d {
-                return Self::new_from_i128((a as i128) + (c as i128), b as i128);
+                return Self::create_from_i128((a as i128) + (c as i128), b as i128);
             }
             if let Some(num) = (a as i128).checked_mul(d as i128)
                 .and_then(|ad| (c as i128).checked_mul(b as i128)
                     .and_then(|cb| ad.checked_add(cb)))
             {
-                return Self::new_from_i128(num, (b as i128) * (d as i128));
+                return Self::create_from_i128(num, (b as i128) * (d as i128));
             }
         }
 
@@ -325,9 +325,9 @@ impl Fraction {
             }
             let g = sum.gcd(&self.denominator);
             if g.is_one() {
-                return Self::new_already_reduced(sum, self.denominator.clone());
+                return Self::create_already_reduced(sum, self.denominator.clone());
             }
-            return Self::new_already_reduced(&sum / &g, &self.denominator / &g);
+            return Self::create_already_reduced(&sum / &g, &self.denominator / &g);
         }
 
         Fraction::new(
@@ -342,18 +342,18 @@ impl Fraction {
             return Self::nil();
         }
 
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
             if b == 1 && d == 1 {
-                return Self::new_from_i128((a as i128) - (c as i128), 1);
+                return Self::create_from_i128((a as i128) - (c as i128), 1);
             }
             if b == d {
-                return Self::new_from_i128((a as i128) - (c as i128), b as i128);
+                return Self::create_from_i128((a as i128) - (c as i128), b as i128);
             }
             if let Some(num) = (a as i128).checked_mul(d as i128)
                 .and_then(|ad| (c as i128).checked_mul(b as i128)
                     .and_then(|cb| ad.checked_sub(cb)))
             {
-                return Self::new_from_i128(num, (b as i128) * (d as i128));
+                return Self::create_from_i128(num, (b as i128) * (d as i128));
             }
         }
 
@@ -364,9 +364,9 @@ impl Fraction {
             }
             let g = diff.gcd(&self.denominator);
             if g.is_one() {
-                return Self::new_already_reduced(diff, self.denominator.clone());
+                return Self::create_already_reduced(diff, self.denominator.clone());
             }
-            return Self::new_already_reduced(&diff / &g, &self.denominator / &g);
+            return Self::create_already_reduced(&diff / &g, &self.denominator / &g);
         }
 
         Fraction::new(
@@ -382,15 +382,15 @@ impl Fraction {
             return Self::nil();
         }
 
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
-            let g1 = gcd_i64(a, d);
-            let g2 = gcd_i64(c, b);
+        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
+            let g1 = compute_gcd_i64(a, d);
+            let g2 = compute_gcd_i64(c, b);
             let a_r = (a / g1) as i128;
             let b_r = (b / g2) as i128;
             let c_r = (c / g2) as i128;
             let d_r = (d / g1) as i128;
             if let (Some(num), Some(den)) = (a_r.checked_mul(c_r), b_r.checked_mul(d_r)) {
-                return Self::new_from_i128(num, den);
+                return Self::create_from_i128(num, den);
             }
         }
 
@@ -405,7 +405,7 @@ impl Fraction {
             let g = self.numerator.gcd(&other.denominator);
             let a_reduced = &self.numerator / &g;
             let d_reduced = &other.denominator / &g;
-            return Self::new_already_reduced(
+            return Self::create_already_reduced(
                 a_reduced * &other.numerator,
                 d_reduced,
             );
@@ -415,7 +415,7 @@ impl Fraction {
             let g = other.numerator.gcd(&self.denominator);
             let c_reduced = &other.numerator / &g;
             let b_reduced = &self.denominator / &g;
-            return Self::new_already_reduced(
+            return Self::create_already_reduced(
                 &self.numerator * c_reduced,
                 b_reduced,
             );
@@ -429,7 +429,7 @@ impl Fraction {
         let c_reduced = &other.numerator / &g2;
         let b_reduced = &self.denominator / &g2;
 
-        Self::new_already_reduced(
+        Self::create_already_reduced(
             a_reduced * c_reduced,
             b_reduced * d_reduced,
         )
@@ -444,15 +444,15 @@ impl Fraction {
             panic!("Division by zero");
         }
 
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
-            let g1 = gcd_i64(a, c);
-            let g2 = gcd_i64(d, b);
+        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
+            let g1 = compute_gcd_i64(a, c);
+            let g2 = compute_gcd_i64(d, b);
             let a_r = (a / g1) as i128;
             let b_r = (b / g2) as i128;
             let c_r = (c / g1) as i128;
             let d_r = (d / g2) as i128;
             if let (Some(num), Some(den)) = (a_r.checked_mul(d_r), b_r.checked_mul(c_r)) {
-                return Self::new_from_i128(num, den);
+                return Self::create_from_i128(num, den);
             }
         }
 
@@ -467,7 +467,7 @@ impl Fraction {
             let g = self.numerator.gcd(&other.numerator);
             let a_reduced = &self.numerator / &g;
             let c_reduced = &other.numerator / &g;
-            return Self::new_already_reduced(
+            return Self::create_already_reduced(
                 a_reduced * &other.denominator,
                 c_reduced,
             );
@@ -477,7 +477,7 @@ impl Fraction {
             let g = self.numerator.gcd(&other.numerator);
             let a_reduced = &self.numerator / &g;
             let c_reduced = &other.numerator / &g;
-            return Self::new_already_reduced(
+            return Self::create_already_reduced(
                 a_reduced,
                 &self.denominator * c_reduced,
             );
@@ -491,7 +491,7 @@ impl Fraction {
         let d_reduced = &other.denominator / &g2;
         let b_reduced = &self.denominator / &g2;
 
-        Self::new_already_reduced(
+        Self::create_already_reduced(
             a_reduced * d_reduced,
             b_reduced * c_reduced,
         )
@@ -662,7 +662,7 @@ impl Fraction {
         }
 
         // i64 fast path for fractional modulo: a/b mod c/d = (a*d mod c*b) / (b*d)
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
             let a = a as i128;
             let b = b as i128;
             let c = c as i128;
@@ -676,7 +676,7 @@ impl Fraction {
             } else {
                 rem
             };
-            return Self::new_from_i128(result_num, den);
+            return Self::create_from_i128(result_num, den);
         }
 
         let div_result = self.div(other);
@@ -695,7 +695,7 @@ impl PartialOrd for Fraction {
 impl Ord for Fraction {
     #[inline]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if let (Some((a, b)), Some((c, d))) = (self.try_as_i64_pair(), other.try_as_i64_pair()) {
+        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
             if b == d {
                 return a.cmp(&c);
             }
