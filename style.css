@@ -50,6 +50,12 @@
     min-width: 0;
 }
 
+.tab-group + .tab-group {
+    margin-left: -1px;
+    position: relative;
+    z-index: 1;
+}
+
 /* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
 .area-tabs::after {
     content: '';
@@ -65,7 +71,7 @@
 .area-tab {
     appearance: none;
     box-sizing: border-box;
-    width: 100%;
+    flex: 1 1 50%;
     margin: 0;
     padding: 0.5rem 0.9rem 0.45rem;
     font-family: var(--font-stack-mono);
@@ -105,10 +111,6 @@
     padding-bottom: calc(0.45rem + 1px);
 }
 
-.tab-group + .tab-group .area-tab:first-child.active {
-    margin-left: -1px;
-    z-index: 2;
-}
 
 .visually-hidden {
     position: absolute;
@@ -739,6 +741,10 @@ body[data-active-area] .main-layout section {
     .area-tabs {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tab-group {
+        flex: 1 1 0;
     }
 
     .area-tabs::-webkit-scrollbar {
