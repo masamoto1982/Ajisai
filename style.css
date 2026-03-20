@@ -31,9 +31,8 @@
  * -------------------------------------------------------------------------- */
 .area-tabs {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: stretch;
-    justify-content: space-between;
     gap: 0;
     padding: 0;
     border-top: 1px solid var(--color-border-strong, #999);
@@ -45,11 +44,7 @@
 }
 
 .tab-group {
-    display: flex;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 0;
-    min-width: 0;
+    display: contents;
 }
 
 /* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
@@ -66,6 +61,8 @@
 
 .area-tab {
     appearance: none;
+    box-sizing: border-box;
+    width: 100%;
     margin: 0;
     padding: 0.5rem 0.9rem 0.45rem;
     font-family: var(--font-stack-mono);
@@ -75,9 +72,10 @@
     background: transparent;
     border: 1px solid transparent;
     border-bottom: none;
-    border-radius: 4px 4px 0 0;
+    border-radius: 0;
     cursor: pointer;
     white-space: nowrap;
+    text-align: center;
     position: relative;
     z-index: 1;
     transition: color 0.15s ease, background 0.15s ease;
@@ -102,6 +100,11 @@
     /* アクティブタブの下端を消してコンテンツと繋げる */
     margin-bottom: -1px;
     padding-bottom: calc(0.45rem + 1px);
+}
+
+.tab-group + .tab-group .area-tab:first-child.active {
+    margin-left: -1px;
+    z-index: 2;
 }
 
 .visually-hidden {
@@ -731,24 +734,14 @@ body[data-active-area] .main-layout section {
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     .area-tabs {
-        display: flex;
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .area-tabs::-webkit-scrollbar {
         display: none;
         width: 0;
         height: 0;
-    }
-
-    .tab-group {
-        width: auto;
-        flex: 0 0 auto;
     }
 
     .main-layout {
