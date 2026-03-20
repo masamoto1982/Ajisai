@@ -44,10 +44,7 @@
 }
 
 .tab-group {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    min-width: 0;
+    display: contents;
 }
 
 .tab-group + .tab-group {
@@ -70,8 +67,7 @@
 
 .area-tab {
     appearance: none;
-    box-sizing: border-box;
-    flex: 1 1 50%;
+    width: 100%;
     margin: 0;
     padding: 0.5rem 0.9rem 0.45rem;
     font-family: var(--font-stack-mono);
@@ -109,6 +105,11 @@
     /* アクティブタブの下端を消してコンテンツと繋げる */
     margin-bottom: -1px;
     padding-bottom: calc(0.45rem + 1px);
+}
+
+.tab-group + .tab-group .area-tab:first-child.active {
+    margin-left: -1px;
+    z-index: 2;
 }
 
 
@@ -740,12 +741,9 @@ body[data-active-area] .main-layout section {
 @media (max-width: 768px) {
     .area-tabs {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    .tab-group {
-        flex: 1 1 0;
-    }
 
     .area-tabs::-webkit-scrollbar {
         display: none;
