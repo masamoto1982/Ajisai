@@ -16,8 +16,8 @@
     gap: 0;
     padding: 0;
     min-height: 0;
-    /* タブバーと左右ボーダーを共有し、上辺は ::after が担当 */
-    border-top: none;
+    /* シート枠の上辺を main-layout 側で一貫して描画する */
+    border-top: 1px solid var(--color-border-strong, #999);
     border-left: 1px solid var(--color-border-strong, #999);
     border-right: 1px solid var(--color-border-strong, #999);
     border-bottom: 1px solid var(--color-border-strong, #999);
@@ -44,27 +44,11 @@
 }
 
 .tab-group {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    min-width: 0;
-}
-
-/* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
-.area-tabs::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--color-border-strong, #999);
-    z-index: 0;
+    display: contents;
 }
 
 .area-tab {
     appearance: none;
-    box-sizing: border-box;
     width: 100%;
     margin: 0;
     padding: 0.5rem 0.9rem 0.45rem;
@@ -739,7 +723,7 @@ body[data-active-area] .main-layout section {
 @media (max-width: 768px) {
     .area-tabs {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
 
