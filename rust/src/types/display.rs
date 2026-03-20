@@ -4,7 +4,7 @@ use std::fmt;
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", auto_display(&self.data))
+        write!(f, "{}", format_value_auto(&self.data))
     }
 }
 
@@ -15,32 +15,32 @@ pub fn format_with_hint(value: &Value, hint: DisplayHint) -> String {
             if matches!(value.data, ValueData::Nil) {
                 "NIL".to_string()
             } else {
-                display_value(&value.data, 0)
+                format_value_recursive(&value.data, 0)
             }
         }
-        DisplayHint::Auto => auto_display(&value.data),
-        DisplayHint::Number => display_value(&value.data, 0),
-        DisplayHint::String => display_as_string(&value.data),
-        DisplayHint::Boolean => display_as_boolean(&value.data),
-        DisplayHint::DateTime => display_as_datetime(&value.data),
+        DisplayHint::Auto => format_value_auto(&value.data),
+        DisplayHint::Number => format_value_recursive(&value.data, 0),
+        DisplayHint::String => format_as_string(&value.data),
+        DisplayHint::Boolean => format_as_boolean(&value.data),
+        DisplayHint::DateTime => format_as_datetime(&value.data),
     }
 }
 
-fn auto_display(data: &ValueData) -> String {
+fn format_value_auto(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-            if !v.is_empty() && looks_like_string(v) {
-                return display_as_string(data);
+            if !v.is_empty() && is_string_like(v) {
+                return format_as_string(data);
             }
-            display_value(data, 0)
+            format_value_recursive(data, 0)
         }
-        ValueData::CodeBlock(tokens) => display_code_block(tokens),
+        ValueData::CodeBlock(tokens) => format_code_block(tokens),
     }
 }
 
-fn looks_like_string(values: &[Value]) -> bool {
+fn is_string_like(values: &[Value]) -> bool {
     values.iter().all(|v| {
         if let ValueData::Scalar(f) = &v.data {
             f.is_integer() && {
@@ -64,32 +64,32 @@ fn looks_like_string(values: &[Value]) -> bool {
     })
 }
 
-fn display_value(data: &ValueData, depth: usize) -> String {
+fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
             if v.is_empty() {
-                let bracket = BracketType::from_depth(depth);
+                let bracket = BracketType::resolve_from_depth(depth);
                 return format!("{} {}", bracket.opening_char(), bracket.closing_char());
             }
 
-            let bracket = BracketType::from_depth(depth);
+            let bracket = BracketType::resolve_from_depth(depth);
             let open = bracket.opening_char();
             let close = bracket.closing_char();
 
             let inner: Vec<String> = v
                 .iter()
-                .map(|child| display_value(&child.data, depth + 1))
+                .map(|child| format_value_recursive(&child.data, depth + 1))
                 .collect();
 
             format!("{} {} {}", open, inner.join(" "), close)
         }
-        ValueData::CodeBlock(tokens) => display_code_block(tokens),
+        ValueData::CodeBlock(tokens) => format_code_block(tokens),
     }
 }
 
-fn display_code_block(tokens: &[super::Token]) -> String {
+fn format_code_block(tokens: &[super::Token]) -> String {
     use super::Token;
     let token_strs: Vec<String> = tokens
         .iter()
@@ -123,7 +123,7 @@ fn format_fraction(f: &Fraction) -> String {
     }
 }
 
-fn display_as_string(data: &ValueData) -> String {
+fn format_as_string(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "''".to_string(),
         ValueData::Scalar(f) => {
@@ -160,11 +160,11 @@ fn display_as_string(data: &ValueData) -> String {
 
             format!("'{}'", chars)
         }
-        ValueData::CodeBlock(tokens) => display_code_block(tokens),
+        ValueData::CodeBlock(tokens) => format_code_block(tokens),
     }
 }
 
-fn display_as_boolean(data: &ValueData) -> String {
+fn format_as_boolean(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => {
@@ -211,13 +211,13 @@ fn display_as_boolean(data: &ValueData) -> String {
                 .collect();
             format!("{{ {} }}", inner.join(" "))
         }
-        ValueData::CodeBlock(tokens) => display_code_block(tokens),
+        ValueData::CodeBlock(tokens) => format_code_block(tokens),
     }
 }
 
-fn display_as_datetime(data: &ValueData) -> String {
+fn format_as_datetime(data: &ValueData) -> String {
     match data {
-        ValueData::Nil => display_value(data, 0),
+        ValueData::Nil => format_value_recursive(data, 0),
         ValueData::Scalar(f) => {
             // @プレフィックスでJS側に日時フォーマットを委譲
             if f.is_integer() {
@@ -226,7 +226,7 @@ fn display_as_datetime(data: &ValueData) -> String {
                 format!("@{}/{}", f.numerator, f.denominator)
             }
         }
-        ValueData::Vector(_) | ValueData::Record { .. } => display_value(data, 0),
-        ValueData::CodeBlock(tokens) => display_code_block(tokens),
+        ValueData::Vector(_) | ValueData::Record { .. } => format_value_recursive(data, 0),
+        ValueData::CodeBlock(tokens) => format_code_block(tokens),
     }
 }

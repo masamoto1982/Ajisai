@@ -202,7 +202,7 @@ const MODULE_SPECS: &[ModuleSpec] = &[
     },
 ];
 
-fn register_words(interp: &mut Interpreter, words: &[ModuleWord]) {
+fn register_module_words_in_dictionary(interp: &mut Interpreter, words: &[ModuleWord]) {
     for word in words {
         interp.core_vocabulary.insert(
             word.name.to_string(),
@@ -229,7 +229,7 @@ pub fn op_import(interp: &mut Interpreter) -> Result<()> {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
 
-    let module_name = parse_module_name(&value)
+    let module_name = extract_module_name_from_value(&value)
         .ok_or_else(|| AjisaiError::UnknownModule(value.to_string()))?
         .to_uppercase();
 
@@ -242,13 +242,13 @@ pub fn op_import(interp: &mut Interpreter) -> Result<()> {
         .find(|module| module.name == module_name)
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.clone()))?;
 
-    register_words(interp, module.words);
-    register_sample_words(interp, &module_name, module.sample_words)?;
+    register_module_words_in_dictionary(interp, module.words);
+    register_module_sample_words(interp, &module_name, module.sample_words)?;
     interp.imported_modules.insert(module_name);
     Ok(())
 }
 
-fn register_sample_words(
+fn register_module_sample_words(
     interp: &mut Interpreter,
     module_name: &str,
     sample_words: &[SampleWord],
@@ -405,8 +405,8 @@ pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
         return true;
     }
     if let Some(module) = MODULE_SPECS.iter().find(|m| m.name == upper) {
-        register_words(interp, module.words);
-        if register_sample_words(interp, &upper, module.sample_words).is_err() {
+        register_module_words_in_dictionary(interp, module.words);
+        if register_module_sample_words(interp, &upper, module.sample_words).is_err() {
             return false;
         }
         interp.imported_modules.insert(upper);
@@ -429,14 +429,14 @@ pub fn execute_module_word(interp: &mut Interpreter, name: &str) -> Option<Resul
 
 /// Check if a module word should preserve operation modes (target/consumption).
 /// Uses metadata from ModuleWord rather than hardcoding word names.
-pub fn preserves_modes(name: &str) -> bool {
+pub fn is_mode_preserving_word(name: &str) -> bool {
     MODULE_SPECS
         .iter()
         .flat_map(|m| m.words.iter())
         .any(|w| w.name == name && w.preserves_modes)
 }
 
-fn parse_module_name(value: &Value) -> Option<String> {
+fn extract_module_name_from_value(value: &Value) -> Option<String> {
     if is_string_value(value) {
         return value_as_string(value);
     }

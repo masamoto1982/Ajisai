@@ -8,7 +8,7 @@
 // 「型変換」は実質的に DisplayHint の変更と、表示形式の変換である。
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{value_as_string, wrap_number};
+use crate::interpreter::helpers::{value_as_string, create_number_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
@@ -84,7 +84,7 @@ fn is_datetime_value(_val: &Value) -> bool {
 /// - 入力が既にStringの場合（「変化なしはエラー」原則）
 /// STR の単一値変換（内部ヘルパー）
 /// 成功時は Ok(converted_value)、NoChange 時は Err を返す
-fn str_convert_single(val: &Value) -> Result<Value> {
+fn convert_value_to_string(val: &Value) -> Result<Value> {
     // NILの場合: 不明な値に変換を射しても不明である (仕様セクション7.2)
     if val.is_nil() {
         return Ok(Value::nil());
@@ -99,17 +99,17 @@ fn str_convert_single(val: &Value) -> Result<Value> {
     // TODO: SemanticRegistry で DisplayHint を参照して Boolean/DateTime 表示を分岐
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
-            let string_repr = fraction_to_string(f);
+            let string_repr = format_fraction_to_string(f);
             return Ok(Value::from_string(&string_repr));
         }
     }
 
     // ベクタの場合（複数要素）
-    let string_repr = value_to_string_repr(val);
+    let string_repr = format_value_to_string_repr(val);
     Ok(Value::from_string(&string_repr))
 }
 
-fn apply_cast_unary(interp: &mut Interpreter, convert: fn(&Value) -> Result<Value>) -> Result<()> {
+fn apply_unary_cast(interp: &mut Interpreter, convert: fn(&Value) -> Result<Value>) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
@@ -172,11 +172,11 @@ fn apply_cast_unary(interp: &mut Interpreter, convert: fn(&Value) -> Result<Valu
 }
 
 pub fn op_str(interp: &mut Interpreter) -> Result<()> {
-    apply_cast_unary(interp, str_convert_single)
+    apply_unary_cast(interp, convert_value_to_string)
 }
 
 /// 分数を文字列に変換するヘルパー
-fn fraction_to_string(f: &Fraction) -> String {
+fn format_fraction_to_string(f: &Fraction) -> String {
     use num_bigint::BigInt;
     use num_traits::One;
     if f.denominator == BigInt::one() {
@@ -203,12 +203,12 @@ fn fraction_to_string(f: &Fraction) -> String {
 /// 【エラー】
 /// - 入力がStringでない場合（「変化なしはエラー」原則）
 /// NUM の単一値変換（内部ヘルパー）
-fn num_convert_single(val: &Value) -> Result<Value> {
+fn convert_value_to_number(val: &Value) -> Result<Value> {
     // 文字列の場合のみ処理
     if is_string_value(val) {
         let s = value_as_string(val).unwrap_or_default();
         match Fraction::from_str(&s) {
-            Ok(fraction) => return Ok(wrap_number(fraction)),
+            Ok(fraction) => return Ok(create_number_value(fraction)),
             Err(_) => return Ok(Value::nil()),
         }
     }
@@ -228,7 +228,7 @@ fn num_convert_single(val: &Value) -> Result<Value> {
 }
 
 pub fn op_num(interp: &mut Interpreter) -> Result<()> {
-    apply_cast_unary(interp, num_convert_single)
+    apply_unary_cast(interp, convert_value_to_number)
 }
 
 /// BOOL - 文字列または数値を真偽値に正規化（Parse/Normalize Boolean）
@@ -254,7 +254,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 /// 【エラー】
 /// - 入力が既にBooleanの場合（「変化なしはエラー」原則）
 /// BOOL の単一値変換（内部ヘルパー）
-fn bool_convert_single(val: &Value) -> Result<Value> {
+fn convert_value_to_boolean(val: &Value) -> Result<Value> {
     if is_boolean_value(val) {
         return Err(AjisaiError::NoChange {
             word: "BOOL".into(),
@@ -285,7 +285,7 @@ fn bool_convert_single(val: &Value) -> Result<Value> {
 }
 
 pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
-    apply_cast_unary(interp, bool_convert_single)
+    apply_unary_cast(interp, convert_value_to_boolean)
 }
 
 /// NIL - 文字列をNilに変換
@@ -690,7 +690,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 /// - 入力が有効なUnicodeコードポイントでない場合
 /// - 入力が数値でない場合
 /// CHR の単一値変換（内部ヘルパー）
-fn chr_convert_single(val: &Value) -> Result<Value> {
+fn convert_codepoint_to_char(val: &Value) -> Result<Value> {
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
             if let Some(code) = f.to_i64() {
@@ -704,7 +704,7 @@ fn chr_convert_single(val: &Value) -> Result<Value> {
                     code
                 )));
             } else {
-                let frac_str = fraction_to_string(f);
+                let frac_str = format_fraction_to_string(f);
                 return Err(AjisaiError::from(format!(
                     "CHR: requires an integer, got {}",
                     frac_str
@@ -725,11 +725,11 @@ fn chr_convert_single(val: &Value) -> Result<Value> {
 }
 
 pub fn op_chr(interp: &mut Interpreter) -> Result<()> {
-    apply_cast_unary(interp, chr_convert_single)
+    apply_unary_cast(interp, convert_codepoint_to_char)
 }
 
 /// 値を文字列表現に変換する（内部ヘルパー）
-fn value_to_string_repr(value: &Value) -> String {
+fn format_value_to_string_repr(value: &Value) -> String {
     if value.is_nil() {
         return "NIL".to_string();
     }
@@ -750,13 +750,13 @@ fn value_to_string_repr(value: &Value) -> String {
 
     if is_datetime_value(value) {
         if let Some(f) = value.as_scalar() {
-            return format!("@{}", fraction_to_string(f));
+            return format!("@{}", format_fraction_to_string(f));
         }
     }
 
     if is_number_value(value) {
         if let Some(f) = value.as_scalar() {
-            return fraction_to_string(f);
+            return format_fraction_to_string(f);
         }
     }
 
@@ -764,7 +764,7 @@ fn value_to_string_repr(value: &Value) -> String {
     fn collect_fractions(val: &Value) -> Vec<String> {
         match &val.data {
             ValueData::Nil => vec!["NIL".to_string()],
-            ValueData::Scalar(f) => vec![fraction_to_string(f)],
+            ValueData::Scalar(f) => vec![format_fraction_to_string(f)],
             ValueData::Vector(children)
             | ValueData::Record {
                 pairs: children, ..
@@ -783,18 +783,18 @@ mod tests {
     use num_traits::One;
 
     #[test]
-    fn test_value_to_string_repr() {
+    fn test_format_value_to_string_repr() {
         // Number
         let num = Value::from_fraction(Fraction::new(BigInt::from(42), BigInt::one()));
-        assert_eq!(value_to_string_repr(&num), "42");
+        assert_eq!(format_value_to_string_repr(&num), "42");
 
         // Boolean (now just a scalar in the new architecture, so displays as "1")
         let bool_val = Value::from_bool(true);
-        assert_eq!(value_to_string_repr(&bool_val), "1");
+        assert_eq!(format_value_to_string_repr(&bool_val), "1");
 
         // Nil
         let nil = Value::nil();
-        assert_eq!(value_to_string_repr(&nil), "NIL");
+        assert_eq!(format_value_to_string_repr(&nil), "NIL");
     }
 
     #[test]
@@ -804,7 +804,7 @@ mod tests {
         // Number → String
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(42), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(42), BigInt::one())));
         op_str(&mut interp).unwrap();
 
         if let Some(val) = interp.stack.last() {
@@ -855,7 +855,7 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(123), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(123), BigInt::one())));
         let result = op_num(&mut interp);
         assert!(result.is_err());
 
@@ -922,7 +922,7 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(100), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(100), BigInt::one())));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(val.is_scalar());
@@ -935,7 +935,7 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(0), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(0), BigInt::one())));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(val.is_scalar());
@@ -948,7 +948,7 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(2))));
+            .push(create_number_value(Fraction::new(BigInt::from(1), BigInt::from(2))));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(val.is_scalar());
@@ -1075,7 +1075,7 @@ mod tests {
         // 65 → 'A'
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(65), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(65), BigInt::one())));
         op_chr(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -1087,7 +1087,7 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(97), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(97), BigInt::one())));
         op_chr(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -1099,7 +1099,7 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(10), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(10), BigInt::one())));
         op_chr(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -1111,7 +1111,7 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(48), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(48), BigInt::one())));
         op_chr(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
@@ -1137,7 +1137,7 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(1), BigInt::from(2))));
+            .push(create_number_value(Fraction::new(BigInt::from(1), BigInt::from(2))));
         let result = op_chr(&mut interp);
         assert!(result.is_err());
 
@@ -1145,13 +1145,13 @@ mod tests {
         interp.stack.clear();
         interp
             .stack
-            .push(wrap_number(Fraction::new(BigInt::from(-1), BigInt::one())));
+            .push(create_number_value(Fraction::new(BigInt::from(-1), BigInt::one())));
         let result = op_chr(&mut interp);
         assert!(result.is_err());
 
         // 範囲外 (0x110000) → エラー
         interp.stack.clear();
-        interp.stack.push(wrap_number(Fraction::new(
+        interp.stack.push(create_number_value(Fraction::new(
             BigInt::from(0x110000),
             BigInt::one(),
         )));

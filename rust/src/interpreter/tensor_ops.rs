@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::wrap_number;
+use crate::interpreter::helpers::create_number_value;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData, MAX_VISIBLE_DIMENSIONS};
@@ -27,7 +27,7 @@ impl FlatTensor {
             }),
             ValueData::Vector(_) | ValueData::Record { .. } => {
                 let shape = value.shape();
-                let data = value.flatten_fractions();
+                let data = value.collect_fractions_flat();
                 let strides = compute_strides(&shape);
                 Ok(Self {
                     data,
@@ -147,7 +147,7 @@ pub(crate) fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
     Ok(out)
 }
 
-fn apply_tensor_metadata_op(
+fn apply_tensor_metadata(
     interp: &mut Interpreter,
     word: &str,
     mapper: fn(&Value) -> Value,
@@ -175,7 +175,7 @@ fn apply_tensor_metadata_op(
     Ok(())
 }
 
-fn shape_value(value: &Value) -> Value {
+fn compute_shape_of_value(value: &Value) -> Value {
     if value.is_nil() {
         return Value::nil();
     }
@@ -192,7 +192,7 @@ fn shape_value(value: &Value) -> Value {
     Value::from_vector(shape_values)
 }
 
-fn rank_value(value: &Value) -> Value {
+fn compute_rank_of_value(value: &Value) -> Value {
     if value.is_nil() {
         return Value::nil();
     }
@@ -202,15 +202,15 @@ fn rank_value(value: &Value) -> Value {
     } else {
         0
     };
-    wrap_number(Fraction::from(rank))
+    create_number_value(Fraction::from(rank))
 }
 
 pub fn op_shape(interp: &mut Interpreter) -> Result<()> {
-    apply_tensor_metadata_op(interp, "SHAPE", shape_value)
+    apply_tensor_metadata(interp, "SHAPE", compute_shape_of_value)
 }
 
 pub fn op_rank(interp: &mut Interpreter) -> Result<()> {
-    apply_tensor_metadata_op(interp, "RANK", rank_value)
+    apply_tensor_metadata(interp, "RANK", compute_rank_of_value)
 }
 
 pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
@@ -395,7 +395,7 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn unary_math_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
+fn apply_unary_math<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction) -> Fraction,
 {
@@ -431,7 +431,7 @@ where
     if val.is_scalar() {
         if let Some(f) = val.as_scalar() {
             let result = op(f);
-            interp.stack.push(wrap_number(result));
+            interp.stack.push(create_number_value(result));
             return Ok(());
         }
     }
@@ -464,15 +464,15 @@ where
 }
 
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
-    unary_math_op(interp, |f| f.floor(), "FLOOR")
+    apply_unary_math(interp, |f| f.floor(), "FLOOR")
 }
 
 pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
-    unary_math_op(interp, |f| f.ceil(), "CEIL")
+    apply_unary_math(interp, |f| f.ceil(), "CEIL")
 }
 
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
-    unary_math_op(interp, |f| f.round(), "ROUND")
+    apply_unary_math(interp, |f| f.round(), "ROUND")
 }
 
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {

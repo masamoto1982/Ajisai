@@ -2,11 +2,11 @@
 //
 // Detailed documentation for built-in words (used by the ? word)
 
-use super::definitions::get_builtin_definitions;
+use super::definitions::collect_builtin_definitions;
 
 /// Returns detailed documentation for a built-in word.
 /// Used by the `?` word to display help information.
-pub fn get_builtin_detail(name: &str) -> String {
+pub fn lookup_builtin_detail(name: &str) -> String {
     match name {
         // ============================================================================
         // 操作対象指定
@@ -2473,7 +2473,7 @@ Form型（新しい構造を生成する）
 
         _ => {
             // 既存の定義情報にフォールバック
-            let definitions = get_builtin_definitions();
+            let definitions = collect_builtin_definitions();
             for (word_name, description, syntax_example, _) in definitions {
                 if word_name == name {
                     return format!("# {} - {}\n\n## 説明\n{}\n\n## 構文例\n{}\n\n詳細な説明は未実装です。",

@@ -31,7 +31,7 @@ fn is_vector_value(val: &Value) -> bool {
 }
 
 fn value_as_string(val: &Value) -> String {
-    let fractions = val.flatten_fractions();
+    let fractions = val.collect_fractions_flat();
     let bytes: Vec<u8> = fractions
         .iter()
         .filter_map(|f| {
@@ -206,7 +206,7 @@ impl AjisaiInterpreter {
         match self.interpreter.execute(code).await {
             Ok(()) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                let output = self.interpreter.get_output();
+                let output = self.interpreter.collect_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
                 js_sys::Reflect::set(
@@ -278,7 +278,7 @@ impl AjisaiInterpreter {
 
         match result {
             Ok(()) => {
-                let output = self.interpreter.get_output();
+                let output = self.interpreter.collect_output();
                 self.step_position += 1;
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
@@ -404,7 +404,7 @@ impl AjisaiInterpreter {
             .iter()
             .map(|(name, def)| CustomWordData {
                 name: name.clone(),
-                definition: self.interpreter.get_word_definition_tokens(name),
+                definition: self.interpreter.lookup_word_definition_tokens(name),
                 description: def.description.clone(),
             })
             .collect();
@@ -413,7 +413,7 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn get_core_words_info(&self) -> JsValue {
-        to_value(&builtins::get_builtin_definitions()).unwrap_or(JsValue::NULL)
+        to_value(&builtins::collect_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
 
     /// IMPORT済みモジュール名の一覧を返す。
@@ -488,7 +488,7 @@ impl AjisaiInterpreter {
     pub fn get_word_definition(&self, name: &str) -> JsValue {
         let upper_name = name.to_uppercase();
         self.interpreter
-            .get_word_definition_tokens(&upper_name)
+            .lookup_word_definition_tokens(&upper_name)
             .map(|def| JsValue::from_str(&def))
             .unwrap_or(JsValue::NULL)
     }
@@ -532,7 +532,7 @@ impl AjisaiInterpreter {
         for i in 0..js_array.length() {
             stack.push(js_value_to_value(js_array.get(i))?);
         }
-        self.interpreter.set_stack(stack);
+        self.interpreter.update_stack(stack);
         Ok(())
     }
 
@@ -553,12 +553,12 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn push_json_string(&mut self, json_string: &str) -> Result<JsValue, JsValue> {
-        use crate::types::json::from_json;
+        use crate::types::json::deserialize_json_to_value;
 
         let obj = js_sys::Object::new();
 
         match serde_json::from_str::<serde_json::Value>(json_string) {
-            Ok(json_val) => match from_json(json_val, 1) {
+            Ok(json_val) => match deserialize_json_to_value(json_val, 1) {
                 Ok(parsed) => {
                     self.interpreter.stack.push(parsed);
                     js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
@@ -610,7 +610,7 @@ impl AjisaiInterpreter {
             .map_err(|e| e.to_string())?;
 
         // 復元時の内部メッセージはユーザーに見せない
-        let _ = self.interpreter.get_output();
+        let _ = self.interpreter.collect_output();
 
         Ok(())
     }

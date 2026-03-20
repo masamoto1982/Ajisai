@@ -21,7 +21,7 @@ pub use structure::{op_concat, op_reverse, op_range, op_reorder, op_collect};
 
 use crate::types::{Value, ValueData};
 
-pub(crate) fn reconstruct_vector_elements(val: &Value) -> &[Value] {
+pub(crate) fn extract_vector_elements(val: &Value) -> &[Value] {
     match &val.data {
         ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => children,
         _ => &[],

@@ -45,7 +45,7 @@ const detectSwipeDirection = (
     return null;
 };
 
-const getNextMode = (currentMode: ViewMode, direction: 'left' | 'right'): ViewMode => {
+const resolveNextViewMode = (currentMode: ViewMode, direction: 'left' | 'right'): ViewMode => {
     const currentIndex = VIEW_ORDER.indexOf(currentMode);
     const nextIndex = direction === 'left'
         ? (currentIndex + 1) % VIEW_ORDER.length
@@ -90,7 +90,7 @@ export const createMobileHandler = (
         const direction = detectSwipeDirection(touchStartX, touchStartY, endX, endY);
 
         if (direction === 'left' || direction === 'right') {
-            const newMode = getNextMode(currentMode, direction);
+            const newMode = resolveNextViewMode(currentMode, direction);
             updateView(newMode);
             options.onModeChange?.(newMode);
         }
@@ -128,7 +128,7 @@ export const createMobileHandler = (
 export const mobileUtils = {
     checkIsMobile,
     detectSwipeDirection,
-    getNextMode,
+    resolveNextViewMode,
     getStylesForMode,
     VIEW_ORDER,
     MOBILE_BREAKPOINT,

@@ -101,7 +101,7 @@ impl SemanticRegistry {
     }
 
     #[inline]
-    pub fn hint_at(&self, index: usize) -> DisplayHint {
+    pub fn lookup_hint_at(&self, index: usize) -> DisplayHint {
         self.stack_hints
             .get(index)
             .copied()
@@ -109,14 +109,14 @@ impl SemanticRegistry {
     }
 
     #[inline]
-    pub fn set_hint_at(&mut self, index: usize, hint: DisplayHint) {
+    pub fn update_hint_at(&mut self, index: usize, hint: DisplayHint) {
         if index < self.stack_hints.len() {
             self.stack_hints[index] = hint;
         }
     }
 
     #[inline]
-    pub fn last_hint(&self) -> DisplayHint {
+    pub fn lookup_last_hint(&self) -> DisplayHint {
         self.stack_hints
             .last()
             .copied()
@@ -138,14 +138,14 @@ impl SemanticRegistry {
         self.stack_hints.len()
     }
 
-    pub fn sync_to_stack_len(&mut self, stack_len: usize) {
+    pub fn normalize_to_stack_len(&mut self, stack_len: usize) {
         while self.stack_hints.len() < stack_len {
             self.stack_hints.push(DisplayHint::Auto);
         }
         self.stack_hints.truncate(stack_len);
     }
 
-    pub fn drain_last(&mut self, count: usize) -> Vec<DisplayHint> {
+    pub fn collect_last_hints(&mut self, count: usize) -> Vec<DisplayHint> {
         let start = self.stack_hints.len().saturating_sub(count);
         self.stack_hints.drain(start..).collect()
     }
@@ -414,12 +414,12 @@ impl Value {
         }
     }
 
-    pub fn flatten_fractions(&self) -> Vec<Fraction> {
+    pub fn collect_fractions_flat(&self) -> Vec<Fraction> {
         match &self.data {
             ValueData::Nil => vec![Fraction::nil()],
             ValueData::Scalar(f) => vec![f.clone()],
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                v.iter().flat_map(|c| c.flatten_fractions()).collect()
+                v.iter().flat_map(|c| c.collect_fractions_flat()).collect()
             }
             ValueData::CodeBlock(_) => vec![],
         }
@@ -501,7 +501,7 @@ impl Value {
     /// Suggest a default DisplayHint based on the data structure.
     /// This is a pure function — it does NOT store anything on Value.
     /// Used by the interpreter when pushing values without explicit hints.
-    pub fn default_hint(&self) -> DisplayHint {
+    pub fn resolve_default_hint(&self) -> DisplayHint {
         match &self.data {
             ValueData::Nil => DisplayHint::Nil,
             ValueData::Scalar(_) => DisplayHint::Number,
@@ -551,7 +551,7 @@ impl BracketType {
         }
     }
 
-    pub fn from_depth(depth: usize) -> Self {
+    pub fn resolve_from_depth(depth: usize) -> Self {
         match depth % 3 {
             0 => BracketType::Curly,
             1 => BracketType::Round,
@@ -626,7 +626,7 @@ pub struct FlowToken {
 impl FlowToken {
     /// Create a new flow token from a `Value`, starting a fresh chain.
     pub fn from_value(value: &Value) -> Self {
-        let total = Self::value_total(value);
+        let total = Self::compute_value_total(value);
         let shape = value.shape();
         FlowToken {
             id: FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
@@ -640,7 +640,7 @@ impl FlowToken {
     }
 
     /// Compute the "total" fraction mass of a value (sum of all scalar leaves).
-    fn value_total(value: &Value) -> Fraction {
+    fn compute_value_total(value: &Value) -> Fraction {
         match &value.data {
             ValueData::Nil => Fraction::from(0),
             ValueData::Scalar(f) => {
@@ -653,7 +653,7 @@ impl FlowToken {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 let mut acc = Fraction::from(0);
                 for child in v.iter() {
-                    let child_total = Self::value_total(child);
+                    let child_total = Self::compute_value_total(child);
                     // Use absolute values so mixed-sign vectors don't cancel out
                     acc = acc.add(&child_total.abs());
                 }
@@ -734,7 +734,7 @@ impl FlowToken {
     ///
     /// Returns true when this flow appears uniquely owned and fully available,
     /// allowing execution paths to consider safe in-place updates.
-    pub fn can_reuse_allocation_hint(&self) -> bool {
+    pub fn is_reusable_allocation(&self) -> bool {
         self.remaining == self.total
             && self.parent_flow_id.is_none()
             && self.child_flow_ids.is_empty()

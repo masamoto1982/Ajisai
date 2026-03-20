@@ -1,12 +1,12 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::get_word_name_from_value;
-use crate::interpreter::vector_exec::vector_to_source;
+use crate::interpreter::helpers::extract_word_name_from_value;
+use crate::interpreter::vector_exec::format_vector_to_source;
 use crate::interpreter::{Interpreter, OperationTargetMode, WordDefinition};
 use crate::types::{ExecutionLine, Token, Value, ValueData};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-fn value_to_string(val: &Value) -> Result<String> {
+fn extract_string_from_value(val: &Value) -> Result<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
             ValueData::Nil => vec![],
@@ -62,7 +62,7 @@ fn is_custom_word_defined(interp: &Interpreter, symbol: &str) -> bool {
     interp.is_custom_word(&upper_symbol)
 }
 
-fn has_definition_description(stack: &[Value]) -> bool {
+fn check_definition_descriptor_on_stack(stack: &[Value]) -> bool {
     if stack.len() < 3 {
         return false;
     }
@@ -85,18 +85,18 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
 
     let mut description = None;
 
-    let has_description = has_definition_description(&interp.stack);
+    let has_description = check_definition_descriptor_on_stack(&interp.stack);
 
     if has_description {
         if let Some(desc_val) = interp.stack.pop() {
-            if let Ok(s) = value_to_string(&desc_val) {
+            if let Ok(s) = extract_string_from_value(&desc_val) {
                 description = Some(s);
             }
         }
     }
 
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let name_str = get_word_name_from_value(&name_val)?;
+    let name_str = extract_word_name_from_value(&name_val)?;
 
     let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
@@ -120,7 +120,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             })
             .collect::<Vec<_>>()
             .join(" "),
-        ValueData::Vector(_) | ValueData::Record { .. } => vector_to_source(&def_val)?,
+        ValueData::Vector(_) | ValueData::Record { .. } => format_vector_to_source(&def_val)?,
         _ => {
             return Err(AjisaiError::from(
                 "DEF requires a code block (: ... ;) or vector as definition body",
@@ -163,7 +163,7 @@ pub(crate) fn op_def_inner(
     }
 
     if let Some(existing) = interp.idiolect.get(&upper_name) {
-        let dependents = interp.get_dependents(&upper_name);
+        let dependents = interp.collect_dependents(&upper_name);
 
         if !dependents.is_empty() && !interp.force_flag {
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
@@ -285,7 +285,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let name = get_word_name_from_value(&val)?;
+    let name = extract_word_name_from_value(&val)?;
 
     let upper_name = name.to_uppercase();
 
@@ -323,7 +323,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    let dependents = interp.get_dependents(&upper_name);
+    let dependents = interp.collect_dependents(&upper_name);
 
     if !dependents.is_empty() && !interp.force_flag {
         let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
@@ -401,13 +401,13 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
 
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let name_str = get_word_name_from_value(&name_val)?;
+    let name_str = extract_word_name_from_value(&name_val)?;
 
     let upper_name = name_str.to_uppercase();
 
     if let Some(def) = interp.resolve_word(&upper_name) {
         if def.is_builtin {
-            let detailed_info = crate::builtins::get_builtin_detail(&upper_name);
+            let detailed_info = crate::builtins::lookup_builtin_detail(&upper_name);
             interp.definition_to_load = Some(detailed_info);
             return Ok(());
         }
@@ -416,7 +416,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
             interp.definition_to_load = Some(original_source.clone());
         } else {
             let definition = interp
-                .get_word_definition_tokens(&upper_name)
+                .lookup_word_definition_tokens(&upper_name)
                 .unwrap_or_default();
             let full_definition = if definition.is_empty() {
                 format!("[ NIL ] '{}' DEF", name_str)
@@ -637,7 +637,7 @@ mod tests {
         // The AUDIO command is still emitted but with an empty seq structure.
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.get_output();
+        let _ = interp.collect_output();
 
         // Custom word names inside a vector literal resolve to their scalar values
         let result = interp.execute("[ C4 D4 E4 ] MUSIC::SEQ MUSIC::PLAY").await;
@@ -647,7 +647,7 @@ mod tests {
             result.err()
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         // AUDIO command is still emitted (with empty seq since elements are treated as lyrics)
         assert!(
             output.contains("AUDIO:"),
@@ -666,7 +666,7 @@ mod tests {
             ("D4", "C4 9 * 8 /", "純正律 D4"),
         ];
         restore_sample_words(&mut interp, &sample_words);
-        let _ = interp.get_output();
+        let _ = interp.collect_output();
 
         let _ = interp.execute("C4").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
@@ -725,7 +725,7 @@ mod tests {
         // Module sample words should also resolve inside nested vectors
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.get_output();
+        let _ = interp.collect_output();
 
         // Nested vector: [ [ C4 E4 G4 ] ] should create a vector of a vector of scalars.
         // Without DisplayHint, is_string_value treats all vectors as strings,
@@ -739,7 +739,7 @@ mod tests {
             result.err()
         );
 
-        let output = interp.get_output();
+        let output = interp.collect_output();
         assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
     }
 
@@ -782,7 +782,7 @@ mod tests {
         // Module-first: DEF of a name reserved by a module sample is an error
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.get_output();
+        let _ = interp.collect_output();
 
         let result = interp.execute(": [ 999 ] ; 'C4' DEF").await;
         assert!(result.is_err(), "Should not be able to define C4 (module-first)");
@@ -802,7 +802,7 @@ mod tests {
 
         // Import music module — user word should be removed
         interp.execute("'music' IMPORT").await.unwrap();
-        let output = interp.get_output();
+        let output = interp.collect_output();
 
         assert!(!interp.idiolect.contains_key("C4"),
             "User word C4 should be removed after IMPORT");
@@ -823,7 +823,7 @@ mod tests {
         // Module-first: module sample shorthand takes highest priority
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.get_output();
+        let _ = interp.collect_output();
 
         let result = interp.execute("C4").await;
         assert!(result.is_ok(), "C4 should work: {:?}", result.err());

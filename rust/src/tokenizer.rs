@@ -33,7 +33,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         // 3. 単一文字トークン（括弧、:、;など）
-        if let Some((token, consumed)) = parse_single_char_tokens(chars[i]) {
+        if let Some((token, consumed)) = parse_token_from_single_char(chars[i]) {
             tokens.push(token);
             i += consumed;
             continue;
@@ -96,7 +96,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         // 7. 引用文字列
-        match parse_quote(&chars[i..]) {
+        match parse_string_from_quote(&chars[i..]) {
             QuoteParseResult::StringSuccess(token, consumed) => {
                 tokens.push(token);
                 i += consumed;
@@ -125,13 +125,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         let token_str: String = chars[start..i].iter().collect();
 
         // 9. キーワードチェック
-        if let Some(token) = try_parse_keyword_from_string(&token_str) {
+        if let Some(token) = parse_keyword_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
 
         // 10. 数値チェック
-        if let Some(token) = try_parse_number_from_string(&token_str) {
+        if let Some(token) = parse_number_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
@@ -157,7 +157,7 @@ fn is_special_char(c: char) -> bool {
     )
 }
 
-fn parse_single_char_tokens(c: char) -> Option<(Token, usize)> {
+fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
     match c {
         // [], {}, () は全て同等にVectorとして扱う
         // 表示時に深さに応じて適切な括弧に変換される
@@ -180,7 +180,7 @@ enum QuoteParseResult {
     NotQuote,
 }
 
-fn parse_quote(chars: &[char]) -> QuoteParseResult {
+fn parse_string_from_quote(chars: &[char]) -> QuoteParseResult {
     if chars.is_empty() {
         return QuoteParseResult::NotQuote;
     }
@@ -188,13 +188,13 @@ fn parse_quote(chars: &[char]) -> QuoteParseResult {
     let quote_char = chars[0];
 
     match quote_char {
-        '\'' => parse_string_literal(chars),
+        '\'' => parse_token_from_string_literal(chars),
         _ => QuoteParseResult::NotQuote,
     }
 }
 
 /// シングルクォート文字列のパース（既存ロジック）
-fn parse_string_literal(chars: &[char]) -> QuoteParseResult {
+fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
     if chars.is_empty() || chars[0] != '\'' {
         return QuoteParseResult::NotQuote;
     }
@@ -231,7 +231,7 @@ fn is_delimiter(c: char) -> bool {
 /// キーワード解析（ドット演算子のみ）
 /// TRUE/FALSE/NILは組み込みワードとして実装するため、ここでは解析しない
 /// すべてのシンボルは統一的に Symbol として扱われる
-fn try_parse_keyword_from_string(s: &str) -> Option<Token> {
+fn parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
         "." => Some(Token::Symbol(".".into())),
         ".." => Some(Token::Symbol("..".into())),
@@ -242,7 +242,7 @@ fn try_parse_keyword_from_string(s: &str) -> Option<Token> {
 }
 
 /// 文字列から数値を解析
-fn try_parse_number_from_string(s: &str) -> Option<Token> {
+fn parse_number_from_string(s: &str) -> Option<Token> {
     // 空文字列チェック
     if s.is_empty() {
         return None;

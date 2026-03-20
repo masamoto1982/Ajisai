@@ -1,26 +1,26 @@
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_integer_from_value, get_operands_with_flow, push_result, push_flow_result};
+use crate::interpreter::helpers::{extract_integer_from_value, extract_operands_with_flow, push_result, push_flow_result};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast;
 use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
 
-fn extract_single_scalar(val: &Value) -> Option<&Fraction> {
+fn extract_scalar_from_value(val: &Value) -> Option<&Fraction> {
     match &val.data {
         ValueData::Scalar(f) => Some(f),
         ValueData::Vector(children) if children.len() == 1 => {
-            extract_single_scalar(&children[0])
+            extract_scalar_from_value(&children[0])
         }
         _ => None
     }
 }
 
-fn is_single_scalar(val: &Value) -> bool {
-    extract_single_scalar(val).is_some()
+fn is_scalar_value(val: &Value) -> bool {
+    extract_scalar_from_value(val).is_some()
 }
 
-fn binary_arithmetic_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
+fn apply_binary_arithmetic<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
@@ -28,7 +28,7 @@ where
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let (operands, flow_tokens) = get_operands_with_flow(interp, 2)?;
+            let (operands, flow_tokens) = extract_operands_with_flow(interp, 2)?;
             let a_val = &operands[0];
             let b_val = &operands[1];
 
@@ -63,7 +63,7 @@ where
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count = extract_integer_from_value(&count_val)? as usize;
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
@@ -82,7 +82,7 @@ where
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            if items.iter().any(|v| !is_single_scalar(v)) {
+            if items.iter().any(|v| !is_scalar_value(v)) {
                 if !is_keep_mode {
                     interp.stack.extend(items);
                 }
@@ -90,12 +90,12 @@ where
                 return Err(AjisaiError::from("STACK mode requires single-element values"));
             }
 
-            let first_scalar = extract_single_scalar(&items[0]).unwrap().clone();
+            let first_scalar = extract_scalar_from_value(&items[0]).unwrap().clone();
             let mut acc = first_scalar.clone();
             let original_first = acc.clone();
 
             for item in items.iter().skip(1) {
-                if let Some(f) = extract_single_scalar(item) {
+                if let Some(f) = extract_scalar_from_value(item) {
                     acc = op(&acc, f)?;
                 }
             }
@@ -120,7 +120,7 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
         let a = &interp.stack[stack_len - 2];
         let b = &interp.stack[stack_len - 1];
 
-        if let Some(result) = simd_ops::try_simd_add(a, b) {
+        if let Some(result) = simd_ops::apply_simd_add(a, b) {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -129,8 +129,8 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        if let Some(result) = simd_ops::try_simd_scalar_add(a, b)
-            .or_else(|| simd_ops::try_simd_scalar_add(b, a))
+        if let Some(result) = simd_ops::apply_simd_scalar_add(a, b)
+            .or_else(|| simd_ops::apply_simd_scalar_add(b, a))
         {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
@@ -140,7 +140,7 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
-    binary_arithmetic_op(interp, |a, b| Ok(a.add(b)), "+")
+    apply_binary_arithmetic(interp, |a, b| Ok(a.add(b)), "+")
 }
 
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
@@ -149,7 +149,7 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
         let a = &interp.stack[stack_len - 2];
         let b = &interp.stack[stack_len - 1];
 
-        if let Some(result) = simd_ops::try_simd_sub(a, b) {
+        if let Some(result) = simd_ops::apply_simd_sub(a, b) {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -158,7 +158,7 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
-    binary_arithmetic_op(interp, |a, b| Ok(a.sub(b)), "-")
+    apply_binary_arithmetic(interp, |a, b| Ok(a.sub(b)), "-")
 }
 
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
@@ -167,7 +167,7 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         let a = &interp.stack[stack_len - 2];
         let b = &interp.stack[stack_len - 1];
 
-        if let Some(result) = simd_ops::try_simd_mul(a, b) {
+        if let Some(result) = simd_ops::apply_simd_mul(a, b) {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -176,8 +176,8 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        if let Some(result) = simd_ops::try_simd_scalar_mul(a, b)
-            .or_else(|| simd_ops::try_simd_scalar_mul(b, a))
+        if let Some(result) = simd_ops::apply_simd_scalar_mul(a, b)
+            .or_else(|| simd_ops::apply_simd_scalar_mul(b, a))
         {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
@@ -187,11 +187,11 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
-    binary_arithmetic_op(interp, |a, b| Ok(a.mul(b)), "*")
+    apply_binary_arithmetic(interp, |a, b| Ok(a.mul(b)), "*")
 }
 
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    binary_arithmetic_op(interp, |a, b| {
+    apply_binary_arithmetic(interp, |a, b| {
         if b.is_zero() {
             Err(AjisaiError::DivisionByZero)
         } else {

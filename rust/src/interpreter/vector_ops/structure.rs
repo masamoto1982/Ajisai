@@ -2,9 +2,9 @@
 //
 // ベクタ構造操作: CONCAT, REVERSE, RANGE, REORDER, COLLECT
 
-use super::reconstruct_vector_elements;
+use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, normalize_index};
+use crate::interpreter::helpers::{extract_bigint_from_value, extract_integer_from_value, normalize_index};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
@@ -18,7 +18,7 @@ fn parse_concat_count(
         return Err(AjisaiError::StackUnderflow);
     };
 
-    let Ok(count_bigint) = get_bigint_from_value(top) else {
+    let Ok(count_bigint) = extract_bigint_from_value(top) else {
         return Ok((default_count, None));
     };
 
@@ -43,7 +43,7 @@ fn concat_values(values: Vec<Value>, is_reversed: bool) -> Value {
     let mut result_vec = Vec::new();
     for value in ordered {
         if value.is_vector() {
-            result_vec.extend_from_slice(reconstruct_vector_elements(&value));
+            result_vec.extend_from_slice(extract_vector_elements(&value));
         } else {
             result_vec.push(value);
         }
@@ -53,7 +53,7 @@ fn concat_values(values: Vec<Value>, is_reversed: bool) -> Value {
 }
 
 fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
-    let bigint = get_bigint_from_value(args_val.get_child(index).unwrap())
+    let bigint = extract_bigint_from_value(args_val.get_child(index).unwrap())
         .map_err(|_| AjisaiError::from(format!("RANGE {} must be an integer", label)))?;
     bigint
         .to_i64()
@@ -96,14 +96,14 @@ fn parse_reorder_indices(indices_val: &Value) -> Result<Vec<i64>> {
 
         let mut indices = Vec::with_capacity(n);
         for i in 0..n {
-            let idx = get_integer_from_value(indices_val.get_child(i).unwrap())
+            let idx = extract_integer_from_value(indices_val.get_child(i).unwrap())
                 .map_err(|_| AjisaiError::from("REORDER indices must be integers"))?;
             indices.push(idx);
         }
         return Ok(indices);
     }
 
-    let single = get_integer_from_value(indices_val)
+    let single = extract_integer_from_value(indices_val)
         .map_err(|_| AjisaiError::from("REORDER requires index list"))?;
     Ok(vec![single])
 }
@@ -167,7 +167,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
             };
 
             if val.is_vector() {
-                let mut v = reconstruct_vector_elements(&val).to_vec();
+                let mut v = extract_vector_elements(&val).to_vec();
                 if !interp.disable_no_change_check {
                     if v.len() < 2 {
                         if !is_keep_mode {
@@ -197,7 +197,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
                 if !is_keep_mode {
                     interp.stack.push(val);
                 }
-                Err(AjisaiError::structure_error("vector", "other format"))
+                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
         }
         OperationTargetMode::Stack => {
@@ -370,7 +370,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(target_val);
                 }
                 interp.stack.push(indices_val);
-                Err(AjisaiError::structure_error("vector", "other format"))
+                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
         }
         OperationTargetMode::Stack => {
@@ -409,11 +409,11 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
 pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let count_bigint = match get_bigint_from_value(&count_val) {
+    let count_bigint = match extract_bigint_from_value(&count_val) {
         Ok(bi) => bi,
         Err(_) => {
             interp.stack.push(count_val);
-            return Err(AjisaiError::structure_error("integer", "other format"));
+            return Err(AjisaiError::create_structure_error("integer", "other format"));
         }
     };
 

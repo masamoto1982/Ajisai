@@ -11,7 +11,7 @@ const SIMD_THRESHOLD: usize = 8;
 
 /// Check if a Value is a flat vector of integer fractions (denominator=1, fits in i64).
 /// Returns the extracted i64 values if so.
-pub fn try_extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
+pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
     let children = match &val.data {
         ValueData::Vector(v) => v,
         _ => return None,
@@ -35,7 +35,7 @@ pub fn try_extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
 }
 
 /// Build a Value vector from i64 values (all as integer fractions).
-pub fn integer_vector_to_value(values: Vec<i64>) -> Value {
+pub fn create_value_from_integer_vector(values: Vec<i64>) -> Value {
     let children: Vec<Value> = values.into_iter().map(Value::from_int).collect();
     Value::from_children(children)
 }
@@ -47,13 +47,13 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
     }
 }
 
-fn try_simd_binary_op(a: &Value, b: &Value, op: fn(&[i64], &[i64]) -> Vec<i64>) -> Option<Value> {
-    let va = try_extract_integer_vector(a)?;
-    let vb = try_extract_integer_vector(b)?;
+fn apply_simd_binary(a: &Value, b: &Value, op: fn(&[i64], &[i64]) -> Vec<i64>) -> Option<Value> {
+    let va = extract_integer_vector(a)?;
+    let vb = extract_integer_vector(b)?;
     if va.len() != vb.len() {
         return None;
     }
-    Some(integer_vector_to_value(op(&va, &vb)))
+    Some(create_value_from_integer_vector(op(&va, &vb)))
 }
 
 // --- WASM SIMD implementations ---
@@ -223,34 +223,34 @@ mod wasm_impl {
 
 /// Try to perform SIMD-accelerated addition on two values.
 /// Returns Some(result) if both are integer vectors of sufficient length, None otherwise.
-pub fn try_simd_add(a: &Value, b: &Value) -> Option<Value> {
-    try_simd_binary_op(a, b, wasm_impl::simd_add)
+pub fn apply_simd_add(a: &Value, b: &Value) -> Option<Value> {
+    apply_simd_binary(a, b, wasm_impl::simd_add)
 }
 
 /// Try to perform SIMD-accelerated subtraction on two values.
-pub fn try_simd_sub(a: &Value, b: &Value) -> Option<Value> {
-    try_simd_binary_op(a, b, wasm_impl::simd_sub)
+pub fn apply_simd_sub(a: &Value, b: &Value) -> Option<Value> {
+    apply_simd_binary(a, b, wasm_impl::simd_sub)
 }
 
 /// Try to perform SIMD-accelerated multiplication on two values.
-pub fn try_simd_mul(a: &Value, b: &Value) -> Option<Value> {
-    try_simd_binary_op(a, b, wasm_impl::simd_mul)
+pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<Value> {
+    apply_simd_binary(a, b, wasm_impl::simd_mul)
 }
 
 /// Try to perform SIMD-accelerated scalar addition (vector + scalar or scalar + vector).
-pub fn try_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
-    let va = try_extract_integer_vector(vec_val)?;
+pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
+    let va = extract_integer_vector(vec_val)?;
     let scalar = extract_integer_scalar(scalar_val)?;
-    Some(integer_vector_to_value(wasm_impl::simd_scalar_add(
+    Some(create_value_from_integer_vector(wasm_impl::simd_scalar_add(
         &va, scalar,
     )))
 }
 
 /// Try to perform SIMD-accelerated scalar multiplication (vector * scalar or scalar * vector).
-pub fn try_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
-    let va = try_extract_integer_vector(vec_val)?;
+pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
+    let va = extract_integer_vector(vec_val)?;
     let scalar = extract_integer_scalar(scalar_val)?;
-    Some(integer_vector_to_value(wasm_impl::simd_scalar_mul(
+    Some(create_value_from_integer_vector(wasm_impl::simd_scalar_mul(
         &va, scalar,
     )))
 }
@@ -265,17 +265,17 @@ mod tests {
     }
 
     #[test]
-    fn test_try_extract_integer_vector() {
+    fn test_extract_integer_vector() {
         let v = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let result = try_extract_integer_vector(&v);
+        let result = extract_integer_vector(&v);
         assert!(result.is_some());
         assert_eq!(result.unwrap(), vec![1, 2, 3, 4, 5, 6, 7, 8]);
     }
 
     #[test]
-    fn test_try_extract_integer_vector_too_small() {
+    fn test_extract_integer_vector_too_small() {
         let v = make_int_vector(&[1, 2, 3]);
-        let result = try_extract_integer_vector(&v);
+        let result = extract_integer_vector(&v);
         assert!(result.is_none());
     }
 
@@ -283,8 +283,8 @@ mod tests {
     fn test_simd_add_vectors() {
         let a = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let b = make_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
-        let result = try_simd_add(&a, &b).unwrap();
-        let expected = try_extract_integer_vector(&result).unwrap();
+        let result = apply_simd_add(&a, &b).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88]);
     }
 
@@ -292,8 +292,8 @@ mod tests {
     fn test_simd_sub_vectors() {
         let a = make_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
         let b = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let result = try_simd_sub(&a, &b).unwrap();
-        let expected = try_extract_integer_vector(&result).unwrap();
+        let result = apply_simd_sub(&a, &b).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![9, 18, 27, 36, 45, 54, 63, 72]);
     }
 
@@ -301,8 +301,8 @@ mod tests {
     fn test_simd_mul_vectors() {
         let a = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let b = make_int_vector(&[2, 3, 4, 5, 6, 7, 8, 9]);
-        let result = try_simd_mul(&a, &b).unwrap();
-        let expected = try_extract_integer_vector(&result).unwrap();
+        let result = apply_simd_mul(&a, &b).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![2, 6, 12, 20, 30, 42, 56, 72]);
     }
 
@@ -310,8 +310,8 @@ mod tests {
     fn test_simd_scalar_add() {
         let v = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let s = Value::from_int(100);
-        let result = try_simd_scalar_add(&v, &s).unwrap();
-        let expected = try_extract_integer_vector(&result).unwrap();
+        let result = apply_simd_scalar_add(&v, &s).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![101, 102, 103, 104, 105, 106, 107, 108]);
     }
 
@@ -319,8 +319,8 @@ mod tests {
     fn test_simd_scalar_mul() {
         let v = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let s = Value::from_int(3);
-        let result = try_simd_scalar_mul(&v, &s).unwrap();
-        let expected = try_extract_integer_vector(&result).unwrap();
+        let result = apply_simd_scalar_mul(&v, &s).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![3, 6, 9, 12, 15, 18, 21, 24]);
     }
 
@@ -328,8 +328,8 @@ mod tests {
     fn test_simd_add_odd_length() {
         let a = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
         let b = make_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80, 90]);
-        let result = try_simd_add(&a, &b).unwrap();
-        let expected = try_extract_integer_vector(&result).unwrap();
+        let result = apply_simd_add(&a, &b).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88, 99]);
     }
 }

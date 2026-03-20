@@ -2,15 +2,15 @@
 //
 // 量指定操作（1オリジン）: LENGTH, TAKE, SPLIT
 
-use super::reconstruct_vector_elements;
+use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{get_bigint_from_value, get_integer_from_value, wrap_number};
+use crate::interpreter::helpers::{extract_bigint_from_value, extract_integer_from_value, create_number_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
-fn take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, usize)> {
+fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, usize)> {
     if count < 0 {
         let take = (-count) as usize;
         if take > len {
@@ -50,9 +50,9 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
                 if target_val.is_nil() {
                     0
                 } else if target_val.is_vector() {
-                    reconstruct_vector_elements(target_val).len()
+                    extract_vector_elements(target_val).len()
                 } else {
-                    return Err(AjisaiError::structure_error("vector", "other format"));
+                    return Err(AjisaiError::create_structure_error("vector", "other format"));
                 }
             } else {
                 let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -60,10 +60,10 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
                 if target_val.is_nil() {
                     0
                 } else if target_val.is_vector() {
-                    reconstruct_vector_elements(&target_val).len()
+                    extract_vector_elements(&target_val).len()
                 } else {
                     interp.stack.push(target_val);
-                    return Err(AjisaiError::structure_error("vector", "other format"));
+                    return Err(AjisaiError::create_structure_error("vector", "other format"));
                 }
             }
         }
@@ -78,7 +78,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
         }
     };
     let len_frac = Fraction::from(len as i64);
-    interp.stack.push(wrap_number(len_frac));
+    interp.stack.push(create_number_value(len_frac));
     Ok(())
 }
 
@@ -90,7 +90,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let count = match get_integer_from_value(&count_val) {
+    let count = match extract_integer_from_value(&count_val) {
         Ok(v) => v,
         Err(e) => {
             interp.stack.push(count_val);
@@ -117,11 +117,11 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(vector_val);
                 }
                 interp.stack.push(count_val);
-                return Err(AjisaiError::structure_error("vector", "other format"));
+                return Err(AjisaiError::create_structure_error("vector", "other format"));
             }
 
-            let elements = reconstruct_vector_elements(&vector_val);
-            let (start, end) = match take_bounds(elements.len(), count, "vector") {
+            let elements = extract_vector_elements(&vector_val);
+            let (start, end) = match compute_take_bounds(elements.len(), count, "vector") {
                 Ok(bounds) => bounds,
                 Err(error) => {
                     if !is_keep_mode {
@@ -145,7 +145,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTargetMode::Stack => {
             let len = interp.stack.len();
-            let (start, end) = match take_bounds(len, count, "stack") {
+            let (start, end) = match compute_take_bounds(len, count, "stack") {
                 Ok(bounds) => bounds,
                 Err(error) => {
                     interp.stack.push(count_val);
@@ -187,7 +187,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 
         let mut sizes = Vec::with_capacity(n);
         for i in 0..n {
-            match get_bigint_from_value(args_val.get_child(i).unwrap()) {
+            match extract_bigint_from_value(args_val.get_child(i).unwrap()) {
                 Ok(bi) => match bi.to_usize() {
                     Some(s) => sizes.push(s),
                     None => {
@@ -222,7 +222,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
             };
 
             if vector_val.is_vector() {
-                let elements = reconstruct_vector_elements(&vector_val);
+                let elements = extract_vector_elements(&vector_val);
                 let total_size: usize = sizes.iter().sum();
                 if total_size > elements.len() {
                     if !is_keep_mode {
@@ -254,7 +254,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                     interp.stack.push(vector_val);
                 }
                 interp.stack.push(args_val);
-                Err(AjisaiError::structure_error("vector", "other format"))
+                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
         }
         OperationTargetMode::Stack => {

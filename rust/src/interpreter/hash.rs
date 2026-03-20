@@ -79,13 +79,13 @@ lazy_static::lazy_static! {
 /// 値を正規バイト列にシリアライズ
 ///
 /// 分数の正規形を使用するため、1/2と2/4は同じバイト列を生成
-fn serialize_value(value: &Value) -> Vec<u8> {
+fn serialize_value_for_hash(value: &Value) -> Vec<u8> {
     let mut bytes = Vec::new();
-    serialize_value_inner(value, &mut bytes);
+    serialize_value_inner_for_hash(value, &mut bytes);
     bytes
 }
 
-fn serialize_value_inner(val: &Value, bytes: &mut Vec<u8>) {
+fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
     // NIL判定
     if val.is_nil() {
         bytes.push(0x06);
@@ -122,7 +122,7 @@ fn serialize_value_inner(val: &Value, bytes: &mut Vec<u8>) {
         bytes.push(0x04);
         bytes.extend_from_slice(&(children.len() as u32).to_le_bytes());
         for elem in children.iter() {
-            serialize_value_inner(elem, bytes);
+            serialize_value_inner_for_hash(elem, bytes);
         }
     }
 }
@@ -131,7 +131,7 @@ fn serialize_value_inner(val: &Value, bytes: &mut Vec<u8>) {
 ///
 /// bytes を多項式の係数として解釈し、HASH_BASE を変数として
 /// 指定された素数でモジュロ評価する
-fn polynomial_hash(bytes: &[u8], prime: &BigInt) -> BigInt {
+fn compute_polynomial_hash(bytes: &[u8], prime: &BigInt) -> BigInt {
     let mut hash = BigInt::zero();
     let mut power = BigInt::one();
 
@@ -149,10 +149,10 @@ fn polynomial_hash(bytes: &[u8], prime: &BigInt) -> BigInt {
 ///
 /// 中国剰余定理風の混合により、各素数のハッシュを結合して
 /// より大きなハッシュ空間を生成
-fn multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
-    let h1 = polynomial_hash(bytes, &PRIME1);
-    let h2 = polynomial_hash(bytes, &PRIME2);
-    let h3 = polynomial_hash(bytes, &PRIME3);
+fn compute_multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
+    let h1 = compute_polynomial_hash(bytes, &PRIME1);
+    let h2 = compute_polynomial_hash(bytes, &PRIME2);
+    let h3 = compute_polynomial_hash(bytes, &PRIME3);
 
     // 各ハッシュを結合（ビットシフトと加算）
     let combined = &h1 + (&h2 << PRIME_BITS as usize) + (&h3 << (2 * PRIME_BITS) as usize);
@@ -175,7 +175,7 @@ fn multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
 }
 
 /// スタックから整数を抽出（単一要素Vectorの数値）
-fn extract_positive_integer(val: &Value) -> Option<u32> {
+fn extract_positive_integer_from_value(val: &Value) -> Option<u32> {
     let tensor = FlatTensor::from_value(val).ok()?;
     if tensor.data.len() != 1 {
         return None;
@@ -187,7 +187,7 @@ fn extract_positive_integer(val: &Value) -> Option<u32> {
     scalar.numerator.to_u32()
 }
 
-fn parse_hash_args_keep(interp: &Interpreter) -> Result<(u32, Value)> {
+fn parse_hash_args_in_keep_mode(interp: &Interpreter) -> Result<(u32, Value)> {
     let target = interp
         .stack
         .last()
@@ -195,7 +195,7 @@ fn parse_hash_args_keep(interp: &Interpreter) -> Result<(u32, Value)> {
         .ok_or_else(|| AjisaiError::from("HASH requires a value to hash"))?;
 
     if interp.stack.len() >= 2 {
-        if let Some(bits) = extract_positive_integer(&interp.stack[interp.stack.len() - 2]) {
+        if let Some(bits) = extract_positive_integer_from_value(&interp.stack[interp.stack.len() - 2]) {
             return Ok((bits, target));
         }
     }
@@ -245,7 +245,7 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
 
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (output_bits, target_value) = if is_keep_mode {
-        parse_hash_args_keep(interp)?
+        parse_hash_args_in_keep_mode(interp)?
     } else {
         parse_hash_args(interp)?
     };
@@ -258,10 +258,10 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
     }
 
     // 値をシリアライズ
-    let bytes = serialize_value(&target_value);
+    let bytes = serialize_value_for_hash(&target_value);
 
     // ハッシュを計算
-    let hash_value = multi_prime_hash(&bytes, output_bits);
+    let hash_value = compute_multi_prime_hash(&bytes, output_bits);
 
     // 分数として結果を構築: hash_value / 2^output_bits
     let denominator = BigInt::one() << output_bits as usize;
@@ -285,7 +285,7 @@ fn parse_hash_args(interp: &mut Interpreter) -> Result<(u32, Value)> {
         .ok_or_else(|| AjisaiError::from("HASH requires a value to hash"))?;
 
     if let Some(bits_val) = interp.stack.last() {
-        if let Some(bits) = extract_positive_integer(bits_val) {
+        if let Some(bits) = extract_positive_integer_from_value(bits_val) {
             interp.stack.pop();
             return Ok((bits, target));
         }

@@ -67,7 +67,7 @@ if ('serviceWorker' in navigator) {
                             console.log('[Main] New version available');
                             try {
                                 const display = GUI_INSTANCE.getDisplay();
-                                display.showInfo('New version available. Please reload.', true);
+                                display.renderInfo('New version available. Please reload.', true);
                             } catch {
                                 // GUI not yet initialized
                             }
@@ -94,7 +94,7 @@ function setupOnlineStatusMonitoring(): void {
             if (!isInitialCheck) {
                 try {
                     const display = GUI_INSTANCE.getDisplay();
-                    display.showInfo('Online mode', true);
+                    display.renderInfo('Online mode', true);
                 } catch {
                     // GUI not yet initialized
                 }
@@ -104,7 +104,7 @@ function setupOnlineStatusMonitoring(): void {
             if (offlineIndicator) offlineIndicator.style.display = 'inline';
             try {
                 const display = GUI_INSTANCE.getDisplay();
-                display.showInfo('Offline mode', true);
+                display.renderInfo('Offline mode', true);
             } catch {
                 // GUI not yet initialized
             }

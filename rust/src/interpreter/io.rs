@@ -9,7 +9,7 @@ use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Value;
 use std::fmt::Write;
 
-fn read_print_value(interp: &mut Interpreter, keep_mode: bool) -> Result<Value> {
+fn extract_value_for_print(interp: &mut Interpreter, keep_mode: bool) -> Result<Value> {
     if keep_mode {
         return interp
             .stack
@@ -40,7 +40,7 @@ fn read_print_value(interp: &mut Interpreter, keep_mode: bool) -> Result<Value> 
 /// - スタックが空の場合
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    let val = read_print_value(interp, is_keep_mode)?;
+    let val = extract_value_for_print(interp, is_keep_mode)?;
     write!(&mut interp.output_buffer, "{} ", val)
         .map_err(|e| AjisaiError::from(format!("PRINT failed: {}", e)))?;
     Ok(())

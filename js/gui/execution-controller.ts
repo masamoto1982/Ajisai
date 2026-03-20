@@ -20,10 +20,10 @@ export interface ExecutionCallbacks {
 }
 
 export interface ExecutionController {
-    readonly runCode: (code: string) => Promise<void>;
+    readonly executeCode: (code: string) => Promise<void>;
     readonly executeReset: () => Promise<void>;
     readonly executeStep: () => Promise<void>;
-    readonly isStepModeActive: () => boolean;
+    readonly checkIsStepModeActive: () => boolean;
     readonly abortExecution: () => void;
 }
 
@@ -33,7 +33,7 @@ interface ExecutionSnapshot {
     readonly importedModules: string[];
 }
 
-const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
+const collectCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     const customWordsInfo = interpreter.get_idiolect_words_info();
     return customWordsInfo.map(wordData => ({
         name: wordData[0],
@@ -42,7 +42,7 @@ const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     }));
 };
 
-const syncInterpreterState = (
+const restoreInterpreterState = (
     interpreter: AjisaiInterpreter,
     result: ExecuteResult
 ): void => {
@@ -60,7 +60,7 @@ const syncInterpreterState = (
     }
 };
 
-const isResetCommand = (code: string): boolean =>
+const checkIsResetCommand = (code: string): boolean =>
     code.trim().toUpperCase() === 'RESET';
 
 const isAbortError = (error: Error): boolean =>
@@ -68,7 +68,7 @@ const isAbortError = (error: Error): boolean =>
 
 const createExecutionSnapshot = (interpreter: AjisaiInterpreter): ExecutionSnapshot => ({
     stack: interpreter.get_stack(),
-    customWords: getCustomWords(interpreter),
+    customWords: collectCustomWords(interpreter),
     importedModules: interpreter.get_imported_modules()
 });
 
@@ -131,12 +131,12 @@ export const createExecutionController = (
         }
     };
 
-    const runCode = async (code: string): Promise<void> => {
+    const executeCode = async (code: string): Promise<void> => {
         if (!code) return;
 
         stepExecutor.reset();
 
-        if (isResetCommand(code)) {
+        if (checkIsResetCommand(code)) {
             await executeReset();
             return;
         }
@@ -149,7 +149,7 @@ export const createExecutionController = (
             const result = await WORKER_MANAGER.execute(code, currentState);
 
             try {
-                syncInterpreterState(interpreter, result);
+                restoreInterpreterState(interpreter, result);
             } catch (error) {
                 console.error('[ExecController] Failed to sync state:', error);
                 showError(error as Error);
@@ -190,25 +190,25 @@ export const createExecutionController = (
         await stepExecutor.executeStep();
     };
 
-    const isStepModeActive = (): boolean => stepExecutor.isActive();
+    const checkIsStepModeActive = (): boolean => stepExecutor.isActive();
 
     const abortExecution = (): void => {
         stepExecutor.abort();
     };
 
     return {
-        runCode,
+        executeCode,
         executeReset,
         executeStep,
-        isStepModeActive,
+        checkIsStepModeActive,
         abortExecution
     };
 };
 
 export const executionControllerUtils = {
-    getCustomWords,
-    syncInterpreterState,
-    isResetCommand,
+    collectCustomWords,
+    restoreInterpreterState,
+    checkIsResetCommand,
     isAbortError,
     createExecutionSnapshot,
     handleExecutionException

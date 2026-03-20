@@ -37,7 +37,7 @@ const DEFAULT_DENOMINATOR_BITS: u32 = 32;
 // ============================================================================
 
 /// 0以上denominator未満の一様乱数を生成（リジェクションサンプリング）
-fn generate_uniform(denominator: &BigInt) -> Result<BigInt> {
+fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
     if *denominator <= BigInt::one() {
         return Ok(BigInt::from(0));
     }
@@ -56,7 +56,7 @@ fn generate_uniform(denominator: &BigInt) -> Result<BigInt> {
 }
 
 /// スタックから正の整数を抽出（単一要素Vectorの数値）
-fn extract_positive_integer(val: &Value) -> Option<BigInt> {
+fn extract_positive_integer_from_value(val: &Value) -> Option<BigInt> {
     let tensor = FlatTensor::from_value(val).ok()?;
     if tensor.data.len() != 1 {
         return None;
@@ -68,7 +68,7 @@ fn extract_positive_integer(val: &Value) -> Option<BigInt> {
     Some(scalar.numerator.clone())
 }
 
-fn parse_csprng_args_keep(interp: &Interpreter) -> Result<(BigInt, usize)> {
+fn parse_csprng_args_in_keep_mode(interp: &Interpreter) -> Result<(BigInt, usize)> {
     let default_denom = BigInt::from(1u64 << DEFAULT_DENOMINATOR_BITS);
 
     if interp.stack.is_empty() {
@@ -79,12 +79,12 @@ fn parse_csprng_args_keep(interp: &Interpreter) -> Result<(BigInt, usize)> {
         .stack
         .last()
         .ok_or_else(|| AjisaiError::from("CSPRNG requires stack value"))?;
-    let Some(first_int) = extract_positive_integer(top) else {
+    let Some(first_int) = extract_positive_integer_from_value(top) else {
         return Ok((default_denom, 1));
     };
 
     if interp.stack.len() >= 2 {
-        if let Some(second_int) = extract_positive_integer(&interp.stack[interp.stack.len() - 2]) {
+        if let Some(second_int) = extract_positive_integer_from_value(&interp.stack[interp.stack.len() - 2]) {
             let count = first_int
                 .to_usize()
                 .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
@@ -110,7 +110,7 @@ pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
 
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (denominator, count) = if is_keep_mode {
-        parse_csprng_args_keep(interp)?
+        parse_csprng_args_in_keep_mode(interp)?
     } else {
         parse_csprng_args(interp)?
     };
@@ -121,7 +121,7 @@ pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
 
     let mut result_vec = Vec::with_capacity(count);
     for _ in 0..count {
-        let numerator = generate_uniform(&denominator)?;
+        let numerator = compute_uniform_random(&denominator)?;
         let frac = Fraction::new(numerator, denominator.clone());
         result_vec.push(Value::from_number(frac));
     }
@@ -147,7 +147,7 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
         .ok_or_else(|| AjisaiError::from("CSPRNG requires stack value"))?;
 
     // 整数でない場合：デフォルト分母で1個（スタックはそのまま）
-    let Some(first_int) = extract_positive_integer(top) else {
+    let Some(first_int) = extract_positive_integer_from_value(top) else {
         return Ok((default_denom, 1));
     };
 
@@ -156,7 +156,7 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
 
     // 次の要素も整数かチェック
     if let Some(second) = interp.stack.last() {
-        if let Some(second_int) = extract_positive_integer(second) {
+        if let Some(second_int) = extract_positive_integer_from_value(second) {
             // パターン3: [ denom ] [ count ]
             interp.stack.pop();
             let count = first_int

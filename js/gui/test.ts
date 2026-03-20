@@ -56,7 +56,7 @@ const groupByCategory = (testCases: TestCase[]): Map<string, TestCase[]> => {
 /**
  * テスト結果が成功かどうか判定
  */
-const isTestPassed = (result: TestResult): boolean => result.passed;
+const checkIsTestPassed = (result: TestResult): boolean => result.passed;
 
 /**
  * スタック差分を計算
@@ -377,7 +377,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
             for (const testCase of categoryTests) {
                 try {
                     const result = await runSingleTest(testCase);
-                    const passed = isTestPassed(result);
+                    const passed = checkIsTestPassed(result);
 
                     if (passed) {
                         totalPassed++;
@@ -414,6 +414,6 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
 // 純粋関数をエクスポート（テスト用）
 export const testUtils = {
     groupByCategory,
-    isTestPassed,
+    checkIsTestPassed,
     calculateStackDifference
 };

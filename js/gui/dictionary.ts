@@ -1,12 +1,12 @@
 // js/gui/dictionary.ts
 
 import {
-    createEmptyWordsMessage,
-    createNoResultsMessage,
-    createWordButton,
-    matchesFilter,
-    setupBackgroundClickHandlers,
-    sortWordName,
+    checkWordMatchesFilter,
+    compareWordName,
+    createEmptyWordsElement,
+    createNoResultsElement,
+    createWordButtonElement,
+    registerBackgroundClickListeners,
 } from './dictionary-ui';
 
 export interface WordInfo {
@@ -44,7 +44,7 @@ const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
     'AND': 'and', 'OR': 'or', 'NOT': 'not',
 });
 
-const decodeWordName = (name: string): string | null => {
+const deserializeWordName = (name: string): string | null => {
     if (name.match(/^W_[0-9A-F]+$/)) return null;
     if (!name.includes('_')) return null;
 
@@ -58,9 +58,9 @@ const decodeWordName = (name: string): string | null => {
     return `≈ ${decoded}`;
 };
 
-const toWordInfo = (wordData: [string, string | null, boolean]): WordInfo => ({
+const createWordInfoFromTuple = (wordData: [string, string | null, boolean]): WordInfo => ({
     name: wordData[0],
-    description: wordData[1] || decodeWordName(wordData[0]) || wordData[0],
+    description: wordData[1] || deserializeWordName(wordData[0]) || wordData[0],
     protected: wordData[2] || false
 });
 
@@ -71,18 +71,18 @@ const clearElement = (element: HTMLElement): void => {
 
 const DEFAULT_WORD_INFO_MESSAGE = 'Hover over a word button to view its usage.';
 
-const setWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
+const renderWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
     element.textContent = text;
     element.classList.toggle('is-placeholder', isPlaceholder);
 };
 
-const resetWordInfo = (element: HTMLElement): void => {
-    setWordInfo(element, DEFAULT_WORD_INFO_MESSAGE, true);
+const resetWordInfoDisplay = (element: HTMLElement): void => {
+    renderWordInfo(element, DEFAULT_WORD_INFO_MESSAGE, true);
 };
 
 const DEPENDENCY_DELETE_ERROR = 'Cannot delete';
 
-const createDeleteContextMenu = (
+const createDeleteContextMenuElement = (
     onDelete: () => void
 ): HTMLDivElement => {
     const menu = document.createElement('div');
@@ -132,7 +132,7 @@ export const createVocabularyManager = (
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
     const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
-    const deleteContextMenu = createDeleteContextMenu(() => {
+    const deleteContextMenu = createDeleteContextMenuElement(() => {
         if (!activeContextWordName) {
             return;
         }
@@ -148,7 +148,7 @@ export const createVocabularyManager = (
         activeContextWordName = null;
     };
 
-    const showDeleteContextMenu = (event: MouseEvent, wordName: string): void => {
+    const renderDeleteContextMenu = (event: MouseEvent, wordName: string): void => {
         activeContextWordName = wordName;
         deleteContextMenu.hidden = false;
         deleteContextMenu.style.left = `${event.clientX}px`;
@@ -166,10 +166,10 @@ export const createVocabularyManager = (
     window.addEventListener('blur', hideDeleteContextMenu);
 
     [elements.builtInWordsDisplay, elements.customWordsDisplay].forEach(container => {
-        setupBackgroundClickHandlers(container, onBackgroundClick, onBackgroundDoubleClick);
+        registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);
     });
 
-    [elements.builtInWordInfo, elements.customWordInfo].forEach(resetWordInfo);
+    [elements.builtInWordInfo, elements.customWordInfo].forEach(resetWordInfoDisplay);
 
     // 検索フィルターとカスタムワードのキャッシュ
     let searchFilter = '';
@@ -227,12 +227,12 @@ export const createVocabularyManager = (
 
         // Sort: symbols first, then alphabetic
         const sorted = [...filtered].sort((a, b) =>
-            sortWordName(a[0] as string, b[0] as string)
+            compareWordName(a[0] as string, b[0] as string)
         );
 
         // Apply search filter
         const matched = sorted.filter(wd =>
-            matchesFilter(wd[0] as string, searchFilter)
+            checkWordMatchesFilter(wd[0] as string, searchFilter)
         );
 
         // Create buttons
@@ -243,20 +243,20 @@ export const createVocabularyManager = (
             const signatureType = (wordData[3] as string) || 'none';
             const sigClass = signatureType !== 'none' ? ` signature-${signatureType}` : '';
 
-            const button = createWordButton(
+            const button = createWordButtonElement(
                 name,
                 description,
                 `word-button core${sigClass}`,
                 () => onWordClick(name),
-                () => { setWordInfo(elements.builtInWordInfo, syntaxExample || DEFAULT_WORD_INFO_MESSAGE, !syntaxExample); },
-                () => { resetWordInfo(elements.builtInWordInfo); }
+                () => { renderWordInfo(elements.builtInWordInfo, syntaxExample || DEFAULT_WORD_INFO_MESSAGE, !syntaxExample); },
+                () => { resetWordInfoDisplay(elements.builtInWordInfo); }
             );
 
             container.appendChild(button);
         });
 
         if (searchFilter && matched.length === 0) {
-            container.appendChild(createNoResultsMessage());
+            container.appendChild(createNoResultsElement());
         }
     };
 
@@ -268,12 +268,12 @@ export const createVocabularyManager = (
 
         // フィルタリング: マッチするワードのみ抽出
         const filteredWords = words.filter(wordInfo =>
-            matchesFilter(wordInfo.name, searchFilter)
+            checkWordMatchesFilter(wordInfo.name, searchFilter)
         );
 
         // Sort: symbols first, then alphabetic
         const sortedFiltered = [...filteredWords].sort((a, b) =>
-            sortWordName(a.name, b.name)
+            compareWordName(a.name, b.name)
         );
 
         sortedFiltered.forEach(wordInfo => {
@@ -281,17 +281,17 @@ export const createVocabularyManager = (
                 ? 'word-button dependency'
                 : 'word-button non-dependency';
 
-            const button = createWordButton(
+            const button = createWordButtonElement(
                 wordInfo.name,
                 wordInfo.description || '',
                 className,
                 () => onWordClick(wordInfo.name),
                 () => {
                     const definition = window.ajisaiInterpreter?.get_word_definition(wordInfo.name);
-                    setWordInfo(elements.customWordInfo, definition || DEFAULT_WORD_INFO_MESSAGE, !definition);
+                    renderWordInfo(elements.customWordInfo, definition || DEFAULT_WORD_INFO_MESSAGE, !definition);
                 },
-                () => { resetWordInfo(elements.customWordInfo); },
-                (event) => showDeleteContextMenu(event, wordInfo.name)
+                () => { resetWordInfoDisplay(elements.customWordInfo); },
+                (event) => renderDeleteContextMenu(event, wordInfo.name)
             );
 
             container.appendChild(button);
@@ -301,13 +301,13 @@ export const createVocabularyManager = (
         // (ただし、元のワードリストが空の場合は表示しない)
         if (searchFilter && words.length > 0 && filteredWords.length === 0) {
             container.classList.add('is-empty');
-            container.appendChild(createNoResultsMessage());
+            container.appendChild(createNoResultsElement());
             return;
         }
 
         if (!searchFilter && words.length === 0) {
             container.classList.add('is-empty');
-            container.appendChild(createEmptyWordsMessage('No custom words defined yet.'));
+            container.appendChild(createEmptyWordsElement('No custom words defined yet.'));
             return;
         }
 
@@ -330,7 +330,7 @@ export const createVocabularyManager = (
     ): void => {
         // キャッシュを更新
         cachedCustomWords = customWordsInfo || [];
-        const words = cachedCustomWords.map(toWordInfo);
+        const words = cachedCustomWords.map(createWordInfoFromTuple);
         renderCustomWordButtons(elements.customWordsDisplay, words);
     };
 
@@ -338,7 +338,7 @@ export const createVocabularyManager = (
         searchFilter = filter.trim();
         // 両方のワードリストを再レンダリング
         renderBuiltInWords();
-        const words = cachedCustomWords.map(toWordInfo);
+        const words = cachedCustomWords.map(createWordInfoFromTuple);
         renderCustomWordButtons(elements.customWordsDisplay, words);
     };
 
@@ -350,7 +350,7 @@ export const createVocabularyManager = (
 };
 
 export const dictionaryUtils = {
-    decodeWordName,
-    toWordInfo,
+    deserializeWordName,
+    createWordInfoFromTuple,
     SYMBOL_MAP
 };

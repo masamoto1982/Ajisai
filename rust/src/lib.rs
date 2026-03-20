@@ -735,7 +735,7 @@ mod unicode_tests {
     fn test_from_string_ascii() {
         let val = Value::from_string("A");
         // 'A' = U+0041 = 65
-        let fracs = val.flatten_fractions();
+        let fracs = val.collect_fractions_flat();
         assert_eq!(fracs.len(), 1);
         assert_eq!(fracs[0].to_i64(), Some(65));
     }
@@ -744,7 +744,7 @@ mod unicode_tests {
     fn test_from_string_unicode_japanese() {
         let val = Value::from_string("あ");
         // 'あ' = U+3042 = 12354
-        let fracs = val.flatten_fractions();
+        let fracs = val.collect_fractions_flat();
         assert_eq!(
             fracs.len(),
             1,
@@ -757,7 +757,7 @@ mod unicode_tests {
     fn test_from_string_emoji() {
         let val = Value::from_string("🌸");
         // '🌸' = U+1F338 = 127800
-        let fracs = val.flatten_fractions();
+        let fracs = val.collect_fractions_flat();
         assert_eq!(fracs.len(), 1, "Emoji should be 1 code point");
         assert_eq!(fracs[0].to_i64(), Some(127800));
     }
@@ -765,7 +765,7 @@ mod unicode_tests {
     #[test]
     fn test_from_string_mixed() {
         let val = Value::from_string("Aあ");
-        let fracs = val.flatten_fractions();
+        let fracs = val.collect_fractions_flat();
         assert_eq!(fracs.len(), 2, "Should have 2 code points");
         assert_eq!(fracs[0].to_i64(), Some(65)); // 'A'
         assert_eq!(fracs[1].to_i64(), Some(12354)); // 'あ'
@@ -942,7 +942,7 @@ mod json_io_tests {
     async fn test_stringify_bool() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        // Without DisplayHint, TRUE is Scalar(1), to_json produces Number(1),
+        // Without DisplayHint, TRUE is Scalar(1), serialize_value_to_json produces Number(1),
         // serde serializes as "1", from_string("1") → Vector([49]) → displays as '1'
         interp.execute("TRUE JSON::STRINGIFY").await.unwrap();
         let stack = interp.get_stack();

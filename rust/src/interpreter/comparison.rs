@@ -5,7 +5,7 @@
 // 比較演算の結果は Boolean ヒント付きの値として返す
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::get_integer_from_value;
+use crate::interpreter::helpers::extract_integer_from_value;
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
@@ -21,21 +21,21 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
         ValueData::Vector(_) | ValueData::Record { .. } => {
             let tensor = FlatTensor::from_value(val)?;
             if tensor.data.len() != 1 {
-                return Err(AjisaiError::structure_error(
+                return Err(AjisaiError::create_structure_error(
                     "scalar value",
                     "non-scalar value",
                 ));
             }
             Ok(tensor.data[0].clone())
         }
-        _ => Err(AjisaiError::structure_error(
+        _ => Err(AjisaiError::create_structure_error(
             "scalar value",
             "non-scalar value",
         )),
     }
 }
 
-fn all_adjacent_pairs_match<F>(items: &[Value], op: F) -> Result<bool>
+fn check_all_adjacent_pairs<F>(items: &[Value], op: F) -> Result<bool>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
@@ -49,7 +49,7 @@ where
     Ok(true)
 }
 
-fn all_adjacent_data_equal(items: &[Value]) -> bool {
+fn check_all_adjacent_equal(items: &[Value]) -> bool {
     items.windows(2).all(|pair| pair[0].data == pair[1].data)
 }
 
@@ -62,7 +62,7 @@ fn all_adjacent_data_equal(items: &[Value]) -> bool {
 /// 【消費モード】
 /// - Consume（デフォルト）: オペランドを消費し、結果をプッシュ
 /// - Keep（,,）: オペランドを保持し、結果を追加
-fn binary_comparison_op<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
+fn apply_binary_comparison<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
@@ -124,7 +124,7 @@ where
         // Stackモード: N個の要素を順に比較
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count = extract_integer_from_value(&count_val)? as usize;
 
             // カウント0, 1はエラー（"No change is an error"原則）
             if count == 0 || count == 1 {
@@ -149,7 +149,7 @@ where
             };
 
             // 全ての隣接ペアをチェック
-            let all_true = match all_adjacent_pairs_match(&items, op) {
+            let all_true = match check_all_adjacent_pairs(&items, op) {
                 Ok(v) => v,
                 Err(e) => {
                     if !is_keep_mode {
@@ -168,12 +168,12 @@ where
 
 /// < 演算子 - 小なり
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
-    binary_comparison_op(interp, |a, b| a.lt(b), "<")
+    apply_binary_comparison(interp, |a, b| a.lt(b), "<")
 }
 
 /// <= 演算子 - 小なりイコール
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
-    binary_comparison_op(interp, |a, b| a.le(b), "<=")
+    apply_binary_comparison(interp, |a, b| a.le(b), "<=")
 }
 
 // > と >= は廃止されました
@@ -218,7 +218,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
         // Stackモード: N個の要素を順に比較
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count = extract_integer_from_value(&count_val)? as usize;
 
             // カウント0, 1はエラー（"No change is an error"原則）
             if count == 0 || count == 1 {
@@ -238,7 +238,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            let all_equal = all_adjacent_data_equal(&items);
+            let all_equal = check_all_adjacent_equal(&items);
             interp.stack.push(Value::from_bool(all_equal));
             Ok(())
         }

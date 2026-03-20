@@ -1,11 +1,11 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::get_integer_from_value;
+use crate::interpreter::helpers::extract_integer_from_value;
 use crate::interpreter::tensor_ops::{apply_binary_broadcast, apply_unary_flat, FlatTensor};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
-fn value_has_any_truthy(val: &Value) -> bool {
+fn check_value_has_truthy(val: &Value) -> bool {
     match &val.data {
         ValueData::Nil => false,
         ValueData::Scalar(f) => !f.is_zero(),
@@ -20,7 +20,7 @@ fn value_has_any_truthy(val: &Value) -> bool {
     }
 }
 
-fn invert_fraction(f: &Fraction) -> Fraction {
+fn compute_inverted_fraction(f: &Fraction) -> Fraction {
     if f.is_zero() {
         Fraction::from(1)
     } else {
@@ -28,14 +28,14 @@ fn invert_fraction(f: &Fraction) -> Fraction {
     }
 }
 
-fn invert_value(val: &Value) -> Result<Value> {
+fn compute_inverted_value(val: &Value) -> Result<Value> {
     if val.is_nil() {
         return Ok(Value::nil());
     }
     if let Some(f) = val.as_scalar() {
-        return Ok(Value::from_fraction(invert_fraction(f)));
+        return Ok(Value::from_fraction(compute_inverted_fraction(f)));
     }
-    apply_unary_flat(val, invert_fraction)
+    apply_unary_flat(val, compute_inverted_fraction)
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
@@ -53,7 +53,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            let result = match invert_value(&val) {
+            let result = match compute_inverted_value(&val) {
                 Ok(v) => v,
                 Err(e) => {
                     if !is_keep_mode {
@@ -70,7 +70,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
             let source: Vec<Value> = interp.stack.iter().cloned().collect();
             let mut results = Vec::with_capacity(source.len());
             for value in &source {
-                results.push(invert_value(value)?);
+                results.push(compute_inverted_value(value)?);
             }
 
             if is_keep_mode {
@@ -111,14 +111,14 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(Value::nil());
                 return Ok(());
             } else if a_is_nil {
-                if value_has_any_truthy(&b_val) {
+                if check_value_has_truthy(&b_val) {
                     interp.stack.push(Value::nil());
                 } else {
                     interp.stack.push(Value::from_bool(false));
                 }
                 return Ok(());
             } else if b_is_nil {
-                if value_has_any_truthy(&a_val) {
+                if check_value_has_truthy(&a_val) {
                     interp.stack.push(Value::nil());
                 } else {
                     interp.stack.push(Value::from_bool(false));
@@ -137,7 +137,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count = extract_integer_from_value(&count_val)? as usize;
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
@@ -202,14 +202,14 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(Value::nil());
                 return Ok(());
             } else if a_is_nil {
-                if value_has_any_truthy(&b_val) {
+                if check_value_has_truthy(&b_val) {
                     interp.stack.push(Value::from_bool(true));
                 } else {
                     interp.stack.push(Value::nil());
                 }
                 return Ok(());
             } else if b_is_nil {
-                if value_has_any_truthy(&a_val) {
+                if check_value_has_truthy(&a_val) {
                     interp.stack.push(Value::from_bool(true));
                 } else {
                     interp.stack.push(Value::nil());
@@ -228,7 +228,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = get_integer_from_value(&count_val)? as usize;
+            let count = extract_integer_from_value(&count_val)? as usize;
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
