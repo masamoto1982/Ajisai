@@ -44,13 +44,10 @@
 }
 
 .tab-group {
-    display: contents;
-}
-
-.tab-group + .tab-group {
-    margin-left: -1px;
-    position: relative;
-    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    min-width: 0;
 }
 
 /* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
@@ -67,6 +64,7 @@
 
 .area-tab {
     appearance: none;
+    box-sizing: border-box;
     width: 100%;
     margin: 0;
     padding: 0.5rem 0.9rem 0.45rem;
@@ -741,7 +739,7 @@ body[data-active-area] .main-layout section {
 @media (max-width: 768px) {
     .area-tabs {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
 
