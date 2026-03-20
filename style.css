@@ -16,8 +16,8 @@
     gap: 0;
     padding: 0;
     min-height: 0;
-    /* タブバーと左右ボーダーを共有し、上辺は ::after が担当 */
-    border-top: none;
+    /* シート枠の上辺を main-layout 側で一貫して描画する */
+    border-top: 1px solid var(--color-border-strong, #999);
     border-left: 1px solid var(--color-border-strong, #999);
     border-right: 1px solid var(--color-border-strong, #999);
     border-bottom: 1px solid var(--color-border-strong, #999);
@@ -31,9 +31,8 @@
  * -------------------------------------------------------------------------- */
 .area-tabs {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: stretch;
-    justify-content: space-between;
     gap: 0;
     padding: 0;
     border-top: 1px solid var(--color-border-strong, #999);
@@ -45,27 +44,12 @@
 }
 
 .tab-group {
-    display: flex;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 0;
-    min-width: 0;
-}
-
-/* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
-.area-tabs::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--color-border-strong, #999);
-    z-index: 0;
+    display: contents;
 }
 
 .area-tab {
     appearance: none;
+    width: 100%;
     margin: 0;
     padding: 0.5rem 0.9rem 0.45rem;
     font-family: var(--font-stack-mono);
@@ -75,9 +59,10 @@
     background: transparent;
     border: 1px solid transparent;
     border-bottom: none;
-    border-radius: 4px 4px 0 0;
+    border-radius: 0;
     cursor: pointer;
     white-space: nowrap;
+    text-align: center;
     position: relative;
     z-index: 1;
     transition: color 0.15s ease, background 0.15s ease;
@@ -103,6 +88,12 @@
     margin-bottom: -1px;
     padding-bottom: calc(0.45rem + 1px);
 }
+
+.tab-group + .tab-group .area-tab:first-child.active {
+    margin-left: -1px;
+    z-index: 2;
+}
+
 
 .visually-hidden {
     position: absolute;
@@ -731,24 +722,15 @@ body[data-active-area] .main-layout section {
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     .area-tabs {
-        display: flex;
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+
 
     .area-tabs::-webkit-scrollbar {
         display: none;
         width: 0;
         height: 0;
-    }
-
-    .tab-group {
-        width: auto;
-        flex: 0 0 auto;
     }
 
     .main-layout {
