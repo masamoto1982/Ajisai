@@ -32,17 +32,17 @@ export interface GUIElements {
     readonly customWordInfo: HTMLElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
-    readonly dictionarySheetSelect: HTMLSelectElement;
+    readonly dictionarySheetSwitcher: HTMLElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
     readonly dictionaryArea: HTMLElement;
     readonly editorPanel: HTMLElement;
     readonly statePanel: HTMLElement;
-    readonly tabInputBtn: HTMLElement;
-    readonly tabOutputBtn: HTMLElement;
-    readonly tabStackBtn: HTMLElement;
-    readonly tabDictionaryBtn: HTMLElement;
+    readonly leftPaneInputButton: HTMLButtonElement;
+    readonly leftPaneOutputButton: HTMLButtonElement;
+    readonly rightPaneStackButton: HTMLButtonElement;
+    readonly rightPaneDictionaryButton: HTMLButtonElement;
 }
 
 export interface GUI {
@@ -73,17 +73,17 @@ const cacheElements = (): GUIElements => ({
     customWordInfo: document.getElementById('custom-word-info')!,
     dictionarySearch: document.getElementById('dictionary-search') as HTMLInputElement,
     dictionarySearchClearBtn: document.getElementById('dictionary-search-clear-btn') as HTMLButtonElement,
-    dictionarySheetSelect: document.getElementById('dictionary-sheet-select') as HTMLSelectElement,
+    dictionarySheetSwitcher: document.querySelector('.dictionary-sheet-switcher')!,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
     dictionaryArea: document.getElementById('dictionary-panel')!,
     editorPanel: document.getElementById('editor-panel')!,
     statePanel: document.getElementById('state-panel')!,
-    tabInputBtn: document.getElementById('tab-input')!,
-    tabOutputBtn: document.getElementById('tab-output')!,
-    tabStackBtn: document.getElementById('tab-stack')!,
-    tabDictionaryBtn: document.getElementById('tab-dictionary')!
+    leftPaneInputButton: document.getElementById('panel-switch-input') as HTMLButtonElement,
+    leftPaneOutputButton: document.getElementById('panel-switch-output') as HTMLButtonElement,
+    rightPaneStackButton: document.getElementById('panel-switch-stack') as HTMLButtonElement,
+    rightPaneDictionaryButton: document.getElementById('panel-switch-dictionary') as HTMLButtonElement
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -110,9 +110,13 @@ const checkStackHighlight = (content: string): boolean => {
     return stackRegex.test(content);
 };
 
-const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
-const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
-const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
+type LeftPaneView = 'input' | 'output';
+type RightPaneView = 'stack' | 'dictionary';
+type DictionarySheetView = string;
+
+const MOBILE_VIEW_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
+const LEFT_PANE_VIEWS: LeftPaneView[] = ['input', 'output'];
+const RIGHT_PANE_VIEWS: RightPaneView[] = ['stack', 'dictionary'];
 
 
 const DESKTOP_EDITOR_PLACEHOLDER = [
@@ -168,9 +172,10 @@ export const createGUI = (): GUI => {
     let persistence: Persistence;
     let executionController: ExecutionController;
     let moduleTabManager: ModuleTabManager;
-    let currentMode: ViewMode = 'input';
-    let currentLeftMode: ViewMode = 'input';
-    let currentRightMode: ViewMode = 'stack';
+    let activeMobileView: ViewMode = 'input';
+    let activeLeftPaneView: LeftPaneView = 'input';
+    let activeRightPaneView: RightPaneView = 'stack';
+    let activeDictionarySheet: DictionarySheetView = 'core';
 
 
     const updateEditorPlaceholder = (): void => {
@@ -180,34 +185,41 @@ export const createGUI = (): GUI => {
             : DESKTOP_EDITOR_PLACEHOLDER;
     };
 
-    const collectTabButtons = (): Record<string, HTMLElement> => ({
-        input: elements.tabInputBtn,
-        output: elements.tabOutputBtn,
-        stack: elements.tabStackBtn,
-        dictionary: elements.tabDictionaryBtn
+    const collectPaneSwitchButtons = (): Record<ViewMode, HTMLButtonElement> => ({
+        input: elements.leftPaneInputButton,
+        output: elements.leftPaneOutputButton,
+        stack: elements.rightPaneStackButton,
+        dictionary: elements.rightPaneDictionaryButton
     });
 
-    const updateTabState = (activeModes: Set<ViewMode>): void => {
-        const tabs = collectTabButtons();
-        TAB_MODES.forEach((key) => {
-            const tab = tabs[key]!;
-            const isActive = activeModes.has(key);
-            tab.classList.toggle('active', isActive);
-            tab.setAttribute('aria-selected', String(isActive));
-            tab.setAttribute('tabindex', isActive ? '0' : '-1');
+    const updatePaneSwitchState = (activeModes: Set<ViewMode>): void => {
+        const switchButtons = collectPaneSwitchButtons();
+        MOBILE_VIEW_MODES.forEach((viewMode) => {
+            const button = switchButtons[viewMode];
+            const isActive = activeModes.has(viewMode);
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
         });
     };
 
     const switchDictionarySheet = (sheetId: string): void => {
+        activeDictionarySheet = sheetId;
         const allSheets = elements.dictionaryArea.querySelectorAll('.dictionary-sheet');
         allSheets.forEach(sheet => {
-            (sheet as HTMLElement).style.display = 'none';
+            (sheet as HTMLElement).hidden = true;
             sheet.classList.remove('active');
+        });
+
+        const allDictionaryButtons = elements.dictionarySheetSwitcher.querySelectorAll<HTMLButtonElement>('.dictionary-sheet-button');
+        allDictionaryButtons.forEach(button => {
+            const isActive = button.dataset.sheet === sheetId;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
         });
 
         const target = document.getElementById(`dictionary-sheet-${sheetId}`);
         if (target) {
-            target.style.display = 'flex';
+            (target as HTMLElement).hidden = false;
             target.classList.add('active');
         }
     };
@@ -218,53 +230,55 @@ export const createGUI = (): GUI => {
         elements.editorPanel.style.flex = '1';
         elements.statePanel.style.flex = '1';
 
-        elements.inputArea.style.display = currentLeftMode === 'input' ? 'flex' : 'none';
-        elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
-        elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
-        elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
+        elements.inputArea.hidden = activeLeftPaneView !== 'input';
+        elements.outputArea.hidden = activeLeftPaneView !== 'output';
+        elements.stackArea.hidden = activeRightPaneView !== 'stack';
+        elements.dictionaryArea.hidden = activeRightPaneView !== 'dictionary';
     };
 
-    const isRightMode = (mode: ViewMode): boolean =>
-        RIGHT_TAB_MODES.includes(mode);
+    const checkIsRightPaneView = (mode: ViewMode): mode is RightPaneView =>
+        RIGHT_PANE_VIEWS.includes(mode as RightPaneView);
 
-    const updateDesktopModes = (mode: ViewMode): void => {
-        if (LEFT_TAB_MODES.includes(mode)) {
-            currentLeftMode = mode;
+    const updateDesktopPaneViews = (mode: ViewMode): void => {
+        if (LEFT_PANE_VIEWS.includes(mode as LeftPaneView)) {
+            activeLeftPaneView = mode as LeftPaneView;
         }
-        if (isRightMode(mode)) {
-            currentRightMode = mode;
+        if (checkIsRightPaneView(mode)) {
+            activeRightPaneView = mode;
             if (mode === 'dictionary') {
-                currentLeftMode = 'input';
+                activeLeftPaneView = 'input';
             }
         }
     };
 
     const fallbackIfModuleTabRemoved = (): void => {
         // If current dictionary sheet is a module sheet that was removed, fallback to core
-        const currentSheet = elements.dictionarySheetSelect?.value;
-        if (currentSheet?.startsWith('module-') && !moduleTabManager.lookupModuleArea(currentSheet)) {
-            elements.dictionarySheetSelect.value = 'core';
+        if (activeDictionarySheet?.startsWith('module-') && !moduleTabManager.lookupModuleArea(activeDictionarySheet)) {
             switchDictionarySheet('core');
         }
     };
 
     const applyAreaState = (mode: ViewMode): void => {
         if (mobile.isMobile()) {
+            elements.inputArea.hidden = mode !== 'input';
+            elements.outputArea.hidden = mode !== 'output';
+            elements.stackArea.hidden = mode !== 'stack';
+            elements.dictionaryArea.hidden = mode !== 'dictionary';
             mobile.updateView(mode);
             document.body.dataset.activeArea = mode;
-            updateTabState(new Set([mode]));
+            updatePaneSwitchState(new Set([mode]));
             return;
         }
 
-        updateDesktopModes(mode);
+        updateDesktopPaneViews(mode);
         fallbackIfModuleTabRemoved();
         syncDesktopLayout();
-        document.body.dataset.activeArea = currentRightMode;
-        updateTabState(new Set([currentLeftMode, currentRightMode]));
+        document.body.dataset.activeArea = activeRightPaneView;
+        updatePaneSwitchState(new Set([activeLeftPaneView, activeRightPaneView]));
     };
 
-    const switchArea = (mode: ViewMode): void => {
-        currentMode = mode;
+    const switchVisibleArea = (mode: ViewMode): void => {
+        activeMobileView = mode;
         applyAreaState(mode);
     };
 
@@ -292,11 +306,9 @@ export const createGUI = (): GUI => {
             if (newSheetIds.length > 0) {
                 const lastSheetId = newSheetIds[newSheetIds.length - 1]!;
                 // Switch to Dictionary tab if not already there
-                if (currentRightMode !== 'dictionary' || (mobile.isMobile() && currentMode !== 'dictionary')) {
-                    switchArea('dictionary');
+                if (activeRightPaneView !== 'dictionary' || (mobile.isMobile() && activeMobileView !== 'dictionary')) {
+                    switchVisibleArea('dictionary');
                 }
-                // Switch to the new module sheet
-                elements.dictionarySheetSelect.value = lastSheetId;
                 switchDictionarySheet(lastSheetId);
             }
 
@@ -357,26 +369,30 @@ export const createGUI = (): GUI => {
             editor.clear();
         });
 
-        const tabs = collectTabButtons();
-        TAB_MODES.forEach((mode) => {
-            const tab = tabs[mode]!;
-            tab.addEventListener('click', () => switchArea(mode));
-            tab.addEventListener('keydown', (e) => {
+        const paneSwitchButtons = collectPaneSwitchButtons();
+        MOBILE_VIEW_MODES.forEach((mode) => {
+            const button = paneSwitchButtons[mode];
+            button.addEventListener('click', () => switchVisibleArea(mode));
+            button.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    switchArea(mode);
+                    switchVisibleArea(mode);
                 }
             });
         });
 
-        // Dictionary sheet selector
-        elements.dictionarySheetSelect.addEventListener('change', () => {
-            const selectedValue = elements.dictionarySheetSelect.value;
-            switchDictionarySheet(selectedValue);
+        elements.dictionarySheetSwitcher.addEventListener('keydown', (event) => {
+            const keyboardEvent = event as KeyboardEvent;
+            if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
+            const target = keyboardEvent.target as HTMLElement | null;
+            const sheetId = target?.getAttribute('data-sheet');
+            if (!sheetId) return;
+            keyboardEvent.preventDefault();
+            switchDictionarySheet(sheetId);
         });
 
         elements.testBtn?.addEventListener('click', () => {
-            switchArea('output');
+            switchVisibleArea('output');
             import('./gui-test-runner').then(({ createTestRunner }) => {
                 const testRunner = createTestRunner({
                     showInfo: (text, append) => display.renderInfo(text, append),
@@ -405,7 +421,7 @@ export const createGUI = (): GUI => {
         });
 
         window.addEventListener('resize', () => {
-            applyAreaState(currentMode);
+            applyAreaState(activeMobileView);
             updateEditorPlaceholder();
         });
 
@@ -433,14 +449,14 @@ export const createGUI = (): GUI => {
 
         elements = cacheElements();
         mobile = createMobileHandler(extractMobileElements(elements), {
-            onModeChange: (mode) => switchArea(mode)
+            onModeChange: (mode) => switchVisibleArea(mode)
         });
         display = createDisplay(extractDisplayElements(elements));
         display.init();
         updateEditorPlaceholder();
 
         moduleTabManager = createModuleTabManager({
-            selectEl: elements.dictionarySheetSelect,
+            switcherEl: elements.dictionarySheetSwitcher,
             sheetContainerEl: elements.dictionaryArea,
             onWordClick: (word: string) => {
                 if (!mobile.isMobile()) {
@@ -458,11 +474,6 @@ export const createGUI = (): GUI => {
                 }
             },
             onSheetChange: (sheetId: string) => switchDictionarySheet(sheetId),
-            onSearchInput: (filter: string) => {
-                elements.dictionarySearch.value = filter;
-                vocabulary.updateSearchFilter(filter);
-                moduleTabManager.updateSearchFilter(filter);
-            },
             onUpdateDisplays: () => updateAllDisplays(),
             onSaveState: () => persistence.saveCurrentState(),
             showInfo: (text: string, append: boolean) => display.renderInfo(text, append)
@@ -477,7 +488,7 @@ export const createGUI = (): GUI => {
 
         editor = createEditor(elements.codeInput, {
             onContentChange: updateHighlights,
-            onSwitchToInputMode: () => switchArea('input'),
+            onSwitchToInputMode: () => switchVisibleArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
         });
 
@@ -513,13 +524,14 @@ export const createGUI = (): GUI => {
             updateDisplays: updateAllDisplays,
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),
-            updateView: (mode) => switchArea(mode)
+            updateView: (mode) => switchVisibleArea(mode)
         });
 
         setupEventListeners();
         vocabulary.renderBuiltInWords();
         updateAllDisplays();
-        switchArea('input');
+        switchDictionarySheet(activeDictionarySheet);
+        switchVisibleArea('input');
 
         // データの読み込みとボタン描画をワーカー初期化より先に行う。
         // ワーカーにはメインスレッドでコンパイル済みのWebAssembly.Moduleを
