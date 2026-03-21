@@ -32,7 +32,7 @@ export interface GUIElements {
     readonly customWordInfo: HTMLElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
-    readonly dictionarySheetSelect: HTMLSelectElement;
+    readonly dictionarySheetSwitcher: HTMLElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
@@ -73,7 +73,7 @@ const cacheElements = (): GUIElements => ({
     customWordInfo: document.getElementById('custom-word-info')!,
     dictionarySearch: document.getElementById('dictionary-search') as HTMLInputElement,
     dictionarySearchClearBtn: document.getElementById('dictionary-search-clear-btn') as HTMLButtonElement,
-    dictionarySheetSelect: document.getElementById('dictionary-sheet-select') as HTMLSelectElement,
+    dictionarySheetSwitcher: document.querySelector('.dictionary-sheet-switcher')!,
     inputArea: document.querySelector('.input-area')!,
     outputArea: document.querySelector('.output-area')!,
     stackArea: document.querySelector('.stack-area')!,
@@ -444,7 +444,7 @@ export const createGUI = (): GUI => {
         updateEditorPlaceholder();
 
         moduleTabManager = createModuleTabManager({
-            selectEl: elements.dictionarySheetSelect,
+            switcherEl: elements.dictionarySheetSwitcher,
             sheetContainerEl: elements.dictionaryArea,
             onWordClick: (word: string) => {
                 if (!mobile.isMobile()) {

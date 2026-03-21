@@ -103,12 +103,9 @@
                 
                 <section id="dictionary-panel" class="dictionary-area" aria-labelledby="panel-switch-dictionary" tabindex="0" hidden>
                     <div class="dictionary-toolbar">
-                        <div class="dictionary-sheet-selector">
-                            <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
-                            <select id="dictionary-sheet-select">
-                                <option value="core">Built-in word</option>
-                                <option value="custom">Custom word</option>
-                            </select>
+                        <div class="dictionary-sheet-switcher" role="radiogroup" aria-label="Dictionary category">
+                            <button id="dictionary-sheet-core-button" class="dictionary-sheet-button active" type="button" data-sheet="core" aria-controls="dictionary-sheet-core" aria-pressed="true">Built-in word</button>
+                            <button id="dictionary-sheet-custom-button" class="dictionary-sheet-button" type="button" data-sheet="custom" aria-controls="dictionary-sheet-custom" aria-pressed="false">Custom word</button>
                         </div>
                         <div class="search-wrapper">
                             <input type="text" id="dictionary-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search word">
