@@ -5,6 +5,14 @@
  * このファイルにはアプリ（インタプリタUI）固有のスタイルのみ記述
  */
 
+/* タブ・シートごとの背景色（アクセシビリティカラーの極薄ティント） */
+:root {
+    --tab-bg-input:      #eef5fb;  /* blue  tint  (#0277BD 系) */
+    --tab-bg-output:     #fdf5e6;  /* gold  tint  (#E69500 系) */
+    --tab-bg-stack:      #f5eaf5;  /* purple tint (#990099 系) */
+    --tab-bg-dictionary: #fdf0e8;  /* orange tint (#E65100 系) */
+}
+
 /* --------------------------------------------------------------------------
  * 1. アプリ用レイアウト
  * -------------------------------------------------------------------------- */
@@ -98,19 +106,16 @@
 
 .area-tab.active {
     color: var(--heading-h2);
-    background: var(--gradient-child, #fff);
-    border-color: var(--color-border-strong, #999);
     /* アクティブタブの下端を消してコンテンツと繋げる */
     margin-bottom: -1px;
     padding-bottom: calc(0.45rem + 1px);
 }
 
-/* デスクトップ: 左グループ末尾のアクティブタブの右辺を消し、右グループとの二重線を防ぐ */
-@media (min-width: 769px) {
-    .tab-group:first-child .area-tab:last-child.active {
-        border-right-color: transparent;
-    }
-}
+/* タブごとの背景色でアクティブ状態を明示 */
+#tab-input.active      { background: var(--tab-bg-input); }
+#tab-output.active     { background: var(--tab-bg-output); }
+#tab-stack.active      { background: var(--tab-bg-stack); }
+#tab-dictionary.active { background: var(--tab-bg-dictionary); }
 
 .visually-hidden {
     position: absolute;
@@ -240,6 +245,12 @@ body[data-active-area] .main-layout section {
     display: flex;
     flex-direction: column;
 }
+
+/* シートごとの背景色（タブと一致） */
+.input-area      { background: var(--tab-bg-input); }
+.output-area     { background: var(--tab-bg-output); }
+.stack-area      { background: var(--tab-bg-stack); }
+.dictionary-area { background: var(--tab-bg-dictionary); }
 
 /* --------------------------------------------------------------------------
  * 2. コード入力
