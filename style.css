@@ -105,9 +105,11 @@
     padding-bottom: calc(0.45rem + 1px);
 }
 
-/* 左グループ末尾のアクティブタブの右辺を消し、右グループとの二重線を防ぐ */
-.tab-group:first-child .area-tab:last-child.active {
-    border-right-color: transparent;
+/* デスクトップ: 左グループ末尾のアクティブタブの右辺を消し、右グループとの二重線を防ぐ */
+@media (min-width: 769px) {
+    .tab-group:first-child .area-tab:last-child.active {
+        border-right-color: transparent;
+    }
 }
 
 .visually-hidden {
@@ -761,11 +763,13 @@ body[data-active-area] .main-layout section {
 
     #editor-panel,
     #state-panel {
-        flex: 1 1 auto;
+        flex: 1;
         width: 100%;
         min-height: 0;
         overflow: hidden;
-        padding: 1rem;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
     }
 
     /* モバイルでは左右仕切り線を消す */
@@ -781,25 +785,37 @@ body[data-active-area] .main-layout section {
         margin-bottom: 0;
     }
 
+    /* 各エリアが縦幅をフル活用し、内容を上詰め */
     .output-area,
     .input-area,
     .stack-area,
     .vocabulary-area,
     .dictionary-area {
-        height: 100%;
-        flex: 1 1 auto;
+        flex: 1;
         min-height: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    /* 内部の表示領域も縦幅をフル活用 */
+    .display-area,
+    .state-display {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .words-display {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
     }
 
     #code-input {
-        min-height: 180px;
-        max-height: 420px;
-    }
-
-    .display-area,
-    .state-display,
-    .words-display {
-        min-height: 80px;
+        flex: 1;
+        min-height: 0;
+        max-height: none;
     }
 
     .words-area .words-display {
