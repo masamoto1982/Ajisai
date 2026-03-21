@@ -105,6 +105,11 @@
     padding-bottom: calc(0.45rem + 1px);
 }
 
+/* 左グループ末尾のアクティブタブの右辺を消し、右グループとの二重線を防ぐ */
+.tab-group:first-child .area-tab:last-child.active {
+    border-right-color: transparent;
+}
+
 .visually-hidden {
     position: absolute;
     width: 1px;
