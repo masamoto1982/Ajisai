@@ -31,7 +31,7 @@
  * -------------------------------------------------------------------------- */
 .area-tabs {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
     gap: 0;
     padding: 0;
@@ -40,17 +40,18 @@
     border-right: 1px solid var(--color-border-strong, #999);
     border-bottom: none;
     background: var(--bg-article);
-}
-
-.tab-group {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    min-width: 0;
     position: relative;
 }
 
-.tab-group::after {
+.tab-group {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-width: 0;
+}
+
+/* タブバー下端にラインを引く（コンテンツ枠の上辺と一致させる） */
+.area-tabs::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -63,7 +64,8 @@
 
 .area-tab {
     appearance: none;
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
     margin: 0;
     padding: 0.5rem 0.9rem 0.45rem;
     font-family: var(--font-stack-mono);
@@ -102,12 +104,6 @@
     margin-bottom: -1px;
     padding-bottom: calc(0.45rem + 1px);
 }
-
-.tab-group + .tab-group .area-tab:first-child.active {
-    margin-left: -1px;
-    z-index: 2;
-}
-
 
 .visually-hidden {
     position: absolute;
@@ -737,9 +733,12 @@ body[data-active-area] .main-layout section {
 @media (max-width: 768px) {
     .area-tabs {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
+    .tab-group {
+        display: contents;
+    }
 
     .area-tabs::-webkit-scrollbar {
         display: none;
