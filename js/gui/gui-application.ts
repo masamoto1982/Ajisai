@@ -210,13 +210,7 @@ export const createGUI = (): GUI => {
             sheet.classList.remove('active');
         });
 
-        const allDictionaryButtons = elements.dictionarySheetSwitcher.querySelectorAll<HTMLButtonElement>('.dictionary-sheet-button');
-        allDictionaryButtons.forEach(button => {
-            const isActive = button.dataset.sheet === sheetId;
-            button.classList.toggle('active', isActive);
-            button.setAttribute('aria-pressed', String(isActive));
-        });
-
+        elements.dictionarySheetSelect.value = sheetId;
         const target = document.getElementById(`dictionary-sheet-${sheetId}`);
         if (target) {
             (target as HTMLElement).hidden = false;
@@ -381,14 +375,8 @@ export const createGUI = (): GUI => {
             });
         });
 
-        elements.dictionarySheetSwitcher.addEventListener('keydown', (event) => {
-            const keyboardEvent = event as KeyboardEvent;
-            if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
-            const target = keyboardEvent.target as HTMLElement | null;
-            const sheetId = target?.getAttribute('data-sheet');
-            if (!sheetId) return;
-            keyboardEvent.preventDefault();
-            switchDictionarySheet(sheetId);
+        elements.dictionarySheetSelect.addEventListener('change', () => {
+            switchDictionarySheet(elements.dictionarySheetSelect.value);
         });
 
         elements.testBtn?.addEventListener('click', () => {
