@@ -28,7 +28,7 @@ async fn run(code: &str) -> Result<Vec<Value>, String> {
 async fn run_with_flow_tracking(code: &str) -> Result<(Vec<Value>, Interpreter), String> {
     let mut interp = Interpreter::new();
     interp.gui_mode = true;
-    interp.set_flow_tracking(true);
+    interp.update_flow_tracking(true);
     interp.execute(code).await.map_err(|e| e.to_string())?;
     let stack = interp.get_stack().clone();
     Ok((stack, interp))

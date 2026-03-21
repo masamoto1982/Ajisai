@@ -14,17 +14,17 @@ export interface AjisaiInterpreter {
     execute(code: string): Promise<ExecuteResult>;
     execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
-    get_stack(): Value[];
-    get_idiolect_words_info(): Array<[string, string | null, boolean]>;
-    get_core_words_info(): Array<[string, string, string]>;
-    get_word_definition(name: string): string | null;
+    collect_stack(): Value[];
+    collect_idiolect_words_info(): Array<[string, string | null, boolean]>;
+    collect_core_words_info(): Array<[string, string, string]>;
+    lookup_word_definition(name: string): string | null;
     restore_stack(stack_js: Value[]): void;
     restore_idiolect(words: CustomWord[]): void;
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
-    get_imported_modules(): string[];
-    get_module_words_info(module_name: string): Array<[string, string | null]>;
-    get_module_sample_words_info(module_name: string): Array<[string, string | null]>;
+    collect_imported_modules(): string[];
+    collect_module_words_info(module_name: string): Array<[string, string | null]>;
+    collect_module_sample_words_info(module_name: string): Array<[string, string | null]>;
     restore_imported_modules(modules: string[]): void;
 }
 

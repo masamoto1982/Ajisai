@@ -1,7 +1,7 @@
 // js/workers/worker-manager.ts
 
 import type { ExecuteResult, Value, CustomWord } from '../wasm-types';
-import { getCompiledWasmModule } from '../wasm-loader';
+import { extractCompiledWasmModule } from '../wasm-loader';
 
 interface WorkerTask {
     id: string;
@@ -39,7 +39,7 @@ export class WorkerManager {
 
         // メインスレッドでコンパイル済みのWASMモジュールを取得。
         // これをワーカーに転送することで、ワーカー側での再コンパイルを回避する。
-        this.compiledModule = getCompiledWasmModule();
+        this.compiledModule = extractCompiledWasmModule();
 
         if (!this.compiledModule) {
             console.warn('[WorkerManager] Compiled WASM module not available; workers will init independently');

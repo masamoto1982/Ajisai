@@ -48,13 +48,13 @@ export interface GUIElements {
 export interface GUI {
     readonly init: () => Promise<void>;
     readonly updateAllDisplays: () => void;
-    readonly getElements: () => GUIElements;
-    readonly getDisplay: () => Display;
-    readonly getEditor: () => Editor;
-    readonly getVocabulary: () => VocabularyManager;
-    readonly getMobile: () => MobileHandler;
-    readonly getPersistence: () => Persistence;
-    readonly getExecutionController: () => ExecutionController;
+    readonly extractElements: () => GUIElements;
+    readonly extractDisplay: () => Display;
+    readonly extractEditor: () => Editor;
+    readonly extractVocabulary: () => VocabularyManager;
+    readonly extractMobile: () => MobileHandler;
+    readonly extractPersistence: () => Persistence;
+    readonly extractExecutionController: () => ExecutionController;
 }
 
 const cacheElements = (): GUIElements => ({
@@ -132,24 +132,24 @@ const MOBILE_EDITOR_PLACEHOLDER = [
     'Autocomplete → Tap suggestions while typing'
 ].join('\n');
 
-const getAutocompleteWords = (): string[] => {
+const collectAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
-    const coreWords = window.ajisaiInterpreter.get_core_words_info().map(word => word[0]);
-    const idiolectWords = window.ajisaiInterpreter.get_idiolect_words_info().map(word => word[0]);
+    const coreWords = window.ajisaiInterpreter.collect_core_words_info().map(word => word[0]);
+    const idiolectWords = window.ajisaiInterpreter.collect_idiolect_words_info().map(word => word[0]);
 
     const moduleWords: string[] = [];
     try {
-        const importedModules = window.ajisaiInterpreter.get_imported_modules();
+        const importedModules = window.ajisaiInterpreter.collect_imported_modules();
         for (const moduleName of importedModules) {
-            const words = window.ajisaiInterpreter.get_module_words_info(moduleName);
+            const words = window.ajisaiInterpreter.collect_module_words_info(moduleName);
             const prefix = `${moduleName}::`;
             for (const word of words) {
                 const name = word[0];
                 moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);
             }
             // Also include module sample words
-            const sampleWords = window.ajisaiInterpreter.get_module_sample_words_info(moduleName);
+            const sampleWords = window.ajisaiInterpreter.collect_module_sample_words_info(moduleName);
             for (const word of sampleWords) {
                 moduleWords.push(word[0]);
             }
@@ -180,7 +180,7 @@ export const createGUI = (): GUI => {
             : DESKTOP_EDITOR_PLACEHOLDER;
     };
 
-    const getTabButtons = (): Record<string, HTMLElement> => ({
+    const collectTabButtons = (): Record<string, HTMLElement> => ({
         input: elements.tabInputBtn,
         output: elements.tabOutputBtn,
         stack: elements.tabStackBtn,
@@ -188,7 +188,7 @@ export const createGUI = (): GUI => {
     });
 
     const updateTabState = (activeModes: Set<ViewMode>): void => {
-        const tabs = getTabButtons();
+        const tabs = collectTabButtons();
         TAB_MODES.forEach((key) => {
             const tab = tabs[key]!;
             const isActive = activeModes.has(key);
@@ -227,7 +227,7 @@ export const createGUI = (): GUI => {
     const isRightMode = (mode: ViewMode): boolean =>
         RIGHT_TAB_MODES.includes(mode);
 
-    const setDesktopModes = (mode: ViewMode): void => {
+    const updateDesktopModes = (mode: ViewMode): void => {
         if (LEFT_TAB_MODES.includes(mode)) {
             currentLeftMode = mode;
         }
@@ -242,7 +242,7 @@ export const createGUI = (): GUI => {
     const fallbackIfModuleTabRemoved = (): void => {
         // If current dictionary sheet is a module sheet that was removed, fallback to core
         const currentSheet = elements.dictionarySheetSelect?.value;
-        if (currentSheet?.startsWith('module-') && !moduleTabManager.getModuleArea(currentSheet)) {
+        if (currentSheet?.startsWith('module-') && !moduleTabManager.lookupModuleArea(currentSheet)) {
             elements.dictionarySheetSelect.value = 'core';
             switchDictionarySheet('core');
         }
@@ -256,7 +256,7 @@ export const createGUI = (): GUI => {
             return;
         }
 
-        setDesktopModes(mode);
+        updateDesktopModes(mode);
         fallbackIfModuleTabRemoved();
         syncDesktopLayout();
         document.body.dataset.activeArea = currentRightMode;
@@ -282,8 +282,8 @@ export const createGUI = (): GUI => {
         if (!window.ajisaiInterpreter) return;
 
         try {
-            display.renderStack(window.ajisaiInterpreter.get_stack());
-            vocabulary.updateCustomWords(window.ajisaiInterpreter.get_idiolect_words_info());
+            display.renderStack(window.ajisaiInterpreter.collect_stack());
+            vocabulary.updateCustomWords(window.ajisaiInterpreter.collect_idiolect_words_info());
 
             // Sync module sheets based on imported modules
             const newSheetIds = moduleTabManager.syncModuleTabs();
@@ -332,21 +332,21 @@ export const createGUI = (): GUI => {
 
     const setupEventListeners = (): void => {
         elements.runBtn.addEventListener('click', () => {
-            executionController.executeCode(editor.getValue());
+            executionController.executeCode(editor.extractValue());
         });
 
         // 辞書検索: デバウンス付きでフィルタリング
         const applySearchFilter = (filter: string): void => {
             elements.dictionarySearch.value = filter;
-            vocabulary.setSearchFilter(filter);
-            moduleTabManager.setSearchFilter(filter);
+            vocabulary.updateSearchFilter(filter);
+            moduleTabManager.updateSearchFilter(filter);
         };
 
-        const handleSearchInput = debounce(() => {
+        const applySearchInput = debounce(() => {
             applySearchFilter(elements.dictionarySearch.value);
         }, 150);
 
-        elements.dictionarySearch.addEventListener('input', handleSearchInput);
+        elements.dictionarySearch.addEventListener('input', applySearchInput);
 
         // 検索窓の×ボタンでクリア
         elements.dictionarySearchClearBtn.addEventListener('click', () => {
@@ -357,7 +357,7 @@ export const createGUI = (): GUI => {
             editor.clear();
         });
 
-        const tabs = getTabButtons();
+        const tabs = collectTabButtons();
         TAB_MODES.forEach((mode) => {
             const tab = tabs[mode]!;
             tab.addEventListener('click', () => switchArea(mode));
@@ -395,7 +395,7 @@ export const createGUI = (): GUI => {
             // Shift+Enter: run
             if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
-                executionController.executeCode(editor.getValue());
+                executionController.executeCode(editor.extractValue());
             }
             // Ctrl+Enter: step execution
             if (e.key === 'Enter' && e.ctrlKey && !e.altKey && !e.shiftKey) {
@@ -460,8 +460,8 @@ export const createGUI = (): GUI => {
             onSheetChange: (sheetId: string) => switchDictionarySheet(sheetId),
             onSearchInput: (filter: string) => {
                 elements.dictionarySearch.value = filter;
-                vocabulary.setSearchFilter(filter);
-                moduleTabManager.setSearchFilter(filter);
+                vocabulary.updateSearchFilter(filter);
+                moduleTabManager.updateSearchFilter(filter);
             },
             onUpdateDisplays: () => updateAllDisplays(),
             onSaveState: () => persistence.saveCurrentState(),
@@ -478,7 +478,7 @@ export const createGUI = (): GUI => {
         editor = createEditor(elements.codeInput, {
             onContentChange: updateHighlights,
             onSwitchToInputMode: () => switchArea('input'),
-            onRequestSuggestions: () => getAutocompleteWords()
+            onRequestSuggestions: () => collectAutocompleteWords()
         });
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
@@ -503,9 +503,9 @@ export const createGUI = (): GUI => {
         });
 
         executionController = createExecutionController(window.ajisaiInterpreter, {
-            getEditorValue: () => editor.getValue(),
+            extractEditorValue: () => editor.extractValue(),
             clearEditor: (switchView) => { editor.clear(switchView); },
-            setEditorValue: (value) => editor.setValue(value),
+            updateEditorValue: (value) => editor.updateValue(value),
             insertEditorText: (text) => editor.insertText(text),
             showInfo: (text, append) => display.renderInfo(text, append),
             showError: (error) => display.renderError(error),
@@ -531,24 +531,24 @@ export const createGUI = (): GUI => {
         console.log('[GUI] GUI initialization completed');
     };
 
-    const getElements = (): GUIElements => elements;
-    const getDisplay = (): Display => display;
-    const getEditor = (): Editor => editor;
-    const getVocabulary = (): VocabularyManager => vocabulary;
-    const getMobile = (): MobileHandler => mobile;
-    const getPersistence = (): Persistence => persistence;
-    const getExecutionController = (): ExecutionController => executionController;
+    const extractElements = (): GUIElements => elements;
+    const extractDisplay = (): Display => display;
+    const extractEditor = (): Editor => editor;
+    const extractVocabulary = (): VocabularyManager => vocabulary;
+    const extractMobile = (): MobileHandler => mobile;
+    const extractPersistence = (): Persistence => persistence;
+    const extractExecutionController = (): ExecutionController => executionController;
 
     return {
         init,
         updateAllDisplays,
-        getElements,
-        getDisplay,
-        getEditor,
-        getVocabulary,
-        getMobile,
-        getPersistence,
-        getExecutionController
+        extractElements,
+        extractDisplay,
+        extractEditor,
+        extractVocabulary,
+        extractMobile,
+        extractPersistence,
+        extractExecutionController
     };
 };
 

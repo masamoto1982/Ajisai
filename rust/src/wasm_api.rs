@@ -57,7 +57,7 @@ fn bracket_chars_for_depth(depth: usize) -> (char, char) {
     }
 }
 
-fn generate_bracket_structure_from_shape(shape: &[usize]) -> String {
+fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
     fn build_level(shape: &[usize], depth: usize) -> String {
         let (open, close) = bracket_chars_for_depth(depth);
         if shape.len() == 1 {
@@ -182,17 +182,17 @@ impl AjisaiInterpreter {
 
                 if let Some(shape_vec) = shape {
                     self.interpreter.stack.pop();
-                    let helper_text = generate_bracket_structure_from_shape(&shape_vec);
+                    let helper_text = build_bracket_structure_from_shape(&shape_vec);
                     js_sys::Reflect::set(&obj, &"inputHelper".into(), &helper_text.into()).unwrap();
                     js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                    js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
                     js_sys::Reflect::set(
                         &obj,
                         &"customWords".into(),
-                        &self.get_custom_words_for_state(),
+                        &self.collect_custom_words_for_state(),
                     )
                     .unwrap();
-                    js_sys::Reflect::set(&obj, &"importedModules".into(), &self.get_imported_modules_array()).unwrap();
+                    js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
                     return Ok(obj.into());
                 } else {
                     js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -208,14 +208,14 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 let output = self.interpreter.collect_output();
                 js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
-                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
                 js_sys::Reflect::set(
                     &obj,
                     &"customWords".into(),
-                    &self.get_custom_words_for_state(),
+                    &self.collect_custom_words_for_state(),
                 )
                 .unwrap();
-                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.get_imported_modules_array()).unwrap();
+                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
 
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
                     js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into())
@@ -300,14 +300,14 @@ impl AjisaiInterpreter {
                     &(self.step_tokens.len() as u32).into(),
                 )
                 .unwrap();
-                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
                 js_sys::Reflect::set(
                     &obj,
                     &"customWords".into(),
-                    &self.get_custom_words_for_state(),
+                    &self.collect_custom_words_for_state(),
                 )
                 .unwrap();
-                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.get_imported_modules_array()).unwrap();
+                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
             }
             Err(e) => {
                 self.step_mode = false;
@@ -335,14 +335,14 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into())
                     .unwrap();
-                js_sys::Reflect::set(&obj, &"stack".into(), &self.get_stack()).unwrap();
+                js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
                 js_sys::Reflect::set(
                     &obj,
                     &"customWords".into(),
-                    &self.get_custom_words_for_state(),
+                    &self.collect_custom_words_for_state(),
                 )
                 .unwrap();
-                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.get_imported_modules_array()).unwrap();
+                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
             }
             Err(e) => {
                 js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
@@ -354,7 +354,7 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn get_stack(&self) -> JsValue {
+    pub fn collect_stack(&self) -> JsValue {
         let js_array = js_sys::Array::new();
         for value in self.interpreter.get_stack() {
             js_array.push(&value_to_js_value(value));
@@ -363,7 +363,7 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn get_idiolect_words_info(&self) -> JsValue {
+    pub fn collect_idiolect_words_info(&self) -> JsValue {
         let js_array = js_sys::Array::new();
 
         for (name, def) in self.interpreter.idiolect.iter() {
@@ -389,7 +389,7 @@ impl AjisaiInterpreter {
         js_array.into()
     }
 
-    fn get_imported_modules_array(&self) -> JsValue {
+    fn collect_imported_modules_array(&self) -> JsValue {
         let arr = js_sys::Array::new();
         for name in &self.interpreter.imported_modules {
             arr.push(&JsValue::from_str(name));
@@ -397,7 +397,7 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    fn get_custom_words_for_state(&self) -> JsValue {
+    fn collect_custom_words_for_state(&self) -> JsValue {
         let words_info: Vec<CustomWordData> = self
             .interpreter
             .idiolect
@@ -412,14 +412,14 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn get_core_words_info(&self) -> JsValue {
+    pub fn collect_core_words_info(&self) -> JsValue {
         to_value(&builtins::collect_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
 
     /// IMPORT済みモジュール名の一覧を返す。
     /// 例: ["MUSIC", "JSON"]
     #[wasm_bindgen]
-    pub fn get_imported_modules(&self) -> JsValue {
+    pub fn collect_imported_modules(&self) -> JsValue {
         let arr = js_sys::Array::new();
         for name in &self.interpreter.imported_modules {
             arr.push(&JsValue::from_str(name));
@@ -430,7 +430,7 @@ impl AjisaiInterpreter {
     /// 指定モジュールのサンプルワード情報を返す。
     /// 返却形式は Array<[name, description]>
     #[wasm_bindgen]
-    pub fn get_module_sample_words_info(&self, module_name: &str) -> JsValue {
+    pub fn collect_module_sample_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
         let arr = js_sys::Array::new();
         if let Some(module_dict) = self.interpreter.module_samples.get(&upper) {
@@ -452,7 +452,7 @@ impl AjisaiInterpreter {
     /// 指定モジュールが公開するワード情報を返す。
     /// 返却形式は Array<[name, description]>
     #[wasm_bindgen]
-    pub fn get_module_words_info(&self, module_name: &str) -> JsValue {
+    pub fn collect_module_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
         let prefix = format!("{}::", upper);
         let arr = js_sys::Array::new();
@@ -485,7 +485,7 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn get_word_definition(&self, name: &str) -> JsValue {
+    pub fn lookup_word_definition(&self, name: &str) -> JsValue {
         let upper_name = name.to_uppercase();
         self.interpreter
             .lookup_word_definition_tokens(&upper_name)
@@ -537,12 +537,12 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn set_input_buffer(&mut self, text: String) {
+    pub fn update_input_buffer(&mut self, text: String) {
         self.interpreter.input_buffer = text;
     }
 
     #[wasm_bindgen]
-    pub fn get_io_output_buffer(&self) -> String {
+    pub fn extract_io_output_buffer(&self) -> String {
         self.interpreter.io_output_buffer.clone()
     }
 
@@ -784,48 +784,48 @@ fn value_to_js_value(value: &Value) -> JsValue {
 
 #[cfg(test)]
 mod test_input_helper {
-    use super::generate_bracket_structure_from_shape;
+    use super::build_bracket_structure_from_shape;
 
     #[test]
-    fn test_generate_bracket_structure_from_shape() {
-        assert_eq!(generate_bracket_structure_from_shape(&[1]), "{ }");
-        assert_eq!(generate_bracket_structure_from_shape(&[2]), "{ } { }");
-        assert_eq!(generate_bracket_structure_from_shape(&[3]), "{ } { } { }");
+    fn test_build_bracket_structure_from_shape() {
+        assert_eq!(build_bracket_structure_from_shape(&[1]), "{ }");
+        assert_eq!(build_bracket_structure_from_shape(&[2]), "{ } { }");
+        assert_eq!(build_bracket_structure_from_shape(&[3]), "{ } { } { }");
 
-        assert_eq!(generate_bracket_structure_from_shape(&[1, 1]), "{ ( ) }");
+        assert_eq!(build_bracket_structure_from_shape(&[1, 1]), "{ ( ) }");
         assert_eq!(
-            generate_bracket_structure_from_shape(&[1, 2]),
+            build_bracket_structure_from_shape(&[1, 2]),
             "{ ( ) ( ) }"
         );
         assert_eq!(
-            generate_bracket_structure_from_shape(&[1, 3]),
+            build_bracket_structure_from_shape(&[1, 3]),
             "{ ( ) ( ) ( ) }"
         );
         assert_eq!(
-            generate_bracket_structure_from_shape(&[2, 3]),
+            build_bracket_structure_from_shape(&[2, 3]),
             "{ ( ) ( ) ( ) } { ( ) ( ) ( ) }"
         );
 
         assert_eq!(
-            generate_bracket_structure_from_shape(&[1, 1, 1]),
+            build_bracket_structure_from_shape(&[1, 1, 1]),
             "{ ( [ ] ) }"
         );
         assert_eq!(
-            generate_bracket_structure_from_shape(&[1, 1, 2]),
+            build_bracket_structure_from_shape(&[1, 1, 2]),
             "{ ( [ ] [ ] ) }"
         );
         assert_eq!(
-            generate_bracket_structure_from_shape(&[1, 2, 3]),
+            build_bracket_structure_from_shape(&[1, 2, 3]),
             "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }"
         );
         assert_eq!(
-            generate_bracket_structure_from_shape(&[2, 2, 3]),
+            build_bracket_structure_from_shape(&[2, 2, 3]),
             "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) } { ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }"
         );
 
         // 4D: brackets cycle back to { }
         assert_eq!(
-            generate_bracket_structure_from_shape(&[1, 1, 1, 1]),
+            build_bracket_structure_from_shape(&[1, 1, 1, 1]),
             "{ ( [ { } ] ) }"
         );
     }

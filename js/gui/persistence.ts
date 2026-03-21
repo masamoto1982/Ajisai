@@ -43,29 +43,29 @@ const toCustomWord = (
     definition: getDefinition(wordData[0])
 });
 
-const getCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
-    const customWordsInfo = interpreter.get_idiolect_words_info();
+const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
+    const customWordsInfo = interpreter.collect_idiolect_words_info();
     const customWords: CustomWord[] = customWordsInfo.map(wordData =>
-        toCustomWord(wordData, name => interpreter.get_word_definition(name))
+        toCustomWord(wordData, name => interpreter.lookup_word_definition(name))
     );
 
     return {
-        stack: interpreter.get_stack(),
+        stack: interpreter.collect_stack(),
         customWords,
         sampleWordsVersion: SAMPLE_WORDS_VERSION
     };
 };
 
 const createExportData = (interpreter: AjisaiInterpreter): CustomWord[] => {
-    const customWordsInfo = interpreter.get_idiolect_words_info();
+    const customWordsInfo = interpreter.collect_idiolect_words_info();
     return customWordsInfo.map(wordData => ({
         name: wordData[0],
         description: wordData[1],
-        definition: interpreter.get_word_definition(wordData[0])
+        definition: interpreter.lookup_word_definition(wordData[0])
     }));
 };
 
-const generateExportFilename = (): string => {
+const buildExportFilename = (): string => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     return `ajisai_words_${timestamp}.json`;
 };
@@ -165,7 +165,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         }
 
         try {
-            const state = getCurrentState(window.ajisaiInterpreter);
+            const state = collectCurrentState(window.ajisaiInterpreter);
             await window.AjisaiDB.saveInterpreterState(state);
             console.log('State saved automatically.');
         } catch (error) {
@@ -232,7 +232,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     // new AjisaiInterpreter() は全エクステンションを登録するが、
                     // 保存データに含まれないワードは削除済みなので除去する。
                     const savedWordNames = new Set(wordsToRestore.map((w: CustomWord) => w.name.toUpperCase()));
-                    const currentWords = window.ajisaiInterpreter.get_idiolect_words_info();
+                    const currentWords = window.ajisaiInterpreter.collect_idiolect_words_info();
                     for (const [name] of currentWords) {
                         if (!savedWordNames.has(name.toUpperCase())) {
                             window.ajisaiInterpreter.remove_word(name);
@@ -264,7 +264,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         }
 
         const exportData = createExportData(window.ajisaiInterpreter);
-        const filename = generateExportFilename();
+        const filename = buildExportFilename();
 
         downloadJson(exportData, filename);
         showInfo?.(`Custom words exported as ${filename}`, true);
@@ -351,8 +351,8 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
 export const persistenceUtils = {
     toCustomWord,
-    getCurrentState,
+    collectCurrentState,
     createExportData,
-    generateExportFilename,
+    buildExportFilename,
     parseCustomWords
 };

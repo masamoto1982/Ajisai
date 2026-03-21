@@ -693,29 +693,29 @@ mod tests {
     use crate::types::fraction::Fraction;
     use num_bigint::BigInt;
 
-    fn make_number(n: i64) -> Value {
+    fn create_number(n: i64) -> Value {
         Value::from_fraction(Fraction::new(BigInt::from(n), BigInt::from(1)))
     }
 
-    fn make_fraction(num: i64, den: i64) -> Value {
+    fn create_fraction(num: i64, den: i64) -> Value {
         Value::from_fraction(Fraction::create_unreduced(
             BigInt::from(num),
             BigInt::from(den),
         ))
     }
 
-    fn make_nil() -> Value {
+    fn create_nil() -> Value {
         Value::nil()
     }
 
-    fn make_vector(elements: Vec<Value>) -> Value {
+    fn create_vector(elements: Vec<Value>) -> Value {
         Value::from_vector(elements)
     }
 
     #[test]
     fn test_tone_from_integer() {
         // 440 → 440Hz, 1スロット
-        let val = make_number(440);
+        let val = create_number(440);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -735,7 +735,7 @@ mod tests {
     #[test]
     fn test_tone_from_fraction() {
         // 440/3 → 440Hz, 3スロット (440 and 3 are coprime, no normalization)
-        let val = make_fraction(440, 3);
+        let val = create_fraction(440, 3);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -756,7 +756,7 @@ mod tests {
     fn test_tone_from_fraction_unreduced() {
         // 440/2 is preserved as-is (no GCD reduction) for music DSL
         // This becomes 440Hz, 2スロット
-        let val = make_fraction(440, 2);
+        let val = create_fraction(440, 2);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -776,7 +776,7 @@ mod tests {
     #[test]
     fn test_rest_from_zero() {
         // 0/4 is preserved as-is for music DSL → 4-slot rest
-        let val = make_fraction(0, 4);
+        let val = create_fraction(0, 4);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -791,7 +791,7 @@ mod tests {
     #[test]
     fn test_rest_from_zero_coprime() {
         // 0/3 is preserved as-is for music DSL → 3-slot rest
-        let val = make_fraction(0, 3);
+        let val = create_fraction(0, 3);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -806,7 +806,7 @@ mod tests {
     #[test]
     fn test_rest_from_nil() {
         // NIL → 1スロット休符
-        let val = make_nil();
+        let val = create_nil();
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -840,8 +840,8 @@ mod tests {
         // Without DisplayHint, is_string_value returns true for all vectors,
         // so a vector of scalars [440, 550] is treated as lyrics (codepoints).
         // build_audio_structure outputs the characters and returns an empty Seq.
-        let elements = vec![make_number(440), make_number(550)];
-        let val = make_vector(elements);
+        let elements = vec![create_number(440), create_number(550)];
+        let val = create_vector(elements);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -857,8 +857,8 @@ mod tests {
     fn test_sim_structure() {
         // Without DisplayHint, is_string_value returns true for all vectors,
         // so a vector of scalars is treated as lyrics (codepoints).
-        let elements = vec![make_number(440), make_number(550)];
-        let val = make_vector(elements);
+        let elements = vec![create_number(440), create_number(550)];
+        let val = create_vector(elements);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Simultaneous, &mut output).unwrap();
 
@@ -874,7 +874,7 @@ mod tests {
 
     #[test]
     fn test_negative_frequency_error() {
-        let val = make_number(-440);
+        let val = create_number(-440);
         let mut output = String::new();
         let result = build_audio_structure(&val, PlayMode::Sequential, &mut output);
 
@@ -883,7 +883,7 @@ mod tests {
 
     #[test]
     fn test_audible_range_warning_low() {
-        let val = make_number(10); // 10Hz - below audible
+        let val = create_number(10); // 10Hz - below audible
         let mut output = String::new();
         let _ = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -899,7 +899,7 @@ mod tests {
 
     #[test]
     fn test_audible_range_warning_high() {
-        let val = make_number(25000); // 25kHz - above audible
+        let val = create_number(25000); // 25kHz - above audible
         let mut output = String::new();
         let _ = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -915,7 +915,7 @@ mod tests {
 
     #[test]
     fn test_audible_range_no_warning() {
-        let val = make_number(440); // 440Hz - audible
+        let val = create_number(440); // 440Hz - audible
         let mut output = String::new();
         let _ = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 

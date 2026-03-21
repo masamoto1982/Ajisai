@@ -259,14 +259,14 @@ pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Valu
 mod tests {
     use super::*;
 
-    fn make_int_vector(values: &[i64]) -> Value {
+    fn create_int_vector(values: &[i64]) -> Value {
         let children: Vec<Value> = values.iter().map(|&v| Value::from_int(v)).collect();
         Value::from_children(children)
     }
 
     #[test]
     fn test_extract_integer_vector() {
-        let v = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let result = extract_integer_vector(&v);
         assert!(result.is_some());
         assert_eq!(result.unwrap(), vec![1, 2, 3, 4, 5, 6, 7, 8]);
@@ -274,15 +274,15 @@ mod tests {
 
     #[test]
     fn test_extract_integer_vector_too_small() {
-        let v = make_int_vector(&[1, 2, 3]);
+        let v = create_int_vector(&[1, 2, 3]);
         let result = extract_integer_vector(&v);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_simd_add_vectors() {
-        let a = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let b = make_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
+        let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let b = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
         let result = apply_simd_add(&a, &b).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88]);
@@ -290,8 +290,8 @@ mod tests {
 
     #[test]
     fn test_simd_sub_vectors() {
-        let a = make_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
-        let b = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let a = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
+        let b = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let result = apply_simd_sub(&a, &b).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![9, 18, 27, 36, 45, 54, 63, 72]);
@@ -299,8 +299,8 @@ mod tests {
 
     #[test]
     fn test_simd_mul_vectors() {
-        let a = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let b = make_int_vector(&[2, 3, 4, 5, 6, 7, 8, 9]);
+        let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let b = create_int_vector(&[2, 3, 4, 5, 6, 7, 8, 9]);
         let result = apply_simd_mul(&a, &b).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![2, 6, 12, 20, 30, 42, 56, 72]);
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn test_simd_scalar_add() {
-        let v = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let s = Value::from_int(100);
         let result = apply_simd_scalar_add(&v, &s).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn test_simd_scalar_mul() {
-        let v = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let s = Value::from_int(3);
         let result = apply_simd_scalar_mul(&v, &s).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
@@ -326,8 +326,8 @@ mod tests {
 
     #[test]
     fn test_simd_add_odd_length() {
-        let a = make_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
-        let b = make_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80, 90]);
+        let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        let b = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80, 90]);
         let result = apply_simd_add(&a, &b).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88, 99]);

@@ -34,7 +34,7 @@ export interface VocabularyCallbacks {
 export interface VocabularyManager {
     readonly renderBuiltInWords: () => void;
     readonly updateCustomWords: (customWordsInfo: Array<[string, string | null, boolean]>) => void;
-    readonly setSearchFilter: (filter: string) => void;
+    readonly updateSearchFilter: (filter: string) => void;
 }
 
 const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
@@ -287,7 +287,7 @@ export const createVocabularyManager = (
                 className,
                 () => onWordClick(wordInfo.name),
                 () => {
-                    const definition = window.ajisaiInterpreter?.get_word_definition(wordInfo.name);
+                    const definition = window.ajisaiInterpreter?.lookup_word_definition(wordInfo.name);
                     renderWordInfo(elements.customWordInfo, definition || DEFAULT_WORD_INFO_MESSAGE, !definition);
                 },
                 () => { resetWordInfoDisplay(elements.customWordInfo); },
@@ -318,7 +318,7 @@ export const createVocabularyManager = (
         if (!window.ajisaiInterpreter) return;
 
         try {
-            const coreWords = window.ajisaiInterpreter.get_core_words_info();
+            const coreWords = window.ajisaiInterpreter.collect_core_words_info();
             renderBuiltInWordsSorted(elements.builtInWordsDisplay, coreWords);
         } catch (error) {
             console.error('Failed to render core words:', error);
@@ -334,7 +334,7 @@ export const createVocabularyManager = (
         renderCustomWordButtons(elements.customWordsDisplay, words);
     };
 
-    const setSearchFilter = (filter: string): void => {
+    const updateSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
         // 両方のワードリストを再レンダリング
         renderBuiltInWords();
@@ -345,7 +345,7 @@ export const createVocabularyManager = (
     return {
         renderBuiltInWords,
         updateCustomWords,
-        setSearchFilter
+        updateSearchFilter
     };
 };
 

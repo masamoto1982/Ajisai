@@ -91,12 +91,12 @@ const calculateStackDifference = (
 
 export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner => {
     // 出力要素を取得（直接DOMアクセス）
-    const getOutputElement = (): HTMLElement | null =>
+    const lookupOutputElement = (): HTMLElement | null =>
         document.getElementById('output-display');
 
     // 色付きメッセージを表示
     const showColoredInfo = (text: string, type: InfoType): void => {
-        const outputElement = getOutputElement();
+        const outputElement = lookupOutputElement();
         if (!outputElement) return;
 
         const span = document.createElement('span');
@@ -123,7 +123,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
     const resetInterpreter = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
 
-        const outputElement = getOutputElement();
+        const outputElement = lookupOutputElement();
         const currentOutput = outputElement?.innerHTML || '';
 
         await window.ajisaiInterpreter.reset();
@@ -136,7 +136,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
     // 期待値のチェック
     const checkExpectations = async (testCase: TestCase): Promise<TestResult> => {
         if (testCase.expectedStack) {
-            const stack = window.ajisaiInterpreter.get_stack();
+            const stack = window.ajisaiInterpreter.collect_stack();
             const matches = compareStack(stack, testCase.expectedStack);
             return {
                 passed: matches,
@@ -359,7 +359,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         let totalFailed = 0;
         const failedTests: string[] = [];
 
-        const outputElement = getOutputElement();
+        const outputElement = lookupOutputElement();
         if (outputElement) {
             outputElement.innerHTML = '';
         }

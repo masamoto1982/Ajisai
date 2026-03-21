@@ -53,7 +53,7 @@ const resolveNextViewMode = (currentMode: ViewMode, direction: 'left' | 'right')
     return VIEW_ORDER[nextIndex]!;
 };
 
-const getStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> => {
+const lookupStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> => {
     const modeMap: Record<ViewMode, Record<keyof MobileElements, string>> = {
         input: { inputArea: 'flex', outputArea: 'none', stackArea: 'none', dictionaryArea: 'none' },
         output: { inputArea: 'none', outputArea: 'flex', stackArea: 'none', dictionaryArea: 'none' },
@@ -82,11 +82,11 @@ export const createMobileHandler = (
 
     const updateView = (mode: ViewMode): void => {
         currentMode = mode;
-        const styles = getStylesForMode(mode);
+        const styles = lookupStylesForMode(mode);
         applyStyles(elements, styles);
     };
 
-    const handleSwipeGesture = (endX: number, endY: number): void => {
+    const resolveSwipeGesture = (endX: number, endY: number): void => {
         const direction = detectSwipeDirection(touchStartX, touchStartY, endX, endY);
 
         if (direction === 'left' || direction === 'right') {
@@ -111,7 +111,7 @@ export const createMobileHandler = (
             if (!checkIsMobile()) return;
             const touch = e.changedTouches[0];
             if (touch) {
-                handleSwipeGesture(touch.screenX, touch.screenY);
+                resolveSwipeGesture(touch.screenX, touch.screenY);
             }
         }, { passive: true });
     };
@@ -129,7 +129,7 @@ export const mobileUtils = {
     checkIsMobile,
     detectSwipeDirection,
     resolveNextViewMode,
-    getStylesForMode,
+    lookupStylesForMode,
     VIEW_ORDER,
     MOBILE_BREAKPOINT,
     SWIPE_THRESHOLD

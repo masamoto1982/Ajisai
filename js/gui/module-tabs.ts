@@ -19,9 +19,9 @@ export interface ModuleSheet {
 export interface ModuleTabManager {
     readonly syncModuleTabs: () => string[];
     readonly clearModuleTabs: () => void;
-    readonly getModuleArea: (sheetId: string) => HTMLElement | null;
-    readonly getSheets: () => ModuleSheet[];
-    readonly setSearchFilter: (filter: string) => void;
+    readonly lookupModuleArea: (sheetId: string) => HTMLElement | null;
+    readonly collectSheets: () => ModuleSheet[];
+    readonly updateSearchFilter: (filter: string) => void;
 }
 
 export interface ModuleTabManagerOptions {
@@ -96,7 +96,7 @@ export const createModuleTabManager = (
 
         try {
             const moduleWords: Array<[string, string | null]> =
-                window.ajisaiInterpreter.get_module_words_info(moduleSheet.moduleName);
+                window.ajisaiInterpreter.collect_module_words_info(moduleSheet.moduleName);
 
             const sorted = [...moduleWords].sort((a, b) => compareWordName(a[0], b[0]));
             const matched = sorted.filter(wd => checkWordMatchesFilter(wd[0], searchFilter));
@@ -146,7 +146,7 @@ export const createModuleTabManager = (
         const newSheetIds: string[] = [];
 
         try {
-            const importedModules: string[] = window.ajisaiInterpreter.get_imported_modules();
+            const importedModules: string[] = window.ajisaiInterpreter.collect_imported_modules();
             const importedSet = new Set(importedModules);
 
             for (let i = sheets.length - 1; i >= 0; i--) {
@@ -191,14 +191,14 @@ export const createModuleTabManager = (
         sheets.length = 0;
     };
 
-    const getModuleSheet = (sheetId: string): HTMLElement | null => {
+    const lookupModuleSheet = (sheetId: string): HTMLElement | null => {
         const sheet = sheets.find(s => s.sheetId === sheetId);
         return sheet?.sheetEl ?? null;
     };
 
-    const getSheets = (): ModuleSheet[] => sheets;
+    const collectSheets = (): ModuleSheet[] => sheets;
 
-    const setSearchFilter = (filter: string): void => {
+    const updateSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
         for (const sheet of sheets) {
             renderModuleWords(sheet);
@@ -208,8 +208,8 @@ export const createModuleTabManager = (
     return {
         syncModuleTabs,
         clearModuleTabs,
-        getModuleArea: getModuleSheet,
-        getSheets,
-        setSearchFilter,
+        lookupModuleArea: lookupModuleSheet,
+        collectSheets,
+        updateSearchFilter,
     };
 };

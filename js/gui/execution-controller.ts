@@ -6,9 +6,9 @@ import { createStepExecutor, StepExecutor } from './step-executor';
 import type { ViewMode } from './mobile';
 
 export interface ExecutionCallbacks {
-    readonly getEditorValue: () => string;
+    readonly extractEditorValue: () => string;
     readonly clearEditor: (switchView?: boolean) => void;
-    readonly setEditorValue: (value: string) => void;
+    readonly updateEditorValue: (value: string) => void;
     readonly insertEditorText: (text: string) => void;
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showError: (error: Error | string) => void;
@@ -28,16 +28,16 @@ export interface ExecutionController {
 }
 
 interface ExecutionSnapshot {
-    readonly stack: ReturnType<AjisaiInterpreter['get_stack']>;
+    readonly stack: ReturnType<AjisaiInterpreter['collect_stack']>;
     readonly customWords: CustomWord[];
     readonly importedModules: string[];
 }
 
 const collectCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
-    const customWordsInfo = interpreter.get_idiolect_words_info();
+    const customWordsInfo = interpreter.collect_idiolect_words_info();
     return customWordsInfo.map(wordData => ({
         name: wordData[0],
-        definition: interpreter.get_word_definition(wordData[0]),
+        definition: interpreter.lookup_word_definition(wordData[0]),
         description: wordData[1]
     }));
 };
@@ -67,12 +67,12 @@ const isAbortError = (error: Error): boolean =>
     error.message.includes('aborted');
 
 const createExecutionSnapshot = (interpreter: AjisaiInterpreter): ExecutionSnapshot => ({
-    stack: interpreter.get_stack(),
+    stack: interpreter.collect_stack(),
     customWords: collectCustomWords(interpreter),
-    importedModules: interpreter.get_imported_modules()
+    importedModules: interpreter.collect_imported_modules()
 });
 
-const handleExecutionException = (
+const resolveExecutionException = (
     error: unknown,
     showInfo: (text: string, append: boolean) => void,
     showError: (error: Error | string) => void
@@ -90,9 +90,9 @@ export const createExecutionController = (
     callbacks: ExecutionCallbacks
 ): ExecutionController => {
     const {
-        getEditorValue,
+        extractEditorValue,
         clearEditor,
-        setEditorValue,
+        updateEditorValue,
         insertEditorText,
         showInfo,
         showError,
@@ -104,7 +104,7 @@ export const createExecutionController = (
     } = callbacks;
 
     const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
-        getEditorValue,
+        extractEditorValue,
         showInfo,
         showError,
         showExecutionResult,
@@ -112,14 +112,14 @@ export const createExecutionController = (
         saveState
     });
 
-    const handleResult = (result: ExecuteResult, code: string): void => {
+    const applyExecutionResult = (result: ExecuteResult, code: string): void => {
         if (result.inputHelper) {
             clearEditor(false);
             insertEditorText(result.inputHelper);
             showInfo('Input helper inserted', false);
             updateView('input');
         } else if (result.definition_to_load) {
-            setEditorValue(result.definition_to_load);
+            updateEditorValue(result.definition_to_load);
             const wordName = code.replace("?", "").trim();
             showInfo(`Showing definition: ${wordName}`, false);
             updateView('input');
@@ -155,10 +155,10 @@ export const createExecutionController = (
                 showError(error as Error);
             }
 
-            handleResult(result, code);
+            applyExecutionResult(result, code);
 
         } catch (error) {
-            handleExecutionException(error, showInfo, showError);
+            resolveExecutionException(error, showInfo, showError);
         }
 
         updateDisplays();
@@ -211,5 +211,5 @@ export const executionControllerUtils = {
     checkIsResetCommand,
     isAbortError,
     createExecutionSnapshot,
-    handleExecutionException
+    resolveExecutionException
 };
