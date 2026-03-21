@@ -12,7 +12,7 @@ import {
 export interface ModuleSheet {
     readonly moduleName: string;
     readonly sheetId: string;
-    readonly optionEl: HTMLOptionElement;
+    readonly buttonEl: HTMLButtonElement;
     readonly sheetEl: HTMLElement;
 }
 
@@ -25,13 +25,12 @@ export interface ModuleTabManager {
 }
 
 export interface ModuleTabManagerOptions {
-    readonly selectEl: HTMLSelectElement;
+    readonly switcherEl: HTMLElement;
     readonly sheetContainerEl: HTMLElement;
     readonly onWordClick: (word: string) => void;
     readonly onBackgroundClick: () => void;
     readonly onBackgroundDoubleClick: () => void;
     readonly onSheetChange: (sheetId: string) => void;
-    readonly onSearchInput: (filter: string) => void;
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (msg: string, clear: boolean) => void;
@@ -41,7 +40,7 @@ export const createModuleTabManager = (
     options: ModuleTabManagerOptions
 ): ModuleTabManager => {
     const {
-        selectEl,
+        switcherEl,
         sheetContainerEl,
         onWordClick,
         onBackgroundClick,
@@ -51,18 +50,23 @@ export const createModuleTabManager = (
     const sheets: ModuleSheet[] = [];
     let searchFilter = '';
 
-    const createOptionElement = (moduleName: string, sheetId: string): HTMLOptionElement => {
-        const option = document.createElement('option');
-        option.value = sheetId;
-        option.textContent = `${moduleName} word`;
-        return option;
+    const createButtonElement = (moduleName: string, sheetId: string): HTMLButtonElement => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'dictionary-sheet-button';
+        button.dataset.sheet = sheetId;
+        button.setAttribute('aria-controls', `dictionary-sheet-${sheetId}`);
+        button.setAttribute('aria-pressed', 'false');
+        button.textContent = `${moduleName} word`;
+        button.addEventListener('click', () => options.onSheetChange(sheetId));
+        return button;
     };
 
     const createSheetElement = (sheetId: string): HTMLElement => {
         const sheet = document.createElement('div');
         sheet.className = 'dictionary-sheet';
         sheet.id = `dictionary-sheet-${sheetId}`;
-        sheet.style.display = 'none';
+        sheet.hidden = true;
 
         const wordInfoDisplay = document.createElement('span');
         wordInfoDisplay.className = 'word-info-display module-word-info';
@@ -152,7 +156,7 @@ export const createModuleTabManager = (
             for (let i = sheets.length - 1; i >= 0; i--) {
                 const sheet = sheets[i]!;
                 if (!importedSet.has(sheet.moduleName)) {
-                    sheet.optionEl.remove();
+                    sheet.buttonEl.remove();
                     sheet.sheetEl.remove();
                     sheets.splice(i, 1);
                 }
@@ -161,13 +165,13 @@ export const createModuleTabManager = (
             for (const moduleName of importedModules) {
                 if (!findSheet(moduleName)) {
                     const sheetId = `module-${moduleName}`;
-                    const optionEl = createOptionElement(moduleName, sheetId);
+                    const buttonEl = createButtonElement(moduleName, sheetId);
                     const sheetEl = createSheetElement(sheetId);
 
-                    selectEl.appendChild(optionEl);
+                    switcherEl.appendChild(buttonEl);
                     sheetContainerEl.appendChild(sheetEl);
 
-                    const moduleSheet: ModuleSheet = { moduleName, sheetId, optionEl, sheetEl };
+                    const moduleSheet: ModuleSheet = { moduleName, sheetId, buttonEl, sheetEl };
                     sheets.push(moduleSheet);
                     newSheetIds.push(sheetId);
                 }
@@ -185,7 +189,7 @@ export const createModuleTabManager = (
 
     const clearModuleTabs = (): void => {
         for (const sheet of sheets) {
-            sheet.optionEl.remove();
+            sheet.buttonEl.remove();
             sheet.sheetEl.remove();
         }
         sheets.length = 0;
