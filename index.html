@@ -65,24 +65,17 @@
             </div>
         </header>
 
-        <nav class="area-tabs" aria-label="Area tabs">
-            <div class="tab-group" role="tablist" aria-label="Editor tabs">
-                <button id="tab-input" class="area-tab active" type="button" role="tab" data-mode="input" aria-controls="input-panel" aria-selected="true">Input</button>
-                <button id="tab-output" class="area-tab" type="button" role="tab" data-mode="output" aria-controls="output-panel" aria-selected="false" tabindex="-1">Output</button>
-            </div>
-            <div class="tab-group" role="tablist" aria-label="State tabs">
-                <button id="tab-stack" class="area-tab active" type="button" role="tab" data-mode="stack" aria-controls="stack-panel" aria-selected="true">Stack</button>
-                <button id="tab-dictionary" class="area-tab" type="button" role="tab" data-mode="dictionary" aria-controls="dictionary-panel" aria-selected="false" tabindex="-1">Dictionary</button>
-            </div>
-        </nav>
-
         <main class="main-layout">
             <div id="editor-panel" class="panel">
-                <section id="output-panel" class="output-area" role="tabpanel" aria-labelledby="tab-output" tabindex="0">
+                <div class="panel-switcher" role="radiogroup" aria-label="Left pane view">
+                    <button id="panel-switch-input" class="panel-switch-button active" type="button" data-pane="input" aria-controls="input-panel" aria-pressed="true">Input</button>
+                    <button id="panel-switch-output" class="panel-switch-button" type="button" data-pane="output" aria-controls="output-panel" aria-pressed="false">Output</button>
+                </div>
+                <section id="output-panel" class="output-area" aria-labelledby="panel-switch-output" tabindex="0" hidden>
                     <h2 class="visually-hidden">Output</h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                 </section>
-                <section id="input-panel" class="input-area" role="tabpanel" aria-labelledby="tab-input" tabindex="0">
+                <section id="input-panel" class="input-area" aria-labelledby="panel-switch-input" tabindex="0">
                     <h2 class="visually-hidden">Input</h2>
                     <div class="textarea-wrapper">
                         <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here"></textarea>
@@ -96,12 +89,16 @@
             </div>
             
             <div id="state-panel" class="panel">
-                <section id="stack-panel" class="stack-area" role="tabpanel" aria-labelledby="tab-stack" tabindex="0">
+                <div class="panel-switcher" role="radiogroup" aria-label="Right pane view">
+                    <button id="panel-switch-stack" class="panel-switch-button active" type="button" data-pane="stack" aria-controls="stack-panel" aria-pressed="true">Stack</button>
+                    <button id="panel-switch-dictionary" class="panel-switch-button" type="button" data-pane="dictionary" aria-controls="dictionary-panel" aria-pressed="false">Dictionary</button>
+                </div>
+                <section id="stack-panel" class="stack-area" aria-labelledby="panel-switch-stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 
-                <section id="dictionary-panel" class="dictionary-area" role="tabpanel" aria-labelledby="tab-dictionary" tabindex="0" style="display:none;">
+                <section id="dictionary-panel" class="dictionary-area" aria-labelledby="panel-switch-dictionary" tabindex="0" hidden>
                     <div class="dictionary-toolbar">
                         <div class="dictionary-sheet-selector">
                             <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
@@ -123,7 +120,7 @@
                             </div>
                         </div>
                     </div>
-                    <div id="dictionary-sheet-custom" class="dictionary-sheet" style="display:none;">
+                    <div id="dictionary-sheet-custom" class="dictionary-sheet" hidden>
                         <div class="vocabulary-container">
                             <div class="words-area">
                                 <span id="custom-word-info" class="word-info-display"></span>
