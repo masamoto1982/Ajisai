@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::extract_integer_from_value;
+use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::tensor_ops::{apply_binary_broadcast, apply_unary_flat, FlatTensor};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;

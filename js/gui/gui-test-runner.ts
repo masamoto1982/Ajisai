@@ -1,7 +1,7 @@
-// js/gui/test.ts - テストランナー（関数型スタイル）
+// js/gui/gui-test-runner.ts - テストランナー（関数型スタイル）
 
-import type { Value } from '../wasm-types';
-import { TEST_CASES, type TestCase } from './test-cases';
+import type { Value } from '../wasm-interpreter-types';
+import { TEST_CASES, type TestCase } from './gui-interpreter-test-cases';
 import { formatStack, formatValueSimple, compareStack, compareValue } from './value-formatter';
 
 // ============================================================

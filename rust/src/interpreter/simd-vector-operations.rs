@@ -1,4 +1,4 @@
-// rust/src/interpreter/simd_ops.rs
+// rust/src/interpreter/simd-vector-operations.rs
 //
 // WASM SIMD acceleration for integer vector arithmetic.
 // Provides fast paths for element-wise operations on vectors of integer fractions (denominator=1).

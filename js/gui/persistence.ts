@@ -1,9 +1,9 @@
 // js/gui/persistence.ts
 
-import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-types';
-import type DB from '../db';
+import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-interpreter-types';
+import type DB from '../indexeddb-custom-word-store';
 import { SAMPLE_CUSTOM_WORDS, SAMPLE_WORDS_VERSION } from './sample-words';
-import { Result, ok, err } from './fp-utils';
+import { Result, ok, err } from './functional-result-helpers';
 
 export interface InterpreterState {
     readonly stack: Value[];

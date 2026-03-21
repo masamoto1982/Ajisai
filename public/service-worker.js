@@ -2,7 +2,7 @@ const CACHE_NAME = 'ajisai-v202512301000';
 const urlsToCache = [
   './',
   './index.html',
-  './style.css',
+  './app-interface.css',
   './manifest.json',
   './ajisai-config.js',
   './ajisai-theme.js'
@@ -13,8 +13,8 @@ const networkFirstPatterns = [
   'ajisai-config.js',
   'ajisai-theme.js',
   'config.js',
-  'script.js',
-  'style.css',
+  'docs-navigation-script.js',
+  'app-interface.css',
   'index.html'
 ];
 

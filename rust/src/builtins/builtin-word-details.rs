@@ -1,8 +1,8 @@
-// rust/src/builtins/details.rs
+// rust/src/builtins/builtin-word-details.rs
 //
 // Detailed documentation for built-in words (used by the ? word)
 
-use super::definitions::collect_builtin_definitions;
+use super::builtin_word_definitions::collect_builtin_definitions;
 
 /// Returns detailed documentation for a built-in word.
 /// Used by the `?` word to display help information.

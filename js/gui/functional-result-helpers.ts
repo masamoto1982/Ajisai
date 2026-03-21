@@ -1,4 +1,4 @@
-// js/gui/fp-utils.ts - Functional utilities
+// js/gui/functional-result-helpers.ts - Functional utilities
 
 /**
  * Pipeline: Apply functions from left to right

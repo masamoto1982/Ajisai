@@ -1,4 +1,4 @@
-// js/gui/main.ts
+// js/gui/gui-application.ts
 
 import { createDisplay, Display, DisplayElements } from './display';
 import { createVocabularyManager, VocabularyManager, VocabularyElements } from './dictionary';
@@ -7,8 +7,8 @@ import { createMobileHandler, MobileHandler, MobileElements, ViewMode } from './
 import { createModuleTabManager, ModuleTabManager } from './module-tabs';
 import { createPersistence, Persistence } from './persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
-import { WORKER_MANAGER } from '../workers/worker-manager';
-import type { AjisaiInterpreter } from '../wasm-types';
+import { WORKER_MANAGER } from '../workers/execution-worker-manager';
+import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 
 declare global {
     interface Window {
@@ -377,7 +377,7 @@ export const createGUI = (): GUI => {
 
         elements.testBtn?.addEventListener('click', () => {
             switchArea('output');
-            import('./test').then(({ createTestRunner }) => {
+            import('./gui-test-runner').then(({ createTestRunner }) => {
                 const testRunner = createTestRunner({
                     showInfo: (text, append) => display.renderInfo(text, append),
                     showError: (error) => display.renderError(error),

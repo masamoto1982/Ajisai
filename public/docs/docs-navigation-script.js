@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const demoButton = `<a href="${c.social.demo.url}" class="header-btn" target="_blank" rel="noopener noreferrer">Demo</a>`;
 
         headerEl.innerHTML = `
-            <img src="../images/ajisai-logo-min_w40.jpg" alt="Ajisai Logo" class="logo">
+            <img src="../images/ajisai-logo-thumbnail-w40.jpg" alt="Ajisai Logo" class="logo">
             <h1>${c.meta.title}</h1>
             <span class="version">${c.meta.subTitle}</span>
             <div class="header-actions">

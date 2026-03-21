@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::extract_word_name_from_value;
+use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::vector_exec::format_vector_to_source;
 use crate::interpreter::{Interpreter, OperationTargetMode, WordDefinition};
 use crate::types::{ExecutionLine, Token, Value, ValueData};

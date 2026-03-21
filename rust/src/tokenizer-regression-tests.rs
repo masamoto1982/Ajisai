@@ -1,7 +1,7 @@
-// test_tokenizer.rs - 空白区切りトークナイザーのテスト
+// rust/src/tokenizer-regression-tests.rs - 空白区切りトークナイザーのテスト
 
 #[cfg(test)]
-mod test_tokenizer {
+mod tokenizer_regression_tests {
     use crate::tokenizer::tokenize;
     use crate::types::Token;
 

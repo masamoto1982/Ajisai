@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{is_string_value, value_as_string};
+use crate::interpreter::value_extraction_helpers::{is_string_value, value_as_string};
 use crate::interpreter::{audio, json, ConsumptionMode, Interpreter};
 use crate::types::{Value, WordDefinition};
 use std::collections::HashSet;

@@ -8,7 +8,7 @@
 // 「型変換」は実質的に DisplayHint の変更と、表示形式の変換である。
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{value_as_string, create_number_value};
+use crate::interpreter::value_extraction_helpers::{value_as_string, create_number_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};

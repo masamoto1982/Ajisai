@@ -1,6 +1,6 @@
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{extract_integer_from_value, extract_operands_with_flow, push_result, push_flow_result};
+use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, extract_operands_with_flow, push_result, push_flow_result};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast;
 use crate::types::{Value, ValueData};

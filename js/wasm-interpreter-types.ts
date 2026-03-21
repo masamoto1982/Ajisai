@@ -1,4 +1,4 @@
-// js/wasm-types.ts
+// js/wasm-interpreter-types.ts
 
 export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;

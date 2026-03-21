@@ -1,9 +1,9 @@
 // js/gui/display.ts
 
-import type { Value, ExecuteResult } from '../wasm-types';
+import type { Value, ExecuteResult } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { formatFractionScientific } from './value-formatter';
-import { pipe } from './fp-utils';
+import { pipe } from './functional-result-helpers';
 
 export interface DisplayElements {
     outputDisplay: HTMLElement;

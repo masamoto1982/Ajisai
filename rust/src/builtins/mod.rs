@@ -1,8 +1,10 @@
-mod definitions;
-mod details;
+#[path = "builtin-word-definitions.rs"]
+mod builtin_word_definitions;
+#[path = "builtin-word-details.rs"]
+mod builtin_word_details;
 
-pub use definitions::collect_builtin_definitions;
-pub use details::lookup_builtin_detail;
+pub use builtin_word_definitions::collect_builtin_definitions;
+pub use builtin_word_details::lookup_builtin_detail;
 
 use crate::types::WordDefinition;
 use std::collections::{HashMap, HashSet};

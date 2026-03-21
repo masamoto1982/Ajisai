@@ -16,7 +16,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
-        reference: 'reference.html'
+        reference: 'language-reference-playground.html'
       }
     }
   },

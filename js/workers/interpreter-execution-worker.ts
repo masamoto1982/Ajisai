@@ -1,6 +1,6 @@
-// js/workers/ajisai-worker.ts
+// js/workers/interpreter-execution-worker.ts
 
-import type { AjisaiInterpreter, ExecuteResult } from '../wasm-types';
+import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 
 let interpreter: AjisaiInterpreter | null = null;
 let isAborted = false;

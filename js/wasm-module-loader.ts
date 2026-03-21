@@ -1,4 +1,4 @@
-import type { WasmModule } from './wasm-types';
+import type { WasmModule } from './wasm-interpreter-types';
 
 let wasmModule: WasmModule | null = null;
 let compiledModule: WebAssembly.Module | null = null;

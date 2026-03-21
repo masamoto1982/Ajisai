@@ -4,7 +4,7 @@
 
 use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{extract_integer_from_value, normalize_index};
+use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, normalize_index};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::Value;
 

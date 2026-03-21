@@ -1,4 +1,4 @@
-// js/db.ts
+// js/indexeddb-custom-word-store.ts
 
 interface TableData {
     name: string;
