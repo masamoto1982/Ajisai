@@ -89,7 +89,7 @@ self.onmessage = async (event: MessageEvent) => {
             interpreter!.restore_stack(event.data.state.stack);
         }
         if (event.data.state?.customWords) {
-            interpreter!.restore_idiolect(event.data.state.customWords);
+            interpreter!.restore_custom_words(event.data.state.customWords);
         }
 
         if (isAborted) throw new Error('aborted');

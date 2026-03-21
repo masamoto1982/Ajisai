@@ -11,7 +11,7 @@ export type ViewMode = 'input' | 'output' | 'stack' | 'dictionary';
 
 export interface MobileHandler {
     readonly isMobile: () => boolean;
-    readonly getCurrentMode: () => ViewMode;
+    readonly extractCurrentMode: () => ViewMode;
     readonly updateView: (mode: ViewMode) => void;
 }
 
@@ -120,7 +120,7 @@ export const createMobileHandler = (
 
     return {
         isMobile: () => checkIsMobile(),
-        getCurrentMode: () => currentMode,
+        extractCurrentMode: () => currentMode,
         updateView
     };
 };

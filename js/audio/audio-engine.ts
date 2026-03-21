@@ -174,29 +174,29 @@ export class AudioEngine {
         oscillator.stop(startTime + duration + release);
     }
 
-    setSlotDuration(seconds: number): void {
+    updateSlotDuration(seconds: number): void {
         this.slotDuration = seconds;
     }
 
-    getSlotDuration(): number {
+    extractSlotDuration(): number {
         return this.slotDuration;
     }
 
-    setGain(value: number): void {
+    updateGain(value: number): void {
         this.currentGain = Math.max(0, Math.min(1, value));
         console.log(`Audio gain set to ${this.currentGain}`);
     }
 
-    getGain(): number {
+    extractGain(): number {
         return this.currentGain;
     }
 
-    setPan(value: number): void {
+    updatePan(value: number): void {
         this.currentPan = Math.max(-1, Math.min(1, value));
         console.log(`Audio pan set to ${this.currentPan}`);
     }
 
-    getPan(): number {
+    extractPan(): number {
         return this.currentPan;
     }
 }

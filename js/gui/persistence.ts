@@ -44,7 +44,7 @@ const toCustomWord = (
 });
 
 const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
-    const customWordsInfo = interpreter.collect_idiolect_words_info();
+    const customWordsInfo = interpreter.collect_custom_words_info();
     const customWords: CustomWord[] = customWordsInfo.map(wordData =>
         toCustomWord(wordData, name => interpreter.lookup_word_definition(name))
     );
@@ -57,7 +57,7 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
 };
 
 const createExportData = (interpreter: AjisaiInterpreter): CustomWord[] => {
-    const customWordsInfo = interpreter.collect_idiolect_words_info();
+    const customWordsInfo = interpreter.collect_custom_words_info();
     return customWordsInfo.map(wordData => ({
         name: wordData[0],
         description: wordData[1],
@@ -175,7 +175,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
     const loadSampleWords = async (): Promise<void> => {
         try {
-            await window.ajisaiInterpreter.restore_idiolect(SAMPLE_CUSTOM_WORDS);
+            await window.ajisaiInterpreter.restore_custom_words(SAMPLE_CUSTOM_WORDS);
             await saveCurrentState();
             console.log('Sample custom words loaded.');
 
@@ -226,13 +226,13 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                         console.log(`Sample words migrated: v${savedVersion} → v${SAMPLE_WORDS_VERSION}`);
                     }
 
-                    await window.ajisaiInterpreter.restore_idiolect(wordsToRestore);
+                    await window.ajisaiInterpreter.restore_custom_words(wordsToRestore);
 
                     // ユーザーが DEL で削除したエクステンションワードを反映する。
                     // new AjisaiInterpreter() は全エクステンションを登録するが、
                     // 保存データに含まれないワードは削除済みなので除去する。
                     const savedWordNames = new Set(wordsToRestore.map((w: CustomWord) => w.name.toUpperCase()));
-                    const currentWords = window.ajisaiInterpreter.collect_idiolect_words_info();
+                    const currentWords = window.ajisaiInterpreter.collect_custom_words_info();
                     for (const [name] of currentWords) {
                         if (!savedWordNames.has(name.toUpperCase())) {
                             window.ajisaiInterpreter.remove_word(name);
@@ -282,7 +282,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
 
                 const importedWords = parseResult.value;
-                await window.ajisaiInterpreter.restore_idiolect(importedWords);
+                await window.ajisaiInterpreter.restore_custom_words(importedWords);
 
                 updateDisplays?.();
                 await saveCurrentState();

@@ -68,9 +68,9 @@ const cacheElements = (): GUIElements => ({
     outputDisplay: document.getElementById('output-display')!,
     stackDisplay: document.getElementById('stack-display')!,
     builtInWordsDisplay: document.getElementById('core-words-display')!,
-    customWordsDisplay: document.getElementById('idiolect-words-display')!,
+    customWordsDisplay: document.getElementById('custom-words-display')!,
     builtInWordInfo: document.getElementById('core-word-info')!,
-    customWordInfo: document.getElementById('idiolect-word-info')!,
+    customWordInfo: document.getElementById('custom-word-info')!,
     dictionarySearch: document.getElementById('dictionary-search') as HTMLInputElement,
     dictionarySearchClearBtn: document.getElementById('dictionary-search-clear-btn') as HTMLButtonElement,
     dictionarySheetSelect: document.getElementById('dictionary-sheet-select') as HTMLSelectElement,
@@ -136,7 +136,7 @@ const collectAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
     const coreWords = window.ajisaiInterpreter.collect_core_words_info().map(word => word[0]);
-    const idiolectWords = window.ajisaiInterpreter.collect_idiolect_words_info().map(word => word[0]);
+    const customWords = window.ajisaiInterpreter.collect_custom_words_info().map(word => word[0]);
 
     const moduleWords: string[] = [];
     try {
@@ -156,7 +156,7 @@ const collectAutocompleteWords = (): string[] => {
         }
     } catch { /* no modules imported */ }
 
-    return Array.from(new Set([...coreWords, ...idiolectWords, ...moduleWords])).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set([...coreWords, ...customWords, ...moduleWords])).sort((a, b) => a.localeCompare(b));
 };
 
 export const createGUI = (): GUI => {
@@ -283,7 +283,7 @@ export const createGUI = (): GUI => {
 
         try {
             display.renderStack(window.ajisaiInterpreter.collect_stack());
-            vocabulary.updateCustomWords(window.ajisaiInterpreter.collect_idiolect_words_info());
+            vocabulary.updateCustomWords(window.ajisaiInterpreter.collect_custom_words_info());
 
             // Sync module sheets based on imported modules
             const newSheetIds = moduleTabManager.syncModuleTabs();

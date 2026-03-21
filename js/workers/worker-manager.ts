@@ -57,8 +57,8 @@ export class WorkerManager {
         const worker = new Worker(new URL('./ajisai-worker.ts', import.meta.url), { type: 'module' });
         const instance: WorkerInstance = { worker, busy: false, currentTaskId: null };
 
-        worker.onmessage = (event) => this.handleWorkerMessage(instance, event.data);
-        worker.onerror = (error) => this.handleWorkerError(instance, error);
+        worker.onmessage = (event) => this.resolveWorkerMessage(instance, event.data);
+        worker.onerror = (error) => this.resolveWorkerError(instance, error);
 
         // コンパイル済みモジュールをワーカーに転送。
         // WebAssembly.Moduleはstructured-cloneableなので、
@@ -78,7 +78,7 @@ export class WorkerManager {
         }
     }
 
-    private handleWorkerMessage(instance: WorkerInstance, message: any): void {
+    private resolveWorkerMessage(instance: WorkerInstance, message: any): void {
         const task = this.activeTasks.get(message.id);
         if (!task) return;
 
@@ -96,7 +96,7 @@ export class WorkerManager {
         this.completeTask(instance);
     }
 
-    private handleWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
+    private resolveWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
         console.error('[WorkerManager] Worker error:', error.message);
         if (instance.currentTaskId) {
             const task = this.activeTasks.get(instance.currentTaskId);
@@ -138,7 +138,7 @@ export class WorkerManager {
         });
     }
 
-    private generateTaskId(): string {
+    private createTaskId(): string {
         // crypto.randomUUID()が利用可能な場合はそれを使用、そうでなければフォールバック
         if (typeof crypto !== 'undefined' && crypto.randomUUID) {
             return crypto.randomUUID();
@@ -151,7 +151,7 @@ export class WorkerManager {
         this.ensureWorkers();
         return new Promise((resolve, reject) => {
             const task: WorkerTask = {
-                id: this.generateTaskId(),
+                id: this.createTaskId(),
                 code,
                 state,
                 resolve,
