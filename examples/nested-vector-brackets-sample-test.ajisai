@@ -1,4 +1,4 @@
-// test_nested_vector_brackets.ajisai
+// nested-vector-brackets-sample-test.ajisai
 // テンソル/ベクタの括弧表示テスト
 // スタックエリアが暗黙のdepth=0なので、テンソルは{}(depth=1)から開始
 

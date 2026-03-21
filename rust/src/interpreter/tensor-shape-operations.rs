@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::create_number_value;
+use crate::interpreter::value_extraction_helpers::create_number_value;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData, MAX_VISIBLE_DIMENSIONS};

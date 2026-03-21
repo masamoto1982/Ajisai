@@ -1,7 +1,7 @@
-// js/workers/worker-manager.ts
+// js/workers/execution-worker-manager.ts
 
-import type { ExecuteResult, Value, CustomWord } from '../wasm-types';
-import { extractCompiledWasmModule } from '../wasm-loader';
+import type { ExecuteResult, Value, CustomWord } from '../wasm-interpreter-types';
+import { extractCompiledWasmModule } from '../wasm-module-loader';
 
 interface WorkerTask {
     id: string;
@@ -54,7 +54,7 @@ export class WorkerManager {
     }
 
     private createWorker(): void {
-        const worker = new Worker(new URL('./ajisai-worker.ts', import.meta.url), { type: 'module' });
+        const worker = new Worker(new URL('./interpreter-execution-worker.ts', import.meta.url), { type: 'module' });
         const instance: WorkerInstance = { worker, busy: false, currentTaskId: null };
 
         worker.onmessage = (event) => this.resolveWorkerMessage(instance, event.data);

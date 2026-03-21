@@ -8,7 +8,7 @@
 // カスタムワードの繰り返し実行や遅延実行をサポートする。
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{extract_integer_from_value, is_string_value, value_as_string};
+use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_string_value, value_as_string};
 use crate::interpreter::Interpreter;
 use crate::interpreter::OperationTargetMode;
 use crate::types::Value;

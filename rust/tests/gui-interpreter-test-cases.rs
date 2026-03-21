@@ -1,4 +1,4 @@
-// Integration tests mirroring js/gui/test-cases.ts
+// Integration tests mirroring js/gui/gui-interpreter-test-cases.ts
 // These tests verify the interpreter produces the same results as expected by the GUI tests.
 
 use ajisai_core::interpreter::Interpreter;

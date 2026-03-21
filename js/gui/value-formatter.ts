@@ -1,6 +1,6 @@
 // js/gui/value-formatter.ts - 値のフォーマットと比較
 
-import type { Value, Fraction } from '../wasm-types';
+import type { Value, Fraction } from '../wasm-interpreter-types';
 
 // フォーマット設定
 const SCIENTIFIC_THRESHOLD = 10; // 10桁以上で科学的記数法

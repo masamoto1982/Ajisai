@@ -1,6 +1,6 @@
-// js/gui/test-cases.ts - Test case definitions
+// js/gui/gui-interpreter-test-cases.ts - Test case definitions
 
-import type { Value } from '../wasm-types';
+import type { Value } from '../wasm-interpreter-types';
 
 export interface TestCase {
     name: string;

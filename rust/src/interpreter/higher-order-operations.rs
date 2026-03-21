@@ -1,10 +1,10 @@
-// rust/src/interpreter/higher_order.rs
+// rust/src/interpreter/higher-order-operations.rs
 //
 // Higher-order functions: MAP, FILTER, FOLD, UNFOLD.
 // Supports code blocks (: ... ;) and word names.
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{
+use crate::interpreter::value_extraction_helpers::{
     extract_integer_from_value, extract_word_name_from_value, is_vector_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};

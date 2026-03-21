@@ -1,4 +1,4 @@
-// rust/src/builtins/definitions.rs
+// rust/src/builtins/builtin-word-definitions.rs
 //
 // Built-in word definitions (name, description, syntax_example, signature_type)
 

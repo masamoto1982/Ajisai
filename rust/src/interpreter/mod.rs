@@ -6,16 +6,21 @@ pub mod control;
 pub mod datetime;
 pub mod dictionary;
 pub mod hash;
-pub(crate) mod helpers;
+#[path = "value-extraction-helpers.rs"]
+pub(crate) mod value_extraction_helpers;
+#[path = "higher-order-operations.rs"]
 pub mod higher_order;
 pub mod io;
 pub mod json;
 pub mod logic;
 pub mod modules;
 pub mod random;
+#[path = "simd-vector-operations.rs"]
 pub(crate) mod simd_ops;
 pub mod sort;
+#[path = "tensor-shape-operations.rs"]
 pub mod tensor_ops;
+#[path = "vector-execution-operations.rs"]
 pub mod vector_exec;
 pub mod vector_ops;
 
@@ -29,7 +34,7 @@ use std::sync::Arc;
 
 pub const MAX_CALL_DEPTH: usize = 4;
 
-use self::helpers::create_number_value;
+use self::value_extraction_helpers::create_number_value;
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
 use async_recursion::async_recursion;
@@ -416,14 +421,14 @@ impl Interpreter {
         let delay_val = self.stack.pop().unwrap();
         let name_val = self.stack.pop().unwrap();
 
-        let n = helpers::extract_integer_from_value(&delay_val)?;
+        let n = value_extraction_helpers::extract_integer_from_value(&delay_val)?;
         let duration_ms = if n < 0 {
             return Err(AjisaiError::from("Delay must be non-negative"));
         } else {
             n as u64
         };
 
-        let word_name = helpers::extract_word_name_from_value(&name_val)?;
+        let word_name = value_extraction_helpers::extract_word_name_from_value(&name_val)?;
 
         if let Some(def) = self.resolve_word(&word_name) {
             if def.is_builtin {

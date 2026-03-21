@@ -1,4 +1,4 @@
-import type { CustomWord } from '../wasm-types';
+import type { CustomWord } from '../wasm-interpreter-types';
 
 // サンプルワードの定義を更新した際はバージョンをインクリメントすること。
 // persistence.ts のマイグレーションロジックが IndexedDB の古い定義を自動更新する。

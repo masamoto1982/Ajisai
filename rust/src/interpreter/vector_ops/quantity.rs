@@ -4,7 +4,7 @@
 
 use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{extract_bigint_from_value, extract_integer_from_value, create_number_value};
+use crate::interpreter::value_extraction_helpers::{extract_bigint_from_value, extract_integer_from_value, create_number_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;

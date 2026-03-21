@@ -23,7 +23,7 @@
 use super::Interpreter;
 use super::OperationTargetMode;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::{is_string_value, is_vector_value, value_as_string};
+use crate::interpreter::value_extraction_helpers::{is_string_value, is_vector_value, value_as_string};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData, ValueExt};
 use num_traits::ToPrimitive;

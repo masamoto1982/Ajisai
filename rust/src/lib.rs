@@ -3,12 +3,14 @@ mod error;
 pub mod interpreter;
 mod tokenizer;
 pub mod types;
-mod wasm_api;
+#[path = "wasm-interpreter-bindings.rs"]
+mod wasm_interpreter_bindings;
 
-pub use wasm_api::AjisaiInterpreter;
+pub use wasm_interpreter_bindings::AjisaiInterpreter;
 
 #[cfg(test)]
-mod test_tokenizer;
+#[path = "tokenizer-regression-tests.rs"]
+mod tokenizer_regression_tests;
 
 #[cfg(test)]
 mod ceil_tests {

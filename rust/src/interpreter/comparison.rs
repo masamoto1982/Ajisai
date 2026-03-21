@@ -5,7 +5,7 @@
 // 比較演算の結果は Boolean ヒント付きの値として返す
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::helpers::extract_integer_from_value;
+use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;

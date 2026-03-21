@@ -1,9 +1,9 @@
-// js/main.ts
+// js/web-app-entrypoint.ts
 
-import { GUI_INSTANCE } from './gui/main';
-import { initWasm } from './wasm-loader';
-import './db';
-import type { WasmModule, AjisaiInterpreter } from './wasm-types';
+import { GUI_INSTANCE } from './gui/gui-application';
+import { initWasm } from './wasm-module-loader';
+import './indexeddb-custom-word-store';
+import type { WasmModule, AjisaiInterpreter } from './wasm-interpreter-types';
 
 declare global {
     interface Window {

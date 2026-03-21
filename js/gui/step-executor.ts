@@ -1,7 +1,7 @@
 // js/gui/step-executor.ts
 
-import { WORKER_MANAGER } from '../workers/worker-manager';
-import type { AjisaiInterpreter, CustomWord, ExecuteResult } from '../wasm-types';
+import { WORKER_MANAGER } from '../workers/execution-worker-manager';
+import type { AjisaiInterpreter, CustomWord, ExecuteResult } from '../wasm-interpreter-types';
 
 export interface StepState {
     readonly active: boolean;

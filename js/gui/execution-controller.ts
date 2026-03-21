@@ -1,7 +1,7 @@
 // js/gui/execution-controller.ts
 
-import { WORKER_MANAGER } from '../workers/worker-manager';
-import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-types';
+import { WORKER_MANAGER } from '../workers/execution-worker-manager';
+import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-interpreter-types';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import type { ViewMode } from './mobile';
 
