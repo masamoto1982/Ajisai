@@ -260,9 +260,9 @@ fn register_module_sample_words(
     // First pass: remove conflicting user-defined words (module-first principle)
     for sample in sample_words {
         let upper_name = sample.name.to_uppercase();
-        if interp.idiolect.contains_key(&upper_name) {
+        if interp.custom_words.contains_key(&upper_name) {
             // Clean up dependency tracking for the removed word
-            if let Some(removed_def) = interp.idiolect.remove(&upper_name) {
+            if let Some(removed_def) = interp.custom_words.remove(&upper_name) {
                 for dep_name in &removed_def.dependencies {
                     if let Some(dependents) = interp.dependents.get_mut(dep_name) {
                         dependents.remove(&upper_name);
@@ -272,7 +272,7 @@ fn register_module_sample_words(
             if let Some(dependents) = interp.dependents.remove(&upper_name) {
                 // Clear reverse references
                 for dep in &dependents {
-                    if let Some(def) = interp.idiolect.get(dep) {
+                    if let Some(def) = interp.custom_words.get(dep) {
                         let mut new_deps = def.dependencies.clone();
                         new_deps.remove(&upper_name);
                         let new_def = WordDefinition {
@@ -282,7 +282,7 @@ fn register_module_sample_words(
                             dependencies: new_deps,
                             original_source: def.original_source.clone(),
                         };
-                        interp.idiolect.insert(dep.clone(), Arc::new(new_def));
+                        interp.custom_words.insert(dep.clone(), Arc::new(new_def));
                     }
                 }
             }

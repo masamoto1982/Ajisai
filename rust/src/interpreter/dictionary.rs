@@ -162,7 +162,7 @@ pub(crate) fn op_def_inner(
         }
     }
 
-    if let Some(existing) = interp.idiolect.get(&upper_name) {
+    if let Some(existing) = interp.custom_words.get(&upper_name) {
         let dependents = interp.collect_dependents(&upper_name);
 
         if !dependents.is_empty() && !interp.force_flag {
@@ -220,7 +220,7 @@ pub(crate) fn op_def_inner(
     };
 
     interp
-        .idiolect
+        .custom_words
         .insert(upper_name.clone(), Arc::new(new_def));
     interp
         .output_buffer
@@ -297,8 +297,8 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    // Check if word exists in idiolect (user-defined)
-    let in_idiolect = interp.idiolect.contains_key(&upper_name);
+    // Check if word exists in custom_words (user-defined)
+    let in_custom_words = interp.custom_words.contains_key(&upper_name);
 
     // Check if word exists in module samples
     let in_module_samples = interp
@@ -306,7 +306,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         .values()
         .any(|md| md.contains_key(&upper_name));
 
-    if !in_idiolect && !in_module_samples {
+    if !in_custom_words && !in_module_samples {
         interp.force_flag = false;
         return Err(AjisaiError::from(format!(
             "Word '{}' is not defined",
@@ -315,7 +315,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     }
 
     // Module sample words require force flag
-    if !in_idiolect && in_module_samples && !interp.force_flag {
+    if !in_custom_words && in_module_samples && !interp.force_flag {
         interp.force_flag = false;
         return Err(AjisaiError::from(format!(
             "Word '{}' is a module sample word. Use ! '{}' DEL to force delete.",
@@ -334,7 +334,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     }
 
     // Delete from dictionary (user-defined)
-    if let Some(removed_def) = interp.idiolect.remove(&upper_name) {
+    if let Some(removed_def) = interp.custom_words.remove(&upper_name) {
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
                 deps.remove(&upper_name);
@@ -586,20 +586,20 @@ mod tests {
         ];
         restore_sample_words(&mut interp, &sample_words);
 
-        assert!(interp.idiolect.contains_key("C4"));
-        assert!(interp.idiolect.contains_key("D4"));
-        assert!(interp.idiolect.contains_key("E4"));
+        assert!(interp.custom_words.contains_key("C4"));
+        assert!(interp.custom_words.contains_key("D4"));
+        assert!(interp.custom_words.contains_key("E4"));
 
         let result = interp.execute("'D4' DEL").await;
         assert!(result.is_ok(), "Should delete D4: {:?}", result.err());
-        assert!(!interp.idiolect.contains_key("D4"));
+        assert!(!interp.custom_words.contains_key("D4"));
 
         let result = interp.execute("'C4' DEL").await;
         assert!(result.is_err(), "Should not delete C4 (has dependents)");
 
         let result = interp.execute("! 'C4' DEL").await;
         assert!(result.is_ok(), "Should force delete C4: {:?}", result.err());
-        assert!(!interp.idiolect.contains_key("C4"));
+        assert!(!interp.custom_words.contains_key("C4"));
     }
 
     #[tokio::test]
@@ -798,13 +798,13 @@ mod tests {
 
         // Define C4 before importing music
         interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
-        assert!(interp.idiolect.contains_key("C4"));
+        assert!(interp.custom_words.contains_key("C4"));
 
         // Import music module — user word should be removed
         interp.execute("'music' IMPORT").await.unwrap();
         let output = interp.collect_output();
 
-        assert!(!interp.idiolect.contains_key("C4"),
+        assert!(!interp.custom_words.contains_key("C4"),
             "User word C4 should be removed after IMPORT");
         assert!(output.contains("Warning"),
             "Should warn about removal: {}", output);

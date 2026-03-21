@@ -258,10 +258,10 @@ const applyEffectCommands = (output: string): void => {
         try {
             const effect = JSON.parse(commandStr);
             if (effect.gain !== undefined) {
-                AUDIO_ENGINE.setGain(effect.gain);
+                AUDIO_ENGINE.updateGain(effect.gain);
             }
             if (effect.pan !== undefined) {
-                AUDIO_ENGINE.setPan(effect.pan);
+                AUDIO_ENGINE.updatePan(effect.pan);
             }
         } catch {
             console.error('Failed to parse EFFECT command:', commandStr);
@@ -274,7 +274,7 @@ const applyConfigCommands = (output: string): void => {
         try {
             const config = JSON.parse(commandStr);
             if (config.slot_duration !== undefined) {
-                AUDIO_ENGINE.setSlotDuration(config.slot_duration);
+                AUDIO_ENGINE.updateSlotDuration(config.slot_duration);
                 console.log(`Slot duration set to ${config.slot_duration}s`);
             }
         } catch {

@@ -113,7 +113,7 @@ class AjisaiDB {
         });
     }
 
-    async getAllTableNames(): Promise<string[]> {
+    async collectTableNames(): Promise<string[]> {
         if (!this.db) await this.open();
         
         return new Promise((resolve, reject) => {
@@ -266,7 +266,7 @@ class AjisaiDB {
             ]);
             
             await this.loadTable('test_table');
-            await this.getAllTableNames();
+            await this.collectTableNames();
             await this.deleteTable('test_table');
             
             return true;

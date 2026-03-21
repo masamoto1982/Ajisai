@@ -363,10 +363,10 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn collect_idiolect_words_info(&self) -> JsValue {
+    pub fn collect_custom_words_info(&self) -> JsValue {
         let js_array = js_sys::Array::new();
 
-        for (name, def) in self.interpreter.idiolect.iter() {
+        for (name, def) in self.interpreter.custom_words.iter() {
             let is_protected = self
                 .interpreter
                 .dependents
@@ -400,7 +400,7 @@ impl AjisaiInterpreter {
     fn collect_custom_words_for_state(&self) -> JsValue {
         let words_info: Vec<CustomWordData> = self
             .interpreter
-            .idiolect
+            .custom_words
             .iter()
             .map(|(name, def)| CustomWordData {
                 name: name.clone(),
@@ -496,7 +496,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn remove_word(&mut self, name: &str) {
         let upper_name = name.to_uppercase();
-        if let Some(removed_def) = self.interpreter.idiolect.remove(&upper_name) {
+        if let Some(removed_def) = self.interpreter.custom_words.remove(&upper_name) {
             for dep_name in &removed_def.dependencies {
                 if let Some(deps) = self.interpreter.dependents.get_mut(dep_name) {
                     deps.remove(&upper_name);
@@ -583,7 +583,7 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn restore_idiolect(&mut self, words_js: JsValue) -> Result<(), String> {
+    pub fn restore_custom_words(&mut self, words_js: JsValue) -> Result<(), String> {
         let words: Vec<CustomWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 

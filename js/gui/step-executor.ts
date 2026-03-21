@@ -61,7 +61,7 @@ const formatStepMessage = (
 };
 
 const collectCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
-    const customWordsInfo = interpreter.collect_idiolect_words_info();
+    const customWordsInfo = interpreter.collect_custom_words_info();
     return customWordsInfo.map(wordData => ({
         name: wordData[0],
         definition: interpreter.lookup_word_definition(wordData[0]),
@@ -100,7 +100,7 @@ const syncInterpreterState = (
         interpreter.restore_stack(result.stack);
     }
     if (result.customWords) {
-        interpreter.restore_idiolect(result.customWords);
+        interpreter.restore_custom_words(result.customWords);
     }
 };
 
