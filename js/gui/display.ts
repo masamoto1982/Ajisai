@@ -22,7 +22,7 @@ export interface Display {
     readonly renderError: (error: Error | { message?: string } | string) => void;
     readonly renderInfo: (text: string, append?: boolean) => void;
     readonly renderStack: (stack: Value[]) => void;
-    readonly getState: () => DisplayState;
+    readonly extractState: () => DisplayState;
 }
 
 // Bracket cycling: depth 0 → {}, depth 1 → (), depth 2 → []
@@ -442,7 +442,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         appendToElement(display, container);
     };
 
-    const getState = (): DisplayState => ({ mainOutput });
+    const extractState = (): DisplayState => ({ mainOutput });
 
     return {
         init,
@@ -452,7 +452,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         renderError,
         renderInfo,
         renderStack,
-        getState
+        extractState
     };
 };
 

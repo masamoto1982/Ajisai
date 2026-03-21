@@ -10,7 +10,7 @@ export interface StepState {
 }
 
 export interface StepExecutorCallbacks {
-    readonly getEditorValue: () => string;
+    readonly extractEditorValue: () => string;
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showError: (error: Error | string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
@@ -19,7 +19,7 @@ export interface StepExecutorCallbacks {
 }
 
 interface StepExecutionSnapshot {
-    readonly stack: ReturnType<AjisaiInterpreter['get_stack']>;
+    readonly stack: ReturnType<AjisaiInterpreter['collect_stack']>;
     readonly customWords: CustomWord[];
 }
 
@@ -28,7 +28,7 @@ export interface StepExecutor {
     readonly reset: () => void;
     readonly executeStep: () => Promise<void>;
     readonly abort: () => void;
-    readonly getState: () => StepState;
+    readonly extractState: () => StepState;
 }
 
 const createInitialState = (): StepState => ({
@@ -60,11 +60,11 @@ const formatStepMessage = (
     return `[>] Step ${currentIndex + 1}/${totalTokens}: "${token}" (${remaining} remaining)`;
 };
 
-const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
-    const customWordsInfo = interpreter.get_idiolect_words_info();
+const collectCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
+    const customWordsInfo = interpreter.collect_idiolect_words_info();
     return customWordsInfo.map(wordData => ({
         name: wordData[0],
-        definition: interpreter.get_word_definition(wordData[0]),
+        definition: interpreter.lookup_word_definition(wordData[0]),
         description: wordData[1]
     }));
 };
@@ -72,11 +72,11 @@ const getCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
 const createStepExecutionSnapshot = (
     interpreter: AjisaiInterpreter
 ): StepExecutionSnapshot => ({
-    stack: interpreter.get_stack(),
-    customWords: getCustomWords(interpreter)
+    stack: interpreter.collect_stack(),
+    customWords: collectCustomWords(interpreter)
 });
 
-const handleStepExecutionException = (
+const resolveStepExecutionException = (
     error: unknown,
     showInfo: (text: string, append: boolean) => void,
     showError: (error: Error | string) => void
@@ -109,7 +109,7 @@ export const createStepExecutor = (
     callbacks: StepExecutorCallbacks
 ): StepExecutor => {
     const {
-        getEditorValue,
+        extractEditorValue,
         showInfo,
         showError,
         showExecutionResult,
@@ -132,10 +132,10 @@ export const createStepExecutor = (
         }
     };
 
-    const getState = (): StepState => ({ ...state });
+    const extractState = (): StepState => ({ ...state });
 
     const startStepMode = async (): Promise<void> => {
-        const code = getEditorValue();
+        const code = extractEditorValue();
         if (!code) return;
 
         const tokens = tokenize(code);
@@ -195,7 +195,7 @@ export const createStepExecutor = (
             }
 
         } catch (error) {
-            handleStepExecutionException(error, showInfo, showError);
+            resolveStepExecutionException(error, showInfo, showError);
             reset();
         }
 
@@ -216,7 +216,7 @@ export const createStepExecutor = (
         reset,
         executeStep,
         abort,
-        getState
+        extractState
     };
 };
 
@@ -226,7 +226,7 @@ export const stepExecutorUtils = {
     createActiveState,
     advanceState,
     formatStepMessage,
-    getCustomWords,
+    collectCustomWords,
     createStepExecutionSnapshot,
-    handleStepExecutionException
+    resolveStepExecutionException
 };

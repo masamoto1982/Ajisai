@@ -149,63 +149,63 @@ mod tests {
     use super::*;
     use num_bigint::BigInt;
 
-    fn make_fraction(num: i64, den: i64) -> Fraction {
+    fn create_fraction(num: i64, den: i64) -> Fraction {
         Fraction::new(BigInt::from(num), BigInt::from(den))
     }
 
     #[test]
     fn test_fraction_comparison() {
-        let half = make_fraction(1, 2);
-        let third = make_fraction(1, 3);
+        let half = create_fraction(1, 2);
+        let third = create_fraction(1, 3);
         assert!(half > third);
 
-        let two_thirds = make_fraction(2, 3);
+        let two_thirds = create_fraction(2, 3);
         assert!(two_thirds > half);
     }
 
     #[test]
     fn test_introsort_integers() {
         let mut values = vec![
-            (0, make_fraction(32, 1)),
-            (1, make_fraction(8, 1)),
-            (2, make_fraction(2, 1)),
-            (3, make_fraction(18, 1)),
+            (0, create_fraction(32, 1)),
+            (1, create_fraction(8, 1)),
+            (2, create_fraction(2, 1)),
+            (3, create_fraction(18, 1)),
         ];
         sort_fractions_by_introsort(&mut values);
 
-        assert_eq!(values[0].1, make_fraction(2, 1));
-        assert_eq!(values[1].1, make_fraction(8, 1));
-        assert_eq!(values[2].1, make_fraction(18, 1));
-        assert_eq!(values[3].1, make_fraction(32, 1));
+        assert_eq!(values[0].1, create_fraction(2, 1));
+        assert_eq!(values[1].1, create_fraction(8, 1));
+        assert_eq!(values[2].1, create_fraction(18, 1));
+        assert_eq!(values[3].1, create_fraction(32, 1));
     }
 
     #[test]
     fn test_sort_fractions_by_introsort() {
         let mut values = vec![
-            (0, make_fraction(1, 2)),
-            (1, make_fraction(1, 3)),
-            (2, make_fraction(2, 3)),
+            (0, create_fraction(1, 2)),
+            (1, create_fraction(1, 3)),
+            (2, create_fraction(2, 3)),
         ];
         sort_fractions_by_introsort(&mut values);
 
-        assert_eq!(values[0].1, make_fraction(1, 3));
-        assert_eq!(values[1].1, make_fraction(1, 2));
-        assert_eq!(values[2].1, make_fraction(2, 3));
+        assert_eq!(values[0].1, create_fraction(1, 3));
+        assert_eq!(values[1].1, create_fraction(1, 2));
+        assert_eq!(values[2].1, create_fraction(2, 3));
     }
 
     #[test]
     fn test_introsort_mixed() {
         let mut values = vec![
-            (0, make_fraction(3, 1)),
-            (1, make_fraction(1, 2)),
-            (2, make_fraction(2, 1)),
-            (3, make_fraction(1, 4)),
+            (0, create_fraction(3, 1)),
+            (1, create_fraction(1, 2)),
+            (2, create_fraction(2, 1)),
+            (3, create_fraction(1, 4)),
         ];
         sort_fractions_by_introsort(&mut values);
 
-        assert_eq!(values[0].1, make_fraction(1, 4));
-        assert_eq!(values[1].1, make_fraction(1, 2));
-        assert_eq!(values[2].1, make_fraction(2, 1));
-        assert_eq!(values[3].1, make_fraction(3, 1));
+        assert_eq!(values[0].1, create_fraction(1, 4));
+        assert_eq!(values[1].1, create_fraction(1, 2));
+        assert_eq!(values[2].1, create_fraction(2, 1));
+        assert_eq!(values[3].1, create_fraction(3, 1));
     }
 }

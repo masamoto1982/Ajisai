@@ -7,14 +7,14 @@ export interface EditorCallbacks {
 }
 
 export interface Editor {
-    readonly getValue: () => string;
-    readonly setValue: (value: string) => void;
+    readonly extractValue: () => string;
+    readonly updateValue: (value: string) => void;
     readonly clear: (switchView?: boolean) => void;
     readonly insertWord: (word: string) => void;
     readonly insertText: (text: string) => void;
     readonly removeLastWord: () => void;
     readonly focus: () => void;
-    readonly setOnContentChange: (callback: (content: string) => void) => void;
+    readonly registerContentChangeCallback: (callback: (content: string) => void) => void;
 }
 
 const insertAt = (
@@ -43,7 +43,7 @@ const computeCursorPosition = (
     return basePosition + insertedText.length;
 };
 
-const setElementValue = (element: HTMLTextAreaElement, value: string): void => {
+const updateElementValue = (element: HTMLTextAreaElement, value: string): void => {
     element.value = value;
 };
 
@@ -51,7 +51,7 @@ const focusElement = (element: HTMLTextAreaElement): void => {
     element.focus();
 };
 
-const setSelectionRange = (
+const updateSelectionRange = (
     element: HTMLTextAreaElement,
     start: number,
     end: number
@@ -175,9 +175,9 @@ export const createEditor = (
     const applySuggestion = (suggestion: string): void => {
         const { start, end } = extractToken(element.value, element.selectionStart);
         const newText = insertAt(element.value, start, end, suggestion);
-        setElementValue(element, newText);
+        updateElementValue(element, newText);
         const newPos = start + suggestion.length;
-        setSelectionRange(element, newPos, newPos);
+        updateSelectionRange(element, newPos, newPos);
         hideSuggestions();
         emitContentChange();
     };
@@ -224,21 +224,21 @@ export const createEditor = (
     };
 
     if (element.value.trim() === '') {
-        setElementValue(element, '');
+        updateElementValue(element, '');
     }
     registerEventListeners();
 
-    const getValue = (): string => element.value.trim();
+    const extractValue = (): string => element.value.trim();
 
-    const setValue = (value: string): void => {
-        setElementValue(element, value);
+    const updateValue = (value: string): void => {
+        updateElementValue(element, value);
         hideSuggestions();
         emitContentChange();
         switchToInputMode();
     };
 
     const clear = (switchView = true): void => {
-        setElementValue(element, '');
+        updateElementValue(element, '');
         if (!checkIsMobile()) {
             focusElement(element);
         }
@@ -253,10 +253,10 @@ export const createEditor = (
         const { start, end } = lookupSelectionRange(element);
         const newText = insertAt(element.value, start, end, word);
 
-        setElementValue(element, newText);
+        updateElementValue(element, newText);
 
         const newPos = start + word.length;
-        setSelectionRange(element, newPos, newPos);
+        updateSelectionRange(element, newPos, newPos);
 
         if (!checkIsMobile()) {
             focusElement(element);
@@ -269,10 +269,10 @@ export const createEditor = (
         const { start, end } = lookupSelectionRange(element);
         const newText = insertAt(element.value, start, end, text);
 
-        setElementValue(element, newText);
+        updateElementValue(element, newText);
 
         const cursorPos = computeCursorPosition(start, text, true);
-        setSelectionRange(element, cursorPos, cursorPos);
+        updateSelectionRange(element, cursorPos, cursorPos);
 
         if (!checkIsMobile()) {
             focusElement(element);
@@ -289,8 +289,8 @@ export const createEditor = (
         const trimmed = before.replace(/\S+\s*$/, '');
         const newText = trimmed + after;
 
-        setElementValue(element, newText);
-        setSelectionRange(element, trimmed.length, trimmed.length);
+        updateElementValue(element, newText);
+        updateSelectionRange(element, trimmed.length, trimmed.length);
 
         if (!checkIsMobile()) {
             focusElement(element);
@@ -305,19 +305,19 @@ export const createEditor = (
         refreshSuggestions();
     };
 
-    const setOnContentChange = (callback: (content: string) => void): void => {
+    const registerContentChangeCallback = (callback: (content: string) => void): void => {
         onContentChangeCallback = callback;
     };
 
     return {
-        getValue,
-        setValue,
+        extractValue,
+        updateValue,
         clear,
         insertWord,
         insertText,
         removeLastWord,
         focus,
-        setOnContentChange
+        registerContentChangeCallback
     };
 };
 

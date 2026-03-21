@@ -45,6 +45,6 @@ export async function initWasm(): Promise<WasmModule | null> {
  * WorkerManagerがワーカーに転送するために使用する。
  * initWasm()の後に呼び出すこと。
  */
-export function getCompiledWasmModule(): WebAssembly.Module | null {
+export function extractCompiledWasmModule(): WebAssembly.Module | null {
     return compiledModule;
 }

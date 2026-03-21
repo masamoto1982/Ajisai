@@ -124,7 +124,7 @@ impl Interpreter {
     // ── Fractional Dataflow API ──────────────────────────────────────
 
     /// Enable or disable conservation-law tracking (debug / test mode).
-    pub fn set_flow_tracking(&mut self, enabled: bool) {
+    pub fn update_flow_tracking(&mut self, enabled: bool) {
         self.flow_tracking = enabled;
         if enabled {
             self.active_flows.clear();
