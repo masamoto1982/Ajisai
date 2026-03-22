@@ -1,4 +1,4 @@
-// js/gui/persistence.ts
+// js/gui/interpreter-state-persistence.ts
 
 import type { AjisaiInterpreter, Value, CustomWord } from '../wasm-interpreter-types';
 import type DB from '../indexeddb-custom-word-store';

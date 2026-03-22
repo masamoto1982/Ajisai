@@ -56,6 +56,15 @@ This inventory records the AI-first filename migration performed in this reposit
 | `examples/test_tensor.ajisai` | `examples/tensor-operations-sample-test.ajisai` | Example subject made explicit | high | Standalone sample |
 | `examples/test_tensor_generation.ajisai` | `examples/tensor-generation-sample-test.ajisai` | Example subject made explicit | high | Standalone sample |
 | `public/images/ajisai-logo-min_w40.jpg` | `public/images/ajisai-logo-thumbnail-w40.jpg` | Encoded shorthand replaced with descriptive asset name | medium | Updated HTML reference |
+| `js/gui/dictionary.ts` | `js/gui/vocabulary-state-controller.ts` | `dictionary` alone does not reveal responsibility; renamed to vocabulary state management role | high | Updated imports |
+| `js/gui/dictionary-ui.ts` | `js/gui/dictionary-element-builders.ts` | `ui` suffix too broad; contains pure DOM element factory functions | high | Updated imports |
+| `js/gui/display.ts` | `js/gui/output-display-renderer.ts` | `display` alone too generic; output/stack rendering role clarified | high | Updated imports |
+| `js/gui/editor.ts` | `js/gui/code-input-editor.ts` | `editor` alone too generic; code input editing role clarified | high | Updated imports |
+| `js/gui/mobile.ts` | `js/gui/mobile-view-switcher.ts` | `mobile` alone does not describe responsibility; view switching and swipe handling clarified | high | Updated imports |
+| `js/gui/persistence.ts` | `js/gui/interpreter-state-persistence.ts` | Subject of persistence not stated; interpreter state scope clarified | high | Updated imports |
+| `js/gui/module-tabs.ts` | `js/gui/module-selector-sheets.ts` | Migrated from tabs to selectors; `tabs` was factually outdated | high | Updated imports |
+| `rust/benches/bottleneck.rs` | `rust/benches/interpreter-performance-benchmarks.rs` | `bottleneck` vague; benchmark subject and purpose clarified | high | Updated Cargo.toml bench name |
+| `docs/file-naming-convention.md` | `docs/guide-file-naming-convention.md` | Convention doc did not follow its own `guide-` prefix recommendation | high | Self-consistency fix |
 
 ## Deferred Exceptions
 
