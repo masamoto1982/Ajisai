@@ -39,10 +39,9 @@ export interface GUIElements {
     readonly dictionaryArea: HTMLElement;
     readonly editorPanel: HTMLElement;
     readonly statePanel: HTMLElement;
-    readonly tabInputBtn: HTMLElement;
-    readonly tabOutputBtn: HTMLElement;
-    readonly tabStackBtn: HTMLElement;
-    readonly tabDictionaryBtn: HTMLElement;
+    readonly leftPanelSelect: HTMLSelectElement;
+    readonly rightPanelSelect: HTMLSelectElement;
+    readonly mobilePanelSelect: HTMLSelectElement;
 }
 
 export interface GUI {
@@ -80,10 +79,9 @@ const cacheElements = (): GUIElements => ({
     dictionaryArea: document.getElementById('dictionary-panel')!,
     editorPanel: document.getElementById('editor-panel')!,
     statePanel: document.getElementById('state-panel')!,
-    tabInputBtn: document.getElementById('tab-input')!,
-    tabOutputBtn: document.getElementById('tab-output')!,
-    tabStackBtn: document.getElementById('tab-stack')!,
-    tabDictionaryBtn: document.getElementById('tab-dictionary')!
+    leftPanelSelect: document.getElementById('left-panel-select') as HTMLSelectElement,
+    rightPanelSelect: document.getElementById('right-panel-select') as HTMLSelectElement,
+    mobilePanelSelect: document.getElementById('mobile-panel-select') as HTMLSelectElement
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -110,7 +108,6 @@ const checkStackHighlight = (content: string): boolean => {
     return stackRegex.test(content);
 };
 
-const TAB_MODES: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 
@@ -180,22 +177,13 @@ export const createGUI = (): GUI => {
             : DESKTOP_EDITOR_PLACEHOLDER;
     };
 
-    const collectTabButtons = (): Record<string, HTMLElement> => ({
-        input: elements.tabInputBtn,
-        output: elements.tabOutputBtn,
-        stack: elements.tabStackBtn,
-        dictionary: elements.tabDictionaryBtn
-    });
+    const syncSelectorState = (leftMode: ViewMode, rightMode: ViewMode): void => {
+        elements.leftPanelSelect.value = leftMode;
+        elements.rightPanelSelect.value = rightMode;
+    };
 
-    const updateTabState = (activeModes: Set<ViewMode>): void => {
-        const tabs = collectTabButtons();
-        TAB_MODES.forEach((key) => {
-            const tab = tabs[key]!;
-            const isActive = activeModes.has(key);
-            tab.classList.toggle('active', isActive);
-            tab.setAttribute('aria-selected', String(isActive));
-            tab.setAttribute('tabindex', isActive ? '0' : '-1');
-        });
+    const syncMobileSelectorState = (mode: ViewMode): void => {
+        elements.mobilePanelSelect.value = mode;
     };
 
     const switchDictionarySheet = (sheetId: string): void => {
@@ -252,7 +240,7 @@ export const createGUI = (): GUI => {
         if (mobile.isMobile()) {
             mobile.updateView(mode);
             document.body.dataset.activeArea = mode;
-            updateTabState(new Set([mode]));
+            syncMobileSelectorState(mode);
             return;
         }
 
@@ -260,7 +248,7 @@ export const createGUI = (): GUI => {
         fallbackIfModuleTabRemoved();
         syncDesktopLayout();
         document.body.dataset.activeArea = currentRightMode;
-        updateTabState(new Set([currentLeftMode, currentRightMode]));
+        syncSelectorState(currentLeftMode, currentRightMode);
     };
 
     const switchArea = (mode: ViewMode): void => {
@@ -357,16 +345,15 @@ export const createGUI = (): GUI => {
             editor.clear();
         });
 
-        const tabs = collectTabButtons();
-        TAB_MODES.forEach((mode) => {
-            const tab = tabs[mode]!;
-            tab.addEventListener('click', () => switchArea(mode));
-            tab.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    switchArea(mode);
-                }
-            });
+        // Area selectors (desktop: left/right, mobile: single)
+        elements.leftPanelSelect.addEventListener('change', () => {
+            switchArea(elements.leftPanelSelect.value as ViewMode);
+        });
+        elements.rightPanelSelect.addEventListener('change', () => {
+            switchArea(elements.rightPanelSelect.value as ViewMode);
+        });
+        elements.mobilePanelSelect.addEventListener('change', () => {
+            switchArea(elements.mobilePanelSelect.value as ViewMode);
         });
 
         // Dictionary sheet selector

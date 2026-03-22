@@ -65,24 +65,39 @@
             </div>
         </header>
 
-        <nav class="area-tabs" aria-label="Area tabs">
-            <div class="tab-group" role="tablist" aria-label="Editor tabs">
-                <button id="tab-input" class="area-tab active" type="button" role="tab" data-mode="input" aria-controls="input-panel" aria-selected="true">Input</button>
-                <button id="tab-output" class="area-tab" type="button" role="tab" data-mode="output" aria-controls="output-panel" aria-selected="false" tabindex="-1">Output</button>
+        <div class="area-selectors">
+            <div class="area-selector area-selector-left">
+                <label for="left-panel-select" class="visually-hidden">Select left panel</label>
+                <select id="left-panel-select">
+                    <option value="input">Input</option>
+                    <option value="output">Output</option>
+                </select>
             </div>
-            <div class="tab-group" role="tablist" aria-label="State tabs">
-                <button id="tab-stack" class="area-tab active" type="button" role="tab" data-mode="stack" aria-controls="stack-panel" aria-selected="true">Stack</button>
-                <button id="tab-dictionary" class="area-tab" type="button" role="tab" data-mode="dictionary" aria-controls="dictionary-panel" aria-selected="false" tabindex="-1">Dictionary</button>
+            <div class="area-selector area-selector-right">
+                <label for="right-panel-select" class="visually-hidden">Select right panel</label>
+                <select id="right-panel-select">
+                    <option value="stack">Stack</option>
+                    <option value="dictionary">Dictionary</option>
+                </select>
             </div>
-        </nav>
+            <div class="area-selector area-selector-mobile">
+                <label for="mobile-panel-select" class="visually-hidden">Select panel</label>
+                <select id="mobile-panel-select">
+                    <option value="input">Input</option>
+                    <option value="output">Output</option>
+                    <option value="stack">Stack</option>
+                    <option value="dictionary">Dictionary</option>
+                </select>
+            </div>
+        </div>
 
         <main class="main-layout">
             <div id="editor-panel" class="panel">
-                <section id="output-panel" class="output-area" role="tabpanel" aria-labelledby="tab-output" tabindex="0">
+                <section id="output-panel" class="output-area" role="region" aria-label="Output" tabindex="0">
                     <h2 class="visually-hidden">Output</h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                 </section>
-                <section id="input-panel" class="input-area" role="tabpanel" aria-labelledby="tab-input" tabindex="0">
+                <section id="input-panel" class="input-area" role="region" aria-label="Input" tabindex="0">
                     <h2 class="visually-hidden">Input</h2>
                     <div class="textarea-wrapper">
                         <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here"></textarea>
@@ -96,12 +111,12 @@
             </div>
             
             <div id="state-panel" class="panel">
-                <section id="stack-panel" class="stack-area" role="tabpanel" aria-labelledby="tab-stack" tabindex="0">
+                <section id="stack-panel" class="stack-area" role="region" aria-label="Stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
                 </section>
                 
-                <section id="dictionary-panel" class="dictionary-area" role="tabpanel" aria-labelledby="tab-dictionary" tabindex="0" style="display:none;">
+                <section id="dictionary-panel" class="dictionary-area" role="region" aria-label="Dictionary" tabindex="0" style="display:none;">
                     <div class="dictionary-toolbar">
                         <div class="dictionary-sheet-selector">
                             <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
