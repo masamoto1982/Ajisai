@@ -126,10 +126,13 @@ body[data-active-area] #state-panel {
     padding: 0.75rem;
 }
 
-body[data-active-area] .main-layout section {
-    margin-bottom: 0;
-    flex: 1;
-    min-height: 0;
+/* デスクトップ: アクティブセクションをパネル内で伸長 */
+@media (min-width: 769px) {
+    body[data-active-area] .main-layout section {
+        margin-bottom: 0;
+        flex: 1;
+        min-height: 0;
+    }
 }
 
 @media (max-width: 768px) {
@@ -685,13 +688,13 @@ body[data-active-area] .main-layout section {
         margin-bottom: 0;
     }
 
-    .output-area,
-    .input-area,
-    .stack-area,
-    .vocabulary-area,
-    .dictionary-area {
-        height: 100%;
-        flex: 1 1 auto;
+    /* モバイル: セクションをパネル内で伸長（height: 100%は使わずflexのみ） */
+    #editor-panel .input-area,
+    #editor-panel .output-area,
+    #state-panel .stack-area,
+    #state-panel .vocabulary-area,
+    #state-panel .dictionary-area {
+        flex: 1;
         min-height: 0;
     }
 
