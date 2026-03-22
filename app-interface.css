@@ -9,44 +9,23 @@
  * 1. アプリ用レイアウト
  * -------------------------------------------------------------------------- */
 
-/* デスクトップレイアウト — タブと一体化するシート枠 */
+/* デスクトップレイアウト — アーティクル枠 */
 .main-layout {
     display: flex;
     flex: 1;
     gap: 0;
     padding: 0;
     min-height: 0;
-    /* タブグループごとの下線を上辺として使う */
-    border-top: none;
-    border-left: 1px solid var(--color-border-strong, #999);
-    border-right: 1px solid var(--color-border-strong, #999);
-    border-bottom: 1px solid var(--color-border-strong, #999);
+    border: 1px solid var(--color-border-strong, #999);
     background: var(--gradient-child, #fff);
 }
-
-
 
 /* --------------------------------------------------------------------------
  * 1.1 エリアセレクタ（パネル切替）
  * -------------------------------------------------------------------------- */
-.area-selectors {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    border-top: 1px solid var(--color-border-strong, #999);
-    border-left: 1px solid var(--color-border-strong, #999);
-    border-right: 1px solid var(--color-border-strong, #999);
-    border-bottom: none;
-    background: var(--bg-article);
-}
-
 .area-selector {
     padding: 0.35rem 0.5rem;
-    border-bottom: 1px solid var(--color-border-strong, #999);
-}
-
-.area-selector-left {
-    border-right: 1px solid var(--color-border-strong, #999);
+    flex-shrink: 0;
 }
 
 .area-selector select {
@@ -153,32 +132,7 @@ body[data-active-area] .main-layout section {
     min-height: 0;
 }
 
-/* アクティブシートの縦線・下辺をパネル枠として補完する */
-@media (min-width: 769px) {
-    body[data-active-area] #editor-panel {
-        box-shadow:
-            inset 1px 0 0 var(--color-border-strong, #999),
-            inset 0 -1px 0 var(--color-border-strong, #999);
-    }
-
-    body[data-active-area] #state-panel {
-        box-shadow:
-            inset -1px 0 0 var(--color-border-strong, #999),
-            inset 0 -1px 0 var(--color-border-strong, #999);
-    }
-}
-
 @media (max-width: 768px) {
-    body[data-active-area="input"] #editor-panel,
-    body[data-active-area="output"] #editor-panel,
-    body[data-active-area="stack"] #state-panel,
-    body[data-active-area="dictionary"] #state-panel {
-        box-shadow:
-            inset 1px 0 0 var(--color-border-strong, #999),
-            inset -1px 0 0 var(--color-border-strong, #999),
-            inset 0 -1px 0 var(--color-border-strong, #999);
-    }
-
     body[data-active-area="input"] #state-panel,
     body[data-active-area="output"] #state-panel,
     body[data-active-area="stack"] #editor-panel,
@@ -694,10 +648,6 @@ body[data-active-area] .main-layout section {
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     /* モバイル: 左右セレクタを非表示、モバイルセレクタを表示 */
-    .area-selectors {
-        grid-template-columns: 1fr;
-    }
-
     .area-selector-left,
     .area-selector-right {
         display: none;
@@ -707,16 +657,16 @@ body[data-active-area] .main-layout section {
         display: block;
     }
 
-    .area-selector-left {
-        border-right: none;
-    }
-
     .main-layout {
         flex: 1;
         flex-direction: column;
         padding: 0;
         min-height: 0;
         overflow: hidden;
+    }
+
+    .area-selector-mobile {
+        border-bottom: 1px solid var(--color-border-strong, #999);
     }
 
     #editor-panel,
