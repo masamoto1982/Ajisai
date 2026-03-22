@@ -1,4 +1,4 @@
-// js/gui/dictionary.ts
+// js/gui/vocabulary-state-controller.ts
 
 import {
     checkWordMatchesFilter,
@@ -7,7 +7,7 @@ import {
     createNoResultsElement,
     createWordButtonElement,
     registerBackgroundClickListeners,
-} from './dictionary-ui';
+} from './dictionary-element-builders';
 
 export interface WordInfo {
     readonly name: string;

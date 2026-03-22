@@ -1,4 +1,4 @@
-// js/gui/module-tabs.ts
+// js/gui/module-selector-sheets.ts
 
 import {
     createEmptyWordsElement,
@@ -7,7 +7,7 @@ import {
     checkWordMatchesFilter,
     registerBackgroundClickListeners,
     compareWordName,
-} from './dictionary-ui';
+} from './dictionary-element-builders';
 
 export interface ModuleSheet {
     readonly moduleName: string;

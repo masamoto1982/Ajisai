@@ -1,4 +1,4 @@
-// js/gui/display.ts
+// js/gui/output-display-renderer.ts
 
 import type { Value, ExecuteResult } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';

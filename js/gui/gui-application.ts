@@ -1,11 +1,11 @@
 // js/gui/gui-application.ts
 
-import { createDisplay, Display, DisplayElements } from './display';
-import { createVocabularyManager, VocabularyManager, VocabularyElements } from './dictionary';
-import { createEditor, Editor } from './editor';
-import { createMobileHandler, MobileHandler, MobileElements, ViewMode } from './mobile';
-import { createModuleTabManager, ModuleTabManager } from './module-tabs';
-import { createPersistence, Persistence } from './persistence';
+import { createDisplay, Display, DisplayElements } from './output-display-renderer';
+import { createVocabularyManager, VocabularyManager, VocabularyElements } from './vocabulary-state-controller';
+import { createEditor, Editor } from './code-input-editor';
+import { createMobileHandler, MobileHandler, MobileElements, ViewMode } from './mobile-view-switcher';
+import { createModuleTabManager, ModuleTabManager } from './module-selector-sheets';
+import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter } from '../wasm-interpreter-types';

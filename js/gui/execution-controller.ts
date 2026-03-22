@@ -3,7 +3,7 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-interpreter-types';
 import { createStepExecutor, StepExecutor } from './step-executor';
-import type { ViewMode } from './mobile';
+import type { ViewMode } from './mobile-view-switcher';
 
 export interface ExecutionCallbacks {
     readonly extractEditorValue: () => string;
