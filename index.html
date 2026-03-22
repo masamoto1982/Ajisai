@@ -65,21 +65,7 @@
             </div>
         </header>
 
-        <div class="area-selectors">
-            <div class="area-selector area-selector-left">
-                <label for="left-panel-select" class="visually-hidden">Select left panel</label>
-                <select id="left-panel-select">
-                    <option value="input">Input</option>
-                    <option value="output">Output</option>
-                </select>
-            </div>
-            <div class="area-selector area-selector-right">
-                <label for="right-panel-select" class="visually-hidden">Select right panel</label>
-                <select id="right-panel-select">
-                    <option value="stack">Stack</option>
-                    <option value="dictionary">Dictionary</option>
-                </select>
-            </div>
+        <main class="main-layout">
             <div class="area-selector area-selector-mobile">
                 <label for="mobile-panel-select" class="visually-hidden">Select panel</label>
                 <select id="mobile-panel-select">
@@ -89,10 +75,15 @@
                     <option value="dictionary">Dictionary</option>
                 </select>
             </div>
-        </div>
 
-        <main class="main-layout">
             <div id="editor-panel" class="panel">
+                <div class="area-selector area-selector-left">
+                    <label for="left-panel-select" class="visually-hidden">Select left panel</label>
+                    <select id="left-panel-select">
+                        <option value="input">Input</option>
+                        <option value="output">Output</option>
+                    </select>
+                </div>
                 <section id="output-panel" class="output-area" role="region" aria-label="Output" tabindex="0">
                     <h2 class="visually-hidden">Output</h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
@@ -111,6 +102,13 @@
             </div>
             
             <div id="state-panel" class="panel">
+                <div class="area-selector area-selector-right">
+                    <label for="right-panel-select" class="visually-hidden">Select right panel</label>
+                    <select id="right-panel-select">
+                        <option value="stack">Stack</option>
+                        <option value="dictionary">Dictionary</option>
+                    </select>
+                </div>
                 <section id="stack-panel" class="stack-area" role="region" aria-label="Stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
