@@ -745,13 +745,13 @@ fn value_to_js_value(value: &Value) -> JsValue {
                 js_sys::Reflect::set(
                     &num_obj,
                     &"numerator".into(),
-                    &f.numerator.to_string().into(),
+                    &f.numerator().to_string().into(),
                 )
                 .unwrap();
                 js_sys::Reflect::set(
                     &num_obj,
                     &"denominator".into(),
-                    &f.denominator.to_string().into(),
+                    &f.denominator().to_string().into(),
                 )
                 .unwrap();
                 js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();

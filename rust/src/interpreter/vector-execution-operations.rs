@@ -5,9 +5,9 @@ use crate::types::{Value, ValueData};
 fn format_scalar_to_source(val: &Value) -> Result<String> {
     if let Some(f) = val.as_scalar() {
         if f.is_integer() {
-            return Ok(f.numerator.to_string());
+            return Ok(f.numerator().to_string());
         }
-        return Ok(format!("{}/{}", f.numerator, f.denominator));
+        return Ok(format!("{}/{}", f.numerator(), f.denominator()));
     }
     Err(AjisaiError::create_structure_error("scalar", "non-scalar value"))
 }

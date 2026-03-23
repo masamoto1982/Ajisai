@@ -117,9 +117,9 @@ fn format_fraction(f: &Fraction) -> String {
         return "NIL".to_string();
     }
     if f.is_integer() {
-        f.numerator.to_string()
+        f.numerator().to_string()
     } else {
-        format!("{}/{}", f.numerator, f.denominator)
+        format!("{}/{}", f.numerator(), f.denominator())
     }
 }
 
@@ -221,9 +221,9 @@ fn format_as_datetime(data: &ValueData) -> String {
         ValueData::Scalar(f) => {
             // @プレフィックスでJS側に日時フォーマットを委譲
             if f.is_integer() {
-                format!("@{}", f.numerator)
+                format!("@{}", f.numerator())
             } else {
-                format!("@{}/{}", f.numerator, f.denominator)
+                format!("@{}/{}", f.numerator(), f.denominator())
             }
         }
         ValueData::Vector(_) | ValueData::Record { .. } => format_value_recursive(data, 0),

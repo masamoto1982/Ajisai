@@ -33,10 +33,27 @@ fn create_bigint_from_i128(n: i128) -> BigInt {
     }
 }
 
+// ---------------------------------------------------------------------------
+// FractionRepr: Small Value Optimization
+// ---------------------------------------------------------------------------
+// Small(num, den) stores both parts inline on the stack (no heap allocation).
+// Invariant: den >= 0. den == 0 represents NIL. When den > 0, reduced form.
+// Big is the fallback for values that overflow i64.
+
+#[derive(Debug, Clone)]
+enum FractionRepr {
+    Small(i64, i64),
+    Big { numerator: BigInt, denominator: BigInt },
+}
+
+/// Fraction with Small Value Optimization.
+///
+/// Arithmetic hot paths are heap-independent when both operands fit in i64.
+/// The internal representation uses `Small(i64, i64)` for common cases and
+/// falls back to `Big { BigInt, BigInt }` only when values overflow.
 #[derive(Debug, Clone)]
 pub struct Fraction {
-    pub numerator: BigInt,
-    pub denominator: BigInt,
+    repr: FractionRepr,
 }
 
 /// Mathematical equality via cross-multiplication.
@@ -47,51 +64,45 @@ impl PartialEq for Fraction {
         if self.is_nil() || other.is_nil() {
             return self.is_nil() && other.is_nil();
         }
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return self.numerator == other.numerator;
+        match (&self.repr, &other.repr) {
+            (FractionRepr::Small(a, b), FractionRepr::Small(c, d)) => {
+                if b == d { return a == c; }
+                (*a as i128) * (*d as i128) == (*c as i128) * (*b as i128)
+            }
+            _ => {
+                let (an, ad) = self.to_bigint_pair();
+                let (bn, bd) = other.to_bigint_pair();
+                if ad == bd { return an == bn; }
+                an * &bd == bn * &ad
+            }
         }
-        if let (Some((a, b)), Some((c, d))) =
-            (self.extract_i64_pair(), other.extract_i64_pair())
-        {
-            if b == d { return a == c; }
-            return (a as i128) * (d as i128) == (c as i128) * (b as i128);
-        }
-        if self.denominator == other.denominator {
-            return self.numerator == other.numerator;
-        }
-        &self.numerator * &other.denominator == &other.numerator * &self.denominator
     }
 }
 
 impl Eq for Fraction {}
 
 impl Fraction {
+    // ── Constructors ─────────────────────────────────────────────────
+
     /// NIL sentinel: denominator = 0. Propagates through arithmetic (three-valued logic).
     #[inline]
     pub fn nil() -> Self {
-        Fraction {
-            numerator: BigInt::zero(),
-            denominator: BigInt::zero(),
-        }
+        Fraction { repr: FractionRepr::Small(0, 0) }
     }
 
     #[inline]
     pub fn is_nil(&self) -> bool {
-        self.denominator.is_zero()
+        match &self.repr {
+            FractionRepr::Small(_, d) => *d == 0,
+            FractionRepr::Big { denominator, .. } => denominator.is_zero(),
+        }
     }
 
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
         if denominator.is_zero() { panic!("Division by zero"); }
 
         if numerator.is_zero() {
-            return Fraction {
-                numerator: BigInt::zero(),
-                denominator: BigInt::one(),
-            };
-        }
-
-        if denominator.is_one() {
-            return Fraction { numerator, denominator };
+            return Fraction { repr: FractionRepr::Small(0, 1) };
         }
 
         if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
@@ -102,10 +113,7 @@ impl Fraction {
                 num = -num;
                 den = -den;
             }
-            return Fraction {
-                numerator: BigInt::from(num),
-                denominator: BigInt::from(den),
-            };
+            return Fraction { repr: FractionRepr::Small(num, den) };
         }
 
         let common = numerator.gcd(&denominator);
@@ -115,7 +123,7 @@ impl Fraction {
             num = -num;
             den = -den;
         }
-        Fraction { numerator: num, denominator: den }
+        Self::from_bigint_pair(num, den)
     }
 
     /// Constructs a fraction without GCD reduction. Only normalizes sign.
@@ -127,7 +135,7 @@ impl Fraction {
             numerator = -numerator;
             denominator = -denominator;
         }
-        Fraction { numerator, denominator }
+        Self::from_bigint_pair(numerator, denominator)
     }
 
     /// Constructs a fraction that is already in lowest terms. Only normalizes sign.
@@ -138,62 +146,124 @@ impl Fraction {
             numerator = -numerator;
             denominator = -denominator;
         }
-        Fraction { numerator, denominator }
+        Self::from_bigint_pair(numerator, denominator)
     }
+
+    /// Internal: create from BigInt pair, using Small when both fit in i64.
+    #[inline]
+    fn from_bigint_pair(numerator: BigInt, denominator: BigInt) -> Self {
+        if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
+            Fraction { repr: FractionRepr::Small(n, d) }
+        } else {
+            Fraction { repr: FractionRepr::Big { numerator, denominator } }
+        }
+    }
+
+    // ── Accessor methods (for external callers needing BigInt) ────────
+
+    /// Returns the numerator as BigInt. For Small repr, constructs on the fly.
+    #[inline]
+    pub fn numerator(&self) -> BigInt {
+        match &self.repr {
+            FractionRepr::Small(n, _) => BigInt::from(*n),
+            FractionRepr::Big { numerator, .. } => numerator.clone(),
+        }
+    }
+
+    /// Returns the denominator as BigInt. For Small repr, constructs on the fly.
+    #[inline]
+    pub fn denominator(&self) -> BigInt {
+        match &self.repr {
+            FractionRepr::Small(_, d) => BigInt::from(*d),
+            FractionRepr::Big { denominator, .. } => denominator.clone(),
+        }
+    }
+
+    /// Returns (numerator, denominator) as owned BigInt pair.
+    #[inline]
+    pub fn to_bigint_pair(&self) -> (BigInt, BigInt) {
+        match &self.repr {
+            FractionRepr::Small(n, d) => (BigInt::from(*n), BigInt::from(*d)),
+            FractionRepr::Big { numerator, denominator } => {
+                (numerator.clone(), denominator.clone())
+            }
+        }
+    }
+
+    // ── Predicates ───────────────────────────────────────────────────
 
     #[inline]
     pub fn is_integer(&self) -> bool {
-        self.denominator.is_one()
+        match &self.repr {
+            FractionRepr::Small(_, d) => *d == 1,
+            FractionRepr::Big { denominator, .. } => denominator.is_one(),
+        }
     }
 
-    /// (a/b) × n: Cross-cancellation with gcd(n, b).
     #[inline]
-    pub fn mul_by_integer(&self, n: &Fraction) -> Fraction {
-        debug_assert!(n.denominator.is_one());
+    pub fn is_zero(&self) -> bool {
+        match &self.repr {
+            FractionRepr::Small(n, _) => *n == 0,
+            FractionRepr::Big { numerator, .. } => numerator.is_zero(),
+        }
+    }
 
-        if let Some((a, b)) = self.extract_i64_pair() {
-            if let Some(n_val) = n.numerator.to_i64() {
-                let g = compute_gcd_i64(n_val, b);
-                let n_r = (n_val / g) as i128;
-                let b_r = (b / g) as i128;
-                let num = (a as i128) * n_r;
-                return Self::create_from_i128(num, b_r);
+    #[inline]
+    pub fn is_exact_integer(&self) -> bool {
+        self.is_integer()
+    }
+
+    // ── Fast-path extraction ─────────────────────────────────────────
+
+    #[inline]
+    fn extract_i64_pair(&self) -> Option<(i64, i64)> {
+        match &self.repr {
+            FractionRepr::Small(n, d) => Some((*n, *d)),
+            FractionRepr::Big { numerator, denominator } => {
+                let n = numerator.to_i64()?;
+                let d = denominator.to_i64()?;
+                Some((n, d))
             }
         }
-
-        let g = n.numerator.gcd(&self.denominator);
-        let n_reduced = &n.numerator / &g;
-        let b_reduced = &self.denominator / &g;
-        Self::create_already_reduced(
-            &self.numerator * n_reduced,
-            b_reduced,
-        )
     }
 
-    /// (a/b) ÷ n: Cross-cancellation with gcd(a, n).
     #[inline]
-    pub fn div_by_integer(&self, n: &Fraction) -> Fraction {
-        debug_assert!(n.denominator.is_one());
-        debug_assert!(!n.numerator.is_zero());
-
-        if let Some((a, b)) = self.extract_i64_pair() {
-            if let Some(n_val) = n.numerator.to_i64() {
-                let g = compute_gcd_i64(a, n_val);
-                let a_r = (a / g) as i128;
-                let n_r = (n_val / g) as i128;
-                let den = (b as i128) * n_r;
-                return Self::create_from_i128(a_r, den);
+    pub fn to_i64(&self) -> Option<i64> {
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                if *d == 1 { Some(*n) } else { None }
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                if denominator.is_one() {
+                    numerator.to_i64()
+                } else {
+                    None
+                }
             }
         }
-
-        let g = self.numerator.gcd(&n.numerator);
-        let a_reduced = &self.numerator / &g;
-        let n_reduced = &n.numerator / &g;
-        Self::create_already_reduced(
-            a_reduced,
-            &self.denominator * n_reduced,
-        )
     }
+
+    #[inline]
+    pub fn as_usize(&self) -> Option<usize> {
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                if *d == 1 && *n >= 0 {
+                    Some(*n as usize)
+                } else {
+                    None
+                }
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                if denominator.is_one() && *numerator >= BigInt::zero() {
+                    numerator.to_usize()
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    // ── i128 construction (used by arithmetic fast paths) ────────────
 
     #[inline]
     fn create_from_i128(num: i128, den: i128) -> Self {
@@ -215,44 +285,84 @@ impl Fraction {
             n = -n;
             d = -d;
         }
-        // i64 shortpath: avoid BigInt allocation when result fits in i64
+        // SVO: store as Small when result fits in i64
         if n >= i64::MIN as i128 && n <= i64::MAX as i128
-            && d >= 1 && d <= i64::MAX as i128
+            && d >= 0 && d <= i64::MAX as i128
         {
-            return Fraction {
-                numerator: BigInt::from(n as i64),
-                denominator: BigInt::from(d as i64),
-            };
+            return Fraction { repr: FractionRepr::Small(n as i64, d as i64) };
         }
         Fraction {
-            numerator: create_bigint_from_i128(n),
-            denominator: create_bigint_from_i128(d),
+            repr: FractionRepr::Big {
+                numerator: create_bigint_from_i128(n),
+                denominator: create_bigint_from_i128(d),
+            },
         }
     }
 
+    // ── Multiplication/Division by integer helpers ───────────────────
+
+    /// (a/b) × n: Cross-cancellation with gcd(n, b).
     #[inline]
-    fn extract_i64_pair(&self) -> Option<(i64, i64)> {
-        let n = self.numerator.to_i64()?;
-        let d = self.denominator.to_i64()?;
-        Some((n, d))
+    pub fn mul_by_integer(&self, n: &Fraction) -> Fraction {
+        debug_assert!(n.is_integer());
+
+        if let (Some((a, b)), Some((n_val, _))) = (self.extract_i64_pair(), n.extract_i64_pair()) {
+            let g = compute_gcd_i64(n_val, b);
+            let n_r = (n_val / g) as i128;
+            let b_r = (b / g) as i128;
+            let num = (a as i128) * n_r;
+            return Self::create_from_i128(num, b_r);
+        }
+
+        let (sn, sd) = self.to_bigint_pair();
+        let nn = n.numerator();
+        let g = nn.gcd(&sd);
+        let n_reduced = &nn / &g;
+        let b_reduced = &sd / &g;
+        Self::create_already_reduced(sn * n_reduced, b_reduced)
     }
+
+    /// (a/b) ÷ n: Cross-cancellation with gcd(a, n).
+    #[inline]
+    pub fn div_by_integer(&self, n: &Fraction) -> Fraction {
+        debug_assert!(n.is_integer());
+        debug_assert!(!n.is_zero());
+
+        if let (Some((a, b)), Some((n_val, _))) = (self.extract_i64_pair(), n.extract_i64_pair()) {
+            let g = compute_gcd_i64(a, n_val);
+            let a_r = (a / g) as i128;
+            let n_r = (n_val / g) as i128;
+            let den = (b as i128) * n_r;
+            return Self::create_from_i128(a_r, den);
+        }
+
+        let (sn, sd) = self.to_bigint_pair();
+        let nn = n.numerator();
+        let g = sn.gcd(&nn);
+        let a_reduced = &sn / &g;
+        let n_reduced = &nn / &g;
+        Self::create_already_reduced(a_reduced, sd * n_reduced)
+    }
+
+    // ── String parsing ───────────────────────────────────────────────
 
     pub fn from_str(s: &str) -> std::result::Result<Self, String> {
         if s.is_empty() { return Err("Empty string".to_string()); }
 
-        if let Some(e_pos) = s.find(|c| c == 'e' || c == 'E') {
+        if let Some(e_pos) = s.find(|c| char::is_ascii(&c) && (c == 'e' || c == 'E')) {
             let mantissa_str = &s[..e_pos];
             let exponent_str = &s[e_pos+1..];
 
             let mantissa = Self::from_str(mantissa_str)?;
             let exponent = exponent_str.parse::<i32>().map_err(|e| e.to_string())?;
 
+            let (mn, md) = mantissa.to_bigint_pair();
             if exponent >= 0 {
                 let power = BigInt::from(10).pow(exponent as u32);
-                return Ok(Fraction::new(mantissa.numerator * power, mantissa.denominator));
+                return Ok(Fraction::new(mn * power, md));
             } else {
                 let power = BigInt::from(10).pow((-exponent) as u32);
-                return Ok(Fraction::new(mantissa.numerator, mantissa.denominator * power));
+                return Ok(Fraction::new(mn, md * power));
             }
         }
         if let Some(pos) = s.find('/') {
@@ -271,7 +381,11 @@ impl Fraction {
         } else {
             let num = BigInt::from_str(s).map_err(|e| e.to_string())?;
             // Integer / 1 is already in lowest terms — skip GCD
-            Ok(Fraction { numerator: num, denominator: BigInt::one() })
+            if let Some(n) = num.to_i64() {
+                Ok(Fraction { repr: FractionRepr::Small(n, 1) })
+            } else {
+                Ok(Fraction { repr: FractionRepr::Big { numerator: num, denominator: BigInt::one() } })
+            }
         }
     }
 
@@ -297,6 +411,8 @@ impl Fraction {
         }
     }
 
+    // ── Arithmetic ───────────────────────────────────────────────────
+
     /// (a/b) + (c/d) with same-denominator fast path and cross-cancellation for shared factors.
     pub fn add(&self, other: &Fraction) -> Fraction {
         if self.is_nil() || other.is_nil() {
@@ -318,21 +434,24 @@ impl Fraction {
             }
         }
 
-        if self.denominator == other.denominator {
-            let sum = &self.numerator + &other.numerator;
+        let (an, ad) = self.to_bigint_pair();
+        let (bn, bd) = other.to_bigint_pair();
+
+        if ad == bd {
+            let sum = &an + &bn;
             if sum.is_zero() {
-                return Fraction { numerator: BigInt::zero(), denominator: BigInt::one() };
+                return Fraction { repr: FractionRepr::Small(0, 1) };
             }
-            let g = sum.gcd(&self.denominator);
+            let g = sum.gcd(&ad);
             if g.is_one() {
-                return Self::create_already_reduced(sum, self.denominator.clone());
+                return Self::create_already_reduced(sum, ad);
             }
-            return Self::create_already_reduced(&sum / &g, &self.denominator / &g);
+            return Self::create_already_reduced(&sum / &g, &ad / &g);
         }
 
         Fraction::new(
-            &self.numerator * &other.denominator + &other.numerator * &self.denominator,
-            &self.denominator * &other.denominator,
+            &an * &bd + &bn * &ad,
+            &ad * &bd,
         )
     }
 
@@ -357,21 +476,24 @@ impl Fraction {
             }
         }
 
-        if self.denominator == other.denominator {
-            let diff = &self.numerator - &other.numerator;
+        let (an, ad) = self.to_bigint_pair();
+        let (bn, bd) = other.to_bigint_pair();
+
+        if ad == bd {
+            let diff = &an - &bn;
             if diff.is_zero() {
-                return Fraction { numerator: BigInt::zero(), denominator: BigInt::one() };
+                return Fraction { repr: FractionRepr::Small(0, 1) };
             }
-            let g = diff.gcd(&self.denominator);
+            let g = diff.gcd(&ad);
             if g.is_one() {
-                return Self::create_already_reduced(diff, self.denominator.clone());
+                return Self::create_already_reduced(diff, ad);
             }
-            return Self::create_already_reduced(&diff / &g, &self.denominator / &g);
+            return Self::create_already_reduced(&diff / &g, &ad / &g);
         }
 
         Fraction::new(
-            &self.numerator * &other.denominator - &other.numerator * &self.denominator,
-            &self.denominator * &other.denominator,
+            &an * &bd - &bn * &ad,
+            &ad * &bd,
         )
     }
 
@@ -394,40 +516,34 @@ impl Fraction {
             }
         }
 
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return Fraction {
-                numerator: &self.numerator * &other.numerator,
-                denominator: BigInt::one(),
-            };
+        let (an, ad) = self.to_bigint_pair();
+        let (bn, bd) = other.to_bigint_pair();
+
+        if ad.is_one() && bd.is_one() {
+            return Self::from_bigint_pair(an * bn, BigInt::one());
         }
 
-        if self.denominator.is_one() {
-            let g = self.numerator.gcd(&other.denominator);
-            let a_reduced = &self.numerator / &g;
-            let d_reduced = &other.denominator / &g;
-            return Self::create_already_reduced(
-                a_reduced * &other.numerator,
-                d_reduced,
-            );
+        if ad.is_one() {
+            let g = an.gcd(&bd);
+            let a_reduced = &an / &g;
+            let d_reduced = &bd / &g;
+            return Self::create_already_reduced(a_reduced * bn, d_reduced);
         }
 
-        if other.denominator.is_one() {
-            let g = other.numerator.gcd(&self.denominator);
-            let c_reduced = &other.numerator / &g;
-            let b_reduced = &self.denominator / &g;
-            return Self::create_already_reduced(
-                &self.numerator * c_reduced,
-                b_reduced,
-            );
+        if bd.is_one() {
+            let g = bn.gcd(&ad);
+            let c_reduced = &bn / &g;
+            let b_reduced = &ad / &g;
+            return Self::create_already_reduced(an * c_reduced, b_reduced);
         }
 
-        let g1 = self.numerator.gcd(&other.denominator);
-        let g2 = other.numerator.gcd(&self.denominator);
+        let g1 = an.gcd(&bd);
+        let g2 = bn.gcd(&ad);
 
-        let a_reduced = &self.numerator / &g1;
-        let d_reduced = &other.denominator / &g1;
-        let c_reduced = &other.numerator / &g2;
-        let b_reduced = &self.denominator / &g2;
+        let a_reduced = &an / &g1;
+        let d_reduced = &bd / &g1;
+        let c_reduced = &bn / &g2;
+        let b_reduced = &ad / &g2;
 
         Self::create_already_reduced(
             a_reduced * c_reduced,
@@ -440,7 +556,7 @@ impl Fraction {
         if self.is_nil() || other.is_nil() {
             return Self::nil();
         }
-        if other.numerator.is_zero() {
+        if other.is_zero() {
             panic!("Division by zero");
         }
 
@@ -456,46 +572,42 @@ impl Fraction {
             }
         }
 
-        if self.denominator.is_one() && other.denominator.is_one() {
-            return Fraction::new(
-                self.numerator.clone(),
-                other.numerator.clone(),
-            );
+        let (an, ad) = self.to_bigint_pair();
+        let (bn, bd) = other.to_bigint_pair();
+
+        if ad.is_one() && bd.is_one() {
+            return Fraction::new(an, bn);
         }
 
-        if self.denominator.is_one() {
-            let g = self.numerator.gcd(&other.numerator);
-            let a_reduced = &self.numerator / &g;
-            let c_reduced = &other.numerator / &g;
-            return Self::create_already_reduced(
-                a_reduced * &other.denominator,
-                c_reduced,
-            );
+        if ad.is_one() {
+            let g = an.gcd(&bn);
+            let a_reduced = &an / &g;
+            let c_reduced = &bn / &g;
+            return Self::create_already_reduced(a_reduced * bd, c_reduced);
         }
 
-        if other.denominator.is_one() {
-            let g = self.numerator.gcd(&other.numerator);
-            let a_reduced = &self.numerator / &g;
-            let c_reduced = &other.numerator / &g;
-            return Self::create_already_reduced(
-                a_reduced,
-                &self.denominator * c_reduced,
-            );
+        if bd.is_one() {
+            let g = an.gcd(&bn);
+            let a_reduced = &an / &g;
+            let c_reduced = &bn / &g;
+            return Self::create_already_reduced(a_reduced, ad * c_reduced);
         }
 
-        let g1 = self.numerator.gcd(&other.numerator);
-        let g2 = other.denominator.gcd(&self.denominator);
+        let g1 = an.gcd(&bn);
+        let g2 = bd.gcd(&ad);
 
-        let a_reduced = &self.numerator / &g1;
-        let c_reduced = &other.numerator / &g1;
-        let d_reduced = &other.denominator / &g2;
-        let b_reduced = &self.denominator / &g2;
+        let a_reduced = &an / &g1;
+        let c_reduced = &bn / &g1;
+        let d_reduced = &bd / &g2;
+        let b_reduced = &ad / &g2;
 
         Self::create_already_reduced(
             a_reduced * d_reduced,
             b_reduced * c_reduced,
         )
     }
+
+    // ── Comparison helpers ───────────────────────────────────────────
 
     /// a/b < c/d — delegates to Ord::cmp for unified fast path
     #[inline]
@@ -518,151 +630,144 @@ impl Fraction {
         self.cmp(other) != std::cmp::Ordering::Less
     }
 
+    // ── Unary operations ─────────────────────────────────────────────
+
     /// Absolute value: |a/b|
     #[inline]
     pub fn abs(&self) -> Fraction {
         if self.is_nil() {
             return self.clone();
         }
-        Fraction {
-            numerator: if self.numerator < BigInt::zero() {
-                -self.numerator.clone()
-            } else {
-                self.numerator.clone()
-            },
-            denominator: self.denominator.clone(),
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                Fraction { repr: FractionRepr::Small(n.abs(), *d) }
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                Fraction {
+                    repr: FractionRepr::Big {
+                        numerator: if *numerator < BigInt::zero() {
+                            -numerator.clone()
+                        } else {
+                            numerator.clone()
+                        },
+                        denominator: denominator.clone(),
+                    },
+                }
+            }
         }
     }
 
     /// Floor: rounds toward negative infinity.
     pub fn floor(&self) -> Fraction {
-        if self.denominator.is_one() {
+        if self.is_integer() {
             return self.clone();
         }
 
-        let q = &self.numerator / &self.denominator;
-        let r = &self.numerator % &self.denominator;
-
-        let floored = if self.numerator < BigInt::zero() && !r.is_zero() {
-            q - BigInt::one()
-        } else {
-            q
-        };
-
-        Fraction {
-            numerator: floored,
-            denominator: BigInt::one(),
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                let q = n / d;
+                let r = n % d;
+                let floored = if *n < 0 && r != 0 { q - 1 } else { q };
+                Fraction { repr: FractionRepr::Small(floored, 1) }
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                let q = numerator / denominator;
+                let r = numerator % denominator;
+                let floored = if *numerator < BigInt::zero() && !r.is_zero() {
+                    q - BigInt::one()
+                } else {
+                    q
+                };
+                Self::from_bigint_pair(floored, BigInt::one())
+            }
         }
     }
 
     /// Ceil: rounds toward positive infinity.
     pub fn ceil(&self) -> Fraction {
-        if self.denominator.is_one() {
+        if self.is_integer() {
             return self.clone();
         }
 
-        let q = &self.numerator / &self.denominator;
-        let r = &self.numerator % &self.denominator;
-
-        let ceiled = if self.numerator > BigInt::zero() && !r.is_zero() {
-            q + BigInt::one()
-        } else if self.numerator < BigInt::zero() && !r.is_zero() {
-            q
-        } else {
-            q
-        };
-
-        Fraction {
-            numerator: ceiled,
-            denominator: BigInt::one(),
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                let q = n / d;
+                let r = n % d;
+                let ceiled = if *n > 0 && r != 0 { q + 1 } else { q };
+                Fraction { repr: FractionRepr::Small(ceiled, 1) }
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                let q = numerator / denominator;
+                let r = numerator % denominator;
+                let ceiled = if *numerator > BigInt::zero() && !r.is_zero() {
+                    q + BigInt::one()
+                } else {
+                    q
+                };
+                Self::from_bigint_pair(ceiled, BigInt::one())
+            }
         }
     }
 
     /// Round half away from zero: floor(|x| + 0.5) with original sign.
     /// Formula: floor((2*|num| + den) / (2*den))
     pub fn round(&self) -> Fraction {
-        if self.denominator.is_one() {
+        if self.is_integer() {
             return self.clone();
         }
 
-        if self.numerator.is_zero() {
-            return Fraction {
-                numerator: BigInt::zero(),
-                denominator: BigInt::one(),
-            };
+        if self.is_zero() {
+            return Fraction { repr: FractionRepr::Small(0, 1) };
         }
 
-        let is_negative = self.numerator < BigInt::zero();
-        let abs_num = if is_negative {
-            -&self.numerator
-        } else {
-            self.numerator.clone()
-        };
-
-        let two = BigInt::from(2);
-        let two_abs_num = &abs_num * &two;
-        let result = (&two_abs_num + &self.denominator) / (&two * &self.denominator);
-
-        Fraction {
-            numerator: if is_negative { -result } else { result },
-            denominator: BigInt::one(),
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                let is_negative = *n < 0;
+                let abs_n = n.abs() as i128;
+                let d128 = *d as i128;
+                let result = ((2 * abs_n + d128) / (2 * d128)) as i64;
+                Fraction { repr: FractionRepr::Small(if is_negative { -result } else { result }, 1) }
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                let is_negative = *numerator < BigInt::zero();
+                let abs_num = if is_negative {
+                    -numerator.clone()
+                } else {
+                    numerator.clone()
+                };
+                let two = BigInt::from(2);
+                let two_abs_num = &abs_num * &two;
+                let result = (&two_abs_num + denominator) / (&two * denominator);
+                Self::from_bigint_pair(
+                    if is_negative { -result } else { result },
+                    BigInt::one(),
+                )
+            }
         }
     }
 
-    #[inline]
-    pub fn is_exact_integer(&self) -> bool {
-        self.denominator == BigInt::one()
-    }
-
-    #[inline]
-    pub fn as_usize(&self) -> Option<usize> {
-        if self.is_exact_integer() && self.numerator >= BigInt::zero() {
-            self.numerator.to_usize()
-        } else {
-            None
-        }
-    }
+    // ── Modulo ───────────────────────────────────────────────────────
 
     /// Mathematical modulo: a mod b = a - b * floor(a/b).
     /// Result has the same sign as b.
     pub fn modulo(&self, other: &Fraction) -> Fraction {
-        if other.numerator.is_zero() {
+        if other.is_zero() {
             panic!("Modulo by zero");
         }
 
         // i64 fast path for integer modulo
-        if self.denominator.is_one() && other.denominator.is_one() {
-            if let (Some(a), Some(b)) = (self.numerator.to_i64(), other.numerator.to_i64()) {
-                let rem = a % b;
+        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
+            if b == 1 && d == 1 {
+                let rem = a % c;
                 let result = if rem < 0 {
-                    if b > 0 { rem + b } else { rem - b }
+                    if c > 0 { rem + c } else { rem - c }
                 } else {
                     rem
                 };
-                return Fraction {
-                    numerator: BigInt::from(result),
-                    denominator: BigInt::one(),
-                };
+                return Fraction { repr: FractionRepr::Small(result, 1) };
             }
 
-            let rem = &self.numerator % &other.numerator;
-            let result = if rem < BigInt::zero() {
-                if other.numerator > BigInt::zero() {
-                    rem + &other.numerator
-                } else {
-                    rem - &other.numerator
-                }
-            } else {
-                rem
-            };
-            return Fraction {
-                numerator: result,
-                denominator: BigInt::one(),
-            };
-        }
-
-        // i64 fast path for fractional modulo: a/b mod c/d = (a*d mod c*b) / (b*d)
-        if let (Some((a, b)), Some((c, d))) = (self.extract_i64_pair(), other.extract_i64_pair()) {
+            // i64 fast path for fractional modulo: a/b mod c/d = (a*d mod c*b) / (b*d)
             let a = a as i128;
             let b = b as i128;
             let c = c as i128;
@@ -679,11 +784,31 @@ impl Fraction {
             return Self::create_from_i128(result_num, den);
         }
 
+        // BigInt fallback for integer modulo
+        let (sn, sd) = self.to_bigint_pair();
+        let (on, od) = other.to_bigint_pair();
+
+        if sd.is_one() && od.is_one() {
+            let rem = &sn % &on;
+            let result = if rem < BigInt::zero() {
+                if on > BigInt::zero() {
+                    rem + &on
+                } else {
+                    rem - &on
+                }
+            } else {
+                rem
+            };
+            return Self::from_bigint_pair(result, BigInt::one());
+        }
+
         let div_result = self.div(other);
         let floored = div_result.floor();
         self.sub(&other.mul(&floored))
     }
 }
+
+// ── Trait implementations ────────────────────────────────────────────
 
 impl PartialOrd for Fraction {
     #[inline]
@@ -703,51 +828,57 @@ impl Ord for Fraction {
             let rhs = (c as i128) * (b as i128);
             return lhs.cmp(&rhs);
         }
-        if self.denominator == other.denominator {
-            return self.numerator.cmp(&other.numerator);
+        let (an, ad) = self.to_bigint_pair();
+        let (bn, bd) = other.to_bigint_pair();
+        if ad == bd {
+            return an.cmp(&bn);
         }
-        let lhs = &self.numerator * &other.denominator;
-        let rhs = &other.numerator * &self.denominator;
+        let lhs = an * &bd;
+        let rhs = bn * &ad;
         lhs.cmp(&rhs)
     }
 }
 
 impl ToPrimitive for Fraction {
     fn to_i64(&self) -> Option<i64> {
-        (&self.numerator / &self.denominator).to_i64()
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                if *d == 0 { return None; }
+                Some(n / d)
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                (numerator / denominator).to_i64()
+            }
+        }
     }
 
     fn to_u64(&self) -> Option<u64> {
-        if self.numerator < BigInt::zero() {
-            None
-        } else {
-            (&self.numerator / &self.denominator).to_u64()
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                if *d == 0 || *n < 0 { return None; }
+                Some((*n / *d) as u64)
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                if *numerator < BigInt::zero() {
+                    None
+                } else {
+                    (numerator / denominator).to_u64()
+                }
+            }
         }
     }
 
     fn to_f64(&self) -> Option<f64> {
-        let num_f64 = self.numerator.to_f64()?;
-        let den_f64 = self.denominator.to_f64()?;
-        if den_f64 == 0.0 {
-            None
-        } else {
-            Some(num_f64 / den_f64)
-        }
-    }
-}
-
-impl Fraction {
-    #[inline]
-    pub fn is_zero(&self) -> bool {
-        self.numerator.is_zero()
-    }
-
-    #[inline]
-    pub fn to_i64(&self) -> Option<i64> {
-        if self.denominator.is_one() {
-            self.numerator.to_i64()
-        } else {
-            None
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                if *d == 0 { return None; }
+                Some(*n as f64 / *d as f64)
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                let num_f64 = numerator.to_f64()?;
+                let den_f64 = denominator.to_f64()?;
+                if den_f64 == 0.0 { None } else { Some(num_f64 / den_f64) }
+            }
         }
     }
 }
@@ -755,29 +886,31 @@ impl Fraction {
 impl From<i64> for Fraction {
     #[inline]
     fn from(n: i64) -> Self {
-        Fraction {
-            numerator: BigInt::from(n),
-            denominator: BigInt::one(),
-        }
+        Fraction { repr: FractionRepr::Small(n, 1) }
     }
 }
 
 impl From<i32> for Fraction {
     #[inline]
     fn from(n: i32) -> Self {
-        Fraction {
-            numerator: BigInt::from(n),
-            denominator: BigInt::one(),
-        }
+        Fraction { repr: FractionRepr::Small(n as i64, 1) }
     }
 }
 
 impl std::fmt::Display for Fraction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.denominator.is_one() {
-            write!(f, "{}", self.numerator)
-        } else {
-            write!(f, "{}/{}", self.numerator, self.denominator)
+        match &self.repr {
+            FractionRepr::Small(n, d) => {
+                if *d == 1 { write!(f, "{}", n) }
+                else { write!(f, "{}/{}", n, d) }
+            }
+            FractionRepr::Big { numerator, denominator } => {
+                if denominator.is_one() {
+                    write!(f, "{}", numerator)
+                } else {
+                    write!(f, "{}/{}", numerator, denominator)
+                }
+            }
         }
     }
 }

@@ -52,10 +52,10 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
 fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
     match &value.data {
         ValueData::Scalar(f) => {
-            if f.denominator != BigInt::one() {
+            if !f.is_integer() {
                 return Err(AjisaiError::create_structure_error("integer", "fraction"));
             }
-            Ok(f.numerator.clone())
+            Ok(f.numerator())
         }
         ValueData::Nil => Err(AjisaiError::create_structure_error(
             "single-element value with integer",

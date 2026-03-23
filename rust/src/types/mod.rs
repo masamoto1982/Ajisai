@@ -256,6 +256,20 @@ impl Value {
         matches!(self.data, ValueData::Vector(_) | ValueData::Record { .. })
     }
 
+    /// Linear-consumption optimization: check whether this value's underlying
+    /// allocation is uniquely owned (Rc strong_count == 1 for Vector/Record).
+    /// Scalars and Nil are always "uniquely owned" (no shared heap allocation).
+    /// CodeBlocks are treated as not uniquely owned (mutation is not meaningful).
+    #[inline]
+    pub fn is_uniquely_owned(&self) -> bool {
+        match &self.data {
+            ValueData::Scalar(_) | ValueData::Nil => true,
+            ValueData::Vector(rc) => Rc::strong_count(rc) == 1,
+            ValueData::Record { pairs, .. } => Rc::strong_count(pairs) == 1,
+            ValueData::CodeBlock(_) => false,
+        }
+    }
+
     #[inline]
     pub fn is_truthy(&self) -> bool {
         match &self.data {
@@ -415,13 +429,35 @@ impl Value {
     }
 
     pub fn collect_fractions_flat(&self) -> Vec<Fraction> {
+        let mut buf = Vec::new();
+        self.collect_fractions_flat_into(&mut buf);
+        buf
+    }
+
+    /// Tensor-path optimized: collect all leaf Fraction values into a pre-allocated buffer.
+    /// Avoids intermediate Vec allocations from recursive flat_map.
+    pub fn collect_fractions_flat_into(&self, buf: &mut Vec<Fraction>) {
         match &self.data {
-            ValueData::Nil => vec![Fraction::nil()],
-            ValueData::Scalar(f) => vec![f.clone()],
+            ValueData::Nil => buf.push(Fraction::nil()),
+            ValueData::Scalar(f) => buf.push(f.clone()),
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                v.iter().flat_map(|c| c.collect_fractions_flat()).collect()
+                for child in v.iter() {
+                    child.collect_fractions_flat_into(buf);
+                }
             }
-            ValueData::CodeBlock(_) => vec![],
+            ValueData::CodeBlock(_) => {}
+        }
+    }
+
+    /// Count total number of leaf Fraction values without allocating.
+    pub fn count_fractions(&self) -> usize {
+        match &self.data {
+            ValueData::Nil => 1,
+            ValueData::Scalar(_) => 1,
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+                v.iter().map(|c| c.count_fractions()).sum()
+            }
+            ValueData::CodeBlock(_) => 0,
         }
     }
 
@@ -730,7 +766,7 @@ impl FlowToken {
         self.remaining.is_zero()
     }
 
-    /// Linear-consumption optimization hook.
+    /// Linear-consumption optimization hook (flow-level).
     ///
     /// Returns true when this flow appears uniquely owned and fully available,
     /// allowing execution paths to consider safe in-place updates.
@@ -739,6 +775,20 @@ impl FlowToken {
             && self.parent_flow_id.is_none()
             && self.child_flow_ids.is_empty()
             && self.mass_ratio == (1, 1)
+    }
+
+    /// Combined linear-consumption optimization hook: flow-level AND value-level.
+    ///
+    /// Returns true when BOTH conditions hold:
+    /// 1. The flow token is reusable (`remaining == total`, no parent/children, full mass ratio)
+    /// 2. The value's underlying allocation has no aliases (Rc strong_count == 1)
+    ///
+    /// When this returns true, an operator MAY safely perform in-place mutation
+    /// on the value's data buffer instead of allocating a new one.
+    /// This is a judgment API — it does NOT change execution semantics.
+    #[inline]
+    pub fn can_update_in_place(&self, value: &Value) -> bool {
+        self.is_reusable_allocation() && value.is_uniquely_owned()
     }
 
     /// Bifurcate this flow into `n` child branches with equal mass distribution.

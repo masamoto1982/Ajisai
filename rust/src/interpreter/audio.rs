@@ -608,11 +608,11 @@ fn build_audio_structure(
     // 数値判定（単一スカラー）
     if let Some(frac) = value.as_scalar() {
         let freq = frac
-            .numerator
+            .numerator()
             .to_f64()
             .ok_or_else(|| AjisaiError::from("Frequency too large"))?;
         let dur = frac
-            .denominator
+            .denominator()
             .to_f64()
             .ok_or_else(|| AjisaiError::from("Duration too large"))?;
 

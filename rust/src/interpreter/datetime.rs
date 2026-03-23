@@ -242,13 +242,11 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    let seconds = &timestamp.numerator / &timestamp.denominator;
-    let remainder_numerator = &timestamp.numerator % &timestamp.denominator;
+    let (ts_num, ts_den) = timestamp.to_bigint_pair();
+    let seconds = &ts_num / &ts_den;
+    let remainder_numerator = &ts_num % &ts_den;
     let subsec_fraction = if !remainder_numerator.is_zero() {
-        Some(Fraction::new(
-            remainder_numerator,
-            timestamp.denominator.clone(),
-        ))
+        Some(Fraction::new(remainder_numerator, ts_den))
     } else {
         None
     };
@@ -385,17 +383,17 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     for (i, component) in components.iter().take(6).enumerate() {
         if component.is_scalar() {
             if let Some(frac) = component.as_scalar() {
-                if frac.denominator != BigInt::one() {
+                if !frac.is_integer() {
                     if !is_keep_mode {
                         interp.stack.push(val);
                         interp.stack.push(tz_val);
                     }
                     return Err(AjisaiError::from(format!(
                         "TIMESTAMP: element {} must be an integer, got {}/{}",
-                        i, frac.numerator, frac.denominator
+                        i, frac.numerator(), frac.denominator()
                     )));
                 }
-                let int_val = frac.numerator.to_i32().ok_or_else(|| {
+                let int_val = frac.numerator().to_i32().ok_or_else(|| {
                     AjisaiError::from(format!("TIMESTAMP: element {} too large", i))
                 })?;
                 integers.push(int_val);
