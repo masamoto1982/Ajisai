@@ -53,22 +53,22 @@ const resolveNextViewMode = (currentMode: ViewMode, direction: 'left' | 'right')
     return VIEW_ORDER[nextIndex]!;
 };
 
-const lookupStylesForMode = (mode: ViewMode): Record<keyof MobileElements, string> => {
-    const modeMap: Record<ViewMode, Record<keyof MobileElements, string>> = {
-        input: { inputArea: 'flex', outputArea: 'none', stackArea: 'none', dictionaryArea: 'none' },
-        output: { inputArea: 'none', outputArea: 'flex', stackArea: 'none', dictionaryArea: 'none' },
-        stack: { inputArea: 'none', outputArea: 'none', stackArea: 'flex', dictionaryArea: 'none' },
-        dictionary: { inputArea: 'none', outputArea: 'none', stackArea: 'none', dictionaryArea: 'flex' },
+const lookupVisibilityForMode = (mode: ViewMode): Record<keyof MobileElements, boolean> => {
+    const modeMap: Record<ViewMode, Record<keyof MobileElements, boolean>> = {
+        input: { inputArea: false, outputArea: true, stackArea: true, dictionaryArea: true },
+        output: { inputArea: true, outputArea: false, stackArea: true, dictionaryArea: true },
+        stack: { inputArea: true, outputArea: true, stackArea: false, dictionaryArea: true },
+        dictionary: { inputArea: true, outputArea: true, stackArea: true, dictionaryArea: false },
     };
     return modeMap[mode];
 };
 
-const applyStyles = (
+const applyVisibility = (
     elements: MobileElements,
-    styles: Record<keyof MobileElements, string>
+    visibility: Record<keyof MobileElements, boolean>
 ): void => {
-    (Object.keys(styles) as Array<keyof MobileElements>).forEach(key => {
-        elements[key].style.display = styles[key];
+    (Object.keys(visibility) as Array<keyof MobileElements>).forEach(key => {
+        elements[key].hidden = visibility[key];
     });
 };
 
@@ -82,8 +82,8 @@ export const createMobileHandler = (
 
     const updateView = (mode: ViewMode): void => {
         currentMode = mode;
-        const styles = lookupStylesForMode(mode);
-        applyStyles(elements, styles);
+        const visibility = lookupVisibilityForMode(mode);
+        applyVisibility(elements, visibility);
     };
 
     const resolveSwipeGesture = (endX: number, endY: number): void => {
@@ -129,7 +129,7 @@ export const mobileUtils = {
     checkIsMobile,
     detectSwipeDirection,
     resolveNextViewMode,
-    lookupStylesForMode,
+    lookupVisibilityForMode,
     VIEW_ORDER,
     MOBILE_BREAKPOINT,
     SWIPE_THRESHOLD

@@ -195,27 +195,24 @@ export const createGUI = (): GUI => {
     const switchDictionarySheet = (sheetId: string): void => {
         const allSheets = elements.dictionaryArea.querySelectorAll('.dictionary-sheet');
         allSheets.forEach(sheet => {
-            (sheet as HTMLElement).style.display = 'none';
+            (sheet as HTMLElement).hidden = true;
             sheet.classList.remove('active');
         });
 
         const target = document.getElementById(`dictionary-sheet-${sheetId}`);
         if (target) {
-            target.style.display = 'flex';
+            target.hidden = false;
             target.classList.add('active');
         }
     };
 
     const syncDesktopLayout = (): void => {
-        elements.editorPanel.style.display = 'flex';
-        elements.statePanel.style.display = 'flex';
-        elements.editorPanel.style.flex = '1';
-        elements.statePanel.style.flex = '1';
-
-        elements.inputArea.style.display = currentLeftMode === 'input' ? 'flex' : 'none';
-        elements.outputArea.style.display = currentLeftMode === 'output' ? 'flex' : 'none';
-        elements.stackArea.style.display = currentRightMode === 'stack' ? 'flex' : 'none';
-        elements.dictionaryArea.style.display = currentRightMode === 'dictionary' ? 'flex' : 'none';
+        elements.editorPanel.hidden = false;
+        elements.statePanel.hidden = false;
+        elements.inputArea.hidden = currentLeftMode !== 'input';
+        elements.outputArea.hidden = currentLeftMode !== 'output';
+        elements.stackArea.hidden = currentRightMode !== 'stack';
+        elements.dictionaryArea.hidden = currentRightMode !== 'dictionary';
     };
 
     const isRightMode = (mode: ViewMode): boolean =>
