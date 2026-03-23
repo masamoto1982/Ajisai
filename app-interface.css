@@ -15,21 +15,37 @@
  * 配置は align-items / align-content / justify-content に依存する。
  * これらが未指定だと stretch（中央寄せや下詰め）になり得る。
  *
- * 対策: コンテンツ表示領域のすべての flex/grid コンテナに対し、
- * 一括で flex-start を適用する。個別クラスでの指定漏れや将来の追加
- * エリアでも上詰めが崩れないよう、このルールが防波堤となる。
+ * 対策: コンテナの flex-direction に応じて適切なプロパティを設定する。
+ *
+ *   ■ column 方向コンテナ (主軸=縦):
+ *     - justify-content が縦方向の配置を制御 → flex-start で上詰め
+ *     - align-items はデフォルト stretch のまま（子要素が横幅いっぱいに広がる）
+ *     ※ align-items: flex-start を設定すると子要素が横方向に縮む！
+ *
+ *   ■ row + wrap 方向コンテナ (主軸=横):
+ *     - align-content が複数行の縦方向配置を制御 → flex-start で上詰め
+ *     - align-items が行内の縦方向配置を制御 → flex-start で上詰め
+ *     - justify-content が横方向配置を制御 → flex-start で左詰め
  * ------------------------------------------------------------------------ */
-.main-layout .display-area,
-.main-layout .state-display,
-.main-layout .words-display,
-.main-layout .area-content-flow,
-.main-layout .vocabulary-container,
-.main-layout .words-area,
-.main-layout .dictionary-sheet,
+
+/* column 方向コンテナ: 縦方向の上詰めのみ指定。
+   align-items は stretch (デフォルト) を維持し、子要素を横幅いっぱいに広げる */
 .main-layout .output-area,
 .main-layout .input-area,
 .main-layout .stack-area,
-.main-layout .dictionary-area {
+.main-layout .dictionary-area,
+.main-layout .vocabulary-container,
+.main-layout .words-area,
+.main-layout .dictionary-sheet {
+    justify-content: flex-start;
+    align-content: flex-start;
+}
+
+/* row + wrap 方向コンテナ: 縦横すべて flex-start で上詰め・左詰め */
+.main-layout .display-area,
+.main-layout .state-display,
+.main-layout .words-display,
+.main-layout .area-content-flow {
     align-content: flex-start;
     align-items: flex-start;
     justify-content: flex-start;
