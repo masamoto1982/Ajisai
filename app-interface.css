@@ -434,6 +434,8 @@ body[data-active-area] #state-panel {
     flex: 1;
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
     align-content: flex-start;
     min-height: 7rem;
     overflow-y: auto;
@@ -444,9 +446,9 @@ body[data-active-area] #state-panel {
 }
 
 .words-area .words-display.is-empty {
-    align-items: center;
-    align-content: center;
-    justify-content: center;
+    align-items: flex-start;
+    align-content: flex-start;
+    justify-content: flex-start;
 }
 
 .empty-words-message {
@@ -470,6 +472,16 @@ body[data-active-area] #state-panel {
 
 #stack-display > div {
     justify-content: flex-start !important;
+}
+
+.area-content-flow {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    align-content: flex-start;
+    width: 100%;
+    min-height: 100%;
 }
 
 /* --------------------------------------------------------------------------
