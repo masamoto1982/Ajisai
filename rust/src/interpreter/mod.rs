@@ -1502,7 +1502,7 @@ ADDTEST
                     children[0]
                         .as_scalar()
                         .expect("Expected scalar")
-                        .numerator
+                        .numerator()
                         .to_string(),
                     "8",
                     "Result should be 8"
@@ -1565,7 +1565,7 @@ ADDTEST
                     children[0]
                         .as_scalar()
                         .expect("Expected scalar")
-                        .numerator
+                        .numerator()
                         .to_string(),
                     "9",
                     "Result should be 9"
@@ -1602,7 +1602,7 @@ ADDTEST
                     children[0]
                         .as_scalar()
                         .expect("Expected scalar")
-                        .numerator
+                        .numerator()
                         .to_string(),
                     "150",
                     "Result should be 150"
@@ -1640,7 +1640,7 @@ ADDTEST
                     children[0]
                         .as_scalar()
                         .expect("Expected scalar")
-                        .numerator
+                        .numerator()
                         .to_string(),
                     "100",
                     "Result should be 100"
@@ -1700,7 +1700,7 @@ ADDTEST
                     children[0]
                         .as_scalar()
                         .expect("Expected scalar")
-                        .numerator
+                        .numerator()
                         .to_string(),
                     "999"
                 );
@@ -1732,7 +1732,7 @@ ADDTEST
                     children[0]
                         .as_scalar()
                         .expect("Expected scalar")
-                        .numerator
+                        .numerator()
                         .to_string(),
                     "2",
                     "First element should be 2"
@@ -1741,7 +1741,7 @@ ADDTEST
                     children[1]
                         .as_scalar()
                         .expect("Expected scalar")
-                        .numerator
+                        .numerator()
                         .to_string(),
                     "3",
                     "Second element should be 3"
@@ -1750,7 +1750,7 @@ ADDTEST
                     children[2]
                         .as_scalar()
                         .expect("Expected scalar")
-                        .numerator
+                        .numerator()
                         .to_string(),
                     "4",
                     "Third element should be 4"

@@ -62,10 +62,10 @@ fn extract_positive_integer_from_value(val: &Value) -> Option<BigInt> {
         return None;
     }
     let scalar = &tensor.data[0];
-    if scalar.denominator != BigInt::one() || scalar.numerator <= BigInt::from(0) {
+    if !scalar.is_integer() || scalar.is_zero() || scalar.numerator() <= BigInt::from(0) {
         return None;
     }
-    Some(scalar.numerator.clone())
+    Some(scalar.numerator())
 }
 
 fn parse_csprng_args_in_keep_mode(interp: &Interpreter) -> Result<(BigInt, usize)> {

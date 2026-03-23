@@ -561,3 +561,221 @@ async fn test_bifurcation_interpreter_arithmetic() {
     assert_number(&result[1], 4, 1);
     assert_number(&result[2], 7, 1);
 }
+
+// ──────────────────────────────────────────────
+// §0.10.2  Linear-consumption optimization hook
+// ──────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_can_update_in_place_uniquely_owned_scalar() {
+    let val = Value::from_fraction(frac(42, 1));
+    let token = FlowToken::from_value(&val);
+
+    // Scalar with full remaining and unique ownership → safe
+    assert!(token.can_update_in_place(&val));
+}
+
+#[tokio::test]
+async fn test_can_update_in_place_uniquely_owned_vector() {
+    let val = Value::from_vector(vec![
+        Value::from_int(1),
+        Value::from_int(2),
+        Value::from_int(3),
+    ]);
+    let token = FlowToken::from_value(&val);
+
+    // Uniquely owned vector with full remaining → safe
+    assert!(token.can_update_in_place(&val));
+}
+
+#[tokio::test]
+async fn test_can_update_in_place_after_partial_consumption() {
+    let val = Value::from_fraction(frac(10, 1));
+    let token = FlowToken::from_value(&val);
+
+    // Consume partial → remaining != total → not safe
+    let (_, consumed_token) = token.consume(&frac(3, 1)).unwrap();
+    assert!(!consumed_token.can_update_in_place(&val));
+}
+
+#[tokio::test]
+async fn test_can_update_in_place_with_aliased_vector() {
+    use std::rc::Rc;
+    use ajisai_core::types::ValueData;
+
+    let children = Rc::new(vec![Value::from_int(1), Value::from_int(2)]);
+    let _alias = children.clone(); // Create alias (strong_count > 1)
+    let val = Value { data: ValueData::Vector(children) };
+    let token = FlowToken::from_value(&val);
+
+    // Aliased vector → not safe even though flow is reusable
+    assert!(!val.is_uniquely_owned());
+    assert!(token.is_reusable_allocation());
+    assert!(!token.can_update_in_place(&val));
+}
+
+#[tokio::test]
+async fn test_can_update_in_place_after_bifurcation() {
+    let val = Value::from_fraction(frac(100, 1));
+    let token = FlowToken::from_value(&val);
+
+    // Bifurcate → children exist → not reusable
+    let (parent, children) = token.bifurcate(2).unwrap();
+    assert!(!parent.can_update_in_place(&val));
+
+    // Children have parent_flow_id set → also not reusable
+    assert!(!children[0].can_update_in_place(&val));
+}
+
+#[tokio::test]
+async fn test_is_uniquely_owned_nil() {
+    let val = Value::nil();
+    assert!(val.is_uniquely_owned());
+}
+
+#[tokio::test]
+async fn test_is_uniquely_owned_code_block() {
+    let val = Value::from_code_block(vec![]);
+    assert!(!val.is_uniquely_owned());
+}
+
+// ──────────────────────────────────────────────
+// §0.10.3  Fraction Small Value Optimization
+// ──────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_fraction_svo_small_construction() {
+    // Small values should not allocate (verified by correct behavior)
+    let f = Fraction::from(42i64);
+    assert_eq!(f.to_i64(), Some(42));
+    assert!(f.is_integer());
+    assert!(!f.is_nil());
+    assert!(!f.is_zero());
+}
+
+#[tokio::test]
+async fn test_fraction_svo_zero() {
+    let f = Fraction::from(0i64);
+    assert!(f.is_zero());
+    assert!(f.is_integer());
+    assert_eq!(f.to_i64(), Some(0));
+}
+
+#[tokio::test]
+async fn test_fraction_svo_nil() {
+    let f = Fraction::nil();
+    assert!(f.is_nil());
+    assert_eq!(f.to_i64(), None);
+}
+
+#[tokio::test]
+async fn test_fraction_svo_arithmetic_stays_small() {
+    // i64 + i64 should stay in small repr
+    let a = Fraction::from(100i64);
+    let b = Fraction::from(200i64);
+    let c = a.add(&b);
+    assert_eq!(c.to_i64(), Some(300));
+}
+
+#[tokio::test]
+async fn test_fraction_svo_fractional_arithmetic() {
+    // 1/3 + 1/6 = 1/2 — entirely in i64 fast path
+    let a = Fraction::new(BigInt::from(1), BigInt::from(3));
+    let b = Fraction::new(BigInt::from(1), BigInt::from(6));
+    let c = a.add(&b);
+    assert_eq!(c, Fraction::new(BigInt::from(1), BigInt::from(2)));
+}
+
+#[tokio::test]
+async fn test_fraction_svo_clone_is_cheap() {
+    // Clone of a small fraction should be trivial (no heap)
+    let f = Fraction::from(999i64);
+    let g = f.clone();
+    assert_eq!(f, g);
+    assert_eq!(g.to_i64(), Some(999));
+}
+
+#[tokio::test]
+async fn test_fraction_svo_comparison() {
+    let half = Fraction::new(BigInt::from(1), BigInt::from(2));
+    let third = Fraction::new(BigInt::from(1), BigInt::from(3));
+    assert!(half.gt(&third));
+    assert!(third.lt(&half));
+    assert_eq!(half, half.clone());
+}
+
+#[tokio::test]
+async fn test_fraction_svo_display() {
+    let f = Fraction::from(42i64);
+    assert_eq!(format!("{}", f), "42");
+
+    let g = Fraction::new(BigInt::from(1), BigInt::from(3));
+    assert_eq!(format!("{}", g), "1/3");
+}
+
+#[tokio::test]
+async fn test_fraction_svo_accessor_methods() {
+    let f = Fraction::new(BigInt::from(3), BigInt::from(7));
+    assert_eq!(f.numerator(), BigInt::from(3));
+    assert_eq!(f.denominator(), BigInt::from(7));
+}
+
+#[tokio::test]
+async fn test_fraction_svo_floor_ceil_round() {
+    let f = Fraction::new(BigInt::from(7), BigInt::from(3)); // 7/3 = 2.333...
+    assert_eq!(f.floor().to_i64(), Some(2));
+    assert_eq!(f.ceil().to_i64(), Some(3));
+    assert_eq!(f.round().to_i64(), Some(2));
+
+    let neg = Fraction::new(BigInt::from(-7), BigInt::from(3)); // -7/3 = -2.333...
+    assert_eq!(neg.floor().to_i64(), Some(-3));
+    assert_eq!(neg.ceil().to_i64(), Some(-2));
+    assert_eq!(neg.round().to_i64(), Some(-2));
+}
+
+#[tokio::test]
+async fn test_fraction_svo_modulo() {
+    let a = Fraction::from(17i64);
+    let b = Fraction::from(5i64);
+    assert_eq!(a.modulo(&b).to_i64(), Some(2));
+}
+
+// ──────────────────────────────────────────────
+// §0.10.3 Tensor path: collect_fractions_flat_into
+// ──────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_collect_fractions_flat_into_preallocated() {
+    let val = Value::from_vector(vec![
+        Value::from_int(10),
+        Value::from_int(20),
+        Value::from_int(30),
+    ]);
+
+    // count_fractions gives correct count
+    assert_eq!(val.count_fractions(), 3);
+
+    // collect_fractions_flat_into uses pre-allocated buffer
+    let mut buf = Vec::with_capacity(val.count_fractions());
+    val.collect_fractions_flat_into(&mut buf);
+    assert_eq!(buf.len(), 3);
+    assert_eq!(buf[0].to_i64(), Some(10));
+    assert_eq!(buf[1].to_i64(), Some(20));
+    assert_eq!(buf[2].to_i64(), Some(30));
+}
+
+#[tokio::test]
+async fn test_collect_fractions_nested_tensor() {
+    // 2x3 matrix
+    let val = Value::from_vector(vec![
+        Value::from_vector(vec![Value::from_int(1), Value::from_int(2), Value::from_int(3)]),
+        Value::from_vector(vec![Value::from_int(4), Value::from_int(5), Value::from_int(6)]),
+    ]);
+
+    assert_eq!(val.count_fractions(), 6);
+    let fracs = val.collect_fractions_flat();
+    assert_eq!(fracs.len(), 6);
+    for (i, f) in fracs.iter().enumerate() {
+        assert_eq!(f.to_i64(), Some((i + 1) as i64));
+    }
+}

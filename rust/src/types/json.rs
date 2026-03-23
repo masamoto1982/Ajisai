@@ -19,10 +19,7 @@ pub fn deserialize_json_to_value(json_val: serde_json::Value, depth: usize) -> R
             } else if let Some(f) = n.as_f64() {
                 let s = format!("{}", f);
                 let frac = Fraction::from_str(&s).unwrap_or_else(|_| {
-                    Fraction {
-                        numerator: BigInt::from(f as i64),
-                        denominator: BigInt::one(),
-                    }
+                    Fraction::from(f as i64)
                 });
                 Ok(Value::from_fraction(frac))
             } else {
@@ -82,7 +79,7 @@ pub fn serialize_value_to_json(val: &Value) -> serde_json::Value {
                     return serde_json::Value::Number(serde_json::Number::from(i));
                 }
             }
-            if let (Some(n), Some(d)) = (f.numerator.to_i64(), f.denominator.to_i64()) {
+            if let (Some(n), Some(d)) = (f.numerator().to_i64(), f.denominator().to_i64()) {
                 let float_val = n as f64 / d as f64;
                 if let Some(num) = serde_json::Number::from_f64(float_val) {
                     return serde_json::Value::Number(num);

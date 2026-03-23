@@ -177,12 +177,10 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
 
 /// 分数を文字列に変換するヘルパー
 fn format_fraction_to_string(f: &Fraction) -> String {
-    use num_bigint::BigInt;
-    use num_traits::One;
-    if f.denominator == BigInt::one() {
-        format!("{}", f.numerator)
+    if f.is_integer() {
+        format!("{}", f.numerator())
     } else {
-        format!("{}/{}", f.numerator, f.denominator)
+        format!("{}/{}", f.numerator(), f.denominator())
     }
 }
 
@@ -825,7 +823,7 @@ mod tests {
         if let Some(val) = interp.stack.last() {
             assert!(is_number_value(val));
             if let Some(f) = val.as_scalar() {
-                assert_eq!(f.numerator, BigInt::from(42));
+                assert_eq!(f.numerator(), BigInt::from(42));
             }
         }
 
@@ -837,8 +835,8 @@ mod tests {
         if let Some(val) = interp.stack.last() {
             assert!(is_number_value(val));
             if let Some(f) = val.as_scalar() {
-                assert_eq!(f.numerator, BigInt::from(1));
-                assert_eq!(f.denominator, BigInt::from(3));
+                assert_eq!(f.numerator(), BigInt::from(1));
+                assert_eq!(f.denominator(), BigInt::from(3));
             }
         }
 

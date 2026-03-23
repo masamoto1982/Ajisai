@@ -24,7 +24,7 @@ pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
     let mut result = Vec::with_capacity(children.len());
     for child in children.iter() {
         match &child.data {
-            ValueData::Scalar(f) if f.denominator.is_one() => match f.numerator.to_i64() {
+            ValueData::Scalar(f) if f.is_integer() => match f.to_i64() {
                 Some(n) => result.push(n),
                 None => return None,
             },
@@ -42,7 +42,7 @@ pub fn create_value_from_integer_vector(values: Vec<i64>) -> Value {
 
 fn extract_integer_scalar(value: &Value) -> Option<i64> {
     match &value.data {
-        ValueData::Scalar(f) if f.denominator.is_one() => f.numerator.to_i64(),
+        ValueData::Scalar(f) if f.is_integer() => f.to_i64(),
         _ => None,
     }
 }

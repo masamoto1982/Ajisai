@@ -96,21 +96,23 @@ fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
     // 正規形（GCD約分済み）でハッシュ化することで、1/2 と 2/4 が同じハッシュを生成
     if val.is_scalar() {
         if let Some(frac) = val.as_scalar() {
-            let canonical = Fraction::new(frac.numerator.clone(), frac.denominator.clone());
+            // Normalize to canonical (GCD-reduced) form so 1/2 and 2/4 hash identically
+            let canonical = Fraction::new(frac.numerator(), frac.denominator());
+            let (can_num, can_den) = canonical.to_bigint_pair();
             bytes.push(0x01);
-            if canonical.numerator < BigInt::zero() {
+            if can_num < BigInt::zero() {
                 bytes.push(0x00);
             } else {
                 bytes.push(0x01);
             }
-            let num_bytes = if canonical.numerator < BigInt::zero() {
-                (-&canonical.numerator).to_bytes_le().1
+            let num_bytes = if can_num < BigInt::zero() {
+                (-&can_num).to_bytes_le().1
             } else {
-                canonical.numerator.to_bytes_le().1
+                can_num.to_bytes_le().1
             };
             bytes.extend_from_slice(&(num_bytes.len() as u32).to_le_bytes());
             bytes.extend_from_slice(&num_bytes);
-            let den_bytes = canonical.denominator.to_bytes_le().1;
+            let den_bytes = can_den.to_bytes_le().1;
             bytes.extend_from_slice(&(den_bytes.len() as u32).to_le_bytes());
             bytes.extend_from_slice(&den_bytes);
             return;
@@ -181,10 +183,10 @@ fn extract_positive_integer_from_value(val: &Value) -> Option<u32> {
         return None;
     }
     let scalar = &tensor.data[0];
-    if scalar.denominator != BigInt::one() || scalar.numerator <= BigInt::from(0) {
+    if !scalar.is_integer() || scalar.is_zero() || scalar.numerator() <= BigInt::from(0) {
         return None;
     }
-    scalar.numerator.to_u32()
+    scalar.numerator().to_u32()
 }
 
 fn parse_hash_args_in_keep_mode(interp: &Interpreter) -> Result<(u32, Value)> {
