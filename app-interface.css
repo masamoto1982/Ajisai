@@ -58,6 +58,10 @@
     border: 0;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 /* アプリ内セクション — base.css の section ボーダーを打ち消し、
    外枠（main-layout）だけでシートを形成する */
 .main-layout section {
