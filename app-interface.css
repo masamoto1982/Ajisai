@@ -554,8 +554,15 @@ body[data-active-area] #state-panel {
     flex-shrink: 0;
 }
 
+/* ツールバー (row flex) 内での横幅比率 */
 .dictionary-sheet-selector {
     flex: 1.618 1 0%;
+}
+
+/* words-area (column flex) 内では縦方向に伸長させない。
+   flex: 1.618 のままだと縦に引き伸ばされ、words-display が下詰めになる */
+.words-area .dictionary-sheet-selector {
+    flex: 0 0 auto;
 }
 
 .dictionary-sheet-selector select {
