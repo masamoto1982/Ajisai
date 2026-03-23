@@ -5,6 +5,36 @@
  * このファイルにはアプリ（インタプリタUI）固有のスタイルのみ記述
  */
 
+/* ==========================================================================
+ * 0. 上詰め保証ルール (Top-alignment guarantee)
+ * ==========================================================================
+ * 全コンテンツエリア（Input, Output, Stack, Dictionary およびその内部）の
+ * 部品は、デスクトップ・モバイル問わず常に上詰め（top-aligned）であること。
+ *
+ * 根本原因: flex コンテナが flex:1 等で引き伸ばされたとき、子要素の
+ * 配置は align-items / align-content / justify-content に依存する。
+ * これらが未指定だと stretch（中央寄せや下詰め）になり得る。
+ *
+ * 対策: コンテンツ表示領域のすべての flex/grid コンテナに対し、
+ * 一括で flex-start を適用する。個別クラスでの指定漏れや将来の追加
+ * エリアでも上詰めが崩れないよう、このルールが防波堤となる。
+ * ------------------------------------------------------------------------ */
+.main-layout .display-area,
+.main-layout .state-display,
+.main-layout .words-display,
+.main-layout .area-content-flow,
+.main-layout .vocabulary-container,
+.main-layout .words-area,
+.main-layout .dictionary-sheet,
+.main-layout .output-area,
+.main-layout .input-area,
+.main-layout .stack-area,
+.main-layout .dictionary-area {
+    align-content: flex-start;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
 /* --------------------------------------------------------------------------
  * 1. アプリ用レイアウト
  * -------------------------------------------------------------------------- */
@@ -474,9 +504,8 @@ body[data-active-area] #state-panel {
     color: var(--color-text-light);
 }
 
-#stack-display > div {
-    justify-content: flex-start !important;
-}
+/* #stack-display > div の !important 個別修正は削除。
+   セクション 0 の上詰め保証ルールで一括カバーされる。 */
 
 .area-content-flow {
     display: flex;
@@ -485,7 +514,10 @@ body[data-active-area] #state-panel {
     align-items: flex-start;
     align-content: flex-start;
     width: 100%;
-    min-height: 100%;
+    /* min-height: 100% を削除。親が flex:1 で引き伸ばされるとき、
+       この値があるとコンテナも同様に伸び、align-content の設定次第で
+       下詰め/中央寄せが発生する根本原因となっていた。
+       コンテナはコンテンツ量に応じた自然な高さを持つべきである。 */
 }
 
 /* --------------------------------------------------------------------------
