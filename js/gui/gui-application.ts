@@ -30,6 +30,7 @@ export interface GUIElements {
     readonly customWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
     readonly customWordInfo: HTMLElement;
+    readonly customDictionarySelect: HTMLSelectElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
     readonly dictionarySheetSelect: HTMLSelectElement;
@@ -70,6 +71,7 @@ const cacheElements = (): GUIElements => ({
     customWordsDisplay: document.getElementById('custom-words-display')!,
     builtInWordInfo: document.getElementById('core-word-info')!,
     customWordInfo: document.getElementById('custom-word-info')!,
+    customDictionarySelect: document.getElementById('custom-dictionary-select') as HTMLSelectElement,
     dictionarySearch: document.getElementById('dictionary-search') as HTMLInputElement,
     dictionarySearchClearBtn: document.getElementById('dictionary-search-clear-btn') as HTMLButtonElement,
     dictionarySheetSelect: document.getElementById('dictionary-sheet-select') as HTMLSelectElement,
@@ -93,7 +95,8 @@ const extractVocabularyElements = (elements: GUIElements): VocabularyElements =>
     builtInWordsDisplay: elements.builtInWordsDisplay,
     customWordsDisplay: elements.customWordsDisplay,
     builtInWordInfo: elements.builtInWordInfo,
-    customWordInfo: elements.customWordInfo
+    customWordInfo: elements.customWordInfo,
+    customDictionarySelect: elements.customDictionarySelect
 });
 
 const extractMobileElements = (elements: GUIElements): MobileElements => ({
@@ -133,7 +136,10 @@ const collectAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
     const coreWords = window.ajisaiInterpreter.collect_core_words_info().map(word => word[0]);
-    const customWords = window.ajisaiInterpreter.collect_custom_words_info().map(word => word[0]);
+    const customWords = window.ajisaiInterpreter.collect_custom_words_info().flatMap(word => [
+        word[1],
+        `${word[0]}::${word[1]}`
+    ]);
 
     const moduleWords: string[] = [];
     try {

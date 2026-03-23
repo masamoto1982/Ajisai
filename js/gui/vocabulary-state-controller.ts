@@ -10,6 +10,7 @@ import {
 } from './dictionary-element-builders';
 
 export interface WordInfo {
+    readonly dictionary: string;
     readonly name: string;
     readonly description?: string | null;
     readonly protected?: boolean;
@@ -20,6 +21,7 @@ export interface VocabularyElements {
     readonly customWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
     readonly customWordInfo: HTMLElement;
+    readonly customDictionarySelect: HTMLSelectElement;
 }
 
 export interface VocabularyCallbacks {
@@ -33,7 +35,7 @@ export interface VocabularyCallbacks {
 
 export interface VocabularyManager {
     readonly renderBuiltInWords: () => void;
-    readonly updateCustomWords: (customWordsInfo: Array<[string, string | null, boolean]>) => void;
+    readonly updateCustomWords: (customWordsInfo: Array<[string, string, string | null, boolean]>) => void;
     readonly updateSearchFilter: (filter: string) => void;
 }
 
@@ -58,10 +60,11 @@ const deserializeWordName = (name: string): string | null => {
     return `≈ ${decoded}`;
 };
 
-const createWordInfoFromTuple = (wordData: [string, string | null, boolean]): WordInfo => ({
-    name: wordData[0],
-    description: wordData[1] || deserializeWordName(wordData[0]) || wordData[0],
-    protected: wordData[2] || false
+const createWordInfoFromTuple = (wordData: [string, string, string | null, boolean]): WordInfo => ({
+    dictionary: wordData[0],
+    name: wordData[1],
+    description: wordData[2] || deserializeWordName(wordData[1]) || wordData[1],
+    protected: wordData[3] || false
 });
 
 
@@ -173,7 +176,8 @@ export const createVocabularyManager = (
 
     // 検索フィルターとカスタムワードのキャッシュ
     let searchFilter = '';
-    let cachedCustomWords: Array<[string, string | null, boolean]> = [];
+    let cachedCustomWords: Array<[string, string, string | null, boolean]> = [];
+    let selectedDictionary = 'SAMPLE';
 
     const deleteWord = async (wordName: string, forceDelete: boolean): Promise<boolean> => {
         const deleteCode = forceDelete
@@ -285,13 +289,14 @@ export const createVocabularyManager = (
                 wordInfo.name,
                 wordInfo.description || '',
                 className,
-                () => onWordClick(wordInfo.name),
+                () => onWordClick(wordInfo.dictionary === 'SAMPLE' ? wordInfo.name : `${wordInfo.dictionary}::${wordInfo.name}`),
                 () => {
-                    const definition = window.ajisaiInterpreter?.lookup_word_definition(wordInfo.name);
+                    const lookupName = `${wordInfo.dictionary}::${wordInfo.name}`;
+                    const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName);
                     renderWordInfo(elements.customWordInfo, definition || DEFAULT_WORD_INFO_MESSAGE, !definition);
                 },
                 () => { resetWordInfoDisplay(elements.customWordInfo); },
-                (event) => renderDeleteContextMenu(event, wordInfo.name)
+                (event) => renderDeleteContextMenu(event, `${wordInfo.dictionary}::${wordInfo.name}`)
             );
 
             container.appendChild(button);
@@ -326,11 +331,23 @@ export const createVocabularyManager = (
     };
 
     const updateCustomWords = (
-        customWordsInfo: Array<[string, string | null, boolean]>
+        customWordsInfo: Array<[string, string, string | null, boolean]>
     ): void => {
         // キャッシュを更新
         cachedCustomWords = customWordsInfo || [];
-        const words = cachedCustomWords.map(createWordInfoFromTuple);
+        const dictionaries = Array.from(new Set(cachedCustomWords.map(([dictionary]) => dictionary))).sort();
+        elements.customDictionarySelect.innerHTML = '';
+        for (const dictionary of dictionaries.length > 0 ? dictionaries : ['SAMPLE']) {
+            const option = document.createElement('option');
+            option.value = dictionary;
+            option.textContent = dictionary === 'SAMPLE' ? 'Sample' : dictionary;
+            elements.customDictionarySelect.appendChild(option);
+        }
+        if (!dictionaries.includes(selectedDictionary)) {
+            selectedDictionary = dictionaries.includes('SAMPLE') ? 'SAMPLE' : (dictionaries[0] || 'SAMPLE');
+        }
+        elements.customDictionarySelect.value = selectedDictionary;
+        const words = cachedCustomWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
         renderCustomWordButtons(elements.customWordsDisplay, words);
     };
 
@@ -338,9 +355,15 @@ export const createVocabularyManager = (
         searchFilter = filter.trim();
         // 両方のワードリストを再レンダリング
         renderBuiltInWords();
-        const words = cachedCustomWords.map(createWordInfoFromTuple);
+        const words = cachedCustomWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
         renderCustomWordButtons(elements.customWordsDisplay, words);
     };
+
+    elements.customDictionarySelect.addEventListener('change', () => {
+        selectedDictionary = elements.customDictionarySelect.value;
+        const words = cachedCustomWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
+        renderCustomWordButtons(elements.customWordsDisplay, words);
+    });
 
     return {
         renderBuiltInWords,

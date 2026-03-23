@@ -5,6 +5,7 @@ export interface AjisaiInterpreterClass {
 }
 
 export interface CustomWord {
+    dictionary?: string | null;
     name: string;
     definition: string | null;
     description: string | null;
@@ -15,7 +16,7 @@ export interface AjisaiInterpreter {
     execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
     collect_stack(): Value[];
-    collect_custom_words_info(): Array<[string, string | null, boolean]>;
+    collect_custom_words_info(): Array<[string, string, string | null, boolean]>;
     collect_core_words_info(): Array<[string, string, string]>;
     lookup_word_definition(name: string): string | null;
     restore_stack(stack_js: Value[]): void;

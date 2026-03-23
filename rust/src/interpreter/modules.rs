@@ -1,8 +1,8 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{is_string_value, value_as_string};
-use crate::interpreter::{audio, json, ConsumptionMode, Interpreter};
+use crate::interpreter::{audio, json, ConsumptionMode, Interpreter, ModuleDictionary};
 use crate::types::{Value, WordDefinition};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 type ModuleExecutor = fn(&mut Interpreter) -> Result<()>;
@@ -212,6 +212,8 @@ fn register_module_words_in_dictionary(interp: &mut Interpreter, words: &[Module
                 description: Some(word.description.to_string()),
                 dependencies: HashSet::new(),
                 original_source: None,
+                namespace: word.name.split_once("::").map(|(ns, _)| ns.to_string()),
+                registration_order: 0,
             }),
         );
     }
@@ -242,8 +244,9 @@ pub fn op_import(interp: &mut Interpreter) -> Result<()> {
         .find(|module| module.name == module_name)
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.clone()))?;
 
+    let order = interp.next_registration_order();
     register_module_words_in_dictionary(interp, module.words);
-    register_module_sample_words(interp, &module_name, module.sample_words)?;
+    register_module_sample_words(interp, &module_name, module.sample_words, order)?;
     interp.imported_modules.insert(module_name);
     Ok(())
 }
@@ -252,50 +255,22 @@ fn register_module_sample_words(
     interp: &mut Interpreter,
     module_name: &str,
     sample_words: &[SampleWord],
+    order: u64,
 ) -> Result<()> {
     if sample_words.is_empty() {
+        interp.module_samples.insert(
+            module_name.to_string(),
+            ModuleDictionary {
+                order,
+                sample_words: HashMap::new(),
+            },
+        );
         return Ok(());
     }
-
-    // First pass: remove conflicting user-defined words (module-first principle)
-    for sample in sample_words {
-        let upper_name = sample.name.to_uppercase();
-        if interp.custom_words.contains_key(&upper_name) {
-            // Clean up dependency tracking for the removed word
-            if let Some(removed_def) = interp.custom_words.remove(&upper_name) {
-                for dep_name in &removed_def.dependencies {
-                    if let Some(dependents) = interp.dependents.get_mut(dep_name) {
-                        dependents.remove(&upper_name);
-                    }
-                }
-            }
-            if let Some(dependents) = interp.dependents.remove(&upper_name) {
-                // Clear reverse references
-                for dep in &dependents {
-                    if let Some(def) = interp.custom_words.get(dep) {
-                        let mut new_deps = def.dependencies.clone();
-                        new_deps.remove(&upper_name);
-                        let new_def = WordDefinition {
-                            lines: def.lines.clone(),
-                            is_builtin: def.is_builtin,
-                            description: def.description.clone(),
-                            dependencies: new_deps,
-                            original_source: def.original_source.clone(),
-                        };
-                        interp.custom_words.insert(dep.clone(), Arc::new(new_def));
-                    }
-                }
-            }
-            interp.output_buffer.push_str(&format!(
-                "Warning: User word '{}' was removed (conflicts with {} module sample).\n",
-                upper_name, module_name
-            ));
-        }
-    }
-
-    let module_dict = interp.module_samples
-        .entry(module_name.to_string())
-        .or_default();
+    let mut module_dict = ModuleDictionary {
+        order,
+        sample_words: HashMap::new(),
+    };
 
     for sample in sample_words {
         let tokens = crate::tokenizer::tokenize(sample.definition)
@@ -309,9 +284,27 @@ fn register_module_sample_words(
             description: Some(sample.description.to_string()),
             dependencies: HashSet::new(),
             original_source: None,
+            namespace: Some(module_name.to_string()),
+            registration_order: order,
         };
-        module_dict.insert(sample.name.to_uppercase(), Arc::new(def));
+        let short_name = sample.name.to_uppercase();
+        if interp.core_vocabulary.contains_key(&short_name) {
+            interp.output_buffer.push_str(&format!(
+                "Warning: '{}' in module {} conflicts with a built-in word.\nUse {}::{} to call it explicitly.\n",
+                short_name, module_name, module_name, short_name
+            ));
+        } else if let Some((winner, _)) = interp.resolve_word_entry(&short_name) {
+            interp.output_buffer.push_str(&format!(
+                "Warning: '{}' in module {} conflicts with {}.\nUse {}::{} to call it explicitly.\n",
+                short_name, module_name, winner, module_name, short_name
+            ));
+        }
+        module_dict.sample_words.insert(short_name, Arc::new(def));
     }
+
+    interp
+        .module_samples
+        .insert(module_name.to_string(), module_dict);
 
     // Rebuild dependencies for module sample words
     rebuild_module_sample_dependencies(interp, module_name);
@@ -356,19 +349,19 @@ fn parse_sample_definition_body(
 
 fn rebuild_module_sample_dependencies(interp: &mut Interpreter, module_name: &str) {
     if let Some(module_dict) = interp.module_samples.get(module_name) {
-        let word_names: Vec<String> = module_dict.keys().cloned().collect();
+        let word_names: Vec<String> = module_dict.sample_words.keys().cloned().collect();
         let word_name_set: HashSet<String> = word_names.iter().cloned().collect();
 
         let mut updates: Vec<(String, HashSet<String>)> = Vec::new();
 
-        for (word_name, def) in module_dict {
+        for (word_name, def) in &module_dict.sample_words {
             let mut dependencies = HashSet::new();
             for line in def.lines.iter() {
                 for token in line.body_tokens.iter() {
                     if let crate::types::Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
                         if word_name_set.contains(&upper_s) {
-                            dependencies.insert(upper_s.clone());
+                            dependencies.insert(format!("{}::{}", module_name, upper_s));
                         }
                     }
                 }
@@ -379,7 +372,7 @@ fn rebuild_module_sample_dependencies(interp: &mut Interpreter, module_name: &st
         // Apply dependency updates
         if let Some(module_dict) = interp.module_samples.get_mut(module_name) {
             for (word_name, dependencies) in &updates {
-                if let Some(def) = module_dict.get_mut(word_name) {
+                if let Some(def) = module_dict.sample_words.get_mut(word_name) {
                     Arc::make_mut(def).dependencies = dependencies.clone();
                 }
             }
@@ -391,7 +384,7 @@ fn rebuild_module_sample_dependencies(interp: &mut Interpreter, module_name: &st
                 interp.dependents
                     .entry(dep)
                     .or_default()
-                    .insert(word_name.clone());
+                    .insert(format!("{}::{}", module_name, word_name));
             }
         }
     }
@@ -406,7 +399,8 @@ pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
     }
     if let Some(module) = MODULE_SPECS.iter().find(|m| m.name == upper) {
         register_module_words_in_dictionary(interp, module.words);
-        if register_module_sample_words(interp, &upper, module.sample_words).is_err() {
+        let order = interp.next_registration_order();
+        if register_module_sample_words(interp, &upper, module.sample_words, order).is_err() {
             return false;
         }
         interp.imported_modules.insert(upper);

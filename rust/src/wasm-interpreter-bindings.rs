@@ -83,6 +83,7 @@ fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
 
 #[derive(Serialize, Deserialize)]
 struct CustomWordData {
+    dictionary: Option<String>,
     name: String,
     definition: Option<String>,
     description: Option<String>,
@@ -366,24 +367,28 @@ impl AjisaiInterpreter {
     pub fn collect_custom_words_info(&self) -> JsValue {
         let js_array = js_sys::Array::new();
 
-        for (name, def) in self.interpreter.custom_words.iter() {
-            let is_protected = self
-                .interpreter
-                .dependents
-                .get(name)
-                .map_or(false, |deps| !deps.is_empty());
+        for dict_name in self.interpreter.custom_dictionary_names() {
+            for (name, def) in self.interpreter.custom_dictionary_words(&dict_name) {
+                let fq_name = format!("{}::{}", dict_name, name);
+                let is_protected = self
+                    .interpreter
+                    .dependents
+                    .get(&fq_name)
+                    .map_or(false, |deps| !deps.is_empty());
 
-            let item = js_sys::Array::new();
-            item.push(&name.clone().into());
-            item.push(
-                &def.description
-                    .clone()
-                    .map(JsValue::from)
-                    .unwrap_or(JsValue::NULL),
-            );
-            item.push(&is_protected.into());
+                let item = js_sys::Array::new();
+                item.push(&dict_name.clone().into());
+                item.push(&name.clone().into());
+                item.push(
+                    &def.description
+                        .clone()
+                        .map(JsValue::from)
+                        .unwrap_or(JsValue::NULL),
+                );
+                item.push(&is_protected.into());
 
-            js_array.push(&item);
+                js_array.push(&item);
+            }
         }
 
         js_array.into()
@@ -400,12 +405,20 @@ impl AjisaiInterpreter {
     fn collect_custom_words_for_state(&self) -> JsValue {
         let words_info: Vec<CustomWordData> = self
             .interpreter
-            .custom_words
-            .iter()
-            .map(|(name, def)| CustomWordData {
-                name: name.clone(),
-                definition: self.interpreter.lookup_word_definition_tokens(name),
-                description: def.description.clone(),
+            .custom_dictionary_names()
+            .into_iter()
+            .flat_map(|dict_name| {
+                self.interpreter
+                    .custom_dictionary_words(&dict_name)
+                    .into_iter()
+                    .map(move |(name, def)| CustomWordData {
+                        dictionary: Some(dict_name.clone()),
+                        name: name.clone(),
+                        definition: self
+                            .interpreter
+                            .lookup_word_definition_tokens(&format!("{}::{}", dict_name, name)),
+                        description: def.description.clone(),
+                    })
             })
             .collect();
         to_value(&words_info).unwrap_or(JsValue::NULL)
@@ -434,7 +447,7 @@ impl AjisaiInterpreter {
         let upper = module_name.to_uppercase();
         let arr = js_sys::Array::new();
         if let Some(module_dict) = self.interpreter.module_samples.get(&upper) {
-            for (name, def) in module_dict {
+            for (name, def) in &module_dict.sample_words {
                 let item = js_sys::Array::new();
                 item.push(&JsValue::from_str(name));
                 item.push(
@@ -496,31 +509,27 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn remove_word(&mut self, name: &str) {
         let upper_name = name.to_uppercase();
-        if let Some(removed_def) = self.interpreter.custom_words.remove(&upper_name) {
-            for dep_name in &removed_def.dependencies {
-                if let Some(deps) = self.interpreter.dependents.get_mut(dep_name) {
-                    deps.remove(&upper_name);
-                }
+        if let Some((dict_name, short_name)) = self.interpreter.split_qualified_name(&upper_name) {
+            if let Some(dict) = self.interpreter.custom_dictionaries.get_mut(&dict_name) {
+                dict.words.remove(&short_name);
             }
-            self.interpreter.dependents.remove(&upper_name);
-            for deps in self.interpreter.dependents.values_mut() {
-                deps.remove(&upper_name);
+            if let Some(dict) = self.interpreter.module_samples.get_mut(&dict_name) {
+                dict.sample_words.remove(&short_name);
             }
-        } else {
-            // Also check module samples
-            for module_dict in self.interpreter.module_samples.values_mut() {
-                if let Some(removed_def) = module_dict.remove(&upper_name) {
-                    for dep_name in &removed_def.dependencies {
-                        if let Some(deps) = self.interpreter.dependents.get_mut(dep_name) {
-                            deps.remove(&upper_name);
-                        }
-                    }
-                    self.interpreter.dependents.remove(&upper_name);
-                    for deps in self.interpreter.dependents.values_mut() {
-                        deps.remove(&upper_name);
-                    }
-                    break;
-                }
+            let _ = self.interpreter.rebuild_dependencies();
+            return;
+        }
+
+        for dict in self.interpreter.custom_dictionaries.values_mut() {
+            if dict.words.remove(&upper_name).is_some() {
+                let _ = self.interpreter.rebuild_dependencies();
+                return;
+            }
+        }
+        for dict in self.interpreter.module_samples.values_mut() {
+            if dict.sample_words.remove(&upper_name).is_some() {
+                let _ = self.interpreter.rebuild_dependencies();
+                return;
             }
         }
     }
@@ -588,6 +597,11 @@ impl AjisaiInterpreter {
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 
         for word in words {
+            self.interpreter.active_custom_dictionary = word
+                .dictionary
+                .clone()
+                .unwrap_or_else(|| "SAMPLE".to_string())
+                .to_uppercase();
             let definition = match &word.definition {
                 Some(def) if !def.is_empty() => def.clone(),
                 _ => continue,

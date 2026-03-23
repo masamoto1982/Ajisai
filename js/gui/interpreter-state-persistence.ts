@@ -35,12 +35,13 @@ declare global {
 }
 
 const toCustomWord = (
-    wordData: [string, string | null, boolean],
+    wordData: [string, string, string | null, boolean],
     getDefinition: (name: string) => string | null
 ): CustomWord => ({
-    name: wordData[0],
-    description: wordData[1],
-    definition: getDefinition(wordData[0])
+    dictionary: wordData[0],
+    name: wordData[1],
+    description: wordData[2],
+    definition: getDefinition(`${wordData[0]}::${wordData[1]}`)
 });
 
 const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
@@ -56,19 +57,19 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
     };
 };
 
-const createExportData = (interpreter: AjisaiInterpreter): CustomWord[] => {
+const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string): CustomWord[] => {
     const customWordsInfo = interpreter.collect_custom_words_info();
-    return customWordsInfo.map(wordData => ({
-        name: wordData[0],
-        description: wordData[1],
-        definition: interpreter.lookup_word_definition(wordData[0])
-    }));
+    return customWordsInfo
+        .filter(([dictionary]) => dictionary === dictionaryName)
+        .map(wordData => ({
+            dictionary: wordData[0],
+            name: wordData[1],
+            description: wordData[2],
+            definition: interpreter.lookup_word_definition(`${wordData[0]}::${wordData[1]}`)
+        }));
 };
 
-const buildExportFilename = (): string => {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    return `ajisai_words_${timestamp}.json`;
-};
+const buildExportFilename = (name: string): string => `${name}.json`;
 
 const downloadJson = (data: unknown, filename: string): void => {
     const jsonString = JSON.stringify(data, null, 2);
@@ -263,8 +264,14 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             return;
         }
 
-        const exportData = createExportData(window.ajisaiInterpreter);
-        const filename = buildExportFilename();
+        const selectedDictionary = (document.getElementById('custom-dictionary-select') as HTMLSelectElement | null)?.value || 'SAMPLE';
+        const suggestedName = selectedDictionary.toLowerCase();
+        const requestedName = window.prompt('Export file name', suggestedName)?.trim();
+        if (!requestedName) {
+            return;
+        }
+        const exportData = createExportData(window.ajisaiInterpreter, selectedDictionary);
+        const filename = buildExportFilename(requestedName);
 
         downloadJson(exportData, filename);
         showInfo?.(`Custom words exported as ${filename}`, true);
@@ -281,7 +288,10 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     return;
                 }
 
-                const importedWords = parseResult.value;
+                const importedWords = parseResult.value.map(word => ({
+                    ...word,
+                    dictionary: (word.dictionary || file.name.replace(/\.json$/i, '')).toUpperCase()
+                }));
                 await window.ajisaiInterpreter.restore_custom_words(importedWords);
 
                 updateDisplays?.();

@@ -63,9 +63,10 @@ const formatStepMessage = (
 const collectCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     const customWordsInfo = interpreter.collect_custom_words_info();
     return customWordsInfo.map(wordData => ({
-        name: wordData[0],
-        definition: interpreter.lookup_word_definition(wordData[0]),
-        description: wordData[1]
+        dictionary: wordData[0],
+        name: wordData[1],
+        definition: interpreter.lookup_word_definition(`${wordData[0]}::${wordData[1]}`),
+        description: wordData[2]
     }));
 };
 
