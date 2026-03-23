@@ -58,10 +58,30 @@ pub enum AsyncAction {
     Wait { duration_ms: u64, word_name: String },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum DictionaryLayer {
+    BuiltIn,
+    Module,
+    Custom,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct CustomDictionary {
+    pub order: u64,
+    pub words: HashMap<String, Arc<WordDefinition>>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ModuleDictionary {
+    pub order: u64,
+    pub sample_words: HashMap<String, Arc<WordDefinition>>,
+}
+
 pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) core_vocabulary: HashMap<String, Arc<WordDefinition>>,
     pub(crate) custom_words: HashMap<String, Arc<WordDefinition>>,
+    pub(crate) custom_dictionaries: HashMap<String, CustomDictionary>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
@@ -92,7 +112,9 @@ pub struct Interpreter {
     // ── Module-scoped sample words ───────────────────────────────────
     /// Per-module sample word dictionaries (e.g. MUSIC → {C4, D4, ...}).
     /// These are registered at IMPORT time and follow module-first resolution.
-    pub(crate) module_samples: HashMap<String, HashMap<String, Arc<WordDefinition>>>,
+    pub(crate) module_samples: HashMap<String, ModuleDictionary>,
+    pub(crate) next_registration_order: u64,
+    pub(crate) active_custom_dictionary: String,
 }
 
 impl Interpreter {
@@ -101,6 +123,7 @@ impl Interpreter {
             stack: Vec::new(),
             core_vocabulary: HashMap::new(),
             custom_words: HashMap::new(),
+            custom_dictionaries: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
             definition_to_load: None,
@@ -121,6 +144,8 @@ impl Interpreter {
             active_flows: Vec::new(),
             flow_consumed_log: Vec::new(),
             module_samples: HashMap::new(),
+            next_registration_order: 1,
+            active_custom_dictionary: "SAMPLE".to_string(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -225,58 +250,117 @@ impl Interpreter {
         }
     }
 
+    pub(crate) fn next_registration_order(&mut self) -> u64 {
+        let order = self.next_registration_order;
+        self.next_registration_order += 1;
+        order
+    }
+
+    pub(crate) fn split_qualified_name<'a>(&self, name: &'a str) -> Option<(String, String)> {
+        let (namespace, word) = name.split_once("::")?;
+        Some((namespace.to_uppercase(), word.to_uppercase()))
+    }
+
+    pub(crate) fn custom_dictionary_names(&self) -> Vec<String> {
+        let mut names: Vec<_> = self.custom_dictionaries.keys().cloned().collect();
+        names.sort();
+        names
+    }
+
+    pub(crate) fn custom_dictionary_words(
+        &self,
+        dictionary_name: &str,
+    ) -> Vec<(String, Arc<WordDefinition>)> {
+        self.custom_dictionaries
+            .get(&dictionary_name.to_uppercase())
+            .map(|dict| {
+                dict.words
+                    .iter()
+                    .map(|(name, def)| (name.clone(), def.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn sync_sample_custom_words_cache(&mut self) {
+        self.custom_words = self
+            .custom_dictionaries
+            .get("SAMPLE")
+            .map(|dict| dict.words.clone())
+            .unwrap_or_default();
+    }
+
+    fn resolve_short_name(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
+        let upper = name.to_uppercase();
+
+        if let Some(def) = self.core_vocabulary.get(&upper) {
+            return Some((upper, def.clone()));
+        }
+
+        let mut best_module: Option<(String, Arc<WordDefinition>, u64)> = None;
+        for (module_name, dict) in &self.module_samples {
+            if let Some(def) = dict.sample_words.get(&upper) {
+                let order = def.registration_order;
+                if best_module.as_ref().map(|(_, _, current)| order < *current).unwrap_or(true) {
+                    best_module = Some((format!("{}::{}", module_name, upper), def.clone(), order));
+                }
+            }
+        }
+        if let Some((name, def, _)) = best_module {
+            return Some((name, def));
+        }
+
+        let mut best_custom: Option<(String, Arc<WordDefinition>, u64)> = None;
+        for (dict_name, dict) in &self.custom_dictionaries {
+            if let Some(def) = dict.words.get(&upper) {
+                let order = def.registration_order;
+                if best_custom.as_ref().map(|(_, _, current)| order < *current).unwrap_or(true) {
+                    best_custom = Some((format!("{}::{}", dict_name, upper), def.clone(), order));
+                }
+            }
+        }
+        best_custom.map(|(name, def, _)| (name, def))
+    }
+
+    pub(crate) fn resolve_word_entry(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
+        if let Some((namespace, word)) = self.split_qualified_name(name) {
+            if let Some(module_dict) = self.module_samples.get(&namespace) {
+                if let Some(def) = module_dict.sample_words.get(&word) {
+                    return Some((format!("{}::{}", namespace, word), def.clone()));
+                }
+            }
+            if let Some(custom_dict) = self.custom_dictionaries.get(&namespace) {
+                if let Some(def) = custom_dict.words.get(&word) {
+                    return Some((format!("{}::{}", namespace, word), def.clone()));
+                }
+            }
+            return self
+                .core_vocabulary
+                .get(name)
+                .cloned()
+                .map(|def| (name.to_uppercase(), def));
+        }
+
+        self.resolve_short_name(name)
+    }
+
     /// Module-first word resolution (flat priority).
     /// Fully qualified names (MODULE::WORD) always take highest priority.
     /// Resolution order: module samples → user dictionary → core builtins.
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
-        // Fully qualified names (MODULE::WORD) are always highest priority
-        if name.contains("::") {
-            return self.core_vocabulary.get(name).cloned();
-        }
-
-        // 1. Specialized Vocabulary: module sample words (all imported modules)
-        for module_dict in self.module_samples.values() {
-            if let Some(def) = module_dict.get(name) {
-                return Some(def.clone());
-            }
-        }
-
-        // 2. Idiolect: user-defined words
-        if let Some(def) = self.custom_words.get(name) {
-            return Some(def.clone());
-        }
-
-        // 3. Core Vocabulary: built-in words
-        self.core_vocabulary.get(name).cloned()
+        self.resolve_word_entry(name).map(|(_, def)| def)
     }
 
     /// Check if a word exists in any layer (for dependency tracking etc.)
     pub(crate) fn word_exists(&self, name: &str) -> bool {
-        if self.custom_words.contains_key(name) {
-            return true;
-        }
-        if self.core_vocabulary.contains_key(name) {
-            return true;
-        }
-        for module_dict in self.module_samples.values() {
-            if module_dict.contains_key(name) {
-                return true;
-            }
-        }
-        false
+        self.resolve_word(name).is_some()
     }
 
     /// Check if a word is a non-builtin custom word (user-defined or module sample)
     pub(crate) fn is_custom_word(&self, name: &str) -> bool {
-        if self.custom_words.contains_key(name) {
-            return true;
-        }
-        for module_dict in self.module_samples.values() {
-            if module_dict.contains_key(name) {
-                return true;
-            }
-        }
-        false
+        self.resolve_word(name)
+            .map(|def| !def.is_builtin)
+            .unwrap_or(false)
     }
 
     fn collect_vector(
@@ -768,25 +852,25 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
-        let def = self
-            .resolve_word(name)
+        let (resolved_name, def) = self
+            .resolve_word_entry(name)
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         // Native implementation (built-in words with no user-defined code)
         if def.lines.is_empty() {
-            return self.execute_builtin(name);
+            return self.execute_builtin(&resolved_name);
         }
 
         // Custom word (user-defined)
         if self.call_stack.len() >= MAX_CALL_DEPTH {
-            let chain = format!("{} -> {}", self.call_stack.join(" -> "), name);
+            let chain = format!("{} -> {}", self.call_stack.join(" -> "), resolved_name);
             return Err(AjisaiError::DepthLimitExceeded {
                 depth: MAX_CALL_DEPTH,
                 chain,
             });
         }
 
-        self.call_stack.push(name.to_string());
+        self.call_stack.push(resolved_name.clone());
 
         let action = self.execute_guard_structure(&def.lines);
 
@@ -805,25 +889,25 @@ impl Interpreter {
 
     #[async_recursion(?Send)]
     pub(crate) async fn execute_word_async(&mut self, name: &str) -> Result<()> {
-        let def = self
-            .resolve_word(name)
+        let (resolved_name, def) = self
+            .resolve_word_entry(name)
             .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
 
         // Native implementation (built-in words with no user-defined code)
         if def.lines.is_empty() {
-            return self.execute_builtin(name);
+            return self.execute_builtin(&resolved_name);
         }
 
         // Custom word (user-defined)
         if self.call_stack.len() >= MAX_CALL_DEPTH {
-            let chain = format!("{} -> {}", self.call_stack.join(" -> "), name);
+            let chain = format!("{} -> {}", self.call_stack.join(" -> "), resolved_name);
             return Err(AjisaiError::DepthLimitExceeded {
                 depth: MAX_CALL_DEPTH,
                 chain,
             });
         }
 
-        self.call_stack.push(name.to_string());
+        self.call_stack.push(resolved_name);
         let result = self.execute_guard_structure_async(&def.lines).await;
         self.call_stack.pop();
 
@@ -980,23 +1064,10 @@ impl Interpreter {
     }
 
     pub fn lookup_word_definition_tokens(&self, name: &str) -> Option<String> {
-        // Check dictionary first, then module_samples
-        let def = if let Some(d) = self.custom_words.get(name) {
-            if d.is_builtin || d.lines.is_empty() {
-                return None;
-            }
-            d.clone()
-        } else {
-            // Check module samples
-            let mut found = None;
-            for module_dict in self.module_samples.values() {
-                if let Some(d) = module_dict.get(name) {
-                    found = Some(d.clone());
-                    break;
-                }
-            }
-            found?
-        };
+        let (_, def) = self.resolve_word_entry(name)?;
+        if def.is_builtin || def.lines.is_empty() {
+            return None;
+        }
 
         let mut result = String::new();
         for (i, line) in def.lines.iter().enumerate() {
@@ -1015,6 +1086,7 @@ impl Interpreter {
         self.stack.clear();
         self.core_vocabulary.clear();
         self.custom_words.clear();
+        self.custom_dictionaries.clear();
         self.dependents.clear();
         self.output_buffer.clear();
         self.definition_to_load = None;
@@ -1026,6 +1098,8 @@ impl Interpreter {
         self.call_stack.clear();
         self.imported_modules.clear();
         self.module_samples.clear();
+        self.next_registration_order = 1;
+        self.active_custom_dictionary = "SAMPLE".to_string();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }
@@ -1058,15 +1132,17 @@ impl Interpreter {
         self.dependents.clear();
 
         // Collect all custom words: user-defined from custom_words + module samples
-        let mut all_custom_words: Vec<(String, Arc<WordDefinition>)> = self
-            .custom_words
-            .iter()
-            .map(|(name, def)| (name.clone(), Arc::clone(def)))
-            .collect();
+        let mut all_custom_words: Vec<(String, Arc<WordDefinition>)> = Vec::new();
 
-        for module_dict in self.module_samples.values() {
-            for (name, def) in module_dict {
-                all_custom_words.push((name.clone(), Arc::clone(def)));
+        for (dict_name, dict) in &self.custom_dictionaries {
+            for (name, def) in &dict.words {
+                all_custom_words.push((format!("{}::{}", dict_name, name), Arc::clone(def)));
+            }
+        }
+
+        for (module_name, module_dict) in &self.module_samples {
+            for (name, def) in &module_dict.sample_words {
+                all_custom_words.push((format!("{}::{}", module_name, name), Arc::clone(def)));
             }
         }
 
@@ -1076,44 +1152,51 @@ impl Interpreter {
                 for token in line.body_tokens.iter() {
                     if let Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
-                        if self.is_custom_word(&upper_s) {
-                            dependencies.insert(upper_s.clone());
-                            self.dependents
-                                .entry(upper_s)
-                                .or_default()
-                                .insert(word_name.clone());
+                        if let Some((resolved_name, resolved_def)) = self.resolve_word_entry(&upper_s) {
+                            if !resolved_def.is_builtin {
+                                dependencies.insert(resolved_name.clone());
+                                self.dependents
+                                    .entry(resolved_name)
+                                    .or_default()
+                                    .insert(word_name.clone());
+                            }
                         }
                     }
                 }
             }
             // Update dependencies on the definition
-            if let Some(def) = self.custom_words.get_mut(word_name) {
-                Arc::make_mut(def).dependencies = dependencies;
-            } else {
-                // Check module samples
-                for module_dict in self.module_samples.values_mut() {
-                    if let Some(def) = module_dict.get_mut(word_name) {
+            if let Some((dict_name, short_name)) = self.split_qualified_name(word_name) {
+                if let Some(dict) = self.custom_dictionaries.get_mut(&dict_name) {
+                    if let Some(def) = dict.words.get_mut(&short_name) {
+                        Arc::make_mut(def).dependencies = dependencies.clone();
+                        continue;
+                    }
+                }
+                if let Some(module_dict) = self.module_samples.get_mut(&dict_name) {
+                    if let Some(def) = module_dict.sample_words.get_mut(&short_name) {
                         Arc::make_mut(def).dependencies = dependencies;
-                        break;
                     }
                 }
             }
         }
+        self.sync_sample_custom_words_cache();
         Ok(())
     }
 
     /// 指定されたワードを参照している他のワードの集合を取得
     pub fn collect_dependents(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
-        for (name, def) in &self.custom_words {
-            if def.dependencies.contains(word_name) {
-                result.insert(name.clone());
+        for (dict_name, dict) in &self.custom_dictionaries {
+            for (name, def) in &dict.words {
+                if def.dependencies.contains(word_name) {
+                    result.insert(format!("{}::{}", dict_name, name));
+                }
             }
         }
-        for module_dict in self.module_samples.values() {
-            for (name, def) in module_dict {
+        for (module_name, module_dict) in &self.module_samples {
+            for (name, def) in &module_dict.sample_words {
                 if def.dependencies.contains(word_name) {
-                    result.insert(name.clone());
+                    result.insert(format!("{}::{}", module_name, name));
                 }
             }
         }

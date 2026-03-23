@@ -152,7 +152,7 @@ pub(crate) fn op_def_inner(
 
     // Module sample collision check (module-first principle)
     for (module_name, module_dict) in &interp.module_samples {
-        if module_dict.contains_key(&upper_name) {
+        if module_dict.sample_words.contains_key(&upper_name) {
             interp.force_flag = false;
             return Err(AjisaiError::from(format!(
                 "Cannot define '{}': name is reserved by module {}. \
@@ -162,15 +162,22 @@ pub(crate) fn op_def_inner(
         }
     }
 
-    if let Some(existing) = interp.custom_words.get(&upper_name) {
-        let dependents = interp.collect_dependents(&upper_name);
+    let dict_name = interp.active_custom_dictionary.clone();
+    let fq_name = format!("{}::{}", dict_name, upper_name);
+
+    if let Some(existing) = interp
+        .custom_dictionaries
+        .get(&dict_name)
+        .and_then(|dict| dict.words.get(&upper_name))
+    {
+        let dependents = interp.collect_dependents(&fq_name);
 
         if !dependents.is_empty() && !interp.force_flag {
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
             interp.force_flag = false;
             return Err(AjisaiError::from(format!(
                 "Cannot redefine '{}': referenced by {}. Use ! [ ... ] '{}' DEF to force.",
-                upper_name, dep_list, upper_name
+                fq_name, dep_list, upper_name
             )));
         }
 
@@ -178,13 +185,13 @@ pub(crate) fn op_def_inner(
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
             interp.output_buffer.push_str(&format!(
                 "Warning: '{}' was redefined. Affected words: {}\n",
-                upper_name, dep_list
+                fq_name, dep_list
             ));
         }
 
         for dep_name in &existing.dependencies {
             if let Some(dependents) = interp.dependents.get_mut(dep_name) {
-                dependents.remove(&upper_name);
+                dependents.remove(&fq_name);
             }
         }
     }
@@ -196,8 +203,10 @@ pub(crate) fn op_def_inner(
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = s.to_uppercase();
-                if is_custom_word_defined(interp, s) {
-                    new_dependencies.insert(upper_s);
+                if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
+                    if !resolved_def.is_builtin {
+                        new_dependencies.insert(resolved_name);
+                    }
                 }
             }
         }
@@ -208,7 +217,7 @@ pub(crate) fn op_def_inner(
             .dependents
             .entry(dep_name.clone())
             .or_default()
-            .insert(upper_name.clone());
+            .insert(fq_name.clone());
     }
 
     let new_def = WordDefinition {
@@ -217,14 +226,23 @@ pub(crate) fn op_def_inner(
         description,
         dependencies: new_dependencies,
         original_source: None,
+        namespace: Some(dict_name.clone()),
+        registration_order: interp.next_registration_order(),
     };
 
-    interp
-        .custom_words
-        .insert(upper_name.clone(), Arc::new(new_def));
+    let dict_order = interp
+        .custom_dictionaries
+        .get(&dict_name)
+        .map(|dict| dict.order)
+        .unwrap_or_else(|| new_def.registration_order);
+    interp.custom_dictionaries.entry(dict_name.clone()).or_insert_with(|| crate::interpreter::CustomDictionary {
+        order: dict_order,
+        words: std::collections::HashMap::new(),
+    }).words.insert(upper_name.clone(), Arc::new(new_def));
+    interp.sync_sample_custom_words_cache();
     interp
         .output_buffer
-        .push_str(&format!("Defined word: {}\n", name));
+        .push_str(&format!("Defined word: {}::{}\n", dict_name, name));
     interp.force_flag = false;
     Ok(())
 }
@@ -297,14 +315,41 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    // Check if word exists in custom_words (user-defined)
-    let in_custom_words = interp.custom_words.contains_key(&upper_name);
+    if interp.custom_dictionaries.contains_key(&upper_name) {
+        interp.custom_dictionaries.remove(&upper_name);
+        interp.sync_sample_custom_words_cache();
+        interp.rebuild_dependencies()?;
+        interp
+            .output_buffer
+            .push_str(&format!("Deleted dictionary: {}\n", upper_name));
+        interp.force_flag = false;
+        return Ok(());
+    }
 
-    // Check if word exists in module samples
-    let in_module_samples = interp
-        .module_samples
-        .values()
-        .any(|md| md.contains_key(&upper_name));
+    if interp.module_samples.contains_key(&upper_name) {
+        interp.module_samples.remove(&upper_name);
+        interp.imported_modules.remove(&upper_name);
+        interp.sync_sample_custom_words_cache();
+        interp.rebuild_dependencies()?;
+        interp
+            .output_buffer
+            .push_str(&format!("Deleted dictionary: {}\n", upper_name));
+        interp.force_flag = false;
+        return Ok(());
+    }
+
+    let custom_owner = interp.custom_dictionaries.iter().find_map(|(dict_name, dict)| {
+        dict.words
+            .contains_key(&upper_name)
+            .then(|| dict_name.clone())
+    });
+    let module_owner = interp.module_samples.iter().find_map(|(module_name, dict)| {
+        dict.sample_words
+            .contains_key(&upper_name)
+            .then(|| module_name.clone())
+    });
+    let in_custom_words = custom_owner.is_some();
+    let in_module_samples = module_owner.is_some();
 
     if !in_custom_words && !in_module_samples {
         interp.force_flag = false;
@@ -323,7 +368,14 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    let dependents = interp.collect_dependents(&upper_name);
+    let resolved_name = if let Some(owner) = &custom_owner {
+        format!("{}::{}", owner, upper_name)
+    } else if let Some(owner) = &module_owner {
+        format!("{}::{}", owner, upper_name)
+    } else {
+        upper_name.clone()
+    };
+    let dependents = interp.collect_dependents(&resolved_name);
 
     if !dependents.is_empty() && !interp.force_flag {
         let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
@@ -334,16 +386,22 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     }
 
     // Delete from dictionary (user-defined)
-    if let Some(removed_def) = interp.custom_words.remove(&upper_name) {
+    if let Some(owner) = custom_owner {
+        let removed_def = interp
+            .custom_dictionaries
+            .get_mut(&owner)
+            .and_then(|dict| dict.words.remove(&upper_name))
+            .unwrap();
+        interp.sync_sample_custom_words_cache();
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
-                deps.remove(&upper_name);
+                deps.remove(&resolved_name);
             }
         }
-        interp.dependents.remove(&upper_name);
+        interp.dependents.remove(&resolved_name);
 
         for deps in interp.dependents.values_mut() {
-            deps.remove(&upper_name);
+            deps.remove(&resolved_name);
         }
 
         if !dependents.is_empty() {
@@ -356,19 +414,20 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
         interp
             .output_buffer
-            .push_str(&format!("Deleted word: {}\n", name));
+            .push_str(&format!("Deleted word: {}\n", resolved_name));
     } else if in_module_samples {
         // Delete from module samples (force flag required, already checked)
         for module_dict in interp.module_samples.values_mut() {
-            if let Some(removed_def) = module_dict.remove(&upper_name) {
+            if let Some(removed_def) = module_dict.sample_words.remove(&upper_name) {
+                interp.sync_sample_custom_words_cache();
                 for dep_name in &removed_def.dependencies {
                     if let Some(deps) = interp.dependents.get_mut(dep_name) {
-                        deps.remove(&upper_name);
+                        deps.remove(&resolved_name);
                     }
                 }
-                interp.dependents.remove(&upper_name);
+                interp.dependents.remove(&resolved_name);
                 for deps in interp.dependents.values_mut() {
-                    deps.remove(&upper_name);
+                    deps.remove(&resolved_name);
                 }
                 break;
             }
@@ -384,7 +443,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
         interp
             .output_buffer
-            .push_str(&format!("Deleted word: {}\n", name));
+            .push_str(&format!("Deleted word: {}\n", resolved_name));
     }
 
     interp.force_flag = false;
@@ -792,22 +851,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_module_first_import_removes_user_word() {
-        // Module-first: IMPORT removes conflicting user-defined words
+    async fn test_module_first_import_keeps_user_word_qualified() {
+        // Module-first: IMPORT keeps conflicting user-defined words accessible via namespace
         let mut interp = Interpreter::new();
 
         // Define C4 before importing music
         interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
         assert!(interp.custom_words.contains_key("C4"));
 
-        // Import music module — user word should be removed
+        // Import music module — user word remains, but short name resolves to module sample
         interp.execute("'music' IMPORT").await.unwrap();
         let output = interp.collect_output();
 
-        assert!(!interp.custom_words.contains_key("C4"),
-            "User word C4 should be removed after IMPORT");
+        assert!(interp.custom_words.contains_key("C4"),
+            "User word C4 should remain in SAMPLE after IMPORT");
         assert!(output.contains("Warning"),
-            "Should warn about removal: {}", output);
+            "Should warn about the short-name conflict: {}", output);
 
         // C4 now resolves to the module sample (264Hz)
         let result = interp.execute("C4").await;
@@ -815,6 +874,21 @@ mod tests {
         if let Some(val) = interp.stack.last() {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264,
                 "C4 should be 264 (module sample)");
+        }
+
+        let result = interp.execute("SAMPLE::C4").await;
+        assert!(result.is_ok(), "Qualified SAMPLE::C4 should work: {:?}", result.err());
+        if let Some(val) = interp.stack.last() {
+            let scalar = val
+                .as_scalar()
+                .or_else(|| {
+                    val.as_vector()
+                        .and_then(|children| children.first())
+                        .and_then(|child| child.as_scalar())
+                })
+                .expect("SAMPLE::C4 should resolve to a numeric value");
+            assert_eq!(scalar.to_i64().unwrap(), 999,
+                "SAMPLE::C4 should remain the user-defined value");
         }
     }
 

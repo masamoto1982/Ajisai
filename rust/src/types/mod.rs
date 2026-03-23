@@ -609,6 +609,8 @@ pub struct WordDefinition {
     pub description: Option<String>,
     pub dependencies: HashSet<String>,
     pub original_source: Option<String>,
+    pub namespace: Option<String>,
+    pub registration_order: u64,
 }
 
 pub type Stack = Vec<Value>;
