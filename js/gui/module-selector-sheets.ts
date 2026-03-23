@@ -62,7 +62,7 @@ export const createModuleTabManager = (
         const sheet = document.createElement('div');
         sheet.className = 'dictionary-sheet';
         sheet.id = `dictionary-sheet-${sheetId}`;
-        sheet.style.display = 'none';
+        sheet.hidden = true;
 
         const wordInfoDisplay = document.createElement('span');
         wordInfoDisplay.className = 'word-info-display module-word-info';

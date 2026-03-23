@@ -425,7 +425,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
         display.style.color = '#333';
         const container = document.createElement('div');
-        container.style.cssText = 'display:flex;flex-wrap:wrap-reverse;justify-content:flex-start;align-content:flex-end;flex-direction:row';
+        container.className = 'area-content-flow';
 
         stack.forEach((item, index) => {
             const elem = document.createElement('span');
