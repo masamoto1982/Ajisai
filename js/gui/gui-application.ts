@@ -454,7 +454,7 @@ export const createGUI = (): GUI => {
             onSaveState: () => persistence.saveCurrentState(),
             showInfo: (text: string, append: boolean) => display.renderInfo(text, append),
             moduleActions: {
-                io: [{
+                IO: [{
                     label: 'JSON',
                     className: 'json-import-btn',
                     ariaLabel: 'Import JSON as vector',
