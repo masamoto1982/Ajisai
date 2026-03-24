@@ -456,7 +456,7 @@ export const createGUI = (): GUI => {
             moduleActions: {
                 IO: [{
                     label: 'JSON',
-                    className: 'json-import-btn',
+                    className: 'btn-primary',
                     ariaLabel: 'Import JSON as vector',
                     onClick: () => persistence.importJsonAsVector(),
                 }],
