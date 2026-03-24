@@ -272,6 +272,19 @@ fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
                     processed_tokens.clear();
                 }
             }
+            // シェブロン分岐トークン(>> / >>>)の前で自動的に行を分割する。
+            // ユーザー入力では改行で自然に分割されるが、定義文字列から復元する
+            // パスでも同一の行構造を保証するために必要。
+            Token::ChevronBranch | Token::ChevronDefault => {
+                if !processed_tokens.is_empty() {
+                    let execution_line = ExecutionLine {
+                        body_tokens: processed_tokens.clone().into(),
+                    };
+                    lines.push(execution_line);
+                    processed_tokens.clear();
+                }
+                processed_tokens.push(tokens[i].clone());
+            }
             _ => {
                 processed_tokens.push(tokens[i].clone());
             }
@@ -916,5 +929,40 @@ mod tests {
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Cannot redefine built-in word"),
             "Expected BuiltinProtection error, got: {}", err_msg);
+    }
+
+    #[tokio::test]
+    async fn test_chevron_in_restored_definition_without_linebreaks() {
+        // 定義文字列に改行がなくてもシェブロン分岐が正しく動作することを検証。
+        // サンプルワード復元パスとユーザーDEFパスで同一の結果を保証する。
+        let mut interp = Interpreter::new();
+
+        let sample_words = vec![
+            ("SAY-BY-SIGN",
+             ">> [ 0 ] < >> 'Hello' PRINT >> [ 0 ] = >> 'Hello World' PRINT >>> 'World' PRINT",
+             "sign branch sample"),
+        ];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.collect_output();
+
+        // 負の値 → "Hello"
+        let result = interp.execute("[ -1 ] SAY-BY-SIGN").await;
+        assert!(result.is_ok(), "SAY-BY-SIGN with -1 should succeed: {:?}", result.err());
+        let output = interp.collect_output();
+        assert!(output.contains("Hello"), "Expected 'Hello' for negative, got: {}", output);
+
+        // 0 → "Hello World"
+        interp.stack.clear();
+        let result = interp.execute("[ 0 ] SAY-BY-SIGN").await;
+        assert!(result.is_ok(), "SAY-BY-SIGN with 0 should succeed: {:?}", result.err());
+        let output = interp.collect_output();
+        assert!(output.contains("Hello World"), "Expected 'Hello World' for zero, got: {}", output);
+
+        // 正の値 → "World"
+        interp.stack.clear();
+        let result = interp.execute("[ 1 ] SAY-BY-SIGN").await;
+        assert!(result.is_ok(), "SAY-BY-SIGN with 1 should succeed: {:?}", result.err());
+        let output = interp.collect_output();
+        assert!(output.contains("World"), "Expected 'World' for positive, got: {}", output);
     }
 }

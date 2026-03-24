@@ -18,7 +18,7 @@ export const SAMPLE_CUSTOM_WORDS: CustomWord[] = [
     {
         name: 'SAY-BY-SIGN',
         definition:
-            ">> [ 0 ] <\n>> 'Hello' PRINT\n>> [ 0 ] =\n>> 'Hello World' PRINT\n>>> 'World' PRINT",
+            ">> [ 0 ] < >> 'Hello' PRINT >> [ 0 ] = >> 'Hello World' PRINT >>> 'World' PRINT",
         description:
             'サンプル④ — スタックトップが負なら「Hello」、0なら「Hello World」、正なら「World」を出力（シェブロン分岐）',
     },
