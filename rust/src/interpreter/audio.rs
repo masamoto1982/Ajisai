@@ -554,19 +554,8 @@ fn build_audio_structure(
         return Ok(AudioStructure::Rest { duration: 1.0 });
     }
 
-    // 文字列判定（歌詞: Outputに出力、時間消費なし）
-    if is_string_value(value) {
-        let s = value_as_string(value).unwrap_or_default();
-        output.push_str(&s);
-        output.push('\n');
-        return Ok(AudioStructure::Seq {
-            children: vec![],
-            envelope: None,
-            waveform: WaveformType::Sine,
-        });
-    }
-
-    // ベクタ判定
+    // ベクタ判定（文字列判定より先に行う。この言語では文字列もベクタであるため、
+    // 文字列判定を先にするとベクタが全て文字列として処理されてしまう）
     if is_vector_value(value) {
         if let Some(children) = value.as_vector() {
             if children.is_empty() {
@@ -837,9 +826,8 @@ mod tests {
 
     #[test]
     fn test_seq_structure() {
-        // Without DisplayHint, is_string_value returns true for all vectors,
-        // so a vector of scalars [440, 550] is treated as lyrics (codepoints).
-        // build_audio_structure outputs the characters and returns an empty Seq.
+        // A vector of scalars [440, 550] should be treated as audio (sequential tones),
+        // not as lyrics/string codepoints.
         let elements = vec![create_number(440), create_number(550)];
         let val = create_vector(elements);
         let mut output = String::new();
@@ -847,7 +835,7 @@ mod tests {
 
         match structure {
             AudioStructure::Seq { children, .. } => {
-                assert_eq!(children.len(), 0, "String-treated vector yields empty seq");
+                assert_eq!(children.len(), 2, "Vector of 2 scalars yields 2 tones");
             }
             _ => panic!("Expected Seq"),
         }
@@ -855,20 +843,18 @@ mod tests {
 
     #[test]
     fn test_sim_structure() {
-        // Without DisplayHint, is_string_value returns true for all vectors,
-        // so a vector of scalars is treated as lyrics (codepoints).
+        // A vector of scalars [440, 550] with Simultaneous mode should produce
+        // a Sim structure with 2 tones (played as a chord).
         let elements = vec![create_number(440), create_number(550)];
         let val = create_vector(elements);
         let mut output = String::new();
         let structure = build_audio_structure(&val, PlayMode::Simultaneous, &mut output).unwrap();
 
-        // Even with Simultaneous mode, the string check happens first
-        // and returns an empty Seq (lyrics path).
         match structure {
-            AudioStructure::Seq { children, .. } => {
-                assert_eq!(children.len(), 0, "String-treated vector yields empty seq");
+            AudioStructure::Sim { children, .. } => {
+                assert_eq!(children.len(), 2, "Vector of 2 scalars yields 2 simultaneous tones");
             }
-            _ => panic!("Expected Seq (string-treated lyrics path)"),
+            _ => panic!("Expected Sim"),
         }
     }
 
