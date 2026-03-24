@@ -738,6 +738,11 @@ impl Interpreter {
             ));
         }
 
+        // 各条件評価の前にスタックをシェブロン開始時の状態に復元する。
+        // これにより、条件式がスタック値を消費しても次の条件が同じ値を参照できる。
+        // アクション/デフォルトは条件評価後のスタック上で実行される（入力値は条件に消費済み）。
+        let saved_stack = self.stack.clone();
+
         let mut i = 0;
         while i < lines.len() - 1 {
             // 最後の行（デフォルト）は別処理
@@ -750,14 +755,15 @@ impl Interpreter {
             let content_tokens = &line.body_tokens[1..];
 
             if i + 1 < lines.len() - 1 {
-                // 条件行
+                // 条件行: スタックを復元してから評価
+                self.stack = saved_stack.clone();
                 let (_, action) = self.execute_section_core(content_tokens, 0)?;
                 if action.is_some() {
                     return Ok(action);
                 }
 
                 if self.check_condition_on_stack()? {
-                    // 次の行はアクション行
+                    // 次の行はアクション行（条件評価後のスタック上で実行）
                     i += 1;
                     let action_line = &lines[i];
                     if action_line.body_tokens.first() != Some(&Token::ChevronBranch) {
@@ -769,14 +775,15 @@ impl Interpreter {
                 }
                 i += 2;
             } else {
-                // 最後の条件行の後にデフォルトがある
+                // 最後の条件行: スタックを復元してから評価
+                self.stack = saved_stack.clone();
                 let (_, action) = self.execute_section_core(content_tokens, 0)?;
                 if action.is_some() {
                     return Ok(action);
                 }
 
                 if self.check_condition_on_stack()? {
-                    // デフォルト行を実行
+                    // デフォルト行を実行（条件評価後のスタック上で実行）
                     let default_tokens = &lines[lines.len() - 1].body_tokens[1..];
                     let (_, action) = self.execute_section_core(default_tokens, 0)?;
                     return Ok(action);
@@ -785,7 +792,7 @@ impl Interpreter {
             }
         }
 
-        // デフォルト行を実行
+        // デフォルト行を実行（最後の条件評価後のスタック上で実行）
         let default_line = &lines[lines.len() - 1];
         let default_tokens = &default_line.body_tokens[1..];
         let (_, action) = self.execute_section_core(default_tokens, 0)?;
