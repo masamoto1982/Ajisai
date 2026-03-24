@@ -24,6 +24,13 @@ export interface ModuleTabManager {
     readonly updateSearchFilter: (filter: string) => void;
 }
 
+export interface ModuleActionConfig {
+    readonly label: string;
+    readonly className: string;
+    readonly ariaLabel: string;
+    readonly onClick: () => void;
+}
+
 export interface ModuleTabManagerOptions {
     readonly selectEl: HTMLSelectElement;
     readonly sheetContainerEl: HTMLElement;
@@ -35,6 +42,7 @@ export interface ModuleTabManagerOptions {
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (msg: string, clear: boolean) => void;
+    readonly moduleActions?: Record<string, readonly ModuleActionConfig[]>;
 }
 
 export const createModuleTabManager = (
@@ -58,7 +66,7 @@ export const createModuleTabManager = (
         return option;
     };
 
-    const createSheetElement = (sheetId: string): HTMLElement => {
+    const createSheetElement = (sheetId: string, moduleName: string): HTMLElement => {
         const sheet = document.createElement('div');
         sheet.className = 'dictionary-sheet';
         sheet.id = `dictionary-sheet-${sheetId}`;
@@ -81,6 +89,24 @@ export const createModuleTabManager = (
         container.appendChild(wordsArea);
 
         sheet.appendChild(container);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'vocabulary-actions';
+
+        const actions = options.moduleActions?.[moduleName];
+        if (actions) {
+            for (const action of actions) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `header-btn ${action.className}`;
+                btn.setAttribute('aria-label', action.ariaLabel);
+                btn.textContent = action.label;
+                btn.addEventListener('click', action.onClick);
+                actionsDiv.appendChild(btn);
+            }
+        }
+
+        sheet.appendChild(actionsDiv);
 
         return sheet;
     };
@@ -162,7 +188,7 @@ export const createModuleTabManager = (
                 if (!findSheet(moduleName)) {
                     const sheetId = `module-${moduleName}`;
                     const optionEl = createOptionElement(moduleName, sheetId);
-                    const sheetEl = createSheetElement(sheetId);
+                    const sheetEl = createSheetElement(sheetId, moduleName);
 
                     selectEl.appendChild(optionEl);
                     sheetContainerEl.appendChild(sheetEl);
