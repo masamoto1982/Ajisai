@@ -349,6 +349,8 @@ article h2 {
  * -------------------------------------------------------------------------- */
 #run-btn,
 .header-btn,
+.btn-primary,
+.btn-secondary,
 .reference-btn,
 .test-btn {
     display: inline-flex;
@@ -376,6 +378,30 @@ article h2 {
     background: var(--color-secondary);
 }
 
+/* プライマリボタン（アクション系） */
+.btn-primary {
+    font-weight: 500;
+    background: var(--color-primary);
+    color: #fff;
+    border: var(--border-main);
+    transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: var(--color-secondary);
+}
+
+/* セカンダリボタン（補助系） */
+.btn-secondary {
+    background: var(--color-light);
+    color: var(--color-text);
+    border: var(--border-main);
+    transition: background-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: var(--color-medium);
+}
 
 /* ヘッダーボタン（メニュースタイル） */
 .header-btn,
