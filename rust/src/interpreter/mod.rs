@@ -297,6 +297,14 @@ impl Interpreter {
             return Some((upper, def.clone()));
         }
 
+        // Check imported module words (e.g., "PLAY" → "MUSIC::PLAY" in core_vocabulary)
+        for module_name in &self.imported_modules {
+            let qualified = format!("{}::{}", module_name, upper);
+            if let Some(def) = self.core_vocabulary.get(&qualified) {
+                return Some((qualified, def.clone()));
+            }
+        }
+
         let mut best_module: Option<(String, Arc<WordDefinition>, u64)> = None;
         for (module_name, dict) in &self.module_samples {
             if let Some(def) = dict.sample_words.get(&upper) {
