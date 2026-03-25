@@ -38,7 +38,7 @@ const collectCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
     return customWordsInfo.map(wordData => ({
         dictionary: wordData[0],
         name: wordData[1],
-        definition: interpreter.lookup_word_definition(`${wordData[0]}::${wordData[1]}`),
+        definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
         description: wordData[2]
     }));
 };

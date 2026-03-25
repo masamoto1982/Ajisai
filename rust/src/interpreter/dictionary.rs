@@ -150,20 +150,16 @@ pub(crate) fn op_def_inner(
         });
     }
 
-    // Module sample collision check (module-first principle)
+    // Module sample collision check — warn but allow DEF
+    let mut collision_modules = Vec::new();
     for (module_name, module_dict) in &interp.module_samples {
         if module_dict.sample_words.contains_key(&upper_name) {
-            interp.force_flag = false;
-            return Err(AjisaiError::from(format!(
-                "Cannot define '{}': name is reserved by module {}. \
-                 Use ! '{}' DEL to remove the module sample first.",
-                upper_name, module_name, upper_name
-            )));
+            collision_modules.push(module_name.clone());
         }
     }
 
     let dict_name = interp.active_custom_dictionary.clone();
-    let fq_name = format!("{}::{}", dict_name, upper_name);
+    let fq_name = format!("{}@{}", dict_name, upper_name);
 
     if let Some(existing) = interp
         .custom_dictionaries
@@ -242,7 +238,17 @@ pub(crate) fn op_def_inner(
     interp.sync_sample_custom_words_cache();
     interp
         .output_buffer
-        .push_str(&format!("Defined word: {}::{}\n", dict_name, name));
+        .push_str(&format!("Defined word: {}@{}\n", dict_name, name));
+    // Warn about collisions with module sample words
+    if !collision_modules.is_empty() {
+        let module_paths: Vec<String> = collision_modules.iter().map(|m| format!("{}@{}", m, upper_name)).collect();
+        let custom_path = format!("{}@{}", dict_name, upper_name);
+        let all_paths: Vec<String> = module_paths.iter().chain(std::iter::once(&custom_path)).cloned().collect();
+        interp.output_buffer.push_str(&format!(
+            "Warning: '{}' now exists in both {}. Use a qualified path when calling this word.\n",
+            upper_name, all_paths.join(" and ")
+        ));
+    }
     interp.force_flag = false;
     Ok(())
 }
@@ -320,7 +326,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name.to_uppercase();
 
-    // FQN（DICT::WORD）形式の場合、辞書名とワード名に分離
+    // FQN（DICT@WORD）形式の場合、辞書名とワード名に分離
     let (target_dict, word_name) = if let Some((ns, w)) = interp.split_qualified_name(&upper_name) {
         (Some(ns), w)
     } else {
@@ -373,7 +379,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    let fq_name = format!("{}::{}", owner_name, word_name);
+    let fq_name = format!("{}@{}", owner_name, word_name);
     let dependents = interp.collect_dependents(&fq_name);
 
     if !dependents.is_empty() && !interp.force_flag {
@@ -447,7 +453,7 @@ fn find_word_owner(
             }
         }
         Err(AjisaiError::from(format!(
-            "Word '{}::{}' is not defined",
+            "Word '{}@{}' is not defined",
             dict_name, word_name
         )))
     } else {
@@ -682,7 +688,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_del_sample_custom_words_with_fqn() {
-        // GUI経由のDEL: FQN（SAMPLE::WORD）形式での削除
+        // GUI経由のDEL: FQN（SAMPLE@WORD）形式での削除
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
@@ -695,20 +701,20 @@ mod tests {
         assert!(interp.custom_words.contains_key("D4"));
 
         // FQN形式で削除
-        let result = interp.execute("'SAMPLE::D4' DEL").await;
+        let result = interp.execute("'SAMPLE@D4' DEL").await;
         assert!(result.is_ok(), "Should delete D4 via FQN: {:?}", result.err());
         assert!(!interp.custom_words.contains_key("D4"));
 
         // 存在しないFQNは適切にエラー
-        let result = interp.execute("'SAMPLE::NONEXISTENT' DEL").await;
+        let result = interp.execute("'SAMPLE@NONEXISTENT' DEL").await;
         assert!(result.is_err(), "Should error for non-existent FQN word");
 
         // 依存関係ありの場合もFQNで正しくエラー
-        let result = interp.execute("'SAMPLE::C4' DEL").await;
+        let result = interp.execute("'SAMPLE@C4' DEL").await;
         assert!(result.is_err(), "Should not delete C4 via FQN (has dependents)");
 
         // forceフラグ付きFQNで強制削除
-        let result = interp.execute("! 'SAMPLE::C4' DEL").await;
+        let result = interp.execute("! 'SAMPLE@C4' DEL").await;
         assert!(result.is_ok(), "Should force delete C4 via FQN: {:?}", result.err());
         assert!(!interp.custom_words.contains_key("C4"));
     }
@@ -751,10 +757,10 @@ mod tests {
         let _ = interp.collect_output();
 
         // Custom word names inside a vector literal resolve to their scalar values
-        let result = interp.execute("[ C4 D4 E4 ] MUSIC::SEQ MUSIC::PLAY").await;
+        let result = interp.execute("[ C4 D4 E4 ] MUSIC@SEQ MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
-            "[ C4 D4 E4 ] MUSIC::SEQ MUSIC::PLAY should succeed: {:?}",
+            "[ C4 D4 E4 ] MUSIC@SEQ MUSIC@PLAY should succeed: {:?}",
             result.err()
         );
 
@@ -842,7 +848,7 @@ mod tests {
         // Without DisplayHint, is_string_value treats all vectors as strings,
         // so audio treats nested scalar vectors as lyrics (no frequency output).
         let result = interp
-            .execute("[ [ C4 E4 G4 ] ] MUSIC::SIM MUSIC::PLAY")
+            .execute("[ [ C4 E4 G4 ] ] MUSIC@SIM MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
@@ -889,47 +895,49 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_module_first_def_blocked_by_module_sample() {
-        // Module-first: DEF of a name reserved by a module sample is an error
+    async fn test_def_with_module_collision_warns() {
+        // DEF of a name that collides with a module sample now succeeds with a warning
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
         let result = interp.execute(": [ 999 ] ; 'C4' DEF").await;
-        assert!(result.is_err(), "Should not be able to define C4 (module-first)");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("reserved by module"),
-            "Expected module reservation error, got: {}", err_msg);
+        assert!(result.is_ok(), "DEF should succeed even with module collision: {:?}", result.err());
+        let output = interp.collect_output();
+        assert!(output.contains("Warning"),
+            "Should warn about the collision: {}", output);
+        assert!(output.contains("MUSIC@C4"),
+            "Warning should mention MUSIC@C4: {}", output);
     }
 
     #[tokio::test]
-    async fn test_module_first_import_keeps_user_word_qualified() {
-        // Module-first: IMPORT keeps conflicting user-defined words accessible via namespace
+    async fn test_import_keeps_user_word_qualified() {
+        // IMPORT keeps conflicting user-defined words accessible via qualified path
         let mut interp = Interpreter::new();
 
         // Define C4 before importing music
         interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
         assert!(interp.custom_words.contains_key("C4"));
 
-        // Import music module — user word remains, but short name resolves to module sample
+        // Import music module — user word remains, short name becomes ambiguous
         interp.execute("'music' IMPORT").await.unwrap();
         let output = interp.collect_output();
 
         assert!(interp.custom_words.contains_key("C4"),
             "User word C4 should remain in SAMPLE after IMPORT");
         assert!(output.contains("Warning"),
-            "Should warn about the short-name conflict: {}", output);
+            "Should warn about the conflict: {}", output);
 
-        // C4 now resolves to the module sample (264Hz)
+        // C4 is now ambiguous (exists in both MUSIC and SAMPLE), should error
         let result = interp.execute("C4").await;
-        assert!(result.is_ok(), "C4 should work: {:?}", result.err());
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264,
-                "C4 should be 264 (module sample)");
-        }
+        assert!(result.is_err(), "C4 should be ambiguous");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Ambiguous"),
+            "Expected ambiguity error, got: {}", err_msg);
 
-        let result = interp.execute("SAMPLE::C4").await;
-        assert!(result.is_ok(), "Qualified SAMPLE::C4 should work: {:?}", result.err());
+        // Qualified access to SAMPLE@C4 should work
+        let result = interp.execute("SAMPLE@C4").await;
+        assert!(result.is_ok(), "Qualified SAMPLE@C4 should work: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
             let scalar = val
                 .as_scalar()
@@ -938,10 +946,14 @@ mod tests {
                         .and_then(|children| children.first())
                         .and_then(|child| child.as_scalar())
                 })
-                .expect("SAMPLE::C4 should resolve to a numeric value");
+                .expect("SAMPLE@C4 should resolve to a numeric value");
             assert_eq!(scalar.to_i64().unwrap(), 999,
-                "SAMPLE::C4 should remain the user-defined value");
+                "SAMPLE@C4 should remain the user-defined value");
         }
+
+        // Qualified access to MUSIC@C4 should work too
+        let result = interp.execute("MUSIC@C4").await;
+        assert!(result.is_ok(), "Qualified MUSIC@C4 should work: {:?}", result.err());
     }
 
     #[tokio::test]
@@ -1003,5 +1015,238 @@ mod tests {
         assert!(result.is_ok(), "SAY-BY-SIGN with 1 should succeed: {:?}", result.err());
         let output = interp.collect_output();
         assert!(output.contains("World"), "Expected 'World' for positive, got: {}", output);
+    }
+
+    // ========================================================================
+    // New path resolution tests for @ notation
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_path_short_name_no_collision() {
+        // Short name resolves when no collision exists
+        let mut interp = Interpreter::new();
+        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.collect_output();
+
+        let result = interp.execute("SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "Short name should resolve: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_path_dict_at_word() {
+        // SAMPLE@WORD resolves custom word
+        let mut interp = Interpreter::new();
+        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.collect_output();
+
+        let result = interp.execute("SAMPLE@SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_path_coinage_dict_word() {
+        // COINAGE@SAMPLE@WORD resolves custom word
+        let mut interp = Interpreter::new();
+        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.collect_output();
+
+        let result = interp.execute("COINAGE@SAMPLE@SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "COINAGE@SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_path_fully_qualified_custom() {
+        // DICTIONARY@COINAGE@SAMPLE@WORD resolves custom word
+        let mut interp = Interpreter::new();
+        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.collect_output();
+
+        let result = interp.execute("DICTIONARY@COINAGE@SAMPLE@SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "DICTIONARY@COINAGE@SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_path_module_at_word() {
+        // MUSIC@PLAY resolves module word
+        let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
+        let _ = interp.collect_output();
+
+        let result = interp.execute("MUSIC@C4").await;
+        assert!(result.is_ok(), "MUSIC@C4 should resolve: {:?}", result.err());
+        if let Some(val) = interp.stack.last() {
+            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_path_dictionary_module_word() {
+        // DICTIONARY@MUSIC@C4 resolves module sample word
+        let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
+        let _ = interp.collect_output();
+
+        let result = interp.execute("DICTIONARY@MUSIC@C4").await;
+        assert!(result.is_ok(), "DICTIONARY@MUSIC@C4 should resolve: {:?}", result.err());
+        if let Some(val) = interp.stack.last() {
+            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_path_builtin_at_word() {
+        // BUILTIN@GET resolves built-in word
+        let mut interp = Interpreter::new();
+        interp.execute("[ 10 20 30 ]").await.unwrap();
+
+        let result = interp.execute("[ 1 ] BUILTIN@GET").await;
+        assert!(result.is_ok(), "BUILTIN@GET should resolve: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_path_dictionary_builtin_word() {
+        // DICTIONARY@BUILTIN@GET resolves built-in word
+        let mut interp = Interpreter::new();
+        interp.execute("[ 10 20 30 ]").await.unwrap();
+
+        let result = interp.execute("[ 1 ] DICTIONARY@BUILTIN@GET").await;
+        assert!(result.is_ok(), "DICTIONARY@BUILTIN@GET should resolve: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_path_case_insensitive() {
+        // Case normalization: music@play → MUSIC@PLAY
+        let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
+        let _ = interp.collect_output();
+
+        let result = interp.execute("music@c4").await;
+        assert!(result.is_ok(), "music@c4 should resolve (case insensitive): {:?}", result.err());
+        if let Some(val) = interp.stack.last() {
+            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_path_case_insensitive_custom() {
+        // Case normalization for custom words
+        let mut interp = Interpreter::new();
+        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_sample_words(&mut interp, &sample_words);
+        let _ = interp.collect_output();
+
+        let result = interp.execute("sample@say-hello-world").await;
+        assert!(result.is_ok(), "sample@say-hello-world should resolve: {:?}", result.err());
+        assert_eq!(interp.stack.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_ambiguous_word_error() {
+        // Word existing in both module and custom should produce ambiguity error
+        let mut interp = Interpreter::new();
+        interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
+        let _ = interp.collect_output();
+
+        interp.execute("'music' IMPORT").await.unwrap();
+        let _ = interp.collect_output();
+
+        // C4 now exists in both MUSIC (sample) and SAMPLE (custom)
+        let result = interp.execute("C4").await;
+        assert!(result.is_err(), "C4 should be ambiguous");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Ambiguous"), "Expected ambiguity error, got: {}", err_msg);
+        assert!(err_msg.contains("MUSIC@C4"), "Should mention MUSIC@C4: {}", err_msg);
+        assert!(err_msg.contains("SAMPLE@C4"), "Should mention SAMPLE@C4: {}", err_msg);
+    }
+
+    #[tokio::test]
+    async fn test_ambiguous_resolved_by_qualified_path() {
+        // Ambiguous word resolved via qualified path
+        let mut interp = Interpreter::new();
+        interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
+        let _ = interp.collect_output();
+
+        interp.execute("'music' IMPORT").await.unwrap();
+        let _ = interp.collect_output();
+
+        // MUSIC@C4 should resolve to 264
+        let result = interp.execute("MUSIC@C4").await;
+        assert!(result.is_ok(), "MUSIC@C4 should resolve: {:?}", result.err());
+        if let Some(val) = interp.stack.last() {
+            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
+        }
+
+        // SAMPLE@C4 should resolve to 999
+        let result = interp.execute("SAMPLE@C4").await;
+        assert!(result.is_ok(), "SAMPLE@C4 should resolve: {:?}", result.err());
+        if let Some(val) = interp.stack.last() {
+            let scalar = val
+                .as_scalar()
+                .or_else(|| {
+                    val.as_vector()
+                        .and_then(|children| children.first())
+                        .and_then(|child| child.as_scalar())
+                })
+                .expect("SAMPLE@C4 should be numeric");
+            assert_eq!(scalar.to_i64().unwrap(), 999);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_builtin_not_ambiguous() {
+        // Built-in words are never ambiguous, even if custom word with same name exists
+        let mut interp = Interpreter::new();
+
+        // GET is a built-in. Even if we somehow had a custom GET (blocked by protection),
+        // the built-in always wins without ambiguity
+        let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
+        assert!(result.is_ok(), "Built-in GET should always work: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_module_builtin_word_via_qualified_path() {
+        // Module built-in words (MUSIC@PLAY etc.) via qualified path
+        let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
+        let _ = interp.collect_output();
+
+        // MUSIC@SEQ is a module built-in (not a sample word)
+        let result = interp.execute("[ 440 ] MUSIC@SEQ MUSIC@PLAY").await;
+        assert!(result.is_ok(), "MUSIC@SEQ MUSIC@PLAY should work: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_split_path_unit() {
+        use crate::interpreter::Interpreter;
+
+        // Test the split_path function directly
+        let (layers, word) = Interpreter::split_path("MUSIC@PLAY");
+        assert_eq!(layers, vec!["MUSIC"]);
+        assert_eq!(word, "PLAY");
+
+        let (layers, word) = Interpreter::split_path("COINAGE@SAMPLE@SAY-HELLO");
+        assert_eq!(layers, vec!["COINAGE", "SAMPLE"]);
+        assert_eq!(word, "SAY-HELLO");
+
+        let (layers, word) = Interpreter::split_path("DICTIONARY@COINAGE@SAMPLE@SAY-HELLO");
+        assert_eq!(layers, vec!["DICTIONARY", "COINAGE", "SAMPLE"]);
+        assert_eq!(word, "SAY-HELLO");
+
+        let (layers, word) = Interpreter::split_path("SAY-HELLO");
+        assert!(layers.is_empty());
+        assert_eq!(word, "SAY-HELLO");
+
+        // Case insensitive
+        let (layers, word) = Interpreter::split_path("music@play");
+        assert_eq!(layers, vec!["MUSIC"]);
+        assert_eq!(word, "PLAY");
     }
 }

@@ -812,14 +812,14 @@ mod json_io_tests {
     use crate::interpreter::Interpreter;
 
     // ========================================================================
-    // JSON::PARSE tests
+    // JSON@PARSE tests
     // ========================================================================
 
     #[tokio::test]
     async fn test_parse_integer() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'42' JSON::PARSE").await.unwrap();
+        interp.execute("'42' JSON@PARSE").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -830,7 +830,7 @@ mod json_io_tests {
     async fn test_parse_string() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute(r#"'"hello"' JSON::PARSE"#).await.unwrap();
+        interp.execute(r#"'"hello"' JSON@PARSE"#).await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -841,7 +841,7 @@ mod json_io_tests {
     async fn test_parse_null() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'null' JSON::PARSE").await.unwrap();
+        interp.execute("'null' JSON@PARSE").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil());
@@ -851,7 +851,7 @@ mod json_io_tests {
     async fn test_parse_bool_true() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'true' JSON::PARSE").await.unwrap();
+        interp.execute("'true' JSON@PARSE").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -863,7 +863,7 @@ mod json_io_tests {
     async fn test_parse_bool_false() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'false' JSON::PARSE").await.unwrap();
+        interp.execute("'false' JSON@PARSE").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -875,7 +875,7 @@ mod json_io_tests {
     async fn test_parse_array() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'[1, 2, 3]' JSON::PARSE").await.unwrap();
+        interp.execute("'[1, 2, 3]' JSON@PARSE").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert_eq!(stack[0].len(), 3);
@@ -885,7 +885,7 @@ mod json_io_tests {
     async fn test_parse_empty_array() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'[]' JSON::PARSE").await.unwrap();
+        interp.execute("'[]' JSON@PARSE").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil());
@@ -895,7 +895,7 @@ mod json_io_tests {
     async fn test_parse_invalid_json() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'not json' JSON::PARSE").await.unwrap();
+        interp.execute("'not json' JSON@PARSE").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil());
@@ -905,7 +905,7 @@ mod json_io_tests {
     async fn test_parse_keep_mode() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'42' ,, JSON::PARSE").await.unwrap();
+        interp.execute("'42' ,, JSON@PARSE").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 2);
         let original = format!("{}", stack[0]);
@@ -915,14 +915,14 @@ mod json_io_tests {
     }
 
     // ========================================================================
-    // JSON::STRINGIFY tests
+    // JSON@STRINGIFY tests
     // ========================================================================
 
     #[tokio::test]
     async fn test_stringify_integer() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("[ 42 ] JSON::STRINGIFY").await.unwrap();
+        interp.execute("[ 42 ] JSON@STRINGIFY").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -933,7 +933,7 @@ mod json_io_tests {
     async fn test_stringify_nil() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("NIL JSON::STRINGIFY").await.unwrap();
+        interp.execute("NIL JSON@STRINGIFY").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -946,7 +946,7 @@ mod json_io_tests {
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         // Without DisplayHint, TRUE is Scalar(1), serialize_value_to_json produces Number(1),
         // serde serializes as "1", from_string("1") → Vector([49]) → displays as '1'
-        interp.execute("TRUE JSON::STRINGIFY").await.unwrap();
+        interp.execute("TRUE JSON@STRINGIFY").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -957,7 +957,7 @@ mod json_io_tests {
     async fn test_stringify_string() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'hello' JSON::STRINGIFY").await.unwrap();
+        interp.execute("'hello' JSON@STRINGIFY").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -968,7 +968,7 @@ mod json_io_tests {
     async fn test_stringify_array() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("[ 1 2 3 ] JSON::STRINGIFY").await.unwrap();
+        interp.execute("[ 1 2 3 ] JSON@STRINGIFY").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -976,14 +976,14 @@ mod json_io_tests {
     }
 
     // ========================================================================
-    // IO::INPUT / IO::OUTPUT tests
+    // IO@INPUT / IO@OUTPUT tests
     // ========================================================================
 
     #[tokio::test]
     async fn test_input_empty() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("IO::INPUT").await.unwrap();
+        interp.execute("IO@INPUT").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -996,7 +996,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp.input_buffer = "hello world".to_string();
-        interp.execute("IO::INPUT").await.unwrap();
+        interp.execute("IO@INPUT").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
@@ -1007,7 +1007,7 @@ mod json_io_tests {
     async fn test_output() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'result' IO::OUTPUT").await.unwrap();
+        interp.execute("'result' IO@OUTPUT").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 0);
         assert_eq!(interp.io_output_buffer, "'result'");
@@ -1017,14 +1017,14 @@ mod json_io_tests {
     async fn test_output_keep_mode() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("'result' ,, IO::OUTPUT").await.unwrap();
+        interp.execute("'result' ,, IO@OUTPUT").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(!interp.io_output_buffer.is_empty());
     }
 
     // ========================================================================
-    // JSON::GET tests
+    // JSON@GET tests
     // ========================================================================
 
     #[tokio::test]
@@ -1032,7 +1032,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute(r#"'{"name": "Ajisai", "version": 1}' JSON::PARSE 'name' JSON::GET"#)
+            .execute(r#"'{"name": "Ajisai", "version": 1}' JSON@PARSE 'name' JSON@GET"#)
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1046,7 +1046,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute(r#"'{"a": 1}' JSON::PARSE 'b' JSON::GET"#)
+            .execute(r#"'{"a": 1}' JSON@PARSE 'b' JSON@GET"#)
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1059,7 +1059,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute(r#"'{"x": 42}' JSON::PARSE 'x' JSON::GET"#)
+            .execute(r#"'{"x": 42}' JSON@PARSE 'x' JSON@GET"#)
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1069,7 +1069,7 @@ mod json_io_tests {
     }
 
     // ========================================================================
-    // JSON::KEYS tests
+    // JSON@KEYS tests
     // ========================================================================
 
     #[tokio::test]
@@ -1077,7 +1077,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute(r#"'{"a": 1, "b": 2}' JSON::PARSE JSON::KEYS"#)
+            .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE JSON@KEYS"#)
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1090,14 +1090,14 @@ mod json_io_tests {
     async fn test_json_keys_non_object() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("[ 1 2 3 ] JSON::KEYS").await.unwrap();
+        interp.execute("[ 1 2 3 ] JSON@KEYS").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil());
     }
 
     // ========================================================================
-    // JSON::SET tests
+    // JSON@SET tests
     // ========================================================================
 
     #[tokio::test]
@@ -1105,7 +1105,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute(r#"'{"a": 1}' JSON::PARSE 'b' [ 2 ] JSON::SET"#)
+            .execute(r#"'{"a": 1}' JSON@PARSE 'b' [ 2 ] JSON@SET"#)
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1119,7 +1119,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute(r#"'{"a": 1}' JSON::PARSE 'a' [ 99 ] JSON::SET 'a' JSON::GET"#)
+            .execute(r#"'{"a": 1}' JSON@PARSE 'a' [ 99 ] JSON@SET 'a' JSON@GET"#)
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1133,7 +1133,7 @@ mod json_io_tests {
     async fn test_json_set_on_nil() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("NIL 'key' 'value' JSON::SET").await.unwrap();
+        interp.execute("NIL 'key' 'value' JSON@SET").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_vector());
@@ -1149,7 +1149,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute("'42' JSON::PARSE JSON::STRINGIFY")
+            .execute("'42' JSON@PARSE JSON@STRINGIFY")
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1163,7 +1163,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute("'[1,2,3]' JSON::PARSE JSON::STRINGIFY")
+            .execute("'[1,2,3]' JSON@PARSE JSON@STRINGIFY")
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1173,7 +1173,7 @@ mod json_io_tests {
     }
 
     // ========================================================================
-    // IO::INPUT → JSON::PARSE → process → JSON::STRINGIFY → IO::OUTPUT pipeline
+    // IO@INPUT → JSON@PARSE → process → JSON@STRINGIFY → IO@OUTPUT pipeline
     // ========================================================================
 
     #[tokio::test]
@@ -1182,7 +1182,7 @@ mod json_io_tests {
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp.input_buffer = "[1, 2, 3]".to_string();
         interp
-            .execute("IO::INPUT JSON::PARSE : [ 2 ] * ; MAP JSON::STRINGIFY IO::OUTPUT")
+            .execute("IO@INPUT JSON@PARSE : [ 2 ] * ; MAP JSON@STRINGIFY IO@OUTPUT")
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1207,11 +1207,11 @@ mod json_io_tests {
         let json_str = format!("{{{}}}", pairs.join(", "));
 
         // Parse it
-        let code = format!("'{}' JSON::PARSE", json_str);
+        let code = format!("'{}' JSON@PARSE", json_str);
         interp.execute(&code).await.unwrap();
 
         // Access the first, middle, and last keys
-        interp.execute("'key0' JSON::GET").await.unwrap();
+        interp.execute("'key0' JSON@GET").await.unwrap();
         let stack = interp.get_stack();
         let result = format!("{}", stack.last().unwrap());
         assert_eq!(result, "0");
@@ -1219,20 +1219,20 @@ mod json_io_tests {
         // Reset stack and re-parse for next test
         interp.stack.clear();
         interp.execute(&code).await.unwrap();
-        interp.execute("'key30' JSON::GET").await.unwrap();
+        interp.execute("'key30' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
         assert_eq!(result, "300");
 
         interp.stack.clear();
         interp.execute(&code).await.unwrap();
-        interp.execute("'key59' JSON::GET").await.unwrap();
+        interp.execute("'key59' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
         assert_eq!(result, "590");
 
         // Non-existent key should return NIL
         interp.stack.clear();
         interp.execute(&code).await.unwrap();
-        interp.execute("'nonexistent' JSON::GET").await.unwrap();
+        interp.execute("'nonexistent' JSON@GET").await.unwrap();
         assert!(interp.get_stack().last().unwrap().is_nil());
     }
 
@@ -1243,30 +1243,30 @@ mod json_io_tests {
 
         // Create object, set a new key, then get it
         interp
-            .execute(r#"'{"a": 1, "b": 2}' JSON::PARSE 'c' 3 JSON::SET"#)
+            .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'c' 3 JSON@SET"#)
             .await
             .unwrap();
-        interp.execute("'c' JSON::GET").await.unwrap();
+        interp.execute("'c' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
         assert_eq!(result, "3");
 
         // Update an existing key, then get it
         interp.stack.clear();
         interp
-            .execute(r#"'{"a": 1, "b": 2}' JSON::PARSE 'a' 99 JSON::SET"#)
+            .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'a' 99 JSON@SET"#)
             .await
             .unwrap();
-        interp.execute("'a' JSON::GET").await.unwrap();
+        interp.execute("'a' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
         assert_eq!(result, "99");
 
         // Verify other keys are unaffected after update
         interp.stack.clear();
         interp
-            .execute(r#"'{"a": 1, "b": 2}' JSON::PARSE 'a' 99 JSON::SET"#)
+            .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'a' 99 JSON@SET"#)
             .await
             .unwrap();
-        interp.execute("'b' JSON::GET").await.unwrap();
+        interp.execute("'b' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
         assert_eq!(result, "2");
     }
@@ -1278,7 +1278,7 @@ mod json_io_tests {
 
         // Parse an object and verify keys come out in insertion order
         interp
-            .execute(r#"'{"alpha": 1, "beta": 2, "gamma": 3}' JSON::PARSE JSON::KEYS"#)
+            .execute(r#"'{"alpha": 1, "beta": 2, "gamma": 3}' JSON@PARSE JSON@KEYS"#)
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -1286,10 +1286,10 @@ mod json_io_tests {
         assert!(stack[0].is_vector());
         assert_eq!(stack[0].len(), 3);
 
-        // JSON::STRINGIFY the original object to verify order is preserved in output
+        // JSON@STRINGIFY the original object to verify order is preserved in output
         interp.stack.clear();
         interp
-            .execute(r#"'{"alpha": 1, "beta": 2, "gamma": 3}' JSON::PARSE JSON::STRINGIFY"#)
+            .execute(r#"'{"alpha": 1, "beta": 2, "gamma": 3}' JSON@PARSE JSON@STRINGIFY"#)
             .await
             .unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());

@@ -136,7 +136,7 @@ const collectAutocompleteWords = (): string[] => {
     const coreWords = window.ajisaiInterpreter.collect_core_words_info().map(word => word[0]);
     const customWords = window.ajisaiInterpreter.collect_custom_words_info().flatMap(word => [
         word[1],
-        `${word[0]}::${word[1]}`
+        `${word[0]}@${word[1]}`
     ]);
 
     const moduleWords: string[] = [];
@@ -144,7 +144,7 @@ const collectAutocompleteWords = (): string[] => {
         const importedModules = window.ajisaiInterpreter.collect_imported_modules();
         for (const moduleName of importedModules) {
             const words = window.ajisaiInterpreter.collect_module_words_info(moduleName);
-            const prefix = `${moduleName}::`;
+            const prefix = `${moduleName}@`;
             for (const word of words) {
                 const name = word[0];
                 moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);

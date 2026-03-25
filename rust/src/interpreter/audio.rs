@@ -17,8 +17,8 @@
 // - 文字列: Outputに出力（歌詞）、時間消費なし
 //
 // 【オペレーションターゲット】
-// - . MUSIC::PLAY（デフォルト）: スタックトップを再生
-// - .. MUSIC::PLAY: スタック全体を再生（マルチトラック）
+// - . MUSIC@PLAY（デフォルト）: スタックトップを再生
+// - .. MUSIC@PLAY: スタック全体を再生（マルチトラック）
 
 use super::Interpreter;
 use super::OperationTargetMode;
@@ -177,27 +177,27 @@ struct PlayCommand {
 }
 
 // ============================================================================
-// MUSIC::SEQ ワード実装
+// MUSIC@SEQ ワード実装
 // ============================================================================
 
-/// MUSIC::SEQ ワード - 順次再生モードを設定
+/// MUSIC@SEQ ワード - 順次再生モードを設定
 pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
     update_play_mode(interp, PlayMode::Sequential);
     Ok(())
 }
 
 // ============================================================================
-// MUSIC::SIM ワード実装
+// MUSIC@SIM ワード実装
 // ============================================================================
 
-/// MUSIC::SIM ワード - 同時再生モードを設定
+/// MUSIC@SIM ワード - 同時再生モードを設定
 pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
     update_play_mode(interp, PlayMode::Simultaneous);
     Ok(())
 }
 
 // ============================================================================
-// MUSIC::SLOT ワード実装
+// MUSIC@SLOT ワード実装
 // ============================================================================
 
 /// ヘルパー関数: 値からスカラー値を取得（単一要素ベクタからも再帰的に取得）
@@ -209,7 +209,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     }
 }
 
-/// MUSIC::SLOT ワード - スロットデュレーションを設定
+/// MUSIC@SLOT ワード - スロットデュレーションを設定
 /// スタック: [ seconds ] --
 /// 1スロットあたりの秒数を設定する
 pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
@@ -232,13 +232,13 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
     // 極端に小さい/大きい値の警告
     if seconds < 0.01 {
         interp.output_buffer.push_str(&format!(
-            "Warning: MUSIC::SLOT duration {}s is very short\n",
+            "Warning: MUSIC@SLOT duration {}s is very short\n",
             seconds
         ));
     }
     if seconds > 10.0 {
         interp.output_buffer.push_str(&format!(
-            "Warning: MUSIC::SLOT duration {}s is very long\n",
+            "Warning: MUSIC@SLOT duration {}s is very long\n",
             seconds
         ));
     }
@@ -252,10 +252,10 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
 }
 
 // ============================================================================
-// MUSIC::GAIN ワード実装
+// MUSIC@GAIN ワード実装
 // ============================================================================
 
-/// MUSIC::GAIN ワード - 音量を設定
+/// MUSIC@GAIN ワード - 音量を設定
 /// スタック: [ value ] --
 /// 0.0〜1.0の範囲で音量を設定（範囲外はクランプ）
 pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
@@ -272,7 +272,7 @@ pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
 
     if (gain - clamped).abs() > f64::EPSILON {
         interp.output_buffer.push_str(&format!(
-            "Warning: MUSIC::GAIN {} clamped to {}\n",
+            "Warning: MUSIC@GAIN {} clamped to {}\n",
             gain, clamped
         ));
     }
@@ -285,17 +285,17 @@ pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// MUSIC::GAIN-RESET ワード - 音量をデフォルト（1.0）に戻す
+/// MUSIC@GAIN-RESET ワード - 音量をデフォルト（1.0）に戻す
 pub fn op_gain_reset(interp: &mut Interpreter) -> Result<()> {
     interp.output_buffer.push_str("EFFECT:{\"gain\":1.0}\n");
     Ok(())
 }
 
 // ============================================================================
-// MUSIC::PAN ワード実装
+// MUSIC@PAN ワード実装
 // ============================================================================
 
-/// MUSIC::PAN ワード - 定位を設定
+/// MUSIC@PAN ワード - 定位を設定
 /// スタック: [ value ] --
 /// -1.0（左）〜1.0（右）の範囲で定位を設定（範囲外はクランプ）
 pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
@@ -312,7 +312,7 @@ pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
 
     if (pan - clamped).abs() > f64::EPSILON {
         interp.output_buffer.push_str(&format!(
-            "Warning: MUSIC::PAN {} clamped to {}\n",
+            "Warning: MUSIC@PAN {} clamped to {}\n",
             pan, clamped
         ));
     }
@@ -325,13 +325,13 @@ pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// MUSIC::PAN-RESET ワード - 定位をデフォルト（0.0=中央）に戻す
+/// MUSIC@PAN-RESET ワード - 定位をデフォルト（0.0=中央）に戻す
 pub fn op_pan_reset(interp: &mut Interpreter) -> Result<()> {
     interp.output_buffer.push_str("EFFECT:{\"pan\":0.0}\n");
     Ok(())
 }
 
-/// MUSIC::FX-RESET ワード - 全エフェクトをデフォルトに戻す
+/// MUSIC@FX-RESET ワード - 全エフェクトをデフォルトに戻す
 pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
     interp
         .output_buffer
@@ -340,10 +340,10 @@ pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
 }
 
 // ============================================================================
-// MUSIC::CHORD ワード実装
+// MUSIC@CHORD ワード実装
 // ============================================================================
 
-/// MUSIC::CHORD ワード - ベクタを同時再生（和音）としてマーク
+/// MUSIC@CHORD ワード - ベクタを同時再生（和音）としてマーク
 pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
@@ -359,14 +359,14 @@ pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
 }
 
 // ============================================================================
-// MUSIC::ADSR ワード実装
+// MUSIC@ADSR ワード実装
 // ============================================================================
 
-/// MUSIC::ADSR ワード - MUSIC::ADSRエンベロープを設定
+/// MUSIC@ADSR ワード - MUSIC@ADSRエンベロープを設定
 /// スタック: [ target ] [ attack decay sustain release ] -- [ target ]'
 /// 対象ベクタにADSRエンベロープを適用
 pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
-    // MUSIC::ADSRパラメータを取得
+    // MUSIC@ADSRパラメータを取得
     let params = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     // 対象ベクタを取得
@@ -444,22 +444,22 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
 // 波形ワード実装
 // ============================================================================
 
-/// MUSIC::SINE ワード - 正弦波を設定
+/// MUSIC@SINE ワード - 正弦波を設定
 pub fn op_sine(interp: &mut Interpreter) -> Result<()> {
     update_waveform_in_hint(interp, WaveformType::Sine)
 }
 
-/// MUSIC::SQUARE ワード - 矩形波を設定
+/// MUSIC@SQUARE ワード - 矩形波を設定
 pub fn op_square(interp: &mut Interpreter) -> Result<()> {
     update_waveform_in_hint(interp, WaveformType::Square)
 }
 
-/// MUSIC::SAW ワード - のこぎり波を設定
+/// MUSIC@SAW ワード - のこぎり波を設定
 pub fn op_saw(interp: &mut Interpreter) -> Result<()> {
     update_waveform_in_hint(interp, WaveformType::Sawtooth)
 }
 
-/// MUSIC::TRI ワード - 三角波を設定
+/// MUSIC@TRI ワード - 三角波を設定
 pub fn op_tri(interp: &mut Interpreter) -> Result<()> {
     update_waveform_in_hint(interp, WaveformType::Triangle)
 }
@@ -480,10 +480,10 @@ fn update_waveform_in_hint(interp: &mut Interpreter, _waveform: WaveformType) ->
 }
 
 // ============================================================================
-// MUSIC::PLAY ワード実装
+// MUSIC@PLAY ワード実装
 // ============================================================================
 
-/// MUSIC::PLAY ワードのエントリポイント
+/// MUSIC@PLAY ワードのエントリポイント
 pub fn op_play(interp: &mut Interpreter) -> Result<()> {
     let mode = lookup_play_mode(interp);
     let target = interp.operation_target_mode;
@@ -583,7 +583,7 @@ fn build_audio_structure(
                 )
                 .collect();
 
-            // MUSIC::CHORDフラグがあれば同時再生、なければモードに従う
+            // MUSIC@CHORDフラグがあれば同時再生、なければモードに従う
             let effective_mode = if is_chord {
                 PlayMode::Simultaneous
             } else {
@@ -931,7 +931,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 440 ] MUSIC::PLAY").await;
+        let result = interp.execute("[ 440 ] MUSIC@PLAY").await;
         assert!(result.is_ok(), "PLAY should succeed: {:?}", result);
 
         let output = interp.collect_output();
@@ -956,11 +956,11 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let result = interp
-            .execute("[ 440 550 660 ] MUSIC::SEQ MUSIC::PLAY")
+            .execute("[ 440 550 660 ] MUSIC@SEQ MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
-            "SEQ MUSIC::PLAY should succeed: {:?}",
+            "SEQ MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -978,17 +978,17 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let result = interp
-            .execute("[ 440 550 660 ] MUSIC::SIM MUSIC::PLAY")
+            .execute("[ 440 550 660 ] MUSIC@SIM MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
-            "SIM MUSIC::PLAY should succeed: {:?}",
+            "SIM MUSIC@PLAY should succeed: {:?}",
             result
         );
 
         let output = interp.collect_output();
         // Without DisplayHint, is_string_value treats the vector as lyrics.
-        // MUSIC::SIM sets mode but build_audio_structure hits the string path first,
+        // MUSIC@SIM sets mode but build_audio_structure hits the string path first,
         // producing an empty seq. The outer play command still emits AUDIO.
         assert!(
             output.contains("AUDIO:"),
@@ -1003,11 +1003,11 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let result = interp
-            .execute("[ 440 550 ] [ 220 275 ] .. MUSIC::SIM MUSIC::PLAY")
+            .execute("[ 440 550 ] [ 220 275 ] .. MUSIC@SIM MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
-            "Multitrack MUSIC::PLAY should succeed: {:?}",
+            "Multitrack MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1020,7 +1020,7 @@ mod tests {
         // スタックが空であることを確認（両方のベクタが消費されたはず）
         assert!(
             interp.get_stack().is_empty(),
-            "Stack should be empty after .. MUSIC::SIM MUSIC::PLAY, but had {} elements",
+            "Stack should be empty after .. MUSIC@SIM MUSIC@PLAY, but had {} elements",
             interp.get_stack().len()
         );
     }
@@ -1032,11 +1032,11 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let result = interp
-            .execute("[ 440 550 ] [ 220 275 ] .. MUSIC::SEQ MUSIC::PLAY")
+            .execute("[ 440 550 ] [ 220 275 ] .. MUSIC@SEQ MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
-            "Multitrack MUSIC::SEQ MUSIC::PLAY should succeed: {:?}",
+            "Multitrack MUSIC@SEQ MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1049,7 +1049,7 @@ mod tests {
         // スタックが空であることを確認
         assert!(
             interp.get_stack().is_empty(),
-            "Stack should be empty after .. MUSIC::SEQ MUSIC::PLAY"
+            "Stack should be empty after .. MUSIC@SEQ MUSIC@PLAY"
         );
     }
 
@@ -1061,11 +1061,11 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let result = interp
-            .execute("[ 440 ] [ 550 ] [ 660 ] .. MUSIC::SIM MUSIC::PLAY")
+            .execute("[ 440 ] [ 550 ] [ 660 ] .. MUSIC@SIM MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
-            "3-track MUSIC::PLAY should succeed: {:?}",
+            "3-track MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1085,7 +1085,7 @@ mod tests {
         // is_string_value, so no tone/duration data is produced.
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 440/3 550/1 660/7 ] MUSIC::PLAY").await;
+        let result = interp.execute("[ 440/3 550/1 660/7 ] MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
             "PLAY with duration should succeed: {:?}",
@@ -1107,7 +1107,7 @@ mod tests {
         // 0/2 rest and tone data are not produced — just lyrics output.
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 440 0/2 550 ] MUSIC::PLAY").await;
+        let result = interp.execute("[ 440 0/2 550 ] MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
             "PLAY with 0/n rest should succeed: {:?}",
@@ -1122,7 +1122,7 @@ mod tests {
     }
 
     // ============================================================================
-    // 新機能テスト: MUSIC::CHORD, MUSIC::ADSR, MUSIC::SINE, MUSIC::SQUARE, MUSIC::SAW, MUSIC::TRI
+    // 新機能テスト: MUSIC@CHORD, MUSIC@ADSR, MUSIC@SINE, MUSIC@SQUARE, MUSIC@SAW, MUSIC@TRI
     // ============================================================================
 
     #[tokio::test]
@@ -1134,11 +1134,11 @@ mod tests {
         // CHORD is now a no-op (AudioHint metadata removed from Value).
         // The vector is also treated as lyrics by is_string_value.
         let result = interp
-            .execute("[ 440 550 660 ] MUSIC::CHORD MUSIC::PLAY")
+            .execute("[ 440 550 660 ] MUSIC@CHORD MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
-            "CHORD MUSIC::PLAY should succeed: {:?}",
+            "CHORD MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1155,7 +1155,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("440 MUSIC::CHORD").await;
+        let result = interp.execute("440 MUSIC@CHORD").await;
         assert!(result.is_err(), "CHORD on non-vector should fail");
     }
 
@@ -1168,11 +1168,11 @@ mod tests {
         // ADSR is now a no-op (AudioHint metadata removed from Value).
         // It validates parameters but doesn't attach envelope data.
         let result = interp
-            .execute("[ 440 ] [ 0.05 0.1 0.8 0.2 ] MUSIC::ADSR MUSIC::PLAY")
+            .execute("[ 440 ] [ 0.05 0.1 0.8 0.2 ] MUSIC@ADSR MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
-            "ADSR MUSIC::PLAY should succeed: {:?}",
+            "ADSR MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1190,8 +1190,8 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        // MUSIC::ADSR needs target + params
-        let result = interp.execute("[ 440 ] [ 0.1 0.2 0.3 ] MUSIC::ADSR").await;
+        // MUSIC@ADSR needs target + params
+        let result = interp.execute("[ 440 ] [ 0.1 0.2 0.3 ] MUSIC@ADSR").await;
         assert!(result.is_err(), "ADSR with 3 elements should fail");
     }
 
@@ -1203,7 +1203,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let result = interp
-            .execute("[ 440 ] [ 0.1 0.1 1.5 0.1 ] MUSIC::ADSR")
+            .execute("[ 440 ] [ 0.1 0.1 1.5 0.1 ] MUSIC@ADSR")
             .await;
         assert!(result.is_err(), "ADSR with sustain > 1.0 should fail");
     }
@@ -1215,10 +1215,10 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // Waveform setting is now a no-op (AudioHint metadata removed from Value).
-        let result = interp.execute("[ 440 ] MUSIC::SQUARE MUSIC::PLAY").await;
+        let result = interp.execute("[ 440 ] MUSIC@SQUARE MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
-            "SQUARE MUSIC::PLAY should succeed: {:?}",
+            "SQUARE MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1236,10 +1236,10 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // Waveform setting is now a no-op (AudioHint metadata removed from Value).
-        let result = interp.execute("[ 440 ] MUSIC::SAW MUSIC::PLAY").await;
+        let result = interp.execute("[ 440 ] MUSIC@SAW MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
-            "SAW MUSIC::PLAY should succeed: {:?}",
+            "SAW MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1257,10 +1257,10 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // Waveform setting is now a no-op (AudioHint metadata removed from Value).
-        let result = interp.execute("[ 440 ] MUSIC::TRI MUSIC::PLAY").await;
+        let result = interp.execute("[ 440 ] MUSIC@TRI MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
-            "TRI MUSIC::PLAY should succeed: {:?}",
+            "TRI MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1275,13 +1275,13 @@ mod tests {
     async fn test_sine_is_default_not_serialized() {
         use crate::interpreter::Interpreter;
 
-        // MUSIC::SINE is the default, so it shouldn't be serialized
+        // MUSIC@SINE is the default, so it shouldn't be serialized
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 440 ] MUSIC::SINE MUSIC::PLAY").await;
+        let result = interp.execute("[ 440 ] MUSIC@SINE MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
-            "SINE MUSIC::PLAY should succeed: {:?}",
+            "SINE MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1301,7 +1301,7 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         // CHORD, ADSR, and waveform settings are all no-ops now
         // (AudioHint metadata removed from Value).
-        let result = interp.execute("[ 440 550 660 ] MUSIC::CHORD [ 0.01 0.1 0.7 0.3 ] MUSIC::ADSR MUSIC::SQUARE MUSIC::PLAY").await;
+        let result = interp.execute("[ 440 550 660 ] MUSIC@CHORD [ 0.01 0.1 0.7 0.3 ] MUSIC@ADSR MUSIC@SQUARE MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
             "Combined CHORD ADSR SQUARE PLAY should succeed: {:?}",
@@ -1316,7 +1316,7 @@ mod tests {
     }
 
     // ============================================================================
-    // MUSIC::SLOT ワードテスト
+    // MUSIC@SLOT ワードテスト
     // ============================================================================
 
     #[tokio::test]
@@ -1325,7 +1325,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 0.25 ] MUSIC::SLOT").await;
+        let result = interp.execute("[ 0.25 ] MUSIC@SLOT").await;
         assert!(result.is_ok(), "SLOT should succeed: {:?}", result);
 
         let output = interp.collect_output();
@@ -1342,7 +1342,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 1/4 ] MUSIC::SLOT").await;
+        let result = interp.execute("[ 1/4 ] MUSIC@SLOT").await;
         assert!(
             result.is_ok(),
             "SLOT with fraction should succeed: {:?}",
@@ -1363,8 +1363,8 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // Create negative number via arithmetic: 0 - 0.5 = -0.5
-        let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC::SLOT").await;
-        assert!(result.is_err(), "Negative MUSIC::SLOT should fail");
+        let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC@SLOT").await;
+        assert!(result.is_err(), "Negative MUSIC@SLOT should fail");
     }
 
     #[tokio::test]
@@ -1373,8 +1373,8 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 0 ] MUSIC::SLOT").await;
-        assert!(result.is_err(), "Zero MUSIC::SLOT should fail");
+        let result = interp.execute("[ 0 ] MUSIC@SLOT").await;
+        assert!(result.is_err(), "Zero MUSIC@SLOT should fail");
     }
 
     #[tokio::test]
@@ -1383,10 +1383,10 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 0.005 ] MUSIC::SLOT").await;
+        let result = interp.execute("[ 0.005 ] MUSIC@SLOT").await;
         assert!(
             result.is_ok(),
-            "Very short MUSIC::SLOT should succeed with warning"
+            "Very short MUSIC@SLOT should succeed with warning"
         );
 
         let output = interp.collect_output();
@@ -1406,10 +1406,10 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 15 ] MUSIC::SLOT").await;
+        let result = interp.execute("[ 15 ] MUSIC@SLOT").await;
         assert!(
             result.is_ok(),
-            "Very long MUSIC::SLOT should succeed with warning"
+            "Very long MUSIC@SLOT should succeed with warning"
         );
 
         let output = interp.collect_output();
@@ -1429,8 +1429,8 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 1 ] MUSIC::SLOT").await;
-        assert!(result.is_ok(), "1 MUSIC::SLOT should succeed: {:?}", result);
+        let result = interp.execute("[ 1 ] MUSIC@SLOT").await;
+        assert!(result.is_ok(), "1 MUSIC@SLOT should succeed: {:?}", result);
 
         let output = interp.collect_output();
         assert!(output.contains("CONFIG:"), "Should contain CONFIG command");
@@ -1447,17 +1447,17 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // CHORD is now a no-op. Use code block for DEF since vector duality
-        // no longer preserves MUSIC:: word names.
+        // no longer preserves MUSIC@ word names.
         let result = interp
-            .execute(": [ 440 550 660 ] MUSIC::CHORD ; 'C_MAJOR' DEF")
+            .execute(": [ 440 550 660 ] MUSIC@CHORD ; 'C_MAJOR' DEF")
             .await;
         assert!(result.is_ok(), "DEF should succeed: {:?}", result);
 
         // Use it
-        let result = interp.execute("C_MAJOR MUSIC::PLAY").await;
+        let result = interp.execute("C_MAJOR MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
-            "C_MAJOR MUSIC::PLAY should succeed: {:?}",
+            "C_MAJOR MUSIC@PLAY should succeed: {:?}",
             result
         );
 
@@ -1470,7 +1470,7 @@ mod tests {
     }
 
     // ============================================================================
-    // MUSIC::GAIN/PAN ワードテスト
+    // MUSIC@GAIN/PAN ワードテスト
     // ============================================================================
 
     #[tokio::test]
@@ -1479,7 +1479,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("0.5 MUSIC::GAIN").await;
+        let result = interp.execute("0.5 MUSIC@GAIN").await;
         assert!(result.is_ok(), "GAIN should succeed: {:?}", result);
 
         let output = interp.collect_output();
@@ -1493,7 +1493,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("1.5 MUSIC::GAIN").await;
+        let result = interp.execute("1.5 MUSIC@GAIN").await;
         assert!(result.is_ok(), "GAIN should succeed with clamping");
 
         let output = interp.collect_output();
@@ -1508,7 +1508,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // Use arithmetic to get negative: 0 - 0.5 = -0.5
-        let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC::GAIN").await;
+        let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC@GAIN").await;
         assert!(result.is_ok(), "GAIN should succeed with clamping");
 
         let output = interp.collect_output();
@@ -1521,7 +1521,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("1/2 MUSIC::GAIN").await;
+        let result = interp.execute("1/2 MUSIC@GAIN").await;
         assert!(result.is_ok(), "GAIN with fraction should succeed");
 
         let output = interp.collect_output();
@@ -1534,7 +1534,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("MUSIC::GAIN-RESET").await;
+        let result = interp.execute("MUSIC@GAIN-RESET").await;
         assert!(result.is_ok(), "GAIN-RESET should succeed");
 
         let output = interp.collect_output();
@@ -1548,7 +1548,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // Use arithmetic to get negative: 0 - 0.5 = -0.5
-        let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC::PAN").await;
+        let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC@PAN").await;
         assert!(result.is_ok(), "PAN should succeed");
 
         let output = interp.collect_output();
@@ -1562,7 +1562,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("2 MUSIC::PAN").await;
+        let result = interp.execute("2 MUSIC@PAN").await;
         assert!(result.is_ok(), "PAN should succeed with clamping");
 
         let output = interp.collect_output();
@@ -1576,7 +1576,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("MUSIC::PAN-RESET").await;
+        let result = interp.execute("MUSIC@PAN-RESET").await;
         assert!(result.is_ok(), "PAN-RESET should succeed");
 
         let output = interp.collect_output();
@@ -1589,7 +1589,7 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("MUSIC::FX-RESET").await;
+        let result = interp.execute("MUSIC@FX-RESET").await;
         assert!(result.is_ok(), "FX-RESET should succeed");
 
         let output = interp.collect_output();
@@ -1603,8 +1603,8 @@ mod tests {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("0.5 MUSIC::GAIN [ 440 ] MUSIC::PLAY").await;
-        assert!(result.is_ok(), "GAIN then MUSIC::PLAY should succeed");
+        let result = interp.execute("0.5 MUSIC@GAIN [ 440 ] MUSIC@PLAY").await;
+        assert!(result.is_ok(), "GAIN then MUSIC@PLAY should succeed");
 
         let output = interp.collect_output();
         assert!(output.contains("EFFECT:"), "Should have EFFECT command");
@@ -1618,11 +1618,11 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let result = interp
-            .execute("0.5 MUSIC::GAIN 0.7 MUSIC::PAN [ 440 ] MUSIC::PLAY")
+            .execute("0.5 MUSIC@GAIN 0.7 MUSIC@PAN [ 440 ] MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
-            "Combined MUSIC::GAIN MUSIC::PAN MUSIC::PLAY should succeed"
+            "Combined MUSIC@GAIN MUSIC@PAN MUSIC@PLAY should succeed"
         );
 
         let output = interp.collect_output();
@@ -1645,7 +1645,7 @@ mod tests {
         // is_string_value. The entire vector (including nested string vectors)
         // is rendered as codepoint characters.
         let result = interp
-            .execute("[ 440/2 'Hello' 550/2 'World' ] MUSIC::PLAY")
+            .execute("[ 440/2 'Hello' 550/2 'World' ] MUSIC@PLAY")
             .await;
         assert!(
             result.is_ok(),
@@ -1669,7 +1669,7 @@ mod tests {
         // so [440/2, 550/2] is treated as lyrics (codepoints).
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ 440/2 550/2 ] MUSIC::PLAY").await;
+        let result = interp.execute("[ 440/2 550/2 ] MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
             "PLAY with unreduced fractions should succeed: {:?}",

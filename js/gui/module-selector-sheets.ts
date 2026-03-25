@@ -126,7 +126,7 @@ export const createModuleTabManager = (
 
             const sorted = [...moduleWords].sort((a, b) => compareWordName(a[0], b[0]));
             const matched = sorted.filter(wd => checkWordMatchesFilter(wd[0], searchFilter));
-            const prefix = `${moduleSheet.moduleName}::`;
+            const prefix = `${moduleSheet.moduleName}@`;
 
             matched.forEach(wordData => {
                 const name = wordData[0];

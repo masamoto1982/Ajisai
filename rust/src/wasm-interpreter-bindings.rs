@@ -369,7 +369,7 @@ impl AjisaiInterpreter {
 
         for dict_name in self.interpreter.custom_dictionary_names() {
             for (name, def) in self.interpreter.custom_dictionary_words(&dict_name) {
-                let fq_name = format!("{}::{}", dict_name, name);
+                let fq_name = format!("{}@{}", dict_name, name);
                 let is_protected = self
                     .interpreter
                     .dependents
@@ -416,7 +416,7 @@ impl AjisaiInterpreter {
                         name: name.clone(),
                         definition: self
                             .interpreter
-                            .lookup_word_definition_tokens(&format!("{}::{}", dict_name, name)),
+                            .lookup_word_definition_tokens(&format!("{}@{}", dict_name, name)),
                         description: def.description.clone(),
                     })
             })
@@ -467,7 +467,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_module_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
-        let prefix = format!("{}::", upper);
+        let prefix = format!("{}@", upper);
         let arr = js_sys::Array::new();
         for (name, def) in &self.interpreter.core_vocabulary {
             if name.starts_with(&prefix) {
