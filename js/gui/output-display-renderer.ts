@@ -418,12 +418,15 @@ export const createDisplay = (elements: DisplayElements): Display => {
         clearElement(display);
 
         if (!Array.isArray(stack) || stack.length === 0) {
-            display.textContent = '(empty)';
-            display.style.color = '#ccc';
+            display.classList.add('is-empty');
+            const message = document.createElement('div');
+            message.className = 'empty-words-message';
+            message.textContent = 'No values on the stack yet.';
+            display.appendChild(message);
             return;
         }
 
-        display.style.color = '#333';
+        display.classList.remove('is-empty');
         const container = document.createElement('div');
         container.className = 'area-content-flow';
 
