@@ -256,9 +256,34 @@ impl Interpreter {
         order
     }
 
-    pub(crate) fn split_qualified_name<'a>(&self, name: &'a str) -> Option<(String, String)> {
-        let (namespace, word) = name.split_once("::")?;
-        Some((namespace.to_uppercase(), word.to_uppercase()))
+    /// `@` 区切りのパスを解析して (layers, word) を返す。
+    /// 例:
+    ///   "MUSIC@PLAY"                           → (["MUSIC"], "PLAY")
+    ///   "COINAGE@SAMPLE@SAY-HELLO"             → (["COINAGE", "SAMPLE"], "SAY-HELLO")
+    ///   "DICTIONARY@COINAGE@SAMPLE@SAY-HELLO"  → (["DICTIONARY", "COINAGE", "SAMPLE"], "SAY-HELLO")
+    ///   "SAY-HELLO"                            → ([], "SAY-HELLO")  ← 省略形
+    pub(crate) fn split_path(name: &str) -> (Vec<String>, String) {
+        let parts: Vec<String> = name.split('@').map(|s| s.to_uppercase()).collect();
+        if parts.len() == 1 {
+            (vec![], parts[0].clone())
+        } else {
+            let word = parts.last().unwrap().clone();
+            let layers = parts[..parts.len() - 1].to_vec();
+            (layers, word)
+        }
+    }
+
+    /// Legacy compatibility wrapper: returns (namespace, word) for single-layer qualified names.
+    pub(crate) fn split_qualified_name(&self, name: &str) -> Option<(String, String)> {
+        let (layers, word) = Self::split_path(name);
+        if layers.len() == 1 {
+            Some((layers[0].clone(), word))
+        } else if layers.is_empty() {
+            None
+        } else {
+            // For multi-layer paths, return the immediate parent as namespace
+            Some((layers.last().unwrap().clone(), word))
+        }
     }
 
     pub(crate) fn custom_dictionary_names(&self) -> Vec<String> {
@@ -293,68 +318,163 @@ impl Interpreter {
     fn resolve_short_name(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
         let upper = name.to_uppercase();
 
+        // 1. Built-in words (always highest priority, no ambiguity check)
         if let Some(def) = self.core_vocabulary.get(&upper) {
             return Some((upper, def.clone()));
         }
 
-        // Check imported module words (e.g., "PLAY" → "MUSIC::PLAY" in core_vocabulary)
+        // 2. Check imported module words (e.g., "PLAY" → "MUSIC@PLAY" in core_vocabulary)
         for module_name in &self.imported_modules {
-            let qualified = format!("{}::{}", module_name, upper);
+            let qualified = format!("{}@{}", module_name, upper);
             if let Some(def) = self.core_vocabulary.get(&qualified) {
                 return Some((qualified, def.clone()));
             }
         }
 
-        let mut best_module: Option<(String, Arc<WordDefinition>, u64)> = None;
+        // 3. Collect all module sample matches
+        let mut module_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
         for (module_name, dict) in &self.module_samples {
             if let Some(def) = dict.sample_words.get(&upper) {
-                let order = def.registration_order;
-                if best_module.as_ref().map(|(_, _, current)| order < *current).unwrap_or(true) {
-                    best_module = Some((format!("{}::{}", module_name, upper), def.clone(), order));
-                }
+                module_matches.push((format!("{}@{}", module_name, upper), def.clone(), def.registration_order));
             }
         }
-        if let Some((name, def, _)) = best_module {
+
+        // 4. Collect all custom dictionary matches
+        let mut custom_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
+        for (dict_name, dict) in &self.custom_dictionaries {
+            if let Some(def) = dict.words.get(&upper) {
+                custom_matches.push((format!("{}@{}", dict_name, upper), def.clone(), def.registration_order));
+            }
+        }
+
+        // 5. Ambiguity detection: if found in both module and custom, return None (error handled by caller)
+        if !module_matches.is_empty() && !custom_matches.is_empty() {
+            // Ambiguous: exists in both module and custom dictionaries
+            return None;
+        }
+
+        // 6. Return best module match
+        if !module_matches.is_empty() {
+            module_matches.sort_by_key(|(_, _, order)| *order);
+            let (name, def, _) = module_matches.into_iter().next().unwrap();
             return Some((name, def));
         }
 
-        let mut best_custom: Option<(String, Arc<WordDefinition>, u64)> = None;
-        for (dict_name, dict) in &self.custom_dictionaries {
-            if let Some(def) = dict.words.get(&upper) {
-                let order = def.registration_order;
-                if best_custom.as_ref().map(|(_, _, current)| order < *current).unwrap_or(true) {
-                    best_custom = Some((format!("{}::{}", dict_name, upper), def.clone(), order));
-                }
+        // 7. Return best custom match
+        if !custom_matches.is_empty() {
+            custom_matches.sort_by_key(|(_, _, order)| *order);
+            let (name, def, _) = custom_matches.into_iter().next().unwrap();
+            return Some((name, def));
+        }
+
+        None
+    }
+
+    /// Check if a short name is ambiguous (exists in both module samples and custom dictionaries).
+    /// Returns the list of conflicting qualified paths if ambiguous, empty vec otherwise.
+    pub(crate) fn check_ambiguity(&self, name: &str) -> Vec<String> {
+        let upper = name.to_uppercase();
+
+        // Built-in words are never ambiguous
+        if self.core_vocabulary.contains_key(&upper) {
+            return vec![];
+        }
+
+        let mut paths = Vec::new();
+        for (module_name, dict) in &self.module_samples {
+            if dict.sample_words.contains_key(&upper) {
+                paths.push(format!("{}@{}", module_name, upper));
             }
         }
-        best_custom.map(|(name, def, _)| (name, def))
+        for (dict_name, dict) in &self.custom_dictionaries {
+            if dict.words.contains_key(&upper) {
+                paths.push(format!("{}@{}", dict_name, upper));
+            }
+        }
+
+        if paths.len() > 1 { paths } else { vec![] }
     }
 
     pub(crate) fn resolve_word_entry(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
-        if let Some((namespace, word)) = self.split_qualified_name(name) {
-            if let Some(module_dict) = self.module_samples.get(&namespace) {
-                if let Some(def) = module_dict.sample_words.get(&word) {
-                    return Some((format!("{}::{}", namespace, word), def.clone()));
-                }
-            }
-            if let Some(custom_dict) = self.custom_dictionaries.get(&namespace) {
-                if let Some(def) = custom_dict.words.get(&word) {
-                    return Some((format!("{}::{}", namespace, word), def.clone()));
-                }
-            }
-            return self
-                .core_vocabulary
-                .get(name)
-                .cloned()
-                .map(|def| (name.to_uppercase(), def));
-        }
+        let (layers, word) = Self::split_path(name);
 
-        self.resolve_short_name(name)
+        match layers.len() {
+            0 => {
+                // Short name: use resolve_short_name
+                self.resolve_short_name(name)
+            }
+            1 => {
+                // MODULE@WORD or DICTNAME@WORD or BUILTIN@WORD
+                let ns = &layers[0];
+                if ns == "BUILTIN" {
+                    return self.core_vocabulary.get(&word).cloned().map(|def| (word.clone(), def));
+                }
+                if let Some(module_dict) = self.module_samples.get(ns.as_str()) {
+                    if let Some(def) = module_dict.sample_words.get(&word) {
+                        return Some((format!("{}@{}", ns, word), def.clone()));
+                    }
+                }
+                if let Some(custom_dict) = self.custom_dictionaries.get(ns.as_str()) {
+                    if let Some(def) = custom_dict.words.get(&word) {
+                        return Some((format!("{}@{}", ns, word), def.clone()));
+                    }
+                }
+                // Try as core vocabulary with qualified name
+                let qualified = format!("{}@{}", ns, word);
+                self.core_vocabulary.get(&qualified).cloned().map(|def| (qualified, def))
+            }
+            2 => {
+                // COINAGE@DICTNAME@WORD or DICTIONARY@MODULE@WORD or DICTIONARY@BUILTIN@WORD
+                let first = &layers[0];
+                let second = &layers[1];
+                if first == "COINAGE" {
+                    // COINAGE@DICTNAME@WORD
+                    if let Some(custom_dict) = self.custom_dictionaries.get(second.as_str()) {
+                        if let Some(def) = custom_dict.words.get(&word) {
+                            return Some((format!("{}@{}", second, word), def.clone()));
+                        }
+                    }
+                } else if first == "DICTIONARY" {
+                    // DICTIONARY@MODULE@WORD or DICTIONARY@BUILTIN@WORD
+                    if second == "BUILTIN" {
+                        return self.core_vocabulary.get(&word).cloned().map(|def| (word.clone(), def));
+                    }
+                    // DICTIONARY@MODULE@WORD (module builtin words)
+                    let qualified = format!("{}@{}", second, word);
+                    if let Some(def) = self.core_vocabulary.get(&qualified) {
+                        return Some((qualified, def.clone()));
+                    }
+                    // DICTIONARY@MODULE@WORD (module sample words)
+                    if let Some(module_dict) = self.module_samples.get(second.as_str()) {
+                        if let Some(def) = module_dict.sample_words.get(&word) {
+                            return Some((format!("{}@{}", second, word), def.clone()));
+                        }
+                    }
+                }
+                None
+            }
+            3 => {
+                // DICTIONARY@COINAGE@DICTNAME@WORD (fully qualified custom word)
+                // or DICTIONARY@BUILTIN@WORD (with extra layer)
+                let first = &layers[0];
+                let second = &layers[1];
+                let third = &layers[2];
+                if first == "DICTIONARY" && second == "COINAGE" {
+                    if let Some(custom_dict) = self.custom_dictionaries.get(third.as_str()) {
+                        if let Some(def) = custom_dict.words.get(&word) {
+                            return Some((format!("{}@{}", third, word), def.clone()));
+                        }
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
     }
 
-    /// Module-first word resolution (flat priority).
-    /// Fully qualified names (MODULE::WORD) always take highest priority.
-    /// Resolution order: module samples → user dictionary → core builtins.
+    /// Word resolution with path-based qualified names.
+    /// Fully qualified names (MODULE@WORD) always take highest priority.
+    /// Resolution order: core builtins → module samples → user dictionary.
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
         self.resolve_word_entry(name).map(|(_, def)| def)
     }
@@ -869,7 +989,17 @@ impl Interpreter {
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
         let (resolved_name, def) = self
             .resolve_word_entry(name)
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
+            .ok_or_else(|| {
+                let ambiguous = self.check_ambiguity(name);
+                if !ambiguous.is_empty() {
+                    AjisaiError::from(format!(
+                        "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
+                        name.to_uppercase(), ambiguous.join(", ")
+                    ))
+                } else {
+                    AjisaiError::UnknownWord(name.to_string())
+                }
+            })?;
 
         // Native implementation (built-in words with no user-defined code)
         if def.lines.is_empty() {
@@ -906,7 +1036,17 @@ impl Interpreter {
     pub(crate) async fn execute_word_async(&mut self, name: &str) -> Result<()> {
         let (resolved_name, def) = self
             .resolve_word_entry(name)
-            .ok_or_else(|| AjisaiError::UnknownWord(name.to_string()))?;
+            .ok_or_else(|| {
+                let ambiguous = self.check_ambiguity(name);
+                if !ambiguous.is_empty() {
+                    AjisaiError::from(format!(
+                        "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
+                        name.to_uppercase(), ambiguous.join(", ")
+                    ))
+                } else {
+                    AjisaiError::UnknownWord(name.to_string())
+                }
+            })?;
 
         // Native implementation (built-in words with no user-defined code)
         if def.lines.is_empty() {
@@ -1151,13 +1291,13 @@ impl Interpreter {
 
         for (dict_name, dict) in &self.custom_dictionaries {
             for (name, def) in &dict.words {
-                all_custom_words.push((format!("{}::{}", dict_name, name), Arc::clone(def)));
+                all_custom_words.push((format!("{}@{}", dict_name, name), Arc::clone(def)));
             }
         }
 
         for (module_name, module_dict) in &self.module_samples {
             for (name, def) in &module_dict.sample_words {
-                all_custom_words.push((format!("{}::{}", module_name, name), Arc::clone(def)));
+                all_custom_words.push((format!("{}@{}", module_name, name), Arc::clone(def)));
             }
         }
 
@@ -1204,14 +1344,14 @@ impl Interpreter {
         for (dict_name, dict) in &self.custom_dictionaries {
             for (name, def) in &dict.words {
                 if def.dependencies.contains(word_name) {
-                    result.insert(format!("{}::{}", dict_name, name));
+                    result.insert(format!("{}@{}", dict_name, name));
                 }
             }
         }
         for (module_name, module_dict) in &self.module_samples {
             for (name, def) in &module_dict.sample_words {
                 if def.dependencies.contains(word_name) {
-                    result.insert(format!("{}::{}", module_name, name));
+                    result.insert(format!("{}@{}", module_name, name));
                 }
             }
         }

@@ -309,7 +309,7 @@ async fn test_collect_for_formant_synthesis() {
     interp.execute("'music' IMPORT").await.unwrap();
 
     let result = interp
-        .execute("[ 800 1200 ] MUSIC::CHORD [ 300 2500 ] MUSIC::CHORD 2 COLLECT")
+        .execute("[ 800 1200 ] MUSIC@CHORD [ 300 2500 ] MUSIC@CHORD 2 COLLECT")
         .await;
     assert!(
         result.is_ok(),

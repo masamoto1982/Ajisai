@@ -28,91 +28,91 @@ struct ModuleSpec {
 
 const MUSIC_WORDS: &[ModuleWord] = &[
     ModuleWord {
-        name: "MUSIC::SEQ",
+        name: "MUSIC@SEQ",
         description: "Set sequential playback mode",
         executor: audio::op_seq,
         preserves_modes: true,
     },
     ModuleWord {
-        name: "MUSIC::SIM",
+        name: "MUSIC@SIM",
         description: "Set simultaneous playback mode",
         executor: audio::op_sim,
         preserves_modes: true,
     },
     ModuleWord {
-        name: "MUSIC::SLOT",
+        name: "MUSIC@SLOT",
         description: "Set slot duration in seconds",
         executor: audio::op_slot,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::GAIN",
+        name: "MUSIC@GAIN",
         description: "Set volume level (0.0-1.0)",
         executor: audio::op_gain,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::GAIN-RESET",
+        name: "MUSIC@GAIN-RESET",
         description: "Reset volume to default (1.0)",
         executor: audio::op_gain_reset,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::PAN",
+        name: "MUSIC@PAN",
         description: "Set stereo position (-1.0 left to 1.0 right)",
         executor: audio::op_pan,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::PAN-RESET",
+        name: "MUSIC@PAN-RESET",
         description: "Reset pan to center (0.0)",
         executor: audio::op_pan_reset,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::FX-RESET",
+        name: "MUSIC@FX-RESET",
         description: "Reset all audio effects to defaults",
         executor: audio::op_fx_reset,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::PLAY",
+        name: "MUSIC@PLAY",
         description: "Play audio",
         executor: audio::op_play,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::CHORD",
+        name: "MUSIC@CHORD",
         description: "Mark vector as chord (simultaneous)",
         executor: audio::op_chord,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::ADSR",
+        name: "MUSIC@ADSR",
         description: "Set ADSR envelope",
         executor: audio::op_adsr,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::SINE",
+        name: "MUSIC@SINE",
         description: "Set sine waveform",
         executor: audio::op_sine,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::SQUARE",
+        name: "MUSIC@SQUARE",
         description: "Set square waveform",
         executor: audio::op_square,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::SAW",
+        name: "MUSIC@SAW",
         description: "Set sawtooth waveform",
         executor: audio::op_saw,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "MUSIC::TRI",
+        name: "MUSIC@TRI",
         description: "Set triangle waveform",
         executor: audio::op_tri,
         preserves_modes: false,
@@ -121,37 +121,37 @@ const MUSIC_WORDS: &[ModuleWord] = &[
 
 const JSON_WORDS: &[ModuleWord] = &[
     ModuleWord {
-        name: "JSON::PARSE",
+        name: "JSON@PARSE",
         description: "Parse JSON string to Ajisai value",
         executor: json::op_parse,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "JSON::STRINGIFY",
+        name: "JSON@STRINGIFY",
         description: "Convert Ajisai value to JSON string",
         executor: json::op_stringify,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "JSON::GET",
+        name: "JSON@GET",
         description: "Get value by key from JSON object",
         executor: json::op_json_get,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "JSON::KEYS",
+        name: "JSON@KEYS",
         description: "Get all keys from JSON object",
         executor: json::op_json_keys,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "JSON::SET",
+        name: "JSON@SET",
         description: "Set key-value in JSON object",
         executor: json::op_json_set,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "JSON::EXPORT",
+        name: "JSON@EXPORT",
         description: "Export stack top as JSON file download",
         executor: json::op_json_export,
         preserves_modes: false,
@@ -160,13 +160,13 @@ const JSON_WORDS: &[ModuleWord] = &[
 
 const IO_WORDS: &[ModuleWord] = &[
     ModuleWord {
-        name: "IO::INPUT",
+        name: "IO@INPUT",
         description: "Read text from input buffer",
         executor: json::op_input,
         preserves_modes: false,
     },
     ModuleWord {
-        name: "IO::OUTPUT",
+        name: "IO@OUTPUT",
         description: "Write value to output buffer",
         executor: json::op_output,
         preserves_modes: false,
@@ -212,7 +212,7 @@ fn register_module_words_in_dictionary(interp: &mut Interpreter, words: &[Module
                 description: Some(word.description.to_string()),
                 dependencies: HashSet::new(),
                 original_source: None,
-                namespace: word.name.split_once("::").map(|(ns, _)| ns.to_string()),
+                namespace: word.name.split_once('@').map(|(ns, _)| ns.to_string()),
                 registration_order: 0,
             }),
         );
@@ -290,13 +290,13 @@ fn register_module_sample_words(
         let short_name = sample.name.to_uppercase();
         if interp.core_vocabulary.contains_key(&short_name) {
             interp.output_buffer.push_str(&format!(
-                "Warning: '{}' in module {} conflicts with a built-in word.\nUse {}::{} to call it explicitly.\n",
+                "Warning: '{}' in module {} conflicts with a built-in word.\nUse {}@{} to call it explicitly.\n",
                 short_name, module_name, module_name, short_name
             ));
         } else if let Some((winner, _)) = interp.resolve_word_entry(&short_name) {
             interp.output_buffer.push_str(&format!(
-                "Warning: '{}' in module {} conflicts with {}.\nUse {}::{} to call it explicitly.\n",
-                short_name, module_name, winner, module_name, short_name
+                "Warning: '{}' now exists in both {}@{} and {}. Use a qualified path when calling this word.\n",
+                short_name, module_name, short_name, winner
             ));
         }
         module_dict.sample_words.insert(short_name, Arc::new(def));
@@ -361,7 +361,7 @@ fn rebuild_module_sample_dependencies(interp: &mut Interpreter, module_name: &st
                     if let crate::types::Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
                         if word_name_set.contains(&upper_s) {
-                            dependencies.insert(format!("{}::{}", module_name, upper_s));
+                            dependencies.insert(format!("{}@{}", module_name, upper_s));
                         }
                     }
                 }
@@ -384,7 +384,7 @@ fn rebuild_module_sample_dependencies(interp: &mut Interpreter, module_name: &st
                 interp.dependents
                     .entry(dep)
                     .or_default()
-                    .insert(format!("{}::{}", module_name, word_name));
+                    .insert(format!("{}@{}", module_name, word_name));
             }
         }
     }

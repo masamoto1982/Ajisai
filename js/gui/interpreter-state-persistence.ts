@@ -41,7 +41,7 @@ const toCustomWord = (
     dictionary: wordData[0],
     name: wordData[1],
     description: wordData[2],
-    definition: getDefinition(`${wordData[0]}::${wordData[1]}`)
+    definition: getDefinition(`${wordData[0]}@${wordData[1]}`)
 });
 
 const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
@@ -65,7 +65,7 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
             dictionary: wordData[0],
             name: wordData[1],
             description: wordData[2],
-            definition: interpreter.lookup_word_definition(`${wordData[0]}::${wordData[1]}`)
+            definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`)
         }));
 };
 

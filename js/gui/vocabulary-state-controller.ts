@@ -289,14 +289,14 @@ export const createVocabularyManager = (
                 wordInfo.name,
                 wordInfo.description || '',
                 className,
-                () => onWordClick(wordInfo.dictionary === 'SAMPLE' ? wordInfo.name : `${wordInfo.dictionary}::${wordInfo.name}`),
+                () => onWordClick(wordInfo.dictionary === 'SAMPLE' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
                 () => {
-                    const lookupName = `${wordInfo.dictionary}::${wordInfo.name}`;
+                    const lookupName = `${wordInfo.dictionary}@${wordInfo.name}`;
                     const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName);
                     renderWordInfo(elements.customWordInfo, definition || DEFAULT_WORD_INFO_MESSAGE, !definition);
                 },
                 () => { resetWordInfoDisplay(elements.customWordInfo); },
-                (event) => renderDeleteContextMenu(event, `${wordInfo.dictionary}::${wordInfo.name}`)
+                (event) => renderDeleteContextMenu(event, `${wordInfo.dictionary}@${wordInfo.name}`)
             );
 
             container.appendChild(button);
