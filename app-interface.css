@@ -366,6 +366,12 @@ body[data-active-area] #state-panel {
     overflow-y: auto;
 }
 
+#stack-display.is-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* 辞書ヘッダー（検索窓） */
 .vocabulary-header {
     display: flex;
@@ -479,9 +485,9 @@ body[data-active-area] #state-panel {
 }
 
 .words-area .words-display.is-empty {
-    align-items: flex-start;
-    align-content: flex-start;
-    justify-content: flex-start;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
 }
 
 .empty-words-message {
