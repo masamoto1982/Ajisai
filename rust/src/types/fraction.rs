@@ -208,11 +208,8 @@ impl Fraction {
                 if *d == 1 { Some(*n) } else { None }
             }
             FractionRepr::Big { numerator, denominator } => {
-                if denominator.is_one() {
-                    numerator.to_i64()
-                } else {
-                    None
-                }
+                if !denominator.is_one() { return None; }
+                numerator.to_i64()
             }
         }
     }
@@ -228,11 +225,8 @@ impl Fraction {
                 }
             }
             FractionRepr::Big { numerator, denominator } => {
-                if denominator.is_one() && *numerator >= BigInt::zero() {
-                    numerator.to_usize()
-                } else {
-                    None
-                }
+                if !denominator.is_one() || *numerator < BigInt::zero() { return None; }
+                numerator.to_usize()
             }
         }
     }
@@ -250,9 +244,9 @@ impl Fraction {
             }
             a
         }
-        let g = compute_gcd_i128(num, den);
-        let mut n = num / g;
-        let mut d = den / g;
+        let g: i128 = compute_gcd_i128(num, den);
+        let mut n: i128 = num / g;
+        let mut d: i128 = den / g;
         if d < 0 {
             n = -n;
             d = -d;
@@ -276,10 +270,10 @@ impl Fraction {
         debug_assert!(n.is_integer());
 
         if let (Some((a, b)), Some((n_val, _))) = (self.extract_i64_pair(), n.extract_i64_pair()) {
-            let g = compute_gcd_i64(n_val, b);
-            let n_r = (n_val / g) as i128;
-            let b_r = (b / g) as i128;
-            let num = (a as i128) * n_r;
+            let g: i64 = compute_gcd_i64(n_val, b);
+            let n_r: i128 = (n_val / g) as i128;
+            let b_r: i128 = (b / g) as i128;
+            let num: i128 = (a as i128) * n_r;
             return Self::create_from_i128(num, b_r);
         }
 
@@ -346,12 +340,11 @@ impl Fraction {
             Ok(Fraction::new(if int_part < BigInt::zero() { -total_num } else { total_num }, frac_den))
         } else {
             let num: BigInt = BigInt::from_str(s).map_err(|e| e.to_string())?;
-            // Integer / 1 is already in lowest terms — skip GCD
+            // Already in lowest terms -- skip GCD
             if let Some(n) = num.to_i64() {
-                Ok(Fraction { repr: FractionRepr::Small(n, 1) })
-            } else {
-                Ok(Fraction { repr: FractionRepr::Big { numerator: num, denominator: BigInt::one() } })
+                return Ok(Fraction { repr: FractionRepr::Small(n, 1) });
             }
+            Ok(Fraction { repr: FractionRepr::Big { numerator: num, denominator: BigInt::one() } })
         }
     }
 
