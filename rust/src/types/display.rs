@@ -40,7 +40,7 @@ fn format_value_auto(data: &ValueData) -> String {
     }
 }
 
-fn is_string_like(values: &[Value]) -> bool {
+pub fn is_string_like(values: &[Value]) -> bool {
     values.iter().all(|v| {
         if let ValueData::Scalar(f) = &v.data {
             f.is_integer() && {

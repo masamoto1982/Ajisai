@@ -3,6 +3,7 @@ use crate::interpreter;
 use crate::interpreter::Interpreter;
 use crate::tokenizer;
 use crate::types::fraction::Fraction;
+use crate::types::display::is_string_like;
 use crate::types::{ExecutionLine, Token, Value, ValueData};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
@@ -10,8 +11,11 @@ use serde_wasm_bindgen::to_value;
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
-fn is_string_value(_val: &Value) -> bool {
-    false
+fn is_string_value(val: &Value) -> bool {
+    match &val.data {
+        ValueData::Vector(children) => !children.is_empty() && is_string_like(children),
+        _ => false,
+    }
 }
 
 fn is_boolean_value(_val: &Value) -> bool {
@@ -31,21 +35,37 @@ fn is_vector_value(val: &Value) -> bool {
 }
 
 fn value_as_string(val: &Value) -> String {
-    let fractions = val.collect_fractions_flat();
-    let bytes: Vec<u8> = fractions
-        .iter()
-        .filter_map(|f| {
-            f.to_i64().and_then(|n| {
-                if n >= 0 && n <= 255 {
-                    Some(n as u8)
-                } else {
-                    None
+    match &val.data {
+        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
+            children
+                .iter()
+                .filter_map(|child| {
+                    if let ValueData::Scalar(f) = &child.data {
+                        f.to_i64().and_then(|n| {
+                            if n >= 0 && n <= 0x10FFFF {
+                                char::from_u32(n as u32)
+                            } else {
+                                None
+                            }
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        }
+        ValueData::Scalar(f) => {
+            if let Some(n) = f.to_i64() {
+                if n >= 0 && n <= 0x10FFFF {
+                    if let Some(c) = char::from_u32(n as u32) {
+                        return c.to_string();
+                    }
                 }
-            })
-        })
-        .collect();
-
-    String::from_utf8_lossy(&bytes).into_owned()
+            }
+            String::new()
+        }
+        _ => String::new(),
+    }
 }
 
 fn bracket_chars_for_depth(depth: usize) -> (char, char) {
