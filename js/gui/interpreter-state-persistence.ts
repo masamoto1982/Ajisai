@@ -267,7 +267,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             return;
         }
 
-        const selectedDictionary = (document.getElementById('custom-dictionary-select') as HTMLSelectElement | null)?.value || 'SAMPLE';
+        const selectedDictionary = (document.getElementById('custom-dictionary-select') as HTMLSelectElement | null)?.value || 'DEMO';
         const suggestedName = selectedDictionary.toLowerCase();
         const requestedName = window.prompt('Export file name', suggestedName)?.trim();
         if (!requestedName) {

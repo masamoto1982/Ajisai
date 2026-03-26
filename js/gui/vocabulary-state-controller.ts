@@ -177,7 +177,7 @@ export const createVocabularyManager = (
     // 検索フィルターとカスタムワードのキャッシュ
     let searchFilter = '';
     let cachedCustomWords: Array<[string, string, string | null, boolean]> = [];
-    let selectedDictionary = 'SAMPLE';
+    let selectedDictionary = 'DEMO';
 
     const deleteWord = async (wordName: string, forceDelete: boolean): Promise<boolean> => {
         const deleteCode = forceDelete
@@ -289,7 +289,7 @@ export const createVocabularyManager = (
                 wordInfo.name,
                 wordInfo.description || '',
                 className,
-                () => onWordClick(wordInfo.dictionary === 'SAMPLE' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
+                () => onWordClick(wordInfo.dictionary === 'DEMO' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
                 () => {
                     const lookupName = `${wordInfo.dictionary}@${wordInfo.name}`;
                     const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName);
@@ -337,14 +337,14 @@ export const createVocabularyManager = (
         cachedCustomWords = customWordsInfo || [];
         const dictionaries = Array.from(new Set(cachedCustomWords.map(([dictionary]) => dictionary))).sort();
         elements.customDictionarySelect.innerHTML = '';
-        for (const dictionary of dictionaries.length > 0 ? dictionaries : ['SAMPLE']) {
+        for (const dictionary of dictionaries.length > 0 ? dictionaries : ['DEMO']) {
             const option = document.createElement('option');
             option.value = dictionary;
-            option.textContent = dictionary === 'SAMPLE' ? 'Sample' : dictionary;
+            option.textContent = dictionary === 'DEMO' ? 'Demonstration' : dictionary;
             elements.customDictionarySelect.appendChild(option);
         }
         if (!dictionaries.includes(selectedDictionary)) {
-            selectedDictionary = dictionaries.includes('SAMPLE') ? 'SAMPLE' : (dictionaries[0] || 'SAMPLE');
+            selectedDictionary = dictionaries.includes('DEMO') ? 'DEMO' : (dictionaries[0] || 'DEMO');
         }
         elements.customDictionarySelect.value = selectedDictionary;
         const words = cachedCustomWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);

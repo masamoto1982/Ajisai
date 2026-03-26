@@ -600,7 +600,7 @@ impl AjisaiInterpreter {
             self.interpreter.active_custom_dictionary = word
                 .dictionary
                 .clone()
-                .unwrap_or_else(|| "SAMPLE".to_string())
+                .unwrap_or_else(|| "DEMO".to_string())
                 .to_uppercase();
             let definition = match &word.definition {
                 Some(def) if !def.is_empty() => def.clone(),

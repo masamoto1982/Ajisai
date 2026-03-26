@@ -145,7 +145,7 @@ impl Interpreter {
             flow_consumed_log: Vec::new(),
             module_samples: HashMap::new(),
             next_registration_order: 1,
-            active_custom_dictionary: "SAMPLE".to_string(),
+            active_custom_dictionary: "DEMO".to_string(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -259,8 +259,8 @@ impl Interpreter {
     /// `@` 区切りのパスを解析して (layers, word) を返す。
     /// 例:
     ///   "MUSIC@PLAY"                       → (["MUSIC"], "PLAY")
-    ///   "USER@SAMPLE@SAY-HELLO"            → (["USER", "SAMPLE"], "SAY-HELLO")
-    ///   "DICT@USER@SAMPLE@SAY-HELLO"       → (["DICT", "USER", "SAMPLE"], "SAY-HELLO")
+    ///   "USER@DEMO@SAY-HELLO"              → (["USER", "DEMO"], "SAY-HELLO")
+    ///   "DICT@USER@DEMO@SAY-HELLO"         → (["DICT", "USER", "DEMO"], "SAY-HELLO")
     ///   "SAY-HELLO"                        → ([], "SAY-HELLO")  ← 省略形
     pub(crate) fn split_path(name: &str) -> (Vec<String>, String) {
         let parts: Vec<String> = name.split('@').map(|s| s.to_uppercase()).collect();
@@ -310,7 +310,7 @@ impl Interpreter {
     pub(crate) fn sync_sample_custom_words_cache(&mut self) {
         self.custom_words = self
             .custom_dictionaries
-            .get("SAMPLE")
+            .get("DEMO")
             .map(|dict| dict.words.clone())
             .unwrap_or_default();
     }
@@ -1253,7 +1253,7 @@ impl Interpreter {
         self.imported_modules.clear();
         self.module_samples.clear();
         self.next_registration_order = 1;
-        self.active_custom_dictionary = "SAMPLE".to_string();
+        self.active_custom_dictionary = "DEMO".to_string();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }

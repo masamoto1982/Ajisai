@@ -688,7 +688,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_del_sample_custom_words_with_fqn() {
-        // GUI経由のDEL: FQN（SAMPLE@WORD）形式での削除
+        // GUI経由のDEL: FQN（DEMO@WORD）形式での削除
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
@@ -701,20 +701,20 @@ mod tests {
         assert!(interp.custom_words.contains_key("D4"));
 
         // FQN形式で削除
-        let result = interp.execute("'SAMPLE@D4' DEL").await;
+        let result = interp.execute("'DEMO@D4' DEL").await;
         assert!(result.is_ok(), "Should delete D4 via FQN: {:?}", result.err());
         assert!(!interp.custom_words.contains_key("D4"));
 
         // 存在しないFQNは適切にエラー
-        let result = interp.execute("'SAMPLE@NONEXISTENT' DEL").await;
+        let result = interp.execute("'DEMO@NONEXISTENT' DEL").await;
         assert!(result.is_err(), "Should error for non-existent FQN word");
 
         // 依存関係ありの場合もFQNで正しくエラー
-        let result = interp.execute("'SAMPLE@C4' DEL").await;
+        let result = interp.execute("'DEMO@C4' DEL").await;
         assert!(result.is_err(), "Should not delete C4 via FQN (has dependents)");
 
         // forceフラグ付きFQNで強制削除
-        let result = interp.execute("! 'SAMPLE@C4' DEL").await;
+        let result = interp.execute("! 'DEMO@C4' DEL").await;
         assert!(result.is_ok(), "Should force delete C4 via FQN: {:?}", result.err());
         assert!(!interp.custom_words.contains_key("C4"));
     }
@@ -924,20 +924,20 @@ mod tests {
         let output = interp.collect_output();
 
         assert!(interp.custom_words.contains_key("C4"),
-            "User word C4 should remain in SAMPLE after IMPORT");
+            "User word C4 should remain in DEMO after IMPORT");
         assert!(output.contains("Warning"),
             "Should warn about the conflict: {}", output);
 
-        // C4 is now ambiguous (exists in both MUSIC and SAMPLE), should error
+        // C4 is now ambiguous (exists in both MUSIC and DEMO), should error
         let result = interp.execute("C4").await;
         assert!(result.is_err(), "C4 should be ambiguous");
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Ambiguous"),
             "Expected ambiguity error, got: {}", err_msg);
 
-        // Qualified access to SAMPLE@C4 should work
-        let result = interp.execute("SAMPLE@C4").await;
-        assert!(result.is_ok(), "Qualified SAMPLE@C4 should work: {:?}", result.err());
+        // Qualified access to DEMO@C4 should work
+        let result = interp.execute("DEMO@C4").await;
+        assert!(result.is_ok(), "Qualified DEMO@C4 should work: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
             let scalar = val
                 .as_scalar()
@@ -946,9 +946,9 @@ mod tests {
                         .and_then(|children| children.first())
                         .and_then(|child| child.as_scalar())
                 })
-                .expect("SAMPLE@C4 should resolve to a numeric value");
+                .expect("DEMO@C4 should resolve to a numeric value");
             assert_eq!(scalar.to_i64().unwrap(), 999,
-                "SAMPLE@C4 should remain the user-defined value");
+                "DEMO@C4 should remain the user-defined value");
         }
 
         // Qualified access to MUSIC@C4 should work too
@@ -1036,40 +1036,40 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_dict_at_word() {
-        // SAMPLE@WORD resolves custom word
+        // DEMO@WORD resolves custom word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("SAMPLE@SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        let result = interp.execute("DEMO@SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "DEMO@SAY-HELLO-WORLD should resolve: {:?}", result.err());
         assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
     async fn test_path_user_dict_word() {
-        // USER@SAMPLE@WORD resolves custom word
+        // USER@DEMO@WORD resolves custom word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("USER@SAMPLE@SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "USER@SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        let result = interp.execute("USER@DEMO@SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "USER@DEMO@SAY-HELLO-WORLD should resolve: {:?}", result.err());
         assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
     async fn test_path_fully_qualified_custom() {
-        // DICT@USER@SAMPLE@WORD resolves custom word
+        // DICT@USER@DEMO@WORD resolves custom word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("DICT@USER@SAMPLE@SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "DICT@USER@SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        let result = interp.execute("DICT@USER@DEMO@SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "DICT@USER@DEMO@SAY-HELLO-WORLD should resolve: {:?}", result.err());
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -1143,8 +1143,8 @@ mod tests {
         restore_sample_words(&mut interp, &sample_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("sample@say-hello-world").await;
-        assert!(result.is_ok(), "sample@say-hello-world should resolve: {:?}", result.err());
+        let result = interp.execute("demo@say-hello-world").await;
+        assert!(result.is_ok(), "demo@say-hello-world should resolve: {:?}", result.err());
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -1158,13 +1158,13 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        // C4 now exists in both MUSIC (sample) and SAMPLE (custom)
+        // C4 now exists in both MUSIC (sample) and DEMO (custom)
         let result = interp.execute("C4").await;
         assert!(result.is_err(), "C4 should be ambiguous");
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Ambiguous"), "Expected ambiguity error, got: {}", err_msg);
         assert!(err_msg.contains("MUSIC@C4"), "Should mention MUSIC@C4: {}", err_msg);
-        assert!(err_msg.contains("SAMPLE@C4"), "Should mention SAMPLE@C4: {}", err_msg);
+        assert!(err_msg.contains("DEMO@C4"), "Should mention DEMO@C4: {}", err_msg);
     }
 
     #[tokio::test]
@@ -1184,9 +1184,9 @@ mod tests {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
 
-        // SAMPLE@C4 should resolve to 999
-        let result = interp.execute("SAMPLE@C4").await;
-        assert!(result.is_ok(), "SAMPLE@C4 should resolve: {:?}", result.err());
+        // DEMO@C4 should resolve to 999
+        let result = interp.execute("DEMO@C4").await;
+        assert!(result.is_ok(), "DEMO@C4 should resolve: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
             let scalar = val
                 .as_scalar()
@@ -1195,7 +1195,7 @@ mod tests {
                         .and_then(|children| children.first())
                         .and_then(|child| child.as_scalar())
                 })
-                .expect("SAMPLE@C4 should be numeric");
+                .expect("DEMO@C4 should be numeric");
             assert_eq!(scalar.to_i64().unwrap(), 999);
         }
     }
@@ -1232,12 +1232,12 @@ mod tests {
         assert_eq!(layers, vec!["MUSIC"]);
         assert_eq!(word, "PLAY");
 
-        let (layers, word) = Interpreter::split_path("USER@SAMPLE@SAY-HELLO");
-        assert_eq!(layers, vec!["USER", "SAMPLE"]);
+        let (layers, word) = Interpreter::split_path("USER@DEMO@SAY-HELLO");
+        assert_eq!(layers, vec!["USER", "DEMO"]);
         assert_eq!(word, "SAY-HELLO");
 
-        let (layers, word) = Interpreter::split_path("DICT@USER@SAMPLE@SAY-HELLO");
-        assert_eq!(layers, vec!["DICT", "USER", "SAMPLE"]);
+        let (layers, word) = Interpreter::split_path("DICT@USER@DEMO@SAY-HELLO");
+        assert_eq!(layers, vec!["DICT", "USER", "DEMO"]);
         assert_eq!(word, "SAY-HELLO");
 
         let (layers, word) = Interpreter::split_path("SAY-HELLO");

@@ -1068,12 +1068,12 @@ Ajisaiの組み込みワードは、**言語コアとして常に利用可能で
 ```ajisai
 'music' IMPORT
 : 999 ; 'C4' DEF
-# → Warning: 'C4' now exists in both MUSIC@C4 and SAMPLE@C4.
+# → Warning: 'C4' now exists in both MUSIC@C4 and DEMO@C4.
 #   Use a qualified path when calling this word.
 ```
 
 衝突後、短縮名 `C4` は曖昧となりエラーとなるため、
-`MUSIC@C4` または `SAMPLE@C4` のようにパス記法で指定する必要がある。
+`MUSIC@C4` または `DEMO@C4` のようにパス記法で指定する必要がある。
 
 #### IMPORT 時の衝突
 
@@ -1083,7 +1083,7 @@ Ajisaiの組み込みワードは、**言語コアとして常に利用可能で
 ```ajisai
 : 100 ; 'C4' DEF
 'music' IMPORT
-# → Warning: 'C4' now exists in both MUSIC@C4 and SAMPLE@C4.
+# → Warning: 'C4' now exists in both MUSIC@C4 and DEMO@C4.
 #   Use a qualified path when calling this word.
 ```
 
@@ -1169,14 +1169,14 @@ Ajisaiの組み込みワードは、**言語コアとして常に利用可能で
 |---|---|
 | `DICT@CORE@WORD` | コア組み込みワード |
 | `DICT@MODULE@WORD` | モジュールワード（例: `DICT@MUSIC@PLAY`） |
-| `DICT@USER@DICTNAME@WORD` | ユーザー定義ワード（例: `DICT@USER@SAMPLE@SAY-HELLO`） |
+| `DICT@USER@DICTNAME@WORD` | ユーザー定義ワード（例: `DICT@USER@DEMO@SAY-HELLO`） |
 
 省略形（左セグメントから省略可能）:
 
 | 記法 | 意味 |
 |---|---|
 | `MUSIC@PLAY` | MUSICモジュールのPLAY |
-| `SAMPLE@SAY-HELLO` | SAMPLE辞書のSAY-HELLO |
+| `DEMO@SAY-HELLO` | DEMO辞書のSAY-HELLO |
 | `SAY-HELLO` | 名前衝突がない場合の省略形 |
 
 ### 6.5 カスタムワード {#WORD-CUSTOM}
