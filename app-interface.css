@@ -552,6 +552,7 @@ body[data-active-area] #state-panel {
    flex: 1.618 のままだと縦に引き伸ばされ、words-display が下詰めになる */
 .words-area .dictionary-sheet-selector {
     flex: 0 0 auto;
+    padding: 4px;
 }
 
 .dictionary-sheet-selector select {
