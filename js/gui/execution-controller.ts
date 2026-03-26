@@ -1,5 +1,3 @@
-// js/gui/execution-controller.ts
-
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
 import { createStepExecutor, StepExecutor } from './step-executor';
@@ -33,14 +31,19 @@ interface ExecutionSnapshot {
     readonly importedModules: string[];
 }
 
+const mapWordDataToUserWord = (
+    interpreter: AjisaiInterpreter,
+    wordData: [string, string, string | null, boolean]
+): UserWord => ({
+    dictionary: wordData[0],
+    name: wordData[1],
+    definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
+    description: wordData[2]
+});
+
 const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
     const userWordsInfo = interpreter.collect_user_words_info();
-    return userWordsInfo.map(wordData => ({
-        dictionary: wordData[0],
-        name: wordData[1],
-        definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
-        description: wordData[2]
-    }));
+    return userWordsInfo.map(wordData => mapWordDataToUserWord(interpreter, wordData));
 };
 
 const restoreInterpreterState = (

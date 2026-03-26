@@ -957,8 +957,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_module_first_sample_takes_priority() {
-        // Module-first: module sample shorthand takes highest priority
+    async fn test_module_word_resolves_without_conflict() {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();

@@ -1,19 +1,22 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::Interpreter;
-use crate::types::{Value, ValueData};
+use crate::interpreter::{AsyncAction, Interpreter};
+use crate::types::{Token, Value, ValueData};
 
 fn format_scalar_to_source(val: &Value) -> Result<String> {
-    if let Some(f) = val.as_scalar() {
-        if f.is_integer() {
-            return Ok(f.numerator().to_string());
-        }
-        return Ok(format!("{}/{}", f.numerator(), f.denominator()));
+    let Some(f) = val.as_scalar() else {
+        return Err(AjisaiError::create_structure_error(
+            "scalar",
+            "non-scalar value",
+        ));
+    };
+
+    if f.is_integer() {
+        return Ok(f.numerator().to_string());
     }
-    Err(AjisaiError::create_structure_error("scalar", "non-scalar value"))
+    Ok(format!("{}/{}", f.numerator(), f.denominator()))
 }
 
-fn format_token_to_source(token: &crate::types::Token) -> String {
-    use crate::types::Token;
+fn format_token_to_source(token: &Token) -> String {
     match token {
         Token::Number(n) => n.to_string(),
         Token::String(s) => format!("'{}'", s),
@@ -47,7 +50,7 @@ fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
                 .iter()
                 .map(|c| format_value_to_source_inner(c, depth + 1))
                 .collect::<Result<Vec<_>>>()?;
-            let joined = inner.join(" ");
+            let joined: String = inner.join(" ");
             if depth > 0 {
                 Ok(format!("[ {} ]", joined))
             } else {
@@ -62,16 +65,16 @@ pub fn format_vector_to_source(val: &Value) -> Result<String> {
 }
 
 pub fn execute_vector_as_code(interp: &mut Interpreter, val: &Value) -> Result<()> {
-    let source = format_vector_to_source(val)?;
+    let source: String = format_vector_to_source(val)?;
 
-    let tokens = crate::tokenizer::tokenize(&source)
-        .map_err(|e| AjisaiError::from(format!("Tokenization error: {}", e)))?;
+    let tokens: Vec<Token> = crate::tokenizer::tokenize(&source)
+        .map_err(|e| AjisaiError::from(format!("EXECUTE_VECTOR: expected valid tokens, got {}", e)))?;
 
-    let (_, action) = interp.execute_section_core(&tokens, 0)?;
+    let (_, action): (usize, Option<AsyncAction>) = interp.execute_section_core(&tokens, 0)?;
 
     if action.is_some() {
         return Err(AjisaiError::from(
-            "Async operations not supported in vector execution",
+            "EXECUTE_VECTOR: expected synchronous execution, got async operation",
         ));
     }
 
@@ -85,56 +88,48 @@ mod tests {
 
     #[test]
     fn test_format_vector_to_source_simple() {
-        // [ 1 2 3 ] → "1 2 3"
-        let val = Value::from_vector(vec![
+        let val: Value = Value::from_vector(vec![
             Value::from_int(1),
             Value::from_int(2),
             Value::from_int(3),
         ]);
-        let source = format_vector_to_source(&val).unwrap();
+        let source: String = format_vector_to_source(&val).unwrap();
         assert_eq!(source, "1 2 3");
     }
 
     #[test]
     fn test_format_vector_to_source_with_nested() {
-        // [ [ 2 ] * ] — from_string("*") now creates Vector([Scalar(42)])
-        // so format_vector_to_source sees two nested vectors: [ 2 ] and [ 42 ]
-        let val = Value::from_vector(vec![
+        let val: Value = Value::from_vector(vec![
             Value::from_vector(vec![Value::from_int(2)]),
             Value::from_string("*"),
         ]);
-        let source = format_vector_to_source(&val).unwrap();
+        let source: String = format_vector_to_source(&val).unwrap();
         assert_eq!(source, "[ 2 ] [ 42 ]");
     }
 
     #[test]
     fn test_format_vector_to_source_symbols() {
-        // from_string("DUP") → Vector([68, 85, 80])
-        // from_string("*")   → Vector([42])
-        // format_vector_to_source renders these as nested vectors of codepoints
-        let val = Value::from_vector(vec![Value::from_string("DUP"), Value::from_string("*")]);
-        let source = format_vector_to_source(&val).unwrap();
+        let val: Value = Value::from_vector(vec![Value::from_string("DUP"), Value::from_string("*")]);
+        let source: String = format_vector_to_source(&val).unwrap();
         assert_eq!(source, "[ 68 85 80 ] [ 42 ]");
     }
 
     #[test]
     fn test_format_vector_to_source_nil() {
-        // NIL → "NIL"
-        let val = Value::nil();
-        let source = format_vector_to_source(&val).unwrap();
+        let val: Value = Value::nil();
+        let source: String = format_vector_to_source(&val).unwrap();
         assert_eq!(source, "NIL");
     }
 
     #[test]
     fn test_format_vector_to_source_fraction() {
-        // [ 1/3 ] → "1/3"
         use crate::types::fraction::Fraction;
         use num_bigint::BigInt;
-        let val = Value::from_vector(vec![Value::from_fraction(Fraction::new(
+        let val: Value = Value::from_vector(vec![Value::from_fraction(Fraction::new(
             BigInt::from(1),
             BigInt::from(3),
         ))]);
-        let source = format_vector_to_source(&val).unwrap();
+        let source: String = format_vector_to_source(&val).unwrap();
         assert_eq!(source, "1/3");
     }
 }
