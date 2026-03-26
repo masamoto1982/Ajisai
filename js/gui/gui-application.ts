@@ -26,10 +26,10 @@ export interface GUIElements {
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
     readonly builtInWordsDisplay: HTMLElement;
-    readonly customWordsDisplay: HTMLElement;
+    readonly userWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
-    readonly customWordInfo: HTMLElement;
-    readonly customDictionarySelect: HTMLSelectElement;
+    readonly userWordInfo: HTMLElement;
+    readonly userDictionarySelect: HTMLSelectElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
     readonly dictionarySheetSelect: HTMLSelectElement;
@@ -66,10 +66,10 @@ const cacheElements = (): GUIElements => ({
     outputDisplay: document.getElementById('output-display')!,
     stackDisplay: document.getElementById('stack-display')!,
     builtInWordsDisplay: document.getElementById('core-words-display')!,
-    customWordsDisplay: document.getElementById('custom-words-display')!,
+    userWordsDisplay: document.getElementById('user-words-display')!,
     builtInWordInfo: document.getElementById('core-word-info')!,
-    customWordInfo: document.getElementById('custom-word-info')!,
-    customDictionarySelect: document.getElementById('custom-dictionary-select') as HTMLSelectElement,
+    userWordInfo: document.getElementById('user-word-info')!,
+    userDictionarySelect: document.getElementById('user-dictionary-select') as HTMLSelectElement,
     dictionarySearch: document.getElementById('dictionary-search') as HTMLInputElement,
     dictionarySearchClearBtn: document.getElementById('dictionary-search-clear-btn') as HTMLButtonElement,
     dictionarySheetSelect: document.getElementById('dictionary-sheet-select') as HTMLSelectElement,
@@ -91,10 +91,10 @@ const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
 
 const extractVocabularyElements = (elements: GUIElements): VocabularyElements => ({
     builtInWordsDisplay: elements.builtInWordsDisplay,
-    customWordsDisplay: elements.customWordsDisplay,
+    userWordsDisplay: elements.userWordsDisplay,
     builtInWordInfo: elements.builtInWordInfo,
-    customWordInfo: elements.customWordInfo,
-    customDictionarySelect: elements.customDictionarySelect
+    userWordInfo: elements.userWordInfo,
+    userDictionarySelect: elements.userDictionarySelect
 });
 
 const extractMobileElements = (elements: GUIElements): MobileElements => ({
@@ -134,7 +134,7 @@ const collectAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
     const coreWords = window.ajisaiInterpreter.collect_core_words_info().map(word => word[0]);
-    const customWords = window.ajisaiInterpreter.collect_custom_words_info().flatMap(word => [
+    const userWords = window.ajisaiInterpreter.collect_user_words_info().flatMap(word => [
         word[1],
         `${word[0]}@${word[1]}`
     ]);
@@ -157,7 +157,7 @@ const collectAutocompleteWords = (): string[] => {
         }
     } catch { /* no modules imported */ }
 
-    return Array.from(new Set([...coreWords, ...customWords, ...moduleWords])).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set([...coreWords, ...userWords, ...moduleWords])).sort((a, b) => a.localeCompare(b));
 };
 
 export const createGUI = (): GUI => {
@@ -272,7 +272,7 @@ export const createGUI = (): GUI => {
 
         try {
             display.renderStack(window.ajisaiInterpreter.collect_stack());
-            vocabulary.updateCustomWords(window.ajisaiInterpreter.collect_custom_words_info());
+            vocabulary.updateUserWords(window.ajisaiInterpreter.collect_user_words_info());
 
             // Sync module sheets based on imported modules
             const newSheetIds = moduleTabManager.syncModuleTabs();
@@ -375,8 +375,8 @@ export const createGUI = (): GUI => {
             });
         });
 
-        elements.exportBtn?.addEventListener('click', () => persistence.exportCustomWords());
-        elements.importBtn?.addEventListener('click', () => persistence.importCustomWords());
+        elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
+        elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
 
         elements.codeInput.addEventListener('keydown', (e) => {
             // Shift+Enter: run

@@ -62,11 +62,11 @@ pub enum AsyncAction {
 pub(crate) enum DictionaryLayer {
     BuiltIn,
     Module,
-    Custom,
+    User,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct CustomDictionary {
+pub(crate) struct UserDictionary {
     pub order: u64,
     pub words: HashMap<String, Arc<WordDefinition>>,
 }
@@ -80,8 +80,8 @@ pub(crate) struct ModuleDictionary {
 pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) core_vocabulary: HashMap<String, Arc<WordDefinition>>,
-    pub(crate) custom_words: HashMap<String, Arc<WordDefinition>>,
-    pub(crate) custom_dictionaries: HashMap<String, CustomDictionary>,
+    pub(crate) user_words: HashMap<String, Arc<WordDefinition>>,
+    pub(crate) user_dictionaries: HashMap<String, UserDictionary>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     pub(crate) definition_to_load: Option<String>,
@@ -114,7 +114,7 @@ pub struct Interpreter {
     /// These are registered at IMPORT time and follow module-first resolution.
     pub(crate) module_samples: HashMap<String, ModuleDictionary>,
     pub(crate) next_registration_order: u64,
-    pub(crate) active_custom_dictionary: String,
+    pub(crate) active_user_dictionary: String,
 }
 
 impl Interpreter {
@@ -122,8 +122,8 @@ impl Interpreter {
         let mut interpreter = Interpreter {
             stack: Vec::new(),
             core_vocabulary: HashMap::new(),
-            custom_words: HashMap::new(),
-            custom_dictionaries: HashMap::new(),
+            user_words: HashMap::new(),
+            user_dictionaries: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
             definition_to_load: None,
@@ -145,7 +145,7 @@ impl Interpreter {
             flow_consumed_log: Vec::new(),
             module_samples: HashMap::new(),
             next_registration_order: 1,
-            active_custom_dictionary: "SAMPLE".to_string(),
+            active_user_dictionary: "DEMO".to_string(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -258,10 +258,10 @@ impl Interpreter {
 
     /// `@` 区切りのパスを解析して (layers, word) を返す。
     /// 例:
-    ///   "MUSIC@PLAY"                           → (["MUSIC"], "PLAY")
-    ///   "COINAGE@SAMPLE@SAY-HELLO"             → (["COINAGE", "SAMPLE"], "SAY-HELLO")
-    ///   "DICTIONARY@COINAGE@SAMPLE@SAY-HELLO"  → (["DICTIONARY", "COINAGE", "SAMPLE"], "SAY-HELLO")
-    ///   "SAY-HELLO"                            → ([], "SAY-HELLO")  ← 省略形
+    ///   "MUSIC@PLAY"                       → (["MUSIC"], "PLAY")
+    ///   "USER@DEMO@SAY-HELLO"              → (["USER", "DEMO"], "SAY-HELLO")
+    ///   "DICT@USER@DEMO@SAY-HELLO"         → (["DICT", "USER", "DEMO"], "SAY-HELLO")
+    ///   "SAY-HELLO"                        → ([], "SAY-HELLO")  ← 省略形
     pub(crate) fn split_path(name: &str) -> (Vec<String>, String) {
         let parts: Vec<String> = name.split('@').map(|s| s.to_uppercase()).collect();
         if parts.len() == 1 {
@@ -286,17 +286,17 @@ impl Interpreter {
         }
     }
 
-    pub(crate) fn custom_dictionary_names(&self) -> Vec<String> {
-        let mut names: Vec<_> = self.custom_dictionaries.keys().cloned().collect();
+    pub(crate) fn user_dictionary_names(&self) -> Vec<String> {
+        let mut names: Vec<_> = self.user_dictionaries.keys().cloned().collect();
         names.sort();
         names
     }
 
-    pub(crate) fn custom_dictionary_words(
+    pub(crate) fn user_dictionary_words(
         &self,
         dictionary_name: &str,
     ) -> Vec<(String, Arc<WordDefinition>)> {
-        self.custom_dictionaries
+        self.user_dictionaries
             .get(&dictionary_name.to_uppercase())
             .map(|dict| {
                 dict.words
@@ -307,10 +307,10 @@ impl Interpreter {
             .unwrap_or_default()
     }
 
-    pub(crate) fn sync_sample_custom_words_cache(&mut self) {
-        self.custom_words = self
-            .custom_dictionaries
-            .get("SAMPLE")
+    pub(crate) fn sync_user_words_cache(&mut self) {
+        self.user_words = self
+            .user_dictionaries
+            .get("DEMO")
             .map(|dict| dict.words.clone())
             .unwrap_or_default();
     }
@@ -340,15 +340,15 @@ impl Interpreter {
         }
 
         // 4. Collect all custom dictionary matches
-        let mut custom_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
-        for (dict_name, dict) in &self.custom_dictionaries {
+        let mut user_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
+        for (dict_name, dict) in &self.user_dictionaries {
             if let Some(def) = dict.words.get(&upper) {
-                custom_matches.push((format!("{}@{}", dict_name, upper), def.clone(), def.registration_order));
+                user_matches.push((format!("{}@{}", dict_name, upper), def.clone(), def.registration_order));
             }
         }
 
         // 5. Ambiguity detection: if found in both module and custom, return None (error handled by caller)
-        if !module_matches.is_empty() && !custom_matches.is_empty() {
+        if !module_matches.is_empty() && !user_matches.is_empty() {
             // Ambiguous: exists in both module and custom dictionaries
             return None;
         }
@@ -361,9 +361,9 @@ impl Interpreter {
         }
 
         // 7. Return best custom match
-        if !custom_matches.is_empty() {
-            custom_matches.sort_by_key(|(_, _, order)| *order);
-            let (name, def, _) = custom_matches.into_iter().next().unwrap();
+        if !user_matches.is_empty() {
+            user_matches.sort_by_key(|(_, _, order)| *order);
+            let (name, def, _) = user_matches.into_iter().next().unwrap();
             return Some((name, def));
         }
 
@@ -386,7 +386,7 @@ impl Interpreter {
                 paths.push(format!("{}@{}", module_name, upper));
             }
         }
-        for (dict_name, dict) in &self.custom_dictionaries {
+        for (dict_name, dict) in &self.user_dictionaries {
             if dict.words.contains_key(&upper) {
                 paths.push(format!("{}@{}", dict_name, upper));
             }
@@ -404,9 +404,9 @@ impl Interpreter {
                 self.resolve_short_name(name)
             }
             1 => {
-                // MODULE@WORD or DICTNAME@WORD or BUILTIN@WORD
+                // MODULE@WORD or DICTNAME@WORD or CORE@WORD
                 let ns = &layers[0];
-                if ns == "BUILTIN" {
+                if ns == "CORE" {
                     return self.core_vocabulary.get(&word).cloned().map(|def| (word.clone(), def));
                 }
                 if let Some(module_dict) = self.module_samples.get(ns.as_str()) {
@@ -414,8 +414,8 @@ impl Interpreter {
                         return Some((format!("{}@{}", ns, word), def.clone()));
                     }
                 }
-                if let Some(custom_dict) = self.custom_dictionaries.get(ns.as_str()) {
-                    if let Some(def) = custom_dict.words.get(&word) {
+                if let Some(user_dict) = self.user_dictionaries.get(ns.as_str()) {
+                    if let Some(def) = user_dict.words.get(&word) {
                         return Some((format!("{}@{}", ns, word), def.clone()));
                     }
                 }
@@ -424,27 +424,27 @@ impl Interpreter {
                 self.core_vocabulary.get(&qualified).cloned().map(|def| (qualified, def))
             }
             2 => {
-                // COINAGE@DICTNAME@WORD or DICTIONARY@MODULE@WORD or DICTIONARY@BUILTIN@WORD
+                // USER@DICTNAME@WORD or DICT@MODULE@WORD or DICT@CORE@WORD
                 let first = &layers[0];
                 let second = &layers[1];
-                if first == "COINAGE" {
-                    // COINAGE@DICTNAME@WORD
-                    if let Some(custom_dict) = self.custom_dictionaries.get(second.as_str()) {
-                        if let Some(def) = custom_dict.words.get(&word) {
+                if first == "USER" {
+                    // USER@DICTNAME@WORD
+                    if let Some(user_dict) = self.user_dictionaries.get(second.as_str()) {
+                        if let Some(def) = user_dict.words.get(&word) {
                             return Some((format!("{}@{}", second, word), def.clone()));
                         }
                     }
-                } else if first == "DICTIONARY" {
-                    // DICTIONARY@MODULE@WORD or DICTIONARY@BUILTIN@WORD
-                    if second == "BUILTIN" {
+                } else if first == "DICT" {
+                    // DICT@MODULE@WORD or DICT@CORE@WORD
+                    if second == "CORE" {
                         return self.core_vocabulary.get(&word).cloned().map(|def| (word.clone(), def));
                     }
-                    // DICTIONARY@MODULE@WORD (module builtin words)
+                    // DICT@MODULE@WORD (module builtin words)
                     let qualified = format!("{}@{}", second, word);
                     if let Some(def) = self.core_vocabulary.get(&qualified) {
                         return Some((qualified, def.clone()));
                     }
-                    // DICTIONARY@MODULE@WORD (module sample words)
+                    // DICT@MODULE@WORD (module sample words)
                     if let Some(module_dict) = self.module_samples.get(second.as_str()) {
                         if let Some(def) = module_dict.sample_words.get(&word) {
                             return Some((format!("{}@{}", second, word), def.clone()));
@@ -454,14 +454,13 @@ impl Interpreter {
                 None
             }
             3 => {
-                // DICTIONARY@COINAGE@DICTNAME@WORD (fully qualified custom word)
-                // or DICTIONARY@BUILTIN@WORD (with extra layer)
+                // DICT@USER@DICTNAME@WORD (fully qualified custom word)
                 let first = &layers[0];
                 let second = &layers[1];
                 let third = &layers[2];
-                if first == "DICTIONARY" && second == "COINAGE" {
-                    if let Some(custom_dict) = self.custom_dictionaries.get(third.as_str()) {
-                        if let Some(def) = custom_dict.words.get(&word) {
+                if first == "DICT" && second == "USER" {
+                    if let Some(user_dict) = self.user_dictionaries.get(third.as_str()) {
+                        if let Some(def) = user_dict.words.get(&word) {
                             return Some((format!("{}@{}", third, word), def.clone()));
                         }
                     }
@@ -485,7 +484,7 @@ impl Interpreter {
     }
 
     /// Check if a word is a non-builtin custom word (user-defined or module sample)
-    pub(crate) fn is_custom_word(&self, name: &str) -> bool {
+    pub(crate) fn is_user_word(&self, name: &str) -> bool {
         self.resolve_word(name)
             .map(|def| !def.is_builtin)
             .unwrap_or(false)
@@ -1240,8 +1239,8 @@ impl Interpreter {
     pub fn execute_reset(&mut self) -> Result<()> {
         self.stack.clear();
         self.core_vocabulary.clear();
-        self.custom_words.clear();
-        self.custom_dictionaries.clear();
+        self.user_words.clear();
+        self.user_dictionaries.clear();
         self.dependents.clear();
         self.output_buffer.clear();
         self.definition_to_load = None;
@@ -1254,7 +1253,7 @@ impl Interpreter {
         self.imported_modules.clear();
         self.module_samples.clear();
         self.next_registration_order = 1;
-        self.active_custom_dictionary = "SAMPLE".to_string();
+        self.active_user_dictionary = "DEMO".to_string();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }
@@ -1286,22 +1285,22 @@ impl Interpreter {
     pub fn rebuild_dependencies(&mut self) -> Result<()> {
         self.dependents.clear();
 
-        // Collect all custom words: user-defined from custom_words + module samples
-        let mut all_custom_words: Vec<(String, Arc<WordDefinition>)> = Vec::new();
+        // Collect all custom words: user-defined from user_words + module samples
+        let mut all_user_words: Vec<(String, Arc<WordDefinition>)> = Vec::new();
 
-        for (dict_name, dict) in &self.custom_dictionaries {
+        for (dict_name, dict) in &self.user_dictionaries {
             for (name, def) in &dict.words {
-                all_custom_words.push((format!("{}@{}", dict_name, name), Arc::clone(def)));
+                all_user_words.push((format!("{}@{}", dict_name, name), Arc::clone(def)));
             }
         }
 
         for (module_name, module_dict) in &self.module_samples {
             for (name, def) in &module_dict.sample_words {
-                all_custom_words.push((format!("{}@{}", module_name, name), Arc::clone(def)));
+                all_user_words.push((format!("{}@{}", module_name, name), Arc::clone(def)));
             }
         }
 
-        for (word_name, word_def) in &all_custom_words {
+        for (word_name, word_def) in &all_user_words {
             let mut dependencies = HashSet::new();
             for line in word_def.lines.iter() {
                 for token in line.body_tokens.iter() {
@@ -1321,7 +1320,7 @@ impl Interpreter {
             }
             // Update dependencies on the definition
             if let Some((dict_name, short_name)) = self.split_qualified_name(word_name) {
-                if let Some(dict) = self.custom_dictionaries.get_mut(&dict_name) {
+                if let Some(dict) = self.user_dictionaries.get_mut(&dict_name) {
                     if let Some(def) = dict.words.get_mut(&short_name) {
                         Arc::make_mut(def).dependencies = dependencies.clone();
                         continue;
@@ -1334,14 +1333,14 @@ impl Interpreter {
                 }
             }
         }
-        self.sync_sample_custom_words_cache();
+        self.sync_user_words_cache();
         Ok(())
     }
 
     /// 指定されたワードを参照している他のワードの集合を取得
     pub fn collect_dependents(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
-        for (dict_name, dict) in &self.custom_dictionaries {
+        for (dict_name, dict) in &self.user_dictionaries {
             for (name, def) in &dict.words {
                 if def.dependencies.contains(word_name) {
                     result.insert(format!("{}@{}", dict_name, name));
@@ -1455,7 +1454,7 @@ ADDTEST
         // 依存なしなら ! 不要で削除可能
         let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_ok());
-        assert!(!interp.custom_words.contains_key("DOUBLE"));
+        assert!(!interp.user_words.contains_key("DOUBLE"));
     }
 
     #[tokio::test]
@@ -1470,7 +1469,7 @@ ADDTEST
         // 依存ありで ! なしはエラー
         let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_err());
-        assert!(interp.custom_words.contains_key("DOUBLE"));
+        assert!(interp.user_words.contains_key("DOUBLE"));
     }
 
     #[tokio::test]
@@ -1485,7 +1484,7 @@ ADDTEST
         // ! 付きなら削除可能
         let result = interp.execute("! 'DOUBLE' DEL").await;
         assert!(result.is_ok());
-        assert!(!interp.custom_words.contains_key("DOUBLE"));
+        assert!(!interp.user_words.contains_key("DOUBLE"));
         assert!(interp.output_buffer.contains("Warning"));
     }
 
@@ -1564,16 +1563,16 @@ ADDTEST
 
         // Verify ANSWER is defined
         assert!(
-            interp.custom_words.contains_key("ANSWER"),
+            interp.user_words.contains_key("ANSWER"),
             "ANSWER should be defined"
         );
         assert!(
-            !interp.custom_words.contains_key("ZERO"),
+            !interp.user_words.contains_key("ZERO"),
             "ZERO should not be defined"
         );
 
         // Debug: Print ANSWER definition
-        if let Some(def) = interp.custom_words.get("ANSWER") {
+        if let Some(def) = interp.user_words.get("ANSWER") {
             println!("ANSWER definition has {} lines", def.lines.len());
             for (i, line) in def.lines.iter().enumerate() {
                 println!("Line {}: {} tokens", i, line.body_tokens.len());
@@ -1614,11 +1613,11 @@ ADDTEST
 
         // Verify SMALL is defined
         assert!(
-            !interp.custom_words.contains_key("BIG"),
+            !interp.user_words.contains_key("BIG"),
             "BIG should not be defined"
         );
         assert!(
-            interp.custom_words.contains_key("SMALL"),
+            interp.user_words.contains_key("SMALL"),
             "SMALL should be defined"
         );
 
@@ -1653,11 +1652,11 @@ ADDTEST
 
         // Verify DEFAULT is defined
         assert!(
-            !interp.custom_words.contains_key("HUNDRED"),
+            !interp.user_words.contains_key("HUNDRED"),
             "HUNDRED should not be defined"
         );
         assert!(
-            interp.custom_words.contains_key("DEFAULT"),
+            interp.user_words.contains_key("DEFAULT"),
             "DEFAULT should be defined"
         );
 
@@ -1672,7 +1671,7 @@ ADDTEST
     }
 
     #[tokio::test]
-    async fn test_def_with_chevron_using_existing_custom_word() {
+    async fn test_def_with_chevron_using_existing_user_word() {
         let mut interp = Interpreter::new();
 
         // Test: Define a word inside chevron that uses an existing custom word
@@ -1698,11 +1697,11 @@ ADDTEST
 
         // Verify PROCESS is defined
         assert!(
-            interp.custom_words.contains_key("PROCESS"),
+            interp.user_words.contains_key("PROCESS"),
             "PROCESS should be defined"
         );
         assert!(
-            interp.custom_words.contains_key("DOUBLE"),
+            interp.user_words.contains_key("DOUBLE"),
             "DOUBLE should exist"
         );
 
@@ -1767,7 +1766,7 @@ ADDTEST
 
         // Verify ANSWER is defined
         assert!(
-            interp.custom_words.contains_key("ANSWER"),
+            interp.user_words.contains_key("ANSWER"),
             "ANSWER should be defined"
         );
 

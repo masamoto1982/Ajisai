@@ -1,4 +1,4 @@
-// js/indexeddb-custom-word-store.ts
+// js/indexeddb-user-word-store.ts
 
 interface TableData {
     name: string;
@@ -10,9 +10,12 @@ interface TableData {
 interface InterpreterState {
     key: string;
     stack: any;
-    customWords: any;
-    sampleWordsVersion?: number;
+    userWords: any;
+    demoWordsVersion?: number;
     updatedAt: string;
+    // Legacy field names (read-only, for migration from older DB)
+    customWords?: any;
+    sampleWordsVersion?: number;
 }
 
 interface ExportData {
@@ -171,8 +174,8 @@ class AjisaiDB {
                 if (result) {
                     resolve({
                         stack: result.stack,
-                        customWords: result.customWords,
-                        sampleWordsVersion: result.sampleWordsVersion
+                        userWords: result.userWords ?? result.customWords,
+                        demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion
                     });
                 } else {
                     resolve(null);

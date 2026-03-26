@@ -18,10 +18,10 @@ export interface WordInfo {
 
 export interface VocabularyElements {
     readonly builtInWordsDisplay: HTMLElement;
-    readonly customWordsDisplay: HTMLElement;
+    readonly userWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
-    readonly customWordInfo: HTMLElement;
-    readonly customDictionarySelect: HTMLSelectElement;
+    readonly userWordInfo: HTMLElement;
+    readonly userDictionarySelect: HTMLSelectElement;
 }
 
 export interface VocabularyCallbacks {
@@ -35,9 +35,19 @@ export interface VocabularyCallbacks {
 
 export interface VocabularyManager {
     readonly renderBuiltInWords: () => void;
-    readonly updateCustomWords: (customWordsInfo: Array<[string, string, string | null, boolean]>) => void;
+    readonly updateUserWords: (userWordsInfo: Array<[string, string, string | null, boolean]>) => void;
     readonly updateSearchFilter: (filter: string) => void;
 }
+
+const DICTIONARY_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze({
+    'DEMO': 'Demonstration',
+});
+
+export const formatDictionaryTabName = (pathName: string): string => {
+    const displayName = DICTIONARY_DISPLAY_NAMES[pathName]
+        ?? pathName.charAt(0).toUpperCase() + pathName.slice(1).toLowerCase();
+    return `${displayName} word`;
+};
 
 const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
     'VSTART': '[', 'VEND': ']', 'BSTART': '{', 'BEND': '}',
@@ -168,16 +178,16 @@ export const createVocabularyManager = (
     });
     window.addEventListener('blur', hideDeleteContextMenu);
 
-    [elements.builtInWordsDisplay, elements.customWordsDisplay].forEach(container => {
+    [elements.builtInWordsDisplay, elements.userWordsDisplay].forEach(container => {
         registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);
     });
 
-    [elements.builtInWordInfo, elements.customWordInfo].forEach(resetWordInfoDisplay);
+    [elements.builtInWordInfo, elements.userWordInfo].forEach(resetWordInfoDisplay);
 
     // 検索フィルターとカスタムワードのキャッシュ
     let searchFilter = '';
-    let cachedCustomWords: Array<[string, string, string | null, boolean]> = [];
-    let selectedDictionary = 'SAMPLE';
+    let cachedUserWords: Array<[string, string, string | null, boolean]> = [];
+    let selectedDictionary = 'DEMO';
 
     const deleteWord = async (wordName: string, forceDelete: boolean): Promise<boolean> => {
         const deleteCode = forceDelete
@@ -189,7 +199,7 @@ export const createVocabularyManager = (
             if (result.status === 'ERROR') {
                 if (!forceDelete && result.message?.includes(DEPENDENCY_DELETE_ERROR)) {
                     const confirmed = confirm(
-                        `Word '${wordName}' is referenced by other custom words. Force delete with ! ?`
+                        `Word '${wordName}' is referenced by other user words. Force delete with ! ?`
                     );
 
                     if (confirmed) {
@@ -264,7 +274,7 @@ export const createVocabularyManager = (
         }
     };
 
-    const renderCustomWordButtons = (
+    const renderUserWordButtons = (
         container: HTMLElement,
         words: WordInfo[]
     ): void => {
@@ -289,13 +299,13 @@ export const createVocabularyManager = (
                 wordInfo.name,
                 wordInfo.description || '',
                 className,
-                () => onWordClick(wordInfo.dictionary === 'SAMPLE' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
+                () => onWordClick(wordInfo.dictionary === 'DEMO' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
                 () => {
                     const lookupName = `${wordInfo.dictionary}@${wordInfo.name}`;
                     const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName);
-                    renderWordInfo(elements.customWordInfo, definition || DEFAULT_WORD_INFO_MESSAGE, !definition);
+                    renderWordInfo(elements.userWordInfo, definition || DEFAULT_WORD_INFO_MESSAGE, !definition);
                 },
-                () => { resetWordInfoDisplay(elements.customWordInfo); },
+                () => { resetWordInfoDisplay(elements.userWordInfo); },
                 (event) => renderDeleteContextMenu(event, `${wordInfo.dictionary}@${wordInfo.name}`)
             );
 
@@ -312,7 +322,7 @@ export const createVocabularyManager = (
 
         if (!searchFilter && words.length === 0) {
             container.classList.add('is-empty');
-            container.appendChild(createEmptyWordsElement('No custom words defined yet.'));
+            container.appendChild(createEmptyWordsElement('No user words defined yet.'));
             return;
         }
 
@@ -330,44 +340,44 @@ export const createVocabularyManager = (
         }
     };
 
-    const updateCustomWords = (
-        customWordsInfo: Array<[string, string, string | null, boolean]>
+    const updateUserWords = (
+        userWordsInfo: Array<[string, string, string | null, boolean]>
     ): void => {
         // キャッシュを更新
-        cachedCustomWords = customWordsInfo || [];
-        const dictionaries = Array.from(new Set(cachedCustomWords.map(([dictionary]) => dictionary))).sort();
-        elements.customDictionarySelect.innerHTML = '';
-        for (const dictionary of dictionaries.length > 0 ? dictionaries : ['SAMPLE']) {
+        cachedUserWords = userWordsInfo || [];
+        const dictionaries = Array.from(new Set(cachedUserWords.map(([dictionary]) => dictionary))).sort();
+        elements.userDictionarySelect.innerHTML = '';
+        for (const dictionary of dictionaries.length > 0 ? dictionaries : ['DEMO']) {
             const option = document.createElement('option');
             option.value = dictionary;
-            option.textContent = dictionary === 'SAMPLE' ? 'Sample' : dictionary;
-            elements.customDictionarySelect.appendChild(option);
+            option.textContent = formatDictionaryTabName(dictionary);
+            elements.userDictionarySelect.appendChild(option);
         }
         if (!dictionaries.includes(selectedDictionary)) {
-            selectedDictionary = dictionaries.includes('SAMPLE') ? 'SAMPLE' : (dictionaries[0] || 'SAMPLE');
+            selectedDictionary = dictionaries.includes('DEMO') ? 'DEMO' : (dictionaries[0] || 'DEMO');
         }
-        elements.customDictionarySelect.value = selectedDictionary;
-        const words = cachedCustomWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
-        renderCustomWordButtons(elements.customWordsDisplay, words);
+        elements.userDictionarySelect.value = selectedDictionary;
+        const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
+        renderUserWordButtons(elements.userWordsDisplay, words);
     };
 
     const updateSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
         // 両方のワードリストを再レンダリング
         renderBuiltInWords();
-        const words = cachedCustomWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
-        renderCustomWordButtons(elements.customWordsDisplay, words);
+        const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
+        renderUserWordButtons(elements.userWordsDisplay, words);
     };
 
-    elements.customDictionarySelect.addEventListener('change', () => {
-        selectedDictionary = elements.customDictionarySelect.value;
-        const words = cachedCustomWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
-        renderCustomWordButtons(elements.customWordsDisplay, words);
+    elements.userDictionarySelect.addEventListener('change', () => {
+        selectedDictionary = elements.userDictionarySelect.value;
+        const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
+        renderUserWordButtons(elements.userWordsDisplay, words);
     });
 
     return {
         renderBuiltInWords,
-        updateCustomWords,
+        updateUserWords,
         updateSearchFilter
     };
 };

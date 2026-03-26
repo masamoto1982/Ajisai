@@ -8,6 +8,7 @@ import {
     registerBackgroundClickListeners,
     compareWordName,
 } from './dictionary-element-builders';
+import { formatDictionaryTabName } from './vocabulary-state-controller';
 
 export interface ModuleSheet {
     readonly moduleName: string;
@@ -62,7 +63,7 @@ export const createModuleTabManager = (
     const createOptionElement = (moduleName: string, sheetId: string): HTMLOptionElement => {
         const option = document.createElement('option');
         option.value = sheetId;
-        option.textContent = `${moduleName} word`;
+        option.textContent = formatDictionaryTabName(moduleName);
         return option;
     };
 

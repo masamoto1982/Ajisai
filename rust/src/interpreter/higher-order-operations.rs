@@ -927,7 +927,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fold_with_custom_word() {
+    async fn test_fold_with_user_word() {
         let mut interp = Interpreter::new();
         let def_code = ": + ; 'MYSUM' DEF";
         let def_result = interp.execute(def_code).await;

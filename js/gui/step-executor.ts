@@ -1,7 +1,7 @@
 // js/gui/step-executor.ts
 
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter, CustomWord, ExecuteResult } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, UserWord, ExecuteResult } from '../wasm-interpreter-types';
 
 export interface StepState {
     readonly active: boolean;
@@ -20,7 +20,7 @@ export interface StepExecutorCallbacks {
 
 interface StepExecutionSnapshot {
     readonly stack: ReturnType<AjisaiInterpreter['collect_stack']>;
-    readonly customWords: CustomWord[];
+    readonly userWords: UserWord[];
 }
 
 export interface StepExecutor {
@@ -60,9 +60,9 @@ const formatStepMessage = (
     return `[>] Step ${currentIndex + 1}/${totalTokens}: "${token}" (${remaining} remaining)`;
 };
 
-const collectCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
-    const customWordsInfo = interpreter.collect_custom_words_info();
-    return customWordsInfo.map(wordData => ({
+const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
+    const userWordsInfo = interpreter.collect_user_words_info();
+    return userWordsInfo.map(wordData => ({
         dictionary: wordData[0],
         name: wordData[1],
         definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
@@ -74,7 +74,7 @@ const createStepExecutionSnapshot = (
     interpreter: AjisaiInterpreter
 ): StepExecutionSnapshot => ({
     stack: interpreter.collect_stack(),
-    customWords: collectCustomWords(interpreter)
+    userWords: collectUserWords(interpreter)
 });
 
 const resolveStepExecutionException = (
@@ -100,8 +100,8 @@ const syncInterpreterState = (
     if (result.stack) {
         interpreter.restore_stack(result.stack);
     }
-    if (result.customWords) {
-        interpreter.restore_custom_words(result.customWords);
+    if (result.userWords) {
+        interpreter.restore_user_words(result.userWords);
     }
 };
 
@@ -227,7 +227,7 @@ export const stepExecutorUtils = {
     createActiveState,
     advanceState,
     formatStepMessage,
-    collectCustomWords,
+    collectUserWords,
     createStepExecutionSnapshot,
     resolveStepExecutionException
 };

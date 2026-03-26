@@ -2,7 +2,7 @@
 
 import { GUI_INSTANCE } from './gui/gui-application';
 import { initWasm } from './wasm-module-loader';
-import './indexeddb-custom-word-store';
+import './indexeddb-user-word-store';
 import type { WasmModule, AjisaiInterpreter } from './wasm-interpreter-types';
 
 declare global {

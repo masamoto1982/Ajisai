@@ -1,7 +1,7 @@
 // js/gui/execution-controller.ts
 
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter, ExecuteResult, CustomWord } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import type { ViewMode } from './mobile-view-switcher';
 
@@ -29,13 +29,13 @@ export interface ExecutionController {
 
 interface ExecutionSnapshot {
     readonly stack: ReturnType<AjisaiInterpreter['collect_stack']>;
-    readonly customWords: CustomWord[];
+    readonly userWords: UserWord[];
     readonly importedModules: string[];
 }
 
-const collectCustomWords = (interpreter: AjisaiInterpreter): CustomWord[] => {
-    const customWordsInfo = interpreter.collect_custom_words_info();
-    return customWordsInfo.map(wordData => ({
+const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
+    const userWordsInfo = interpreter.collect_user_words_info();
+    return userWordsInfo.map(wordData => ({
         dictionary: wordData[0],
         name: wordData[1],
         definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
@@ -56,8 +56,8 @@ const restoreInterpreterState = (
     if (result.stack) {
         interpreter.restore_stack(result.stack);
     }
-    if (result.customWords) {
-        interpreter.restore_custom_words(result.customWords);
+    if (result.userWords) {
+        interpreter.restore_user_words(result.userWords);
     }
 };
 
@@ -69,7 +69,7 @@ const isAbortError = (error: Error): boolean =>
 
 const createExecutionSnapshot = (interpreter: AjisaiInterpreter): ExecutionSnapshot => ({
     stack: interpreter.collect_stack(),
-    customWords: collectCustomWords(interpreter),
+    userWords: collectUserWords(interpreter),
     importedModules: interpreter.collect_imported_modules()
 });
 
@@ -207,7 +207,7 @@ export const createExecutionController = (
 };
 
 export const executionControllerUtils = {
-    collectCustomWords,
+    collectUserWords,
     restoreInterpreterState,
     checkIsResetCommand,
     isAbortError,

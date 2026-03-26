@@ -385,7 +385,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_times_in_custom_word_with_word_name() {
+    async fn test_times_in_user_word_with_word_name() {
         let mut interp = Interpreter::new();
 
         // Define INC first (use code block since vector duality no longer preserves operators)
@@ -708,7 +708,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_exec_with_custom_word() {
+    async fn test_exec_with_user_word() {
         let mut interp = Interpreter::new();
 
         // カスタムワードを定義してEXECで使用

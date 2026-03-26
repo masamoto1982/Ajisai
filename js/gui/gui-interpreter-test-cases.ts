@@ -519,27 +519,27 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
-    // Custom Word Definition
+    // User Word Definition
     // 仕様: DEF構文は : code ; 'NAME' DEF（セクション6.3）
     // ============================================
     {
         name: "DEF and call",
         code: ": [ 2 ] * ; 'DOUBLE' DEF\n[ 5 ] DOUBLE",
         expectedStack: [createVector([createNumber('10')])],
-        category: "Custom Words"
+        category: "User Words"
     },
     {
         // 仕様: シェブロン分岐（ガード）を使用する（セクション4.2）
         name: "DEF with guard clause",
         code: ":\n>> [ 3 ] [ 1 ] <\n>> [ 99 ]\n>>> [ 0 ]\n; 'GUARD' DEF\nGUARD",
         expectedStack: [createVector([createNumber('0')])],
-        category: "Custom Words"
+        category: "User Words"
     },
     {
-        name: "DEL - delete custom word",
+        name: "DEL - delete user word",
         code: ": [ 2 ] * ; 'TEMP' DEF\n'TEMP' DEL\nTEMP",
         expectError: true,
-        category: "Custom Words"
+        category: "User Words"
     },
 
     // ============================================
