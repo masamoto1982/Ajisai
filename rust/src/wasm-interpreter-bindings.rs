@@ -82,7 +82,7 @@ fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
 }
 
 #[derive(Serialize, Deserialize)]
-struct CustomWordData {
+struct UserWordData {
     dictionary: Option<String>,
     name: String,
     definition: Option<String>,
@@ -189,8 +189,8 @@ impl AjisaiInterpreter {
                     js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
                     js_sys::Reflect::set(
                         &obj,
-                        &"customWords".into(),
-                        &self.collect_custom_words_for_state(),
+                        &"userWords".into(),
+                        &self.collect_user_words_for_state(),
                     )
                     .unwrap();
                     js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
@@ -212,8 +212,8 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
                 js_sys::Reflect::set(
                     &obj,
-                    &"customWords".into(),
-                    &self.collect_custom_words_for_state(),
+                    &"userWords".into(),
+                    &self.collect_user_words_for_state(),
                 )
                 .unwrap();
                 js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
@@ -304,8 +304,8 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
                 js_sys::Reflect::set(
                     &obj,
-                    &"customWords".into(),
-                    &self.collect_custom_words_for_state(),
+                    &"userWords".into(),
+                    &self.collect_user_words_for_state(),
                 )
                 .unwrap();
                 js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
@@ -339,8 +339,8 @@ impl AjisaiInterpreter {
                 js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
                 js_sys::Reflect::set(
                     &obj,
-                    &"customWords".into(),
-                    &self.collect_custom_words_for_state(),
+                    &"userWords".into(),
+                    &self.collect_user_words_for_state(),
                 )
                 .unwrap();
                 js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
@@ -364,11 +364,11 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn collect_custom_words_info(&self) -> JsValue {
+    pub fn collect_user_words_info(&self) -> JsValue {
         let js_array = js_sys::Array::new();
 
-        for dict_name in self.interpreter.custom_dictionary_names() {
-            for (name, def) in self.interpreter.custom_dictionary_words(&dict_name) {
+        for dict_name in self.interpreter.user_dictionary_names() {
+            for (name, def) in self.interpreter.user_dictionary_words(&dict_name) {
                 let fq_name = format!("{}@{}", dict_name, name);
                 let is_protected = self
                     .interpreter
@@ -402,16 +402,16 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    fn collect_custom_words_for_state(&self) -> JsValue {
-        let words_info: Vec<CustomWordData> = self
+    fn collect_user_words_for_state(&self) -> JsValue {
+        let words_info: Vec<UserWordData> = self
             .interpreter
-            .custom_dictionary_names()
+            .user_dictionary_names()
             .into_iter()
             .flat_map(|dict_name| {
                 self.interpreter
-                    .custom_dictionary_words(&dict_name)
+                    .user_dictionary_words(&dict_name)
                     .into_iter()
-                    .map(move |(name, def)| CustomWordData {
+                    .map(move |(name, def)| UserWordData {
                         dictionary: Some(dict_name.clone()),
                         name: name.clone(),
                         definition: self
@@ -510,7 +510,7 @@ impl AjisaiInterpreter {
     pub fn remove_word(&mut self, name: &str) {
         let upper_name = name.to_uppercase();
         if let Some((dict_name, short_name)) = self.interpreter.split_qualified_name(&upper_name) {
-            if let Some(dict) = self.interpreter.custom_dictionaries.get_mut(&dict_name) {
+            if let Some(dict) = self.interpreter.user_dictionaries.get_mut(&dict_name) {
                 dict.words.remove(&short_name);
             }
             if let Some(dict) = self.interpreter.module_samples.get_mut(&dict_name) {
@@ -520,7 +520,7 @@ impl AjisaiInterpreter {
             return;
         }
 
-        for dict in self.interpreter.custom_dictionaries.values_mut() {
+        for dict in self.interpreter.user_dictionaries.values_mut() {
             if dict.words.remove(&upper_name).is_some() {
                 let _ = self.interpreter.rebuild_dependencies();
                 return;
@@ -592,12 +592,12 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn restore_custom_words(&mut self, words_js: JsValue) -> Result<(), String> {
-        let words: Vec<CustomWordData> = serde_wasm_bindgen::from_value(words_js)
+    pub fn restore_user_words(&mut self, words_js: JsValue) -> Result<(), String> {
+        let words: Vec<UserWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 
         for word in words {
-            self.interpreter.active_custom_dictionary = word
+            self.interpreter.active_user_dictionary = word
                 .dictionary
                 .clone()
                 .unwrap_or_else(|| "DEMO".to_string())

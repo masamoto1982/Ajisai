@@ -1,10 +1,10 @@
-import type { CustomWord } from '../wasm-interpreter-types';
+import type { UserWord } from '../wasm-interpreter-types';
 
 // サンプルワードの定義を更新した際はバージョンをインクリメントすること。
 // persistence.ts のマイグレーションロジックが IndexedDB の古い定義を自動更新する。
-export const SAMPLE_WORDS_VERSION = 5;
+export const DEMO_WORDS_VERSION = 5;
 
-export const SAMPLE_CUSTOM_WORDS: CustomWord[] = [
+export const DEMO_USER_WORDS: UserWord[] = [
     {
         name: 'SAY-HELLO',
         definition: "'Hello' PRINT",

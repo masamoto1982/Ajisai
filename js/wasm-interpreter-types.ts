@@ -4,7 +4,7 @@ export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
 }
 
-export interface CustomWord {
+export interface UserWord {
     dictionary?: string | null;
     name: string;
     definition: string | null;
@@ -16,11 +16,11 @@ export interface AjisaiInterpreter {
     execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
     collect_stack(): Value[];
-    collect_custom_words_info(): Array<[string, string, string | null, boolean]>;
+    collect_user_words_info(): Array<[string, string, string | null, boolean]>;
     collect_core_words_info(): Array<[string, string, string]>;
     lookup_word_definition(name: string): string | null;
     restore_stack(stack_js: Value[]): void;
-    restore_custom_words(words: CustomWord[]): void;
+    restore_user_words(words: UserWord[]): void;
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
     collect_imported_modules(): string[];
@@ -40,7 +40,7 @@ export interface ExecuteResult {
     inputHelper?: string; // Input helper text to insert into the editor
     // Workerから返されるインタプリタの状態
     stack?: Value[];
-    customWords?: CustomWord[];
+    userWords?: UserWord[];
     importedModules?: string[];
 }
 

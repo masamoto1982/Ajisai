@@ -1,6 +1,6 @@
 // js/workers/execution-worker-manager.ts
 
-import type { ExecuteResult, Value, CustomWord } from '../wasm-interpreter-types';
+import type { ExecuteResult, Value, UserWord } from '../wasm-interpreter-types';
 import { extractCompiledWasmModule } from '../wasm-module-loader';
 
 interface WorkerTask {
@@ -8,7 +8,7 @@ interface WorkerTask {
     code: string;
     state: {
         stack: Value[];
-        customWords: CustomWord[];
+        userWords: UserWord[];
         importedModules?: string[];
     };
     resolve: (result: any) => void;
@@ -147,7 +147,7 @@ export class WorkerManager {
         return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     }
 
-    execute(code: string, state: { stack: Value[], customWords: CustomWord[], importedModules?: string[] }): Promise<ExecuteResult> {
+    execute(code: string, state: { stack: Value[], userWords: UserWord[], importedModules?: string[] }): Promise<ExecuteResult> {
         this.ensureWorkers();
         return new Promise((resolve, reject) => {
             const task: WorkerTask = {

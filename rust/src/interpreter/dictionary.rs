@@ -57,9 +57,9 @@ fn is_string_like(val: &Value) -> bool {
     check_codepoints(val)
 }
 
-fn is_custom_word_defined(interp: &Interpreter, symbol: &str) -> bool {
+fn is_user_word_defined(interp: &Interpreter, symbol: &str) -> bool {
     let upper_symbol = symbol.to_uppercase();
-    interp.is_custom_word(&upper_symbol)
+    interp.is_user_word(&upper_symbol)
 }
 
 fn check_definition_descriptor_on_stack(stack: &[Value]) -> bool {
@@ -158,11 +158,11 @@ pub(crate) fn op_def_inner(
         }
     }
 
-    let dict_name = interp.active_custom_dictionary.clone();
+    let dict_name = interp.active_user_dictionary.clone();
     let fq_name = format!("{}@{}", dict_name, upper_name);
 
     if let Some(existing) = interp
-        .custom_dictionaries
+        .user_dictionaries
         .get(&dict_name)
         .and_then(|dict| dict.words.get(&upper_name))
     {
@@ -227,23 +227,23 @@ pub(crate) fn op_def_inner(
     };
 
     let dict_order = interp
-        .custom_dictionaries
+        .user_dictionaries
         .get(&dict_name)
         .map(|dict| dict.order)
         .unwrap_or_else(|| new_def.registration_order);
-    interp.custom_dictionaries.entry(dict_name.clone()).or_insert_with(|| crate::interpreter::CustomDictionary {
+    interp.user_dictionaries.entry(dict_name.clone()).or_insert_with(|| crate::interpreter::UserDictionary {
         order: dict_order,
         words: std::collections::HashMap::new(),
     }).words.insert(upper_name.clone(), Arc::new(new_def));
-    interp.sync_sample_custom_words_cache();
+    interp.sync_user_words_cache();
     interp
         .output_buffer
         .push_str(&format!("Defined word: {}@{}\n", dict_name, name));
     // Warn about collisions with module sample words
     if !collision_modules.is_empty() {
         let module_paths: Vec<String> = collision_modules.iter().map(|m| format!("{}@{}", m, upper_name)).collect();
-        let custom_path = format!("{}@{}", dict_name, upper_name);
-        let all_paths: Vec<String> = module_paths.iter().chain(std::iter::once(&custom_path)).cloned().collect();
+        let user_path = format!("{}@{}", dict_name, upper_name);
+        let all_paths: Vec<String> = module_paths.iter().chain(std::iter::once(&user_path)).cloned().collect();
         interp.output_buffer.push_str(&format!(
             "Warning: '{}' now exists in both {}. Use a qualified path when calling this word.\n",
             upper_name, all_paths.join(" and ")
@@ -343,9 +343,9 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     // 辞書全体の削除（FQNでない場合のみ）
     if target_dict.is_none() {
-        if interp.custom_dictionaries.contains_key(&word_name) {
-            interp.custom_dictionaries.remove(&word_name);
-            interp.sync_sample_custom_words_cache();
+        if interp.user_dictionaries.contains_key(&word_name) {
+            interp.user_dictionaries.remove(&word_name);
+            interp.sync_user_words_cache();
             interp.rebuild_dependencies()?;
             interp
                 .output_buffer
@@ -357,7 +357,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         if interp.module_samples.contains_key(&word_name) {
             interp.module_samples.remove(&word_name);
             interp.imported_modules.remove(&word_name);
-            interp.sync_sample_custom_words_cache();
+            interp.sync_user_words_cache();
             interp.rebuild_dependencies()?;
             interp
                 .output_buffer
@@ -398,13 +398,13 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             .and_then(|dict| dict.sample_words.remove(&word_name))
     } else {
         interp
-            .custom_dictionaries
+            .user_dictionaries
             .get_mut(&owner_name)
             .and_then(|dict| dict.words.remove(&word_name))
     };
 
     if let Some(removed_def) = removed_def {
-        interp.sync_sample_custom_words_cache();
+        interp.sync_user_words_cache();
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
                 deps.remove(&fq_name);
@@ -442,7 +442,7 @@ fn find_word_owner(
 ) -> Result<(String, bool)> {
     if let Some(dict_name) = target_dict {
         // FQN指定: 指定された辞書から検索
-        if let Some(dict) = interp.custom_dictionaries.get(dict_name) {
+        if let Some(dict) = interp.user_dictionaries.get(dict_name) {
             if dict.words.contains_key(word_name) {
                 return Ok((dict_name.to_string(), false));
             }
@@ -457,8 +457,8 @@ fn find_word_owner(
             dict_name, word_name
         )))
     } else {
-        // 短縮名: 全辞書を検索（custom_dictionaries優先）
-        for (dict_name, dict) in &interp.custom_dictionaries {
+        // 短縮名: 全辞書を検索（user_dictionaries優先）
+        for (dict_name, dict) in &interp.user_dictionaries {
             if dict.words.contains_key(word_name) {
                 return Ok((dict_name.clone(), false));
             }
@@ -539,7 +539,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_can_override_custom_word() {
+    async fn test_can_override_user_word() {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // Use code block syntax since vector duality no longer preserves operators.
@@ -660,7 +660,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_del_sample_custom_words() {
+    async fn test_del_sample_user_words() {
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
@@ -670,24 +670,24 @@ mod tests {
         ];
         restore_sample_words(&mut interp, &sample_words);
 
-        assert!(interp.custom_words.contains_key("C4"));
-        assert!(interp.custom_words.contains_key("D4"));
-        assert!(interp.custom_words.contains_key("E4"));
+        assert!(interp.user_words.contains_key("C4"));
+        assert!(interp.user_words.contains_key("D4"));
+        assert!(interp.user_words.contains_key("E4"));
 
         let result = interp.execute("'D4' DEL").await;
         assert!(result.is_ok(), "Should delete D4: {:?}", result.err());
-        assert!(!interp.custom_words.contains_key("D4"));
+        assert!(!interp.user_words.contains_key("D4"));
 
         let result = interp.execute("'C4' DEL").await;
         assert!(result.is_err(), "Should not delete C4 (has dependents)");
 
         let result = interp.execute("! 'C4' DEL").await;
         assert!(result.is_ok(), "Should force delete C4: {:?}", result.err());
-        assert!(!interp.custom_words.contains_key("C4"));
+        assert!(!interp.user_words.contains_key("C4"));
     }
 
     #[tokio::test]
-    async fn test_del_sample_custom_words_with_fqn() {
+    async fn test_del_sample_user_words_with_fqn() {
         // GUI経由のDEL: FQN（DEMO@WORD）形式での削除
         let mut interp = Interpreter::new();
 
@@ -698,12 +698,12 @@ mod tests {
         ];
         restore_sample_words(&mut interp, &sample_words);
 
-        assert!(interp.custom_words.contains_key("D4"));
+        assert!(interp.user_words.contains_key("D4"));
 
         // FQN形式で削除
         let result = interp.execute("'DEMO@D4' DEL").await;
         assert!(result.is_ok(), "Should delete D4 via FQN: {:?}", result.err());
-        assert!(!interp.custom_words.contains_key("D4"));
+        assert!(!interp.user_words.contains_key("D4"));
 
         // 存在しないFQNは適切にエラー
         let result = interp.execute("'DEMO@NONEXISTENT' DEL").await;
@@ -716,7 +716,7 @@ mod tests {
         // forceフラグ付きFQNで強制削除
         let result = interp.execute("! 'DEMO@C4' DEL").await;
         assert!(result.is_ok(), "Should force delete C4 via FQN: {:?}", result.err());
-        assert!(!interp.custom_words.contains_key("C4"));
+        assert!(!interp.user_words.contains_key("C4"));
     }
 
     #[tokio::test]
@@ -838,7 +838,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_custom_word_resolved_in_nested_vector() {
+    async fn test_user_word_resolved_in_nested_vector() {
         // Module sample words should also resolve inside nested vectors
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
@@ -917,13 +917,13 @@ mod tests {
 
         // Define C4 before importing music
         interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
-        assert!(interp.custom_words.contains_key("C4"));
+        assert!(interp.user_words.contains_key("C4"));
 
         // Import music module — user word remains, short name becomes ambiguous
         interp.execute("'music' IMPORT").await.unwrap();
         let output = interp.collect_output();
 
-        assert!(interp.custom_words.contains_key("C4"),
+        assert!(interp.user_words.contains_key("C4"),
             "User word C4 should remain in DEMO after IMPORT");
         assert!(output.contains("Warning"),
             "Should warn about the conflict: {}", output);
@@ -1061,7 +1061,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_path_fully_qualified_custom() {
+    async fn test_path_fully_qualified_user() {
         // DICT@USER@DEMO@WORD resolves custom word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
@@ -1136,7 +1136,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_path_case_insensitive_custom() {
+    async fn test_path_case_insensitive_user() {
         // Case normalization for custom words
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
