@@ -539,7 +539,7 @@ body[data-active-area] #state-panel {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0 0 0.75rem 0;
+    padding: 0 0 0.5rem 0;
     flex-shrink: 0;
 }
 
@@ -552,7 +552,7 @@ body[data-active-area] #state-panel {
    flex: 1.618 のままだと縦に引き伸ばされ、words-display が下詰めになる */
 .words-area .dictionary-sheet-selector {
     flex: 0 0 auto;
-    padding: 0 0 0.75rem 0;
+    padding: 0 0 0.5rem 0;
 }
 
 /* words-area は overflow: hidden のため、正の outline-offset だと
