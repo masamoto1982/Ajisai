@@ -718,6 +718,20 @@ body[data-active-area] #state-panel {
  * 7. モバイル対応（アプリ固有）
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+    /* アプリページ専用: height チェーンを確定させて flex: 1 を有効にする
+       （ajisai-base.css の height: auto をオーバーライド） */
+    html,
+    body {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .container {
+        height: 100vh;
+        height: 100dvh;   /* モバイルブラウザのアドレスバーを考慮 */
+        min-height: 0;
+    }
+
     /* モバイル: 左右セレクタを非表示、モバイルセレクタを表示 */
     .area-selector-left,
     .area-selector-right {
@@ -768,7 +782,7 @@ body[data-active-area] #state-panel {
 
     #code-input {
         min-height: 180px;
-        max-height: 420px;
+        max-height: none;
     }
 
     .display-area,
