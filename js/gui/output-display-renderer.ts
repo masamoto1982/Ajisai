@@ -1,5 +1,3 @@
-// js/gui/output-display-renderer.ts
-
 import type { Value, ExecuteResult } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { formatFractionScientific } from './value-formatter';
@@ -25,14 +23,11 @@ export interface Display {
     readonly extractState: () => DisplayState;
 }
 
-// Bracket cycling: depth 0 → {}, depth 1 → (), depth 2 → []
 const lookupBracketsAtDepth = (depth: number): [string, string] => {
-    switch (depth % 3) {
-        case 0: return ['{', '}'];
-        case 1: return ['(', ')'];
-        case 2: return ['[', ']'];
-        default: return ['{', '}'];
-    }
+    const remainder: number = depth % 3;
+    if (remainder === 0) return ['{', '}'];
+    if (remainder === 1) return ['(', ')'];
+    return ['[', ']'];
 };
 
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
@@ -97,13 +92,15 @@ const formatDateTime = (value: unknown): string => {
     }
 };
 
+const extractByteFromFraction = (frac: unknown): number | null => {
+    const fraction: Record<string, unknown> | null = checkFractionObject(frac);
+    if (!fraction) return null;
+    return parseFractionToNumber(fraction);
+};
+
 const deserializeBytesToString = (data: unknown[]): string => {
-    const bytes = data
-        .map(frac => {
-            const fraction = checkFractionObject(frac);
-            if (!fraction) return null;
-            return parseFractionToNumber(fraction);
-        })
+    const bytes: number[] = data
+        .map(extractByteFromFraction)
         .filter((value): value is number => value !== null && value >= 0 && value <= 255);
 
     try {
@@ -127,13 +124,13 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, 
             const str = deserializeBytesToString(data);
             return `'${str}'`;
         }
-        const elements = data.map(frac => formatFraction(frac)).join(' ');
+        const elements: string = data.map(frac => formatFraction(frac)).join(' ');
         return `${open} ${elements} ${close}`;
     }
 
-    const outerSize = shape[0] ?? 0;
-    const innerShape = shape.slice(1);
-    const innerSize = innerShape.reduce((a, b) => a * b, 1);
+    const outerSize: number = shape[0] ?? 0;
+    const innerShape: number[] = shape.slice(1);
+    const innerSize: number = innerShape.reduce((a: number, b: number) => a * b, 1);
 
     const parts: string[] = [];
     for (let i = 0; i < outerSize; i++) {
@@ -159,9 +156,10 @@ const formatVector = (value: unknown, depth: number): string => {
         if (value.length === 0) {
             return `${open}${close}`;
         }
-        const elements = value.map((v: Value) => {
+        const formatSingleElement = (v: Value): string => {
             try { return formatValue(v, depth + 1); } catch { return '?'; }
-        }).join(' ');
+        };
+        const elements: string = value.map(formatSingleElement).join(' ');
         return `${open} ${elements} ${close}`;
     }
     return `${open}${close}`;
@@ -284,9 +282,7 @@ const applyConfigCommands = (output: string): void => {
 };
 
 const executeAudioCommands = (output: string): void => {
-    // Process EFFECT commands first (they set gain/pan before playback)
     applyEffectCommands(output);
-    // Process CONFIG commands (they may affect audio playback)
     applyConfigCommands(output);
 
     extractAudioCommands(output).forEach(commandStr => {
@@ -300,7 +296,6 @@ const executeAudioCommands = (output: string): void => {
 };
 
 const createJsonDownloadLinkElement = (jsonCompact: string): HTMLAnchorElement => {
-    // Pretty-print for download file
     let prettyJson: string;
     try {
         prettyJson = JSON.stringify(JSON.parse(jsonCompact), null, 2);
@@ -364,7 +359,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
             appendSpan(program, '#4DC4FF');
         }
 
-        // JSON export download links
         renderJsonExportLinks(rawOutput, elements.outputDisplay);
 
         if (!debug && !program && !extractJsonExportCommands(rawOutput).length && result.status === 'OK') {
@@ -401,7 +395,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         span.style.fontWeight = 'bold';
     };
 
-    // Show info message
     const renderInfo = (text: string, append = false): void => {
         if (append && elements.outputDisplay.innerHTML.trim() !== '') {
             mainOutput = `${mainOutput}\n${text}`;

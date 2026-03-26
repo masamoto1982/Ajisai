@@ -1,5 +1,3 @@
-// js/gui/gui-application.ts
-
 import { createDisplay, Display, DisplayElements } from './output-display-renderer';
 import { createVocabularyManager, VocabularyManager, VocabularyElements } from './vocabulary-state-controller';
 import { createEditor, Editor } from './code-input-editor';
@@ -133,31 +131,35 @@ const MOBILE_EDITOR_PLACEHOLDER = [
 const collectAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
-    const coreWords = window.ajisaiInterpreter.collect_core_words_info().map(word => word[0]);
-    const userWords = window.ajisaiInterpreter.collect_user_words_info().flatMap(word => [
+    const coreWordsInfo = window.ajisaiInterpreter.collect_core_words_info();
+    const coreWords: string[] = coreWordsInfo.map(word => word[0]).filter((w): w is string => w !== undefined);
+
+    const userWordsInfo = window.ajisaiInterpreter.collect_user_words_info();
+    const userWords: string[] = userWordsInfo.flatMap(word => [
         word[1],
         `${word[0]}@${word[1]}`
     ]);
 
     const moduleWords: string[] = [];
     try {
-        const importedModules = window.ajisaiInterpreter.collect_imported_modules();
+        const importedModules: string[] = window.ajisaiInterpreter.collect_imported_modules();
         for (const moduleName of importedModules) {
             const words = window.ajisaiInterpreter.collect_module_words_info(moduleName);
-            const prefix = `${moduleName}@`;
+            const prefix: string = `${moduleName}@`;
             for (const word of words) {
-                const name = word[0];
+                const name: string = word[0] ?? '';
                 moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);
             }
-            // Also include module sample words
             const sampleWords = window.ajisaiInterpreter.collect_module_sample_words_info(moduleName);
             for (const word of sampleWords) {
-                moduleWords.push(word[0]);
+                const sampleName: string = word[0] ?? '';
+                moduleWords.push(sampleName);
             }
         }
-    } catch { /* no modules imported */ }
+    } catch { /* modules not imported */ }
 
-    return Array.from(new Set([...coreWords, ...userWords, ...moduleWords])).sort((a, b) => a.localeCompare(b));
+    const allWords: Set<string> = new Set([...coreWords, ...userWords, ...moduleWords]);
+    return Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));
 };
 
 export const createGUI = (): GUI => {
@@ -229,7 +231,6 @@ export const createGUI = (): GUI => {
     };
 
     const fallbackIfModuleTabRemoved = (): void => {
-        // If current dictionary sheet is a module sheet that was removed, fallback to core
         const currentSheet = elements.dictionarySheetSelect?.value;
         if (currentSheet?.startsWith('module-') && !moduleTabManager.lookupModuleArea(currentSheet)) {
             elements.dictionarySheetSelect.value = 'core';
@@ -274,17 +275,13 @@ export const createGUI = (): GUI => {
             display.renderStack(window.ajisaiInterpreter.collect_stack());
             vocabulary.updateUserWords(window.ajisaiInterpreter.collect_user_words_info());
 
-            // Sync module sheets based on imported modules
-            const newSheetIds = moduleTabManager.syncModuleTabs();
+            const newSheetIds: string[] = moduleTabManager.syncModuleTabs();
 
-            // Focus the newly imported module's sheet
             if (newSheetIds.length > 0) {
-                const lastSheetId = newSheetIds[newSheetIds.length - 1]!;
-                // Switch to Dictionary tab if not already there
+                const lastSheetId: string = newSheetIds[newSheetIds.length - 1]!;
                 if (currentRightMode !== 'dictionary' || (mobile.isMobile() && currentMode !== 'dictionary')) {
                     switchArea('dictionary');
                 }
-                // Switch to the new module sheet
                 elements.dictionarySheetSelect.value = lastSheetId;
                 switchDictionarySheet(lastSheetId);
             }
@@ -307,7 +304,6 @@ export const createGUI = (): GUI => {
         }
     };
 
-    // デバウンス用ユーティリティ
     const debounce = <T extends (...args: unknown[]) => void>(
         fn: T,
         delay: number
@@ -324,7 +320,6 @@ export const createGUI = (): GUI => {
             executionController.executeCode(editor.extractValue());
         });
 
-        // 辞書検索: デバウンス付きでフィルタリング
         const applySearchFilter = (filter: string): void => {
             elements.dictionarySearch.value = filter;
             vocabulary.updateSearchFilter(filter);
@@ -337,7 +332,6 @@ export const createGUI = (): GUI => {
 
         elements.dictionarySearch.addEventListener('input', applySearchInput);
 
-        // 検索窓の×ボタンでクリア
         elements.dictionarySearchClearBtn.addEventListener('click', () => {
             applySearchFilter('');
         });
@@ -346,7 +340,6 @@ export const createGUI = (): GUI => {
             editor.clear();
         });
 
-        // Area selectors (desktop: left/right, mobile: single)
         elements.leftPanelSelect.addEventListener('change', () => {
             switchArea(elements.leftPanelSelect.value as ViewMode);
         });
@@ -357,34 +350,30 @@ export const createGUI = (): GUI => {
             switchArea(elements.mobilePanelSelect.value as ViewMode);
         });
 
-        // Dictionary sheet selector
         elements.dictionarySheetSelect.addEventListener('change', () => {
             const selectedValue = elements.dictionarySheetSelect.value;
             switchDictionarySheet(selectedValue);
         });
 
-        elements.testBtn?.addEventListener('click', () => {
+        elements.testBtn?.addEventListener('click', async () => {
             switchArea('output');
-            import('./gui-test-runner').then(({ createTestRunner }) => {
-                const testRunner = createTestRunner({
-                    showInfo: (text, append) => display.renderInfo(text, append),
-                    showError: (error) => display.renderError(error),
-                    updateDisplays: updateAllDisplays
-                });
-                testRunner.runAllTests();
+            const { createTestRunner } = await import('./gui-test-runner');
+            const testRunner = createTestRunner({
+                showInfo: (text: string, append: boolean) => display.renderInfo(text, append),
+                showError: (error: Error | string) => display.renderError(error),
+                updateDisplays: updateAllDisplays
             });
+            testRunner.runAllTests();
         });
 
         elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
         elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
 
-        elements.codeInput.addEventListener('keydown', (e) => {
-            // Shift+Enter: run
+        elements.codeInput.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
                 executionController.executeCode(editor.extractValue());
             }
-            // Ctrl+Enter: step execution
             if (e.key === 'Enter' && e.ctrlKey && !e.altKey && !e.shiftKey) {
                 e.preventDefault();
                 executionController.executeStep();
@@ -396,15 +385,13 @@ export const createGUI = (): GUI => {
             updateEditorPlaceholder();
         });
 
-        window.addEventListener('keydown', (e) => {
-            // Escape: abort
+        window.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 WORKER_MANAGER.abortAll();
                 executionController.abortExecution();
                 e.preventDefault();
                 e.stopImmediatePropagation();
             }
-            // Ctrl+Alt+Enter: reset
             if (e.key === 'Enter' && e.ctrlKey && e.altKey) {
                 if (confirm('Are you sure you want to reset the system?')) {
                     executionController.executeReset();
@@ -516,9 +503,6 @@ export const createGUI = (): GUI => {
         updateAllDisplays();
         switchArea('input');
 
-        // データの読み込みとボタン描画をワーカー初期化より先に行う。
-        // ワーカーにはメインスレッドでコンパイル済みのWebAssembly.Moduleを
-        // 転送するため、ワーカー側での再コンパイルは発生しない。
         await persistence.loadDatabaseData();
         updateAllDisplays();
         await initializeWorkers();

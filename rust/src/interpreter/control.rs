@@ -1,68 +1,39 @@
-// rust/src/interpreter/control.rs
-//
-// 統一分数アーキテクチャ版の制御フロー操作
-// コードブロック (: ... ;) 対応
-//
-// 【責務】
-// TIMES、WAIT などの制御フロー操作を実装する。
-// カスタムワードの繰り返し実行や遅延実行をサポートする。
+use std::sync::Arc;
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_string_value, value_as_string};
+use crate::interpreter::value_extraction_helpers::{
+    extract_integer_from_value, is_string_value, value_as_string,
+};
 use crate::interpreter::Interpreter;
 use crate::interpreter::OperationTargetMode;
-use crate::types::Value;
+use crate::interpreter::AsyncAction;
+use crate::types::{Token, Value, WordDefinition};
 
-/// TIMES - コードブロックまたはワード名をN回繰り返し実行する
-///
-/// 【責務】
-/// - 指定されたコードブロック（: ... ;）またはカスタムワード名を指定回数繰り返し実行
-/// - ビルトインワードには使用不可
-///
-/// 【使用法】
-/// - `: [ 1 ] + ; [5] TIMES` → コードブロックを5回実行（新構文）
-/// - `'MYWORD' [5] TIMES` → カスタムワードを5回実行（ワード名）
-///
-/// 【引数スタック】
-/// - [count]: 実行回数（単一要素ベクタの整数）
-/// - : code ; または 'word_name': コードブロックまたはワード名
-///
-/// 【戻り値スタック】
-/// - なし（実行結果がスタックに残る）
-///
-/// 【エラー】
-/// - ビルトインワードを指定した場合
-/// - カウントが整数でない場合
 pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     if interp.stack.len() < 2 {
         return Err(AjisaiError::from(
-            "TIMES requires code and count. Usage: : code ; [ n ] TIMES",
+            "TIMES: expected code and count, got insufficient stack depth",
         ));
     }
 
-    let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let code_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let count = extract_integer_from_value(&count_val)?;
+    let count: i64 = extract_integer_from_value(&count_val)?;
 
-    let saved_no_change_check = interp.disable_no_change_check;
+    let saved_no_change_check: bool = interp.disable_no_change_check;
     interp.disable_no_change_check = true;
 
     let execution_result: Result<()> = if let Some(tokens) = code_val.as_code_block() {
-        let tokens = tokens.clone();
-        (|| -> Result<()> {
-            for _ in 0..count {
-                let (_, _) = interp.execute_section_core(&tokens, 0)?;
-            }
-            Ok(())
-        })()
+        let tokens: Vec<Token> = tokens.clone();
+        execute_code_block_n_times(interp, &tokens, count)
     } else if is_string_value(&code_val) {
-        let word_name = value_as_string(&code_val).ok_or_else(|| {
+        let word_name: String = value_as_string(&code_val).ok_or_else(|| {
             AjisaiError::create_structure_error("code block (: ... ;) or word name", "other format")
         })?;
-        let upper_word_name = word_name.to_uppercase();
+        let upper_word_name: String = word_name.to_uppercase();
 
-        let Some(def) = interp.resolve_word(&upper_word_name) else {
+        let Some(def): Option<Arc<WordDefinition>> = interp.resolve_word(&upper_word_name) else {
             interp.disable_no_change_check = saved_no_change_check;
             return Err(AjisaiError::UnknownWord(upper_word_name));
         };
@@ -70,22 +41,17 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
         if def.is_builtin {
             interp.disable_no_change_check = saved_no_change_check;
             return Err(AjisaiError::from(
-                "TIMES can only be used with custom words, not builtin words",
+                "TIMES: expected custom word, got builtin word",
             ));
         }
 
-        (|| -> Result<()> {
-            for _ in 0..count {
-                interp.execute_word_core(&upper_word_name)?;
-            }
-            Ok(())
-        })()
+        execute_word_n_times(interp, &upper_word_name, count)
     } else {
         interp.disable_no_change_check = saved_no_change_check;
         interp.stack.push(code_val);
         interp.stack.push(count_val);
         return Err(AjisaiError::from(
-            "TIMES requires a code block (: ... ;) or word name. Usage: : code ; [ n ] TIMES",
+            "TIMES: expected code block (: ... ;) or word name, got other value",
         ));
     };
 
@@ -93,92 +59,71 @@ pub(crate) fn execute_times(interp: &mut Interpreter) -> Result<()> {
     execution_result
 }
 
-/// EXEC - ベクタ（またはスタック）をコードとして実行する
-///
-/// 【責務】
-/// - StackTopモード: スタックトップから値を1つポップし、それがVectorであればコードとして実行
-/// - Stackモード: スタック全体を取り出し、それらを要素とする一時的なVectorを生成してコードとして実行
-///
-/// 【使用法】
-/// - `[ 1 2 + ] EXEC` → [ 3 ]
-/// - `1 2 + .. EXEC` → [ 3 ] （スタック上のデータがコードとして実行される）
-///
-/// 【引数スタック】
-/// - StackTopモード: ベクタ（コードを表す）
-/// - Stackモード: スタック全体が対象
-///
-/// 【戻り値スタック】
-/// - 実行結果がスタックに残る
+fn execute_code_block_n_times(
+    interp: &mut Interpreter,
+    tokens: &[Token],
+    count: i64,
+) -> Result<()> {
+    for _ in 0..count {
+        let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(tokens, 0)?;
+    }
+    Ok(())
+}
+
+fn execute_word_n_times(
+    interp: &mut Interpreter,
+    word_name: &str,
+    count: i64,
+) -> Result<()> {
+    for _ in 0..count {
+        interp.execute_word_core(word_name)?;
+    }
+    Ok(())
+}
+
 pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
-    // 実行対象のValueを取得
-    let target_vector = match interp.operation_target_mode {
+    let target_vector: Value = match interp.operation_target_mode {
         OperationTargetMode::StackTop => interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?,
         OperationTargetMode::Stack => {
-            // スタック全体を取り出して一つのVectorにする
             let all_elements: Vec<Value> = interp.stack.drain(..).collect();
             Value::from_vector(all_elements)
         }
     };
 
-    // 実行前にoperation_targetをStackTopにリセット
-    // （実行されるコード内のワードはStackTopモードで動作する）
     interp.operation_target_mode = OperationTargetMode::StackTop;
 
-    // vector_execモジュールの機能を使って実行
     crate::interpreter::vector_exec::execute_vector_as_code(interp, &target_vector)
 }
 
-/// EVAL - 文字列（またはスタック上の文字コード列）をパースして実行する
-///
-/// 【責務】
-/// - StackTopモード: スタックトップから値を1つポップし、文字列として解釈してパース・実行
-/// - Stackモード: スタック全体を取り出し、それらを文字コード列として結合してパース・実行
-///
-/// 【使用法】
-/// - `'1 2 +' EVAL` → [ 3 ]
-/// - `49 32 50 32 43 .. EVAL` → [ 3 ] （ASCII文字コードから "1 2 +" が復元され実行される）
-///
-/// 【引数スタック】
-/// - StackTopモード: 文字列値（DisplayHint::String）
-/// - Stackモード: スタック全体が文字コード列として扱われる
-///
-/// 【戻り値スタック】
-/// - 実行結果がスタックに残る
 pub(crate) fn op_eval(interp: &mut Interpreter) -> Result<()> {
-    // 実行対象のソースコード文字列（Rust String）を構築
-    let source_code = match interp.operation_target_mode {
+    let source_code: String = match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            // ヘルパー関数を用いてValue -> String変換
+            let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             value_as_string(&val)
-                .ok_or_else(|| AjisaiError::from("EVAL requires a string value"))?
+                .ok_or_else(|| AjisaiError::from("EVAL: expected string value, got non-string"))?
         }
         OperationTargetMode::Stack => {
-            // スタック全体を文字コード列として結合
             let all_elements: Vec<Value> = interp.stack.drain(..).collect();
             if all_elements.is_empty() {
                 return Err(AjisaiError::from(
-                    "EVAL requires at least one character on stack",
+                    "EVAL: expected at least one character on stack, got empty stack",
                 ));
             }
-            // Vector化してから文字列変換
-            let temp_vec = Value::from_vector(all_elements);
+            let temp_vec: Value = Value::from_vector(all_elements);
             value_as_string(&temp_vec)
-                .ok_or_else(|| AjisaiError::from("EVAL: cannot convert stack to string"))?
+                .ok_or_else(|| AjisaiError::from("EVAL: expected convertible stack, got non-string data"))?
         }
     };
 
-    // 実行前にoperation_targetをStackTopにリセット
-    // （実行されるコード内のワードはStackTopモードで動作する）
     interp.operation_target_mode = OperationTargetMode::StackTop;
 
-    let tokens = crate::tokenizer::tokenize(&source_code)
-        .map_err(|e| AjisaiError::from(format!("EVAL tokenization error: {}", e)))?;
+    let tokens: Vec<Token> = crate::tokenizer::tokenize(&source_code)
+        .map_err(|e| AjisaiError::from(format!("EVAL: expected valid syntax, got tokenization error: {}", e)))?;
 
-    let (_, action) = interp.execute_section_core(&tokens, 0)?;
+    let (_, action): (usize, Option<AsyncAction>) = interp.execute_section_core(&tokens, 0)?;
 
     if action.is_some() {
-        return Err(AjisaiError::from("Async operations not supported in EVAL"));
+        return Err(AjisaiError::from("EVAL: expected synchronous code, got async operation"));
     }
 
     Ok(())
@@ -411,8 +356,6 @@ mod tests {
             }
         }
     }
-
-    // === Code Block - コードブロック構文を使用するTIMESのテスト ===
 
     #[tokio::test]
     async fn test_code_block_push() {

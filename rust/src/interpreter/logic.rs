@@ -68,7 +68,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTargetMode::Stack => {
             let source: Vec<Value> = interp.stack.iter().cloned().collect();
-            let mut results = Vec::with_capacity(source.len());
+            let mut results: Vec<Value> = Vec::with_capacity(source.len());
             for value in &source {
                 results.push(compute_inverted_value(value)?);
             }
@@ -104,8 +104,8 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 (a_val, b_val)
             };
 
-            let a_is_nil = a_val.is_nil();
-            let b_is_nil = b_val.is_nil();
+            let a_is_nil: bool = a_val.is_nil();
+            let b_is_nil: bool = b_val.is_nil();
 
             if a_is_nil && b_is_nil {
                 interp.stack.push(Value::nil());
@@ -156,9 +156,9 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            let has_nil = items.iter().any(|v| v.is_nil());
-            let has_falsy_non_nil = items.iter().any(|v| !v.is_nil() && !v.is_truthy());
-            let all_truthy = items.iter().all(|v| v.is_truthy());
+            let has_nil: bool = items.iter().any(|v| v.is_nil());
+            let has_falsy_non_nil: bool = items.iter().any(|v| !v.is_nil() && !v.is_truthy());
+            let all_truthy: bool = items.iter().all(|v| v.is_truthy());
 
             if has_falsy_non_nil {
                 interp.stack.push(Value::from_bool(false));
@@ -195,8 +195,8 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 (a_val, b_val)
             };
 
-            let a_is_nil = a_val.is_nil();
-            let b_is_nil = b_val.is_nil();
+            let a_is_nil: bool = a_val.is_nil();
+            let b_is_nil: bool = b_val.is_nil();
 
             if a_is_nil && b_is_nil {
                 interp.stack.push(Value::nil());
@@ -247,8 +247,8 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            let has_nil = items.iter().any(|v| v.is_nil());
-            let has_truthy = items.iter().any(|v| v.is_truthy());
+            let has_nil: bool = items.iter().any(|v| v.is_nil());
+            let has_truthy: bool = items.iter().any(|v| v.is_truthy());
 
             if has_truthy {
                 interp.stack.push(Value::from_bool(true));

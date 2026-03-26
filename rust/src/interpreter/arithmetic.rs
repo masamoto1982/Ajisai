@@ -3,7 +3,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, extract_operands_with_flow, push_result, push_flow_result};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast;
-use crate::types::{Value, ValueData};
+use crate::types::{FlowToken, Value, ValueData};
 use crate::types::fraction::Fraction;
 
 fn extract_scalar_from_value(val: &Value) -> Option<&Fraction> {
@@ -12,7 +12,10 @@ fn extract_scalar_from_value(val: &Value) -> Option<&Fraction> {
         ValueData::Vector(children) if children.len() == 1 => {
             extract_scalar_from_value(&children[0])
         }
-        _ => None
+        ValueData::Vector(_) => None,
+        ValueData::Nil => None,
+        ValueData::Record { .. } => None,
+        ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -28,7 +31,7 @@ where
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let (operands, flow_tokens) = extract_operands_with_flow(interp, 2)?;
+            let (operands, flow_tokens): (Vec<Value>, Option<Vec<FlowToken>>) = extract_operands_with_flow(interp, 2)?;
             let a_val = &operands[0];
             let b_val = &operands[1];
 
@@ -77,9 +80,9 @@ where
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].iter().cloned().collect()
+                interp.stack[stack_len - count..].iter().cloned().collect::<Vec<Value>>()
             } else {
-                interp.stack.drain(interp.stack.len() - count..).collect()
+                interp.stack.drain(interp.stack.len() - count..).collect::<Vec<Value>>()
             };
 
             if items.iter().any(|v| !is_scalar_value(v)) {
@@ -87,10 +90,10 @@ where
                     interp.stack.extend(items);
                 }
                 interp.stack.push(count_val);
-                return Err(AjisaiError::from("STACK mode requires single-element values"));
+                return Err(AjisaiError::from("+: expected scalar values in Stack mode"));
             }
 
-            let first_scalar = extract_scalar_from_value(&items[0]).unwrap().clone();
+            let first_scalar: Fraction = extract_scalar_from_value(&items[0]).unwrap().clone();
             let mut acc = first_scalar.clone();
             let original_first = acc.clone();
 

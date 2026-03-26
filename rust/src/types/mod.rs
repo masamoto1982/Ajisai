@@ -8,12 +8,6 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
-// ValueExt: Generic extension trait for module-specific value metadata
-// ---------------------------------------------------------------------------
-// In the Data Plane / Semantic Plane architecture, ValueExt metadata lives
-// in the SemanticRegistry (semantic plane), NOT in the Value struct (data plane).
-
 pub trait ValueExt: std::fmt::Debug + 'static {
     fn clone_box(&self) -> Box<dyn ValueExt>;
     fn as_any(&self) -> &dyn Any;
@@ -49,21 +43,10 @@ pub enum ValueData {
     CodeBlock(Vec<Token>),
 }
 
-// ---------------------------------------------------------------------------
-// Value: Data Plane only — pure computation data, no metadata
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub data: ValueData,
 }
-
-// ---------------------------------------------------------------------------
-// SemanticRegistry: Semantic Plane — metadata managed separately from data
-// ---------------------------------------------------------------------------
-// DisplayHint and ValueExt are tracked here, keyed by stack index or FlowToken ID.
-// Pure computation words (arithmetic, comparison, structural ops) never access this.
-// Only display boundaries (PRINT, STR, GUI) and module side-effects consult it.
 
 pub struct SemanticRegistry {
     pub stack_hints: Vec<DisplayHint>,
@@ -146,8 +129,9 @@ impl SemanticRegistry {
     }
 
     pub fn collect_last_hints(&mut self, count: usize) -> Vec<DisplayHint> {
-        let start = self.stack_hints.len().saturating_sub(count);
-        self.stack_hints.drain(start..).collect()
+        let start: usize = self.stack_hints.len().saturating_sub(count);
+        let hints: Vec<DisplayHint> = self.stack_hints.drain(start..).collect();
+        hints
     }
 
     pub fn extend_hints(&mut self, hints: impl IntoIterator<Item = DisplayHint>) {
@@ -301,7 +285,7 @@ impl Value {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index),
             ValueData::Scalar(_) if index == 0 => Some(self),
-            _ => None,
+            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -310,7 +294,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Rc::make_mut(v).get_mut(index)
             }
-            _ => None,
+            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -348,14 +332,14 @@ impl Value {
     pub fn pop_child(&mut self) -> Option<Value> {
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v).pop(),
-            _ => None,
+            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => None,
         }
     }
 
     pub fn insert_child(&mut self, index: usize, child: Value) {
-        let v = match &mut self.data {
+        let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            _ => return,
+            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => return,
         };
         if index <= v.len() {
             v.insert(index, child);
@@ -363,9 +347,9 @@ impl Value {
     }
 
     pub fn remove_child(&mut self, index: usize) -> Option<Value> {
-        let v = match &mut self.data {
+        let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            _ => return None,
+            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => return None,
         };
         if index < v.len() {
             Some(v.remove(index))
@@ -375,9 +359,9 @@ impl Value {
     }
 
     pub fn replace_child(&mut self, index: usize, child: Value) -> Option<Value> {
-        let v = match &mut self.data {
+        let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            _ => return None,
+            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => return None,
         };
         if index < v.len() {
             Some(std::mem::replace(&mut v[index], child))
@@ -390,7 +374,7 @@ impl Value {
     pub fn as_scalar(&self) -> Option<&Fraction> {
         match &self.data {
             ValueData::Scalar(f) => Some(f),
-            _ => None,
+            ValueData::Vector(_) | ValueData::Record { .. } | ValueData::Nil | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -398,7 +382,7 @@ impl Value {
     pub fn as_scalar_mut(&mut self) -> Option<&mut Fraction> {
         match &mut self.data {
             ValueData::Scalar(f) => Some(f),
-            _ => None,
+            ValueData::Vector(_) | ValueData::Record { .. } | ValueData::Nil | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -416,7 +400,7 @@ impl Value {
     pub fn as_vector(&self) -> Option<&Vec<Value>> {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(v),
-            _ => None,
+            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -424,7 +408,7 @@ impl Value {
     pub fn as_vector_mut(&mut self) -> Option<&mut Vec<Value>> {
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Rc::make_mut(v)),
-            _ => None,
+            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -434,8 +418,6 @@ impl Value {
         buf
     }
 
-    /// Tensor-path optimized: collect all leaf Fraction values into a pre-allocated buffer.
-    /// Avoids intermediate Vec allocations from recursive flat_map.
     pub fn collect_fractions_flat_into(&self, buf: &mut Vec<Fraction>) {
         match &self.data {
             ValueData::Nil => buf.push(Fraction::nil()),
@@ -449,7 +431,6 @@ impl Value {
         }
     }
 
-    /// Count total number of leaf Fraction values without allocating.
     pub fn count_fractions(&self) -> usize {
         match &self.data {
             ValueData::Nil => 1,
@@ -469,8 +450,8 @@ impl Value {
                 if v.is_empty() {
                     vec![0]
                 } else {
-                    let first_shape = v[0].shape();
-                    let all_same = v.iter().skip(1).all(|c| c.shape() == first_shape);
+                    let first_shape: Vec<usize> = v[0].shape();
+                    let all_same: bool = v.iter().skip(1).all(|c| c.shape() == first_shape);
                     if all_same && !first_shape.is_empty() {
                         let mut shape = vec![v.len()];
                         shape.extend(first_shape);
@@ -495,7 +476,7 @@ impl Value {
             };
         }
         Self {
-            data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect())),
+            data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect::<Vec<Value>>())),
         }
     }
 
@@ -510,7 +491,7 @@ impl Value {
             };
         }
         Self {
-            data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect())),
+            data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect::<Vec<Value>>())),
         }
     }
 
@@ -521,11 +502,10 @@ impl Value {
 
     #[inline]
     pub fn as_code_block(&self) -> Option<&Vec<Token>> {
-        if let ValueData::CodeBlock(tokens) = &self.data {
-            Some(tokens)
-        } else {
-            None
-        }
+        let ValueData::CodeBlock(tokens) = &self.data else {
+            return None;
+        };
+        Some(tokens)
     }
 
     pub fn from_code_block(tokens: Vec<Token>) -> Self {
@@ -534,9 +514,6 @@ impl Value {
         }
     }
 
-    /// Suggest a default DisplayHint based on the data structure.
-    /// This is a pure function — it does NOT store anything on Value.
-    /// Used by the interpreter when pushing values without explicit hints.
     pub fn resolve_default_hint(&self) -> DisplayHint {
         match &self.data {
             ValueData::Nil => DisplayHint::Nil,
@@ -617,55 +594,25 @@ pub type Stack = Vec<Value>;
 
 pub const MAX_VISIBLE_DIMENSIONS: usize = 9;
 
-// ---------------------------------------------------------------------------
-// Fractional Dataflow: FlowToken
-// ---------------------------------------------------------------------------
-//
-// A FlowToken tracks the UTXO-style consumption chain for a value flowing
-// through the pipeline.  Each operation consumes some fraction and hands
-// the remainder to the next stage.
-//
-// Conservation law:  total == Σ consumed_i + remaining   (at every point)
-//
-// The interpreter creates a FlowToken when a value enters the pipeline and
-// threads it through successive operations.
-
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static FLOW_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
-/// A token that tracks fraction consumption through the dataflow pipeline.
-///
-/// Modelled after the UTXO (Unspent Transaction Output) pattern:
-/// each operation consumes part of the remaining fraction, and the
-/// unconsumed remainder is forwarded to the next operation.
-///
-/// Bifurcation: when `,,` is used, the flow mass is split into child
-/// branches rather than copied.  Each child carries a fraction of the
-/// parent mass (MVP: equal 1/2 : 1/2 split).
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlowToken {
-    /// Unique identifier for this flow chain
     pub id: u64,
-    /// The original total entering this chain
     pub total: Fraction,
-    /// The fraction still available for consumption
     pub remaining: Fraction,
-    /// Logical shape of the flow bundle
     pub shape: Vec<usize>,
-    /// If this token was created by bifurcation, the parent flow ID
     pub parent_flow_id: Option<u64>,
-    /// Child flow IDs created by bifurcation from this token
     pub child_flow_ids: Vec<u64>,
-    /// The mass ratio this branch received (numerator, denominator)
     pub mass_ratio: (u64, u64),
 }
 
 impl FlowToken {
-    /// Create a new flow token from a `Value`, starting a fresh chain.
     pub fn from_value(value: &Value) -> Self {
-        let total = Self::compute_value_total(value);
-        let shape = value.shape();
+        let total: Fraction = Self::compute_value_total(value);
+        let shape: Vec<usize> = value.shape();
         FlowToken {
             id: FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
             total: total.clone(),
@@ -677,7 +624,6 @@ impl FlowToken {
         }
     }
 
-    /// Compute the "total" fraction mass of a value (sum of all scalar leaves).
     fn compute_value_total(value: &Value) -> Fraction {
         match &value.data {
             ValueData::Nil => Fraction::from(0),
@@ -691,7 +637,7 @@ impl FlowToken {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 let mut acc = Fraction::from(0);
                 for child in v.iter() {
-                    let child_total = Self::compute_value_total(child);
+                    let child_total: Fraction = Self::compute_value_total(child);
                     // Use absolute values so mixed-sign vectors don't cancel out
                     acc = acc.add(&child_total.abs());
                 }
@@ -701,9 +647,6 @@ impl FlowToken {
         }
     }
 
-    /// Consume `amount` from this token, returning (consumed, remainder_token).
-    ///
-    /// Returns `Err(OverConsumption)` if `amount > remaining`.
     pub fn consume(
         &self,
         amount: &Fraction,
@@ -714,7 +657,7 @@ impl FlowToken {
                 remaining: format!("{}", self.remaining),
             });
         }
-        let new_remaining = self.remaining.sub(amount);
+        let new_remaining: Fraction = self.remaining.sub(amount);
         Ok((
             amount.clone(),
             FlowToken {
@@ -729,8 +672,6 @@ impl FlowToken {
         ))
     }
 
-    /// Check that the conservation law holds for this token given a list of
-    /// consumed amounts.
     pub fn verify_conservation(
         &self,
         consumed: &[Fraction],
@@ -739,7 +680,7 @@ impl FlowToken {
         for c in consumed {
             sum = sum.add(&c.abs());
         }
-        let reconstructed = sum.add(&self.remaining);
+        let reconstructed: Fraction = sum.add(&self.remaining);
         if reconstructed != self.total {
             return Err(crate::error::AjisaiError::Custom(format!(
                 "Conservation violation: total={}, Σconsumed + remaining = {}",
@@ -749,7 +690,6 @@ impl FlowToken {
         Ok(())
     }
 
-    /// Assert that this token has been fully consumed (remainder == 0).
     pub fn assert_complete(
         &self,
         context: &str,
@@ -763,15 +703,10 @@ impl FlowToken {
         Ok(())
     }
 
-    /// Whether this token has any remaining fraction to consume.
     pub fn is_exhausted(&self) -> bool {
         self.remaining.is_zero()
     }
 
-    /// Linear-consumption optimization hook (flow-level).
-    ///
-    /// Returns true when this flow appears uniquely owned and fully available,
-    /// allowing execution paths to consider safe in-place updates.
     pub fn is_reusable_allocation(&self) -> bool {
         self.remaining == self.total
             && self.parent_flow_id.is_none()
@@ -834,14 +769,14 @@ impl FlowToken {
             return Ok((parent, children));
         }
 
-        let denom = Fraction::from(n as i64);
-        let child_mass = self.remaining.div(&denom);
+        let denom: Fraction = Fraction::from(n as i64);
+        let child_mass: Fraction = self.remaining.div(&denom);
 
         let mut children = Vec::with_capacity(n);
         let mut child_ids = Vec::with_capacity(n);
 
         for _ in 0..n {
-            let child_id = FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let child_id: u64 = FLOW_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
             child_ids.push(child_id);
             children.push(FlowToken {
                 id: child_id,
@@ -867,7 +802,6 @@ impl FlowToken {
         Ok((parent, children))
     }
 
-    /// Verify the bifurcation conservation law: sum of child masses == parent remaining.
     pub fn verify_bifurcation_conservation(
         parent_remaining: &Fraction,
         children: &[FlowToken],
@@ -886,13 +820,9 @@ impl FlowToken {
     }
 }
 
-/// Result of a single operation in the consumed/remainder model.
 #[derive(Debug, Clone)]
 pub struct FlowResult {
-    /// The output value produced by the operation
     pub output: Value,
-    /// The remainder token after consumption
     pub remainder: FlowToken,
-    /// How much was consumed in this step
     pub consumed: Fraction,
 }

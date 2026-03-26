@@ -1,102 +1,61 @@
-// rust/src/interpreter/cast.rs
-//
-// 統一Value宇宙アーキテクチャ版の型変換ワード群
-//
-// 【設計原則】
-// すべての値は ValueData (Scalar/Vector/Nil) として表現される。
-// DisplayHint は表示目的のみに使用し、演算には使用しない。
-// 「型変換」は実質的に DisplayHint の変更と、表示形式の変換である。
-
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{value_as_string, create_number_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 
-// TODO: Type checks will consult SemanticRegistry for DisplayHint.
-// For now, use structural checks on ValueData only.
-// Without SemanticRegistry, we cannot distinguish Boolean/DateTime from Number;
-// all scalars are treated as numbers. Cast operations still work structurally.
-
 fn is_string_value(val: &Value) -> bool {
-    // Without DisplayHint, use heuristic: a vector of printable Unicode codepoints
-    // is considered a string. Vectors with non-printable/control chars or
-    // non-scalar elements are treated as arrays.
-    if let ValueData::Vector(v) = &val.data {
-        !v.is_empty()
-            && v.iter().all(|child| {
-                if let ValueData::Scalar(f) = &child.data {
-                    if let Some(n) = f.to_i64() {
-                        if n >= 0 && n <= 0x10FFFF {
-                            if let Some(c) = char::from_u32(n as u32) {
-                                !c.is_control() || c == '\n' || c == '\r' || c == '\t'
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            })
-    } else {
-        false
+    let children: &Vec<Value> = match &val.data {
+        ValueData::Vector(v) if !v.is_empty() => v,
+        ValueData::Vector(_) => return false,
+        ValueData::Scalar(_) => return false,
+        ValueData::Nil => return false,
+        ValueData::Record { .. } => return false,
+        ValueData::CodeBlock(_) => return false,
+    };
+    children.iter().all(|child| check_char_scalar(child))
+}
+
+fn check_char_scalar(child: &Value) -> bool {
+    let f: &Fraction = match &child.data {
+        ValueData::Scalar(f) => f,
+        ValueData::Vector(_) => return false,
+        ValueData::Nil => return false,
+        ValueData::Record { .. } => return false,
+        ValueData::CodeBlock(_) => return false,
+    };
+    let n: i64 = match f.to_i64() {
+        Some(n) if n >= 0 && n <= 0x10FFFF => n,
+        Some(_) => return false,
+        None => return false,
+    };
+    match char::from_u32(n as u32) {
+        Some(c) => !c.is_control() || c == '\n' || c == '\r' || c == '\t',
+        None => false,
     }
 }
 
-/// 値が真偽値として扱えるかチェック
-/// TODO: Will check SemanticRegistry hint; for now always false (scalars = numbers)
 fn is_boolean_value(_val: &Value) -> bool {
     false
 }
 
-/// 値が数値として扱えるかチェック
 fn is_number_value(val: &Value) -> bool {
     val.is_scalar()
 }
 
-/// 値がDateTimeとして扱えるかチェック
-/// TODO: Will check SemanticRegistry hint; for now always false (scalars = numbers)
 fn is_datetime_value(_val: &Value) -> bool {
     false
 }
 
-/// STR - 値を人間が読める形式の文字列に変換（Stringify）
-///
-/// 【使用法】
-/// ```ajisai
-/// 123 STR → '123'
-/// TRUE STR → 'TRUE'
-/// NIL STR → 'NIL'
-/// ```
-///
-/// 【動作】
-/// - 数値: その文字列表現に変換（例: 123 → '123', 1/3 → '1/3'）
-/// - 真偽値: 'TRUE' または 'FALSE'
-/// - NIL: 'NIL'
-/// - ベクタ: 要素を空白区切りで連結
-///
-/// 【エラー】
-/// - 入力が既にStringの場合（「変化なしはエラー」原則）
-/// STR の単一値変換（内部ヘルパー）
-/// 成功時は Ok(converted_value)、NoChange 時は Err を返す
 fn convert_value_to_string(val: &Value) -> Result<Value> {
-    // NILの場合: 不明な値に変換を射しても不明である (仕様セクション7.2)
     if val.is_nil() {
         return Ok(Value::nil());
     }
 
-    // 既に文字列形式の場合は冗長な変換エラー
     if is_string_value(val) {
         return Err(AjisaiError::NoChange { word: "STR".into() });
     }
 
-    // スカラー値の場合（数値/真偽値/DateTimeは全てScalar）
-    // TODO: SemanticRegistry で DisplayHint を参照して Boolean/DateTime 表示を分岐
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
             let string_repr = format_fraction_to_string(f);
@@ -104,7 +63,6 @@ fn convert_value_to_string(val: &Value) -> Result<Value> {
         }
     }
 
-    // ベクタの場合（複数要素）
     let string_repr = format_value_to_string_repr(val);
     Ok(Value::from_string(&string_repr))
 }
@@ -175,7 +133,6 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_string)
 }
 
-/// 分数を文字列に変換するヘルパー
 fn format_fraction_to_string(f: &Fraction) -> String {
     if f.is_integer() {
         format!("{}", f.numerator())
@@ -184,25 +141,7 @@ fn format_fraction_to_string(f: &Fraction) -> String {
     }
 }
 
-/// NUM - 文字列を数値（分数）にパース
-///
-/// 【使用法】
-/// ```ajisai
-/// '123' NUM → [ 123 ]
-/// '1/3' NUM → [ 1/3 ]
-/// 'ABC' NUM → NIL
-/// ```
-///
-/// 【動作】
-/// - 文字列を数値としてパースする
-/// - パース成功時: その数値を返す
-/// - パース失敗時: NILを返す（エラー停止させない）
-///
-/// 【エラー】
-/// - 入力がStringでない場合（「変化なしはエラー」原則）
-/// NUM の単一値変換（内部ヘルパー）
 fn convert_value_to_number(val: &Value) -> Result<Value> {
-    // 文字列の場合のみ処理
     if is_string_value(val) {
         let s = value_as_string(val).unwrap_or_default();
         match Fraction::from_str(&s) {
@@ -216,11 +155,11 @@ fn convert_value_to_number(val: &Value) -> Result<Value> {
     }
     if is_boolean_value(val) {
         return Err(AjisaiError::from(
-            "NUM: cannot parse Boolean (expected String)",
+            "NUM: expected String, got Boolean",
         ));
     }
     if val.is_nil() {
-        return Err(AjisaiError::from("NUM: cannot parse Nil (expected String)"));
+        return Err(AjisaiError::from("NUM: expected String, got Nil"));
     }
     Err(AjisaiError::from("NUM: expected String input"))
 }
@@ -229,29 +168,6 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_number)
 }
 
-/// BOOL - 文字列または数値を真偽値に正規化（Parse/Normalize Boolean）
-///
-/// 【使用法】
-/// ```ajisai
-/// 'True' BOOL → TRUE
-/// 'false' BOOL → FALSE
-/// 'other' BOOL → NIL
-/// 100 BOOL → TRUE
-/// 0 BOOL → FALSE
-/// ```
-///
-/// 【動作】
-/// - 入力がStringの場合: 大文字小文字を無視して判定
-///   - 'true' → TRUE
-///   - 'false' → FALSE
-///   - それ以外 → NIL
-/// - 入力がNumberの場合: Truthiness判定
-///   - 0 → FALSE
-///   - 0以外 → TRUE
-///
-/// 【エラー】
-/// - 入力が既にBooleanの場合（「変化なしはエラー」原則）
-/// BOOL の単一値変換（内部ヘルパー）
 fn convert_value_to_boolean(val: &Value) -> Result<Value> {
     if is_boolean_value(val) {
         return Err(AjisaiError::NoChange {
@@ -276,7 +192,7 @@ fn convert_value_to_boolean(val: &Value) -> Result<Value> {
     }
     if val.is_nil() {
         return Err(AjisaiError::from(
-            "BOOL: cannot convert Nil (expected String or Number)",
+            "BOOL: expected String or Number, got Nil",
         ));
     }
     Err(AjisaiError::from("BOOL: expected String or Number input"))
@@ -286,19 +202,6 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_boolean)
 }
 
-/// NIL - 文字列をNilに変換
-///
-/// 【使用法】
-/// ```ajisai
-/// [ 'nil' ] NIL → [ NIL ]
-/// [ 'NIL' ] NIL → [ NIL ]
-/// ```
-///
-/// 【エラー】
-/// - "nil"以外の文字列
-/// - Boolean型
-/// - Number型
-/// - Nil型（同型変換）
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported {
@@ -309,13 +212,11 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
 
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 既にNIL形式の場合は冗長な変換エラー
     if val.is_nil() {
         interp.stack.push(val);
         return Err(AjisaiError::NoChange { word: "NIL".into() });
     }
 
-    // 文字列の場合
     if is_string_value(&val) {
         let s = value_as_string(&val).unwrap_or_default();
         let upper = s.to_uppercase();
@@ -329,54 +230,39 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    // 真偽値の場合
     if is_boolean_value(&val) {
         interp.stack.push(val);
         return Err(AjisaiError::from(
-            "NIL: cannot convert boolean format to nil",
+            "NIL: expected String, got Boolean",
         ));
     }
 
-    // 数値の場合
     if is_number_value(&val) {
         interp.stack.push(val);
         return Err(AjisaiError::from(
-            "NIL: cannot convert number format to nil",
+            "NIL: expected String, got Number",
         ));
     }
 
-    // その他はエラー
     interp.stack.push(val);
-    Err(AjisaiError::from("NIL: requires string format"))
+    Err(AjisaiError::from("NIL: expected String input"))
 }
 
-/// CHARS - 文字列を文字ベクタに分解
-///
-/// 【使用法】
-/// ```ajisai
-/// [ 'hello' ] CHARS → [ { 'h' 'e' 'l' 'l' 'o' } ]
-/// ```
-///
-/// 【エラー】
-/// - 空文字列
-/// - String以外の型
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // NILの場合
             if val.is_nil() {
                 interp.stack.push(val);
-                return Err(AjisaiError::from("CHARS: cannot convert Nil to characters"));
+                return Err(AjisaiError::from("CHARS: expected String, got Nil"));
             }
 
-            // 文字列の場合
             if is_string_value(&val) {
                 let s = value_as_string(&val).unwrap_or_default();
                 if s.is_empty() {
                     interp.stack.push(val);
-                    return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                    return Err(AjisaiError::from("CHARS: expected non-empty String"));
                 }
 
                 let chars: Vec<Value> = s
@@ -388,28 +274,24 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            // 数値の場合
             if is_number_value(&val) {
                 interp.stack.push(val);
                 return Err(AjisaiError::from(
-                    "CHARS: cannot convert Number to characters",
+                    "CHARS: expected String, got Number",
                 ));
             }
 
-            // 真偽値の場合
             if is_boolean_value(&val) {
                 interp.stack.push(val);
                 return Err(AjisaiError::from(
-                    "CHARS: cannot convert Boolean to characters",
+                    "CHARS: expected String, got Boolean",
                 ));
             }
 
-            // その他はエラー
             interp.stack.push(val);
-            Err(AjisaiError::from("CHARS: requires string format"))
+            Err(AjisaiError::from("CHARS: expected String input"))
         }
         OperationTargetMode::Stack => {
-            // スタック上の各要素に対してCHARSを適用
             let stack_len = interp.stack.len();
             if stack_len == 0 {
                 return Err(AjisaiError::StackUnderflow);
@@ -419,20 +301,18 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
             let elements: Vec<Value> = interp.stack.drain(..).collect();
 
             for elem in elements {
-                // NILの場合
                 if elem.is_nil() {
                     interp.stack = results;
                     interp.stack.push(elem);
-                    return Err(AjisaiError::from("CHARS: cannot convert Nil to characters"));
+                    return Err(AjisaiError::from("CHARS: expected String, got Nil"));
                 }
 
-                // 文字列の場合
                 if is_string_value(&elem) {
                     let s = value_as_string(&elem).unwrap_or_default();
                     if s.is_empty() {
                         interp.stack = results;
                         interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: empty string has no characters"));
+                        return Err(AjisaiError::from("CHARS: expected non-empty String"));
                     }
                     let chars: Vec<Value> = s
                         .chars()
@@ -442,28 +322,25 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                     continue;
                 }
 
-                // 数値の場合
                 if is_number_value(&elem) {
                     interp.stack = results;
                     interp.stack.push(elem);
                     return Err(AjisaiError::from(
-                        "CHARS: cannot convert Number to characters",
+                        "CHARS: expected String, got Number",
                     ));
                 }
 
-                // 真偽値の場合
                 if is_boolean_value(&elem) {
                     interp.stack = results;
                     interp.stack.push(elem);
                     return Err(AjisaiError::from(
-                        "CHARS: cannot convert Boolean to characters",
+                        "CHARS: expected String, got Boolean",
                     ));
                 }
 
-                // その他はエラー
                 interp.stack = results;
                 interp.stack.push(elem);
-                return Err(AjisaiError::from("CHARS: requires string format"));
+                return Err(AjisaiError::from("CHARS: expected String input"));
             }
 
             interp.stack = results;
@@ -472,39 +349,33 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// JOIN - 文字列ベクタを連結して単一文字列に
-///
-/// 【使用法】
-/// ```ajisai
-/// [ 'h' 'e' 'l' 'l' 'o' ] JOIN → 'hello'
-/// ```
-///
-/// 【エラー】
-/// - 空ベクタ
-/// - String/Number以外の要素を含む場合
+fn try_char_from_value(val: &Value) -> Option<char> {
+    let f: &Fraction = val.as_scalar()?;
+    let code: i64 = f.to_i64()?;
+    if code < 0 || code > 0x10FFFF { return None; }
+    char::from_u32(code as u32)
+}
+
 pub fn op_join(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            // NILの場合
             if val.is_nil() {
                 interp.stack.push(val);
-                return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
+                return Err(AjisaiError::from("JOIN: expected Vector, got Nil"));
             }
 
-            // ベクタの場合
             if let ValueData::Vector(children) = &val.data {
                 if children.is_empty() {
                     interp.stack.push(val);
                     return Err(AjisaiError::from(
-                        "JOIN: empty vector has no strings to join",
+                        "JOIN: expected non-empty Vector",
                     ));
                 }
 
                 let mut result = String::new();
                 for (i, elem) in children.iter().enumerate() {
-                    // 文字列の場合
                     if is_string_value(elem) {
                         if let Some(s) = value_as_string(elem) {
                             result.push_str(&s);
@@ -512,26 +383,19 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         }
                     }
 
-                    // 数値の場合（文字コードとして解釈）
                     if is_number_value(elem) {
-                        if let Some(f) = elem.as_scalar() {
-                            if let Some(code) = f.to_i64() {
-                                if code >= 0 && code <= 0x10FFFF {
-                                    if let Some(c) = char::from_u32(code as u32) {
-                                        result.push(c);
-                                        continue;
-                                    }
-                                }
+                        match try_char_from_value(elem) {
+                            Some(c) => { result.push(c); continue; }
+                            None => {
+                                interp.stack.push(val);
+                                return Err(AjisaiError::from(format!(
+                                    "JOIN: invalid character code at index {}",
+                                    i
+                                )));
                             }
                         }
-                        interp.stack.push(val);
-                        return Err(AjisaiError::from(format!(
-                            "JOIN: invalid character code at index {}",
-                            i
-                        )));
                     }
 
-                    // その他の型
                     let type_name = if elem.is_nil() {
                         "nil"
                     } else if is_boolean_value(elem) {
@@ -550,7 +414,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            // 単一要素の場合（ベクタではない）
             let type_name = if is_string_value(&val) {
                 "String"
             } else if is_number_value(&val) {
@@ -564,7 +427,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             };
             interp.stack.push(val);
             Err(AjisaiError::from(format!(
-                "JOIN: requires vector format, got {}",
+                "JOIN: expected Vector, got {}",
                 type_name
             )))
         }

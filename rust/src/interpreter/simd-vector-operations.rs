@@ -1,40 +1,38 @@
-// rust/src/interpreter/simd-vector-operations.rs
-//
-// WASM SIMD acceleration for integer vector arithmetic.
-// Provides fast paths for element-wise operations on vectors of integer fractions (denominator=1).
-
 use crate::types::{Value, ValueData};
-use num_traits::{One, ToPrimitive};
+use num_traits::ToPrimitive;
 
-/// Minimum vector length to use SIMD path (below this, scalar is faster due to branch overhead)
 const SIMD_THRESHOLD: usize = 8;
 
-/// Check if a Value is a flat vector of integer fractions (denominator=1, fits in i64).
-/// Returns the extracted i64 values if so.
 pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
-    let children = match &val.data {
+    let children: &Vec<Value> = match &val.data {
         ValueData::Vector(v) => v,
-        _ => return None,
+        ValueData::Scalar(_)
+        | ValueData::Record { .. }
+        | ValueData::Nil
+        | ValueData::CodeBlock(_) => return None,
     };
 
     if children.len() < SIMD_THRESHOLD {
         return None;
     }
 
-    let mut result = Vec::with_capacity(children.len());
+    let mut result: Vec<i64> = Vec::with_capacity(children.len());
     for child in children.iter() {
         match &child.data {
             ValueData::Scalar(f) if f.is_integer() => match f.to_i64() {
                 Some(n) => result.push(n),
                 None => return None,
             },
-            _ => return None,
+            ValueData::Scalar(_)
+            | ValueData::Vector(_)
+            | ValueData::Record { .. }
+            | ValueData::Nil
+            | ValueData::CodeBlock(_) => return None,
         }
     }
     Some(result)
 }
 
-/// Build a Value vector from i64 values (all as integer fractions).
 pub fn create_value_from_integer_vector(values: Vec<i64>) -> Value {
     let children: Vec<Value> = values.into_iter().map(Value::from_int).collect();
     Value::from_children(children)
@@ -43,20 +41,22 @@ pub fn create_value_from_integer_vector(values: Vec<i64>) -> Value {
 fn extract_integer_scalar(value: &Value) -> Option<i64> {
     match &value.data {
         ValueData::Scalar(f) if f.is_integer() => f.to_i64(),
-        _ => None,
+        ValueData::Scalar(_)
+        | ValueData::Vector(_)
+        | ValueData::Record { .. }
+        | ValueData::Nil
+        | ValueData::CodeBlock(_) => None,
     }
 }
 
 fn apply_simd_binary(a: &Value, b: &Value, op: fn(&[i64], &[i64]) -> Vec<i64>) -> Option<Value> {
-    let va = extract_integer_vector(a)?;
-    let vb = extract_integer_vector(b)?;
+    let va: Vec<i64> = extract_integer_vector(a)?;
+    let vb: Vec<i64> = extract_integer_vector(b)?;
     if va.len() != vb.len() {
         return None;
     }
     Some(create_value_from_integer_vector(op(&va, &vb)))
 }
-
-// --- WASM SIMD implementations ---
 
 #[cfg(target_arch = "wasm32")]
 mod wasm_impl {
@@ -191,65 +191,57 @@ mod wasm_impl {
     }
 }
 
-// --- Scalar fallback for non-WASM targets (tests, native builds) ---
-
 #[cfg(not(target_arch = "wasm32"))]
 mod wasm_impl {
     #[inline]
     pub fn simd_add(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter().zip(b.iter()).map(|(x, y)| x + y).collect()
+        a.iter().zip(b.iter()).map(|(x, y)| x + y).collect::<Vec<i64>>()
     }
 
     #[inline]
     pub fn simd_sub(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter().zip(b.iter()).map(|(x, y)| x - y).collect()
+        a.iter().zip(b.iter()).map(|(x, y)| x - y).collect::<Vec<i64>>()
     }
 
     #[inline]
     pub fn simd_mul(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter().zip(b.iter()).map(|(x, y)| x * y).collect()
+        a.iter().zip(b.iter()).map(|(x, y)| x * y).collect::<Vec<i64>>()
     }
 
     #[inline]
     pub fn simd_scalar_add(vec: &[i64], scalar: i64) -> Vec<i64> {
-        vec.iter().map(|x| x + scalar).collect()
+        vec.iter().map(|x| x + scalar).collect::<Vec<i64>>()
     }
 
     #[inline]
     pub fn simd_scalar_mul(vec: &[i64], scalar: i64) -> Vec<i64> {
-        vec.iter().map(|x| x * scalar).collect()
+        vec.iter().map(|x| x * scalar).collect::<Vec<i64>>()
     }
 }
 
-/// Try to perform SIMD-accelerated addition on two values.
-/// Returns Some(result) if both are integer vectors of sufficient length, None otherwise.
 pub fn apply_simd_add(a: &Value, b: &Value) -> Option<Value> {
     apply_simd_binary(a, b, wasm_impl::simd_add)
 }
 
-/// Try to perform SIMD-accelerated subtraction on two values.
 pub fn apply_simd_sub(a: &Value, b: &Value) -> Option<Value> {
     apply_simd_binary(a, b, wasm_impl::simd_sub)
 }
 
-/// Try to perform SIMD-accelerated multiplication on two values.
 pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<Value> {
     apply_simd_binary(a, b, wasm_impl::simd_mul)
 }
 
-/// Try to perform SIMD-accelerated scalar addition (vector + scalar or scalar + vector).
 pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
-    let va = extract_integer_vector(vec_val)?;
-    let scalar = extract_integer_scalar(scalar_val)?;
+    let va: Vec<i64> = extract_integer_vector(vec_val)?;
+    let scalar: i64 = extract_integer_scalar(scalar_val)?;
     Some(create_value_from_integer_vector(wasm_impl::simd_scalar_add(
         &va, scalar,
     )))
 }
 
-/// Try to perform SIMD-accelerated scalar multiplication (vector * scalar or scalar * vector).
 pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
-    let va = extract_integer_vector(vec_val)?;
-    let scalar = extract_integer_scalar(scalar_val)?;
+    let va: Vec<i64> = extract_integer_vector(vec_val)?;
+    let scalar: i64 = extract_integer_scalar(scalar_val)?;
     Some(create_value_from_integer_vector(wasm_impl::simd_scalar_mul(
         &va, scalar,
     )))
@@ -260,40 +252,40 @@ mod tests {
     use super::*;
 
     fn create_int_vector(values: &[i64]) -> Value {
-        let children: Vec<Value> = values.iter().map(|&v| Value::from_int(v)).collect();
+        let children: Vec<Value> = values.iter().map(|&v| Value::from_int(v)).collect::<Vec<Value>>();
         Value::from_children(children)
     }
 
     #[test]
     fn test_extract_integer_vector() {
-        let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let result = extract_integer_vector(&v);
+        let v: Value = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let result: Option<Vec<i64>> = extract_integer_vector(&v);
         assert!(result.is_some());
         assert_eq!(result.unwrap(), vec![1, 2, 3, 4, 5, 6, 7, 8]);
     }
 
     #[test]
     fn test_extract_integer_vector_too_small() {
-        let v = create_int_vector(&[1, 2, 3]);
-        let result = extract_integer_vector(&v);
+        let v: Value = create_int_vector(&[1, 2, 3]);
+        let result: Option<Vec<i64>> = extract_integer_vector(&v);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_simd_add_vectors() {
-        let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let b = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
-        let result = apply_simd_add(&a, &b).unwrap();
-        let expected = extract_integer_vector(&result).unwrap();
+        let a: Value = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let b: Value = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
+        let result: Value = apply_simd_add(&a, &b).unwrap();
+        let expected: Vec<i64> = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88]);
     }
 
     #[test]
     fn test_simd_sub_vectors() {
-        let a = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
-        let b = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let result = apply_simd_sub(&a, &b).unwrap();
-        let expected = extract_integer_vector(&result).unwrap();
+        let a: Value = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
+        let b: Value = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let result: Value = apply_simd_sub(&a, &b).unwrap();
+        let expected: Vec<i64> = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![9, 18, 27, 36, 45, 54, 63, 72]);
     }
 

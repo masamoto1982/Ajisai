@@ -26,13 +26,11 @@ impl FlatTensor {
                 strides: Vec::new(),
             }),
             ValueData::Vector(_) | ValueData::Record { .. } => {
-                let shape = value.shape();
-                // Pre-allocate based on total element count to avoid
-                // intermediate Vec allocations in recursive traversal
-                let total_size = value.count_fractions();
-                let mut data = Vec::with_capacity(total_size);
+                let shape: Vec<usize> = value.shape();
+                let total_size: usize = value.count_fractions();
+                let mut data: Vec<Fraction> = Vec::with_capacity(total_size);
                 value.collect_fractions_flat_into(&mut data);
-                let strides = compute_strides(&shape);
+                let strides: Vec<usize> = compute_strides(&shape);
                 Ok(Self {
                     data,
                     shape,
@@ -59,7 +57,7 @@ impl FlatTensor {
                 shape
             )));
         }
-        let strides = compute_strides(&shape);
+        let strides: Vec<usize> = compute_strides(&shape);
         Ok(Self {
             data,
             shape,
@@ -124,8 +122,8 @@ fn project_broadcast_index(
 }
 
 pub(crate) fn broadcast_shape(a: &[usize], b: &[usize]) -> Result<Vec<usize>> {
-    let rank = a.len().max(b.len());
-    let mut out = vec![1; rank];
+    let rank: usize = a.len().max(b.len());
+    let mut out: Vec<usize> = vec![1; rank];
 
     for i in 0..rank {
         let a_dim = if i >= rank - a.len() {
@@ -163,8 +161,8 @@ fn apply_tensor_metadata(
         });
     }
 
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    let value = if is_keep_mode {
+    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
+    let value: Value = if is_keep_mode {
         interp
             .stack
             .last()
@@ -174,7 +172,7 @@ fn apply_tensor_metadata(
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
 
-    let result = mapper(&value);
+    let result: Value = mapper(&value);
     interp.stack.push(result);
     Ok(())
 }
@@ -201,7 +199,7 @@ fn compute_rank_of_value(value: &Value) -> Value {
         return Value::nil();
     }
 
-    let rank = if value.is_vector() {
+    let rank: i64 = if value.is_vector() {
         value.shape().len() as i64
     } else {
         0
@@ -225,8 +223,8 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    let shape_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let data_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let shape_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let data_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if !shape_val.is_vector() && !shape_val.is_nil() {
         interp.stack.push(data_val);
@@ -234,7 +232,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("RESHAPE requires shape as vector"));
     }
 
-    let dim_count = shape_val.len();
+    let dim_count: usize = shape_val.len();
     if dim_count > MAX_VISIBLE_DIMENSIONS {
         interp.stack.push(data_val);
         interp.stack.push(shape_val);
@@ -244,7 +242,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    let mut new_shape = Vec::with_capacity(dim_count);
+    let mut new_shape: Vec<usize> = Vec::with_capacity(dim_count);
     for i in 0..dim_count {
         let dim = match shape_val
             .get_child(i)
@@ -270,7 +268,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("RESHAPE requires data as vector"));
     }
 
-    let input_tensor = match FlatTensor::from_value(&data_val) {
+    let input_tensor: FlatTensor = match FlatTensor::from_value(&data_val) {
         Ok(t) => t,
         Err(err) => {
             interp.stack.push(data_val);
@@ -295,7 +293,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    let result_tensor = FlatTensor::from_shape_and_data(new_shape, input_tensor.data.clone())?;
+    let result_tensor: FlatTensor = FlatTensor::from_shape_and_data(new_shape, input_tensor.data.clone())?;
 
     if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
         interp.stack.push(data_val);
@@ -308,13 +306,11 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
 
 pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
     if shape.is_empty() {
-        // スカラー
         if data.len() == 1 {
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
             };
         }
-        // データが複数ある場合はベクタ
         let children: Vec<Value> = data
             .iter()
             .map(|f| Value::from_fraction(f.clone()))
@@ -323,7 +319,6 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
     }
 
     if shape.len() == 1 {
-        // 1次元ベクタ
         let children: Vec<Value> = data
             .iter()
             .map(|f| Value::from_fraction(f.clone()))
@@ -333,8 +328,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
         };
     }
 
-    // 多次元: 最外層の次元でチャンクに分割し、再帰的に構築
-    let outer_size = shape[0];
+    let outer_size: usize = shape[0];
     let inner_shape = &shape[1..];
     let inner_size: usize = inner_shape.iter().product();
 
@@ -359,14 +353,14 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if val.is_nil() {
         interp.stack.push(Value::nil());
         return Ok(());
     }
 
-    let tensor = match FlatTensor::from_value(&val) {
+    let tensor: FlatTensor = match FlatTensor::from_value(&val) {
         Ok(t) => t,
         Err(err) => {
             interp.stack.push(val);
@@ -379,17 +373,17 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("TRANSPOSE requires 2D vector"));
     }
 
-    let rows = tensor.shape[0];
-    let cols = tensor.shape[1];
+    let rows: usize = tensor.shape[0];
+    let cols: usize = tensor.shape[1];
 
-    let mut transposed = Vec::with_capacity(tensor.data.len());
+    let mut transposed: Vec<Fraction> = Vec::with_capacity(tensor.data.len());
     for j in 0..cols {
         for i in 0..rows {
             transposed.push(tensor.data[i * cols + j].clone());
         }
     }
 
-    let result_tensor = FlatTensor::from_shape_and_data(vec![cols, rows], transposed)?;
+    let result_tensor: FlatTensor = FlatTensor::from_shape_and_data(vec![cols, rows], transposed)?;
 
     if interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep {
         interp.stack.push(val);
@@ -410,9 +404,9 @@ where
         });
     }
 
-    let is_keep_mode = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
+    let is_keep_mode: bool = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
 
-    let val = if is_keep_mode {
+    let val: Value = if is_keep_mode {
         interp
             .stack
             .last()
@@ -434,7 +428,7 @@ where
 
     if val.is_scalar() {
         if let Some(f) = val.as_scalar() {
-            let result = op(f);
+            let result: Fraction = op(f);
             interp.stack.push(create_number_value(result));
             return Ok(());
         }
@@ -487,9 +481,9 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    let is_keep_mode = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
+    let is_keep_mode: bool = interp.consumption_mode == crate::interpreter::ConsumptionMode::Keep;
 
-    let b_val = if is_keep_mode {
+    let b_val: Value = if is_keep_mode {
         interp
             .stack
             .last()
@@ -728,10 +722,10 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
             .and_then(|f| f.as_usize())
         {
             Some(d) if d > 0 => d,
-            _ => {
+            Some(_) | None => {
                 interp.stack.push(args_val);
                 return Err(AjisaiError::from(
-                    "Shape dimensions must be positive integers",
+                    "RESHAPE: expected positive integer dimensions, got invalid dimension",
                 ));
             }
         };

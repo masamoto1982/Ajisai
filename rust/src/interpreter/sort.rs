@@ -1,12 +1,3 @@
-// rust/src/interpreter/sort.rs
-//
-// 【責務】
-// 高速ソートアルゴリズム（SORT）を実装する。
-// Introsortアルゴリズムを使用し、分数比較には除算を避けて
-// クロス乗算（a/b < c/d ⟺ a*d < b*c）を使用する。
-//
-// 統一Value宇宙アーキテクチャ版
-
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
@@ -19,15 +10,15 @@ fn sort_fractions_by_introsort(values: &mut [(usize, Fraction)]) {
 fn reorder_values_by_permutation(source: &[Value], perm: &[usize]) -> Vec<Value> {
     perm.iter()
         .map(|&orig_idx| source[orig_idx].clone())
-        .collect()
+        .collect::<Vec<Value>>()
 }
 
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let val = if is_keep_mode {
+            let val: Value = if is_keep_mode {
                 interp
                     .stack
                     .last()
@@ -42,11 +33,14 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 ValueData::Record {
                     pairs: children, ..
                 } => children,
-                _ => {
+                ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => {
                     if !is_keep_mode {
                         interp.stack.push(val);
                     }
-                    return Err(AjisaiError::create_structure_error("vector", "other format"));
+                    return Err(AjisaiError::create_structure_error(
+                        "SORT: expected vector, got non-vector value",
+                        "other format",
+                    ));
                 }
             };
 
@@ -64,7 +58,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                             interp.stack.push(val);
                         }
                         return Err(AjisaiError::from(
-                            "SORT requires all elements to be numbers",
+                            "SORT: expected all elements to be numbers, got non-number element",
                         ));
                     }
                 }
@@ -75,26 +69,24 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             let perm: Vec<usize> = indexed_fractions
                 .iter()
                 .map(|(orig_idx, _)| *orig_idx)
-                .collect();
-            let sorted_v = reorder_values_by_permutation(children, &perm);
+                .collect::<Vec<usize>>();
+            let sorted_v: Vec<Value> = reorder_values_by_permutation(children, &perm);
 
-            if !interp.disable_no_change_check {
-                if children.len() < 2 {
-                    if !is_keep_mode {
-                        interp.stack.push(Value::from_vector(sorted_v));
-                    }
-                    return Err(AjisaiError::NoChange {
-                        word: "SORT".into(),
-                    });
+            if !interp.disable_no_change_check && children.len() < 2 {
+                if !is_keep_mode {
+                    interp.stack.push(Value::from_vector(sorted_v));
                 }
-                if sorted_v == **children {
-                    if !is_keep_mode {
-                        interp.stack.push(Value::from_vector(sorted_v));
-                    }
-                    return Err(AjisaiError::NoChange {
-                        word: "SORT".into(),
-                    });
+                return Err(AjisaiError::NoChange {
+                    word: "SORT".into(),
+                });
+            }
+            if !interp.disable_no_change_check && sorted_v == **children {
+                if !is_keep_mode {
+                    interp.stack.push(Value::from_vector(sorted_v));
                 }
+                return Err(AjisaiError::NoChange {
+                    word: "SORT".into(),
+                });
             }
 
             interp.stack.push(Value::from_vector(sorted_v));
@@ -112,7 +104,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                     Some(f) => indexed_fractions.push((i, f.clone())),
                     None => {
                         return Err(AjisaiError::from(
-                            "SORT requires all stack elements to be numbers",
+                            "SORT: expected all stack elements to be numbers, got non-number element",
                         ));
                     }
                 }
@@ -120,20 +112,19 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
 
             sort_fractions_by_introsort(&mut indexed_fractions);
 
-            let is_identity = indexed_fractions
+            let is_identity: bool = indexed_fractions
                 .iter()
                 .enumerate()
                 .all(|(i, (orig, _))| *orig == i);
-            if !interp.disable_no_change_check {
-                if interp.stack.len() < 2 || is_identity {
-                    return Err(AjisaiError::NoChange {
-                        word: "SORT".into(),
-                    });
-                }
+
+            if !interp.disable_no_change_check && (interp.stack.len() < 2 || is_identity) {
+                return Err(AjisaiError::NoChange {
+                    word: "SORT".into(),
+                });
             }
 
-            let perm: Vec<usize> = indexed_fractions.iter().map(|(orig, _)| *orig).collect();
-            let sorted_stack = reorder_values_by_permutation(&interp.stack, &perm);
+            let perm: Vec<usize> = indexed_fractions.iter().map(|(orig, _)| *orig).collect::<Vec<usize>>();
+            let sorted_stack: Vec<Value> = reorder_values_by_permutation(&interp.stack, &perm);
             if is_keep_mode {
                 interp.stack.extend(sorted_stack);
             } else {
@@ -155,17 +146,17 @@ mod tests {
 
     #[test]
     fn test_fraction_comparison() {
-        let half = create_fraction(1, 2);
-        let third = create_fraction(1, 3);
+        let half: Fraction = create_fraction(1, 2);
+        let third: Fraction = create_fraction(1, 3);
         assert!(half > third);
 
-        let two_thirds = create_fraction(2, 3);
+        let two_thirds: Fraction = create_fraction(2, 3);
         assert!(two_thirds > half);
     }
 
     #[test]
     fn test_introsort_integers() {
-        let mut values = vec![
+        let mut values: Vec<(usize, Fraction)> = vec![
             (0, create_fraction(32, 1)),
             (1, create_fraction(8, 1)),
             (2, create_fraction(2, 1)),
@@ -181,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_sort_fractions_by_introsort() {
-        let mut values = vec![
+        let mut values: Vec<(usize, Fraction)> = vec![
             (0, create_fraction(1, 2)),
             (1, create_fraction(1, 3)),
             (2, create_fraction(2, 3)),
@@ -195,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_introsort_mixed() {
-        let mut values = vec![
+        let mut values: Vec<(usize, Fraction)> = vec![
             (0, create_fraction(3, 1)),
             (1, create_fraction(1, 2)),
             (2, create_fraction(2, 1)),
