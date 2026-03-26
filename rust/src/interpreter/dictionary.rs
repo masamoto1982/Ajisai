@@ -1048,28 +1048,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_path_coinage_dict_word() {
-        // COINAGE@SAMPLE@WORD resolves custom word
+    async fn test_path_user_dict_word() {
+        // USER@SAMPLE@WORD resolves custom word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("COINAGE@SAMPLE@SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "COINAGE@SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        let result = interp.execute("USER@SAMPLE@SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "USER@SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
         assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
     async fn test_path_fully_qualified_custom() {
-        // DICTIONARY@COINAGE@SAMPLE@WORD resolves custom word
+        // DICT@USER@SAMPLE@WORD resolves custom word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("DICTIONARY@COINAGE@SAMPLE@SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "DICTIONARY@COINAGE@SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        let result = interp.execute("DICT@USER@SAMPLE@SAY-HELLO-WORLD").await;
+        assert!(result.is_ok(), "DICT@USER@SAMPLE@SAY-HELLO-WORLD should resolve: {:?}", result.err());
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -1088,37 +1088,37 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_path_dictionary_module_word() {
-        // DICTIONARY@MUSIC@C4 resolves module sample word
+    async fn test_path_dict_module_word() {
+        // DICT@MUSIC@C4 resolves module sample word
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        let result = interp.execute("DICTIONARY@MUSIC@C4").await;
-        assert!(result.is_ok(), "DICTIONARY@MUSIC@C4 should resolve: {:?}", result.err());
+        let result = interp.execute("DICT@MUSIC@C4").await;
+        assert!(result.is_ok(), "DICT@MUSIC@C4 should resolve: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
     }
 
     #[tokio::test]
-    async fn test_path_builtin_at_word() {
-        // BUILTIN@GET resolves built-in word
+    async fn test_path_core_at_word() {
+        // CORE@GET resolves built-in word
         let mut interp = Interpreter::new();
         interp.execute("[ 10 20 30 ]").await.unwrap();
 
-        let result = interp.execute("[ 1 ] BUILTIN@GET").await;
-        assert!(result.is_ok(), "BUILTIN@GET should resolve: {:?}", result.err());
+        let result = interp.execute("[ 1 ] CORE@GET").await;
+        assert!(result.is_ok(), "CORE@GET should resolve: {:?}", result.err());
     }
 
     #[tokio::test]
-    async fn test_path_dictionary_builtin_word() {
-        // DICTIONARY@BUILTIN@GET resolves built-in word
+    async fn test_path_dict_core_word() {
+        // DICT@CORE@GET resolves built-in word
         let mut interp = Interpreter::new();
         interp.execute("[ 10 20 30 ]").await.unwrap();
 
-        let result = interp.execute("[ 1 ] DICTIONARY@BUILTIN@GET").await;
-        assert!(result.is_ok(), "DICTIONARY@BUILTIN@GET should resolve: {:?}", result.err());
+        let result = interp.execute("[ 1 ] DICT@CORE@GET").await;
+        assert!(result.is_ok(), "DICT@CORE@GET should resolve: {:?}", result.err());
     }
 
     #[tokio::test]
@@ -1232,12 +1232,12 @@ mod tests {
         assert_eq!(layers, vec!["MUSIC"]);
         assert_eq!(word, "PLAY");
 
-        let (layers, word) = Interpreter::split_path("COINAGE@SAMPLE@SAY-HELLO");
-        assert_eq!(layers, vec!["COINAGE", "SAMPLE"]);
+        let (layers, word) = Interpreter::split_path("USER@SAMPLE@SAY-HELLO");
+        assert_eq!(layers, vec!["USER", "SAMPLE"]);
         assert_eq!(word, "SAY-HELLO");
 
-        let (layers, word) = Interpreter::split_path("DICTIONARY@COINAGE@SAMPLE@SAY-HELLO");
-        assert_eq!(layers, vec!["DICTIONARY", "COINAGE", "SAMPLE"]);
+        let (layers, word) = Interpreter::split_path("DICT@USER@SAMPLE@SAY-HELLO");
+        assert_eq!(layers, vec!["DICT", "USER", "SAMPLE"]);
         assert_eq!(word, "SAY-HELLO");
 
         let (layers, word) = Interpreter::split_path("SAY-HELLO");

@@ -1045,8 +1045,8 @@ Ajisaiの組み込みワードは、**言語コアとして常に利用可能で
 | 層 | GUI タブ名 | パス識別子 | 探索優先度 |
 |---|---|---|---|
 | モジュールワード | **MUSIC word**, **JSON word** 等 | `MUSIC`, `JSON` 等 | 1（最高） |
-| ユーザー定義ワード | **Coinage** | `COINAGE` | 2（中間） |
-| 組み込みワード | **Built-in word** | `BUILTIN` | 3（最低） |
+| ユーザー定義ワード | **User word** | `USER` | 2（中間） |
+| 組み込みワード | **Core word** | `CORE` | 3（最低） |
 
 #### 短縮名の解決優先順位
 
@@ -1167,9 +1167,9 @@ Ajisaiの組み込みワードは、**言語コアとして常に利用可能で
 
 | 完全修飾パス | 対象 |
 |---|---|
-| `DICTIONARY@BUILTIN@WORD` | コア組み込みワード |
-| `DICTIONARY@MODULE@WORD` | モジュールワード（例: `DICTIONARY@MUSIC@PLAY`） |
-| `DICTIONARY@COINAGE@DICTNAME@WORD` | カスタムワード（例: `DICTIONARY@COINAGE@SAMPLE@SAY-HELLO`） |
+| `DICT@CORE@WORD` | コア組み込みワード |
+| `DICT@MODULE@WORD` | モジュールワード（例: `DICT@MUSIC@PLAY`） |
+| `DICT@USER@DICTNAME@WORD` | ユーザー定義ワード（例: `DICT@USER@SAMPLE@SAY-HELLO`） |
 
 省略形（左セグメントから省略可能）:
 

@@ -258,10 +258,10 @@ impl Interpreter {
 
     /// `@` 区切りのパスを解析して (layers, word) を返す。
     /// 例:
-    ///   "MUSIC@PLAY"                           → (["MUSIC"], "PLAY")
-    ///   "COINAGE@SAMPLE@SAY-HELLO"             → (["COINAGE", "SAMPLE"], "SAY-HELLO")
-    ///   "DICTIONARY@COINAGE@SAMPLE@SAY-HELLO"  → (["DICTIONARY", "COINAGE", "SAMPLE"], "SAY-HELLO")
-    ///   "SAY-HELLO"                            → ([], "SAY-HELLO")  ← 省略形
+    ///   "MUSIC@PLAY"                       → (["MUSIC"], "PLAY")
+    ///   "USER@SAMPLE@SAY-HELLO"            → (["USER", "SAMPLE"], "SAY-HELLO")
+    ///   "DICT@USER@SAMPLE@SAY-HELLO"       → (["DICT", "USER", "SAMPLE"], "SAY-HELLO")
+    ///   "SAY-HELLO"                        → ([], "SAY-HELLO")  ← 省略形
     pub(crate) fn split_path(name: &str) -> (Vec<String>, String) {
         let parts: Vec<String> = name.split('@').map(|s| s.to_uppercase()).collect();
         if parts.len() == 1 {
@@ -404,9 +404,9 @@ impl Interpreter {
                 self.resolve_short_name(name)
             }
             1 => {
-                // MODULE@WORD or DICTNAME@WORD or BUILTIN@WORD
+                // MODULE@WORD or DICTNAME@WORD or CORE@WORD
                 let ns = &layers[0];
-                if ns == "BUILTIN" {
+                if ns == "CORE" {
                     return self.core_vocabulary.get(&word).cloned().map(|def| (word.clone(), def));
                 }
                 if let Some(module_dict) = self.module_samples.get(ns.as_str()) {
@@ -424,27 +424,27 @@ impl Interpreter {
                 self.core_vocabulary.get(&qualified).cloned().map(|def| (qualified, def))
             }
             2 => {
-                // COINAGE@DICTNAME@WORD or DICTIONARY@MODULE@WORD or DICTIONARY@BUILTIN@WORD
+                // USER@DICTNAME@WORD or DICT@MODULE@WORD or DICT@CORE@WORD
                 let first = &layers[0];
                 let second = &layers[1];
-                if first == "COINAGE" {
-                    // COINAGE@DICTNAME@WORD
+                if first == "USER" {
+                    // USER@DICTNAME@WORD
                     if let Some(custom_dict) = self.custom_dictionaries.get(second.as_str()) {
                         if let Some(def) = custom_dict.words.get(&word) {
                             return Some((format!("{}@{}", second, word), def.clone()));
                         }
                     }
-                } else if first == "DICTIONARY" {
-                    // DICTIONARY@MODULE@WORD or DICTIONARY@BUILTIN@WORD
-                    if second == "BUILTIN" {
+                } else if first == "DICT" {
+                    // DICT@MODULE@WORD or DICT@CORE@WORD
+                    if second == "CORE" {
                         return self.core_vocabulary.get(&word).cloned().map(|def| (word.clone(), def));
                     }
-                    // DICTIONARY@MODULE@WORD (module builtin words)
+                    // DICT@MODULE@WORD (module builtin words)
                     let qualified = format!("{}@{}", second, word);
                     if let Some(def) = self.core_vocabulary.get(&qualified) {
                         return Some((qualified, def.clone()));
                     }
-                    // DICTIONARY@MODULE@WORD (module sample words)
+                    // DICT@MODULE@WORD (module sample words)
                     if let Some(module_dict) = self.module_samples.get(second.as_str()) {
                         if let Some(def) = module_dict.sample_words.get(&word) {
                             return Some((format!("{}@{}", second, word), def.clone()));
@@ -454,12 +454,11 @@ impl Interpreter {
                 None
             }
             3 => {
-                // DICTIONARY@COINAGE@DICTNAME@WORD (fully qualified custom word)
-                // or DICTIONARY@BUILTIN@WORD (with extra layer)
+                // DICT@USER@DICTNAME@WORD (fully qualified custom word)
                 let first = &layers[0];
                 let second = &layers[1];
                 let third = &layers[2];
-                if first == "DICTIONARY" && second == "COINAGE" {
+                if first == "DICT" && second == "USER" {
                     if let Some(custom_dict) = self.custom_dictionaries.get(third.as_str()) {
                         if let Some(def) = custom_dict.words.get(&word) {
                             return Some((format!("{}@{}", third, word), def.clone()));
