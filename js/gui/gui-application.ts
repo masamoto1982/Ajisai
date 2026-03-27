@@ -40,6 +40,7 @@ export interface GUIElements {
     readonly leftPanelSelect: HTMLSelectElement;
     readonly rightPanelSelect: HTMLSelectElement;
     readonly mobilePanelSelect: HTMLSelectElement;
+    readonly copyOutputBtn: HTMLButtonElement;
 }
 
 export interface GUI {
@@ -79,7 +80,8 @@ const cacheElements = (): GUIElements => ({
     statePanel: document.getElementById('state-panel')!,
     leftPanelSelect: document.getElementById('left-panel-select') as HTMLSelectElement,
     rightPanelSelect: document.getElementById('right-panel-select') as HTMLSelectElement,
-    mobilePanelSelect: document.getElementById('mobile-panel-select') as HTMLSelectElement
+    mobilePanelSelect: document.getElementById('mobile-panel-select') as HTMLSelectElement,
+    copyOutputBtn: document.getElementById('copy-output-btn') as HTMLButtonElement
 });
 
 const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
@@ -364,6 +366,24 @@ export const createGUI = (): GUI => {
                 updateDisplays: updateAllDisplays
             });
             testRunner.runAllTests();
+        });
+
+        elements.outputArea.addEventListener('click', (e: MouseEvent) => {
+            if ((e.target as HTMLElement).closest('button, a')) return;
+            if (!mobile.isMobile() && currentLeftMode === 'output') {
+                switchArea('input');
+            }
+        });
+
+        elements.copyOutputBtn.addEventListener('click', (e: MouseEvent) => {
+            e.stopPropagation();
+            const text = display.extractState().mainOutput;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = elements.copyOutputBtn;
+                const original = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = original; }, 1500);
+            });
         });
 
         elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
