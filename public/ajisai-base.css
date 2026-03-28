@@ -110,6 +110,13 @@ header {
     align-items: stretch;
     gap: 0.5rem;
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+header > * {
+    position: relative;
+    z-index: 1;
 }
 
 .app-header-top {
@@ -181,6 +188,13 @@ footer {
     color: var(--header-text);
     font-size: 0.875rem;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+footer > * {
+    position: relative;
+    z-index: 1;
 }
 
 footer a {
@@ -660,6 +674,78 @@ small {
     background-color: rgba(255, 255, 255, 0.5);
     border: var(--border-main);
     border-radius: var(--radius-main);
+}
+
+/* --------------------------------------------------------------------------
+ * 水の波紋アニメーション（ヘッダー・フッター背景装飾）
+ * -------------------------------------------------------------------------- */
+@keyframes water-ripple-expand {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0.12;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+    }
+}
+
+header::before,
+header::after,
+footer::before,
+footer::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(
+        circle,
+        transparent 40%,
+        rgba(255, 255, 255, 0.15) 55%,
+        transparent 65%
+    );
+    animation: water-ripple-expand 8s ease-out infinite;
+}
+
+header::before {
+    width: 300px;
+    height: 300px;
+    top: 30%;
+    left: 20%;
+}
+
+header::after {
+    width: 220px;
+    height: 220px;
+    top: 50%;
+    left: 70%;
+    animation-delay: 4s;
+}
+
+footer::before {
+    width: 250px;
+    height: 250px;
+    top: 40%;
+    left: 75%;
+}
+
+footer::after {
+    width: 180px;
+    height: 180px;
+    top: 50%;
+    left: 30%;
+    animation-delay: 4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    header::before,
+    header::after,
+    footer::before,
+    footer::after {
+        animation: none;
+        display: none;
+    }
 }
 
 /* --------------------------------------------------------------------------
