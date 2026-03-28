@@ -55,8 +55,8 @@ Canonical spec: `SPECIFICATION.md` (single source of truth).
 
 - Post-fix notation, dictionary-based (inherited from FORTH).
 - No type system — everything is fractions.
-- Call depth limit: 4 levels (main + 4 custom word chain). Built-in words don't count.
-- Nesting limit: 10 dimensions. Brackets `[] {} ()` cycle every 3 levels for display.
+- Call depth limit: max 5 hierarchy levels (main context + 4-step custom word chain = fingers on one hand). `MAX_CALL_DEPTH = 4` counts the chain steps; built-in words don't count.
+- Nesting limit: max 10 dimensions (fingers on both hands). Brackets `[] {} ()` cycle every 3 levels for display.
 - Broadcast: NumPy/APL-style shape broadcasting for arithmetic.
 
 ### Modifiers
@@ -192,9 +192,9 @@ If adding `>` or `>=` comparison operators, then stop — these are intentionall
 
 If tempted to add DUP/SWAP/ROT/OVER or any stack manipulation word, then stop — these are prohibited by design. Use REORDER, `.. GET`, or `,,` bifurcation.
 
-If the call depth exceeds 4 (MAX_CALL_DEPTH), then it is an error. Do not increase this limit.
+If the custom word call chain exceeds 4 steps (`MAX_CALL_DEPTH`), then it is an error. Main + 4 = 5 total hierarchy levels (fingers on one hand). Do not increase this limit.
 
-If nesting exceeds 10 dimensions, then it is an error (`DimensionLimitExceeded`). Do not increase this limit.
+If nesting exceeds 10 dimensions, then it is an error (`DimensionLimitExceeded`). 3 bracket types × 3 cycles + stack = 10 (fingers on both hands). Do not increase this limit.
 
 If implementing backward-compatibility shims, deprecated paths, or feature flags for old behavior, then stop — Ajisai prohibits backward compatibility maintenance.
 
