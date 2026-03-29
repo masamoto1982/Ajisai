@@ -14,6 +14,8 @@ pub mod structure;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_modes;
 
 pub use position::{op_get, op_insert, op_replace, op_remove};
 pub use quantity::{op_length, op_take, op_split};
