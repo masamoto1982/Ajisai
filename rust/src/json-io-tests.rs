@@ -367,7 +367,7 @@ mod json_io_tests {
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp.input_buffer = "[1, 2, 3]".to_string();
         interp
-            .execute("[ 2 ] * | 'DBL' DEF IO@INPUT JSON@PARSE 'DBL' MAP JSON@STRINGIFY IO@OUTPUT")
+            .execute("{ [ 2 ] * } 'DBL' DEF IO@INPUT JSON@PARSE 'DBL' MAP JSON@STRINGIFY IO@OUTPUT")
             .await
             .unwrap();
         let stack = interp.get_stack();
