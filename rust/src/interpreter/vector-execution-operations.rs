@@ -23,8 +23,7 @@ fn format_token_to_source(token: &Token) -> String {
         Token::Symbol(s) => s.to_string(),
         Token::VectorStart => "[".to_string(),
         Token::VectorEnd => "]".to_string(),
-        Token::CodeBlockStart => ":".to_string(),
-        Token::CodeBlockEnd => ";".to_string(),
+        Token::BlockSeparator => "|".to_string(),
         Token::Pipeline => "==".to_string(),
         Token::NilCoalesce => "=>".to_string(),
         Token::SafeMode => "~".to_string(),
@@ -38,7 +37,7 @@ fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
         ValueData::Scalar(_) => format_scalar_to_source(val),
         ValueData::CodeBlock(tokens) => {
             let token_strs: Vec<String> = tokens.iter().map(format_token_to_source).collect();
-            Ok(format!(": {} ;", token_strs.join(" ")))
+            Ok(token_strs.join(" "))
         }
         ValueData::Vector(children)
         | ValueData::Record {

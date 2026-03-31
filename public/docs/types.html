@@ -32,15 +32,15 @@
       <nav id="js-side-nav" class="side-nav"></nav>
 
       <article id="main-content" class="main-content">
-        <h2>Data Types &amp; FlowTokens</h2>
+        <h2>Data Types &amp| FlowTokens</h2>
 
-        <section class="manifesto" style="background: var(--bg-secondary, #f0f4f8); border-left: 4px solid var(--accent, #6366f1); padding: 1em 1.5em; margin-bottom: 1.5em; border-radius: 4px;">
-          <p>In Ajisai's Fractional Dataflow model, every value on the stream is a <strong>FlowToken</strong> &mdash; a typed fraction that is consumed exactly once by an operation and produces a result plus a remainder. The types below describe the kinds of FlowTokens that flow through the consume/remainder chain.</p>
+        <section class="manifesto" style="background: var(--bg-secondary, #f0f4f8)| border-left: 4px solid var(--accent, #6366f1)| padding: 1em 1.5em| margin-bottom: 1.5em| border-radius: 4px;">
+          <p>In Ajisai's Fractional Dataflow model, every value on the stream is a <strong>FlowToken</strong> &mdash| a typed fraction that is consumed exactly once by an operation and produces a result plus a remainder. The types below describe the kinds of FlowTokens that flow through the consume/remainder chain.</p>
         </section>
 
         <section>
           <h3>Number (Fraction FlowToken)</h3>
-          <p>All numbers are internally fractions &mdash; no rounding errors. This conservation-preserving representation ensures that no value is lost as tokens flow through operations:</p>
+          <p>All numbers are internally fractions &mdash| no rounding errors. This conservation-preserving representation ensures that no value is lost as tokens flow through operations:</p>
 <pre><code># Integers
 42
 -17
@@ -123,17 +123,17 @@ NOW 'LOCAL' DATETIME    # Result: [ [ 2024 11 25 14 0 0 ] ]
           <h3>Type Conversion (FlowToken Transform)</h3>
           <table>
             <tr><th>Word</th><th>Example</th></tr>
-            <tr><td><code>STR</code></td><td><code>[ 42 ] STR</code> &rarr; <code>[ '42' ]</code></td></tr>
-            <tr><td><code>NUM</code></td><td><code>[ '42' ] NUM</code> &rarr; <code>[ 42 ]</code></td></tr>
-            <tr><td><code>BOOL</code></td><td><code>[ 1 ] BOOL</code> &rarr; <code>[ TRUE ]</code></td></tr>
-            <tr><td><code>CHARS</code></td><td><code>[ 'abc' ] CHARS</code> &rarr; <code>[ 'a' 'b' 'c' ]</code></td></tr>
-            <tr><td><code>JOIN</code></td><td><code>[ 'a' 'b' ] JOIN</code> &rarr; <code>[ 'ab' ]</code></td></tr>
+            <tr><td><code>STR</code></td><td><code>[ 42 ] STR</code> &rarr| <code>[ '42' ]</code></td></tr>
+            <tr><td><code>NUM</code></td><td><code>[ '42' ] NUM</code> &rarr| <code>[ 42 ]</code></td></tr>
+            <tr><td><code>BOOL</code></td><td><code>[ 1 ] BOOL</code> &rarr| <code>[ TRUE ]</code></td></tr>
+            <tr><td><code>CHARS</code></td><td><code>[ 'abc' ] CHARS</code> &rarr| <code>[ 'a' 'b' 'c' ]</code></td></tr>
+            <tr><td><code>JOIN</code></td><td><code>[ 'a' 'b' ] JOIN</code> &rarr| <code>[ 'ab' ]</code></td></tr>
           </table>
         </section>
 
         <section>
           <h3>Broadcasting (Fraction Flow Expansion)</h3>
-          <p>Broadcasting extends a FlowToken across dimensions via remainder passing &mdash; like a TPU distributing a single value across parallel lanes with no materialized intermediates:</p>
+          <p>Broadcasting extends a FlowToken across dimensions via remainder passing &mdash| like a TPU distributing a single value across parallel lanes with no materialized intermediates:</p>
 <pre><code># Scalar broadcast — single fraction flows across the vector
 [ 5 ] [ 1 2 3 ] +    # Result: [ 6 7 8 ]
 

@@ -149,7 +149,7 @@ mod tests {
     async fn test_ambiguous_word_error() {
         // Word existing in both module and custom should produce ambiguity error
         let mut interp = Interpreter::new();
-        interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
+        interp.execute("[ 999 ] | 'C4' DEF").await.unwrap();
         let _ = interp.collect_output();
 
         interp.execute("'music' IMPORT").await.unwrap();
@@ -168,7 +168,7 @@ mod tests {
     async fn test_ambiguous_resolved_by_qualified_path() {
         // Ambiguous word resolved via qualified path
         let mut interp = Interpreter::new();
-        interp.execute(": [ 999 ] ; 'C4' DEF").await.unwrap();
+        interp.execute("[ 999 ] | 'C4' DEF").await.unwrap();
         let _ = interp.collect_output();
 
         interp.execute("'music' IMPORT").await.unwrap();

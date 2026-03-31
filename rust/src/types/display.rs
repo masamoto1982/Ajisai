@@ -99,15 +99,14 @@ fn format_code_block(tokens: &[super::Token]) -> String {
             Token::Symbol(s) => s.to_string(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::CodeBlockStart => ":".to_string(),
-            Token::CodeBlockEnd => ";".to_string(),
+            Token::BlockSeparator => "|".to_string(),
             Token::Pipeline => "==".to_string(),
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),
             Token::LineBreak => "\n".to_string(),
         })
         .collect();
-    format!(": {} ;", token_strs.join(" "))
+    token_strs.join(" ")
 }
 
 fn format_fraction(f: &Fraction) -> String {

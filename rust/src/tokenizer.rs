@@ -32,7 +32,14 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // 3. 単一文字トークン（括弧、:、;など）
+        if chars[i] == ':' {
+            return Err("':' (code block start) has been removed. Use '|' as block separator.".to_string());
+        }
+        if chars[i] == ';' {
+            return Err("';' (code block end) has been removed. Use '|' as block separator.".to_string());
+        }
+
+        // 3. 単一文字トークン（括弧、|など）
         if let Some((token, consumed)) = parse_token_from_single_char(chars[i]) {
             tokens.push(token);
             i += consumed;
@@ -145,7 +152,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~' | '|'
     )
 }
 
@@ -155,6 +162,7 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
         // 表示時に深さに応じて適切な括弧に変換される
         '[' | '{' | '(' => Some((Token::VectorStart, 1)),
         ']' | '}' | ')' => Some((Token::VectorEnd, 1)),
+        '|' => Some((Token::BlockSeparator, 1)),
         // セーフモード修飾子
         '~' => Some((Token::SafeMode, 1)),
         // > は特別処理が必要（>> と >>> のチェック）
@@ -227,8 +235,6 @@ fn parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
         "." => Some(Token::Symbol(".".into())),
         ".." => Some(Token::Symbol("..".into())),
-        ":" => Some(Token::CodeBlockStart),
-        ";" => Some(Token::CodeBlockEnd),
         _ => None,
     }
 }

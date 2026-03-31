@@ -174,10 +174,77 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
     ) -> Result<(usize, Option<AsyncAction>)> {
-        let mut i = start_index;
+        let source_tokens: Vec<Token> = tokens[start_index..].to_vec();
+        let mut vector_depth: i32 = 0;
+        let mut buffered_tokens: Vec<Token> = Vec::new();
+        let mut prelude_tokens: Vec<Token> = Vec::new();
+        let mut separated_blocks: Vec<Vec<Token>> = Vec::new();
+        let mut trailing_tokens: Vec<Token> = Vec::new();
+        let mut has_separator: bool = false;
 
-        while i < tokens.len() {
-            match &tokens[i] {
+        for token in source_tokens {
+            match token {
+                Token::VectorStart => {
+                    vector_depth += 1;
+                    buffered_tokens.push(Token::VectorStart);
+                }
+                Token::VectorEnd => {
+                    vector_depth -= 1;
+                    buffered_tokens.push(Token::VectorEnd);
+                }
+                Token::BlockSeparator if vector_depth == 0 => {
+                    if !has_separator {
+                        let maybe_start_index: Option<usize> =
+                            buffered_tokens.iter().position(|token| {
+                                matches!(
+                                    token,
+                                    Token::Symbol(symbol)
+                                        if symbol.as_ref() == ",,"
+                                            || symbol.as_ref() == ","
+                                            || symbol.as_ref() == "."
+                                            || symbol.as_ref() == ".."
+                                )
+                            });
+                        if let Some(start_index) = maybe_start_index {
+                            if start_index > 0 {
+                                prelude_tokens.extend_from_slice(&buffered_tokens[..start_index]);
+                                buffered_tokens = buffered_tokens[start_index..].to_vec();
+                            }
+                        }
+                    }
+                    separated_blocks.push(buffered_tokens.clone());
+                    buffered_tokens.clear();
+                    has_separator = true;
+                }
+                _ => buffered_tokens.push(token),
+            }
+        }
+
+        if has_separator {
+            trailing_tokens = buffered_tokens;
+        } else {
+            trailing_tokens = tokens[start_index..].to_vec();
+        }
+
+        if has_separator && !prelude_tokens.is_empty() {
+            let (_, action): (usize, Option<AsyncAction>) =
+                self.execute_section_core(&prelude_tokens, 0)?;
+            if action.is_some() {
+                return Ok((start_index, action));
+            }
+        }
+
+        for block_tokens in separated_blocks {
+            self.stack.push(Value::from_code_block(block_tokens));
+        }
+
+        let execute_tokens_vec: Vec<Token> = trailing_tokens;
+
+        let mut i: usize = 0;
+        let execute_tokens: &[Token] = &execute_tokens_vec;
+
+        while i < execute_tokens.len() {
+            match &execute_tokens[i] {
                 Token::Number(n) => {
                     let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
                     self.stack.push(create_number_value(frac));
@@ -186,7 +253,7 @@ impl Interpreter {
                     self.stack.push(Value::from_string(s));
                 }
                 Token::VectorStart => {
-                    let (values, consumed) = self.collect_vector(tokens, i)?;
+                    let (values, consumed) = self.collect_vector(execute_tokens, i)?;
                     if values.is_empty() {
                         return Err(AjisaiError::from(
                             "Empty vector is not allowed. Use NIL for empty values.",
@@ -216,7 +283,7 @@ impl Interpreter {
                                 "WAIT" => {
                                     let action = self.build_wait_action()?;
                                     self.reset_execution_modes();
-                                    return Ok((i + 1, Some(action)));
+                                    return Ok((start_index + i + 1, Some(action)));
                                 }
                                 _ => {
                                     if self.safe_mode {
@@ -240,37 +307,7 @@ impl Interpreter {
                         }
                     }
                 }
-                Token::CodeBlockStart => {
-                    let mut code_tokens = Vec::new();
-                    let mut depth = 1;
-                    i += 1;
-
-                    while i < tokens.len() && depth > 0 {
-                        match &tokens[i] {
-                            Token::CodeBlockStart => {
-                                depth += 1;
-                                code_tokens.push(tokens[i].clone());
-                            }
-                            Token::CodeBlockEnd => {
-                                depth -= 1;
-                                if depth > 0 {
-                                    code_tokens.push(tokens[i].clone());
-                                }
-                            }
-                            _ => {
-                                code_tokens.push(tokens[i].clone());
-                            }
-                        }
-                        i += 1;
-                    }
-
-                    if depth != 0 {
-                        return Err(AjisaiError::from("Unclosed code block: missing ';'"));
-                    }
-
-                    self.stack.push(Value::from_code_block(code_tokens));
-                    continue;
-                }
+                Token::BlockSeparator => {}
                 Token::Pipeline => {
                     // no-op visual marker
                 }
@@ -280,13 +317,13 @@ impl Interpreter {
                     if !value.is_nil() {
                         self.stack.push(value);
                         i += 1;
-                        if i < tokens.len() {
-                            match &tokens[i] {
+                        if i < execute_tokens.len() {
+                            match &execute_tokens[i] {
                                 Token::VectorStart => {
                                     let mut depth = 1;
                                     i += 1;
-                                    while i < tokens.len() && depth > 0 {
-                                        match &tokens[i] {
+                                    while i < execute_tokens.len() && depth > 0 {
+                                        match &execute_tokens[i] {
                                             Token::VectorStart => depth += 1,
                                             Token::VectorEnd => depth -= 1,
                                             _ => {}
@@ -306,8 +343,7 @@ impl Interpreter {
                 Token::SafeMode => {
                     self.safe_mode = true;
                 }
-                Token::CodeBlockEnd
-                | Token::LineBreak => {}
+                Token::LineBreak => {}
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
                 }
@@ -315,7 +351,7 @@ impl Interpreter {
             i += 1;
         }
 
-        Ok((i, None))
+        Ok((start_index + i, None))
     }
 
     pub(crate) fn execute_guard_structure(
@@ -345,56 +381,9 @@ impl Interpreter {
     }
 
     pub(crate) fn split_tokens_to_lines(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
-        let mut lines = Vec::new();
-        let mut current_line = Vec::new();
-        let mut i = 0;
-
-        while i < tokens.len() {
-            match &tokens[i] {
-                Token::LineBreak => {
-                    if !current_line.is_empty() {
-                        lines.push(ExecutionLine {
-                            body_tokens: current_line.clone().into(),
-                        });
-                        current_line.clear();
-                    }
-                    i += 1;
-                }
-                Token::CodeBlockStart => {
-                    current_line.push(Token::CodeBlockStart);
-                    i += 1;
-                    let mut depth = 1;
-                    while i < tokens.len() && depth > 0 {
-                        match &tokens[i] {
-                            Token::CodeBlockStart => {
-                                depth += 1;
-                                current_line.push(tokens[i].clone());
-                            }
-                            Token::CodeBlockEnd => {
-                                depth -= 1;
-                                current_line.push(tokens[i].clone());
-                            }
-                            _ => {
-                                current_line.push(tokens[i].clone());
-                            }
-                        }
-                        i += 1;
-                    }
-                }
-                _ => {
-                    current_line.push(tokens[i].clone());
-                    i += 1;
-                }
-            }
-        }
-
-        if !current_line.is_empty() {
-            lines.push(ExecutionLine {
-                body_tokens: current_line.into(),
-            });
-        }
-
-        Ok(lines)
+        Ok(vec![ExecutionLine {
+            body_tokens: tokens.to_vec().into(),
+        }])
     }
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {

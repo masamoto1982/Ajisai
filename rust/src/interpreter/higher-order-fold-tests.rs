@@ -30,11 +30,8 @@ mod tests {
     async fn test_map_with_route_word() {
         let mut interp = Interpreter::new();
         // CHECK_ONE: if value == 1 → multiply by 10, otherwise multiply by 20
-        let def_code = r#":
-  : ,, [ 1 ] = ; : [ 10 ] * ;
-  : [ 20 ] * ;
-  ROUTE
-; 'CHECK_ONE' DEF"#;
+        let def_code = r#",, [ 1 ] = | [ 10 ] * | [ 20 ] * | ROUTE
+| 'CHECK_ONE' DEF"#;
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 
@@ -58,10 +55,9 @@ mod tests {
     #[tokio::test]
     async fn test_map_with_multiline_word() {
         let mut interp = Interpreter::new();
-        let def_code = r#":
-[ 2 ] *
+        let def_code = r#"[ 2 ] *
 [ 1 ] +
-; 'DOUBLE_PLUS_ONE' DEF"#;
+| 'DOUBLE_PLUS_ONE' DEF"#;
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 
@@ -85,7 +81,7 @@ mod tests {
     #[tokio::test]
     async fn test_map_preserves_stack_below() {
         let mut interp = Interpreter::new();
-        let def_code = ": [ 2 ] * ; 'DOUBLE' DEF";
+        let def_code = "[ 2 ] * | 'DOUBLE' DEF";
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 
@@ -124,7 +120,7 @@ mod tests {
     #[tokio::test]
     async fn test_fold_with_user_word() {
         let mut interp = Interpreter::new();
-        let def_code = ": + ; 'MYSUM' DEF";
+        let def_code = "+ | 'MYSUM' DEF";
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 
