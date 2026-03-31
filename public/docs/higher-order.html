@@ -102,9 +102,9 @@
 
           <h4>Example: Range Generator</h4>
 <pre><code>:
-  >> [ 5 ] <= NOT
-  >> [ ]
-  >>> DUP [ 1 ] +
+  : ,, [ 5 ] <= NOT ;  : NIL ;
+                        : ,, [ 1 ] + ;
+  ROUTE
 ; 'RANGE_GEN' DEF
 
 [ 1 ] 'RANGE_GEN' UNFOLD    # Result: [ 1 2 3 4 5 ]</code></pre>

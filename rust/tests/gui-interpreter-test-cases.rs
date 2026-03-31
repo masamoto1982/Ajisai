@@ -651,8 +651,9 @@ async fn test_def_and_call() {
 }
 
 #[tokio::test]
-async fn test_def_with_guard_clause() {
-    let stack = run(":\n>> [ 3 ] [ 1 ] <\n>> [ 99 ]\n>>> [ 0 ]\n; 'GUARD' DEF\nGUARD")
+async fn test_def_with_route_branch() {
+    // [ 3 ] is NOT < 1, so default `[ 0 ] *` runs → 3 * 0 = 0
+    let stack = run(":\n: ,, [ 1 ] < ; : [ 99 ] * ;\n: [ 0 ] * ;\nROUTE\n; 'GUARD' DEF\n[ 3 ] GUARD")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
@@ -669,8 +670,8 @@ async fn test_del_delete_custom_word() {
 // ============================================
 
 #[tokio::test]
-async fn test_times_repeat() {
-    let stack = run(": [ 1 ] + ; 'INC' DEF\n[ 0 ] 'INC' [ 5 ] TIMES")
+async fn test_route_loop() {
+    let stack = run("[ 0 ]\n: ,, [ 5 ] < ; : [ 1 ] + ;\n.. ROUTE")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);

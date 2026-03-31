@@ -2,7 +2,7 @@ import type { UserWord } from '../wasm-interpreter-types';
 
 // サンプルワードの定義を更新した際はバージョンをインクリメントすること。
 // persistence.ts のマイグレーションロジックが IndexedDB の古い定義を自動更新する。
-export const DEMO_WORDS_VERSION = 5;
+export const DEMO_WORDS_VERSION = 6;
 
 export const DEMO_USER_WORDS: UserWord[] = [
     {
@@ -18,14 +18,14 @@ export const DEMO_USER_WORDS: UserWord[] = [
     {
         name: 'SAY-BY-SIGN',
         definition:
-            ">> [ 0 ] < >> 'Hello' PRINT >> [ 0 ] = >> 'Hello World' PRINT >>> 'World' PRINT",
+            ": ,, [ 0 ] < ; : 'Hello' PRINT ; : ,, [ 0 ] = ; : 'Hello World' PRINT ; : 'World' PRINT ; ROUTE",
         description:
-            'サンプル④ — スタックトップが負なら「Hello」、0なら「Hello World」、正なら「World」を出力（シェブロン分岐）',
+            'サンプル④ — スタックトップが負なら「Hello」、0なら「Hello World」、正なら「World」を出力（ROUTE分岐）',
     },
     {
         name: 'SAY-HELLO-WORLD',
-        definition: ": SAY-HELLO SAY-WORLD ; [ 3 ] TIMES 'Hello World' PRINT",
+        definition: "SAY-HELLO SAY-WORLD 'Hello World' PRINT",
         description:
-            'サンプル⑤ — HelloとWorldの出力を3回繰り返し、最後に「Hello World」で締めくくる（TIMES反復）',
+            'サンプル⑤ — Hello、World、Hello Worldを順に出力',
     },
 ];

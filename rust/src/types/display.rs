@@ -101,8 +101,6 @@ fn format_code_block(tokens: &[super::Token]) -> String {
             Token::VectorEnd => "]".to_string(),
             Token::CodeBlockStart => ":".to_string(),
             Token::CodeBlockEnd => ";".to_string(),
-            Token::ChevronBranch => ">>".to_string(),
-            Token::ChevronDefault => ">>>".to_string(),
             Token::Pipeline => "==".to_string(),
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),

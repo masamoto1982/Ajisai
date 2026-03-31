@@ -453,20 +453,10 @@ TRUE NOT          # Result: FALSE</code></div>
         <section>
           <h3>Control Flow</h3>
           <div class="word-item">
-            <h4>&gt;&gt; (Chevron Branch)</h4>
-            <p>Guard separator for conditional branching (condition-action pairs)</p>
-            <div class="word-example"><code>>> condition >> action >> condition >> action</code></div>
-          </div>
-          <div class="word-item">
-            <h4>&gt;&gt;&gt; (Chevron Default)</h4>
-            <p>Default branch in guard expressions</p>
-            <div class="word-example"><code>>> [ 0 ] < >> [ -1 ] >>> [ 1 ]</code></div>
-          </div>
-          <div class="word-item">
-            <h4>TIMES</h4>
-            <p>Execute code block or word N times</p>
-            <div class="word-example"><code>: [ 2 ] * ; [ 3 ] TIMES    # Code block 3 times
-'DOUBLE' [ 3 ] TIMES       # Word name 3 times</code></div>
+            <h4>ROUTE</h4>
+            <p>Route flow through condition-action code block pairs. Modifiers: <code>.</code> (branch), <code>..</code> (loop), <code>,,</code> (bifurcation)</p>
+            <div class="word-example"><code>: ,, [ 0 ] < ; : [ -1 ] * ; : ; ROUTE    # ABS
+[ 0 ] : ,, [ 5 ] < ; : [ 1 ] + ; .. ROUTE    # Count to 5</code></div>
           </div>
           <div class="word-item">
             <h4>== (Pipeline)</h4>

@@ -35,50 +35,41 @@
         <h2>Control Flow</h2>
 
         <section>
-          <h3>Guards (Conditional Branching)</h3>
-          <p>Guards use chevron branching with <code>&gt;&gt;</code> for condition-action pairs and <code>&gt;&gt;&gt;</code> for default:</p>
-<pre><code>>> condition1 >> action1 >> condition2 >> action2 >>> default</code></pre>
+          <h3>ROUTE — Flow Routing</h3>
+          <p>ROUTE routes the flow through condition-action code block pairs. Use modifiers to switch between branching and looping:</p>
+<pre><code>:cond; :action; :default; ROUTE        # . ROUTE: single branch (if-else)
+:cond; :action; .. ROUTE               # .. ROUTE: loop (while)
+:cond; :action; :default; ,, ROUTE     # ,, ROUTE: bifurcation (keep flow)
+:cond; :action; .. ,, ROUTE            # .. ,, ROUTE: loop + bifurcation</code></pre>
 
-          <h4>Example: Sign Classification</h4>
+          <h4>Example: Absolute Value (. ROUTE)</h4>
 <pre><code>:
-  >> [ 0 ] <
-  >> [ -1 ]
-  >> [ 0 ] =
-  >> [ 0 ]
-  >>> [ 1 ]
-; 'SIGN' DEF
-
-[ -5 ] SIGN    # Result: [ -1 ]
-[ 0 ] SIGN     # Result: [ 0 ]
-[ 10 ] SIGN    # Result: [ 1 ]</code></pre>
-
-          <h4>Example: Absolute Value</h4>
-<pre><code>:
-  >> [ 0 ] <
-  >> [ -1 ] *
-  >>>
+  : ,, [ 0 ] < ;   : [ -1 ] * ;
+                    : ;
+  ROUTE
 ; 'ABS' DEF
 
 [ -5 ] ABS    # Result: [ 5 ]
 [ 3 ] ABS     # Result: [ 3 ]</code></pre>
-        </section>
 
-        <section>
-          <h3>TIMES - Repetition</h3>
-          <p>Execute code block or word N times:</p>
-<pre><code>: code ; [ count ] TIMES    # Code block syntax
-'word_name' [ count ] TIMES # Word name syntax</code></pre>
+          <h4>Example: Loop (.. ROUTE)</h4>
+<pre><code># Double until > 1000
+[ 1 ]
+  : ,, [ 1000 ] < ;  : [ 2 ] * ;
+.. ROUTE
+# Result: [ 1024 ]
 
-          <h4>Examples</h4>
-<pre><code># Double 3 times using code block (multiply by 8)
-[ 5 ] : [ 2 ] * ; [ 3 ] TIMES    # Result: [ 40 ]
+# Count up to 100
+[ 0 ]
+  : ,, [ 100 ] < ;  : [ 1 ] + ;
+.. ROUTE
+# Result: [ 100 ]</code></pre>
 
-# Double 3 times using word name
-: [ 2 ] * ; 'DOUBLE' DEF
-[ 5 ] 'DOUBLE' [ 3 ] TIMES       # Result: [ 40 ]
-
-# Increment with code block
-[ 0 ] : [ 1 ] + ; [ 5 ] TIMES    # Result: [ 5 ]</code></pre>
+          <h4>Example: Bifurcation (,, ROUTE)</h4>
+<pre><code>[ 5 ]
+  : ,, [ 0 ] < NOT ; : [ 2 ] * ;
+,, ROUTE
+# Result: [ 5 ] [ 10 ]  (original + result)</code></pre>
         </section>
 
         <section>

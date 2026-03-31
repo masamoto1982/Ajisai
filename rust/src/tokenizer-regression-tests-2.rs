@@ -265,30 +265,22 @@ mod tokenizer_regression_tests_2 {
         assert!(matches!(&result[7], Token::Symbol(s) if s.as_ref() == "DEF"));
     }
 
-    // === シェブロン分岐トークンのテスト ===
+    // === シェブロン分岐トークンの廃止テスト ===
 
     #[test]
-    fn test_chevron_branch_token() {
-        // >> トークン
-        let result = tokenize(">> [ 5 ] [ 3 ] <").unwrap();
-        assert_eq!(result[0], Token::ChevronBranch);
+    fn test_chevron_branch_token_removed() {
+        // >> は廃止 — エラーになること
+        let result = tokenize(">> [ 5 ] [ 3 ] <");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("removed"));
     }
 
     #[test]
-    fn test_chevron_default_token() {
-        // >>> トークン
-        let result = tokenize(">>> [ 0 ]").unwrap();
-        assert_eq!(result[0], Token::ChevronDefault);
-    }
-
-    #[test]
-    fn test_chevron_structure() {
-        let result = tokenize(">> [ 5 ] [ 3 ] <\n>> [ 100 ]\n>>> [ 0 ]").unwrap();
-        assert!(matches!(&result[0], Token::ChevronBranch));
-        assert!(matches!(&result[8], Token::LineBreak));
-        assert!(matches!(&result[9], Token::ChevronBranch));
-        assert!(matches!(&result[13], Token::LineBreak));
-        assert!(matches!(&result[14], Token::ChevronDefault));
+    fn test_chevron_default_token_removed() {
+        // >>> は廃止 — エラーになること
+        let result = tokenize(">>> [ 0 ]");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("removed"));
     }
 
     // === コードブロックトークンのテスト ===
@@ -330,11 +322,11 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_multiline_code_block_with_chevrons() {
+    fn test_multiline_code_block_with_route() {
         let input = r#":
->> [ 1 ] =
->> [ 10 ]
->>> [ 20 ]
+  : ,, [ 1 ] = ; : [ 10 ] ;
+  : [ 20 ] ;
+  ROUTE
 ; 'CHECK_ONE' DEF"#;
 
         let result = tokenize(input).unwrap();

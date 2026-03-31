@@ -255,17 +255,11 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
             "[ TRUE FALSE ] NOT → [ FALSE TRUE ]",
             "map",
         ),
-        // Control (chevron branching)
+        // Control (ROUTE)
         (
-            ">>",
-            "Chevron branch (condition/action)",
-            ">> condition >> action >>> default",
-            "none",
-        ),
-        (
-            ">>>",
-            "Chevron branch (default)",
-            ">>> default_action",
+            "ROUTE",
+            "Route flow through condition-action branches",
+            ":cond; :action; :default; ROUTE",
             "none",
         ),
         // Code block
@@ -325,12 +319,6 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
         ("DEL", "Delete custom word", "'WORD' DEL", "none"),
         ("?", "Show word definition", "'DOUBLE' ?", "none"),
         // Control flow
-        (
-            "TIMES",
-            "Repeat code N times",
-            ": [ 1 ] + ; [ 5 ] TIMES",
-            "none",
-        ),
         (
             "WAIT",
             "Execute word after delay (ms)",

@@ -106,8 +106,6 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 Token::VectorEnd => "]".to_string(),
                 Token::CodeBlockStart => ":".to_string(),
                 Token::CodeBlockEnd => ";".to_string(),
-                Token::ChevronBranch => ">>".to_string(),
-                Token::ChevronDefault => ">>>".to_string(),
                 Token::Pipeline => "==".to_string(),
                 Token::NilCoalesce => "=>".to_string(),
                 Token::SafeMode => "~".to_string(),
@@ -273,19 +271,8 @@ pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLin
                     processed_tokens.clear();
                 }
             }
-            // シェブロン分岐トークン(>> / >>>)の前で自動的に行を分割する。
-            // ユーザー入力では改行で自然に分割されるが、定義文字列から復元する
-            // パスでも同一の行構造を保証するために必要。
-            Token::ChevronBranch | Token::ChevronDefault => {
-                if !processed_tokens.is_empty() {
-                    let execution_line = ExecutionLine {
-                        body_tokens: processed_tokens.clone().into(),
-                    };
-                    lines.push(execution_line);
-                    processed_tokens.clear();
-                }
-                processed_tokens.push(tokens[i].clone());
-            }
+            // Note: Chevron tokens (>> / >>>) have been removed.
+            // ROUTE uses code blocks on the stack instead.
             _ => {
                 processed_tokens.push(tokens[i].clone());
             }

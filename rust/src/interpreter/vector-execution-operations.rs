@@ -27,8 +27,6 @@ fn format_token_to_source(token: &Token) -> String {
         Token::CodeBlockEnd => ";".to_string(),
         Token::Pipeline => "==".to_string(),
         Token::NilCoalesce => "=>".to_string(),
-        Token::ChevronBranch => ">>".to_string(),
-        Token::ChevronDefault => ">>>".to_string(),
         Token::SafeMode => "~".to_string(),
         Token::LineBreak => "\n".to_string(),
     }
