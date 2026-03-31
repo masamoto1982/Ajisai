@@ -1,5 +1,5 @@
 use super::fraction::Fraction;
-use super::{BracketType, DisplayHint, Value, ValueData};
+use super::{DisplayHint, Value, ValueData};
 use std::fmt;
 
 impl fmt::Display for Value {
@@ -70,13 +70,11 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
             if v.is_empty() {
-                let bracket = BracketType::resolve_from_depth(depth);
-                return format!("{} {}", bracket.opening_char(), bracket.closing_char());
+                return "[ ]".to_string();
             }
 
-            let bracket = BracketType::resolve_from_depth(depth);
-            let open = bracket.opening_char();
-            let close = bracket.closing_char();
+            let open = '[';
+            let close = ']';
 
             let inner: Vec<String> = v
                 .iter()
@@ -99,7 +97,8 @@ fn format_code_block(tokens: &[super::Token]) -> String {
             Token::Symbol(s) => s.to_string(),
             Token::VectorStart => "[".to_string(),
             Token::VectorEnd => "]".to_string(),
-            Token::BlockSeparator => "|".to_string(),
+            Token::BlockStart => "{".to_string(),
+            Token::BlockEnd => "}".to_string(),
             Token::Pipeline => "==".to_string(),
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),

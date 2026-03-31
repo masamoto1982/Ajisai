@@ -23,11 +23,12 @@ export interface Display {
     readonly extractState: () => DisplayState;
 }
 
-const lookupBracketsAtDepth = (depth: number): [string, string] => {
-    const remainder: number = depth % 3;
-    if (remainder === 0) return ['{', '}'];
-    if (remainder === 1) return ['(', ')'];
-    return ['[', ']'];
+const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
+
+const getNestBackground = (depth: number): string => {
+    if (depth <= 0) return 'transparent';
+    const opacity = Math.min(0.05 * depth, 0.5);
+    return `rgba(var(--color-nest-rgb, 77, 196, 255), ${opacity})`;
 };
 
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
@@ -163,6 +164,71 @@ const formatVector = (value: unknown, depth: number): string => {
         return `${open} ${elements} ${close}`;
     }
     return `${open}${close}`;
+};
+
+const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
+    const node = document.createElement('span');
+    node.className = 'stack-node';
+    node.style.backgroundColor = getNestBackground(depth);
+
+    if (item.type === 'vector' && Array.isArray(item.value)) {
+        node.classList.add('stack-node-vector');
+        node.append('[ ');
+        item.value.forEach((child, index) => {
+            if (index > 0) node.append(' ');
+            node.appendChild(renderStackValueNode(child, depth + 1));
+        });
+        node.append(' ]');
+        return node;
+    }
+
+    if (item.type === 'tensor' && item.value && typeof item.value === 'object') {
+        const tensor = item.value as { shape?: number[]; data?: unknown[]; displayHint?: string };
+        const shape = Array.isArray(tensor.shape) ? tensor.shape : [];
+        const data = Array.isArray(tensor.data) ? tensor.data : [];
+
+        const renderTensorNode = (tensorShape: number[], tensorData: unknown[], tensorDepth: number): HTMLElement => {
+            const tensorNode = document.createElement('span');
+            tensorNode.className = 'stack-node stack-node-vector';
+            tensorNode.style.backgroundColor = getNestBackground(tensorDepth);
+
+            if (tensorShape.length === 0) {
+                tensorNode.textContent = '[ ]';
+                return tensorNode;
+            }
+
+            if (tensorShape.length === 1) {
+                tensorNode.append('[ ');
+                if ((tensor.displayHint ?? '').toLowerCase() === 'string') {
+                    tensorNode.append(deserializeBytesToString(tensorData));
+                } else {
+                    tensorData.forEach((frac, index) => {
+                        if (index > 0) tensorNode.append(' ');
+                        tensorNode.append(formatFraction(frac));
+                    });
+                }
+                tensorNode.append(' ]');
+                return tensorNode;
+            }
+
+            const outerSize = tensorShape[0] ?? 0;
+            const innerShape = tensorShape.slice(1);
+            const innerSize = innerShape.reduce((a, b) => a * b, 1);
+            tensorNode.append('[ ');
+            for (let i = 0; i < outerSize; i++) {
+                if (i > 0) tensorNode.append(' ');
+                const innerData = tensorData.slice(i * innerSize, (i + 1) * innerSize);
+                tensorNode.appendChild(renderTensorNode(innerShape, innerData, tensorDepth + 1));
+            }
+            tensorNode.append(' ]');
+            return tensorNode;
+        };
+
+        return renderTensorNode(shape, data, depth);
+    }
+
+    node.textContent = formatValue(item, depth);
+    return node;
 };
 
 const formatValue = (item: Value, depth: number): string => {
@@ -427,7 +493,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
             try {
-                elem.textContent = formatValue(item, 0);
+                elem.appendChild(renderStackValueNode(item, 0));
             } catch {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';

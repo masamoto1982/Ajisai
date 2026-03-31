@@ -72,12 +72,8 @@ pub(crate) fn value_as_string(val: &Value) -> String {
 }
 
 pub(crate) fn bracket_chars_for_depth(depth: usize) -> (char, char) {
-    match depth % 3 {
-        0 => ('{', '}'),
-        1 => ('(', ')'),
-        2 => ('[', ']'),
-        _ => unreachable!(),
-    }
+    let _ = depth;
+    ('[', ']')
 }
 
 pub(crate) fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
@@ -99,7 +95,7 @@ pub(crate) fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
         }
     }
     if shape.is_empty() {
-        return "{ }".to_string();
+        return "[ ]".to_string();
     }
     build_level(shape, 0)
 }
@@ -276,45 +272,45 @@ mod test_input_helper {
 
     #[test]
     fn test_build_bracket_structure_from_shape() {
-        assert_eq!(build_bracket_structure_from_shape(&[1]), "{ }");
-        assert_eq!(build_bracket_structure_from_shape(&[2]), "{ } { }");
-        assert_eq!(build_bracket_structure_from_shape(&[3]), "{ } { } { }");
+        assert_eq!(build_bracket_structure_from_shape(&[1]), "[ ]");
+        assert_eq!(build_bracket_structure_from_shape(&[2]), "[ ] [ ]");
+        assert_eq!(build_bracket_structure_from_shape(&[3]), "[ ] [ ] [ ]");
 
-        assert_eq!(build_bracket_structure_from_shape(&[1, 1]), "{ ( ) }");
+        assert_eq!(build_bracket_structure_from_shape(&[1, 1]), "[ [ ] ]");
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 2]),
-            "{ ( ) ( ) }"
+            "[ [ ] [ ] ]"
         );
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 3]),
-            "{ ( ) ( ) ( ) }"
+            "[ [ ] [ ] [ ] ]"
         );
         assert_eq!(
             build_bracket_structure_from_shape(&[2, 3]),
-            "{ ( ) ( ) ( ) } { ( ) ( ) ( ) }"
+            "[ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ]"
         );
 
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 1, 1]),
-            "{ ( [ ] ) }"
+            "[ [ [ ] ] ]"
         );
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 1, 2]),
-            "{ ( [ ] [ ] ) }"
+            "[ [ [ ] [ ] ] ]"
         );
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 2, 3]),
-            "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }"
+            "[ [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ] ]"
         );
         assert_eq!(
             build_bracket_structure_from_shape(&[2, 2, 3]),
-            "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) } { ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }"
+            "[ [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ] ] [ [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ] ]"
         );
 
-        // 4D: brackets cycle back to { }
+        // 4D: still [ ] with deeper nesting
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 1, 1, 1]),
-            "{ ( [ { } ] ) }"
+            "[ [ [ [ ] ] ] ]"
         );
     }
 }

@@ -45,7 +45,7 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
         (
             "FRAME",
             "Create bracket structure with shape",
-            "[ 2 3 ] FRAME → { ( ) ( ) ( ) } { ( ) ( ) ( ) }",
+            "[ 2 3 ] FRAME → [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ]",
             "none",
         ),
         // Position operations (0-indexed)
