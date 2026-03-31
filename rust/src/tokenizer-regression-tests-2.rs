@@ -283,20 +283,22 @@ mod tokenizer_regression_tests_2 {
         assert!(result.unwrap_err().contains("removed"));
     }
 
-    // === コードブロック区切りトークンのテスト ===
+    // === コードブロックトークンのテスト ===
 
     #[test]
     fn test_code_block_tokens() {
-        let result = tokenize("[ 2 ] * |").unwrap();
-        assert_eq!(result[result.len() - 1], Token::BlockSeparator);
+        let result = tokenize("{ [ 2 ] * }").unwrap();
+        assert_eq!(result[0], Token::BlockStart);
+        assert_eq!(result[result.len() - 1], Token::BlockEnd);
     }
 
     #[test]
     fn test_code_block_def_syntax() {
-        let result = tokenize("[ 2 ] * | 'DOUBLE' DEF").unwrap();
-        assert_eq!(result[4], Token::BlockSeparator);
-        assert!(matches!(&result[5], Token::String(s) if s.as_ref() == "DOUBLE"));
-        assert!(matches!(&result[6], Token::Symbol(s) if s.as_ref() == "DEF"));
+        let result = tokenize("{ [ 2 ] * } 'DOUBLE' DEF").unwrap();
+        assert_eq!(result[0], Token::BlockStart);
+        assert_eq!(result[5], Token::BlockEnd);
+        assert!(matches!(&result[6], Token::String(s) if s.as_ref() == "DOUBLE"));
+        assert!(matches!(&result[7], Token::Symbol(s) if s.as_ref() == "DEF"));
     }
 
     #[test]
@@ -329,21 +331,19 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_multiline_code_block_with_route() {
-        let input = r#",, [ 1 ] = | [ 10 ] |
-[ 20 ] |
-ROUTE
-|
-'CHECK_ONE' DEF"#;
+    fn test_multiline_code_block_error() {
+        let input = "{ ,, [ 1 ] =\n[ 10 ] } 'CHECK_ONE' DEF";
+        let result = tokenize(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Code block must be on a single line"));
+    }
 
-        let result = tokenize(input).unwrap();
-
-        let code_block_end_index = result
-            .iter()
-            .position(|t| matches!(t, Token::BlockSeparator));
-        assert!(
-            code_block_end_index.is_some(),
-            "BlockSeparator should exist in tokens"
-        );
+    #[test]
+    fn test_pipe_character_removed_error() {
+        let result = tokenize("[ 2 ] * | 'DOUBLE' DEF");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("'|' (block separator) has been removed"));
     }
 }

@@ -159,44 +159,12 @@ pub enum Token {
     Symbol(Arc<str>),
     VectorStart,
     VectorEnd,
-    BlockSeparator,
+    BlockStart,
+    BlockEnd,
     Pipeline,
     NilCoalesce,
     SafeMode,
     LineBreak,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum BracketType {
-    Square,
-    Curly,
-    Round,
-}
-
-impl BracketType {
-    pub fn opening_char(&self) -> char {
-        match self {
-            BracketType::Square => '[',
-            BracketType::Curly => '{',
-            BracketType::Round => '(',
-        }
-    }
-    pub fn closing_char(&self) -> char {
-        match self {
-            BracketType::Square => ']',
-            BracketType::Curly => '}',
-            BracketType::Round => ')',
-        }
-    }
-
-    pub fn resolve_from_depth(depth: usize) -> Self {
-        match depth % 3 {
-            0 => BracketType::Curly,
-            1 => BracketType::Round,
-            2 => BracketType::Square,
-            _ => unreachable!(),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

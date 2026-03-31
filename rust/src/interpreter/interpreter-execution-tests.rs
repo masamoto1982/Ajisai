@@ -56,7 +56,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let code = r#"
-[2] [3] + | 'ADDTEST' DEF
+{ [2] [3] + } 'ADDTEST' DEF
 ADDTEST
 "#;
 
@@ -74,9 +74,7 @@ ADDTEST
 
         // Condition: 3 < 5 → true → execute action (define ANSWER)
         let code = r#"
-[ 3 ] [ 5 ] < | [ 42 ] 'ANSWER' DEF |
-[ 0 ] 'ZERO' DEF |
-ROUTE
+{ [ 3 ] [ 5 ] < } { [ 42 ] 'ANSWER' DEF } { [ 0 ] 'ZERO' DEF } ROUTE
 "#;
 
         let result = interp.execute(code).await;
@@ -102,9 +100,7 @@ ROUTE
 
         // Condition: 5 < 3 → false → default (define SMALL)
         let code = r#"
-[ 5 ] [ 3 ] < | [ 100 ] 'BIG' DEF |
-[ -1 ] 'SMALL' DEF |
-ROUTE
+{ [ 5 ] [ 3 ] < } { [ 100 ] 'BIG' DEF } { [ -1 ] 'SMALL' DEF } ROUTE
 "#;
 
         let result = interp.execute(code).await;
@@ -137,7 +133,7 @@ ROUTE
         let mut interp = Interpreter::new();
 
         // Single code block (odd count = default only)
-        let code = "[ 999 ] 'DEFAULT' DEF | ROUTE";
+        let code = "{ [ 999 ] 'DEFAULT' DEF } ROUTE";
 
         let result = interp.execute(code).await;
         assert!(
@@ -163,7 +159,7 @@ ROUTE
     async fn test_route_with_existing_user_word() {
         let mut interp = Interpreter::new();
 
-        let def_code = "[ 2 ] * | 'DOUBLE' DEF";
+        let def_code = "{ [ 2 ] * } 'DOUBLE' DEF";
         let result = interp.execute(def_code).await;
         assert!(
             result.is_ok(),
@@ -173,9 +169,7 @@ ROUTE
 
         // Condition: 5 < 10 → true → define PROCESS using DOUBLE
         let route_code = r#"
-[ 5 ] [ 10 ] < | [ 3 ] DOUBLE 'PROCESS' DEF |
-[ 0 ] 'NOPROCESS' DEF |
-ROUTE
+{ [ 5 ] [ 10 ] < } { [ 3 ] DOUBLE 'PROCESS' DEF } { [ 0 ] 'NOPROCESS' DEF } ROUTE
 "#;
         let result = interp.execute(route_code).await;
         assert!(
@@ -233,7 +227,7 @@ ROUTE
     async fn test_def_with_new_syntax() {
         let mut interp = Interpreter::new();
 
-        let code = "[ 42 ] | 'ANSWER' DEF";
+        let code = "{ [ 42 ] } 'ANSWER' DEF";
 
         let result = interp.execute(code).await;
         assert!(
@@ -327,7 +321,7 @@ ROUTE
         let mut interp = Interpreter::new();
 
         // ROUTE: condition 3 < 5 → true → [ 100 ]
-        let route_code = "[ 3 ] [ 5 ] < ,, | [ 100 ] | [ 0 ] | ROUTE";
+        let route_code = "[ 3 ] { ,, [ 5 ] < } { [ 100 ] } { [ 0 ] } ROUTE";
 
         let result = interp.execute(route_code).await;
         assert!(
@@ -365,7 +359,7 @@ ROUTE
         let mut interp = Interpreter::new();
 
         // [ 0 ]: condition 0 < 5 → true → action: multiply by 100
-        let code = "[ 0 ] ,, [ 5 ] < | [ 100 ] * | ,, [ 10 ] < | [ 200 ] * | [ 999 ] + | ROUTE";
+        let code = "[ 0 ] { ,, [ 5 ] < } { [ 100 ] * } { ,, [ 10 ] < } { [ 200 ] * } { [ 999 ] + } ROUTE";
 
         let result = interp.execute(code).await;
         assert!(

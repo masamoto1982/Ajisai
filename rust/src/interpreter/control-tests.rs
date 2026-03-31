@@ -28,7 +28,7 @@ mod tests {
         // ABS: if negative, multiply by -1; otherwise pass through
         // Action `[ -1 ] *` consumes the flow and produces result
         let result = interp
-            .execute("[ -5 ] ,, [ 0 ] < | [ -1 ] * | ROUTE")
+            .execute("[ -5 ] { ,, [ 0 ] < } { [ -1 ] * } ROUTE")
             .await;
         assert!(result.is_ok(), "ROUTE branch should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -40,7 +40,7 @@ mod tests {
         let mut interp = Interpreter::new();
         // [ 5 ] is not negative → default (pass through with empty code block)
         let result = interp
-            .execute("[ 5 ] ,, [ 0 ] < | [ -1 ] * | ROUTE")
+            .execute("[ 5 ] { ,, [ 0 ] < } { [ -1 ] * } ROUTE")
             .await;
         assert!(result.is_ok(), "ROUTE branch should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -52,11 +52,7 @@ mod tests {
         let mut interp = Interpreter::new();
         // SIGN-like: negative → multiply by -1 (→ positive), positive → keep, zero → keep
         // But we test with actions that transform the flow value
-        let def = r#",, [ 0 ] < | [ -1 ] * |
-,, [ 0 ] = | [ 0 ] * |
-ROUTE
-|
-'ABS-OR-ZERO' DEF"#;
+        let def = r#"{ { ,, [ 0 ] < } { [ -1 ] * } { ,, [ 0 ] = } { [ 0 ] * } ROUTE } 'ABS-OR-ZERO' DEF"#;
         interp.execute(def).await.unwrap();
 
         // Test negative: -5 * -1 = 5
@@ -79,7 +75,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // No default, condition false → flow passes through unchanged
         let result = interp
-            .execute("[ 42 ] ,, [ 0 ] < | [ -1 ] * | ROUTE")
+            .execute("[ 42 ] { ,, [ 0 ] < } { [ -1 ] * } ROUTE")
             .await;
         assert!(result.is_ok(), "ROUTE pass-through should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -91,7 +87,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // Only a default block (1 code block = odd → default)
         // Action adds 1 to the flow
-        let result = interp.execute("[ 99 ] [ 1 ] + | ROUTE").await;
+        let result = interp.execute("[ 99 ] { [ 1 ] + } ROUTE").await;
         assert!(result.is_ok(), "ROUTE default-only should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
         assert_stack_top_scalar(&interp, 100, "Default-only → 99 + 1 = 100");
@@ -113,7 +109,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // Count from 0 to 5
         let result = interp
-            .execute("[ 0 ] ,, [ 5 ] < | [ 1 ] + | .. ROUTE")
+            .execute("[ 0 ] { ,, [ 5 ] < } { [ 1 ] + } .. ROUTE")
             .await;
         assert!(result.is_ok(), "ROUTE loop should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -125,7 +121,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // Double until > 1000
         let result = interp
-            .execute("[ 1 ] ,, [ 1000 ] < | [ 2 ] * | .. ROUTE")
+            .execute("[ 1 ] { ,, [ 1000 ] < } { [ 2 ] * } .. ROUTE")
             .await;
         assert!(result.is_ok(), "ROUTE loop should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -137,7 +133,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // Loop with default: when loop ends, default adds 100
         let result = interp
-            .execute("[ 0 ] ,, [ 3 ] < | [ 1 ] + | [ 100 ] + | .. ROUTE")
+            .execute("[ 0 ] { ,, [ 3 ] < } { [ 1 ] + } { [ 100 ] + } .. ROUTE")
             .await;
         assert!(result.is_ok(), "ROUTE loop with default: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -149,7 +145,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // Condition immediately false → no iterations
         let result = interp
-            .execute("[ 100 ] ,, [ 5 ] < | [ 1 ] + | .. ROUTE")
+            .execute("[ 100 ] { ,, [ 5 ] < } { [ 1 ] + } .. ROUTE")
             .await;
         assert!(result.is_ok(), "ROUTE loop immediate exit: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -165,7 +161,7 @@ ROUTE
         // Inner branching: even → /2, odd → *3+1
         // We use a single loop with two condition-action pairs
         let result = interp
-            .execute("[ 4 ] ,, [ 2 ] MOD [ 0 ] = | [ 2 ] / | ,, [ 1 ] = NOT | [ 3 ] * [ 1 ] + | .. ROUTE")
+            .execute("[ 4 ] { ,, [ 2 ] MOD [ 0 ] = } { [ 2 ] / } { ,, [ 1 ] = NOT } { [ 3 ] * [ 1 ] + } .. ROUTE")
             .await;
         assert!(result.is_ok(), "ROUTE multi-cond loop: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -181,7 +177,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // [ 5 ] with bifurcation: positive → multiply by 2, keep original
         let result = interp
-            .execute("[ 5 ] ,, [ 0 ] < NOT | [ 2 ] * | ,, ROUTE")
+            .execute("[ 5 ] { ,, [ 0 ] < NOT } { [ 2 ] * } ,, ROUTE")
             .await;
         assert!(result.is_ok(), ",, ROUTE should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 2, "Should have original + result");
@@ -204,7 +200,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // Start with [ 1 ], loop double while < 100, keep original
         let result = interp
-            .execute("[ 1 ] ,, [ 100 ] < | [ 2 ] * | .. ,, ROUTE")
+            .execute("[ 1 ] { ,, [ 100 ] < } { [ 2 ] * } .. ,, ROUTE")
             .await;
         assert!(result.is_ok(), ".. ,, ROUTE should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 2, "Should have original + result");
@@ -224,9 +220,7 @@ ROUTE
     async fn test_route_in_custom_word() {
         let mut interp = Interpreter::new();
         // ABS word using ROUTE
-        let def = r#",, [ 0 ] < | [ -1 ] * | ROUTE
-|
-'ABS' DEF"#;
+        let def = r#"{ { ,, [ 0 ] < } { [ -1 ] * } ROUTE } 'ABS' DEF"#;
         interp.execute(def).await.unwrap();
 
         interp.execute("[ -5 ] ABS").await.unwrap();
@@ -244,7 +238,7 @@ ROUTE
     #[tokio::test]
     async fn test_code_block_push() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 0 ] [ 1 ] + |").await;
+        let result = interp.execute("{ [ 0 ] [ 1 ] + }").await;
         assert!(result.is_ok(), "Code block should parse successfully");
         assert_eq!(interp.stack.len(), 1);
         assert!(interp.stack[0].as_code_block().is_some());
@@ -259,7 +253,7 @@ ROUTE
         let mut interp = Interpreter::new();
         // Condition true, action is empty code block (no-op) → flow unchanged
         let result = interp
-            .execute("[ 42 ] ,, [ 0 ] < NOT | | ROUTE")
+            .execute("[ 42 ] { ,, [ 0 ] < NOT } { } ROUTE")
             .await;
         assert!(result.is_ok(), "Empty action: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
