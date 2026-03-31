@@ -701,7 +701,14 @@ body[data-active-area] #state-panel {
 .stack-node {
     display: inline;
     border-radius: 4px;
-    padding: 0 2px;
+    padding: 1px 3px;
+}
+
+.stack-node-vector {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 4px;
 }
 
 /* スタックトップ（最新の要素）を強調 */

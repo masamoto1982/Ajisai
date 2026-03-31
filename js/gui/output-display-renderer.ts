@@ -27,7 +27,7 @@ const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
 
 const getNestBackground = (depth: number): string => {
     if (depth <= 0) return 'transparent';
-    const opacity = Math.min(0.06 * depth, 0.45);
+    const opacity = Math.min(0.12 + 0.08 * (depth - 1), 0.45);
     return `rgba(var(--color-nest-rgb, 149, 76, 233), ${opacity})`;
 };
 
