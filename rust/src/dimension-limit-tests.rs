@@ -95,13 +95,13 @@ mod dimension_limit_tests {
         let stack = interp.get_stack();
         let result = format!("{}", stack[0]);
         assert!(
-            result.starts_with('{'),
-            "1D should display with {{ }}, got: {}",
+            result.starts_with('['),
+            "1D should display with [ ], got: {}",
             result
         );
         assert!(
-            result.ends_with('}'),
-            "1D should display with {{ }}, got: {}",
+            result.ends_with(']'),
+            "1D should display with [ ], got: {}",
             result
         );
     }
@@ -114,15 +114,11 @@ mod dimension_limit_tests {
         let stack = interp.get_stack();
         let result = format!("{}", stack[0]);
         assert!(
-            result.starts_with('{'),
-            "2D outermost should be {{ }}, got: {}",
+            result.starts_with('['),
+            "2D outermost should be [ ], got: {}",
             result
         );
-        assert!(
-            result.contains('('),
-            "2D inner should contain (), got: {}",
-            result
-        );
+        assert!(result.contains("[ 1 2 ]"), "2D inner should use [ ], got: {}", result);
     }
 
     #[tokio::test]
@@ -133,8 +129,8 @@ mod dimension_limit_tests {
         let stack = interp.get_stack();
         let result = format!("{}", stack[0]);
         assert!(
-            result.starts_with('{'),
-            "3D outermost should be {{ }}, got: {}",
+            result.starts_with('['),
+            "3D outermost should be [ ], got: {}",
             result
         );
         assert!(
@@ -149,19 +145,14 @@ mod dimension_limit_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute("{ ( [ 1 ] [ 2 ] [ 3 ] ) ( [ 4 ] [ 5 ] [ 6 ] ) }")
+            .execute("[ [ [ 1 ] [ 2 ] [ 3 ] ] [ [ 4 ] [ 5 ] [ 6 ] ] ]")
             .await
             .unwrap();
         let stack = interp.get_stack();
         let result = format!("{}", stack[0]);
         assert!(
-            result.starts_with('{'),
-            "3D outermost should be {{ }}, got: {}",
-            result
-        );
-        assert!(
-            result.contains('('),
-            "3D second level should contain (), got: {}",
+            result.starts_with('['),
+            "3D outermost should be [ ], got: {}",
             result
         );
         assert!(
@@ -170,7 +161,7 @@ mod dimension_limit_tests {
             result
         );
         assert_eq!(
-            result, "{ ( [ 1 ] [ 2 ] [ 3 ] ) ( [ 4 ] [ 5 ] [ 6 ] ) }",
+            result, "[ [ [ 1 ] [ 2 ] [ 3 ] ] [ [ 4 ] [ 5 ] [ 6 ] ] ]",
             "Expected 3D structure"
         );
     }
@@ -183,8 +174,8 @@ mod dimension_limit_tests {
         let stack = interp.get_stack();
         let result = format!("{}", stack[0]);
         assert_eq!(
-            result, "{ ( [ { 1 } ] ) }",
-            "4D should cycle brackets: {}",
+            result, "[ [ [ [ 1 ] ] ] ]",
+            "4D should keep [ ] brackets: {}",
             result
         );
     }
@@ -200,8 +191,8 @@ mod dimension_limit_tests {
         let stack = interp.get_stack();
         let result = format!("{}", stack[0]);
         assert_eq!(
-            result, "{ ( [ { ( [ { ( [ 1 ] ) } ] ) } ] ) }",
-            "9D bracket cycle: {}",
+            result, "[ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ]",
+            "9D unified [ ] display: {}",
             result
         );
     }

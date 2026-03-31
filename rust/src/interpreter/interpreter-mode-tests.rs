@@ -104,7 +104,7 @@ mod tests {
         interp
             .execute_guard_structure_sync(
                 &interp
-                    .split_tokens_to_lines(&crate::tokenizer::tokenize("[9] | 'NOP' DEF").unwrap())
+                    .split_tokens_to_lines(&crate::tokenizer::tokenize("{ [9] } 'NOP' DEF").unwrap())
                     .unwrap(),
             )
             .unwrap();
