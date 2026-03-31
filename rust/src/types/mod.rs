@@ -161,8 +161,6 @@ pub enum Token {
     VectorEnd,
     CodeBlockStart,
     CodeBlockEnd,
-    ChevronBranch,
-    ChevronDefault,
     Pipeline,
     NilCoalesce,
     SafeMode,

@@ -307,8 +307,6 @@ impl Interpreter {
                     self.safe_mode = true;
                 }
                 Token::CodeBlockEnd
-                | Token::ChevronBranch
-                | Token::ChevronDefault
                 | Token::LineBreak => {}
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
@@ -328,80 +326,13 @@ impl Interpreter {
             return Ok(None);
         }
 
-        let is_chevron_structure = lines.iter().all(|line| {
-            matches!(
-                line.body_tokens.first(),
-                Some(Token::ChevronBranch) | Some(Token::ChevronDefault)
-            )
-        });
-
-        if !is_chevron_structure {
-            for line in lines {
-                let (_, action) = self.execute_section_core(&line.body_tokens, 0)?;
-                if action.is_some() {
-                    return Ok(action);
-                }
-            }
-            return Ok(None);
-        }
-
-        let last_line = lines.last().unwrap();
-        if last_line.body_tokens.first() != Some(&Token::ChevronDefault) {
-            return Err(AjisaiError::from(
-                "Chevron branch must end with >>> (default branch)",
-            ));
-        }
-
-        let saved_stack = self.stack.clone();
-
-        let mut i = 0;
-        while i < lines.len() - 1 {
-            let line = &lines[i];
-
-            if line.body_tokens.first() != Some(&Token::ChevronBranch) {
-                return Err(AjisaiError::from("Expected >> at line start"));
-            }
-
-            let content_tokens = &line.body_tokens[1..];
-
-            if i + 1 < lines.len() - 1 {
-                self.stack = saved_stack.clone();
-                let (_, action) = self.execute_section_core(content_tokens, 0)?;
-                if action.is_some() {
-                    return Ok(action);
-                }
-
-                if self.check_condition_on_stack()? {
-                    i += 1;
-                    let action_line = &lines[i];
-                    if action_line.body_tokens.first() != Some(&Token::ChevronBranch) {
-                        return Err(AjisaiError::from("Expected >> for action line"));
-                    }
-                    let action_tokens = &action_line.body_tokens[1..];
-                    let (_, action) = self.execute_section_core(action_tokens, 0)?;
-                    return Ok(action);
-                }
-                i += 2;
-            } else {
-                self.stack = saved_stack.clone();
-                let (_, action) = self.execute_section_core(content_tokens, 0)?;
-                if action.is_some() {
-                    return Ok(action);
-                }
-
-                if self.check_condition_on_stack()? {
-                    let default_tokens = &lines[lines.len() - 1].body_tokens[1..];
-                    let (_, action) = self.execute_section_core(default_tokens, 0)?;
-                    return Ok(action);
-                }
-                i += 1;
+        for line in lines {
+            let (_, action) = self.execute_section_core(&line.body_tokens, 0)?;
+            if action.is_some() {
+                return Ok(action);
             }
         }
-
-        let default_line = &lines[lines.len() - 1];
-        let default_tokens = &default_line.body_tokens[1..];
-        let (_, action) = self.execute_section_core(default_tokens, 0)?;
-        Ok(action)
+        Ok(None)
     }
 
     pub(crate) fn check_condition_on_stack(&mut self) -> Result<bool> {

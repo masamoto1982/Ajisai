@@ -529,9 +529,9 @@ export const TEST_CASES: TestCase[] = [
         category: "User Words"
     },
     {
-        // 仕様: シェブロン分岐（ガード）を使用する（セクション4.2）
-        name: "DEF with guard clause",
-        code: ":\n>> [ 3 ] [ 1 ] <\n>> [ 99 ]\n>>> [ 0 ]\n; 'GUARD' DEF\nGUARD",
+        // 仕様: ROUTE分岐を使用するワード定義
+        name: "DEF with ROUTE branch",
+        code: ":\n: ,, [ 1 ] < ; : [ 99 ] * ;\n: [ 0 ] * ;\nROUTE\n; 'GUARD' DEF\n[ 3 ] GUARD",
         expectedStack: [createVector([createNumber('0')])],
         category: "User Words"
     },
@@ -546,9 +546,9 @@ export const TEST_CASES: TestCase[] = [
     // Control Flow
     // ============================================
     {
-        // 仕様: TIMES はコードブロックまたはカスタムワード名をN回繰り返す（セクション5.4）
-        name: "TIMES - repeat",
-        code: ": [ 1 ] + ; 'INC' DEF\n[ 0 ] 'INC' [ 5 ] TIMES",
+        // 仕様: ROUTE (..) で反復制御
+        name: "ROUTE loop - count up",
+        code: "[ 0 ]\n: ,, [ 5 ] < ; : [ 1 ] + ;\n.. ROUTE",
         expectedStack: [createVector([createNumber('5')])],
         category: "Control Flow"
     },

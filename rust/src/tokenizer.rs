@@ -73,25 +73,17 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        // 6. シェブロン記号の処理（>>>, >>, >）
+        // 6. '>' 系の処理（全て廃止済み）
         if chars[i] == '>' {
-            // >>> をチェック（デフォルト分岐）
             if i + 2 < chars.len() && chars[i + 1] == '>' && chars[i + 2] == '>' {
-                tokens.push(Token::ChevronDefault);
-                i += 3;
-                continue;
+                return Err("'>>>' (chevron default) has been removed. Use ROUTE for control flow.".to_string());
             }
-            // >> をチェック（条件/アクション分岐）
             if i + 1 < chars.len() && chars[i + 1] == '>' {
-                tokens.push(Token::ChevronBranch);
-                i += 2;
-                continue;
+                return Err("'>>' (chevron branch) has been removed. Use ROUTE for control flow.".to_string());
             }
-            // >= をチェック（廃止された比較演算子）
             if i + 1 < chars.len() && chars[i + 1] == '=' {
                 return Err("The '>=' operator has been removed. Use '<= NOT' or reverse operands with '<=' instead.".to_string());
             }
-            // 単独の '>' はエラー（廃止された比較演算子）
             return Err("The '>' operator has been removed. Use '< NOT' or reverse operands with '<' instead.".to_string());
         }
 

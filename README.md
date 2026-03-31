@@ -46,7 +46,7 @@
 - カスタムワード定義（`DEF` / `DEL` / `?`）
 - コードブロック（`:` / `;`）
 - 高階関数（`MAP`, `FILTER`, `FOLD`）
-- ガード分岐（`>>`, `>>>`）
+- フロー経路制御（`ROUTE` — 分岐・反復の統一構造）
 
 ### データ・演算
 
@@ -60,7 +60,7 @@
 ### 補助・モジュール
 
 - 定数: `TRUE`, `FALSE`, `NIL`
-- 実行補助: `EXEC`, `EVAL`, `TIMES`, `WAIT`, `PRINT`
+- 実行補助: `EXEC`, `EVAL`, `WAIT`, `PRINT`
 - 乱数/ハッシュ: `CSPRNG`, `HASH`
 - 日時: `NOW`, `DATETIME`, `TIMESTAMP`
 - モジュール読込: `IMPORT`（例: `music`, `json`, `io`）

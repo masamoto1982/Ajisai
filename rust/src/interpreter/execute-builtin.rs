@@ -153,7 +153,7 @@ impl Interpreter {
                 self.stack.push(Value::nil());
                 Ok(())
             }
-            "TIMES" => control::execute_times(self),
+            "ROUTE" => control::execute_route(self),
             "EXEC" => control::op_exec(self),
             "EVAL" => control::op_eval(self),
             "DEF" => execute_def::op_def(self),
@@ -212,8 +212,6 @@ impl Interpreter {
             Token::VectorEnd => "]".to_string(),
             Token::CodeBlockStart => ":".to_string(),
             Token::CodeBlockEnd => ";".to_string(),
-            Token::ChevronBranch => ">>".to_string(),
-            Token::ChevronDefault => ">>>".to_string(),
             Token::Pipeline => "==".to_string(),
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),
