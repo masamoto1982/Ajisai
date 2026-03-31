@@ -263,11 +263,11 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result2,
             vec![
-                Token::VectorStart,
+                Token::BlockStart,
                 Token::Symbol("a".into()),
                 Token::Symbol("b".into()),
                 Token::Symbol("c".into()),
-                Token::VectorEnd,
+                Token::BlockEnd,
             ]
         );
 
@@ -275,11 +275,11 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result3,
             vec![
-                Token::VectorStart,
+                Token::BlockStart,
                 Token::Symbol("x".into()),
                 Token::Symbol("y".into()),
                 Token::Symbol("z".into()),
-                Token::VectorEnd,
+                Token::BlockEnd,
             ]
         );
     }
@@ -290,33 +290,35 @@ mod tokenizer_regression_tests {
         assert_eq!(
             result,
             vec![
-                Token::VectorStart,
-                Token::VectorStart,
+                Token::BlockStart,
+                Token::BlockStart,
                 Token::VectorStart,
                 Token::Number("1".into()),
                 Token::VectorEnd,
-                Token::VectorEnd,
-                Token::VectorEnd,
+                Token::BlockEnd,
+                Token::BlockEnd,
             ]
         );
 
-        let result2 = tokenize("{ ( ) ( ) }").unwrap();
+        let result2 = tokenize("{ ( X ) ( Y ) }").unwrap();
         assert_eq!(
             result2,
             vec![
-                Token::VectorStart,
-                Token::VectorStart,
-                Token::VectorEnd,
-                Token::VectorStart,
-                Token::VectorEnd,
-                Token::VectorEnd,
+                Token::BlockStart,
+                Token::BlockStart,
+                Token::Symbol("X".into()),
+                Token::BlockEnd,
+                Token::BlockStart,
+                Token::Symbol("Y".into()),
+                Token::BlockEnd,
+                Token::BlockEnd,
             ]
         );
     }
 
     #[test]
     fn test_frame_output_format() {
-        let frame_output = "{ ( [ ] [ ] [ ] ) ( [ ] [ ] [ ] ) }";
+        let frame_output = "[ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ]";
         let result = tokenize(frame_output).unwrap();
 
         assert!(result

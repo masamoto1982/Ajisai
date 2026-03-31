@@ -33,10 +33,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         if chars[i] == ':' {
-            return Err("':' (code block start) has been removed. Use '|' as block separator.".to_string());
+            return Err("':' (code block start) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
         }
         if chars[i] == ';' {
-            return Err("';' (code block end) has been removed. Use '|' as block separator.".to_string());
+            return Err("';' (code block end) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
+        }
+        if chars[i] == '|' {
+            return Err("'|' (block separator) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
         }
 
         // 3. 単一文字トークン（括弧、|など）
@@ -144,6 +147,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         tokens.pop();
     }
 
+    check_single_line_block_constraint(&tokens)?;
     Ok(tokens)
 }
 
@@ -152,22 +156,40 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~' | '|'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~'
     )
 }
 
 fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
     match c {
-        // [], {}, () は全て同等にVectorとして扱う
-        // 表示時に深さに応じて適切な括弧に変換される
-        '[' | '{' | '(' => Some((Token::VectorStart, 1)),
-        ']' | '}' | ')' => Some((Token::VectorEnd, 1)),
-        '|' => Some((Token::BlockSeparator, 1)),
+        '[' => Some((Token::VectorStart, 1)),
+        ']' => Some((Token::VectorEnd, 1)),
+        '{' | '(' => Some((Token::BlockStart, 1)),
+        '}' | ')' => Some((Token::BlockEnd, 1)),
         // セーフモード修飾子
         '~' => Some((Token::SafeMode, 1)),
         // > は特別処理が必要（>> と >>> のチェック）
         _ => None,
     }
+}
+
+fn check_single_line_block_constraint(tokens: &[Token]) -> Result<(), String> {
+    let mut depth: i32 = 0;
+
+    for token in tokens {
+        match token {
+            Token::BlockStart => depth += 1,
+            Token::BlockEnd => depth -= 1,
+            Token::LineBreak if depth > 0 => {
+                return Err(
+                    "ParseError: Code block must be on a single line. Use named words to break up long definitions.".to_string()
+                );
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
 }
 
 /// 引用文字列のパース結果

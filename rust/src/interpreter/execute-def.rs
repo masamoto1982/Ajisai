@@ -104,7 +104,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             let previous_block_tokens: Vec<Token> = prev_tokens.to_vec();
             let _ = interp.stack.pop();
             let mut composed: Vec<Token> = previous_block_tokens;
-            composed.push(Token::BlockSeparator);
+            composed.push(Token::LineBreak);
             composed.extend(merged_tokens);
             merged_tokens = composed;
         }
@@ -120,7 +120,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 Token::Symbol(s) => s.to_string(),
                 Token::VectorStart => "[".to_string(),
                 Token::VectorEnd => "]".to_string(),
-                Token::BlockSeparator => "|".to_string(),
+                Token::BlockStart => "{".to_string(),
+                Token::BlockEnd => "}".to_string(),
                 Token::Pipeline => "==".to_string(),
                 Token::NilCoalesce => "=>".to_string(),
                 Token::SafeMode => "~".to_string(),
@@ -131,7 +132,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         ValueData::Vector(_) | ValueData::Record { .. } => format_vector_to_source(&def_val)?,
         _ => {
             return Err(AjisaiError::from(
-                "DEF requires a code block (... |) or vector as definition body",
+                "DEF requires a code block ({ ... } / ( ... )) or vector as definition body",
             ));
         }
     };

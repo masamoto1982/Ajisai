@@ -104,10 +104,8 @@ const extractMobileElements = (elements: GUIElements): MobileElements => ({
     dictionaryArea: elements.dictionaryArea
 });
 
-const checkStackHighlight = (content: string): boolean => {
-    const stackRegex = /(\s|^)\.\.(\s|$)/;
-    return stackRegex.test(content);
-};
+const checkStackHighlightAll = (content: string): boolean => /(\s|^)\.\.(\s|$)/.test(content);
+const checkStackHighlightTop = (content: string): boolean => /(\s|^)\.(\s|$)/.test(content);
 
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
@@ -261,12 +259,21 @@ export const createGUI = (): GUI => {
     };
 
     const updateHighlights = (content: string): void => {
-        const hasStackWord = checkStackHighlight(content);
+        const hasStackAllWord = checkStackHighlightAll(content);
+        const hasStackTopWord = checkStackHighlightTop(content) || !hasStackAllWord;
 
-        if (hasStackWord) {
+        if (hasStackAllWord) {
             elements.stackDisplay.classList.add('highlight-all');
+            elements.stackDisplay.classList.add('blink-all');
         } else {
             elements.stackDisplay.classList.remove('highlight-all');
+            elements.stackDisplay.classList.remove('blink-all');
+        }
+
+        if (hasStackTopWord && !hasStackAllWord) {
+            elements.stackDisplay.classList.add('blink-top');
+        } else {
+            elements.stackDisplay.classList.remove('blink-top');
         }
     };
 
@@ -558,5 +565,6 @@ export const guiUtils = {
     extractDisplayElements,
     extractVocabularyElements,
     extractMobileElements,
-    checkStackHighlight
+    checkStackHighlightAll,
+    checkStackHighlightTop
 };
