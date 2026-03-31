@@ -690,7 +690,9 @@ body[data-active-area] #state-panel {
 .stack-item {
     font-family: var(--font-stack-mono);
     font-size: 0.75rem;
-    display: inline-block;
+    display: inline-flex;
+    align-items: flex-start;
+    vertical-align: top;
     margin: 2px;
     padding: 2px 4px;
     background-color: transparent;
@@ -699,14 +701,17 @@ body[data-active-area] #state-panel {
 }
 
 .stack-node {
-    display: inline;
+    display: inline-flex;
+    align-items: flex-start;
     border-radius: 4px;
     padding: 1px 3px;
+    line-height: 1.4;
 }
 
 .stack-node-vector {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
+    vertical-align: top;
     gap: 3px;
     padding: 2px 4px;
 }
