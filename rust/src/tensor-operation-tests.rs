@@ -10,7 +10,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 3 }");
+        assert_eq!(result, "[ 3 ]");
     }
 
     #[tokio::test]
@@ -24,7 +24,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 2 3 }");
+        assert_eq!(result, "[ 2 3 ]");
     }
 
     #[tokio::test]
@@ -35,9 +35,9 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 2);
         let original = format!("{}", stack[0]);
-        assert_eq!(original, "{ 1 2 3 }");
+        assert_eq!(original, "[ 1 2 3 ]");
         let shape = format!("{}", stack[1]);
-        assert_eq!(shape, "{ 3 }");
+        assert_eq!(shape, "[ 3 ]");
     }
 
     #[tokio::test]
@@ -73,7 +73,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ ( 1 2 3 ) ( 4 5 6 ) }");
+        assert_eq!(result, "[ [ 1 2 3 ] [ 4 5 6 ] ]");
     }
 
     #[tokio::test]
@@ -87,7 +87,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ ( 1 2 ) ( 3 4 ) ( 5 6 ) }");
+        assert_eq!(result, "[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]");
     }
 
     #[tokio::test]
@@ -101,7 +101,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ ( 1 4 ) ( 2 5 ) ( 3 6 ) }");
+        assert_eq!(result, "[ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]");
     }
 
     #[tokio::test]
@@ -112,7 +112,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 0 0 0 }");
+        assert_eq!(result, "[ 0 0 0 ]");
     }
 
     #[tokio::test]
@@ -123,7 +123,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ ( 5 5 5 ) ( 5 5 5 ) }");
+        assert_eq!(result, "[ [ 5 5 5 ] [ 5 5 5 ] ]");
     }
 
     #[tokio::test]
@@ -137,7 +137,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ ( 11 22 33 ) ( 14 25 36 ) }");
+        assert_eq!(result, "[ [ 11 22 33 ] [ 14 25 36 ] ]");
     }
 
     #[tokio::test]
@@ -151,7 +151,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ ( 101 102 103 ) ( 204 205 206 ) }");
+        assert_eq!(result, "[ [ 101 102 103 ] [ 204 205 206 ] ]");
     }
 
     #[tokio::test]

@@ -174,74 +174,8 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
     ) -> Result<(usize, Option<AsyncAction>)> {
-        let source_tokens: Vec<Token> = tokens[start_index..].to_vec();
-        let mut vector_depth: i32 = 0;
-        let mut buffered_tokens: Vec<Token> = Vec::new();
-        let mut prelude_tokens: Vec<Token> = Vec::new();
-        let mut separated_blocks: Vec<Vec<Token>> = Vec::new();
-        let mut trailing_tokens: Vec<Token> = Vec::new();
-        let mut has_separator: bool = false;
-
-        for token in source_tokens {
-            match token {
-                Token::VectorStart => {
-                    vector_depth += 1;
-                    buffered_tokens.push(Token::VectorStart);
-                }
-                Token::VectorEnd => {
-                    vector_depth -= 1;
-                    buffered_tokens.push(Token::VectorEnd);
-                }
-                Token::BlockSeparator if vector_depth == 0 => {
-                    if !has_separator {
-                        let maybe_start_index: Option<usize> =
-                            buffered_tokens.iter().position(|token| {
-                                matches!(
-                                    token,
-                                    Token::Symbol(symbol)
-                                        if symbol.as_ref() == ",,"
-                                            || symbol.as_ref() == ","
-                                            || symbol.as_ref() == "."
-                                            || symbol.as_ref() == ".."
-                                )
-                            });
-                        if let Some(start_index) = maybe_start_index {
-                            if start_index > 0 {
-                                prelude_tokens.extend_from_slice(&buffered_tokens[..start_index]);
-                                buffered_tokens = buffered_tokens[start_index..].to_vec();
-                            }
-                        }
-                    }
-                    separated_blocks.push(buffered_tokens.clone());
-                    buffered_tokens.clear();
-                    has_separator = true;
-                }
-                _ => buffered_tokens.push(token),
-            }
-        }
-
-        if has_separator {
-            trailing_tokens = buffered_tokens;
-        } else {
-            trailing_tokens = tokens[start_index..].to_vec();
-        }
-
-        if has_separator && !prelude_tokens.is_empty() {
-            let (_, action): (usize, Option<AsyncAction>) =
-                self.execute_section_core(&prelude_tokens, 0)?;
-            if action.is_some() {
-                return Ok((start_index, action));
-            }
-        }
-
-        for block_tokens in separated_blocks {
-            self.stack.push(Value::from_code_block(block_tokens));
-        }
-
-        let execute_tokens_vec: Vec<Token> = trailing_tokens;
-
         let mut i: usize = 0;
-        let execute_tokens: &[Token] = &execute_tokens_vec;
+        let execute_tokens: &[Token] = &tokens[start_index..];
 
         while i < execute_tokens.len() {
             match &execute_tokens[i] {
@@ -261,6 +195,36 @@ impl Interpreter {
                     }
                     self.stack.push(Value::from_vector(values));
                     i += consumed;
+                    continue;
+                }
+                Token::BlockStart => {
+                    let mut depth: i32 = 1;
+                    let mut j: usize = i + 1;
+                    let mut block_tokens: Vec<Token> = Vec::new();
+
+                    while j < execute_tokens.len() && depth > 0 {
+                        match &execute_tokens[j] {
+                            Token::BlockStart => {
+                                depth += 1;
+                                block_tokens.push(execute_tokens[j].clone());
+                            }
+                            Token::BlockEnd => {
+                                depth -= 1;
+                                if depth > 0 {
+                                    block_tokens.push(execute_tokens[j].clone());
+                                }
+                            }
+                            token => block_tokens.push(token.clone()),
+                        }
+                        j += 1;
+                    }
+
+                    if depth != 0 {
+                        return Err(AjisaiError::from("Unclosed code block"));
+                    }
+
+                    self.stack.push(Value::from_code_block(block_tokens));
+                    i = j;
                     continue;
                 }
                 Token::Symbol(s) => {
@@ -307,7 +271,9 @@ impl Interpreter {
                         }
                     }
                 }
-                Token::BlockSeparator => {}
+                Token::BlockEnd => {
+                    return Err(AjisaiError::from("Unexpected code block end"));
+                }
                 Token::Pipeline => {
                     // no-op visual marker
                 }
@@ -326,6 +292,19 @@ impl Interpreter {
                                         match &execute_tokens[i] {
                                             Token::VectorStart => depth += 1,
                                             Token::VectorEnd => depth -= 1,
+                                            _ => {}
+                                        }
+                                        i += 1;
+                                    }
+                                    continue;
+                                }
+                                Token::BlockStart => {
+                                    let mut depth = 1;
+                                    i += 1;
+                                    while i < execute_tokens.len() && depth > 0 {
+                                        match &execute_tokens[i] {
+                                            Token::BlockStart => depth += 1,
+                                            Token::BlockEnd => depth -= 1,
                                             _ => {}
                                         }
                                         i += 1;

@@ -10,7 +10,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 3 }", "CEIL(7/3) should be 3");
+        assert_eq!(result, "[ 3 ]", "CEIL(7/3) should be 3");
     }
 
     #[tokio::test]
@@ -21,7 +21,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ -2 }", "CEIL(-7/3) should be -2");
+        assert_eq!(result, "[ -2 ]", "CEIL(-7/3) should be -2");
     }
 
     #[tokio::test]
@@ -32,7 +32,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 2 }", "CEIL(6/3) should be 2");
+        assert_eq!(result, "[ 2 ]", "CEIL(6/3) should be 2");
     }
 
     #[tokio::test]
@@ -43,22 +43,21 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ -2 }", "CEIL(-6/3) should be -2");
+        assert_eq!(result, "[ -2 ]", "CEIL(-6/3) should be -2");
     }
 
     #[tokio::test]
     async fn test_ceil_with_route() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        let def_code = r#",, [ 1 ] < | [ 0 ] * [ 7/3 ] + CEIL | [ 0 ] * | ROUTE
-| 'TEST' DEF"#;
+        let def_code = r#"{ { ,, [ 1 ] < } { [ 0 ] * [ 7/3 ] + CEIL } { [ 0 ] * } ROUTE } 'TEST' DEF"#;
         interp.execute(def_code).await.unwrap();
         // [ 3 ] is NOT < 1, so default `[ 0 ] *` is used → 3 * 0 = 0
         interp.execute("[ 3 ] TEST").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 0 }");
+        assert_eq!(result, "[ 0 ]");
     }
 
     #[tokio::test]
@@ -93,7 +92,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 2 }", "ROUND(7/3) should be 2");
+        assert_eq!(result, "[ 2 ]", "ROUND(7/3) should be 2");
     }
 
     #[tokio::test]
@@ -104,7 +103,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 3 }", "ROUND(5/2) should be 3");
+        assert_eq!(result, "[ 3 ]", "ROUND(5/2) should be 3");
     }
 
     #[tokio::test]
@@ -115,7 +114,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 3 }", "ROUND(8/3) should be 3");
+        assert_eq!(result, "[ 3 ]", "ROUND(8/3) should be 3");
     }
 
     #[tokio::test]
@@ -126,7 +125,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ -2 }", "ROUND(-7/3) should be -2");
+        assert_eq!(result, "[ -2 ]", "ROUND(-7/3) should be -2");
     }
 
     #[tokio::test]
@@ -137,7 +136,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ -3 }", "ROUND(-5/2) should be -3");
+        assert_eq!(result, "[ -3 ]", "ROUND(-5/2) should be -3");
     }
 
     #[tokio::test]
@@ -148,7 +147,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ -3 }", "ROUND(-8/3) should be -3");
+        assert_eq!(result, "[ -3 ]", "ROUND(-8/3) should be -3");
     }
 
     #[tokio::test]
@@ -159,7 +158,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 2 }", "ROUND(6/3) should be 2");
+        assert_eq!(result, "[ 2 ]", "ROUND(6/3) should be 2");
     }
 
     #[tokio::test]
@@ -170,22 +169,21 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ -2 }", "ROUND(-6/3) should be -2");
+        assert_eq!(result, "[ -2 ]", "ROUND(-6/3) should be -2");
     }
 
     #[tokio::test]
     async fn test_round_with_route() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        let def_code = r#",, [ 1 ] < | [ 0 ] * [ 8/3 ] + ROUND | [ 0 ] * | ROUTE
-| 'TEST' DEF"#;
+        let def_code = r#"{ { ,, [ 1 ] < } { [ 0 ] * [ 8/3 ] + ROUND } { [ 0 ] * } ROUTE } 'TEST' DEF"#;
         interp.execute(def_code).await.unwrap();
         // [ 3 ] is NOT < 1, so default `[ 0 ] *` is used → 3 * 0 = 0
         interp.execute("[ 3 ] TEST").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "{ 0 }");
+        assert_eq!(result, "[ 0 ]");
     }
 
     #[tokio::test]
