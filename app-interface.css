@@ -695,7 +695,13 @@ body[data-active-area] #state-panel {
     padding: 2px 4px;
     background-color: transparent;
     color: var(--color-stack);
-    border: 1px solid transparent;
+    border: none;
+}
+
+.stack-node {
+    display: inline;
+    border-radius: 4px;
+    padding: 0 2px;
 }
 
 .stack-node {
@@ -707,20 +713,18 @@ body[data-active-area] #state-panel {
 /* スタックトップ（最新の要素）を強調 */
 .stack-item:last-child {
     font-weight: bold;
-    border: 1px solid color-mix(in srgb, var(--color-stack) 40%, transparent);
 }
 
 /* STACKワードが入力されたとき、全スタック要素を強調 */
 #stack-display.highlight-all .stack-item {
     background-color: var(--color-stack);
     color: #fff;
-    border: 1px solid var(--color-stack);
     font-weight: bold;
 }
 
 @keyframes ajisai-blink {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.45); }
+    0%, 100% { background-color: color-mix(in srgb, var(--color-stack) 15%, transparent); }
+    50% { background-color: color-mix(in srgb, var(--color-stack) 55%, transparent); }
 }
 
 #stack-display.blink-all .stack-item,

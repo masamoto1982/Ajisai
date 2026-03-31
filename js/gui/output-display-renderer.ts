@@ -173,12 +173,10 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
 
     if (item.type === 'vector' && Array.isArray(item.value)) {
         node.classList.add('stack-node-vector');
-        node.append('[ ');
         item.value.forEach((child, index) => {
             if (index > 0) node.append(' ');
             node.appendChild(renderStackValueNode(child, depth + 1));
         });
-        node.append(' ]');
         return node;
     }
 
@@ -193,12 +191,11 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
             tensorNode.style.backgroundColor = getNestBackground(tensorDepth);
 
             if (tensorShape.length === 0) {
-                tensorNode.textContent = '[ ]';
+                tensorNode.textContent = '';
                 return tensorNode;
             }
 
             if (tensorShape.length === 1) {
-                tensorNode.append('[ ');
                 if ((tensor.displayHint ?? '').toLowerCase() === 'string') {
                     tensorNode.append(deserializeBytesToString(tensorData));
                 } else {
@@ -207,20 +204,17 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
                         tensorNode.append(formatFraction(frac));
                     });
                 }
-                tensorNode.append(' ]');
                 return tensorNode;
             }
 
             const outerSize = tensorShape[0] ?? 0;
             const innerShape = tensorShape.slice(1);
             const innerSize = innerShape.reduce((a, b) => a * b, 1);
-            tensorNode.append('[ ');
             for (let i = 0; i < outerSize; i++) {
                 if (i > 0) tensorNode.append(' ');
                 const innerData = tensorData.slice(i * innerSize, (i + 1) * innerSize);
                 tensorNode.appendChild(renderTensorNode(innerShape, innerData, tensorDepth + 1));
             }
-            tensorNode.append(' ]');
             return tensorNode;
         };
 
