@@ -27,8 +27,8 @@ const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
 
 const getNestBackground = (depth: number): string => {
     if (depth <= 0) return 'transparent';
-    const opacity = Math.min(0.05 * depth, 0.5);
-    return `rgba(var(--color-nest-rgb, 77, 196, 255), ${opacity})`;
+    const opacity = Math.min(0.06 * depth, 0.45);
+    return `rgba(var(--color-nest-rgb, 149, 76, 233), ${opacity})`;
 };
 
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
@@ -487,7 +487,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
             try {
-                elem.appendChild(renderStackValueNode(item, 0));
+                elem.appendChild(renderStackValueNode(item, 1));
             } catch {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';

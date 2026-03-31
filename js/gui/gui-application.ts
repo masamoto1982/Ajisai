@@ -260,7 +260,7 @@ export const createGUI = (): GUI => {
 
     const updateHighlights = (content: string): void => {
         const hasStackAllWord = checkStackHighlightAll(content);
-        const hasStackTopWord = checkStackHighlightTop(content);
+        const hasStackTopWord = checkStackHighlightTop(content) || !hasStackAllWord;
 
         if (hasStackAllWord) {
             elements.stackDisplay.classList.add('highlight-all');
