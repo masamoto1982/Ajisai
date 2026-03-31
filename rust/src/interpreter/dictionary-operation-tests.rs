@@ -22,10 +22,10 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         // Use code block syntax since vector duality no longer preserves operators.
-        let result1 = interp.execute("[ 2 ] * | 'DOUBLE' DEF").await;
+        let result1 = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
 
-        let result2 = interp.execute("[ 3 ] * | 'DOUBLE' DEF").await;
+        let result2 = interp.execute("{ [ 3 ] * } 'DOUBLE' DEF").await;
         assert!(result2.is_ok(), "Overriding custom word should succeed");
 
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
@@ -293,7 +293,7 @@ mod tests {
 
         // Use code block syntax since vector duality no longer preserves
         // builtin operator symbols (from_string creates codepoint vectors).
-        let result = interp.execute("[ 2 ] * | 'DOUBLE' DEF").await;
+        let result = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
             "Code block DEF should work: {:?}",
@@ -344,7 +344,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Use code block syntax since vector duality no longer preserves operators.
-        let result = interp.execute("[ 2 ] * | 'DOUBLE' DEF").await;
+        let result = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
             "DEF with vector should succeed: {:?}",
@@ -380,7 +380,7 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        let result = interp.execute("[ 999 ] | 'C4' DEF").await;
+        let result = interp.execute("{ [ 999 ] } 'C4' DEF").await;
         assert!(result.is_ok(), "DEF should succeed even with module collision: {:?}", result.err());
         let output = interp.collect_output();
         assert!(output.contains("Warning"),
@@ -395,7 +395,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         // Define C4 before importing music
-        interp.execute("[ 999 ] | 'C4' DEF").await.unwrap();
+        interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
         assert!(interp.user_words.contains_key("C4"));
 
         // Import music module — user word remains, short name becomes ambiguous
@@ -453,7 +453,7 @@ mod tests {
     async fn test_module_first_builtin_still_protected() {
         // Module-first: core built-in words are still protected from override
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 ] | 'GET' DEF").await;
+        let result = interp.execute("{ [ 1 ] } 'GET' DEF").await;
         assert!(result.is_err(), "Should not be able to override built-in GET");
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Cannot redefine built-in word"),
@@ -468,7 +468,7 @@ mod tests {
 
         let sample_words = vec![
             ("SAY-BY-SIGN",
-             ",, [ 0 ] < | 'Hello' PRINT | ,, [ 0 ] = | 'Hello World' PRINT | 'World' PRINT | ROUTE",
+             "{ ,, [ 0 ] < } { 'Hello' PRINT } { ,, [ 0 ] = } { 'Hello World' PRINT } { 'World' PRINT } ROUTE",
              "sign branch sample"),
         ];
         restore_sample_words(&mut interp, &sample_words);

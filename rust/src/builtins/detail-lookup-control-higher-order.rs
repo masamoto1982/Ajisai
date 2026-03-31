@@ -13,19 +13,19 @@ pub(crate) fn lookup_detail_control_higher_order(name: &str) -> Option<String> {
 
 ## 機能
 コードブロック（遅延評価されるコード）の開始を示します。
-| と対で使用し、DEFでのワード定義に使用します。
+{ } または ( ) で囲んで使用し、DEFでのワード定義に使用します。
 
 ## 使用法
-コード | 'NAME' DEF
+{ コード } 'NAME' DEF
 
 ## 使用例
-[ 2 ] * | 'DOUBLE' DEF
+{ [ 2 ] * } 'DOUBLE' DEF
 [ 5 ] DOUBLE    # → [ 10 ]
 
-[ 800 1200 ] MUSIC@CHORD | 'VOWEL_A' DEF
+{ [ 800 1200 ] MUSIC@CHORD } 'VOWEL_A' DEF
 
 ## 注意
-- 必ず | で閉じる必要があります
+- 必ず } または ) で閉じる必要があります
 - ネスト可能です"#,
 
         ";" => r#"# | - コードブロック終了

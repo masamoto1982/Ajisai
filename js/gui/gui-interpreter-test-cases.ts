@@ -397,18 +397,18 @@ export const TEST_CASES: TestCase[] = [
 
     // ============================================
     // Higher-Order Functions
-    // 仕様: DEF構文は code | 'NAME' DEF（セクション6.3）
+    // 仕様: DEF構文は { code } 'NAME' DEF（セクション6.3）
     // ============================================
     {
         name: "MAP - double",
-        code: "[ 2 ] * | 'DBL' DEF\n[ 1 2 3 ] 'DBL' MAP",
+        code: "{ [ 2 ] * } 'DBL' DEF\n[ 1 2 3 ] 'DBL' MAP",
         expectedStack: [createVector([createNumber('2'), createNumber('4'), createNumber('6')])],
         category: "Higher-Order Functions"
     },
     {
         // 仕様: > は提供しない。<= NOT で代替する
         name: "FILTER - positive",
-        code: "[ 0 ] <= NOT | 'POS' DEF\n[ -2 -1 0 1 2 ] 'POS' FILTER",
+        code: "{ [ 0 ] <= NOT } 'POS' DEF\n[ -2 -1 0 1 2 ] 'POS' FILTER",
         expectedStack: [createVector([createNumber('1'), createNumber('2')])],
         category: "Higher-Order Functions"
     },
@@ -520,24 +520,24 @@ export const TEST_CASES: TestCase[] = [
 
     // ============================================
     // User Word Definition
-    // 仕様: DEF構文は code | 'NAME' DEF（セクション6.3）
+    // 仕様: DEF構文は { code } 'NAME' DEF（セクション6.3）
     // ============================================
     {
         name: "DEF and call",
-        code: "[ 2 ] * | 'DOUBLE' DEF\n[ 5 ] DOUBLE",
+        code: "{ [ 2 ] * } 'DOUBLE' DEF\n[ 5 ] DOUBLE",
         expectedStack: [createVector([createNumber('10')])],
         category: "User Words"
     },
     {
         // 仕様: ROUTE分岐を使用するワード定義
         name: "DEF with ROUTE branch",
-        code: ",, [ 1 ] < | [ 99 ] * |\n[ 0 ] * |\nROUTE\n| 'GUARD' DEF\n[ 3 ] GUARD",
+        code: "{ ,, [ 1 ] < } { [ 99 ] * } { [ 0 ] * } ROUTE 'GUARD' DEF\n[ 3 ] GUARD",
         expectedStack: [createVector([createNumber('0')])],
         category: "User Words"
     },
     {
         name: "DEL - delete user word",
-        code: "[ 2 ] * | 'TEMP' DEF\n'TEMP' DEL\nTEMP",
+        code: "{ [ 2 ] * } 'TEMP' DEF\n'TEMP' DEL\nTEMP",
         expectError: true,
         category: "User Words"
     },
@@ -548,7 +548,7 @@ export const TEST_CASES: TestCase[] = [
     {
         // 仕様: ROUTE (..) で反復制御
         name: "ROUTE loop - count up",
-        code: "[ 0 ]\n,, [ 5 ] < | [ 1 ] + |\n.. ROUTE",
+        code: "[ 0 ] { ,, [ 5 ] < } { [ 1 ] + } .. ROUTE",
         expectedStack: [createVector([createNumber('5')])],
         category: "Control Flow"
     },
