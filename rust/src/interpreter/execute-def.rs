@@ -93,7 +93,23 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let name_str = extract_word_name_from_value(&name_val)?;
 
-    let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let mut def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    if let ValueData::CodeBlock(tokens) = &def_val.data {
+        let mut merged_tokens: Vec<Token> = tokens.to_vec();
+        while let Some(prev) = interp.stack.last() {
+            let Some(prev_tokens) = prev.as_code_block() else {
+                break;
+            };
+            let previous_block_tokens: Vec<Token> = prev_tokens.to_vec();
+            let _ = interp.stack.pop();
+            let mut composed: Vec<Token> = previous_block_tokens;
+            composed.push(Token::BlockSeparator);
+            composed.extend(merged_tokens);
+            merged_tokens = composed;
+        }
+        def_val = Value::from_code_block(merged_tokens);
+    }
 
     let definition_str = match &def_val.data {
         ValueData::CodeBlock(tokens) => tokens
@@ -104,8 +120,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 Token::Symbol(s) => s.to_string(),
                 Token::VectorStart => "[".to_string(),
                 Token::VectorEnd => "]".to_string(),
-                Token::CodeBlockStart => ":".to_string(),
-                Token::CodeBlockEnd => ";".to_string(),
+                Token::BlockSeparator => "|".to_string(),
                 Token::Pipeline => "==".to_string(),
                 Token::NilCoalesce => "=>".to_string(),
                 Token::SafeMode => "~".to_string(),
@@ -116,7 +131,7 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         ValueData::Vector(_) | ValueData::Record { .. } => format_vector_to_source(&def_val)?,
         _ => {
             return Err(AjisaiError::from(
-                "DEF requires a code block (: ... ;) or vector as definition body",
+                "DEF requires a code block (... |) or vector as definition body",
             ));
         }
     };

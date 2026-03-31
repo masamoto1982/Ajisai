@@ -202,7 +202,7 @@ mod tests {
     async fn test_exec_with_user_word() {
         let mut interp = Interpreter::new();
 
-        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ 2 ] * | 'DOUBLE' DEF").await.unwrap();
 
         let result = interp.execute("'[ 3 ] DOUBLE' EVAL").await;
 
@@ -231,7 +231,7 @@ mod tests {
     async fn test_eval_with_custom_word() {
         let mut interp = Interpreter::new();
 
-        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ 2 ] * | 'DOUBLE' DEF").await.unwrap();
 
         let result = interp.execute("'[ 3 ] DOUBLE' EVAL").await;
 

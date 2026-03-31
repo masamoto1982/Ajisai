@@ -513,7 +513,7 @@ async fn test_broadcast_matrix_plus_row_vector() {
 
 #[tokio::test]
 async fn test_map_double() {
-    let stack = run(": [ 2 ] * ; 'DBL' DEF\n[ 1 2 3 ] 'DBL' MAP")
+    let stack = run("[ 2 ] * | 'DBL' DEF\n[ 1 2 3 ] 'DBL' MAP")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
@@ -522,7 +522,7 @@ async fn test_map_double() {
 
 #[tokio::test]
 async fn test_filter_positive() {
-    let stack = run(": [ 0 ] <= NOT ; 'POS' DEF\n[ -2 -1 0 1 2 ] 'POS' FILTER")
+    let stack = run("[ 0 ] <= NOT | 'POS' DEF\n[ -2 -1 0 1 2 ] 'POS' FILTER")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
@@ -531,7 +531,7 @@ async fn test_filter_positive() {
 
 #[tokio::test]
 async fn test_fold_sum() {
-    let stack = run("[ 1 2 3 4 ] [ 0 ] : + ; FOLD").await.unwrap();
+    let stack = run("[ 1 2 3 4 ] [ 0 ] '+' FOLD").await.unwrap();
     assert_eq!(stack.len(), 1);
     assert_vector_numbers(&stack[0], &[(10, 1)]);
 }
@@ -645,7 +645,7 @@ async fn test_stack_mode_reverse() {
 
 #[tokio::test]
 async fn test_def_and_call() {
-    let stack = run(": [ 2 ] * ; 'DOUBLE' DEF\n[ 5 ] DOUBLE").await.unwrap();
+    let stack = run("[ 2 ] * | 'DOUBLE' DEF\n[ 5 ] DOUBLE").await.unwrap();
     assert_eq!(stack.len(), 1);
     assert_vector_numbers(&stack[0], &[(10, 1)]);
 }
@@ -653,7 +653,7 @@ async fn test_def_and_call() {
 #[tokio::test]
 async fn test_def_with_route_branch() {
     // [ 3 ] is NOT < 1, so default `[ 0 ] *` runs → 3 * 0 = 0
-    let stack = run(":\n: ,, [ 1 ] < ; : [ 99 ] * ;\n: [ 0 ] * ;\nROUTE\n; 'GUARD' DEF\n[ 3 ] GUARD")
+    let stack = run(",, [ 1 ] < | [ 99 ] * |\n[ 0 ] * |\nROUTE\n| 'GUARD' DEF\n[ 3 ] GUARD")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
@@ -662,7 +662,7 @@ async fn test_def_with_route_branch() {
 
 #[tokio::test]
 async fn test_del_delete_custom_word() {
-    assert!(run_expect_error(": [ 2 ] * ; 'TEMP' DEF\n'TEMP' DEL\nTEMP").await);
+    assert!(run_expect_error("[ 2 ] * | 'TEMP' DEF\n'TEMP' DEL\nTEMP").await);
 }
 
 // ============================================
@@ -671,7 +671,7 @@ async fn test_del_delete_custom_word() {
 
 #[tokio::test]
 async fn test_route_loop() {
-    let stack = run("[ 0 ]\n: ,, [ 5 ] < ; : [ 1 ] + ;\n.. ROUTE")
+    let stack = run("[ 0 ]\n,, [ 5 ] < | [ 1 ] + |\n.. ROUTE")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);

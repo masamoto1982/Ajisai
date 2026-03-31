@@ -9,7 +9,7 @@ mod tests {
     async fn test_map_with_increment() {
         let mut interp = Interpreter::new();
         let result = interp
-            .execute(": [ 1 ] + ; 'INC' DEF [ 1 2 3 ] 'INC' MAP")
+            .execute("[ 1 ] + | 'INC' DEF [ 1 2 3 ] 'INC' MAP")
             .await;
         assert!(
             result.is_ok(),
@@ -58,7 +58,7 @@ mod tests {
     async fn test_map_stack_mode() {
         let mut interp = Interpreter::new();
         let result = interp
-            .execute(": [ 2 ] * ; 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP")
+            .execute("[ 2 ] * | 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP")
             .await;
         assert!(
             result.is_ok(),
@@ -92,7 +92,7 @@ mod tests {
     #[tokio::test]
     async fn test_force_flag_del_without_dependents() {
         let mut interp = Interpreter::new();
-        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ 2 ] * | 'DOUBLE' DEF").await.unwrap();
 
         let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_ok());
@@ -102,9 +102,9 @@ mod tests {
     #[tokio::test]
     async fn test_force_flag_del_with_dependents_error() {
         let mut interp = Interpreter::new();
-        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ 2 ] * | 'DOUBLE' DEF").await.unwrap();
         interp
-            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .execute("DOUBLE DOUBLE | 'QUAD' DEF")
             .await
             .unwrap();
 
@@ -116,9 +116,9 @@ mod tests {
     #[tokio::test]
     async fn test_force_flag_del_with_dependents_forced() {
         let mut interp = Interpreter::new();
-        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ 2 ] * | 'DOUBLE' DEF").await.unwrap();
         interp
-            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .execute("DOUBLE DOUBLE | 'QUAD' DEF")
             .await
             .unwrap();
 
@@ -131,26 +131,26 @@ mod tests {
     #[tokio::test]
     async fn test_force_flag_def_with_dependents_error() {
         let mut interp = Interpreter::new();
-        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ 2 ] * | 'DOUBLE' DEF").await.unwrap();
         interp
-            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .execute("DOUBLE DOUBLE | 'QUAD' DEF")
             .await
             .unwrap();
 
-        let result = interp.execute(": [ 3 ] * ; 'DOUBLE' DEF").await;
+        let result = interp.execute("[ 3 ] * | 'DOUBLE' DEF").await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_force_flag_def_with_dependents_forced() {
         let mut interp = Interpreter::new();
-        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ 2 ] * | 'DOUBLE' DEF").await.unwrap();
         interp
-            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .execute("DOUBLE DOUBLE | 'QUAD' DEF")
             .await
             .unwrap();
 
-        let result = interp.execute("! : [ 3 ] * ; 'DOUBLE' DEF").await;
+        let result = interp.execute("! [ [ 3 ] * ] 'DOUBLE' DEF").await;
         assert!(result.is_ok());
         assert!(interp.output_buffer.contains("Warning"));
     }
@@ -166,9 +166,9 @@ mod tests {
     #[tokio::test]
     async fn test_force_flag_reset_after_other_word() {
         let mut interp = Interpreter::new();
-        interp.execute(": [ 2 ] * ; 'DOUBLE' DEF").await.unwrap();
+        interp.execute("[ 2 ] * | 'DOUBLE' DEF").await.unwrap();
         interp
-            .execute(": DOUBLE DOUBLE ; 'QUAD' DEF")
+            .execute("DOUBLE DOUBLE | 'QUAD' DEF")
             .await
             .unwrap();
 
@@ -300,10 +300,10 @@ mod tests {
     #[tokio::test]
     async fn test_call_depth_4_ok() {
         let mut interp = Interpreter::new();
-        interp.execute(": B ; 'A' DEF").await.unwrap();
-        interp.execute(": C ; 'B' DEF").await.unwrap();
-        interp.execute(": D ; 'C' DEF").await.unwrap();
-        interp.execute(": [ 1 ] ; 'D' DEF").await.unwrap();
+        interp.execute("B | 'A' DEF").await.unwrap();
+        interp.execute("C | 'B' DEF").await.unwrap();
+        interp.execute("D | 'C' DEF").await.unwrap();
+        interp.execute("[ 1 ] | 'D' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
         assert!(result.is_ok(), "Call depth 4 should succeed: {:?}", result);
@@ -313,11 +313,11 @@ mod tests {
     #[tokio::test]
     async fn test_call_depth_5_exceeds() {
         let mut interp = Interpreter::new();
-        interp.execute(": B ; 'A' DEF").await.unwrap();
-        interp.execute(": C ; 'B' DEF").await.unwrap();
-        interp.execute(": D ; 'C' DEF").await.unwrap();
-        interp.execute(": E ; 'D' DEF").await.unwrap();
-        interp.execute(": [ 1 ] ; 'E' DEF").await.unwrap();
+        interp.execute("B | 'A' DEF").await.unwrap();
+        interp.execute("C | 'B' DEF").await.unwrap();
+        interp.execute("D | 'C' DEF").await.unwrap();
+        interp.execute("E | 'D' DEF").await.unwrap();
+        interp.execute("[ 1 ] | 'E' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
         assert!(result.is_err(), "Call depth 5 should fail");
@@ -332,7 +332,7 @@ mod tests {
     #[tokio::test]
     async fn test_direct_recursion_limited() {
         let mut interp = Interpreter::new();
-        interp.execute(": REC ; 'REC' DEF").await.unwrap();
+        interp.execute("REC | 'REC' DEF").await.unwrap();
 
         let result = interp.execute("REC").await;
         assert!(result.is_err(), "Direct recursion should hit depth limit");
@@ -347,8 +347,8 @@ mod tests {
     #[tokio::test]
     async fn test_call_depth_resets_after_completion() {
         let mut interp = Interpreter::new();
-        interp.execute(": B ; 'A' DEF").await.unwrap();
-        interp.execute(": [ 1 ] ; 'B' DEF").await.unwrap();
+        interp.execute("B | 'A' DEF").await.unwrap();
+        interp.execute("[ 1 ] | 'B' DEF").await.unwrap();
 
         let result1 = interp.execute("A").await;
         assert!(result1.is_ok(), "First call should succeed");
@@ -363,11 +363,11 @@ mod tests {
     #[tokio::test]
     async fn test_call_depth_error_shows_trace() {
         let mut interp = Interpreter::new();
-        interp.execute(": B ; 'A' DEF").await.unwrap();
-        interp.execute(": C ; 'B' DEF").await.unwrap();
-        interp.execute(": D ; 'C' DEF").await.unwrap();
-        interp.execute(": E ; 'D' DEF").await.unwrap();
-        interp.execute(": [ 1 ] ; 'E' DEF").await.unwrap();
+        interp.execute("B | 'A' DEF").await.unwrap();
+        interp.execute("C | 'B' DEF").await.unwrap();
+        interp.execute("D | 'C' DEF").await.unwrap();
+        interp.execute("E | 'D' DEF").await.unwrap();
+        interp.execute("[ 1 ] | 'E' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
         assert!(result.is_err());

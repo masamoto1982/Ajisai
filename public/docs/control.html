@@ -37,17 +37,17 @@
         <section>
           <h3>ROUTE — Flow Routing</h3>
           <p>ROUTE routes the flow through condition-action code block pairs. Use modifiers to switch between branching and looping:</p>
-<pre><code>:cond; :action; :default; ROUTE        # . ROUTE: single branch (if-else)
-:cond; :action; .. ROUTE               # .. ROUTE: loop (while)
-:cond; :action; :default; ,, ROUTE     # ,, ROUTE: bifurcation (keep flow)
-:cond; :action; .. ,, ROUTE            # .. ,, ROUTE: loop + bifurcation</code></pre>
+<pre><code>cond | action | default | ROUTE        # . ROUTE: single branch (if-else)
+cond | action | .. ROUTE               # .. ROUTE: loop (while)
+cond | action | default | ,, ROUTE     # ,, ROUTE: bifurcation (keep flow)
+cond | action | .. ,, ROUTE            # .. ,, ROUTE: loop + bifurcation</code></pre>
 
           <h4>Example: Absolute Value (. ROUTE)</h4>
-<pre><code>:
-  : ,, [ 0 ] < ;   : [ -1 ] * ;
-                    : ;
+<pre><code>|
+  ,, [ 0 ] < |   [ -1 ] * |
+                    |
   ROUTE
-; 'ABS' DEF
+| 'ABS' DEF
 
 [ -5 ] ABS    # Result: [ 5 ]
 [ 3 ] ABS     # Result: [ 3 ]</code></pre>
@@ -55,19 +55,19 @@
           <h4>Example: Loop (.. ROUTE)</h4>
 <pre><code># Double until > 1000
 [ 1 ]
-  : ,, [ 1000 ] < ;  : [ 2 ] * ;
+  ,, [ 1000 ] < |  [ 2 ] * |
 .. ROUTE
 # Result: [ 1024 ]
 
 # Count up to 100
 [ 0 ]
-  : ,, [ 100 ] < ;  : [ 1 ] + ;
+  ,, [ 100 ] < |  [ 1 ] + |
 .. ROUTE
 # Result: [ 100 ]</code></pre>
 
           <h4>Example: Bifurcation (,, ROUTE)</h4>
 <pre><code>[ 5 ]
-  : ,, [ 0 ] < NOT ; : [ 2 ] * ;
+  ,, [ 0 ] < NOT | [ 2 ] * |
 ,, ROUTE
 # Result: [ 5 ] [ 10 ]  (original + result)</code></pre>
         </section>
@@ -76,9 +76,9 @@
           <h3>Pipeline Operator (==)</h3>
           <p>Visual marker for data flow (no-op). Makes complex transformations readable:</p>
 <pre><code>[ 1 2 3 4 5 ]
-  == : [ 2 ] * ; MAP
-  == : [ 5 ] < NOT ; FILTER
-  == [ 0 ] : + ; FOLD</code></pre>
+  == [ 2 ] * | MAP
+  == [ 5 ] < NOT | FILTER
+  == [ 0 ] + | FOLD</code></pre>
         </section>
 
         <section>
@@ -97,7 +97,7 @@
 
           <h4>Examples</h4>
 <pre><code># Execute after 1 second
-: [ 'Done!' ] PRINT ; 'NOTIFY' DEF
+[ 'Done!' ] PRINT | 'NOTIFY' DEF
 'NOTIFY' [ 1000 ] WAIT</code></pre>
 
           <p>Use cases:</p>
@@ -112,8 +112,8 @@
           <h3>Force Execution (!)</h3>
           <p>Allows DEL/DEF of dependent words:</p>
 <pre><code># Define dependent words
-: HELPER ; 'MAIN' DEF
-: [ 1 ] ; 'HELPER' DEF
+HELPER | 'MAIN' DEF
+[ 1 ] | 'HELPER' DEF
 
 # Cannot delete HELPER normally
 'HELPER' DEL    # Error!
@@ -127,11 +127,11 @@
           <p>Recursive patterns via word definitions:</p>
 
           <h4>Factorial</h4>
-<pre><code>:
+<pre><code>|
   >> [ 1 ] <=
   >> [ 1 ]
   >>> [ 1 ] - FACTORIAL *
-; 'FACTORIAL' DEF
+| 'FACTORIAL' DEF
 
 [ 5 ] FACTORIAL    # Result: [ 120 ]</code></pre>
 
