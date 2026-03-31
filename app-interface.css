@@ -704,6 +704,12 @@ body[data-active-area] #state-panel {
     padding: 0 2px;
 }
 
+.stack-node {
+    display: inline;
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
 /* スタックトップ（最新の要素）を強調 */
 .stack-item:last-child {
     font-weight: bold;
