@@ -29,7 +29,7 @@ const getNestBackground = (depth: number): string => {
     if (depth <= 0) return 'transparent';
     const hue = depth % 2 === 1 ? 270 : 330;
     const cycle = Math.ceil(depth / 2);
-    const alpha = 0.12 + 0.08 * (cycle - 1);
+    const alpha = 0.44 - 0.08 * (cycle - 1);
     return `hsla(${hue}, 80%, 60%, ${alpha})`;
 };
 
