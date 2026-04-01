@@ -27,10 +27,9 @@ const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
 
 const getNestBackground = (depth: number): string => {
     if (depth <= 0) return 'transparent';
-    const hue = depth % 2 === 1 ? 270 : 330;
-    const cycle = Math.ceil(depth / 2);
-    const alpha = 0.44 - 0.08 * (cycle - 1);
-    return `hsla(${hue}, 50%, 70%, ${alpha})`;
+    return depth % 2 === 1
+        ? 'hsla(270, 50%, 70%, 0.44)'
+        : '#fff';
 };
 
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
