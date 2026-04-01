@@ -721,21 +721,23 @@ body[data-active-area] #state-panel {
     font-weight: bold;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を強調（枠点滅で統一） */
+/* STACKワードが入力されたとき、全スタック要素を強調 */
 #stack-display.highlight-all .stack-item {
+    background-color: var(--color-stack);
+    color: #fff;
     font-weight: bold;
 }
 
-@keyframes ajisai-blink-border {
-    0%, 100% { outline-color: transparent; }
-    50% { outline-color: var(--color-stack, #990099); }
+/* ターゲット選択時の塗りつぶし強調 */
+#stack-display.blink-all .stack-item {
+    background-color: var(--color-stack);
+    color: #fff;
+    font-weight: bold;
 }
 
-#stack-display.blink-all .stack-item,
 #stack-display.blink-top .stack-item:last-child {
-    outline: 2px solid transparent;
-    outline-offset: -2px;
-    animation: ajisai-blink-border 0.6s ease-in-out infinite;
+    background-color: var(--color-stack);
+    color: #fff;
 }
 
 /* --------------------------------------------------------------------------
