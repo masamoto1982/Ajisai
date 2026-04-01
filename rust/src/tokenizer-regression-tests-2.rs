@@ -346,4 +346,89 @@ mod tokenizer_regression_tests_2 {
             .unwrap_err()
             .contains("'|' (block separator) has been removed"));
     }
+
+    // === 括弧の対応チェックテスト ===
+
+    #[test]
+    fn test_mismatched_brace_paren() {
+        // { を ) で閉じるのはエラー
+        let result = tokenize("{ [ 2 ] * )");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Mismatched brackets"));
+    }
+
+    #[test]
+    fn test_mismatched_paren_brace() {
+        // ( を } で閉じるのはエラー
+        let result = tokenize("( [ 2 ] * }");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Mismatched brackets"));
+    }
+
+    #[test]
+    fn test_mismatched_bracket_brace() {
+        // [ を } で閉じるのはエラー
+        let result = tokenize("[ 1 2 3 }");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Mismatched brackets"));
+    }
+
+    #[test]
+    fn test_mismatched_bracket_paren() {
+        // [ を ) で閉じるのはエラー
+        let result = tokenize("[ 1 2 3 )");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Mismatched brackets"));
+    }
+
+    #[test]
+    fn test_mismatched_brace_bracket() {
+        // { を ] で閉じるのはエラー
+        let result = tokenize("{ [ 2 ] * ]");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Mismatched brackets"));
+    }
+
+    #[test]
+    fn test_matched_braces_ok() {
+        // { } の正常な対応
+        let result = tokenize("{ [ 2 ] * }");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_matched_parens_ok() {
+        // ( ) の正常な対応
+        let result = tokenize("( [ 2 ] * )");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_nested_mixed_brackets_ok() {
+        // ネストされた異なる括弧の正常な対応
+        let result = tokenize("{ ( [ 1 ] + ) }");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_mismatched_nested_brackets() {
+        // ネスト内での不一致
+        let result = tokenize("{ ( [ 1 ] + } )");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Mismatched brackets"));
+    }
+
+    #[test]
+    fn test_brackets_in_string_ignored() {
+        // 文字列内の括弧は無視される
+        let result = tokenize("'{ ( [' [ 1 ]");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_brackets_in_comment_ignored() {
+        // コメント内の括弧は無視される
+        let result = tokenize("[ 1 ] # { ( [");
+        assert!(result.is_ok());
+    }
 }

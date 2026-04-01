@@ -147,6 +147,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         tokens.pop();
     }
 
+    check_bracket_matching(input)?;
     check_single_line_block_constraint(&tokens)?;
     Ok(tokens)
 }
@@ -170,6 +171,117 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
         '~' => Some((Token::SafeMode, 1)),
         // > は特別処理が必要（>> と >>> のチェック）
         _ => None,
+    }
+}
+
+fn check_bracket_matching(input: &str) -> Result<(), String> {
+    let mut stack: Vec<char> = Vec::new();
+    let mut in_string = false;
+    let mut in_comment = false;
+    let chars: Vec<char> = input.chars().collect();
+    let mut i: usize = 0;
+
+    while i < chars.len() {
+        let c: char = chars[i];
+
+        if c == '\n' {
+            in_comment = false;
+            i += 1;
+            continue;
+        }
+
+        if in_comment {
+            i += 1;
+            continue;
+        }
+
+        if c == '#' {
+            in_comment = true;
+            i += 1;
+            continue;
+        }
+
+        if c == '\'' {
+            if in_string {
+                // Check if this closes the string (next char is delimiter or EOF)
+                if i + 1 >= chars.len() || chars[i + 1].is_whitespace() || is_special_char(chars[i + 1]) {
+                    in_string = false;
+                }
+            } else {
+                in_string = true;
+            }
+            i += 1;
+            continue;
+        }
+
+        if in_string {
+            i += 1;
+            continue;
+        }
+
+        match c {
+            '[' | '{' | '(' => stack.push(c),
+            ']' => match stack.pop() {
+                Some('[') => {}
+                Some(open) => {
+                    return Err(format!(
+                        "Mismatched brackets: '{}' is closed by ']', expected '{}'",
+                        open,
+                        closing_bracket(open)
+                    ));
+                }
+                None => {
+                    return Err("Unexpected ']' without matching '['".to_string());
+                }
+            },
+            '}' => match stack.pop() {
+                Some('{') => {}
+                Some(open) => {
+                    return Err(format!(
+                        "Mismatched brackets: '{}' is closed by '}}', expected '{}'",
+                        open,
+                        closing_bracket(open)
+                    ));
+                }
+                None => {
+                    return Err("Unexpected '}' without matching '{'".to_string());
+                }
+            },
+            ')' => match stack.pop() {
+                Some('(') => {}
+                Some(open) => {
+                    return Err(format!(
+                        "Mismatched brackets: '{}' is closed by ')', expected '{}'",
+                        open,
+                        closing_bracket(open)
+                    ));
+                }
+                None => {
+                    return Err("Unexpected ')' without matching '('".to_string());
+                }
+            },
+            _ => {}
+        }
+        i += 1;
+    }
+
+    if let Some(open) = stack.last() {
+        return Err(format!(
+            "Unclosed '{}': expected '{}'",
+            open,
+            closing_bracket(*open)
+        ));
+    }
+
+    Ok(())
+}
+
+fn closing_bracket(open: char) -> char {
+    match open {
+        '[' => ']',
+        '{' => '}',
+        '(' => ')',
+        _ => '?',
     }
 }
 
