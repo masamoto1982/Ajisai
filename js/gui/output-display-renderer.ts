@@ -28,7 +28,7 @@ const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
 const getNestBackground = (depth: number): string => {
     if (depth <= 0) return 'transparent';
     return depth % 2 === 1
-        ? 'hsla(270, 50%, 70%, 0.44)'
+        ? 'hsla(270, 55%, 58%, 0.62)'
         : '#fff';
 };
 
