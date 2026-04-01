@@ -364,6 +364,7 @@ body[data-active-area] #state-panel {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 #stack-display.is-empty {
@@ -523,6 +524,12 @@ body[data-active-area] #state-panel {
        この値があるとコンテナも同様に伸び、align-content の設定次第で
        下詰め/中央寄せが発生する根本原因となっていた。
        コンテナはコンテンツ量に応じた自然な高さを持つべきである。 */
+}
+
+/* Stack は新しい行を上方向に積み上げる（右端で折り返したら上へ） */
+#stack-display .stack-content-flow {
+    flex-wrap: wrap-reverse;
+    align-content: flex-end;
 }
 
 /* --------------------------------------------------------------------------

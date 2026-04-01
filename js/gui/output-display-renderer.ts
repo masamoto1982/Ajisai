@@ -483,7 +483,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
         display.classList.remove('is-empty');
         const container = document.createElement('div');
-        container.className = 'area-content-flow';
+        container.className = 'area-content-flow stack-content-flow';
 
         stack.forEach((item, index) => {
             const elem = document.createElement('span');
