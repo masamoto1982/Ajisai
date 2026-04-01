@@ -691,8 +691,8 @@ body[data-active-area] #state-panel {
     font-family: var(--font-stack-mono);
     font-size: 0.75rem;
     display: inline-flex;
-    align-items: flex-start;
-    vertical-align: top;
+    align-items: center;
+    vertical-align: middle;
     margin: 2px;
     padding: 2px 4px;
     background-color: transparent;
@@ -702,7 +702,7 @@ body[data-active-area] #state-panel {
 
 .stack-node {
     display: inline-flex;
-    align-items: flex-start;
+    align-items: center;
     border-radius: 4px;
     padding: 1px 3px;
     line-height: 1.4;
@@ -710,8 +710,8 @@ body[data-active-area] #state-panel {
 
 .stack-node-vector {
     display: inline-flex;
-    align-items: flex-start;
-    vertical-align: top;
+    align-items: center;
+    vertical-align: middle;
     gap: 3px;
     padding: 2px 4px;
 }
@@ -729,8 +729,8 @@ body[data-active-area] #state-panel {
 }
 
 @keyframes ajisai-blink {
-    0%, 100% { background-color: rgba(var(--color-nest-rgb, 149, 76, 233), 0.08); }
-    50% { background-color: rgba(var(--color-nest-rgb, 149, 76, 233), 0.45); }
+    0%, 100% { background-color: hsla(270, 60%, 65%, 0.08); }
+    50% { background-color: hsla(270, 60%, 65%, 0.45); }
 }
 
 #stack-display.blink-all .stack-item,
