@@ -264,17 +264,18 @@ export const createGUI = (): GUI => {
 
         if (hasStackAllWord) {
             elements.stackDisplay.classList.add('highlight-all');
-            elements.stackDisplay.classList.add('blink-all');
         } else {
             elements.stackDisplay.classList.remove('highlight-all');
-            elements.stackDisplay.classList.remove('blink-all');
         }
 
         if (hasStackTopWord && !hasStackAllWord) {
-            elements.stackDisplay.classList.add('blink-top');
+            elements.stackDisplay.classList.add('highlight-top');
         } else {
-            elements.stackDisplay.classList.remove('blink-top');
+            elements.stackDisplay.classList.remove('highlight-top');
         }
+
+        elements.stackDisplay.classList.remove('blink-all');
+        elements.stackDisplay.classList.remove('blink-top');
     };
 
     const updateAllDisplays = (): void => {
