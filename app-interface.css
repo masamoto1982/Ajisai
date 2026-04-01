@@ -725,6 +725,11 @@ body[data-active-area] #state-panel {
     padding: 4px 6px;
 }
 
+/* ベクター内リーフ要素のパディングを除去し、スカラーとの縦幅・横幅を統一 */
+.stack-node-vector > .stack-node:not(.stack-node-vector) {
+    padding: 0;
+}
+
 /* スタックトップ（最新の要素）を強調 */
 .stack-item:last-child {
     font-weight: bold;
