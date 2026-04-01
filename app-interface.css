@@ -713,7 +713,7 @@ body[data-active-area] #state-panel {
     display: inline-flex;
     align-items: center;
     border-radius: 6px;
-    padding: 1px 3px;
+    padding: 4px 6px;
     line-height: 1.4;
 }
 
