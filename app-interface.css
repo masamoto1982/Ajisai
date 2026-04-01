@@ -721,10 +721,8 @@ body[data-active-area] #state-panel {
     font-weight: bold;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を強調 */
+/* STACKワードが入力されたとき、全スタック要素を強調（枠点滅で統一） */
 #stack-display.highlight-all .stack-item {
-    background-color: var(--color-stack);
-    color: #fff;
     font-weight: bold;
 }
 
