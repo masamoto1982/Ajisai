@@ -713,7 +713,7 @@ body[data-active-area] #state-panel {
     display: inline-flex;
     align-items: center;
     border-radius: 6px;
-    padding: 4px 6px;
+    padding: 5px;
     line-height: 1.4;
 }
 
@@ -721,8 +721,8 @@ body[data-active-area] #state-panel {
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
-    gap: 3px;
-    padding: 4px 6px;
+    gap: 5px;
+    padding: 5px;
 }
 
 /* ベクター内リーフ要素のパディングを除去し、スカラーとの縦幅・横幅を統一 */
