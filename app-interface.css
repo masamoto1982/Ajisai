@@ -735,19 +735,21 @@ body[data-active-area] #state-panel {
     font-weight: bold;
 }
 
-/* ..ターゲット：全スタック要素の背景を濃い紫で塗りつぶし */
-#stack-display.highlight-all .stack-item .stack-node,
-#stack-display.blink-all .stack-item .stack-node {
-    background-color: hsla(270, 55%, 42%, 0.85);
-    color: #fff;
+/* STACKワードが入力されたとき、全スタック要素を枠線で強調（塗りつぶしなし） */
+#stack-display.highlight-all .stack-item,
+#stack-display.blink-all .stack-item {
+    background-color: transparent;
+    color: var(--color-stack);
     font-weight: bold;
+    box-shadow: inset 0 0 0 2px var(--color-stack);
 }
 
-/* .ターゲット：スタックトップのみ背景を濃い紫で塗りつぶし */
-#stack-display.highlight-top .stack-item:last-child .stack-node,
-#stack-display.blink-top .stack-item:last-child .stack-node {
-    background-color: hsla(270, 55%, 42%, 0.85);
-    color: #fff;
+/* ターゲット選択時はスタックトップのみ枠線で強調（点滅なし） */
+#stack-display.highlight-top .stack-item:last-child,
+#stack-display.blink-top .stack-item:last-child {
+    background-color: transparent;
+    color: var(--color-stack);
+    box-shadow: inset 0 0 0 2px var(--color-stack);
 }
 
 /* --------------------------------------------------------------------------
