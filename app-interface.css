@@ -735,21 +735,21 @@ body[data-active-area] #state-panel {
     font-weight: bold;
 }
 
-/* STACKワードが入力されたとき、全スタック要素を枠線で強調（塗りつぶしなし） */
+/* ..ターゲット：全スタック要素を枠線で強調（背景色と同色） */
 #stack-display.highlight-all .stack-item,
 #stack-display.blink-all .stack-item {
     background-color: transparent;
     color: var(--color-stack);
     font-weight: bold;
-    box-shadow: inset 0 0 0 2px var(--color-stack);
+    box-shadow: inset 0 0 0 2px hsla(270, 55%, 58%, 0.62);
 }
 
-/* ターゲット選択時はスタックトップのみ枠線で強調（点滅なし） */
+/* .ターゲット：スタックトップのみ枠線で強調（背景色と同色） */
 #stack-display.highlight-top .stack-item:last-child,
 #stack-display.blink-top .stack-item:last-child {
     background-color: transparent;
     color: var(--color-stack);
-    box-shadow: inset 0 0 0 2px var(--color-stack);
+    box-shadow: inset 0 0 0 2px hsla(270, 55%, 58%, 0.62);
 }
 
 /* --------------------------------------------------------------------------
