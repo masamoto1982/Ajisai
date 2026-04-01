@@ -530,6 +530,7 @@ body[data-active-area] #state-panel {
 #stack-display .stack-content-flow {
     flex-wrap: wrap-reverse;
     align-content: flex-end;
+    align-items: center;
 }
 
 /* --------------------------------------------------------------------------
@@ -702,6 +703,7 @@ body[data-active-area] #state-panel {
     vertical-align: middle;
     margin: 2px;
     padding: 2px 4px;
+    border-radius: 4px;
     background-color: transparent;
     color: var(--color-stack);
     border: none;
