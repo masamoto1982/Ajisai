@@ -32,6 +32,11 @@ const getNestBackground = (depth: number): string => {
         : '#fff';
 };
 
+const getNestTextColor = (depth: number): string => {
+    if (depth <= 0) return 'inherit';
+    return depth % 2 === 1 ? '#fff' : 'var(--color-stack)';
+};
+
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
     if (!value || typeof value !== 'object') return null;
     const candidate = value as Record<string, unknown>;
@@ -174,6 +179,7 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
     if (item.type === 'vector' && Array.isArray(item.value)) {
         node.classList.add('stack-node-vector');
         node.style.backgroundColor = getNestBackground(depth);
+        node.style.color = getNestTextColor(depth);
         item.value.forEach((child, index) => {
             if (index > 0) node.append(' ');
             node.appendChild(renderStackValueNode(child, depth + 1));
@@ -190,6 +196,7 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
             const tensorNode = document.createElement('span');
             tensorNode.className = 'stack-node stack-node-vector';
             tensorNode.style.backgroundColor = getNestBackground(tensorDepth);
+            tensorNode.style.color = getNestTextColor(tensorDepth);
 
             if (tensorShape.length === 0) {
                 tensorNode.textContent = '';
