@@ -229,6 +229,10 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
         return renderTensorNode(shape, data, depth);
     }
 
+    if (depth === 1) {
+        node.style.backgroundColor = getNestBackground(depth);
+        node.style.color = getNestTextColor(depth);
+    }
     node.textContent = formatValue(item, depth);
     return node;
 };
