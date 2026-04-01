@@ -171,10 +171,10 @@ const formatVector = (value: unknown, depth: number): string => {
 const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
     const node = document.createElement('span');
     node.className = 'stack-node';
-    node.style.backgroundColor = getNestBackground(depth);
 
     if (item.type === 'vector' && Array.isArray(item.value)) {
         node.classList.add('stack-node-vector');
+        node.style.backgroundColor = getNestBackground(depth);
         item.value.forEach((child, index) => {
             if (index > 0) node.append(' ');
             node.appendChild(renderStackValueNode(child, depth + 1));
