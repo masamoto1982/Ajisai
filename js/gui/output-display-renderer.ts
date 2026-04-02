@@ -25,6 +25,30 @@ export interface Display {
 
 const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
 
+// Paul Tol "Muted" palette — color-vision-deficiency safe (9 chromatic colors, excluding pale grey)
+const BRACKET_DEPTH_COLORS: readonly string[] = [
+    '#332288', // indigo
+    '#88CCEE', // cyan
+    '#44AA99', // teal
+    '#117733', // green
+    '#999933', // olive
+    '#DDCC77', // sand
+    '#CC6677', // rose
+    '#882255', // wine
+    '#AA4499', // purple
+] as const;
+
+const lookupBracketColor = (depth: number): string =>
+    BRACKET_DEPTH_COLORS[(depth - 1) % BRACKET_DEPTH_COLORS.length] ?? '#332288';
+
+const createBracketSpan = (bracket: string, depth: number): HTMLSpanElement => {
+    const span = document.createElement('span');
+    span.className = 'stack-bracket';
+    span.style.color = lookupBracketColor(depth);
+    span.textContent = bracket;
+    return span;
+};
+
 
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
     if (!value || typeof value !== 'object') return null;
@@ -168,10 +192,12 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
     if (item.type === 'vector' && Array.isArray(item.value)) {
         node.classList.add('stack-node-vector');
         node.dataset.depth = String(depth);
+        node.appendChild(createBracketSpan('[', depth));
         item.value.forEach((child, index) => {
             if (index > 0) node.append(' ');
             node.appendChild(renderStackValueNode(child, depth + 1));
         });
+        node.appendChild(createBracketSpan(']', depth));
         return node;
     }
 
@@ -186,7 +212,8 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
             tensorNode.dataset.depth = String(tensorDepth);
 
             if (tensorShape.length === 0) {
-                tensorNode.textContent = '';
+                tensorNode.appendChild(createBracketSpan('[', tensorDepth));
+                tensorNode.appendChild(createBracketSpan(']', tensorDepth));
                 return tensorNode;
             }
 
@@ -194,14 +221,17 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
                 if ((tensor.displayHint ?? '').toLowerCase() === 'string') {
                     tensorNode.append(deserializeBytesToString(tensorData));
                 } else {
+                    tensorNode.appendChild(createBracketSpan('[', tensorDepth));
                     tensorData.forEach((frac, index) => {
                         if (index > 0) tensorNode.append(' ');
                         tensorNode.append(formatFraction(frac));
                     });
+                    tensorNode.appendChild(createBracketSpan(']', tensorDepth));
                 }
                 return tensorNode;
             }
 
+            tensorNode.appendChild(createBracketSpan('[', tensorDepth));
             const outerSize = tensorShape[0] ?? 0;
             const innerShape = tensorShape.slice(1);
             const innerSize = innerShape.reduce((a, b) => a * b, 1);
@@ -210,6 +240,7 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
                 const innerData = tensorData.slice(i * innerSize, (i + 1) * innerSize);
                 tensorNode.appendChild(renderTensorNode(innerShape, innerData, tensorDepth + 1));
             }
+            tensorNode.appendChild(createBracketSpan(']', tensorDepth));
             return tensorNode;
         };
 

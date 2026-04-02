@@ -725,17 +725,18 @@ body[data-active-area] #state-panel {
     padding: 5px;
 }
 
-/* depth に基づくネスト背景色（奇数=薄紫、偶数=白） */
-.stack-node[data-depth="1"] { background-color: hsla(270, 55%, 58%, 0.62); color: #fff; }
-.stack-node[data-depth="2"] { background-color: #fff; color: var(--color-stack); }
-.stack-node[data-depth="3"] { background-color: hsla(270, 55%, 58%, 0.62); color: #fff; }
-.stack-node[data-depth="4"] { background-color: #fff; color: var(--color-stack); }
-.stack-node[data-depth="5"] { background-color: hsla(270, 55%, 58%, 0.62); color: #fff; }
-.stack-node[data-depth="6"] { background-color: #fff; color: var(--color-stack); }
-.stack-node[data-depth="7"] { background-color: hsla(270, 55%, 58%, 0.62); color: #fff; }
-.stack-node[data-depth="8"] { background-color: #fff; color: var(--color-stack); }
-.stack-node[data-depth="9"] { background-color: hsla(270, 55%, 58%, 0.62); color: #fff; }
-.stack-node[data-depth="10"] { background-color: #fff; color: var(--color-stack); }
+/* ブラケット着色（Paul Tol "Muted" パレット — 色覚障碍対応） */
+.stack-bracket {
+    font-weight: bold;
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+/* ベクターノードは背景透明、テキスト色はスタック色を継承 */
+.stack-node-vector {
+    background-color: transparent;
+    color: var(--color-stack);
+}
 
 /* ベクター内リーフ要素のパディングを除去し、スカラーとの縦幅・横幅を統一 */
 .stack-node-vector > .stack-node:not(.stack-node-vector) {
@@ -750,16 +751,16 @@ body[data-active-area] #state-panel {
 /* ..ターゲット：全スタック要素の最浅階層に一貫した強調枠を付ける */
 #stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
-    background-color: hsla(270, 55%, 42%, 0.85);
+    background-color: hsla(270, 55%, 58%, 0.15);
     font-weight: bold;
-    box-shadow: inset 0 0 0 2px hsla(0, 0%, 100%, 0.92);
+    box-shadow: inset 0 0 0 2px hsla(270, 55%, 58%, 0.4);
 }
 
 /* .ターゲット：スタックトップの最浅階層のみを強調 */
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
-    background-color: hsla(270, 55%, 42%, 0.85);
-    box-shadow: inset 0 0 0 2px hsla(0, 0%, 100%, 0.92);
+    background-color: hsla(270, 55%, 58%, 0.15);
+    box-shadow: inset 0 0 0 2px hsla(270, 55%, 58%, 0.4);
 }
 
 /* --------------------------------------------------------------------------
