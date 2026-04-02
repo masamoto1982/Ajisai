@@ -737,19 +737,21 @@ body[data-active-area] #state-panel {
     font-weight: bold;
 }
 
-/* ..ターゲット：全スタック要素の最浅階層に一貫した強調枠を付ける */
+/* ..ターゲット：全スタック要素の最浅階層に一貫した強調を付ける */
 #stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
-    background-color: hsla(270, 55%, 58%, 0.15);
+    background-color: #DDDDDD;
     font-weight: bold;
-    box-shadow: inset 0 0 0 2px hsla(270, 55%, 58%, 0.4);
+    padding: 2px 5px;
+    border-radius: 4px;
 }
 
 /* .ターゲット：スタックトップの最浅階層のみを強調 */
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
-    background-color: hsla(270, 55%, 58%, 0.15);
-    box-shadow: inset 0 0 0 2px hsla(270, 55%, 58%, 0.4);
+    background-color: #DDDDDD;
+    padding: 2px 5px;
+    border-radius: 4px;
 }
 
 
