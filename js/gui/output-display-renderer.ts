@@ -402,7 +402,9 @@ const renderVectorAsGrid = (item: Value, depth: number, editCtx: EditContext | n
     const table = document.createElement('table');
     table.className = 'stack-grid-table';
     table.dataset.depth = String(depth);
-    table.style.backgroundColor = lookupGridBackground(depth);
+    if (depth > 1) {
+        table.style.backgroundColor = lookupGridBackground(depth);
+    }
     table.style.borderColor = lookupBracketColor(depth);
 
     if (classification.kind === '1d') {
@@ -445,14 +447,50 @@ const renderVectorAsGrid = (item: Value, depth: number, editCtx: EditContext | n
     return renderStackValueNode(item, depth);
 };
 
+const renderScalarAsGrid = (item: Value, editCtx: EditContext | null): HTMLElement => {
+    const table = document.createElement('table');
+    table.className = 'stack-grid-table';
+    table.dataset.depth = '1';
+    table.style.borderColor = lookupBracketColor(1);
+
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.className = 'stack-grid-cell';
+
+    const text: string = formatLeafValue(item);
+    td.textContent = text;
+
+    if (editCtx && (item.type === 'number' || item.type === 'string' || item.type === 'boolean' || item.type === 'nil')) {
+        td.classList.add('stack-grid-cell-editable');
+        td.addEventListener('click', () => {
+            activateInlineEdit(td, text, editCtx, []);
+        });
+    }
+
+    tr.appendChild(td);
+    table.appendChild(tr);
+    return table;
+};
+
 const renderStackItemAsGrid = (item: Value, editCtx: EditContext | null): HTMLElement => {
     if (item.type === 'vector' && Array.isArray(item.value)) {
         return renderVectorAsGrid(item, 1, editCtx, []);
     }
     if (item.type === 'tensor' && item.value && typeof item.value === 'object') {
-        return renderStackValueNode(item, 1);
+        // Tensor: render as text node inside a 1×1 grid wrapper for visual consistency
+        const table = document.createElement('table');
+        table.className = 'stack-grid-table';
+        table.dataset.depth = '1';
+        table.style.borderColor = lookupBracketColor(1);
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.className = 'stack-grid-cell';
+        td.appendChild(renderStackValueNode(item, 1));
+        tr.appendChild(td);
+        table.appendChild(tr);
+        return table;
     }
-    return renderStackValueNode(item, 1);
+    return renderScalarAsGrid(item, editCtx);
 };
 
 // ---------------------------------------------------------------------------
@@ -691,7 +729,6 @@ const renderJsonExportLinks = (output: string, outputDisplay: HTMLElement): void
 
 export const createDisplay = (elements: DisplayElements, onStackEdit?: StackEditCallback): Display => {
     let mainOutput = '';
-    let gridMode = false;
 
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
@@ -771,43 +808,9 @@ export const createDisplay = (elements: DisplayElements, onStackEdit?: StackEdit
         }
     };
 
-    let lastStack: Value[] = [];
-
-    const buildToggleBar = (): HTMLElement => {
-        const bar = document.createElement('div');
-        bar.className = 'stack-view-toggle';
-
-        const textBtn = document.createElement('button');
-        textBtn.className = 'stack-toggle-btn' + (gridMode ? '' : ' active');
-        textBtn.textContent = 'Text';
-        textBtn.type = 'button';
-
-        const gridBtn = document.createElement('button');
-        gridBtn.className = 'stack-toggle-btn' + (gridMode ? ' active' : '');
-        gridBtn.textContent = 'Grid';
-        gridBtn.type = 'button';
-
-        textBtn.addEventListener('click', () => {
-            if (!gridMode) return;
-            gridMode = false;
-            renderStack(lastStack);
-        });
-
-        gridBtn.addEventListener('click', () => {
-            if (gridMode) return;
-            gridMode = true;
-            renderStack(lastStack);
-        });
-
-        bar.appendChild(textBtn);
-        bar.appendChild(gridBtn);
-        return bar;
-    };
-
     const renderStack = (stack: Value[]): void => {
         const display = elements.stackDisplay;
         clearElement(display);
-        lastStack = stack;
 
         if (!Array.isArray(stack) || stack.length === 0) {
             display.classList.add('is-empty');
@@ -820,9 +823,6 @@ export const createDisplay = (elements: DisplayElements, onStackEdit?: StackEdit
 
         display.classList.remove('is-empty');
 
-        // Toggle bar
-        appendToElement(display, buildToggleBar());
-
         const container = document.createElement('div');
         container.className = 'area-content-flow stack-content-flow';
 
@@ -830,14 +830,10 @@ export const createDisplay = (elements: DisplayElements, onStackEdit?: StackEdit
             const elem = document.createElement('span');
             elem.className = 'stack-item';
             try {
-                if (gridMode) {
-                    const editCtx: EditContext | null = onStackEdit
-                        ? { stack, stackIndex: index, onEdit: onStackEdit }
-                        : null;
-                    elem.appendChild(renderStackItemAsGrid(item, editCtx));
-                } else {
-                    elem.appendChild(renderStackValueNode(item, 1));
-                }
+                const editCtx: EditContext | null = onStackEdit
+                    ? { stack, stackIndex: index, onEdit: onStackEdit }
+                    : null;
+                elem.appendChild(renderStackItemAsGrid(item, editCtx));
             } catch {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';

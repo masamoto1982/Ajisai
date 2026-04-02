@@ -756,6 +756,14 @@ body[data-active-area] #state-panel {
     box-shadow: inset 0 0 0 2px hsla(270, 55%, 58%, 0.4);
 }
 
+/* ..ターゲット（グリッド版） */
+#stack-display.highlight-all .stack-item .stack-grid-table[data-depth="1"],
+#stack-display.blink-all .stack-item .stack-grid-table[data-depth="1"] {
+    outline: 2px solid hsla(270, 55%, 58%, 0.5);
+    outline-offset: 1px;
+    font-weight: bold;
+}
+
 /* .ターゲット：スタックトップの最浅階層のみを強調 */
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
@@ -763,63 +771,43 @@ body[data-active-area] #state-panel {
     box-shadow: inset 0 0 0 2px hsla(270, 55%, 58%, 0.4);
 }
 
+/* .ターゲット（グリッド版）：スタックトップのみ強調 */
+#stack-display.highlight-top .stack-item:last-child .stack-grid-table[data-depth="1"],
+#stack-display.blink-top .stack-item:last-child .stack-grid-table[data-depth="1"] {
+    outline: 2px solid hsla(270, 55%, 58%, 0.5);
+    outline-offset: 1px;
+}
+
+/* ターゲット外のグリッドは枠線を控えめに（ターゲットとの区別を明確化） */
+#stack-display.highlight-top .stack-item:not(:last-child) .stack-grid-table[data-depth="1"],
+#stack-display.highlight-all .stack-item .stack-grid-table:not([data-depth="1"]) {
+    outline: none;
+}
+
 /* --------------------------------------------------------------------------
  * 6.1 スタック・グリッド表示（スプレッドシート風）
  * -------------------------------------------------------------------------- */
 
-/* トグルバー */
-.stack-view-toggle {
-    display: flex;
-    gap: 0;
-    margin-bottom: 0.5rem;
-    flex-shrink: 0;
-}
-
-.stack-toggle-btn {
-    font-family: var(--font-stack-mono);
-    font-size: 0.7rem;
-    padding: 0.15rem 0.5rem;
-    border: 1px solid var(--color-border-strong, #999);
-    background: var(--gradient-child, #fff);
-    color: var(--color-text-light, #888);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-}
-
-.stack-toggle-btn:first-child {
-    border-radius: 3px 0 0 3px;
-}
-
-.stack-toggle-btn:last-child {
-    border-radius: 0 3px 3px 0;
-    border-left: none;
-}
-
-.stack-toggle-btn.active {
-    background: var(--color-text, #333);
-    color: #fff;
-    border-color: var(--color-text, #333);
-}
-
-/* グリッドテーブル */
+/* グリッドテーブル — コンパクト幅（コンテンツフィット） */
 .stack-grid-table {
     border-collapse: collapse;
-    border: 2px solid var(--color-border-strong, #999);
-    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.20);
     font-family: var(--font-stack-mono);
     font-size: 0.75rem;
+    width: auto;
 }
 
+/* ネストされたサブグリッド */
 .stack-grid-table .stack-grid-table {
     border-width: 1px;
     font-size: 0.7rem;
 }
 
 .stack-grid-cell {
-    min-width: 2.5rem;
-    padding: 0.2rem 0.45rem;
+    min-width: 1.8rem;
+    padding: 0.15rem 0.4rem;
     text-align: right;
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.10);
     white-space: nowrap;
     color: var(--color-stack, #333);
     vertical-align: middle;
@@ -827,7 +815,7 @@ body[data-active-area] #state-panel {
 
 /* セル内にサブグリッドがある場合 */
 .stack-grid-cell:has(.stack-grid-table) {
-    padding: 0.2rem;
+    padding: 0.15rem;
     text-align: center;
 }
 
@@ -843,7 +831,7 @@ body[data-active-area] #state-panel {
 /* インライン編集用input */
 .stack-grid-edit-input {
     width: 100%;
-    min-width: 2.5rem;
+    min-width: 2rem;
     padding: 0.1rem 0.3rem;
     border: 1px solid var(--color-primary, #4a90d9);
     border-radius: 2px;
@@ -855,7 +843,7 @@ body[data-active-area] #state-panel {
     outline: none;
 }
 
-/* グリッドモード時のstack-itemレイアウト調整 */
+/* グリッド版stack-itemレイアウト */
 .stack-item:has(.stack-grid-table) {
     display: inline-block;
     vertical-align: top;
