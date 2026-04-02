@@ -764,6 +764,104 @@ body[data-active-area] #state-panel {
 }
 
 /* --------------------------------------------------------------------------
+ * 6.1 スタック・グリッド表示（スプレッドシート風）
+ * -------------------------------------------------------------------------- */
+
+/* トグルバー */
+.stack-view-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0.5rem;
+    flex-shrink: 0;
+}
+
+.stack-toggle-btn {
+    font-family: var(--font-stack-mono);
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--color-border-strong, #999);
+    background: var(--gradient-child, #fff);
+    color: var(--color-text-light, #888);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.stack-toggle-btn:first-child {
+    border-radius: 3px 0 0 3px;
+}
+
+.stack-toggle-btn:last-child {
+    border-radius: 0 3px 3px 0;
+    border-left: none;
+}
+
+.stack-toggle-btn.active {
+    background: var(--color-text, #333);
+    color: #fff;
+    border-color: var(--color-text, #333);
+}
+
+/* グリッドテーブル */
+.stack-grid-table {
+    border-collapse: collapse;
+    border: 2px solid var(--color-border-strong, #999);
+    border-radius: 3px;
+    font-family: var(--font-stack-mono);
+    font-size: 0.75rem;
+}
+
+.stack-grid-table .stack-grid-table {
+    border-width: 1px;
+    font-size: 0.7rem;
+}
+
+.stack-grid-cell {
+    min-width: 2.5rem;
+    padding: 0.2rem 0.45rem;
+    text-align: right;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+    color: var(--color-stack, #333);
+    vertical-align: middle;
+}
+
+/* セル内にサブグリッドがある場合 */
+.stack-grid-cell:has(.stack-grid-table) {
+    padding: 0.2rem;
+    text-align: center;
+}
+
+/* 編集可能セルのカーソル */
+.stack-grid-cell-editable {
+    cursor: text;
+}
+
+.stack-grid-cell-editable:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* インライン編集用input */
+.stack-grid-edit-input {
+    width: 100%;
+    min-width: 2.5rem;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid var(--color-primary, #4a90d9);
+    border-radius: 2px;
+    font-family: var(--font-stack-mono);
+    font-size: 0.75rem;
+    text-align: right;
+    background: #fff;
+    color: var(--color-text, #333);
+    outline: none;
+}
+
+/* グリッドモード時のstack-itemレイアウト調整 */
+.stack-item:has(.stack-grid-table) {
+    display: inline-block;
+    vertical-align: top;
+}
+
+/* --------------------------------------------------------------------------
  * 7. モバイル対応（アプリ固有）
  * -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
