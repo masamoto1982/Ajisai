@@ -1,4 +1,4 @@
-import { createDisplay, Display, DisplayElements, StackEditCallback } from './output-display-renderer';
+import { createDisplay, Display, DisplayElements } from './output-display-renderer';
 import { createVocabularyManager, VocabularyManager, VocabularyElements } from './vocabulary-state-controller';
 import { createEditor, Editor } from './code-input-editor';
 import { createMobileHandler, MobileHandler, MobileElements, ViewMode } from './mobile-view-switcher';
@@ -437,15 +437,7 @@ export const createGUI = (): GUI => {
         mobile = createMobileHandler(extractMobileElements(elements), {
             onModeChange: (mode) => switchArea(mode)
         });
-        const onStackEdit: StackEditCallback = (updatedStack) => {
-            if (!window.ajisaiInterpreter) return;
-            window.ajisaiInterpreter.restore_stack(updatedStack);
-            display.renderStack(window.ajisaiInterpreter.collect_stack());
-            if (persistence) {
-                void persistence.saveCurrentState();
-            }
-        };
-        display = createDisplay(extractDisplayElements(elements), onStackEdit);
+        display = createDisplay(extractDisplayElements(elements));
         display.init();
         updateEditorPlaceholder();
 
