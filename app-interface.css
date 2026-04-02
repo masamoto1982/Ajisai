@@ -801,6 +801,7 @@ body[data-active-area] #state-panel {
 .stack-grid-table .stack-grid-table {
     border-width: 1px;
     font-size: 0.7rem;
+    vertical-align: middle;
 }
 
 .stack-grid-cell {
@@ -846,7 +847,7 @@ body[data-active-area] #state-panel {
 /* グリッド版stack-itemレイアウト */
 .stack-item:has(.stack-grid-table) {
     display: inline-block;
-    vertical-align: top;
+    vertical-align: middle;
 }
 
 /* --------------------------------------------------------------------------
