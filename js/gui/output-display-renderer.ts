@@ -216,7 +216,9 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
         return renderTensorNode(shape, data, depth);
     }
 
-    node.dataset.depth = String(depth);
+    if (depth === 1) {
+        node.dataset.depth = String(depth);
+    }
     node.textContent = formatValue(item, depth);
     return node;
 };
