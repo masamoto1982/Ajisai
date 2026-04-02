@@ -282,8 +282,8 @@ const applyEditAtPath = (root: Value, path: number[], newLeaf: Value): void => {
     (parent.value as Value[])[leafIndex] = newLeaf;
 };
 
-const parseEditedValue = (text: string): Value | null => {
-    const trimmed: string = text.trim();
+const parsePrimitiveValue = (token: string): Value | null => {
+    const trimmed: string = token.trim();
     if (trimmed === '') return null;
 
     if (trimmed === '[]') return { type: 'vector', value: [] };
@@ -312,7 +312,6 @@ const parseEditedValue = (text: string): Value | null => {
     // Decimal → fraction approximation
     const num: number = parseFloat(trimmed);
     if (!isNaN(num)) {
-        // Simple decimal to fraction: multiply by 10^decimals
         const parts: string[] = trimmed.split('.');
         const decimals: number = parts[1]?.length ?? 0;
         const denom: number = Math.pow(10, decimals);
@@ -321,6 +320,49 @@ const parseEditedValue = (text: string): Value | null => {
     }
 
     return null;
+};
+
+const parseEditedValue = (text: string): Value | null => {
+    const trimmed: string = text.trim();
+    if (trimmed === '') return null;
+
+    const tokens: string[] | null = trimmed.match(/\[|\]|'[^']*'|[^\s\[\]]+/g);
+    if (!tokens || tokens.length === 0) return null;
+
+    const parseAt = (start: number): { value: Value; next: number } | null => {
+        const token: string | undefined = tokens[start];
+        if (!token) return null;
+
+        if (token === '[') {
+            const values: Value[] = [];
+            let cursor: number = start + 1;
+
+            while (cursor < tokens.length) {
+                const nextToken: string = tokens[cursor]!;
+                if (nextToken === ']') {
+                    return { value: { type: 'vector', value: values }, next: cursor + 1 };
+                }
+
+                const parsedChild = parseAt(cursor);
+                if (!parsedChild) return null;
+                values.push(parsedChild.value);
+                cursor = parsedChild.next;
+            }
+
+            return null;
+        }
+
+        if (token === ']') return null;
+
+        const primitive = parsePrimitiveValue(token);
+        if (!primitive) return null;
+        return { value: primitive, next: start + 1 };
+    };
+
+    const parsed = parseAt(0);
+    if (!parsed) return null;
+    if (parsed.next !== tokens.length) return null;
+    return parsed.value;
 };
 
 const activateInlineEdit = (
