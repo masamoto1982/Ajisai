@@ -196,12 +196,13 @@ type GridClassification =
     | { kind: '1d'; elements: Value[] }
     | { kind: '2d'; rows: Value[][]; cols: number }
     | { kind: '3d-plus'; elements: Value[] }
+    | { kind: 'empty' }
     | { kind: 'fallback' };
 
 const classifyVector = (item: Value): GridClassification => {
     if (item.type !== 'vector' || !Array.isArray(item.value)) return { kind: 'fallback' };
     const elements: Value[] = item.value;
-    if (elements.length === 0) return { kind: 'fallback' };
+    if (elements.length === 0) return { kind: 'empty' };
 
     const checkLeaf = (v: Value): boolean =>
         v.type !== 'vector' && v.type !== 'tensor';
@@ -406,6 +407,24 @@ const renderVectorAsGrid = (item: Value, depth: number, editCtx: EditContext | n
         table.style.backgroundColor = lookupGridBackground(depth);
     }
     table.style.borderColor = lookupBracketColor(depth);
+
+    if (classification.kind === 'empty') {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.className = 'stack-grid-cell stack-grid-cell-empty-vector';
+        td.textContent = ' ';
+
+        if (editCtx) {
+            td.classList.add('stack-grid-cell-editable');
+            td.addEventListener('click', () => {
+                activateInlineEdit(td, '', editCtx, parentPath);
+            });
+        }
+
+        tr.appendChild(td);
+        table.appendChild(tr);
+        return table;
+    }
 
     if (classification.kind === '1d') {
         const tr = document.createElement('tr');
