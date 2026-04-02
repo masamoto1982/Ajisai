@@ -39,7 +39,7 @@ const BRACKET_DEPTH_COLORS: readonly string[] = [
 ] as const;
 
 const lookupBracketColor = (depth: number): string =>
-    BRACKET_DEPTH_COLORS[(depth - 1) % BRACKET_DEPTH_COLORS.length] ?? '#332288';
+    BRACKET_DEPTH_COLORS[depth - 1] ?? '#332288';
 
 const createBracketSpan = (bracket: string, depth: number): HTMLSpanElement => {
     const span = document.createElement('span');
