@@ -441,6 +441,9 @@ export const createGUI = (): GUI => {
             if (!window.ajisaiInterpreter) return;
             window.ajisaiInterpreter.restore_stack(updatedStack);
             display.renderStack(window.ajisaiInterpreter.collect_stack());
+            if (persistence) {
+                void persistence.saveCurrentState();
+            }
         };
         display = createDisplay(extractDisplayElements(elements), onStackEdit);
         display.init();
