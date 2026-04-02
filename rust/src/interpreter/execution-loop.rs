@@ -1,11 +1,28 @@
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
-use crate::types::{ExecutionLine, Token, Value, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{DisplayHint, ExecutionLine, Token, Value, MAX_VISIBLE_DIMENSIONS};
 
 use super::value_extraction_helpers::{create_number_value, extract_integer_from_value, extract_word_name_from_value};
 use super::{modules, AsyncAction, ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::SemanticRegistry;
 
 use async_recursion::async_recursion;
+
+fn apply_word_hint_override(registry: &mut SemanticRegistry, word: &str) {
+    let hint: Option<DisplayHint> = match word {
+        "STR" | "CHR" | "CHARS" | "JOIN" => Some(DisplayHint::String),
+        "NUM" => Some(DisplayHint::Number),
+        "BOOL" => Some(DisplayHint::Boolean),
+        "NOW" | "DATETIME" | "TIMESTAMP" => Some(DisplayHint::DateTime),
+        _ => None,
+    };
+    if let Some(h) = hint {
+        let len: usize = registry.len();
+        if len > 0 {
+            registry.update_hint_at(len - 1, h);
+        }
+    }
+}
 use gloo_timers::future::sleep;
 use std::time::Duration;
 
@@ -182,9 +199,11 @@ impl Interpreter {
                 Token::Number(n) => {
                     let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
                     self.stack.push(create_number_value(frac));
+                    self.semantic_registry.push_hint(DisplayHint::Number);
                 }
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
+                    self.semantic_registry.push_hint(DisplayHint::String);
                 }
                 Token::VectorStart => {
                     let (values, consumed) = self.collect_vector(execute_tokens, i)?;
@@ -194,6 +213,7 @@ impl Interpreter {
                         ));
                     }
                     self.stack.push(Value::from_vector(values));
+                    self.semantic_registry.push_hint(DisplayHint::Auto);
                     i += consumed;
                     continue;
                 }
@@ -224,6 +244,7 @@ impl Interpreter {
                     }
 
                     self.stack.push(Value::from_code_block(block_tokens));
+                    self.semantic_registry.push_hint(DisplayHint::Auto);
                     i = j;
                     continue;
                 }
@@ -254,14 +275,20 @@ impl Interpreter {
                                         let stack_snapshot = self.stack.clone();
                                         self.safe_mode = false;
                                         match self.execute_word_core(upper.as_ref()) {
-                                            Ok(()) => {}
+                                            Ok(()) => {
+                                                self.semantic_registry.normalize_to_stack_len(self.stack.len());
+                                                apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
+                                            }
                                             Err(_) => {
                                                 self.stack = stack_snapshot;
                                                 self.stack.push(Value::nil());
+                                                self.semantic_registry.normalize_to_stack_len(self.stack.len());
                                             }
                                         }
                                     } else {
                                         self.execute_word_core(upper.as_ref())?;
+                                        self.semantic_registry.normalize_to_stack_len(self.stack.len());
+                                        apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
                                     }
                                     if !modules::is_mode_preserving_word(upper.as_ref()) {
                                         self.reset_execution_modes();
@@ -279,9 +306,11 @@ impl Interpreter {
                 }
                 Token::NilCoalesce => {
                     let value = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+                    let hint = self.semantic_registry.pop_hint();
 
                     if !value.is_nil() {
                         self.stack.push(value);
+                        self.semantic_registry.push_hint(hint);
                         i += 1;
                         if i < execute_tokens.len() {
                             match &execute_tokens[i] {

@@ -1,7 +1,7 @@
 use crate::builtins;
 use crate::interpreter;
 use crate::tokenizer;
-use super::wasm_value_conversion::{js_value_to_value, value_to_js_value, UserWordData};
+use super::wasm_value_conversion::{extract_display_hint_from_js, js_value_to_value, value_to_js_value, value_to_js_value_with_hint, UserWordData};
 use super::AjisaiInterpreter;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
@@ -11,8 +11,10 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_stack(&self) -> JsValue {
         let js_array = js_sys::Array::new();
-        for value in self.interpreter.get_stack() {
-            js_array.push(&value_to_js_value(value));
+        let hints = self.interpreter.collect_stack_hints();
+        for (i, value) in self.interpreter.get_stack().iter().enumerate() {
+            let hint = hints.get(i).copied().unwrap_or(crate::types::DisplayHint::Auto);
+            js_array.push(&value_to_js_value_with_hint(value, hint));
         }
         js_array.into()
     }
@@ -192,10 +194,14 @@ impl AjisaiInterpreter {
     pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
         let js_array = js_sys::Array::from(&stack_js);
         let mut stack = Vec::new();
+        let mut hints: Vec<crate::types::DisplayHint> = Vec::new();
         for i in 0..js_array.length() {
-            stack.push(js_value_to_value(js_array.get(i))?);
+            let item = js_array.get(i);
+            stack.push(js_value_to_value(item.clone())?);
+            let hint = extract_display_hint_from_js(&item);
+            hints.push(hint);
         }
-        self.interpreter.update_stack(stack);
+        self.interpreter.update_stack_with_hints(stack, hints);
         Ok(())
     }
 

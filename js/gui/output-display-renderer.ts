@@ -252,6 +252,7 @@ const formatValue = (item: Value, depth: number): string => {
     }
 };
 
+
 const extractAudioCommands = (output: string): string[] =>
     output.split('\n')
         .filter(line => line.startsWith('AUDIO:'))

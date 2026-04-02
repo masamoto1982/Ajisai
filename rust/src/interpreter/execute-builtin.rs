@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
-use crate::types::{FlowToken, Token, Value};
+use crate::types::{DisplayHint, FlowToken, Token, Value};
 
 use super::interpreter_core::MAX_CALL_DEPTH;
 use super::{
@@ -143,14 +143,17 @@ impl Interpreter {
             "NOT" => logic::op_not(self),
             "TRUE" => {
                 self.stack.push(Value::from_bool(true));
+                self.semantic_registry.push_hint(DisplayHint::Boolean);
                 Ok(())
             }
             "FALSE" => {
                 self.stack.push(Value::from_bool(false));
+                self.semantic_registry.push_hint(DisplayHint::Boolean);
                 Ok(())
             }
             "NIL" => {
                 self.stack.push(Value::nil());
+                self.semantic_registry.push_hint(DisplayHint::Nil);
                 Ok(())
             }
             "ROUTE" => control::execute_route(self),
