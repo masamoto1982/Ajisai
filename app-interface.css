@@ -359,12 +359,16 @@ body[data-active-area] #state-panel {
     min-height: 0;
 }
 
-/* スタック表示を親いっぱいに広げる */
+/* スタック表示を親いっぱいに広げる。
+   flex + column-reverse で子コンテナを下端起点に積み上げる */
 #stack-display {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
 }
 
 #stack-display.is-empty {
@@ -526,10 +530,12 @@ body[data-active-area] #state-panel {
        コンテナはコンテンツ量に応じた自然な高さを持つべきである。 */
 }
 
-/* Stack は新しい行を上方向に積み上げる（右端で折り返したら上へ） */
+/* Stack アイテムは通常の wrap で左→右に並べる。
+   下から積み上がる見た目は親 #stack-display の justify-content: flex-end が担う。
+   align-items: center でアイテム同士の垂直中央揃えを保つ。 */
 #stack-display .stack-content-flow {
-    flex-wrap: wrap-reverse;
-    align-content: flex-end;
+    flex-wrap: wrap;
+    align-content: flex-start;
     align-items: center;
 }
 
