@@ -462,8 +462,7 @@ const renderGridCell = (item: Value, depth: number, editCtx: EditContext | null,
 
 const renderVectorAsGrid = (item: Value, depth: number, editCtx: EditContext | null, parentPath: number[]): HTMLElement => {
     const classification = classifyVector(item);
-
-    if (classification.kind === 'fallback' || classification.kind === 'scalar') {
+    if (classification.kind === 'scalar') {
         return renderStackValueNode(item, depth);
     }
 
@@ -474,6 +473,17 @@ const renderVectorAsGrid = (item: Value, depth: number, editCtx: EditContext | n
         table.style.backgroundColor = lookupGridBackground(depth);
     }
     table.style.borderColor = lookupBracketColor(depth);
+
+    if (classification.kind === 'fallback') {
+        const elements: Value[] = Array.isArray(item.value) ? item.value : [];
+        const tr = document.createElement('tr');
+        elements.forEach((element: Value, colIdx: number) => {
+            const cellPath: number[] = [...parentPath, colIdx];
+            tr.appendChild(renderGridCell(element, depth, editCtx, cellPath));
+        });
+        table.appendChild(tr);
+        return table;
+    }
 
     if (classification.kind === 'empty') {
         const tr = document.createElement('tr');
