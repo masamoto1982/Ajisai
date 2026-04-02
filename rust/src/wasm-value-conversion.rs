@@ -1,6 +1,6 @@
 use crate::types::display::is_string_like;
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::{DisplayHint, Value, ValueData};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -196,31 +196,78 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
 }
 
 pub(crate) fn value_to_js_value(value: &Value) -> JsValue {
+    value_to_js_value_with_hint(value, DisplayHint::Auto)
+}
+
+pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> JsValue {
     let obj = js_sys::Object::new();
 
     if value.is_nil() {
         js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
         js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        js_sys::Reflect::set(&obj, &"displayHint".into(), &"nil".into()).unwrap();
         return obj.into();
     }
 
-    let type_str = if is_datetime_value(value) {
-        "datetime"
-    } else if is_boolean_value(value) {
-        "boolean"
-    } else if is_string_value(value) {
-        "string"
-    } else if is_number_value(value) {
-        "number"
-    } else if is_vector_value(value) {
-        "vector"
-    } else if value.is_scalar() {
-        "number"
-    } else {
-        "nil"
+    let type_str: &str = match hint {
+        DisplayHint::String => {
+            if value.is_scalar() || is_string_value(value) {
+                "string"
+            } else if is_vector_value(value) {
+                "vector"
+            } else {
+                "number"
+            }
+        }
+        DisplayHint::Boolean => {
+            if value.is_scalar() {
+                "boolean"
+            } else if is_vector_value(value) {
+                "vector"
+            } else {
+                "number"
+            }
+        }
+        DisplayHint::DateTime => {
+            if value.is_scalar() {
+                "datetime"
+            } else {
+                "number"
+            }
+        }
+        DisplayHint::Number => "number",
+        DisplayHint::Nil => "nil",
+        DisplayHint::Auto => {
+            // Fallback to heuristic detection for Auto hint
+            if is_datetime_value(value) {
+                "datetime"
+            } else if is_boolean_value(value) {
+                "boolean"
+            } else if is_string_value(value) {
+                "string"
+            } else if is_number_value(value) {
+                "number"
+            } else if is_vector_value(value) {
+                "vector"
+            } else if value.is_scalar() {
+                "number"
+            } else {
+                "nil"
+            }
+        }
+    };
+
+    let hint_str: &str = match hint {
+        DisplayHint::Auto => "auto",
+        DisplayHint::Number => "number",
+        DisplayHint::String => "string",
+        DisplayHint::Boolean => "boolean",
+        DisplayHint::DateTime => "datetime",
+        DisplayHint::Nil => "nil",
     };
 
     js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
+    js_sys::Reflect::set(&obj, &"displayHint".into(), &hint_str.into()).unwrap();
 
     match type_str {
         "number" | "datetime" => {
@@ -264,6 +311,19 @@ pub(crate) fn value_to_js_value(value: &Value) -> JsValue {
     };
 
     obj.into()
+}
+
+pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
+    let obj = js_sys::Object::from(js_val.clone());
+    let hint_js = js_sys::Reflect::get(&obj, &"displayHint".into()).unwrap_or(JsValue::UNDEFINED);
+    match hint_js.as_string().as_deref() {
+        Some("number") => DisplayHint::Number,
+        Some("string") => DisplayHint::String,
+        Some("boolean") => DisplayHint::Boolean,
+        Some("datetime") => DisplayHint::DateTime,
+        Some("nil") => DisplayHint::Nil,
+        _ => DisplayHint::Auto,
+    }
 }
 
 #[cfg(test)]

@@ -52,6 +52,7 @@ export interface Fraction {
 export interface Value {
     type: string;
     value: any | Fraction | Value[];
+    displayHint?: 'auto' | 'number' | 'string' | 'boolean' | 'datetime' | 'nil';
 }
 
 export interface WasmModule {

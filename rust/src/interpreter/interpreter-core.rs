@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::types::fraction::Fraction;
-use crate::types::{FlowToken, Stack, Token, Value, WordDefinition};
+use crate::types::{DisplayHint, FlowToken, SemanticRegistry, Stack, Token, Value, WordDefinition};
 use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -75,6 +75,8 @@ pub struct Interpreter {
     pub(crate) module_samples: HashMap<String, ModuleDictionary>,
     pub(crate) next_registration_order: u64,
     pub(crate) active_user_dictionary: String,
+    // ── Semantic plane ──────────────────────────────────────────────
+    pub(crate) semantic_registry: SemanticRegistry,
 }
 
 impl Interpreter {
@@ -106,6 +108,7 @@ impl Interpreter {
             module_samples: HashMap::new(),
             next_registration_order: 1,
             active_user_dictionary: "DEMO".to_string(),
+            semantic_registry: SemanticRegistry::new(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -227,6 +230,7 @@ impl Interpreter {
         self.module_samples.clear();
         self.next_registration_order = 1;
         self.active_user_dictionary = "DEMO".to_string();
+        self.semantic_registry.clear();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }
@@ -241,5 +245,16 @@ impl Interpreter {
 
     pub fn update_stack(&mut self, stack: Stack) {
         self.stack = stack;
+        self.semantic_registry.normalize_to_stack_len(self.stack.len());
+    }
+
+    pub fn update_stack_with_hints(&mut self, stack: Stack, hints: Vec<DisplayHint>) {
+        self.stack = stack;
+        self.semantic_registry.stack_hints = hints;
+        self.semantic_registry.normalize_to_stack_len(self.stack.len());
+    }
+
+    pub fn collect_stack_hints(&self) -> &[DisplayHint] {
+        &self.semantic_registry.stack_hints
     }
 }
