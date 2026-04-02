@@ -747,35 +747,19 @@ body[data-active-area] #state-panel {
     font-weight: bold;
 }
 
-/* ..ターゲット：全スタック要素の背景を濃く */
+/* ..ターゲット：全スタック要素の最浅階層に一貫した強調枠を付ける */
 #stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
     background-color: hsla(270, 55%, 42%, 0.85);
     font-weight: bold;
-}
-#stack-display.highlight-all .stack-item .stack-node[data-depth="2"],
-#stack-display.blink-all .stack-item .stack-node[data-depth="2"] {
-    background-color: hsla(0, 0%, 85%, 1);
-    font-weight: bold;
-}
-#stack-display.highlight-all .stack-item .stack-node[data-depth="3"],
-#stack-display.blink-all .stack-item .stack-node[data-depth="3"] {
-    background-color: hsla(270, 55%, 42%, 0.85);
-    font-weight: bold;
+    box-shadow: inset 0 0 0 2px hsla(0, 0%, 100%, 0.92);
 }
 
-/* .ターゲット：スタックトップのみ背景を濃く */
+/* .ターゲット：スタックトップの最浅階層のみを強調 */
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
     background-color: hsla(270, 55%, 42%, 0.85);
-}
-#stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="2"],
-#stack-display.blink-top .stack-item:last-child .stack-node[data-depth="2"] {
-    background-color: hsla(0, 0%, 85%, 1);
-}
-#stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="3"],
-#stack-display.blink-top .stack-item:last-child .stack-node[data-depth="3"] {
-    background-color: hsla(270, 55%, 42%, 0.85);
+    box-shadow: inset 0 0 0 2px hsla(0, 0%, 100%, 0.92);
 }
 
 /* --------------------------------------------------------------------------
