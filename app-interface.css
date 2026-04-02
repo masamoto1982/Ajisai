@@ -699,31 +699,24 @@ body[data-active-area] #state-panel {
 .stack-item {
     font-family: var(--font-stack-mono);
     font-size: 0.75rem;
-    display: inline-flex;
-    align-items: center;
-    vertical-align: middle;
+    display: inline;
     margin: 2px;
-    padding: 4px 6px;
+    padding: 2px 4px;
     border-radius: 6px;
     background-color: transparent;
     color: var(--color-stack);
     border: none;
+    word-break: break-word;
 }
 
 .stack-node {
-    display: inline-flex;
-    align-items: center;
+    display: inline;
     border-radius: 6px;
-    padding: 5px;
-    line-height: 1.4;
+    line-height: 1.6;
 }
 
 .stack-node-vector {
-    display: inline-flex;
-    align-items: center;
-    vertical-align: middle;
-    gap: 5px;
-    padding: 5px;
+    display: inline;
 }
 
 /* ブラケット着色（Paul Tol "Muted" パレット — 色覚障碍対応） */
@@ -737,11 +730,6 @@ body[data-active-area] #state-panel {
 .stack-node-vector {
     background-color: transparent;
     color: var(--color-stack);
-}
-
-/* ベクター内リーフ要素のパディングを除去し、スカラーとの縦幅・横幅を統一 */
-.stack-node-vector > .stack-node:not(.stack-node-vector) {
-    padding: 0;
 }
 
 /* スタックトップ（最新の要素）を強調 */
