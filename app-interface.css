@@ -796,6 +796,9 @@ body[data-active-area] #state-panel {
     font-family: var(--font-stack-mono);
     font-size: 0.75rem;
     width: auto;
+    margin: 0;
+    table-layout: auto;
+    word-break: normal;
 }
 
 /* ネストされたサブグリッド */
