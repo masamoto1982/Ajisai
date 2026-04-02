@@ -8,6 +8,8 @@ export interface DisplayElements {
     stackDisplay: HTMLElement;
 }
 
+export type StackEditCallback = (updatedStack: Value[]) => void;
+
 export interface DisplayState {
     readonly mainOutput: string;
 }
@@ -244,25 +246,156 @@ const lookupGridBackground = (depth: number): string =>
 
 const formatLeafValue = (item: Value): string => formatValue(item, 1);
 
-const renderGridCell = (item: Value, depth: number): HTMLElement => {
+interface EditContext {
+    readonly stack: Value[];
+    readonly stackIndex: number;
+    readonly onEdit: StackEditCallback;
+}
+
+const cloneValue = (v: Value): Value => {
+    if (v.type === 'vector' && Array.isArray(v.value)) {
+        return { ...v, value: (v.value as Value[]).map(cloneValue) };
+    }
+    return { ...v };
+};
+
+const cloneStack = (stack: Value[]): Value[] => stack.map(cloneValue);
+
+const resolveValueAtPath = (root: Value, path: number[]): Value | null => {
+    let current: Value = root;
+    for (const idx of path) {
+        if (current.type !== 'vector' || !Array.isArray(current.value)) return null;
+        const arr: Value[] = current.value;
+        if (idx < 0 || idx >= arr.length) return null;
+        current = arr[idx]!;
+    }
+    return current;
+};
+
+const applyEditAtPath = (root: Value, path: number[], newLeaf: Value): void => {
+    if (path.length === 0) return;
+    const parentPath: number[] = path.slice(0, -1);
+    const leafIndex: number = path[path.length - 1]!;
+    const parent: Value | null = parentPath.length === 0 ? root : resolveValueAtPath(root, parentPath);
+    if (!parent || parent.type !== 'vector' || !Array.isArray(parent.value)) return;
+    (parent.value as Value[])[leafIndex] = newLeaf;
+};
+
+const parseEditedValue = (text: string): Value | null => {
+    const trimmed: string = text.trim();
+    if (trimmed === '') return null;
+
+    // Boolean
+    if (trimmed === 'TRUE') return { type: 'boolean', value: true, displayHint: 'boolean' };
+    if (trimmed === 'FALSE') return { type: 'boolean', value: false, displayHint: 'boolean' };
+    if (trimmed === 'NIL') return { type: 'nil', value: null, displayHint: 'nil' };
+
+    // String (quoted)
+    if (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2) {
+        return { type: 'string', value: trimmed.slice(1, -1) };
+    }
+
+    // Fraction (e.g. "3/4")
+    const fractionMatch: RegExpMatchArray | null = trimmed.match(/^(-?\d+)\/(-?\d+)$/);
+    if (fractionMatch) {
+        return { type: 'number', value: { numerator: fractionMatch[1], denominator: fractionMatch[2] } };
+    }
+
+    // Integer
+    if (/^-?\d+$/.test(trimmed)) {
+        return { type: 'number', value: { numerator: trimmed, denominator: '1' } };
+    }
+
+    // Decimal → fraction approximation
+    const num: number = parseFloat(trimmed);
+    if (!isNaN(num)) {
+        // Simple decimal to fraction: multiply by 10^decimals
+        const parts: string[] = trimmed.split('.');
+        const decimals: number = parts[1]?.length ?? 0;
+        const denom: number = Math.pow(10, decimals);
+        const numer: number = Math.round(num * denom);
+        return { type: 'number', value: { numerator: String(numer), denominator: String(denom) } };
+    }
+
+    return null;
+};
+
+const activateInlineEdit = (td: HTMLElement, currentText: string, editCtx: EditContext, cellPath: number[]): void => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'stack-grid-edit-input';
+    input.value = currentText;
+
+    td.textContent = '';
+    td.appendChild(input);
+    input.focus();
+    input.select();
+
+    const commitEdit = (): void => {
+        const newValue: Value | null = parseEditedValue(input.value);
+        if (!newValue) {
+            // Revert
+            td.textContent = currentText;
+            return;
+        }
+
+        const updatedStack: Value[] = cloneStack(editCtx.stack);
+        const rootItem: Value = updatedStack[editCtx.stackIndex]!;
+
+        if (cellPath.length === 0) {
+            // Editing a scalar stack item directly
+            updatedStack[editCtx.stackIndex] = newValue;
+        } else {
+            applyEditAtPath(rootItem, cellPath, newValue);
+        }
+
+        editCtx.onEdit(updatedStack);
+    };
+
+    let committed = false;
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            committed = true;
+            commitEdit();
+        } else if (e.key === 'Escape') {
+            committed = true;
+            td.textContent = currentText;
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        if (!committed) {
+            commitEdit();
+        }
+    });
+};
+
+const renderGridCell = (item: Value, depth: number, editCtx: EditContext | null, cellPath: number[]): HTMLElement => {
     const td = document.createElement('td');
     td.className = 'stack-grid-cell';
 
     if (item.type === 'vector' && Array.isArray(item.value)) {
         // Nested vector inside a cell → render sub-grid
-        const subGrid = renderVectorAsGrid(item, depth + 1);
+        const subGrid = renderVectorAsGrid(item, depth + 1, editCtx, cellPath);
         td.appendChild(subGrid);
     } else {
-        td.textContent = formatLeafValue(item);
+        const text: string = formatLeafValue(item);
+        td.textContent = text;
+
+        if (editCtx && (item.type === 'number' || item.type === 'string' || item.type === 'boolean' || item.type === 'nil')) {
+            td.classList.add('stack-grid-cell-editable');
+            td.addEventListener('click', () => {
+                activateInlineEdit(td, text, editCtx, cellPath);
+            });
+        }
     }
     return td;
 };
 
-const renderVectorAsGrid = (item: Value, depth: number): HTMLElement => {
+const renderVectorAsGrid = (item: Value, depth: number, editCtx: EditContext | null, parentPath: number[]): HTMLElement => {
     const classification = classifyVector(item);
 
     if (classification.kind === 'fallback' || classification.kind === 'scalar') {
-        // Delegate to text-mode node
         return renderStackValueNode(item, depth);
     }
 
@@ -274,35 +407,35 @@ const renderVectorAsGrid = (item: Value, depth: number): HTMLElement => {
 
     if (classification.kind === '1d') {
         const tr = document.createElement('tr');
-        classification.elements.forEach((element: Value) => {
-            tr.appendChild(renderGridCell(element, depth));
+        classification.elements.forEach((element: Value, colIdx: number) => {
+            const cellPath: number[] = [...parentPath, colIdx];
+            tr.appendChild(renderGridCell(element, depth, editCtx, cellPath));
         });
         table.appendChild(tr);
         return table;
     }
 
     if (classification.kind === '2d') {
-        classification.rows.forEach((row: Value[]) => {
+        classification.rows.forEach((row: Value[], rowIdx: number) => {
             const tr = document.createElement('tr');
-            row.forEach((cell: Value) => {
-                tr.appendChild(renderGridCell(cell, depth));
+            row.forEach((cell: Value, colIdx: number) => {
+                const cellPath: number[] = [...parentPath, rowIdx, colIdx];
+                tr.appendChild(renderGridCell(cell, depth, editCtx, cellPath));
             });
             table.appendChild(tr);
         });
         return table;
     }
 
-    // 3d-plus: each element is a vector rendered as sub-grid within a 1-row table
     if (classification.kind === '3d-plus') {
         const outerElements: Value[] = classification.elements;
-        // Treat as 2D where each cell contains a sub-grid
-        // Outer = rows, check if inner elements are all same-length vectors
         const innerRows: Value[][] = outerElements.map((v: Value) => v.value as Value[]);
 
-        innerRows.forEach((row: Value[]) => {
+        innerRows.forEach((row: Value[], rowIdx: number) => {
             const tr = document.createElement('tr');
-            row.forEach((cell: Value) => {
-                tr.appendChild(renderGridCell(cell, depth));
+            row.forEach((cell: Value, colIdx: number) => {
+                const cellPath: number[] = [...parentPath, rowIdx, colIdx];
+                tr.appendChild(renderGridCell(cell, depth, editCtx, cellPath));
             });
             table.appendChild(tr);
         });
@@ -312,15 +445,13 @@ const renderVectorAsGrid = (item: Value, depth: number): HTMLElement => {
     return renderStackValueNode(item, depth);
 };
 
-const renderStackItemAsGrid = (item: Value): HTMLElement => {
+const renderStackItemAsGrid = (item: Value, editCtx: EditContext | null): HTMLElement => {
     if (item.type === 'vector' && Array.isArray(item.value)) {
-        return renderVectorAsGrid(item, 1);
+        return renderVectorAsGrid(item, 1, editCtx, []);
     }
     if (item.type === 'tensor' && item.value && typeof item.value === 'object') {
-        // Tensors stay as text for now (they have their own flat data + shape representation)
         return renderStackValueNode(item, 1);
     }
-    // Scalar / string / etc → text node
     return renderStackValueNode(item, 1);
 };
 
@@ -558,7 +689,7 @@ const renderJsonExportLinks = (output: string, outputDisplay: HTMLElement): void
     });
 };
 
-export const createDisplay = (elements: DisplayElements): Display => {
+export const createDisplay = (elements: DisplayElements, onStackEdit?: StackEditCallback): Display => {
     let mainOutput = '';
     let gridMode = false;
 
@@ -700,7 +831,10 @@ export const createDisplay = (elements: DisplayElements): Display => {
             elem.className = 'stack-item';
             try {
                 if (gridMode) {
-                    elem.appendChild(renderStackItemAsGrid(item));
+                    const editCtx: EditContext | null = onStackEdit
+                        ? { stack, stackIndex: index, onEdit: onStackEdit }
+                        : null;
+                    elem.appendChild(renderStackItemAsGrid(item, editCtx));
                 } else {
                     elem.appendChild(renderStackValueNode(item, 1));
                 }

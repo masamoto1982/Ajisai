@@ -831,6 +831,30 @@ body[data-active-area] #state-panel {
     text-align: center;
 }
 
+/* 編集可能セルのカーソル */
+.stack-grid-cell-editable {
+    cursor: text;
+}
+
+.stack-grid-cell-editable:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* インライン編集用input */
+.stack-grid-edit-input {
+    width: 100%;
+    min-width: 2.5rem;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid var(--color-primary, #4a90d9);
+    border-radius: 2px;
+    font-family: var(--font-stack-mono);
+    font-size: 0.75rem;
+    text-align: right;
+    background: #fff;
+    color: var(--color-text, #333);
+    outline: none;
+}
+
 /* グリッドモード時のstack-itemレイアウト調整 */
 .stack-item:has(.stack-grid-table) {
     display: inline-block;
