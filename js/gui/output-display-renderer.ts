@@ -196,12 +196,13 @@ type GridClassification =
     | { kind: '1d'; elements: Value[] }
     | { kind: '2d'; rows: Value[][]; cols: number }
     | { kind: '3d-plus'; elements: Value[] }
+    | { kind: 'empty' }
     | { kind: 'fallback' };
 
 const classifyVector = (item: Value): GridClassification => {
     if (item.type !== 'vector' || !Array.isArray(item.value)) return { kind: 'fallback' };
     const elements: Value[] = item.value;
-    if (elements.length === 0) return { kind: 'fallback' };
+    if (elements.length === 0) return { kind: 'empty' };
 
     const checkLeaf = (v: Value): boolean =>
         v.type !== 'vector' && v.type !== 'tensor';
@@ -281,8 +282,8 @@ const applyEditAtPath = (root: Value, path: number[], newLeaf: Value): void => {
     (parent.value as Value[])[leafIndex] = newLeaf;
 };
 
-const parseEditedValue = (text: string): Value | null => {
-    const trimmed: string = text.trim();
+const parsePrimitiveValue = (token: string): Value | null => {
+    const trimmed: string = token.trim();
     if (trimmed === '') return null;
 
     // Boolean
@@ -309,7 +310,6 @@ const parseEditedValue = (text: string): Value | null => {
     // Decimal → fraction approximation
     const num: number = parseFloat(trimmed);
     if (!isNaN(num)) {
-        // Simple decimal to fraction: multiply by 10^decimals
         const parts: string[] = trimmed.split('.');
         const decimals: number = parts[1]?.length ?? 0;
         const denom: number = Math.pow(10, decimals);
@@ -320,7 +320,56 @@ const parseEditedValue = (text: string): Value | null => {
     return null;
 };
 
-const activateInlineEdit = (td: HTMLElement, currentText: string, editCtx: EditContext, cellPath: number[]): void => {
+const parseEditedValue = (text: string): Value | null => {
+    const trimmed: string = text.trim();
+    if (trimmed === '') return null;
+
+    const tokens: string[] | null = trimmed.match(/\[|\]|'[^']*'|[^\s\[\]]+/g);
+    if (!tokens || tokens.length === 0) return null;
+
+    const parseAt = (start: number): { value: Value; next: number } | null => {
+        const token: string | undefined = tokens[start];
+        if (!token) return null;
+
+        if (token === '[') {
+            const values: Value[] = [];
+            let cursor: number = start + 1;
+
+            while (cursor < tokens.length) {
+                const nextToken: string = tokens[cursor]!;
+                if (nextToken === ']') {
+                    return { value: { type: 'vector', value: values }, next: cursor + 1 };
+                }
+
+                const parsedChild = parseAt(cursor);
+                if (!parsedChild) return null;
+                values.push(parsedChild.value);
+                cursor = parsedChild.next;
+            }
+
+            return null;
+        }
+
+        if (token === ']') return null;
+
+        const primitive = parsePrimitiveValue(token);
+        if (!primitive) return null;
+        return { value: primitive, next: start + 1 };
+    };
+
+    const parsed = parseAt(0);
+    if (!parsed) return null;
+    if (parsed.next !== tokens.length) return null;
+    return parsed.value;
+};
+
+const activateInlineEdit = (
+    td: HTMLElement,
+    currentText: string,
+    editCtx: EditContext,
+    cellPath: number[],
+    onRevert?: () => void
+): void => {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'stack-grid-edit-input';
@@ -335,7 +384,8 @@ const activateInlineEdit = (td: HTMLElement, currentText: string, editCtx: EditC
         const newValue: Value | null = parseEditedValue(input.value);
         if (!newValue) {
             // Revert
-            td.textContent = currentText;
+            if (onRevert) onRevert();
+            else td.textContent = currentText;
             return;
         }
 
@@ -359,7 +409,8 @@ const activateInlineEdit = (td: HTMLElement, currentText: string, editCtx: EditC
             commitEdit();
         } else if (e.key === 'Escape') {
             committed = true;
-            td.textContent = currentText;
+            if (onRevert) onRevert();
+            else td.textContent = currentText;
         }
     });
 
@@ -378,6 +429,21 @@ const renderGridCell = (item: Value, depth: number, editCtx: EditContext | null,
         // Nested vector inside a cell → render sub-grid
         const subGrid = renderVectorAsGrid(item, depth + 1, editCtx, cellPath);
         td.appendChild(subGrid);
+
+        if (editCtx) {
+            td.classList.add('stack-grid-cell-editable');
+            td.title = 'Double-click to replace this nested value';
+            td.addEventListener('dblclick', (event: MouseEvent) => {
+                event.stopPropagation();
+                activateInlineEdit(
+                    td,
+                    formatValue(item, depth + 1),
+                    editCtx,
+                    cellPath,
+                    () => editCtx.onEdit(cloneStack(editCtx.stack))
+                );
+            });
+        }
     } else {
         const text: string = formatLeafValue(item);
         td.textContent = text;
@@ -394,8 +460,7 @@ const renderGridCell = (item: Value, depth: number, editCtx: EditContext | null,
 
 const renderVectorAsGrid = (item: Value, depth: number, editCtx: EditContext | null, parentPath: number[]): HTMLElement => {
     const classification = classifyVector(item);
-
-    if (classification.kind === 'fallback' || classification.kind === 'scalar') {
+    if (classification.kind === 'scalar') {
         return renderStackValueNode(item, depth);
     }
 
@@ -406,6 +471,35 @@ const renderVectorAsGrid = (item: Value, depth: number, editCtx: EditContext | n
         table.style.backgroundColor = lookupGridBackground(depth);
     }
     table.style.borderColor = lookupBracketColor(depth);
+
+    if (classification.kind === 'fallback') {
+        const elements: Value[] = Array.isArray(item.value) ? item.value : [];
+        const tr = document.createElement('tr');
+        elements.forEach((element: Value, colIdx: number) => {
+            const cellPath: number[] = [...parentPath, colIdx];
+            tr.appendChild(renderGridCell(element, depth, editCtx, cellPath));
+        });
+        table.appendChild(tr);
+        return table;
+    }
+
+    if (classification.kind === 'empty') {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.className = 'stack-grid-cell stack-grid-cell-empty-vector';
+        td.textContent = ' ';
+
+        if (editCtx) {
+            td.classList.add('stack-grid-cell-editable');
+            td.addEventListener('click', () => {
+                activateInlineEdit(td, '', editCtx, parentPath);
+            });
+        }
+
+        tr.appendChild(td);
+        table.appendChild(tr);
+        return table;
+    }
 
     if (classification.kind === '1d') {
         const tr = document.createElement('tr');
