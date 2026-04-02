@@ -922,14 +922,20 @@ export const createDisplay = (elements: DisplayElements, onStackEdit?: StackEdit
         const container = document.createElement('div');
         container.className = 'area-content-flow stack-content-flow';
 
+        const isMobile = window.innerWidth <= 768;
+
         stack.forEach((item, index) => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
             try {
-                const editCtx: EditContext | null = onStackEdit
-                    ? { stack, stackIndex: index, onEdit: onStackEdit }
-                    : null;
-                elem.appendChild(renderStackItemAsGrid(item, editCtx));
+                if (isMobile) {
+                    elem.appendChild(renderStackValueNode(item, 1));
+                } else {
+                    const editCtx: EditContext | null = onStackEdit
+                        ? { stack, stackIndex: index, onEdit: onStackEdit }
+                        : null;
+                    elem.appendChild(renderStackItemAsGrid(item, editCtx));
+                }
             } catch {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';
