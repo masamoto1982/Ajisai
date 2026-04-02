@@ -25,17 +25,6 @@ export interface Display {
 
 const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
 
-const getNestBackground = (depth: number): string => {
-    if (depth <= 0) return 'transparent';
-    return depth % 2 === 1
-        ? 'hsla(270, 55%, 58%, 0.62)'
-        : '#fff';
-};
-
-const getNestTextColor = (depth: number): string => {
-    if (depth <= 0) return 'inherit';
-    return depth % 2 === 1 ? '#fff' : 'var(--color-stack)';
-};
 
 const checkFractionObject = (value: unknown): Record<string, unknown> | null => {
     if (!value || typeof value !== 'object') return null;
@@ -178,8 +167,7 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
 
     if (item.type === 'vector' && Array.isArray(item.value)) {
         node.classList.add('stack-node-vector');
-        node.style.backgroundColor = getNestBackground(depth);
-        node.style.color = getNestTextColor(depth);
+        node.dataset.depth = String(depth);
         item.value.forEach((child, index) => {
             if (index > 0) node.append(' ');
             node.appendChild(renderStackValueNode(child, depth + 1));
@@ -195,8 +183,7 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
         const renderTensorNode = (tensorShape: number[], tensorData: unknown[], tensorDepth: number): HTMLElement => {
             const tensorNode = document.createElement('span');
             tensorNode.className = 'stack-node stack-node-vector';
-            tensorNode.style.backgroundColor = getNestBackground(tensorDepth);
-            tensorNode.style.color = getNestTextColor(tensorDepth);
+            tensorNode.dataset.depth = String(tensorDepth);
 
             if (tensorShape.length === 0) {
                 tensorNode.textContent = '';
@@ -229,10 +216,7 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
         return renderTensorNode(shape, data, depth);
     }
 
-    if (depth === 1) {
-        node.style.backgroundColor = getNestBackground(depth);
-        node.style.color = getNestTextColor(depth);
-    }
+    node.dataset.depth = String(depth);
     node.textContent = formatValue(item, depth);
     return node;
 };
