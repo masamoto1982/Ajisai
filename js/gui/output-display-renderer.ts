@@ -185,6 +185,149 @@ const formatVector = (value: unknown, depth: number): string => {
     return `${open}${close}`;
 };
 
+// ---------------------------------------------------------------------------
+// Grid (spreadsheet-style) rendering for Stack area
+// ---------------------------------------------------------------------------
+
+type GridClassification =
+    | { kind: 'scalar' }
+    | { kind: '1d'; elements: Value[] }
+    | { kind: '2d'; rows: Value[][]; cols: number }
+    | { kind: '3d-plus'; elements: Value[] }
+    | { kind: 'fallback' };
+
+const classifyVector = (item: Value): GridClassification => {
+    if (item.type !== 'vector' || !Array.isArray(item.value)) return { kind: 'fallback' };
+    const elements: Value[] = item.value;
+    if (elements.length === 0) return { kind: 'fallback' };
+
+    const checkLeaf = (v: Value): boolean =>
+        v.type !== 'vector' && v.type !== 'tensor';
+
+    // All elements are leaves → 1D
+    if (elements.every(checkLeaf)) return { kind: '1d', elements };
+
+    // All elements are vectors → check for uniform 2D
+    if (elements.every((v: Value) => v.type === 'vector' && Array.isArray(v.value))) {
+        const rows: Value[][] = elements.map((v: Value) => v.value as Value[]);
+        const colCounts: number[] = rows.map((r: Value[]) => r.length);
+        const cols: number = colCounts[0] ?? 0;
+
+        // Uniform column count → 2D grid
+        if (cols > 0 && colCounts.every((c: number) => c === cols)) {
+            // Check if all cells are leaves → pure 2D
+            const allLeaves: boolean = rows.every((row: Value[]) => row.every(checkLeaf));
+            if (allLeaves) return { kind: '2d', rows, cols };
+
+            // Cells contain sub-vectors → 3D+
+            return { kind: '3d-plus', elements };
+        }
+
+        // Non-uniform columns → fallback
+        return { kind: 'fallback' };
+    }
+
+    // Mixed types → fallback
+    return { kind: 'fallback' };
+};
+
+const GRID_DEPTH_BACKGROUNDS: readonly string[] = [
+    'rgba(51, 34, 136, 0.06)',   // indigo
+    'rgba(136, 204, 238, 0.10)', // cyan
+    'rgba(68, 170, 153, 0.10)',  // teal
+    'rgba(17, 119, 51, 0.08)',   // green
+    'rgba(153, 153, 51, 0.08)',  // olive
+] as const;
+
+const lookupGridBackground = (depth: number): string =>
+    GRID_DEPTH_BACKGROUNDS[(depth - 1) % GRID_DEPTH_BACKGROUNDS.length] ?? GRID_DEPTH_BACKGROUNDS[0]!;
+
+const formatLeafValue = (item: Value): string => formatValue(item, 1);
+
+const renderGridCell = (item: Value, depth: number): HTMLElement => {
+    const td = document.createElement('td');
+    td.className = 'stack-grid-cell';
+
+    if (item.type === 'vector' && Array.isArray(item.value)) {
+        // Nested vector inside a cell → render sub-grid
+        const subGrid = renderVectorAsGrid(item, depth + 1);
+        td.appendChild(subGrid);
+    } else {
+        td.textContent = formatLeafValue(item);
+    }
+    return td;
+};
+
+const renderVectorAsGrid = (item: Value, depth: number): HTMLElement => {
+    const classification = classifyVector(item);
+
+    if (classification.kind === 'fallback' || classification.kind === 'scalar') {
+        // Delegate to text-mode node
+        return renderStackValueNode(item, depth);
+    }
+
+    const table = document.createElement('table');
+    table.className = 'stack-grid-table';
+    table.dataset.depth = String(depth);
+    table.style.backgroundColor = lookupGridBackground(depth);
+    table.style.borderColor = lookupBracketColor(depth);
+
+    if (classification.kind === '1d') {
+        const tr = document.createElement('tr');
+        classification.elements.forEach((element: Value) => {
+            tr.appendChild(renderGridCell(element, depth));
+        });
+        table.appendChild(tr);
+        return table;
+    }
+
+    if (classification.kind === '2d') {
+        classification.rows.forEach((row: Value[]) => {
+            const tr = document.createElement('tr');
+            row.forEach((cell: Value) => {
+                tr.appendChild(renderGridCell(cell, depth));
+            });
+            table.appendChild(tr);
+        });
+        return table;
+    }
+
+    // 3d-plus: each element is a vector rendered as sub-grid within a 1-row table
+    if (classification.kind === '3d-plus') {
+        const outerElements: Value[] = classification.elements;
+        // Treat as 2D where each cell contains a sub-grid
+        // Outer = rows, check if inner elements are all same-length vectors
+        const innerRows: Value[][] = outerElements.map((v: Value) => v.value as Value[]);
+
+        innerRows.forEach((row: Value[]) => {
+            const tr = document.createElement('tr');
+            row.forEach((cell: Value) => {
+                tr.appendChild(renderGridCell(cell, depth));
+            });
+            table.appendChild(tr);
+        });
+        return table;
+    }
+
+    return renderStackValueNode(item, depth);
+};
+
+const renderStackItemAsGrid = (item: Value): HTMLElement => {
+    if (item.type === 'vector' && Array.isArray(item.value)) {
+        return renderVectorAsGrid(item, 1);
+    }
+    if (item.type === 'tensor' && item.value && typeof item.value === 'object') {
+        // Tensors stay as text for now (they have their own flat data + shape representation)
+        return renderStackValueNode(item, 1);
+    }
+    // Scalar / string / etc → text node
+    return renderStackValueNode(item, 1);
+};
+
+// ---------------------------------------------------------------------------
+// Original text-mode rendering
+// ---------------------------------------------------------------------------
+
 const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
     const node = document.createElement('span');
     node.className = 'stack-node';
@@ -417,6 +560,7 @@ const renderJsonExportLinks = (output: string, outputDisplay: HTMLElement): void
 
 export const createDisplay = (elements: DisplayElements): Display => {
     let mainOutput = '';
+    let gridMode = false;
 
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
@@ -496,9 +640,43 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
+    let lastStack: Value[] = [];
+
+    const buildToggleBar = (): HTMLElement => {
+        const bar = document.createElement('div');
+        bar.className = 'stack-view-toggle';
+
+        const textBtn = document.createElement('button');
+        textBtn.className = 'stack-toggle-btn' + (gridMode ? '' : ' active');
+        textBtn.textContent = 'Text';
+        textBtn.type = 'button';
+
+        const gridBtn = document.createElement('button');
+        gridBtn.className = 'stack-toggle-btn' + (gridMode ? ' active' : '');
+        gridBtn.textContent = 'Grid';
+        gridBtn.type = 'button';
+
+        textBtn.addEventListener('click', () => {
+            if (!gridMode) return;
+            gridMode = false;
+            renderStack(lastStack);
+        });
+
+        gridBtn.addEventListener('click', () => {
+            if (gridMode) return;
+            gridMode = true;
+            renderStack(lastStack);
+        });
+
+        bar.appendChild(textBtn);
+        bar.appendChild(gridBtn);
+        return bar;
+    };
+
     const renderStack = (stack: Value[]): void => {
         const display = elements.stackDisplay;
         clearElement(display);
+        lastStack = stack;
 
         if (!Array.isArray(stack) || stack.length === 0) {
             display.classList.add('is-empty');
@@ -510,6 +688,10 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
 
         display.classList.remove('is-empty');
+
+        // Toggle bar
+        appendToElement(display, buildToggleBar());
+
         const container = document.createElement('div');
         container.className = 'area-content-flow stack-content-flow';
 
@@ -517,7 +699,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
             try {
-                elem.appendChild(renderStackValueNode(item, 1));
+                if (gridMode) {
+                    elem.appendChild(renderStackItemAsGrid(item));
+                } else {
+                    elem.appendChild(renderStackValueNode(item, 1));
+                }
             } catch {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';
