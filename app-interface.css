@@ -359,16 +359,12 @@ body[data-active-area] #state-panel {
     min-height: 0;
 }
 
-/* スタック表示を親いっぱいに広げる。
-   flex + column-reverse で子コンテナを下端起点に積み上げる */
+/* スタック表示を親いっぱいに広げる */
 #stack-display {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
 }
 
 #stack-display.is-empty {
@@ -530,12 +526,11 @@ body[data-active-area] #state-panel {
        コンテナはコンテンツ量に応じた自然な高さを持つべきである。 */
 }
 
-/* Stack アイテムは通常の wrap で左→右に並べる。
-   下から積み上がる見た目は親 #stack-display の justify-content: flex-end が担う。
+/* Stack は wrap-reverse で行を下→上に積む。
    align-items: center でアイテム同士の垂直中央揃えを保つ。 */
 #stack-display .stack-content-flow {
-    flex-wrap: wrap;
-    align-content: flex-start;
+    flex-wrap: wrap-reverse;
+    align-content: flex-end;
     align-items: center;
 }
 
@@ -850,10 +845,10 @@ body[data-active-area] #state-panel {
     outline: none;
 }
 
-/* グリッド版stack-itemレイアウト */
+/* グリッド版stack-item: inline-flex を維持し、テーブルを中央配置 */
 .stack-item:has(.stack-grid-table) {
-    display: inline-block;
-    vertical-align: middle;
+    display: inline-flex;
+    align-items: center;
 }
 
 /* --------------------------------------------------------------------------
