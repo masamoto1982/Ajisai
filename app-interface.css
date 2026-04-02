@@ -835,6 +835,50 @@ body[data-active-area] #state-panel {
     min-width: 2.4rem;
     min-height: 2.1rem;
     text-align: center;
+    min-width: 2.4rem;
+    min-height: 2.1rem;
+}
+
+.stack-grid-cell:has(.stack-grid-table) > .stack-grid-table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.stack-grid-cell-empty-vector {
+    min-width: 2.4rem;
+    min-height: 2.1rem;
+    text-align: center;
+    min-width: 2.4rem;
+    min-height: 2.1rem;
+}
+
+.stack-grid-cell:has(.stack-grid-table) > .stack-grid-table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.stack-grid-cell-empty-vector {
+    min-width: 2.4rem;
+    min-height: 2.1rem;
+    text-align: center;
+    min-width: 2.4rem;
+    min-height: 2.1rem;
+}
+
+.stack-grid-cell:has(.stack-grid-table) > .stack-grid-table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.stack-grid-cell-empty-vector {
+    min-width: 2.4rem;
+    min-height: 2.1rem;
+    text-align: center;
+}
+
+.stack-grid-cell:has(.stack-grid-table) > .stack-grid-table {
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* 編集可能セルのカーソル */

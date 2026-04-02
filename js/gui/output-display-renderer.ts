@@ -286,6 +286,8 @@ const parsePrimitiveValue = (token: string): Value | null => {
     const trimmed: string = token.trim();
     if (trimmed === '') return null;
 
+    if (trimmed === '[]') return { type: 'vector', value: [] };
+
     // Boolean
     if (trimmed === 'TRUE') return { type: 'boolean', value: true, displayHint: 'boolean' };
     if (trimmed === 'FALSE') return { type: 'boolean', value: false, displayHint: 'boolean' };
