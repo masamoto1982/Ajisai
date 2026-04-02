@@ -824,6 +824,11 @@ body[data-active-area] #state-panel {
     text-align: center;
 }
 
+.stack-grid-cell:has(.stack-grid-table) > .stack-grid-table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
 /* 編集可能セルのカーソル */
 .stack-grid-cell-editable {
     cursor: text;
