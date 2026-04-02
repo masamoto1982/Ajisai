@@ -286,6 +286,8 @@ const parseEditedValue = (text: string): Value | null => {
     const trimmed: string = text.trim();
     if (trimmed === '') return null;
 
+    if (trimmed === '[]') return { type: 'vector', value: [] };
+
     // Boolean
     if (trimmed === 'TRUE') return { type: 'boolean', value: true, displayHint: 'boolean' };
     if (trimmed === 'FALSE') return { type: 'boolean', value: false, displayHint: 'boolean' };
@@ -321,7 +323,13 @@ const parseEditedValue = (text: string): Value | null => {
     return null;
 };
 
-const activateInlineEdit = (td: HTMLElement, currentText: string, editCtx: EditContext, cellPath: number[]): void => {
+const activateInlineEdit = (
+    td: HTMLElement,
+    currentText: string,
+    editCtx: EditContext,
+    cellPath: number[],
+    onRevert?: () => void
+): void => {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'stack-grid-edit-input';
@@ -336,7 +344,8 @@ const activateInlineEdit = (td: HTMLElement, currentText: string, editCtx: EditC
         const newValue: Value | null = parseEditedValue(input.value);
         if (!newValue) {
             // Revert
-            td.textContent = currentText;
+            if (onRevert) onRevert();
+            else td.textContent = currentText;
             return;
         }
 
@@ -360,7 +369,8 @@ const activateInlineEdit = (td: HTMLElement, currentText: string, editCtx: EditC
             commitEdit();
         } else if (e.key === 'Escape') {
             committed = true;
-            td.textContent = currentText;
+            if (onRevert) onRevert();
+            else td.textContent = currentText;
         }
     });
 
@@ -379,6 +389,21 @@ const renderGridCell = (item: Value, depth: number, editCtx: EditContext | null,
         // Nested vector inside a cell → render sub-grid
         const subGrid = renderVectorAsGrid(item, depth + 1, editCtx, cellPath);
         td.appendChild(subGrid);
+
+        if (editCtx) {
+            td.classList.add('stack-grid-cell-editable');
+            td.title = 'Double-click to replace this nested value';
+            td.addEventListener('dblclick', (event: MouseEvent) => {
+                event.stopPropagation();
+                activateInlineEdit(
+                    td,
+                    formatValue(item, depth + 1),
+                    editCtx,
+                    cellPath,
+                    () => editCtx.onEdit(cloneStack(editCtx.stack))
+                );
+            });
+        }
     } else {
         const text: string = formatLeafValue(item);
         td.textContent = text;
