@@ -164,8 +164,6 @@ pub enum Token {
     Pipeline,
     NilCoalesce,
     SafeMode,
-    BranchGuard,
-    LoopGuard,
     LineBreak,
 }
 

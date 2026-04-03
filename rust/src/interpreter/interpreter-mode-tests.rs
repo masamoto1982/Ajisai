@@ -98,29 +98,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_wait_resets_modes_in_section_core() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute_guard_structure_sync(
-                &interp
-                    .split_tokens_to_lines(&crate::tokenizer::tokenize("{ [9] } 'NOP' DEF").unwrap())
-                    .unwrap(),
-            )
-            .unwrap();
-
-        let tokens = crate::tokenizer::tokenize(".. ,, 'NOP' [0] WAIT").unwrap();
-        let result = interp.execute_section_core(&tokens, 0);
-        assert!(
-            result.is_ok(),
-            "WAIT should be prepared in section core: {:?}",
-            result
-        );
-
-        assert_eq!(interp.operation_target_mode, OperationTargetMode::StackTop);
-        assert_eq!(interp.consumption_mode, ConsumptionMode::Consume);
-    }
-
     #[tokio::test]
     async fn test_keep_mode_with_mul() {
         let mut interp = Interpreter::new();

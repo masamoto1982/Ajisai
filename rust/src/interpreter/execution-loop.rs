@@ -2,11 +2,9 @@ use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, ExecutionLine, Token, Value, MAX_VISIBLE_DIMENSIONS};
 
-use super::value_extraction_helpers::{create_number_value, extract_integer_from_value, extract_word_name_from_value};
-use super::{modules, AsyncAction, ConsumptionMode, Interpreter, OperationTargetMode};
+use super::value_extraction_helpers::create_number_value;
+use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::SemanticRegistry;
-
-use async_recursion::async_recursion;
 
 fn apply_word_hint_override(registry: &mut SemanticRegistry, word: &str) {
     let hint: Option<DisplayHint> = match word {
@@ -23,9 +21,6 @@ fn apply_word_hint_override(registry: &mut SemanticRegistry, word: &str) {
         }
     }
 }
-use gloo_timers::future::sleep;
-use std::time::Duration;
-
 impl Interpreter {
     pub(crate) fn collect_vector(
         &mut self,
@@ -127,70 +122,14 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_guard_structure_sync(&mut self, lines: &[ExecutionLine]) -> Result<()> {
-        let action = self.execute_guard_structure(lines)?;
-
-        if let Some(async_action) = action {
-            return Err(AjisaiError::from(format!(
-                "Async operation {:?} requires async context",
-                async_action
-            )));
-        }
-
-        Ok(())
-    }
-
-    #[async_recursion(?Send)]
-    pub(crate) async fn execute_guard_structure_async(&mut self, lines: &[ExecutionLine]) -> Result<()> {
-        match self.execute_guard_structure(lines)? {
-            None => Ok(()),
-            Some(AsyncAction::Wait {
-                duration_ms,
-                word_name,
-            }) => {
-                sleep(Duration::from_millis(duration_ms)).await;
-                self.execute_word_async(&word_name).await
-            }
-        }
-    }
-
-    pub(crate) fn build_wait_action(&mut self) -> Result<AsyncAction> {
-        if self.stack.len() < 2 {
-            return Err(AjisaiError::from(
-                "WAIT requires word name and delay. Usage: 'WORD' [ ms ] WAIT",
-            ));
-        }
-
-        let delay_val = self.stack.pop().unwrap();
-        let name_val = self.stack.pop().unwrap();
-
-        let n = extract_integer_from_value(&delay_val)?;
-        let duration_ms = if n < 0 {
-            return Err(AjisaiError::from("Delay must be non-negative"));
-        } else {
-            n as u64
-        };
-
-        let word_name = extract_word_name_from_value(&name_val)?;
-
-        if let Some(def) = self.resolve_word(&word_name) {
-            if def.is_builtin {
-                return Err(AjisaiError::from("WAIT can only be used with custom words"));
-            }
-        } else {
-            return Err(AjisaiError::UnknownWord(word_name));
-        }
-
-        Ok(AsyncAction::Wait {
-            duration_ms,
-            word_name,
-        })
+        self.execute_guard_structure(lines)
     }
 
     pub(crate) fn execute_section_core(
         &mut self,
         tokens: &[Token],
         start_index: usize,
-    ) -> Result<(usize, Option<AsyncAction>)> {
+    ) -> Result<usize> {
         let mut i: usize = 0;
         let execute_tokens: &[Token] = &tokens[start_index..];
 
@@ -264,36 +203,27 @@ impl Interpreter {
                         }
                         _ => {
                             let upper = Self::normalize_symbol(s);
-                            match upper.as_ref() {
-                                "WAIT" => {
-                                    let action = self.build_wait_action()?;
-                                    self.reset_execution_modes();
-                                    return Ok((start_index + i + 1, Some(action)));
-                                }
-                                _ => {
-                                    if self.safe_mode {
-                                        let stack_snapshot = self.stack.clone();
-                                        self.safe_mode = false;
-                                        match self.execute_word_core(upper.as_ref()) {
-                                            Ok(()) => {
-                                                self.semantic_registry.normalize_to_stack_len(self.stack.len());
-                                                apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
-                                            }
-                                            Err(_) => {
-                                                self.stack = stack_snapshot;
-                                                self.stack.push(Value::nil());
-                                                self.semantic_registry.normalize_to_stack_len(self.stack.len());
-                                            }
-                                        }
-                                    } else {
-                                        self.execute_word_core(upper.as_ref())?;
+                            if self.safe_mode {
+                                let stack_snapshot = self.stack.clone();
+                                self.safe_mode = false;
+                                match self.execute_word_core(upper.as_ref()) {
+                                    Ok(()) => {
                                         self.semantic_registry.normalize_to_stack_len(self.stack.len());
                                         apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
                                     }
-                                    if !modules::is_mode_preserving_word(upper.as_ref()) {
-                                        self.reset_execution_modes();
+                                    Err(_) => {
+                                        self.stack = stack_snapshot;
+                                        self.stack.push(Value::nil());
+                                        self.semantic_registry.normalize_to_stack_len(self.stack.len());
                                     }
                                 }
+                            } else {
+                                self.execute_word_core(upper.as_ref())?;
+                                self.semantic_registry.normalize_to_stack_len(self.stack.len());
+                                apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
+                            }
+                            if !modules::is_mode_preserving_word(upper.as_ref()) {
+                                self.reset_execution_modes();
                             }
                         }
                     }
@@ -352,16 +282,6 @@ impl Interpreter {
                     self.safe_mode = true;
                 }
 
-                Token::BranchGuard => {
-                    i = crate::interpreter::control::execute_branch_from_tokens(self, execute_tokens, i)?;
-                    self.reset_execution_modes();
-                    continue;
-                }
-                Token::LoopGuard => {
-                    i = crate::interpreter::control::execute_loop_from_tokens(self, execute_tokens, i)?;
-                    self.reset_execution_modes();
-                    continue;
-                }
                 Token::LineBreak => {}
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));
@@ -370,33 +290,17 @@ impl Interpreter {
             i += 1;
         }
 
-        Ok((start_index + i, None))
+        Ok(start_index + i)
     }
 
     pub(crate) fn execute_guard_structure(
         &mut self,
         lines: &[ExecutionLine],
-    ) -> Result<Option<AsyncAction>> {
-        if lines.is_empty() {
-            return Ok(None);
-        }
-
+    ) -> Result<()> {
         for line in lines {
-            let (_, action) = self.execute_section_core(&line.body_tokens, 0)?;
-            if action.is_some() {
-                return Ok(action);
-            }
+            self.execute_section_core(&line.body_tokens, 0)?;
         }
-        Ok(None)
-    }
-
-    pub(crate) fn check_condition_on_stack(&mut self) -> Result<bool> {
-        if self.stack.is_empty() {
-            return Ok(false);
-        }
-
-        let top = self.stack.pop().unwrap();
-        Ok(top.is_truthy())
+        Ok(())
     }
 
     pub(crate) fn split_tokens_to_lines(&self, tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
@@ -406,9 +310,9 @@ impl Interpreter {
     }
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
-        let tokens = crate::tokenizer::tokenize(code)?;
-        let lines = self.split_tokens_to_lines(&tokens)?;
-        self.execute_guard_structure_async(&lines).await?;
+        let tokens: Vec<Token> = crate::tokenizer::tokenize(code)?;
+        let lines: Vec<ExecutionLine> = self.split_tokens_to_lines(&tokens)?;
+        self.execute_guard_structure(&lines)?;
         Ok(())
     }
 }

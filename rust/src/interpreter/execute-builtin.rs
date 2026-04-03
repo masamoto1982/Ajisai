@@ -9,8 +9,6 @@ use super::{
     tensor_ops, vector_ops, Interpreter,
 };
 
-use async_recursion::async_recursion;
-
 impl Interpreter {
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
         let (resolved_name, def) = self
@@ -40,54 +38,8 @@ impl Interpreter {
         }
 
         self.call_stack.push(resolved_name.clone());
-
-        let action = self.execute_guard_structure(&def.lines);
-
+        let result = self.execute_guard_structure(&def.lines);
         self.call_stack.pop();
-
-        let action = action?;
-
-        if action.is_some() {
-            return Err(AjisaiError::from(
-                "WAIT requires async execution context. Use execute() instead of execute_sync().",
-            ));
-        }
-
-        Ok(())
-    }
-
-    #[async_recursion(?Send)]
-    pub(crate) async fn execute_word_async(&mut self, name: &str) -> Result<()> {
-        let (resolved_name, def) = self
-            .resolve_word_entry(name)
-            .ok_or_else(|| {
-                let ambiguous = self.check_ambiguity(name);
-                if !ambiguous.is_empty() {
-                    AjisaiError::from(format!(
-                        "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
-                        name.to_uppercase(), ambiguous.join(", ")
-                    ))
-                } else {
-                    AjisaiError::UnknownWord(name.to_string())
-                }
-            })?;
-
-        if def.lines.is_empty() {
-            return self.execute_builtin(&resolved_name);
-        }
-
-        if self.call_stack.len() >= MAX_CALL_DEPTH {
-            let chain = format!("{} -> {}", self.call_stack.join(" -> "), resolved_name);
-            return Err(AjisaiError::DepthLimitExceeded {
-                depth: MAX_CALL_DEPTH,
-                chain,
-            });
-        }
-
-        self.call_stack.push(resolved_name);
-        let result = self.execute_guard_structure_async(&def.lines).await;
-        self.call_stack.pop();
-
         result
     }
 
@@ -198,9 +150,6 @@ impl Interpreter {
             "TIMESTAMP" => datetime::op_timestamp(self),
             "CSPRNG" => random::op_csprng(self),
             "HASH" => hash::op_hash(self),
-            "WAIT" => Err(AjisaiError::from(
-                "WAIT should be handled by execute_section_core, not execute_builtin",
-            )),
             _ => modules::execute_module_word(self, name)
                 .unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string()))),
         }
@@ -218,8 +167,6 @@ impl Interpreter {
             Token::Pipeline => "==".to_string(),
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),
-            Token::BranchGuard => "$".to_string(),
-            Token::LoopGuard => "&".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }

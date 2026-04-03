@@ -16,13 +16,6 @@ export const DEMO_USER_WORDS: UserWord[] = [
         description: 'サンプル② — Outputに「World」を出力',
     },
     {
-        name: 'SAY-BY-SIGN',
-        definition:
-            "$ { ,, [ 0 ] < } { 'Hello' PRINT } $ { ,, [ 0 ] = } { 'Hello World' PRINT } $ { 'World' PRINT }",
-        description:
-            'サンプル④ — スタックトップが負なら「Hello」、0なら「Hello World」、正なら「World」を出力（$分岐）',
-    },
-    {
         name: 'SAY-HELLO-WORLD',
         definition: "SAY-HELLO SAY-WORLD 'Hello World' PRINT",
         description:

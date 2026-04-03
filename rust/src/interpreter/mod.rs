@@ -66,9 +66,6 @@ mod dictionary_operation_tests;
 #[path = "dictionary-resolution-tests.rs"]
 mod dictionary_resolution_tests;
 #[cfg(test)]
-#[path = "control-tests.rs"]
-mod control_tests;
-#[cfg(test)]
 #[path = "control-exec-eval-tests.rs"]
 mod control_exec_eval_tests;
 #[cfg(test)]

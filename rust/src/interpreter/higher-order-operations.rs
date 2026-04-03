@@ -34,7 +34,7 @@ fn is_truthy_boolean(val: &Value) -> bool {
 pub(crate) fn execute_executable_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
     match exec {
         ExecutableCode::CodeBlock(tokens) => {
-            let (_, _) = interp.execute_section_core(tokens, 0)?;
+            interp.execute_section_core(tokens, 0)?;
             Ok(())
         }
         ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),

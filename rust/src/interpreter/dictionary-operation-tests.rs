@@ -460,38 +460,4 @@ mod tests {
             "Expected BuiltinProtection error, got: {}", err_msg);
     }
 
-    #[tokio::test]
-    async fn test_route_in_restored_definition_without_linebreaks() {
-        // 定義文字列に改行がなくても$分岐が正しく動作することを検証。
-        // サンプルワード復元パスとユーザーDEFパスで同一の結果を保証する。
-        let mut interp = Interpreter::new();
-
-        let sample_words = vec![
-            ("SAY-BY-SIGN",
-             "$ { ,, [ 0 ] < } { 'Hello' PRINT } $ { ,, [ 0 ] = } { 'Hello World' PRINT } $ { 'World' PRINT }",
-             "sign branch sample"),
-        ];
-        restore_sample_words(&mut interp, &sample_words);
-        let _ = interp.collect_output();
-
-        // 負の値 → "Hello"
-        let result = interp.execute("[ -1 ] SAY-BY-SIGN").await;
-        assert!(result.is_ok(), "SAY-BY-SIGN with -1 should succeed: {:?}", result.err());
-        let output = interp.collect_output();
-        assert!(output.contains("Hello"), "Expected 'Hello' for negative, got: {}", output);
-
-        // 0 → "Hello World"
-        interp.stack.clear();
-        let result = interp.execute("[ 0 ] SAY-BY-SIGN").await;
-        assert!(result.is_ok(), "SAY-BY-SIGN with 0 should succeed: {:?}", result.err());
-        let output = interp.collect_output();
-        assert!(output.contains("Hello World"), "Expected 'Hello World' for zero, got: {}", output);
-
-        // 正の値 → "World"
-        interp.stack.clear();
-        let result = interp.execute("[ 1 ] SAY-BY-SIGN").await;
-        assert!(result.is_ok(), "SAY-BY-SIGN with 1 should succeed: {:?}", result.err());
-        let output = interp.collect_output();
-        assert!(output.contains("World"), "Expected 'World' for positive, got: {}", output);
-    }
 }
