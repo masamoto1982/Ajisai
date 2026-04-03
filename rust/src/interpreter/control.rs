@@ -1,106 +1,131 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::value_as_string;
-use crate::interpreter::Interpreter;
-use crate::interpreter::{ConsumptionMode, OperationTargetMode};
 use crate::interpreter::AsyncAction;
+use crate::interpreter::Interpreter;
+use crate::interpreter::ConsumptionMode;
+use crate::interpreter::OperationTargetMode;
 use crate::types::{Token, Value};
 
-/// Maximum iterations for `..` ROUTE (loop mode) to prevent infinite loops.
-const ROUTE_MAX_ITERATIONS: usize = 10_000;
+const LOOP_MAX_ITERATIONS: usize = 10_000;
 
-/// ROUTE — unified control structure for branching and looping.
-///
-/// Consumes code blocks from the stack top, pairs them as condition-action,
-/// and routes the flow through the matching branch.
-///
-/// Modifier effects:
-/// - `.` ROUTE (default): single branch selection (if-else / case)
-/// - `..` ROUTE: loop while any condition matches (while / loop)
-/// - `,,` ROUTE: bifurcation — keep original flow + result
-/// - `.. ,,` ROUTE: loop + bifurcation
-pub(crate) fn execute_route(interp: &mut Interpreter) -> Result<()> {
-    let is_loop: bool = interp.operation_target_mode == OperationTargetMode::Stack;
+pub(crate) fn execute_branch_from_tokens(
+    interp: &mut Interpreter,
+    tokens: &[Token],
+    start_index: usize,
+) -> Result<usize> {
     let keep_flow: bool = interp.consumption_mode == ConsumptionMode::Keep;
-
-    // Reset modes before execution
-    interp.operation_target_mode = OperationTargetMode::StackTop;
-    interp.consumption_mode = ConsumptionMode::Consume;
-
-    // 1. Pop all consecutive code blocks from stack top
-    let mut code_blocks: Vec<Vec<Token>> = Vec::new();
-    while let Some(top) = interp.stack.last() {
-        if top.as_code_block().is_some() {
-            let val: Value = interp.stack.pop().unwrap();
-            code_blocks.push(val.as_code_block().unwrap().clone());
-        } else {
-            break;
-        }
-    }
-
-    if code_blocks.is_empty() {
-        return Err(AjisaiError::from(
-            "ROUTE: expected at least one code block on the stack",
-        ));
-    }
-
-    // Reverse to get original push order (first pushed = first condition)
-    code_blocks.reverse();
-
-    // 2. Determine default block (odd count → last block is default)
-    let has_default: bool = code_blocks.len() % 2 == 1;
-    let default_block: Option<Vec<Token>> = if has_default {
-        Some(code_blocks.pop().unwrap())
-    } else {
-        None
-    };
-
-    // 3. Build condition-action pairs
-    let pairs: Vec<(Vec<Token>, Vec<Token>)> = code_blocks
-        .chunks(2)
-        .map(|chunk: &[Vec<Token>]| (chunk[0].clone(), chunk[1].clone()))
-        .collect::<Vec<_>>();
-
-    // 4. Save the no-change-check flag (disable during route execution)
     let saved_no_change_check: bool = interp.disable_no_change_check;
     interp.disable_no_change_check = true;
 
-    let result: Result<()> = if is_loop {
-        execute_route_loop(interp, &pairs, &default_block, keep_flow)
-    } else {
-        execute_route_branch(interp, &pairs, &default_block, keep_flow)
-    };
+    let mut pairs: Vec<(Vec<Token>, Vec<Token>)> = Vec::new();
+    let mut default_block: Option<Vec<Token>> = None;
+    let mut i: usize = start_index;
 
+    loop {
+        if !matches!(tokens.get(i), Some(Token::BranchGuard)) {
+            break;
+        }
+
+        let (first_block, after_first): (Vec<Token>, usize) = extract_block_after(tokens, i + 1, "$")?;
+
+        if matches!(tokens.get(after_first), Some(Token::BlockStart)) {
+            let (action_block, after_action): (Vec<Token>, usize) =
+                extract_block_after(tokens, after_first, "$")?;
+            pairs.push((first_block, action_block));
+            i = after_action;
+            continue;
+        }
+
+        default_block = Some(first_block);
+        i = after_first;
+        break;
+    }
+
+    let default: Vec<Token> = default_block.ok_or_else(|| {
+        AjisaiError::from("$: expected final default block, got condition/action pairs only")
+    })?;
+
+    let result: Result<()> = execute_branch_with_pairs(interp, &pairs, &default, keep_flow);
     interp.disable_no_change_check = saved_no_change_check;
-    result
+    result?;
+
+    Ok(i)
 }
 
-/// `.` ROUTE — single branch selection.
-///
-/// 1. Save the current stack as flow
-/// 2. For each condition: restore stack, execute condition, check top
-/// 3. First true condition → restore stack, execute action, done
-/// 4. All false + default → restore stack, execute default
-/// 5. All false + no default → restore stack (pass-through)
-fn execute_route_branch(
+pub(crate) fn execute_loop_from_tokens(
+    interp: &mut Interpreter,
+    tokens: &[Token],
+    start_index: usize,
+) -> Result<usize> {
+    let keep_flow: bool = interp.consumption_mode == ConsumptionMode::Keep;
+    let saved_no_change_check: bool = interp.disable_no_change_check;
+    interp.disable_no_change_check = true;
+
+    let (condition_block, after_condition): (Vec<Token>, usize) =
+        extract_block_after(tokens, start_index + 1, "&")?;
+    let (action_block, after_action): (Vec<Token>, usize) =
+        extract_block_after(tokens, after_condition, "&")?;
+
+    let result: Result<()> = execute_loop_with_blocks(interp, &condition_block, &action_block, keep_flow);
+    interp.disable_no_change_check = saved_no_change_check;
+    result?;
+
+    Ok(after_action)
+}
+
+fn extract_block_after(tokens: &[Token], start_index: usize, word: &str) -> Result<(Vec<Token>, usize)> {
+    if !matches!(tokens.get(start_index), Some(Token::BlockStart)) {
+        return Err(AjisaiError::from(format!(
+            "{}: expected code block after guard",
+            word
+        )));
+    }
+
+    let mut depth: i32 = 1;
+    let mut i: usize = start_index + 1;
+    let mut body: Vec<Token> = Vec::new();
+
+    while i < tokens.len() && depth > 0 {
+        match &tokens[i] {
+            Token::BlockStart => {
+                depth += 1;
+                body.push(tokens[i].clone());
+            }
+            Token::BlockEnd => {
+                depth -= 1;
+                if depth > 0 {
+                    body.push(tokens[i].clone());
+                }
+            }
+            token => body.push(token.clone()),
+        }
+        i += 1;
+    }
+
+    if depth != 0 {
+        return Err(AjisaiError::from(format!("{}: unclosed code block", word)));
+    }
+
+    Ok((body, i))
+}
+
+fn execute_branch_with_pairs(
     interp: &mut Interpreter,
     pairs: &[(Vec<Token>, Vec<Token>)],
-    default_block: &Option<Vec<Token>>,
+    default_block: &[Token],
     keep_flow: bool,
 ) -> Result<()> {
     let saved_stack: Vec<Value> = interp.stack.clone();
 
     for (condition, action) in pairs {
-        // Restore stack for condition evaluation
         interp.stack = saved_stack.clone();
         let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(condition, 0)?;
 
         if interp.check_condition_on_stack()? {
-            // Condition matched — restore stack and execute action
             interp.stack = saved_stack.clone();
             let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(action, 0)?;
 
             if keep_flow {
-                // ,, ROUTE: prepend original flow before result
                 let result_stack: Vec<Value> = std::mem::take(&mut interp.stack);
                 interp.stack = saved_stack;
                 interp.stack.extend(result_stack);
@@ -109,38 +134,22 @@ fn execute_route_branch(
         }
     }
 
-    // No condition matched
-    if let Some(default) = default_block {
-        interp.stack = saved_stack.clone();
-        let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(default, 0)?;
+    interp.stack = saved_stack.clone();
+    let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(default_block, 0)?;
 
-        if keep_flow {
-            let result_stack: Vec<Value> = std::mem::take(&mut interp.stack);
-            interp.stack = saved_stack;
-            interp.stack.extend(result_stack);
-        }
-    } else {
-        // Pass-through: restore original stack
+    if keep_flow {
+        let result_stack: Vec<Value> = std::mem::take(&mut interp.stack);
         interp.stack = saved_stack;
+        interp.stack.extend(result_stack);
     }
 
     Ok(())
 }
 
-/// `..` ROUTE — loop while any condition matches.
-///
-/// 1. Save the current stack as flow
-/// 2. Loop:
-///    a. For each condition: reset to current flow, execute condition, check
-///    b. If true: reset to current flow, execute action, result becomes new flow
-///    c. Go to step 2
-/// 3. All false + default → execute default on current flow, done
-/// 4. All false + no default → current flow is result
-/// 5. Safety valve: max 10,000 iterations
-fn execute_route_loop(
+fn execute_loop_with_blocks(
     interp: &mut Interpreter,
-    pairs: &[(Vec<Token>, Vec<Token>)],
-    default_block: &Option<Vec<Token>>,
+    condition_block: &[Token],
+    action_block: &[Token],
     keep_flow: bool,
 ) -> Result<()> {
     let original_stack: Vec<Value> = interp.stack.clone();
@@ -148,44 +157,27 @@ fn execute_route_loop(
     let mut iterations: usize = 0;
 
     loop {
-        if iterations >= ROUTE_MAX_ITERATIONS {
+        if iterations >= LOOP_MAX_ITERATIONS {
             return Err(AjisaiError::from(
-                "ROUTE: loop exceeded 10,000 iterations (safety limit)",
+                "&: loop exceeded 10,000 iterations (safety limit)",
             ));
         }
         iterations += 1;
 
-        let mut matched: bool = false;
+        interp.stack = current_flow.clone();
+        let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(condition_block, 0)?;
 
-        for (condition, action) in pairs {
-            // Restore to current flow for condition evaluation
-            interp.stack = current_flow.clone();
-            let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(condition, 0)?;
-
-            if interp.check_condition_on_stack()? {
-                // Condition matched — execute action on current flow
-                interp.stack = current_flow.clone();
-                let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(action, 0)?;
-                current_flow = interp.stack.clone();
-                matched = true;
-                break;
-            }
-        }
-
-        if !matched {
-            // No condition matched — execute default if present, then exit loop
-            if let Some(default) = default_block {
-                interp.stack = current_flow;
-                let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(default, 0)?;
-            } else {
-                interp.stack = current_flow;
-            }
+        if !interp.check_condition_on_stack()? {
+            interp.stack = current_flow;
             break;
         }
+
+        interp.stack = current_flow.clone();
+        let (_, _): (usize, Option<AsyncAction>) = interp.execute_section_core(action_block, 0)?;
+        current_flow = interp.stack.clone();
     }
 
     if keep_flow {
-        // ,, .. ROUTE: prepend original flow before result
         let result_stack: Vec<Value> = std::mem::take(&mut interp.stack);
         interp.stack = original_stack;
         interp.stack.extend(result_stack);

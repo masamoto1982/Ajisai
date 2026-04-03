@@ -125,6 +125,8 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
                 Token::Pipeline => "==".to_string(),
                 Token::NilCoalesce => "=>".to_string(),
                 Token::SafeMode => "~".to_string(),
+                Token::BranchGuard => "$".to_string(),
+                Token::LoopGuard => "&".to_string(),
                 Token::LineBreak => "\n".to_string(),
             })
             .collect::<Vec<_>>()
@@ -288,7 +290,7 @@ pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLin
                 }
             }
             // Note: Chevron tokens (>> / >>>) have been removed.
-            // ROUTE uses code blocks on the stack instead.
+            // Branch/loop guards ($, &) use code blocks on the stack instead.
             _ => {
                 processed_tokens.push(tokens[i].clone());
             }

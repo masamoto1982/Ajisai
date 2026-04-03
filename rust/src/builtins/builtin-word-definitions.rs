@@ -255,13 +255,20 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
             "[ TRUE FALSE ] NOT → [ FALSE TRUE ]",
             "map",
         ),
-        // Control (ROUTE)
+        // Control
         (
-            "ROUTE",
-            "Route flow through condition-action branches",
-            ":cond; :action; :default; ROUTE",
+            "$",
+            "Branch control with required final default block",
+            "$ { ,, [ 0 ] < } { [ -1 ] } $ { [ 1 ] }",
             "none",
         ),
+        (
+            "&",
+            "Loop while condition block is true",
+            "[ 1 ] & { ,, [ 1000 ] < } { [ 2 ] * }",
+            "none",
+        ),
+        ("IDLE", "No-op (passes through flow unchanged)", "IDLE", "none"),
         // Code block
         (
             ":",

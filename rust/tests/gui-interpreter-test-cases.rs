@@ -651,9 +651,9 @@ async fn test_def_and_call() {
 }
 
 #[tokio::test]
-async fn test_def_with_route_branch() {
+async fn test_def_with_branch_guard() {
     // [ 3 ] is NOT < 1, so default `[ 0 ] *` runs → 3 * 0 = 0
-    let stack = run("{ ,, [ 1 ] < } { [ 99 ] * } { [ 0 ] * } ROUTE 'GUARD' DEF\n[ 3 ] GUARD")
+    let stack = run("{ $ { ,, [ 1 ] < } { [ 99 ] * } $ { [ 0 ] * } } 'GUARD' DEF\n[ 3 ] GUARD")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
@@ -670,8 +670,8 @@ async fn test_del_delete_custom_word() {
 // ============================================
 
 #[tokio::test]
-async fn test_route_loop() {
-    let stack = run("[ 0 ] { ,, [ 5 ] < } { [ 1 ] + } .. ROUTE")
+async fn test_loop_guard() {
+    let stack = run("[ 0 ] & { ,, [ 5 ] < } { [ 1 ] + }")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);

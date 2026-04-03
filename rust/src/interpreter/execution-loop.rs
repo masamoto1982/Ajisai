@@ -351,6 +351,17 @@ impl Interpreter {
                 Token::SafeMode => {
                     self.safe_mode = true;
                 }
+
+                Token::BranchGuard => {
+                    i = crate::interpreter::control::execute_branch_from_tokens(self, execute_tokens, i)?;
+                    self.reset_execution_modes();
+                    continue;
+                }
+                Token::LoopGuard => {
+                    i = crate::interpreter::control::execute_loop_from_tokens(self, execute_tokens, i)?;
+                    self.reset_execution_modes();
+                    continue;
+                }
                 Token::LineBreak => {}
                 Token::VectorEnd => {
                     return Err(AjisaiError::from("Unexpected vector end"));

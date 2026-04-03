@@ -18,9 +18,9 @@ export const DEMO_USER_WORDS: UserWord[] = [
     {
         name: 'SAY-BY-SIGN',
         definition:
-            ": ,, [ 0 ] < ; : 'Hello' PRINT ; : ,, [ 0 ] = ; : 'Hello World' PRINT ; : 'World' PRINT ; ROUTE",
+            "$ { ,, [ 0 ] < } { 'Hello' PRINT } $ { ,, [ 0 ] = } { 'Hello World' PRINT } $ { 'World' PRINT }",
         description:
-            'サンプル④ — スタックトップが負なら「Hello」、0なら「Hello World」、正なら「World」を出力（ROUTE分岐）',
+            'サンプル④ — スタックトップが負なら「Hello」、0なら「Hello World」、正なら「World」を出力（$分岐）',
     },
     {
         name: 'SAY-HELLO-WORLD',

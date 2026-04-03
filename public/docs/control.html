@@ -35,40 +35,40 @@
         <h2>Control Flow</h2>
 
         <section>
-          <h3>ROUTE — Flow Routing</h3>
-          <p>ROUTE routes the flow through condition-action code block pairs. Use modifiers to switch between branching and looping:</p>
-<pre><code>cond | action | default | ROUTE        # . ROUTE: single branch (if-else)
-cond | action | .. ROUTE               # .. ROUTE: loop (while)
-cond | action | default | ,, ROUTE     # ,, ROUTE: bifurcation (keep flow)
-cond | action | .. ,, ROUTE            # .. ,, ROUTE: loop + bifurcation</code></pre>
+          <h3>$ — Flow Routing</h3>
+          <p>$ routes the flow through condition-action code block pairs. Use modifiers to switch between branching and looping:</p>
+<pre><code>cond | action | default | $        # $: single branch (if-else)
+cond | action | .$               # .$: loop (while)
+cond | action | default | $ (keep mode)     # $ (keep mode): bifurcation (keep flow)
+cond | action | .. $ (keep mode)            # .. $ (keep mode): loop + bifurcation</code></pre>
 
-          <h4>Example: Absolute Value (. ROUTE)</h4>
+          <h4>Example: Absolute Value ($)</h4>
 <pre><code>|
   ,, [ 0 ] < |   [ -1 ] * |
                     |
-  ROUTE
+  $
 | 'ABS' DEF
 
 [ -5 ] ABS    # Result: [ 5 ]
 [ 3 ] ABS     # Result: [ 3 ]</code></pre>
 
-          <h4>Example: Loop (.. ROUTE)</h4>
+          <h4>Example: Loop (.$)</h4>
 <pre><code># Double until > 1000
 [ 1 ]
   ,, [ 1000 ] < |  [ 2 ] * |
-.. ROUTE
+.$
 # Result: [ 1024 ]
 
 # Count up to 100
 [ 0 ]
   ,, [ 100 ] < |  [ 1 ] + |
-.. ROUTE
+.$
 # Result: [ 100 ]</code></pre>
 
-          <h4>Example: Bifurcation (,, ROUTE)</h4>
+          <h4>Example: Bifurcation ($ (keep mode))</h4>
 <pre><code>[ 5 ]
   ,, [ 0 ] < NOT | [ 2 ] * |
-,, ROUTE
+$ (keep mode)
 # Result: [ 5 ] [ 10 ]  (original + result)</code></pre>
         </section>
 

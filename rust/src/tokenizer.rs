@@ -86,10 +86,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         // 6. '>' 系の処理（全て廃止済み）
         if chars[i] == '>' {
             if i + 2 < chars.len() && chars[i + 1] == '>' && chars[i + 2] == '>' {
-                return Err("'>>>' (chevron default) has been removed. Use ROUTE for control flow.".to_string());
+                return Err("'>>>' (chevron default) has been removed. Use '$' for branching with a final default block.".to_string());
             }
             if i + 1 < chars.len() && chars[i + 1] == '>' {
-                return Err("'>>' (chevron branch) has been removed. Use ROUTE for control flow.".to_string());
+                return Err("'>>' (chevron branch) has been removed. Use '$' for branching with a final default block.".to_string());
             }
             if i + 1 < chars.len() && chars[i + 1] == '=' {
                 return Err("The '>=' operator has been removed. Use '<= NOT' or reverse operands with '<=' instead.".to_string());
@@ -157,7 +157,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~' | '$' | '&'
     )
 }
 
@@ -170,6 +170,8 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
         // セーフモード修飾子
         '~' => Some((Token::SafeMode, 1)),
         // > は特別処理が必要（>> と >>> のチェック）
+        '$' => Some((Token::BranchGuard, 1)),
+        '&' => Some((Token::LoopGuard, 1)),
         _ => None,
     }
 }

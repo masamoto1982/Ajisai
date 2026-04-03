@@ -529,9 +529,9 @@ export const TEST_CASES: TestCase[] = [
         category: "User Words"
     },
     {
-        // 仕様: ROUTE分岐を使用するワード定義
-        name: "DEF with ROUTE branch",
-        code: "{ ,, [ 1 ] < } { [ 99 ] * } { [ 0 ] * } ROUTE 'GUARD' DEF\n[ 3 ] GUARD",
+        // 仕様: $分岐を使用するワード定義
+        name: "DEF with $ branch",
+        code: "{ $ { ,, [ 1 ] < } { [ 99 ] * } $ { [ 0 ] * } } 'GUARD' DEF\n[ 3 ] GUARD",
         expectedStack: [createVector([createNumber('0')])],
         category: "User Words"
     },
@@ -546,9 +546,9 @@ export const TEST_CASES: TestCase[] = [
     // Control Flow
     // ============================================
     {
-        // 仕様: ROUTE (..) で反復制御
-        name: "ROUTE loop - count up",
-        code: "[ 0 ] { ,, [ 5 ] < } { [ 1 ] + } .. ROUTE",
+        // 仕様: $ (..) で反復制御
+        name: "& loop - count up",
+        code: "[ 0 ] & { ,, [ 5 ] < } { [ 1 ] + }",
         expectedStack: [createVector([createNumber('5')])],
         category: "Control Flow"
     },
