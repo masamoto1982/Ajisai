@@ -19,11 +19,6 @@ pub enum ConsumptionMode {
     Keep,
 }
 
-#[derive(Debug, Clone)]
-pub enum AsyncAction {
-    Wait { duration_ms: u64, word_name: String },
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum DictionaryLayer {
     BuiltIn,

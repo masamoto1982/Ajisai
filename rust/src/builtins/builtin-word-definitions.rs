@@ -256,18 +256,6 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
             "map",
         ),
         // Control
-        (
-            "$",
-            "Branch control with required final default block",
-            "$ { ,, [ 0 ] < } { [ -1 ] } $ { [ 1 ] }",
-            "none",
-        ),
-        (
-            "&",
-            "Loop while condition block is true",
-            "[ 1 ] & { ,, [ 1000 ] < } { [ 2 ] * }",
-            "none",
-        ),
         ("IDLE", "No-op (passes through flow unchanged)", "IDLE", "none"),
         // Code block
         (
@@ -325,13 +313,6 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
         ),
         ("DEL", "Delete custom word", "'WORD' DEL", "none"),
         ("?", "Show word definition", "'DOUBLE' ?", "none"),
-        // Control flow
-        (
-            "WAIT",
-            "Execute word after delay (ms)",
-            "'PROCESS' [ 1000 ] WAIT",
-            "none",
-        ),
         (
             "!",
             "Force flag - allow DEL/DEF of dependent words",

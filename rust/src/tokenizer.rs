@@ -170,8 +170,6 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
         // セーフモード修飾子
         '~' => Some((Token::SafeMode, 1)),
         // > は特別処理が必要（>> と >>> のチェック）
-        '$' => Some((Token::BranchGuard, 1)),
-        '&' => Some((Token::LoopGuard, 1)),
         _ => None,
     }
 }

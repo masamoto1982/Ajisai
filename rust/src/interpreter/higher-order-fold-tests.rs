@@ -27,31 +27,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_map_with_route_word() {
-        let mut interp = Interpreter::new();
-        // CHECK_ONE: if value == 1 → multiply by 10, otherwise multiply by 20
-        let def_code = r#"{ $ { ,, [ 1 ] = } { [ 10 ] * } $ { [ 20 ] * } } 'CHECK_ONE' DEF"#;
-        let def_result = interp.execute(def_code).await;
-        assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
-
-        let map_code = "[ 1 2 1 3 1 ] 'CHECK_ONE' MAP";
-        let result = interp.execute(map_code).await;
-
-        assert!(
-            result.is_ok(),
-            "MAP with $ word should succeed: {:?}",
-            result
-        );
-
-        assert_eq!(
-            interp.stack.len(),
-            1,
-            "Stack should have exactly 1 element, got {}",
-            interp.stack.len()
-        );
-    }
-
-    #[tokio::test]
     async fn test_map_with_multiline_word() {
         let mut interp = Interpreter::new();
         let def_code = r#"{ [ 2 ] * } 'DOUBLE' DEF

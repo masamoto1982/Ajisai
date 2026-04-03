@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{AsyncAction, Interpreter};
+use crate::interpreter::Interpreter;
 use crate::types::{Token, Value, ValueData};
 
 fn format_scalar_to_source(val: &Value) -> Result<String> {
@@ -28,8 +28,6 @@ fn format_token_to_source(token: &Token) -> String {
         Token::Pipeline => "==".to_string(),
         Token::NilCoalesce => "=>".to_string(),
         Token::SafeMode => "~".to_string(),
-        Token::BranchGuard => "$".to_string(),
-        Token::LoopGuard => "&".to_string(),
         Token::LineBreak => "\n".to_string(),
     }
 }
@@ -70,13 +68,7 @@ pub fn execute_vector_as_code(interp: &mut Interpreter, val: &Value) -> Result<(
     let tokens: Vec<Token> = crate::tokenizer::tokenize(&source)
         .map_err(|e| AjisaiError::from(format!("EXECUTE_VECTOR: expected valid tokens, got {}", e)))?;
 
-    let (_, action): (usize, Option<AsyncAction>) = interp.execute_section_core(&tokens, 0)?;
-
-    if action.is_some() {
-        return Err(AjisaiError::from(
-            "EXECUTE_VECTOR: expected synchronous execution, got async operation",
-        ));
-    }
+    interp.execute_section_core(&tokens, 0)?;
 
     Ok(())
 }
