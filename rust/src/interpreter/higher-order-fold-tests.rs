@@ -30,7 +30,7 @@ mod tests {
     async fn test_map_with_route_word() {
         let mut interp = Interpreter::new();
         // CHECK_ONE: if value == 1 → multiply by 10, otherwise multiply by 20
-        let def_code = r#"{ { ,, [ 1 ] = } { [ 10 ] * } { [ 20 ] * } ROUTE } 'CHECK_ONE' DEF"#;
+        let def_code = r#"{ $ { ,, [ 1 ] = } { [ 10 ] * } $ { [ 20 ] * } } 'CHECK_ONE' DEF"#;
         let def_result = interp.execute(def_code).await;
         assert!(def_result.is_ok(), "DEF should succeed: {:?}", def_result);
 
@@ -39,7 +39,7 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "MAP with ROUTE word should succeed: {:?}",
+            "MAP with $ word should succeed: {:?}",
             result
         );
 

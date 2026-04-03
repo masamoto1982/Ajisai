@@ -453,10 +453,10 @@ TRUE NOT          # Result: FALSE</code></div>
         <section>
           <h3>Control Flow</h3>
           <div class="word-item">
-            <h4>ROUTE</h4>
+            <h4>$</h4>
             <p>Route flow through condition-action code block pairs. Modifiers: <code>.</code> (branch), <code>..</code> (loop), <code>,,</code> (bifurcation)</p>
-            <div class="word-example"><code>: ,, [ 0 ] < ; : [ -1 ] * ; : ; ROUTE    # ABS
-[ 0 ] : ,, [ 5 ] < ; : [ 1 ] + ; .. ROUTE    # Count to 5</code></div>
+            <div class="word-example"><code>: ,, [ 0 ] < ; : [ -1 ] * ; : ; $    # ABS
+[ 0 ] : ,, [ 5 ] < ; : [ 1 ] + ; .$    # Count to 5</code></div>
           </div>
           <div class="word-item">
             <h4>== (Pipeline)</h4>

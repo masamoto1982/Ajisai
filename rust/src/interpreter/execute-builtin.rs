@@ -156,7 +156,7 @@ impl Interpreter {
                 self.semantic_registry.push_hint(DisplayHint::Nil);
                 Ok(())
             }
-            "ROUTE" => control::execute_route(self),
+            "IDLE" => Ok(()),
             "EXEC" => control::op_exec(self),
             "EVAL" => control::op_eval(self),
             "DEF" => execute_def::op_def(self),
@@ -218,6 +218,8 @@ impl Interpreter {
             Token::Pipeline => "==".to_string(),
             Token::NilCoalesce => "=>".to_string(),
             Token::SafeMode => "~".to_string(),
+            Token::BranchGuard => "$".to_string(),
+            Token::LoopGuard => "&".to_string(),
             Token::LineBreak => "\n".to_string(),
         }
     }

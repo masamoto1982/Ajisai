@@ -74,13 +74,13 @@ ADDTEST
 
         // Condition: 3 < 5 → true → execute action (define ANSWER)
         let code = r#"
-{ [ 3 ] [ 5 ] < } { [ 42 ] 'ANSWER' DEF } { [ 0 ] 'ZERO' DEF } ROUTE
+$ { [ 3 ] [ 5 ] < } { [ 42 ] 'ANSWER' DEF } $ { [ 0 ] 'ZERO' DEF }
 "#;
 
         let result = interp.execute(code).await;
         assert!(
             result.is_ok(),
-            "ROUTE branch should succeed: {:?}",
+            "$ branch should succeed: {:?}",
             result
         );
 
@@ -100,13 +100,13 @@ ADDTEST
 
         // Condition: 5 < 3 → false → default (define SMALL)
         let code = r#"
-{ [ 5 ] [ 3 ] < } { [ 100 ] 'BIG' DEF } { [ -1 ] 'SMALL' DEF } ROUTE
+$ { [ 5 ] [ 3 ] < } { [ 100 ] 'BIG' DEF } $ { [ -1 ] 'SMALL' DEF }
 "#;
 
         let result = interp.execute(code).await;
         assert!(
             result.is_ok(),
-            "ROUTE branch (false case) should succeed: {:?}",
+            "$ branch (false case) should succeed: {:?}",
             result
         );
 
@@ -133,12 +133,12 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         // Single code block (odd count = default only)
-        let code = "{ [ 999 ] 'DEFAULT' DEF } ROUTE";
+        let code = "$ { [ 999 ] 'DEFAULT' DEF }";
 
         let result = interp.execute(code).await;
         assert!(
             result.is_ok(),
-            "ROUTE default-only should succeed: {:?}",
+            "$ default-only should succeed: {:?}",
             result
         );
 
@@ -169,12 +169,12 @@ ADDTEST
 
         // Condition: 5 < 10 → true → define PROCESS using DOUBLE
         let route_code = r#"
-{ [ 5 ] [ 10 ] < } { [ 3 ] DOUBLE 'PROCESS' DEF } { [ 0 ] 'NOPROCESS' DEF } ROUTE
+$ { [ 5 ] [ 10 ] < } { [ 3 ] DOUBLE 'PROCESS' DEF } $ { [ 0 ] 'NOPROCESS' DEF }
 "#;
         let result = interp.execute(route_code).await;
         assert!(
             result.is_ok(),
-            "ROUTE with existing word should succeed: {:?}",
+            "$ with existing word should succeed: {:?}",
             result
         );
 
@@ -320,18 +320,18 @@ ADDTEST
     async fn test_route_branch_vs_sequential() {
         let mut interp = Interpreter::new();
 
-        // ROUTE: condition 3 < 5 → true → [ 100 ]
-        let route_code = "[ 3 ] { ,, [ 5 ] < } { [ 100 ] } { [ 0 ] } ROUTE";
+        // $: condition 3 < 5 → true → [ 100 ]
+        let route_code = "[ 3 ] $ { ,, [ 5 ] < } { [ 100 ] } $ { [ 0 ] }";
 
         let result = interp.execute(route_code).await;
         assert!(
             result.is_ok(),
-            "ROUTE branch should succeed: {:?}",
+            "$ branch should succeed: {:?}",
             result
         );
 
         // The condition evaluated [3] [5] < = TRUE, which is on the stack.
-        // ROUTE sees code blocks. The TRUE from condition evaluation is the flow.
+        // $ sees code blocks. The TRUE from condition evaluation is the flow.
         // Let's verify the result.
         assert!(!interp.stack.is_empty(), "Stack should not be empty");
 
@@ -359,12 +359,12 @@ ADDTEST
         let mut interp = Interpreter::new();
 
         // [ 0 ]: condition 0 < 5 → true → action: multiply by 100
-        let code = "[ 0 ] { ,, [ 5 ] < } { [ 100 ] * } { ,, [ 10 ] < } { [ 200 ] * } { [ 999 ] + } ROUTE";
+        let code = "[ 0 ] $ { ,, [ 5 ] < } { [ 100 ] * } $ { ,, [ 10 ] < } { [ 200 ] * } $ { [ 999 ] + }";
 
         let result = interp.execute(code).await;
         assert!(
             result.is_ok(),
-            "ROUTE multi-condition should succeed: {:?}",
+            "$ multi-condition should succeed: {:?}",
             result
         );
 
