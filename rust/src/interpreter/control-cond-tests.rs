@@ -33,7 +33,7 @@ mod tests {
         assert!(result.is_err(), "COND should fail without else: {:?}", result);
         let message = result.err().unwrap().to_string();
         assert!(
-            message.contains("COND: no matching guard and no else clause"),
+            message.contains("COND: all guards failed and no else clause"),
             "unexpected error: {}",
             message
         );
@@ -49,6 +49,21 @@ mod tests {
             message.contains("COND: expected even number of code blocks"),
             "unexpected error: {}",
             message
+        );
+    }
+
+    #[tokio::test]
+    async fn test_cond_keep_mode_no_duplicate() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("[ -5 ] ,, { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND")
+            .await;
+        assert!(result.is_ok(), "COND with ,, should succeed: {:?}", result);
+        assert_eq!(
+            interp.stack.len(),
+            2,
+            "Keep mode should leave original + result (2 items), got {}",
+            interp.stack.len()
         );
     }
 

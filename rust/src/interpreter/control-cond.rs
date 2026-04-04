@@ -5,7 +5,11 @@ use crate::types::{DisplayHint, Token, Value};
 pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
     let pairs: Vec<(Vec<Token>, Vec<Token>)> = collect_cond_pairs_from_stack(interp)?;
     let target_value: Value = match interp.consumption_mode {
-        ConsumptionMode::Consume => interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?,
+        ConsumptionMode::Consume => {
+            let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let _ = interp.semantic_registry.pop_hint();
+            val
+        }
         ConsumptionMode::Keep => interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?,
     };
 
@@ -25,7 +29,7 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
         return execute_cond_body(interp, &body_tokens, &target_value);
     }
 
-    Err(AjisaiError::from("COND: no matching guard and no else clause"))
+    Err(AjisaiError::CondExhausted)
 }
 
 fn collect_cond_pairs_from_stack(interp: &mut Interpreter) -> Result<Vec<(Vec<Token>, Vec<Token>)>> {
@@ -128,10 +132,6 @@ fn execute_cond_body(interp: &mut Interpreter, body_tokens: &[Token], value: &Va
     execution_result?;
     let result_value: Value =
         body_result_value.ok_or_else(|| AjisaiError::from("COND: body must return a value"))?;
-    if interp.consumption_mode == ConsumptionMode::Keep {
-        interp.stack.push(value.clone());
-        interp.semantic_registry.push_hint(DisplayHint::Auto);
-    }
     interp.stack.push(result_value);
     interp.semantic_registry.push_hint(DisplayHint::Auto);
     Ok(())

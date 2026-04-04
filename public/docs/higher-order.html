@@ -101,7 +101,7 @@
           </ul>
 
           <h4>Example: Range Generator</h4>
-<pre><code>{ { ,, [ 5 ] <= NOT } { NIL } { ,, [ 1 ] + } $ } 'RANGE_GEN' DEF
+<pre><code>{ ,, { [ 5 ] <= NOT } { NIL } { IDLE } { ,, [ 1 ] + } COND } 'RANGE_GEN' DEF
 
 [ 1 ] 'RANGE_GEN' UNFOLD    # Result: [ 1 2 3 4 5 ]</code></pre>
         </section>

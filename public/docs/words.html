@@ -456,12 +456,6 @@ TRUE NOT          # Result: FALSE</code></div>
   COND</code></div>
           </div>
           <div class="word-item">
-            <h4>$</h4>
-            <p>Route flow through condition-action code block pairs. Modifiers: <code>.</code> (branch), <code>..</code> (loop), <code>,,</code> (bifurcation)</p>
-            <div class="word-example"><code>{ ,, [ 0 ] < } { [ -1 ] * } { } $          # ABS
-[ 0 ] { ,, [ 5 ] < } { [ 1 ] + } .$    # Count to 5</code></div>
-          </div>
-          <div class="word-item">
             <h4>== (Pipeline)</h4>
             <p>Visual data flow marker (no-op)</p>
             <div class="word-example"><code>[ 1 2 3 ] == { [ 2 ] * } MAP    # Readable pipeline</code></div>

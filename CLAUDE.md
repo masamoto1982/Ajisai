@@ -75,9 +75,9 @@ Canonical spec: `SPECIFICATION.md` (single source of truth).
 ### Word signature types
 
 - **Map** (element-wise transform): STR, NUM, BOOL, CHR, CHARS, JOIN, NOT, FLOOR, CEIL, ROUND, SHAPE, RANK, PRINT
-- **Form** (structural): GET, INSERT, REPLACE, REMOVE, LENGTH, TAKE, SPLIT, CONCAT, REVERSE, RANGE, REORDER, SORT, MAP, FILTER, FOLD, RESHAPE, TRANSPOSE, FILL
+- **Form** (structural): GET, INSERT, REPLACE, REMOVE, LENGTH, TAKE, SPLIT, CONCAT, REVERSE, RANGE, REORDER, SORT, MAP, FILTER, FOLD, COND, RESHAPE, TRANSPOSE, FILL
 - **Fold** (reduction): `+` `-` `*` `/` MOD `=` `<` `<=` AND OR
-- **None**: TRUE, FALSE, NIL, NOW, CSPRNG, DATETIME, TIMESTAMP, DEF, DEL, `?`, `:` `;` `=>` `==` `.` `..` `,` `,,` `~` `!` COLLECT, EXEC, EVAL, HASH, FRAME, IMPORT
+- **None**: TRUE, FALSE, NIL, NOW, CSPRNG, DATETIME, TIMESTAMP, DEF, DEL, `?`, `:` `;` `=>` `==` `.` `..` `,` `,,` `~` `!` COLLECT, IDLE, EXEC, EVAL, HASH, FRAME, IMPORT
 
 ### Modules (via IMPORT)
 
