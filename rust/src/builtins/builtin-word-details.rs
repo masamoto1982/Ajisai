@@ -6,6 +6,7 @@
 use super::builtin_word_definitions::collect_builtin_definitions;
 use super::detail_lookup_arithmetic_logic::lookup_detail_arithmetic_logic;
 use super::detail_lookup_control_higher_order::lookup_detail_control_higher_order;
+use super::detail_lookup_cond::lookup_detail_cond;
 use super::detail_lookup_io_module::lookup_detail_io_module;
 use super::detail_lookup_modifier::lookup_detail_modifier;
 use super::detail_lookup_string_cast::lookup_detail_string_cast;
@@ -27,6 +28,9 @@ pub fn lookup_builtin_detail(name: &str) -> String {
         return detail;
     }
     if let Some(detail) = lookup_detail_control_higher_order(name) {
+        return detail;
+    }
+    if let Some(detail) = lookup_detail_cond(name) {
         return detail;
     }
     if let Some(detail) = lookup_detail_io_module(name) {

@@ -90,6 +90,15 @@
         </section>
 
         <section>
+          <h3>Conditional Branching with COND</h3>
+<pre><code>[ -5 ]
+  { [ 0 ] < }   { 'negative' }
+  { [ 0 ] = }   { 'zero' }
+  { IDLE }      { 'positive' }
+  COND</code></pre>
+        </section>
+
+        <section>
           <h3>Fraction Arithmetic</h3>
 <pre><code># Exact fractions
 [ 1/3 ] [ 1/6 ] +        # Result: [ 1/2 ]

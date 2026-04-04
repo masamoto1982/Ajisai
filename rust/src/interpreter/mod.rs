@@ -3,6 +3,8 @@ pub mod audio;
 pub mod cast;
 pub mod comparison;
 pub mod control;
+#[path = "control-cond.rs"]
+pub mod control_cond;
 pub mod datetime;
 #[path = "execute-def.rs"]
 pub mod execute_def;
@@ -68,6 +70,9 @@ mod dictionary_resolution_tests;
 #[cfg(test)]
 #[path = "control-exec-eval-tests.rs"]
 mod control_exec_eval_tests;
+#[cfg(test)]
+#[path = "control-cond-tests.rs"]
+mod control_cond_tests;
 #[cfg(test)]
 #[path = "datetime-tests.rs"]
 mod datetime_tests;
