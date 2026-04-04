@@ -46,8 +46,6 @@
             <code>.</code>
             <code>..</code>
             <code>/</code>
-            <code>:</code>
-            <code>;</code>
             <code>&lt;</code>
             <code>&lt;=</code>
             <code>=</code>
@@ -432,8 +430,8 @@ TRUE NOT          # Result: FALSE</code></div>
           <h3>Word Management</h3>
           <div class="word-item">
             <h4>DEF</h4>
-            <p>Define custom word using code block syntax <code>: ... ;</code></p>
-            <div class="word-example"><code>: [ 2 ] * ; 'DOUBLE' DEF</code></div>
+            <p>Define custom word using code block syntax <code>{ ... }</code> or <code>( ... )</code></p>
+            <div class="word-example"><code>{ [ 2 ] * } 'DOUBLE' DEF</code></div>
           </div>
           <div class="word-item">
             <h4>DEL</h4>
@@ -460,13 +458,13 @@ TRUE NOT          # Result: FALSE</code></div>
           <div class="word-item">
             <h4>$</h4>
             <p>Route flow through condition-action code block pairs. Modifiers: <code>.</code> (branch), <code>..</code> (loop), <code>,,</code> (bifurcation)</p>
-            <div class="word-example"><code>: ,, [ 0 ] < ; : [ -1 ] * ; : ; $    # ABS
-[ 0 ] : ,, [ 5 ] < ; : [ 1 ] + ; .$    # Count to 5</code></div>
+            <div class="word-example"><code>{ ,, [ 0 ] < } { [ -1 ] * } { } $          # ABS
+[ 0 ] { ,, [ 5 ] < } { [ 1 ] + } .$    # Count to 5</code></div>
           </div>
           <div class="word-item">
             <h4>== (Pipeline)</h4>
             <p>Visual data flow marker (no-op)</p>
-            <div class="word-example"><code>[ 1 2 3 ] == : [ 2 ] * ; MAP    # Readable pipeline</code></div>
+            <div class="word-example"><code>[ 1 2 3 ] == { [ 2 ] * } MAP    # Readable pipeline</code></div>
           </div>
           <div class="word-item">
             <h4>=&gt; (Nil Coalescing)</h4>

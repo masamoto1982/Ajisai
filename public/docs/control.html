@@ -47,9 +47,9 @@
           <h3>Pipeline Operator (==)</h3>
           <p>Visual marker for data flow (no-op). Makes complex transformations readable:</p>
 <pre><code>[ 1 2 3 4 5 ]
-  == [ 2 ] * | MAP
-  == [ 5 ] < NOT | FILTER
-  == [ 0 ] + | FOLD</code></pre>
+  == { [ 2 ] * } MAP
+  == { [ 5 ] < NOT } FILTER
+  == [ 0 ] { + } FOLD</code></pre>
         </section>
 
         <section>
@@ -66,8 +66,8 @@
           <h3>Force Execution (!)</h3>
           <p>Allows DEL/DEF of dependent words:</p>
 <pre><code># Define dependent words
-HELPER | 'MAIN' DEF
-[ 1 ] | 'HELPER' DEF
+{ HELPER } 'MAIN' DEF
+{ [ 1 ] } 'HELPER' DEF
 
 # Cannot delete HELPER normally
 'HELPER' DEL    # Error!

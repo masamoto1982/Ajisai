@@ -85,15 +85,15 @@ nil</code></pre>
 
         <section>
           <h3>Defining Words</h3>
-          <p>Use code block syntax <code>: ... ;</code> to define words:</p>
+          <p>Use code block syntax <code>{ ... }</code> (or <code>( ... )</code>) to define words:</p>
 <pre><code># Define a word
-: [ 2 ] * ; 'DOUBLE' DEF
+{ [ 2 ] * } 'DOUBLE' DEF
 
 # Use it
 [ 5 ] DOUBLE    # Result: [ 10 ]
 
 # Check if even
-: [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
+{ [ 2 ] MOD [ 0 ] = } 'EVEN?' DEF
 [ 4 ] EVEN?     # Result: [ TRUE ]</code></pre>
         </section>
 
@@ -111,9 +111,9 @@ a b c .. REVERSE    # Result: c b a</code></pre>
           <h3>Pipeline Operator (==)</h3>
           <p>Visual marker for data flow (no-op). Makes complex transformations readable:</p>
 <pre><code>[ 1 2 3 4 5 ]
-  == : [ 2 ] * ; MAP           # Double each
-  == : [ 5 ] < NOT ; FILTER    # Keep >= 5
-  == [ 0 ] : + ; FOLD          # Sum</code></pre>
+  == { [ 2 ] * } MAP           # Double each
+  == { [ 5 ] < NOT } FILTER    # Keep >= 5
+  == [ 0 ] { + } FOLD          # Sum</code></pre>
         </section>
 
         <section>
