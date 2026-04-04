@@ -287,8 +287,6 @@ pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLin
                     processed_tokens.clear();
                 }
             }
-            // Note: Chevron tokens (>> / >>>) have been removed.
-            // Branch/loop guards ($, &) use code blocks on the stack instead.
             _ => {
                 processed_tokens.push(tokens[i].clone());
             }

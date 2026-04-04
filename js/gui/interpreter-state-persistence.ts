@@ -213,7 +213,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                         const oldSampleNames = new Set([
                             // v3→v4: 旧音階サンプル（Rust側モジュールサンプルに移行済み）
                             'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5',
-                            // v4→v5: 旧Hello worldサンプル（分岐・反復サンプルに刷新）
+                            // v4→v5: 旧Hello worldサンプル（サンプルワード刷新）
                             'GREETING', 'WORLD', 'HELLO-WORLD',
                         ]);
                         const newSampleWordNames = new Set(

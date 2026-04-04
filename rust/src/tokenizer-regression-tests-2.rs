@@ -265,7 +265,7 @@ mod tokenizer_regression_tests_2 {
         assert!(matches!(&result[7], Token::Symbol(s) if s.as_ref() == "DEF"));
     }
 
-    // === シェブロン分岐トークンの廃止テスト ===
+    // === シェブロントークンの廃止テスト ===
 
     #[test]
     fn test_chevron_branch_token_removed() {

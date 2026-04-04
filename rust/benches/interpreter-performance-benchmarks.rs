@@ -28,7 +28,7 @@ fn build_ajisai_dictionary() -> HashMap<String, String> {
         "SINE", "SQUARE", "SAW", "TRI",
         "PARSE", "STRINGIFY", "INPUT", "OUTPUT",
         "JSON-GET", "JSON-KEYS", "JSON-SET", "JSON-EXPORT",
-        "WAIT", "!",
+        "!",
     ];
     let mut map = HashMap::new();
     for w in &words {
