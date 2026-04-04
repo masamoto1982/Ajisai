@@ -59,6 +59,8 @@ pub enum AjisaiError {
         parent_mass: String,
         children_sum: String,
     },
+    /// COND: all guards failed and no else clause
+    CondExhausted,
 }
 
 impl AjisaiError {
@@ -131,6 +133,9 @@ impl fmt::Display for AjisaiError {
                     "Bifurcation conservation violation: parent mass {} != children sum {}",
                     parent_mass, children_sum
                 )
+            }
+            AjisaiError::CondExhausted => {
+                write!(f, "COND: all guards failed and no else clause")
             }
         }
     }
