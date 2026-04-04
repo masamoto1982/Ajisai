@@ -19,13 +19,6 @@ pub enum ConsumptionMode {
     Keep,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum DictionaryLayer {
-    BuiltIn,
-    Module,
-    User,
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct UserDictionary {
     pub order: u64,
@@ -34,7 +27,6 @@ pub(crate) struct UserDictionary {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleDictionary {
-    pub order: u64,
     pub sample_words: HashMap<String, Arc<WordDefinition>>,
 }
 

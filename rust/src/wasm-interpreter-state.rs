@@ -1,7 +1,7 @@
 use crate::builtins;
 use crate::interpreter;
 use crate::tokenizer;
-use super::wasm_value_conversion::{extract_display_hint_from_js, js_value_to_value, value_to_js_value, value_to_js_value_with_hint, UserWordData};
+use super::wasm_value_conversion::{extract_display_hint_from_js, js_value_to_value, value_to_js_value_with_hint, UserWordData};
 use super::AjisaiInterpreter;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;

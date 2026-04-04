@@ -1,7 +1,7 @@
 use crate::tokenizer;
-use crate::types::{ExecutionLine, Token, ValueData};
+use crate::types::{ExecutionLine, ValueData};
 use super::wasm_value_conversion::{
-    build_bracket_structure_from_shape, is_vector_value, value_to_js_value,
+    build_bracket_structure_from_shape, is_vector_value,
 };
 use super::AjisaiInterpreter;
 use wasm_bindgen::prelude::*;

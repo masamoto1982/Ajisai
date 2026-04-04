@@ -48,7 +48,7 @@ use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_bigint::BigInt;
-use num_traits::{One, ToPrimitive, Zero};
+use num_traits::{ToPrimitive, Zero};
 use wasm_bindgen::prelude::*;
 
 fn parse_timezone_from_value(tz_val: &Value, word: &str) -> Result<String> {

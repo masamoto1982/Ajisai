@@ -6,7 +6,7 @@ use super::interpreter_core::MAX_CALL_DEPTH;
 use super::{
     arithmetic, cast, comparison, control, control_cond, datetime, execute_def, execute_del,
     execute_lookup, hash, higher_order, higher_order_fold, io, logic, modules, random, sort, tensor_cmds,
-    tensor_ops, vector_ops, Interpreter,
+    vector_ops, Interpreter,
 };
 
 impl Interpreter {
