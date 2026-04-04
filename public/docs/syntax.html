@@ -108,24 +108,6 @@ a b c .. REVERSE    # Result: c b a</code></pre>
         </section>
 
         <section>
-          <h3>Guards (Conditionals)</h3>
-          <p>Guards use chevron branching with <code>&gt;&gt;</code> for condition-action pairs and <code>&gt;&gt;&gt;</code> for default:</p>
-<pre><code># Syntax: >> condition >> action >> condition >> action >>> default
-
-:
-  >> [ 0 ] <
-  >> [ -1 ]
-  >> [ 0 ] =
-  >> [ 0 ]
-  >>> [ 1 ]
-; 'SIGN' DEF
-
-[ -5 ] SIGN    # Result: [ -1 ]
-[ 0 ] SIGN     # Result: [ 0 ]
-[ 10 ] SIGN    # Result: [ 1 ]</code></pre>
-        </section>
-
-        <section>
           <h3>Pipeline Operator (==)</h3>
           <p>Visual marker for data flow (no-op). Makes complex transformations readable:</p>
 <pre><code>[ 1 2 3 4 5 ]

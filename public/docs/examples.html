@@ -67,15 +67,7 @@
 
 # Even check
 : [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
-[ 6 ] EVEN?                  # Result: [ TRUE ]
-
-# Absolute value (with guard)
-:
-  >> [ 0 ] <
-  >> [ -1 ] *
-  >>>
-; 'ABS' DEF
-[ -5 ] ABS                   # Result: [ 5 ]</code></pre>
+[ 6 ] EVEN?                  # Result: [ TRUE ]</code></pre>
         </section>
 
         <section>
@@ -175,15 +167,7 @@ a b c d e .. CONCAT      # Result: [ a b c d e ]</code></pre>
         <section>
           <h3>Practical: Factorial</h3>
 <pre><code># Using FOLD
-[ 1 ] [ 5 ] RANGE [ 1 ] '*' FOLD    # 5! = [ 120 ]
-
-# Using recursion (with guard)
-:
-  >> [ 1 ] <=
-  >> [ 1 ]
-  >>> [ 1 ] - FACTORIAL *
-; 'FACTORIAL' DEF
-[ 5 ] FACTORIAL                      # Result: [ 120 ]</code></pre>
+[ 1 ] [ 5 ] RANGE [ 1 ] '*' FOLD    # 5! = [ 120 ]</code></pre>
         </section>
       </article>
     </main>

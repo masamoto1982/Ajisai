@@ -77,7 +77,7 @@ Canonical spec: `SPECIFICATION.md` (single source of truth).
 - **Map** (element-wise transform): STR, NUM, BOOL, CHR, CHARS, JOIN, NOT, FLOOR, CEIL, ROUND, SHAPE, RANK, PRINT
 - **Form** (structural): GET, INSERT, REPLACE, REMOVE, LENGTH, TAKE, SPLIT, CONCAT, REVERSE, RANGE, REORDER, SORT, MAP, FILTER, FOLD, RESHAPE, TRANSPOSE, FILL
 - **Fold** (reduction): `+` `-` `*` `/` MOD `=` `<` `<=` AND OR
-- **None**: TRUE, FALSE, NIL, NOW, CSPRNG, DATETIME, TIMESTAMP, DEF, DEL, `?`, $, WAIT, `:` `;` `=>` `==` `.` `..` `,` `,,` `~` `!` COLLECT, EXEC, EVAL, HASH, FRAME, IMPORT
+- **None**: TRUE, FALSE, NIL, NOW, CSPRNG, DATETIME, TIMESTAMP, DEF, DEL, `?`, `:` `;` `=>` `==` `.` `..` `,` `,,` `~` `!` COLLECT, EXEC, EVAL, HASH, FRAME, IMPORT
 
 ### Modules (via IMPORT)
 
@@ -108,7 +108,7 @@ Canonical spec: `SPECIFICATION.md` (single source of truth).
 | `interpreter/arithmetic.rs` | `+` `-` `*` `/` MOD FLOOR CEIL ROUND |
 | `interpreter/comparison.rs` | `=` `<` `<=` |
 | `interpreter/logic.rs` | AND OR NOT (Kleene three-valued logic for NIL) |
-| `interpreter/control.rs` | $ (branching/looping), EXEC, EVAL |
+| `interpreter/control.rs` | EXEC, EVAL |
 | `interpreter/cast.rs` | STR NUM BOOL CHR type conversions |
 | `interpreter/dictionary.rs` | DEF DEL `?` word management |
 | `interpreter/higher-order-operations.rs` | MAP FILTER FOLD |
