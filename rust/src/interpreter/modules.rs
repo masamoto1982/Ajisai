@@ -244,9 +244,8 @@ pub fn op_import(interp: &mut Interpreter) -> Result<()> {
         .find(|module| module.name == module_name)
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.clone()))?;
 
-    let order = interp.next_registration_order();
     register_module_words_in_dictionary(interp, module.words);
-    register_module_sample_words(interp, &module_name, module.sample_words, order)?;
+    register_module_sample_words(interp, &module_name, module.sample_words)?;
     interp.imported_modules.insert(module_name);
     Ok(())
 }
@@ -255,20 +254,17 @@ fn register_module_sample_words(
     interp: &mut Interpreter,
     module_name: &str,
     sample_words: &[SampleWord],
-    order: u64,
 ) -> Result<()> {
     if sample_words.is_empty() {
         interp.module_samples.insert(
             module_name.to_string(),
             ModuleDictionary {
-                order,
                 sample_words: HashMap::new(),
             },
         );
         return Ok(());
     }
     let mut module_dict = ModuleDictionary {
-        order,
         sample_words: HashMap::new(),
     };
 
@@ -285,7 +281,7 @@ fn register_module_sample_words(
             dependencies: HashSet::new(),
             original_source: None,
             namespace: Some(module_name.to_string()),
-            registration_order: order,
+            registration_order: 0,
         };
         let short_name = sample.name.to_uppercase();
         if interp.core_vocabulary.contains_key(&short_name) {
@@ -399,8 +395,7 @@ pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
     }
     if let Some(module) = MODULE_SPECS.iter().find(|m| m.name == upper) {
         register_module_words_in_dictionary(interp, module.words);
-        let order = interp.next_registration_order();
-        if register_module_sample_words(interp, &upper, module.sample_words, order).is_err() {
+        if register_module_sample_words(interp, &upper, module.sample_words).is_err() {
             return false;
         }
         interp.imported_modules.insert(upper);

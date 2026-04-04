@@ -208,12 +208,6 @@ impl Interpreter {
         self.resolve_word(name).is_some()
     }
 
-    pub(crate) fn is_user_word(&self, name: &str) -> bool {
-        self.resolve_word(name)
-            .map(|def| !def.is_builtin)
-            .unwrap_or(false)
-    }
-
     pub fn rebuild_dependencies(&mut self) -> crate::error::Result<()> {
         self.dependents.clear();
 

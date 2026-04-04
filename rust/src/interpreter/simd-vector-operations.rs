@@ -1,5 +1,4 @@
 use crate::types::{Value, ValueData};
-use num_traits::ToPrimitive;
 
 const SIMD_THRESHOLD: usize = 8;
 

@@ -311,36 +311,6 @@ impl Value {
     }
 
     #[inline]
-    pub fn from_numbers(v: Vec<Fraction>) -> Self {
-        if v.is_empty() {
-            return Self::nil();
-        }
-        if v.len() == 1 {
-            return Self {
-                data: ValueData::Scalar(v[0].clone()),
-            };
-        }
-        Self {
-            data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect::<Vec<Value>>())),
-        }
-    }
-
-    #[inline]
-    pub fn from_vec(v: Vec<Fraction>) -> Self {
-        if v.is_empty() {
-            return Self::nil();
-        }
-        if v.len() == 1 {
-            return Self {
-                data: ValueData::Scalar(v[0].clone()),
-            };
-        }
-        Self {
-            data: ValueData::Vector(Rc::new(v.into_iter().map(Value::from_fraction).collect::<Vec<Value>>())),
-        }
-    }
-
-    #[inline]
     pub fn is_code_block(&self) -> bool {
         matches!(self.data, ValueData::CodeBlock(_))
     }

@@ -3,9 +3,7 @@ use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 use num_bigint::BigInt;
-#[allow(unused_imports)]
-use num_traits::Zero;
-use num_traits::{One, ToPrimitive};
+use num_traits::ToPrimitive;
 
 #[inline]
 pub(crate) fn is_vector_value(val: &Value) -> bool {
@@ -197,6 +195,7 @@ pub(crate) fn push_flow_result(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use num_traits::One;
 
     #[test]
     fn test_normalize_index_positive() {

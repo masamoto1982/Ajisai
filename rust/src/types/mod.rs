@@ -137,19 +137,6 @@ impl SemanticRegistry {
         self.stack_hints.extend(hints);
     }
 
-    pub fn insert_hint(&mut self, index: usize, hint: DisplayHint) {
-        if index <= self.stack_hints.len() {
-            self.stack_hints.insert(index, hint);
-        }
-    }
-
-    pub fn remove_hint(&mut self, index: usize) -> DisplayHint {
-        if index < self.stack_hints.len() {
-            self.stack_hints.remove(index)
-        } else {
-            DisplayHint::Auto
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

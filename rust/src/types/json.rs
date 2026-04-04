@@ -4,8 +4,7 @@ use std::rc::Rc;
 use crate::types::{Value, ValueData, MAX_VISIBLE_DIMENSIONS};
 use crate::types::fraction::Fraction;
 use crate::error::{Result, AjisaiError};
-use num_bigint::BigInt;
-use num_traits::{One, ToPrimitive};
+use num_traits::ToPrimitive;
 
 pub fn deserialize_json_to_value(json_val: serde_json::Value, depth: usize) -> Result<Value> {
     match json_val {
