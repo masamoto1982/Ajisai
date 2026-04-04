@@ -70,19 +70,19 @@
 
         <section>
           <h3>Lesson 3: Defining Words</h3>
-          <p>Use code block syntax <code>: ... ;</code> to define words:</p>
+          <p>Use code block syntax <code>{ ... }</code> (or <code>( ... )</code>) to define words:</p>
 <pre><code># Define a word
-: [ 2 ] * ; 'DOUBLE' DEF
+{ [ 2 ] * } 'DOUBLE' DEF
 
 # Use it
 [ 5 ] DOUBLE                 # Result: [ 10 ]
 [ 3 ] DOUBLE                 # Result: [ 6 ]
 
 # More examples
-: DUP * ; 'SQUARE' DEF
+{ DUP * } 'SQUARE' DEF
 [ 4 ] SQUARE                 # Result: [ 16 ]
 
-: [ 2 ] MOD [ 0 ] = ; 'EVEN?' DEF
+{ [ 2 ] MOD [ 0 ] = } 'EVEN?' DEF
 [ 4 ] EVEN?                  # Result: [ TRUE ]</code></pre>
         </section>
 
@@ -105,16 +105,16 @@
 
 # Using inline code blocks
 [ 1 2 3 4 5 ]
-  == : [ 2 ] * ; MAP              # [ 2 4 6 8 10 ]
-  == : [ 5 ] < NOT ; FILTER       # [ 6 8 10 ]</code></pre>
+  == { [ 2 ] * } MAP              # [ 2 4 6 8 10 ]
+  == { [ 5 ] < NOT } FILTER       # [ 6 8 10 ]</code></pre>
         </section>
 
         <section>
           <h3>Lesson 4.5: Pipeline &amp; Nil Coalescing</h3>
           <p><code>==</code> is a visual marker for data flow (no-op):</p>
 <pre><code>[ 1 2 3 ]
-  == : [ 2 ] * ; MAP       # Clear flow visualization
-  == [ 0 ] : + ; FOLD</code></pre>
+  == { [ 2 ] * } MAP       # Clear flow visualization
+  == [ 0 ] { + } FOLD</code></pre>
 
           <p><code>=&gt;</code> returns alternative when NIL:</p>
 <pre><code>NIL =&gt; [ 0 ]            # Result: [ 0 ]
@@ -142,7 +142,7 @@
           <p>Define AVERAGE for a vector.</p>
           <details>
             <summary>Solution</summary>
-<pre><code>: DUP [ 0 ] '+' FOLD SWAP LENGTH / ; 'AVERAGE' DEF
+<pre><code>{ DUP [ 0 ] '+' FOLD SWAP LENGTH / } 'AVERAGE' DEF
 [ 2 4 6 8 10 ] AVERAGE    # Result: [ 6 ]</code></pre>
           </details>
 
@@ -157,7 +157,7 @@
           <p>Sum numbers 1-20 divisible by 3.</p>
           <details>
             <summary>Solution</summary>
-<pre><code>: [ 3 ] MOD [ 0 ] = ; 'DIV3?' DEF
+<pre><code>{ [ 3 ] MOD [ 0 ] = } 'DIV3?' DEF
 [ 1 ] [ 20 ] RANGE
   'DIV3?' FILTER
   [ 0 ] '+' FOLD    # Result: [ 63 ]</code></pre>

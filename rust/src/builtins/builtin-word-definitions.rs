@@ -263,19 +263,11 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
             "value { guard1 } { body1 } { IDLE } { else_body } COND",
             "form",
         ),
-        // Code block
-        (
-            ":",
-            "Code block start",
-            ": code ; → pushes code block to stack",
-            "none",
-        ),
-        (";", "Code block end", ": code ; → ends code block", "none"),
         // Pipeline and Nil Coalescing
         (
             "==",
             "Pipeline operator (visual marker)",
-            "[ 1 2 3 ] == : [ 2 ] * ; MAP",
+            "[ 1 2 3 ] == { [ 2 ] * } MAP",
             "none",
         ),
         (
@@ -288,19 +280,19 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
         (
             "MAP",
             "Apply code to each element",
-            "[ 1 2 3 ] : [ 2 ] * ; MAP → [ 2 4 6 ]",
+            "[ 1 2 3 ] { [ 2 ] * } MAP → [ 2 4 6 ]",
             "form",
         ),
         (
             "FILTER",
             "Filter elements by condition",
-            "[ 1 2 3 4 ] : [ 2 ] MOD [ 0 ] = ; FILTER → [ 2 4 ]",
+            "[ 1 2 3 4 ] { [ 2 ] MOD [ 0 ] = } FILTER → [ 2 4 ]",
             "form",
         ),
         (
             "FOLD",
             "Fold with initial value",
-            "[ 1 2 3 4 ] [ 0 ] : + ; FOLD → [ 10 ]",
+            "[ 1 2 3 4 ] [ 0 ] { + } FOLD → [ 10 ]",
             "form",
         ),
         // I/O
@@ -314,7 +306,7 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
         (
             "DEF",
             "Define custom word",
-            ": [ 2 ] * ; 'DOUBLE' DEF",
+            "{ [ 2 ] * } 'DOUBLE' DEF",
             "none",
         ),
         ("DEL", "Delete custom word", "'WORD' DEL", "none"),
