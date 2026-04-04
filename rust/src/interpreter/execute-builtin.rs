@@ -4,8 +4,8 @@ use crate::types::{DisplayHint, FlowToken, Token, Value};
 
 use super::interpreter_core::MAX_CALL_DEPTH;
 use super::{
-    arithmetic, cast, comparison, control, datetime, execute_def, execute_del, execute_lookup,
-    hash, higher_order, higher_order_fold, io, logic, modules, random, sort, tensor_cmds,
+    arithmetic, cast, comparison, control, control_cond, datetime, execute_def, execute_del,
+    execute_lookup, hash, higher_order, higher_order_fold, io, logic, modules, random, sort, tensor_cmds,
     tensor_ops, vector_ops, Interpreter,
 };
 
@@ -111,6 +111,7 @@ impl Interpreter {
             "IDLE" => Ok(()),
             "EXEC" => control::op_exec(self),
             "EVAL" => control::op_eval(self),
+            "COND" => control_cond::op_cond(self),
             "DEF" => execute_def::op_def(self),
             "DEL" => execute_del::op_del(self),
             "?" => execute_lookup::op_lookup(self),

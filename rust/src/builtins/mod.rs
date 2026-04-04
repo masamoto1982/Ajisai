@@ -6,6 +6,8 @@ mod builtin_word_details;
 mod detail_lookup_arithmetic_logic;
 #[path = "detail-lookup-control-higher-order.rs"]
 mod detail_lookup_control_higher_order;
+#[path = "detail-lookup-cond.rs"]
+mod detail_lookup_cond;
 #[path = "detail-lookup-io-module.rs"]
 mod detail_lookup_io_module;
 #[path = "detail-lookup-modifier.rs"]

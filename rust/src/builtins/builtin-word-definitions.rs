@@ -257,6 +257,12 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
         ),
         // Control
         ("IDLE", "No-op (passes through flow unchanged)", "IDLE", "none"),
+        (
+            "COND",
+            "Evaluate guard/body pairs and execute the first matching branch",
+            "value { guard1 } { body1 } { IDLE } { else_body } COND",
+            "form",
+        ),
         // Code block
         (
             ":",

@@ -35,6 +35,15 @@
         <h2>Control Flow</h2>
 
         <section>
+          <h3>Conditional (COND)</h3>
+          <p>Evaluates guard/body pairs and executes the first matching branch.</p>
+<pre><code>[ 42 ]
+  { [ 0 ] < }   { 'negative' }
+  { IDLE }      { 'positive' }
+  COND</code></pre>
+        </section>
+
+        <section>
           <h3>Pipeline Operator (==)</h3>
           <p>Visual marker for data flow (no-op). Makes complex transformations readable:</p>
 <pre><code>[ 1 2 3 4 5 ]

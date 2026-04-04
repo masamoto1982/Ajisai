@@ -238,6 +238,28 @@ export const TEST_CASES: TestCase[] = [
     },
 
     // ============================================
+    // Conditional
+    // ============================================
+    {
+        name: "COND - basic branch",
+        code: "[ -1 ] { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND",
+        expectedStack: [createString('negative')],
+        category: "Conditional"
+    },
+    {
+        name: "COND - else branch",
+        code: "[ 7 ] { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND",
+        expectedStack: [createString('positive')],
+        category: "Conditional"
+    },
+    {
+        name: "COND - exhausted error",
+        code: "[ 7 ] { [ 0 ] < } { 'negative' } COND",
+        expectError: true,
+        category: "Conditional"
+    },
+
+    // ============================================
     // Vector Operations
     // ============================================
     {
