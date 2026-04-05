@@ -41,6 +41,12 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         if chars[i] == '|' {
             return Err("'|' (block separator) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
         }
+        if chars[i] == '$' {
+            return Err("'$' (branch guard) has been removed. Use COND for conditional branching.".to_string());
+        }
+        if chars[i] == '&' {
+            return Err("'&' (loop guard) has been removed. Use FOLD or recursive COND for iteration.".to_string());
+        }
 
         // 3. 単一文字トークン（括弧、|など）
         if let Some((token, consumed)) = parse_token_from_single_char(chars[i]) {
