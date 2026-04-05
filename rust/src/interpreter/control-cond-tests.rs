@@ -82,3 +82,79 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod demo_word_gui_mode_tests {
+    use crate::interpreter::Interpreter;
+
+    fn create_gui_interpreter() -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.gui_mode = true;
+        interp
+    }
+
+    async fn setup_demo_words(interp: &mut Interpreter) {
+        interp.execute("{ 'Hello' ,, PRINT } 'SAY-HELLO' DEF").await.unwrap();
+        interp.execute("{ 'World' ,, PRINT } 'SAY-WORLD' DEF").await.unwrap();
+        interp.execute("{ '!' ,, PRINT } 'SAY-BANG' DEF").await.unwrap();
+        interp.execute("{ { [ 1 ] = } { SAY-HELLO } { [ 2 ] = } { SAY-WORLD } { IDLE } { SAY-BANG } COND } 'GREET' DEF").await.unwrap();
+        interp.execute("{ { GREET } MAP } 'GREET-ALL' DEF").await.unwrap();
+        let _ = interp.collect_output();
+    }
+
+    #[tokio::test]
+    async fn test_cond_guard_unwraps_vector_boolean_in_gui_mode() {
+        let mut interp = create_gui_interpreter();
+        let r = interp
+            .execute("[ 1 ] { [ 1 ] = } { 'yes' } { IDLE } { 'no' } COND")
+            .await;
+        assert!(r.is_ok(), "COND should handle gui-mode vector boolean: {:?}", r);
+    }
+
+    #[tokio::test]
+    async fn test_greet_in_gui_mode() {
+        let mut interp = create_gui_interpreter();
+        setup_demo_words(&mut interp).await;
+
+        let r = interp.execute("[ 1 ] GREET").await;
+        assert!(r.is_ok(), "GREET 1 failed: {:?}", r);
+        let output = interp.collect_output();
+        assert!(output.contains("Hello"), "Expected Hello, got: {}", output);
+    }
+
+    #[tokio::test]
+    async fn test_greet_branch_2_in_gui_mode() {
+        let mut interp = create_gui_interpreter();
+        setup_demo_words(&mut interp).await;
+
+        let r = interp.execute("[ 2 ] GREET").await;
+        assert!(r.is_ok(), "GREET 2 failed: {:?}", r);
+        let output = interp.collect_output();
+        assert!(output.contains("World"), "Expected World, got: {}", output);
+    }
+
+    #[tokio::test]
+    async fn test_greet_else_branch_in_gui_mode() {
+        let mut interp = create_gui_interpreter();
+        setup_demo_words(&mut interp).await;
+
+        let r = interp.execute("[ 99 ] GREET").await;
+        assert!(r.is_ok(), "GREET 99 failed: {:?}", r);
+        let output = interp.collect_output();
+        assert!(output.contains("!"), "Expected !, got: {}", output);
+    }
+
+    #[tokio::test]
+    async fn test_greet_all_in_gui_mode() {
+        let mut interp = create_gui_interpreter();
+        setup_demo_words(&mut interp).await;
+
+        let r = interp.execute("[ 1 2 3 ] GREET-ALL").await;
+        assert!(r.is_ok(), "GREET-ALL failed: {:?}", r);
+        let output = interp.collect_output();
+        assert!(output.contains("Hello"), "Expected Hello in output, got: {}", output);
+        assert!(output.contains("World"), "Expected World in output, got: {}", output);
+        assert!(output.contains("!"), "Expected ! in output, got: {}", output);
+    }
+}
+

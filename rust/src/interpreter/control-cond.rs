@@ -91,7 +91,20 @@ fn evaluate_guard_with_value(interp: &mut Interpreter, guard_tokens: &[Token], v
     let result_value: Value = guard_result_value.ok_or_else(|| {
         AjisaiError::from("COND: guard must return TRUE or FALSE, got empty stack")
     })?;
-    let scalar = result_value
+    let unwrapped: &Value = if result_value.as_scalar().is_none() {
+        if result_value.len() == 1 {
+            result_value.get_child(0).ok_or_else(|| {
+                AjisaiError::from("COND: guard must return TRUE or FALSE, got non-scalar")
+            })?
+        } else {
+            return Err(AjisaiError::from(
+                "COND: guard must return TRUE or FALSE, got non-scalar",
+            ));
+        }
+    } else {
+        &result_value
+    };
+    let scalar = unwrapped
         .as_scalar()
         .ok_or_else(|| AjisaiError::from("COND: guard must return TRUE or FALSE, got non-scalar"))?;
     if scalar.is_zero() {
