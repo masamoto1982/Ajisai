@@ -3,7 +3,7 @@ use crate::interpreter::value_extraction_helpers::{
     extract_integer_from_value, extract_word_name_from_value, is_vector_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::{Token, Value, ValueData};
+use crate::types::{DisplayHint, Token, Value, ValueData};
 
 pub(crate) enum ExecutableCode {
     WordName(String),
@@ -108,7 +108,12 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 match execute_executable_code(interp, &executable) {
                     Ok(_) => match interp.stack.pop() {
                         Some(result_val) => {
-                            if is_vector_value(&result_val) && result_val.len() == 1 {
+                            let result_hint: DisplayHint =
+                                interp.semantic_registry.pop_hint();
+                            if is_vector_value(&result_val)
+                                && result_val.len() == 1
+                                && result_hint != DisplayHint::String
+                            {
                                 results.push(result_val.get_child(0).unwrap().clone());
                             } else {
                                 results.push(result_val);

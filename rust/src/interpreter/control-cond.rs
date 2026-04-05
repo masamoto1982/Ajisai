@@ -134,6 +134,7 @@ fn execute_cond_body(interp: &mut Interpreter, body_tokens: &[Token], value: &Va
     interp.safe_mode = false;
 
     let execution_result: Result<usize> = interp.execute_section_core(body_tokens, 0);
+    let body_result_hint: DisplayHint = interp.semantic_registry.pop_hint();
     let body_result_value: Option<Value> = interp.stack.pop();
 
     interp.stack = saved_stack;
@@ -146,7 +147,7 @@ fn execute_cond_body(interp: &mut Interpreter, body_tokens: &[Token], value: &Va
     let result_value: Value =
         body_result_value.ok_or_else(|| AjisaiError::from("COND: body must return a value"))?;
     interp.stack.push(result_value);
-    interp.semantic_registry.push_hint(DisplayHint::Auto);
+    interp.semantic_registry.push_hint(body_result_hint);
     Ok(())
 }
 
