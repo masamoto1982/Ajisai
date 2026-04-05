@@ -2,23 +2,32 @@ import type { UserWord } from '../wasm-interpreter-types';
 
 // サンプルワードの定義を更新した際はバージョンをインクリメントすること。
 // persistence.ts のマイグレーションロジックが IndexedDB の古い定義を自動更新する。
-export const DEMO_WORDS_VERSION = 6;
+export const DEMO_WORDS_VERSION = 7;
 
 export const DEMO_USER_WORDS: UserWord[] = [
     {
         name: 'SAY-HELLO',
-        definition: "'Hello' PRINT",
-        description: 'サンプル① — Outputに「Hello」を出力',
+        definition: "'Hello' ,, PRINT",
+        description: 'Outputに「Hello」を出力し、文字列を返す',
     },
     {
         name: 'SAY-WORLD',
-        definition: "'World' PRINT",
-        description: 'サンプル② — Outputに「World」を出力',
+        definition: "'World' ,, PRINT",
+        description: 'Outputに「World」を出力し、文字列を返す',
     },
     {
-        name: 'SAY-HELLO-WORLD',
-        definition: "SAY-HELLO SAY-WORLD 'Hello World' PRINT",
-        description:
-            'サンプル⑤ — Hello、World、Hello Worldを順に出力',
+        name: 'SAY-BANG',
+        definition: "'!' ,, PRINT",
+        description: 'Outputに「!」を出力し、文字列を返す',
+    },
+    {
+        name: 'GREET',
+        definition: "{ [ 1 ] = } { SAY-HELLO } { [ 2 ] = } { SAY-WORLD } { IDLE } { SAY-BANG } COND",
+        description: '分岐 — 1→Hello、2→World、他→! を出力（COND）',
+    },
+    {
+        name: 'GREET-ALL',
+        definition: '{ GREET } MAP',
+        description: '反復 — ベクトルの各要素をGREETで出力（MAP）',
     },
 ];
