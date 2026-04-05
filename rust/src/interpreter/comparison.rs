@@ -170,7 +170,24 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                 (a_val, b_val)
             };
 
-            let result: bool = a_val.data == b_val.data;
+            let result: bool = if a_val.data == b_val.data {
+                true
+            } else {
+                // Scalar(x) と Vector([Scalar(x)]) は意味的に等価として扱う
+                match (&a_val.data, &b_val.data) {
+                    (ValueData::Scalar(_), ValueData::Vector(children))
+                        if children.len() == 1 =>
+                    {
+                        a_val.data == children[0].data
+                    }
+                    (ValueData::Vector(children), ValueData::Scalar(_))
+                        if children.len() == 1 =>
+                    {
+                        children[0].data == b_val.data
+                    }
+                    _ => false,
+                }
+            };
             if interp.gui_mode {
                 interp
                     .stack
