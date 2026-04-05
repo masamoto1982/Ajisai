@@ -1,12 +1,29 @@
-import { createDisplay, Display, DisplayElements } from './output-display-renderer';
-import { createVocabularyManager, VocabularyManager, VocabularyElements } from './vocabulary-state-controller';
+import { createDisplay, Display } from './output-display-renderer';
+import { createVocabularyManager, VocabularyManager } from './vocabulary-state-controller';
 import { createEditor, Editor } from './code-input-editor';
-import { createMobileHandler, MobileHandler, MobileElements, ViewMode } from './mobile-view-switcher';
+import { createMobileHandler, MobileHandler, ViewMode } from './mobile-view-switcher';
 import { createModuleTabManager, ModuleTabManager } from './module-selector-sheets';
 import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter } from '../wasm-interpreter-types';
+import {
+    GUIElements,
+    cacheElements,
+    extractDisplayElements,
+    extractVocabularyElements,
+    extractMobileElements
+} from './gui-dom-cache';
+import {
+    createLayoutState,
+    applyAreaState,
+    updateHighlights,
+    updateEditorPlaceholder,
+    checkStackHighlightAll,
+    checkStackHighlightTop,
+    LayoutState
+} from './gui-layout-state';
+import { switchDictionarySheet } from './gui-dictionary-sheet';
 
 declare global {
     interface Window {
@@ -14,34 +31,7 @@ declare global {
     }
 }
 
-export interface GUIElements {
-    readonly codeInput: HTMLTextAreaElement;
-    readonly runBtn: HTMLButtonElement;
-    readonly clearBtn: HTMLButtonElement;
-    readonly testBtn: HTMLButtonElement;
-    readonly exportBtn: HTMLButtonElement;
-    readonly importBtn: HTMLButtonElement;
-    readonly outputDisplay: HTMLElement;
-    readonly stackDisplay: HTMLElement;
-    readonly builtInWordsDisplay: HTMLElement;
-    readonly userWordsDisplay: HTMLElement;
-    readonly builtInWordInfo: HTMLElement;
-    readonly userWordInfo: HTMLElement;
-    readonly userDictionarySelect: HTMLSelectElement;
-    readonly dictionarySearch: HTMLInputElement;
-    readonly dictionarySearchClearBtn: HTMLButtonElement;
-    readonly dictionarySheetSelect: HTMLSelectElement;
-    readonly inputArea: HTMLElement;
-    readonly outputArea: HTMLElement;
-    readonly stackArea: HTMLElement;
-    readonly dictionaryArea: HTMLElement;
-    readonly editorPanel: HTMLElement;
-    readonly statePanel: HTMLElement;
-    readonly leftPanelSelect: HTMLSelectElement;
-    readonly rightPanelSelect: HTMLSelectElement;
-    readonly mobilePanelSelect: HTMLSelectElement;
-    readonly copyOutputBtn: HTMLButtonElement;
-}
+export type { GUIElements };
 
 export interface GUI {
     readonly init: () => Promise<void>;
@@ -54,79 +44,6 @@ export interface GUI {
     readonly extractPersistence: () => Persistence;
     readonly extractExecutionController: () => ExecutionController;
 }
-
-const cacheElements = (): GUIElements => ({
-    codeInput: document.getElementById('code-input') as HTMLTextAreaElement,
-    runBtn: document.getElementById('run-btn') as HTMLButtonElement,
-    clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
-    testBtn: document.getElementById('test-btn') as HTMLButtonElement,
-    exportBtn: document.getElementById('export-btn') as HTMLButtonElement,
-    importBtn: document.getElementById('import-btn') as HTMLButtonElement,
-    outputDisplay: document.getElementById('output-display')!,
-    stackDisplay: document.getElementById('stack-display')!,
-    builtInWordsDisplay: document.getElementById('core-words-display')!,
-    userWordsDisplay: document.getElementById('user-words-display')!,
-    builtInWordInfo: document.getElementById('core-word-info')!,
-    userWordInfo: document.getElementById('user-word-info')!,
-    userDictionarySelect: document.getElementById('user-dictionary-select') as HTMLSelectElement,
-    dictionarySearch: document.getElementById('dictionary-search') as HTMLInputElement,
-    dictionarySearchClearBtn: document.getElementById('dictionary-search-clear-btn') as HTMLButtonElement,
-    dictionarySheetSelect: document.getElementById('dictionary-sheet-select') as HTMLSelectElement,
-    inputArea: document.querySelector('.input-area')!,
-    outputArea: document.querySelector('.output-area')!,
-    stackArea: document.querySelector('.stack-area')!,
-    dictionaryArea: document.getElementById('dictionary-panel')!,
-    editorPanel: document.getElementById('editor-panel')!,
-    statePanel: document.getElementById('state-panel')!,
-    leftPanelSelect: document.getElementById('left-panel-select') as HTMLSelectElement,
-    rightPanelSelect: document.getElementById('right-panel-select') as HTMLSelectElement,
-    mobilePanelSelect: document.getElementById('mobile-panel-select') as HTMLSelectElement,
-    copyOutputBtn: document.getElementById('copy-output-btn') as HTMLButtonElement
-});
-
-const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
-    outputDisplay: elements.outputDisplay,
-    stackDisplay: elements.stackDisplay
-});
-
-const extractVocabularyElements = (elements: GUIElements): VocabularyElements => ({
-    builtInWordsDisplay: elements.builtInWordsDisplay,
-    userWordsDisplay: elements.userWordsDisplay,
-    builtInWordInfo: elements.builtInWordInfo,
-    userWordInfo: elements.userWordInfo,
-    userDictionarySelect: elements.userDictionarySelect
-});
-
-const extractMobileElements = (elements: GUIElements): MobileElements => ({
-    inputArea: elements.inputArea,
-    outputArea: elements.outputArea,
-    stackArea: elements.stackArea,
-    dictionaryArea: elements.dictionaryArea
-});
-
-const checkStackHighlightAll = (content: string): boolean => /(\s|^)\.\.(\s|$)/.test(content);
-const checkStackHighlightTop = (content: string): boolean => /(\s|^)\.(\s|$)/.test(content);
-
-const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
-const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
-
-
-const DESKTOP_EDITOR_PLACEHOLDER = [
-    'Enter code here',
-    '',
-    'Run → Shift+Enter',
-    'Step → Ctrl+Enter',
-    'Abort → Escape',
-    'Reset → Ctrl+Alt+Enter',
-    'Autocomplete → Ctrl+Space / Tab / ↑↓'
-].join('\n');
-
-const MOBILE_EDITOR_PLACEHOLDER = [
-    'Enter code here',
-    '',
-    'Run → Tap the Run button',
-    'Autocomplete → Tap suggestions while typing'
-].join('\n');
 
 const collectAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
@@ -171,111 +88,15 @@ export const createGUI = (): GUI => {
     let persistence: Persistence;
     let executionController: ExecutionController;
     let moduleTabManager: ModuleTabManager;
-    let currentMode: ViewMode = 'input';
-    let currentLeftMode: ViewMode = 'input';
-    let currentRightMode: ViewMode = 'stack';
+    let layoutState: LayoutState;
 
-
-    const updateEditorPlaceholder = (): void => {
-        if (!elements?.codeInput) return;
-        elements.codeInput.placeholder = mobile.isMobile()
-            ? MOBILE_EDITOR_PLACEHOLDER
-            : DESKTOP_EDITOR_PLACEHOLDER;
-    };
-
-    const syncSelectorState = (leftMode: ViewMode, rightMode: ViewMode): void => {
-        elements.leftPanelSelect.value = leftMode;
-        elements.rightPanelSelect.value = rightMode;
-    };
-
-    const syncMobileSelectorState = (mode: ViewMode): void => {
-        elements.mobilePanelSelect.value = mode;
-    };
-
-    const switchDictionarySheet = (sheetId: string): void => {
-        const allSheets = elements.dictionaryArea.querySelectorAll('.dictionary-sheet');
-        allSheets.forEach(sheet => {
-            (sheet as HTMLElement).hidden = true;
-            sheet.classList.remove('active');
-        });
-
-        const target = document.getElementById(`dictionary-sheet-${sheetId}`);
-        if (target) {
-            target.hidden = false;
-            target.classList.add('active');
-        }
-    };
-
-    const syncDesktopLayout = (): void => {
-        elements.editorPanel.hidden = false;
-        elements.statePanel.hidden = false;
-        elements.inputArea.hidden = currentLeftMode !== 'input';
-        elements.outputArea.hidden = currentLeftMode !== 'output';
-        elements.stackArea.hidden = currentRightMode !== 'stack';
-        elements.dictionaryArea.hidden = currentRightMode !== 'dictionary';
-    };
-
-    const isRightMode = (mode: ViewMode): boolean =>
-        RIGHT_TAB_MODES.includes(mode);
-
-    const updateDesktopModes = (mode: ViewMode): void => {
-        if (LEFT_TAB_MODES.includes(mode)) {
-            currentLeftMode = mode;
-        }
-        if (isRightMode(mode)) {
-            currentRightMode = mode;
-            if (mode === 'dictionary') {
-                currentLeftMode = 'input';
-            }
-        }
-    };
-
-    const fallbackIfModuleTabRemoved = (): void => {
-        const currentSheet = elements.dictionarySheetSelect?.value;
-        if (currentSheet?.startsWith('module-') && !moduleTabManager.lookupModuleArea(currentSheet)) {
-            elements.dictionarySheetSelect.value = 'core';
-            switchDictionarySheet('core');
-        }
-    };
-
-    const applyAreaState = (mode: ViewMode): void => {
-        if (mobile.isMobile()) {
-            mobile.updateView(mode);
-            document.body.dataset.activeArea = mode;
-            syncMobileSelectorState(mode);
-            return;
-        }
-
-        updateDesktopModes(mode);
-        fallbackIfModuleTabRemoved();
-        syncDesktopLayout();
-        document.body.dataset.activeArea = currentRightMode;
-        syncSelectorState(currentLeftMode, currentRightMode);
+    const doSwitchDictionarySheet = (sheetId: string): void => {
+        switchDictionarySheet(elements.dictionaryArea, sheetId);
     };
 
     const switchArea = (mode: ViewMode): void => {
-        currentMode = mode;
-        applyAreaState(mode);
-    };
-
-    const updateHighlights = (content: string): void => {
-        const hasStackAllWord = checkStackHighlightAll(content);
-        const hasStackTopWord = checkStackHighlightTop(content) || !hasStackAllWord;
-
-        if (hasStackAllWord) {
-            elements.stackDisplay.classList.add('highlight-all');
-        } else {
-            elements.stackDisplay.classList.remove('highlight-all');
-        }
-
-        if (hasStackTopWord && !hasStackAllWord) {
-            elements.stackDisplay.classList.add('highlight-top');
-        } else {
-            elements.stackDisplay.classList.remove('highlight-top');
-        }
-
-        elements.stackDisplay.classList.remove('blink-all');
-        elements.stackDisplay.classList.remove('blink-top');
+        layoutState.currentMode = mode;
+        applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, mode);
     };
 
     const updateAllDisplays = (): void => {
@@ -289,14 +110,14 @@ export const createGUI = (): GUI => {
 
             if (newSheetIds.length > 0) {
                 const lastSheetId: string = newSheetIds[newSheetIds.length - 1]!;
-                if (currentRightMode !== 'dictionary' || (mobile.isMobile() && currentMode !== 'dictionary')) {
+                if (layoutState.currentRightMode !== 'dictionary' || (mobile.isMobile() && layoutState.currentMode !== 'dictionary')) {
                     switchArea('dictionary');
                 }
                 elements.dictionarySheetSelect.value = lastSheetId;
-                switchDictionarySheet(lastSheetId);
+                doSwitchDictionarySheet(lastSheetId);
             }
 
-            updateHighlights(elements.codeInput.value);
+            updateHighlights(elements, elements.codeInput.value);
         } catch (error) {
             console.error('Failed to update display:', error);
             display.renderError(new Error('Failed to update display.'));
@@ -362,7 +183,7 @@ export const createGUI = (): GUI => {
 
         elements.dictionarySheetSelect.addEventListener('change', () => {
             const selectedValue = elements.dictionarySheetSelect.value;
-            switchDictionarySheet(selectedValue);
+            doSwitchDictionarySheet(selectedValue);
         });
 
         elements.testBtn?.addEventListener('click', async () => {
@@ -378,7 +199,7 @@ export const createGUI = (): GUI => {
 
         elements.outputArea.addEventListener('click', (e: MouseEvent) => {
             if ((e.target as HTMLElement).closest('button, a')) return;
-            if (!mobile.isMobile() && currentLeftMode === 'output') {
+            if (!mobile.isMobile() && layoutState.currentLeftMode === 'output') {
                 switchArea('input');
             }
         });
@@ -409,8 +230,8 @@ export const createGUI = (): GUI => {
         });
 
         window.addEventListener('resize', () => {
-            applyAreaState(currentMode);
-            updateEditorPlaceholder();
+            applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, layoutState.currentMode);
+            updateEditorPlaceholder(elements, mobile);
         });
 
         window.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -434,12 +255,13 @@ export const createGUI = (): GUI => {
         console.log('[GUI] Initializing GUI...');
 
         elements = cacheElements();
+        layoutState = createLayoutState();
         mobile = createMobileHandler(extractMobileElements(elements), {
             onModeChange: (mode) => switchArea(mode)
         });
         display = createDisplay(extractDisplayElements(elements));
         display.init();
-        updateEditorPlaceholder();
+        updateEditorPlaceholder(elements, mobile);
 
         moduleTabManager = createModuleTabManager({
             selectEl: elements.dictionarySheetSelect,
@@ -459,7 +281,7 @@ export const createGUI = (): GUI => {
                     editor.removeLastWord();
                 }
             },
-            onSheetChange: (sheetId: string) => switchDictionarySheet(sheetId),
+            onSheetChange: (sheetId: string) => doSwitchDictionarySheet(sheetId),
             onSearchInput: (filter: string) => {
                 elements.dictionarySearch.value = filter;
                 vocabulary.updateSearchFilter(filter);
@@ -486,7 +308,7 @@ export const createGUI = (): GUI => {
         await persistence.init();
 
         editor = createEditor(elements.codeInput, {
-            onContentChange: updateHighlights,
+            onContentChange: (content) => updateHighlights(elements, content),
             onSwitchToInputMode: () => switchArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
         });
@@ -538,24 +360,16 @@ export const createGUI = (): GUI => {
         console.log('[GUI] GUI initialization completed');
     };
 
-    const extractElements = (): GUIElements => elements;
-    const extractDisplay = (): Display => display;
-    const extractEditor = (): Editor => editor;
-    const extractVocabulary = (): VocabularyManager => vocabulary;
-    const extractMobile = (): MobileHandler => mobile;
-    const extractPersistence = (): Persistence => persistence;
-    const extractExecutionController = (): ExecutionController => executionController;
-
     return {
         init,
         updateAllDisplays,
-        extractElements,
-        extractDisplay,
-        extractEditor,
-        extractVocabulary,
-        extractMobile,
-        extractPersistence,
-        extractExecutionController
+        extractElements: () => elements,
+        extractDisplay: () => display,
+        extractEditor: () => editor,
+        extractVocabulary: () => vocabulary,
+        extractMobile: () => mobile,
+        extractPersistence: () => persistence,
+        extractExecutionController: () => executionController
     };
 };
 

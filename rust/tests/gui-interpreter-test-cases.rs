@@ -652,12 +652,13 @@ async fn test_def_and_call() {
 
 #[tokio::test]
 async fn test_def_with_branch_guard() {
-    // [ 3 ] is NOT < 1, so default `[ 0 ] *` runs → 3 * 0 = 0
-    let stack = run("{ $ { ,, [ 1 ] < } { [ 99 ] * } $ { [ 0 ] * } } 'GUARD' DEF\n[ 3 ] GUARD")
+    // [ 3 ] < 10 → TRUE, so first branch runs: 3 * 2 = 6
+    // Migrated from legacy `$` branch guard syntax to COND
+    let stack = run("{ { ,, [ 10 ] < } { [ 2 ] * } { IDLE } { [ 3 ] * } COND } 'GUARD' DEF\n[ 3 ] GUARD")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(0, 1)]);
+    assert_vector_numbers(&stack[0], &[(6, 1)]);
 }
 
 #[tokio::test]
@@ -670,12 +671,15 @@ async fn test_del_delete_custom_word() {
 // ============================================
 
 #[tokio::test]
-async fn test_loop_guard() {
-    let stack = run("[ 0 ] & { ,, [ 5 ] < } { [ 1 ] + }")
+async fn test_cond_multi_branch() {
+    // Test multi-branch COND: [ 10 ] matches second guard (> 5 via reversed <)
+    // Migrated from legacy `&` loop guard syntax; loop construct removed from spec.
+    // Tests COND with multiple guard/body pairs instead.
+    let stack = run("[ 10 ] { ,, [ 0 ] < } { 'negative' } { ,, [ 5 ] < } { 'small' } { IDLE } { 'big' } COND")
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
-    assert_vector_numbers(&stack[0], &[(5, 1)]);
+    assert_string_val(&stack[0], "big");
 }
 
 // ============================================

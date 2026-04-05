@@ -372,4 +372,34 @@ mod tokenizer_regression_tests {
             ]
         );
     }
+
+    // === Removed syntax: explicit tokenizer errors ===
+
+    #[test]
+    fn test_removed_dollar_branch_guard() {
+        let result = tokenize("[ 1 ] $ { TRUE } { [ 2 ] }");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("'$' (branch guard) has been removed"));
+    }
+
+    #[test]
+    fn test_removed_ampersand_loop_guard() {
+        let result = tokenize("[ 0 ] & { ,, [ 5 ] < } { [ 1 ] + }");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("'&' (loop guard) has been removed"));
+    }
+
+    #[test]
+    fn test_removed_colon_code_block() {
+        let result = tokenize(": DUP ;");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("':'"));
+    }
+
+    #[test]
+    fn test_removed_chevron_branch() {
+        let result = tokenize(">> { TRUE }");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("'>>'"));
+    }
 }

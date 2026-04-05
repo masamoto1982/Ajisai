@@ -20,6 +20,7 @@
 この README は **実装済み機能の概要** に限定し、詳細仕様は `SPECIFICATION.md` を参照します。
 
 - 言語意味論・用語定義: `SPECIFICATION.md`
+- 実装クイックスタート: [`docs/dev/implementation-quickstart.md`](docs/dev/implementation-quickstart.md)
 - 実行系実装: `rust/src/interpreter/`
 - 組み込みワード定義: `rust/src/builtins/builtin-word-definitions.rs`
 - Web UI 実装: `js/gui/`
