@@ -13,6 +13,8 @@ pub mod execute_del;
 #[path = "execute-lookup.rs"]
 pub mod execute_lookup;
 pub mod hash;
+#[path = "naming-convention-checker.rs"]
+pub(crate) mod naming_convention_checker;
 #[path = "value-extraction-helpers.rs"]
 pub(crate) mod value_extraction_helpers;
 #[path = "higher-order-operations.rs"]

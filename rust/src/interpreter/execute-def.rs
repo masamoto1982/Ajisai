@@ -159,6 +159,10 @@ pub(crate) fn op_def_inner(
         });
     }
 
+    if let Some(warning) = crate::interpreter::naming_convention_checker::check_word_name_convention(name) {
+        interp.output_buffer.push_str(&format!("{}\n", warning));
+    }
+
     // Module sample collision check — warn but allow DEF
     let mut collision_modules = Vec::new();
     for (module_name, module_dict) in &interp.module_samples {
