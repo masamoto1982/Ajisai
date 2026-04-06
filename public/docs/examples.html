@@ -35,64 +35,62 @@
         <h2>Examples</h2>
 
         <section>
-          <h3>Stream-First Vector Operations</h3>
+          <h3>Vector Operations</h3>
 <pre><code># Create vectors
 [ 1 2 3 4 5 ]
 [ [ 1 2 ] [ 3 4 ] ]
-[ 1 'hello' TRUE ]
 
 # Access elements
-[ 10 20 30 ] [ 0 ] GET     # Result: [ 10 ]
-[ 10 20 30 ] [ -1 ] GET    # Result: [ 30 ]
+[ 10 20 30 ] [ 0 ] GET       # { 10 }
+[ 10 20 30 ] [ -1 ] GET      # { 30 }
 
 # Modify
-[ 1 2 3 ] [ 1 ] [ 99 ] INSERT    # Result: [ 1 99 2 3 ]
-[ 1 2 3 ] [ 1 ] [ 99 ] REPLACE   # Result: [ 1 99 3 ]
-[ 1 2 3 ] [ 1 ] REMOVE           # Result: [ 1 3 ]
+[ 1 3 ] [ 1 2 ] INSERT       # { 1 2 3 }
+[ 1 2 3 ] [ 0 9 ] REPLACE    # { 9 2 3 }
+[ 1 2 3 ] [ 1 ] REMOVE       # { 1 3 }
 
-# Arithmetic with broadcasting
-[ 1 2 3 ] [ 10 ] +               # Result: [ 11 12 13 ]
-[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] +  # Result: [ [ 11 22 ] [ 13 24 ] ]</code></pre>
+# Broadcasting arithmetic
+[ 1 2 3 ] [ 10 ] +                # { 11 12 13 }
+[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] +   # { ( 11 22 ) ( 13 24 ) }</code></pre>
         </section>
 
         <section>
           <h3>Defining Words</h3>
-<pre><code># Double a number
-{ [ 2 ] * } 'DOUBLE' DEF
-[ 5 ] DOUBLE                 # Result: [ 10 ]
+          <p>Define reusable words with code blocks. Ajisai has no stack manipulation words (no DUP, SWAP, ROT, or OVER). Instead, use <code>,,</code> bifurcation, <code>.. GET</code>, or REORDER to access values:</p>
+<pre><code>{ [ 2 ] * } 'DOUBLE' DEF
+[ 5 ] DOUBLE                  # { 10 }
 
-# Square
-{ DUP * } 'SQUARE' DEF
-[ 4 ] SQUARE                 # Result: [ 16 ]
+{ [ 2 ] MOD [ 0 ] = } 'IS-EVEN' DEF
+[ 6 ] IS-EVEN                 # { TRUE }
 
-# Even check
-{ [ 2 ] MOD [ 0 ] = } 'EVEN?' DEF
-[ 6 ] EVEN?                  # Result: [ TRUE ]</code></pre>
+{ [ 1 ] + } 'INCREMENT' DEF
+[ 9 ] INCREMENT               # { 10 }</code></pre>
         </section>
 
         <section>
           <h3>Higher-Order Functions</h3>
-<pre><code># MAP
-[ 1 2 3 4 5 ] 'DOUBLE' MAP       # Result: [ 2 4 6 8 10 ]
+<pre><code># MAP - apply a function to each element
+[ 1 2 3 4 5 ] { [ 2 ] * } MAP       # { 2 4 6 8 10 }
 
-# FILTER
-[ 1 2 3 4 5 6 ] 'EVEN?' FILTER   # Result: [ 2 4 6 ]
+# FILTER - keep elements matching a condition
+[ 1 2 3 4 5 6 ] { [ 2 ] MOD [ 0 ] = } FILTER   # { 2 4 6 }
 
-# FOLD
-[ 1 2 3 4 5 ] [ 0 ] '+' FOLD     # Result: [ 15 ]
-[ 1 2 3 4 5 ] [ 1 ] '*' FOLD     # Result: [ 120 ]
+# FOLD - reduce to a single value
+[ 1 2 3 4 5 ] [ 0 ] { + } FOLD      # { 15 }
+[ 1 2 3 4 5 ] [ 1 ] { * } FOLD      # { 120 }
 
-# Chaining
+# Chaining with the pipeline operator (==)
 [ 1 2 3 4 5 6 7 8 9 10 ]
-  'EVEN?' FILTER         # [ 2 4 6 8 10 ]
-  'SQUARE' MAP           # [ 4 16 36 64 100 ]
-  [ 0 ] '+' FOLD         # [ 220 ]</code></pre>
+  == { [ 2 ] MOD [ 0 ] = } FILTER    # { 2 4 6 8 10 }
+  == { [ 2 ] * } MAP                  # { 4 8 12 16 20 }
+  == [ 0 ] { + } FOLD                 # { 60 }</code></pre>
         </section>
 
         <section>
-          <h3>Conditional Branching with COND</h3>
+          <h3>Conditional Branching</h3>
+          <p>COND takes pairs of guard and body code blocks. IDLE acts as the default "else" clause:</p>
 <pre><code>[ -5 ]
-  { [ 0 ] < }   { 'negative' }
+  { [ 0 ] &lt; }   { 'negative' }
   { [ 0 ] = }   { 'zero' }
   { IDLE }      { 'positive' }
   COND</code></pre>
@@ -100,83 +98,76 @@
 
         <section>
           <h3>Fraction Arithmetic</h3>
-<pre><code># Exact fractions
-[ 1/3 ] [ 1/6 ] +        # Result: [ 1/2 ]
-[ 1/3 ] [ 2 ] *          # Result: [ 2/3 ]
-
-# No rounding errors
-[ 0.1 ] [ 0.2 ] +        # Result: [ 3/10 ]
-
-# Large numbers
-[ 1000000000000 ] [ 1000000000000 ] *</code></pre>
+          <p>All values are exact fractions with arbitrary precision. No floating-point rounding errors:</p>
+<pre><code>[ 1/3 ] [ 1/6 ] +             # { 1/2 }
+[ 1/3 ] [ 2 ] *               # { 2/3 }
+[ 0.1 ] [ 0.2 ] +             # { 3/10 }</code></pre>
         </section>
 
         <section>
           <h3>Matrix Operations</h3>
-<pre><code># Create matrix
+<pre><code># Create a 3x3 matrix from a range
 [ 1 ] [ 9 ] RANGE [ 3 3 ] RESHAPE
-# Result: [ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ]
+# { ( 1 2 3 ) ( 4 5 6 ) ( 7 8 9 ) }
 
-# Transpose
+# Transpose a matrix
 [ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE
-# Result: [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
+# { ( 1 4 ) ( 2 5 ) ( 3 6 ) }
 
-# Row sums
-[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ]
-  '[ 0 ] '+' FOLD' MAP   # Result: [ [ 6 ] [ 15 ] [ 24 ] ]
-
-# Fill with zeros
+# Fill a shape with a value
 [ 3 3 ] [ 0 ] FILL
-# Result: [ [ 0 0 0 ] [ 0 0 0 ] [ 0 0 0 ] ]</code></pre>
+# { ( 0 0 0 ) ( 0 0 0 ) ( 0 0 0 ) }</code></pre>
         </section>
 
         <section>
           <h3>String Processing</h3>
-<pre><code># Reverse string
-[ 'hello' ] CHARS REVERSE JOIN   # Result: [ 'olleh' ]
+<pre><code># Reverse a string
+'hello' CHARS REVERSE JOIN     # 'olleh'
 
 # String length
-[ 'hello' ] CHARS LENGTH         # Result: [ 5 ]
-
-# Palindrome check
-{ CHARS DUP REVERSE = } 'PALINDROME?' DEF
-[ 'radar' ] PALINDROME?          # Result: [ TRUE ]</code></pre>
+'hello' CHARS LENGTH           # { 5 }</code></pre>
         </section>
 
         <section>
           <h3>Date/Time</h3>
-<pre><code># Current time
-NOW                              # Result: [ @2024-11-25 14:00:00 ]
+<pre><code># Current timestamp
+NOW
 
-# Extract components
-NOW 'LOCAL' DATETIME             # Result: [ [ 2024 11 25 14 0 0 ] ]
+# Convert to local datetime components
+NOW 'LOCAL' DATETIME
 
-# Add one hour
-NOW [ 3600 ] +                   # Adds 3600 seconds
-
-# Create specific date
+# Create a timestamp from components
 [ [ 2024 12 25 0 0 0 ] ] 'LOCAL' TIMESTAMP</code></pre>
         </section>
 
         <section>
-          <h3>Stack Mode</h3>
-<pre><code># Stack length
-a b c d e .. LENGTH      # Result: a b c d e [ 5 ]
+          <h3>Stack Mode (..) and Bifurcation (,,)</h3>
+          <p>The <code>..</code> modifier targets the entire stack instead of just the top element. Combined with <code>,,</code> bifurcation, you can inspect the stack without consuming it:</p>
+<pre><code># Bifurcation preserves operands alongside the result
+,, .. LENGTH         # Preserves all stack items, pushes count
+.. REVERSE           # Reverses the entire stack order
+.. CONCAT            # Combines all stack items into one vector</code></pre>
 
-# Get from stack
-a b c d [ 2 ] .. GET     # Result: a b c d [ c ]
+          <p>Examples of bifurcation with individual operations:</p>
+<pre><code>[ 5 ] ,, LENGTH                # { 5 } { 1 }
+[ 3 ] [ 4 ] ,, +              # { 3 } { 4 } { 7 }
+[ 3 1 2 ] ,, SORT             # { 3 1 2 } { 1 2 3 }</code></pre>
+        </section>
 
-# Reverse stack
-a b c .. REVERSE         # Result: c b a
+        <section>
+          <h3>Safe Mode (~)</h3>
+          <p>The <code>~</code> modifier converts errors into NIL, allowing graceful error handling:</p>
+<pre><code># Out-of-bounds access returns NIL instead of an error
+[ 1 2 3 ] [ 10 ] ~ GET        # NIL
 
-# Combine to vector
-a b c d e .. CONCAT      # Result: [ a b c d e ]</code></pre>
+# Combine with nil coalescing (=&gt;) for default values
+[ 1 2 3 ] [ 10 ] ~ GET =&gt; [ 0 ] # { 0 }</code></pre>
         </section>
 
         <section>
           <h3>Practical: Factorial</h3>
-<pre><code># Using FOLD
-[ 1 ] [ 5 ] RANGE [ 1 ] '*' FOLD    # 5! = [ 120 ]</code></pre>
+<pre><code># 5! using RANGE and FOLD
+[ 1 ] [ 5 ] RANGE [ 1 ] { * } FOLD    # 5! = { 120 }</code></pre>
         </section>
       </article>
     </main>

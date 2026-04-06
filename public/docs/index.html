@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ajisai | Fractional Dataflow Language</title>
-  <meta name="description" content="Ajisai - A Fractional Dataflow programming language (FORTH-inherited postfix notation), running on WebAssembly">
+  <title>Ajisai | Vector-oriented Fractional Dataflow Language</title>
+  <meta name="description" content="Ajisai - A vector-oriented, fractional-dataflow programming language with a Rust/WebAssembly core and web GUI">
 
   <!-- 共通設定・テーマ（CSSより先に読み込み） -->
   <script src="../ajisai-config.js?v=20251230"></script>
@@ -33,16 +33,20 @@
       <nav id="js-side-nav" class="side-nav"></nav>
 
       <article id="main-content" class="main-content">
-        <h2>Welcome to Ajisai</h2>
+        <h2>Ajisai &mdash; Vector-oriented Fractional Dataflow Language</h2>
 
         <section class="manifesto" style="background: var(--bg-secondary, #f0f4f8); border-left: 4px solid var(--accent, #6366f1); padding: 1em 1.5em; margin-bottom: 1.5em; border-radius: 4px;">
-          <p><strong>Manifesto:</strong> Ajisai is a <em>Fractional Dataflow</em> language. Every value flows through operations as a fraction &mdash; consumed and producing a remainder, like a TPU pipeline with no materialized intermediates. Each token is spent exactly once, like a UTXO: what enters must exit as result + remainder, preserving the conservation law.</p>
+          <p><strong>Manifesto:</strong> Data flows like water. In Ajisai, every value is a fraction that streams through operations &mdash; each word consumes a portion and passes the remainder downstream. The <em>DisplayHint</em> is merely the surface ripple, not the substance beneath. What you see at the output boundary is interpretation; what flows through the pipeline is pure fractional data, conserved without loss.</p>
         </section>
 
         <section>
           <h3>What is Ajisai?</h3>
-          <p>Ajisai is a Fractional Dataflow programming language (FORTH-inherited postfix notation), featuring a WebAssembly Runtime and an interactive web-based GUI.</p>
-          <p>Values flow through a consume/remainder chain: each operation consumes its input and forwards the remainder, analogous to TPU streaming (no materialized intermediates) and UTXO spending (each token used exactly once).</p>
+          <p>Ajisai is a <strong>vector-oriented, fractional-dataflow</strong> programming language. It inherits postfix (Reverse Polish) notation from FORTH, runs on a <strong>WebAssembly runtime</strong> compiled from Rust, and provides an interactive <strong>web-based GUI</strong>.</p>
+          <p>At its core, Ajisai employs a <strong>two-layer architecture</strong>:</p>
+          <ul>
+            <li><strong>Data Plane</strong> &mdash; Pure Fraction tensors (Scalar, Vector, Record, Nil, CodeBlock). All computation happens here. Values are consumed and remainders forwarded, preserving the conservation law.</li>
+            <li><strong>Semantic Plane</strong> &mdash; DisplayHint (Auto, Number, String, Boolean, DateTime, Nil) and ValueExt metadata live in the SemanticRegistry, queried only at output boundaries (PRINT, STR, GUI). Computation never touches this layer.</li>
+          </ul>
           <p>The name "Ajisai" (hydrangea in Japanese) represents how small words come together to form functionality, like how small flowers form a hydrangea cluster.</p>
         </section>
 
@@ -50,42 +54,42 @@
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F4DA;</div>
             <h4>Fractional Dataflow</h4>
-            <p>FORTH-inherited postfix notation with remainder passing &mdash; values flow, never stall</p>
+            <p>Every value carries a FlowToken with consume/remainder tracking. Operations consume from remaining flow mass; the conservation law guarantees: initial_total = sum(consumed) + final_remainder.</p>
           </div>
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F9EE;</div>
-            <h4>Stream-First Vector Processing</h4>
-            <p>NumPy/APL-style broadcasting and tensor operations over fraction flows</p>
+            <h4>Vector-oriented Processing</h4>
+            <p>NumPy/APL-style shape broadcasting for arithmetic. Support for up to 10 dimensions, with bracket types <code>[] {} ()</code> cycling every 3 levels for display.</p>
           </div>
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F522;</div>
-            <h4>Conservation-Preserving Fraction Arithmetic</h4>
-            <p>All numbers as fractions &mdash; no rounding errors, conservation law guaranteed</p>
+            <h4>Two-layer Architecture</h4>
+            <p>Data Plane holds pure Fraction tensors for computation. Semantic Plane holds DisplayHint and metadata, queried only at output boundaries. Clean separation &mdash; no metadata in the data path.</p>
           </div>
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F680;</div>
             <h4>WebAssembly Runtime</h4>
-            <p>Rust core compiled to WASM for fast browser execution</p>
+            <p>Rust core compiled to WASM with SIMD128 support for fast in-browser execution. Arbitrary-precision fraction arithmetic with no rounding errors.</p>
           </div>
         </div>
 
         <section>
           <h3>Quick Example</h3>
-<pre><code># Vector creation and operations
+<pre><code># Vector creation
 [ 1 2 3 ]               # 1D vector
 [ [ 1 2 ] [ 3 4 ] ]     # 2D nested vector
 
 # Broadcasting arithmetic
-[ 5 ] [ 1 2 3 ] +       # Result: [ 6 7 8 ]
+[ 5 ] [ 1 2 3 ] +       # Result: { 6 7 8 }
 
-# User word definition (code block syntax)
+# User word definition
 { [ 2 ] * } 'DOUBLE' DEF
-[ 5 ] DOUBLE            # Result: [ 10 ]
+[ 5 ] DOUBLE             # Result: { 10 }
 
 # Higher-order functions with pipeline
 [ 1 2 3 4 5 ]
-  == 'DOUBLE' MAP             # Result: [ 2 4 6 8 10 ]
-  == [ 0 ] { + } FOLD         # Sum: [ 30 ]</code></pre>
+  == { [ 2 ] * } MAP           # Result: { 2 4 6 8 10 }
+  == [ 0 ] { + } FOLD          # Sum: { 30 }</code></pre>
         </section>
 
         <section>

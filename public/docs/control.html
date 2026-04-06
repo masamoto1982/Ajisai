@@ -35,17 +35,25 @@
         <h2>Control Flow</h2>
 
         <section>
-          <h3>Conditional (COND)</h3>
-          <p>Evaluates guard/body pairs and executes the first matching branch.</p>
+          <h3>Conditional (COND) <span class="signature-type">(Form)</span></h3>
+          <p>Evaluates guard/body pairs in order. Executes the body of the first guard that returns true. Use <code>{ IDLE }</code> as an else clause that always matches.</p>
 <pre><code>[ 42 ]
   { [ 0 ] < }   { 'negative' }
+  { [ 0 ] = }   { 'zero' }
   { IDLE }      { 'positive' }
   COND</code></pre>
+
+          <h4>Rules</h4>
+          <ul>
+            <li>Guard and body must be paired</li>
+            <li><code>{ IDLE }</code> guard acts as else clause (always matches)</li>
+            <li>No matching guard and no else &rarr; <code>CondExhausted</code> error</li>
+          </ul>
         </section>
 
         <section>
           <h3>Pipeline Operator (==)</h3>
-          <p>Visual marker for data flow (no-op). Makes complex transformations readable:</p>
+          <p>Visual marker for data flow (no-op). Makes multi-step transformations readable:</p>
 <pre><code>[ 1 2 3 4 5 ]
   == { [ 2 ] * } MAP
   == { [ 5 ] < NOT } FILTER
@@ -54,33 +62,63 @@
 
         <section>
           <h3>Nil Coalescing (=>)</h3>
-          <p>Returns alternative value when first value is NIL:</p>
-<pre><code>NIL => [ 0 ]       # Result: [ 0 ]
-[ 42 ] => [ 0 ]    # Result: [ 42 ]
+          <p>Returns an alternative value when the first value is NIL. If the value is not NIL, the alternative is ignored:</p>
+<pre><code>NIL => [ 0 ]       # Result: { 0 }
+[ 42 ] => [ 0 ]    # Result: { 42 }
 
-# Useful for safe defaults
-'key' LOOKUP => [ 'not found' ]</code></pre>
+# Combine with FILTER
+[ 1 2 3 ] { [ 10 ] < NOT } FILTER => [ 0 ]   # { 0 }</code></pre>
+        </section>
+
+        <section>
+          <h3>Safe Mode (~)</h3>
+          <p>Errors become NIL instead of halting execution. Useful for graceful error handling:</p>
+<pre><code>[ 1 2 3 ] [ 10 ] ~ GET            # NIL (instead of index error)
+[ 1 2 3 ] [ 10 ] ~ GET => [ 0 ]   # { 0 } (safe + default)
+
+# "No Change is Error" also caught
+[ 1 ] ~ REVERSE                    # NIL (no change &rarr; NIL)</code></pre>
+
+          <p>Combine modifiers freely (order-independent):</p>
+<pre><code>1 2 3 [ 10 ] ~ ,, .. GET          # 1 2 3 NIL</code></pre>
         </section>
 
         <section>
           <h3>Force Execution (!)</h3>
           <p>Allows DEL/DEF of dependent words:</p>
-<pre><code># Define dependent words
-{ HELPER } 'MAIN' DEF
-{ [ 1 ] } 'HELPER' DEF
+<pre><code>{ [ 2 ] * } 'DOUBLE' DEF
+{ DOUBLE DOUBLE } 'QUAD' DEF
 
-# Cannot delete HELPER normally
-'HELPER' DEL    # Error!
+# Cannot delete DOUBLE normally (QUAD depends on it)
+'DOUBLE' DEL                   # Error!
 
 # Force delete
-! 'HELPER' DEL  # Success</code></pre>
+! 'DOUBLE' DEL                # Success (with warning)</code></pre>
+        </section>
+
+        <section>
+          <h3>Code Blocks</h3>
+          <p><code>{ code }</code> or <code>( code )</code> define deferred code. Used for DEF, MAP, FILTER, FOLD, COND.</p>
+<pre><code>{ [ 2 ] * } 'DOUBLE' DEF
+[ 1 2 3 ] { [ 10 ] + } MAP</code></pre>
+          <p>Code blocks are first-class values (CodeBlock variant in ValueData).</p>
+        </section>
+
+        <section>
+          <h3>Metaprogramming</h3>
+          <ul>
+            <li><code>EXEC</code> &mdash; Execute a vector as code: <code>[ [ 2 ] [ 3 ] * ] EXEC</code> &rarr; <code>{ 6 }</code></li>
+            <li><code>EVAL</code> &mdash; Parse and execute a string: <code>'[ 2 ] [ 3 ] *' EVAL</code> &rarr; <code>{ 6 }</code></li>
+          </ul>
         </section>
 
         <section>
           <h3>Best Practices</h3>
           <ul>
-            <li><strong>Prefer higher-order functions</strong> (MAP, FILTER, FOLD) for data transformations</li>
-            <li><strong>Avoid deep recursion</strong> - use FOLD for large data</li>
+            <li>Prefer higher-order functions (MAP, FILTER, FOLD) over deep word chains</li>
+            <li>Call depth is limited to 5 levels (main + 4 chain steps)</li>
+            <li>Use <code>~</code> safe mode + <code>=></code> nil coalescing for robust pipelines</li>
+            <li>Use <code>==</code> pipeline operator for readable multi-step transformations</li>
           </ul>
         </section>
       </article>
