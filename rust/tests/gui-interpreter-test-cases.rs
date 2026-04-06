@@ -640,7 +640,7 @@ async fn test_stack_mode_reverse() {
 }
 
 // ============================================
-// Custom Word Definition
+// User Word Definition
 // ============================================
 
 #[tokio::test]
@@ -662,7 +662,7 @@ async fn test_def_with_branch_guard() {
 }
 
 #[tokio::test]
-async fn test_del_delete_custom_word() {
+async fn test_del_delete_user_word() {
     assert!(run_expect_error("{ [ 2 ] * } 'TEMP' DEF\n'TEMP' DEL\nTEMP").await);
 }
 

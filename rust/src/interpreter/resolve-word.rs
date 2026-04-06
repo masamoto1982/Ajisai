@@ -81,7 +81,7 @@ impl Interpreter {
             }
         }
 
-        // 4. Collect all custom dictionary matches
+        // 4. Collect all user dictionary matches
         let mut user_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
         for (dict_name, dict) in &self.user_dictionaries {
             if let Some(def) = dict.words.get(&upper) {
@@ -101,7 +101,7 @@ impl Interpreter {
             return Some((name, def));
         }
 
-        // 7. Return best custom match
+        // 7. Return best user match
         if !user_matches.is_empty() {
             user_matches.sort_by_key(|(_, _, order)| *order);
             let (name, def, _) = user_matches.into_iter().next().unwrap();

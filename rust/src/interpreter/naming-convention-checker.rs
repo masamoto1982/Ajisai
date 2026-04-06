@@ -1,4 +1,4 @@
-/// Naming convention checker for custom word definitions.
+/// Naming convention checker for user word definitions.
 /// Validates that user-defined word names follow the AI-first naming convention (§DEV-NAMING-INDEX).
 /// Produces warnings (not errors) for violations, guiding users toward clearer names.
 
@@ -12,7 +12,7 @@ const AMBIGUOUS_NAMES: &[&str] = &[
 /// without requiring an action-object pattern (e.g., GREET, DOUBLE).
 const SHORT_NAME_MAX_LENGTH: usize = 6;
 
-/// Checks if a custom word name follows the AI-first naming convention.
+/// Checks if a user word name follows the AI-first naming convention.
 /// Returns Some(warning_message) if a violation is detected, None if compliant.
 pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
     let upper = name.to_uppercase();

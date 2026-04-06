@@ -190,7 +190,7 @@ export const createVocabularyManager = (
 
     [elements.builtInWordInfo, elements.userWordInfo].forEach(resetWordInfoDisplay);
 
-    // 検索フィルターとカスタムワードのキャッシュ
+    // 検索フィルターとユーザーワードのキャッシュ
     let searchFilter = '';
     let cachedUserWords: Array<[string, string, string | null, boolean]> = [];
     let selectedDictionary = 'DEMO';

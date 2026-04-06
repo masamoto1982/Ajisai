@@ -26,7 +26,7 @@ mod tests {
         assert!(result1.is_ok(), "First definition should succeed");
 
         let result2 = interp.execute("{ [ 3 ] * } 'DOUBLE' DEF").await;
-        assert!(result2.is_ok(), "Overriding custom word should succeed");
+        assert!(result2.is_ok(), "Overriding user word should succeed");
 
         let result3 = interp.execute("[ 5 ] DOUBLE").await;
         assert!(result3.is_ok(), "Executing redefined word should succeed");
@@ -235,7 +235,7 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        // Custom word names inside a vector literal resolve to their scalar values
+        // User word names inside a vector literal resolve to their scalar values
         let result = interp.execute("[ C4 D4 E4 ] MUSIC@SEQ MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
@@ -331,7 +331,7 @@ mod tests {
             .await;
         assert!(
             result.is_ok(),
-            "Nested vector with custom words should work: {:?}",
+            "Nested vector with user words should work: {:?}",
             result.err()
         );
 

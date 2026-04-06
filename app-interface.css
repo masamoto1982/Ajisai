@@ -638,7 +638,7 @@ body[data-active-area] #state-panel {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* 依存されているカスタムワード - 色覚配慮カラー */
+/* 依存されているユーザーワード - 色覚配慮カラー */
 .word-button.dependency {
     border-color: var(--color-dependency);
     background: #fff;
@@ -652,7 +652,7 @@ body[data-active-area] #state-panel {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* 依存されていないカスタムワード - 色覚配慮カラー */
+/* 依存されていないユーザーワード - 色覚配慮カラー */
 .word-button.non-dependency {
     border-color: var(--color-non-dependency);
     background: #fff;
