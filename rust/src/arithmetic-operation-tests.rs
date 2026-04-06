@@ -199,9 +199,10 @@ mod num_tests {
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp.execute("[ 42 ]").await.unwrap();
         let result = interp.execute("NUM").await;
-        assert!(result.is_ok(), "NUM now treats [42] as string '*' → Nil");
+        // [42] with Number hint is NOT a string; NUM expects String input
+        assert!(result.is_err(), "NUM should error on number vector [42]");
         let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "Stack should have 1 element");
+        assert_eq!(stack.len(), 1, "Stack should be restored after error");
     }
 
     #[tokio::test]

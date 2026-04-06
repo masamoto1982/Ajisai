@@ -235,7 +235,13 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
                 "number"
             }
         }
-        DisplayHint::Number => "number",
+        DisplayHint::Number => {
+            if is_vector_value(value) {
+                "vector"
+            } else {
+                "number"
+            }
+        }
         DisplayHint::Nil => "nil",
         DisplayHint::Auto => {
             // Fallback to heuristic detection for Auto hint
@@ -302,7 +308,7 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
             let js_array = js_sys::Array::new();
             if let ValueData::Vector(children) = &value.data {
                 for child in children.iter() {
-                    js_array.push(&value_to_js_value(child));
+                    js_array.push(&value_to_js_value_with_hint(child, hint));
                 }
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
