@@ -208,7 +208,7 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "EXEC with custom word should succeed: {:?}",
+            "EXEC with user word should succeed: {:?}",
             result
         );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
@@ -228,7 +228,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_eval_with_custom_word() {
+    async fn test_eval_with_user_word() {
         let mut interp = Interpreter::new();
 
         interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
@@ -237,7 +237,7 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "EVAL with custom word should succeed: {:?}",
+            "EVAL with user word should succeed: {:?}",
             result
         );
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");

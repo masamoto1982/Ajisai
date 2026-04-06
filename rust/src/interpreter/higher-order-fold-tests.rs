@@ -102,7 +102,7 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "FOLD with custom word should succeed: {:?}",
+            "FOLD with user word should succeed: {:?}",
             result
         );
 

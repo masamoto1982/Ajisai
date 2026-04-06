@@ -33,7 +33,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_dict_at_word() {
-        // DEMO@WORD resolves custom word
+        // DEMO@WORD resolves user word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -46,7 +46,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_user_dict_word() {
-        // USER@DEMO@WORD resolves custom word
+        // USER@DEMO@WORD resolves user word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -59,7 +59,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_fully_qualified_user() {
-        // DICT@USER@DEMO@WORD resolves custom word
+        // DICT@USER@DEMO@WORD resolves user word
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -134,7 +134,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_case_insensitive_user() {
-        // Case normalization for custom words
+        // Case normalization for user words
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -147,7 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ambiguous_word_error() {
-        // Word existing in both module and custom should produce ambiguity error
+        // Word existing in both module and user dictionary should produce ambiguity error
         let mut interp = Interpreter::new();
         interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
         let _ = interp.collect_output();
@@ -155,7 +155,7 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        // C4 now exists in both MUSIC (sample) and DEMO (custom)
+        // C4 now exists in both MUSIC (sample) and DEMO (user)
         let result = interp.execute("C4").await;
         assert!(result.is_err(), "C4 should be ambiguous");
         let err_msg = result.unwrap_err().to_string();
@@ -199,10 +199,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_builtin_not_ambiguous() {
-        // Built-in words are never ambiguous, even if custom word with same name exists
+        // Built-in words are never ambiguous, even if user word with same name exists
         let mut interp = Interpreter::new();
 
-        // GET is a built-in. Even if we somehow had a custom GET (blocked by protection),
+        // GET is a built-in. Even if we somehow had a user GET (blocked by protection),
         // the built-in always wins without ambiguity
         let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
         assert!(result.is_ok(), "Built-in GET should always work: {:?}", result.err());
