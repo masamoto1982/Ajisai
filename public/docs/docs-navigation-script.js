@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         serviceMenu: [
             { label: "Syntax", link: "syntax.html" },
             { label: "Built-in Words", link: "words.html" },
-            { label: "Data Types", link: "types.html" },
+            { label: "Data Model", link: "types.html" },
             { label: "Control Flow", link: "control.html" },
             { label: "Higher-Order", link: "higher-order.html" }
         ],
