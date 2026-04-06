@@ -1,9 +1,19 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::{DisplayHint, Value, ValueData};
 
 pub(crate) fn is_string_value(val: &Value) -> bool {
+    is_string_value_with_hint(val, DisplayHint::Auto)
+}
+
+pub(crate) fn is_string_value_with_hint(val: &Value, hint: DisplayHint) -> bool {
+    match hint {
+        DisplayHint::Number | DisplayHint::Boolean | DisplayHint::DateTime | DisplayHint::Nil => {
+            return false;
+        }
+        DisplayHint::String | DisplayHint::Auto => {}
+    }
     let children: &Vec<Value> = match &val.data {
         ValueData::Vector(v) if !v.is_empty() => v,
         ValueData::Vector(_) => return false,
@@ -46,12 +56,13 @@ pub(crate) fn is_datetime_value(_val: &Value) -> bool {
     false
 }
 
-pub(crate) fn apply_unary_cast(interp: &mut Interpreter, convert: fn(&Value) -> Result<Value>) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+pub(crate) fn apply_unary_cast(interp: &mut Interpreter, convert: fn(&Value, DisplayHint) -> Result<Value>) -> Result<()> {
+    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let value = if is_keep_mode {
+            let hint: DisplayHint = interp.semantic_registry.lookup_last_hint();
+            let value: Value = if is_keep_mode {
                 interp
                     .stack
                     .last()
@@ -61,7 +72,7 @@ pub(crate) fn apply_unary_cast(interp: &mut Interpreter, convert: fn(&Value) -> 
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            match convert(&value) {
+            match convert(&value, hint) {
                 Ok(result) => {
                     interp.stack.push(result);
                     Ok(())
@@ -81,18 +92,24 @@ pub(crate) fn apply_unary_cast(interp: &mut Interpreter, convert: fn(&Value) -> 
 
             if is_keep_mode {
                 let originals: Vec<Value> = interp.stack.to_vec();
-                let mut converted = Vec::with_capacity(originals.len());
-                for value in &originals {
-                    converted.push(convert(value)?);
+                let hints: Vec<DisplayHint> = (0..originals.len())
+                    .map(|idx| interp.semantic_registry.lookup_hint_at(idx))
+                    .collect();
+                let mut converted: Vec<Value> = Vec::with_capacity(originals.len());
+                for (idx, value) in originals.iter().enumerate() {
+                    converted.push(convert(value, hints[idx])?);
                 }
                 interp.stack.extend(converted);
                 Ok(())
             } else {
                 let originals: Vec<Value> = interp.stack.drain(..).collect();
-                let mut converted = Vec::with_capacity(originals.len());
+                let hints: Vec<DisplayHint> = (0..originals.len())
+                    .map(|idx| interp.semantic_registry.lookup_hint_at(idx))
+                    .collect();
+                let mut converted: Vec<Value> = Vec::with_capacity(originals.len());
 
-                for value in &originals {
-                    match convert(value) {
+                for (idx, value) in originals.iter().enumerate() {
+                    match convert(value, hints[idx]) {
                         Ok(result) => converted.push(result),
                         Err(error) => {
                             interp.stack = originals;

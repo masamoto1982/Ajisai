@@ -1,19 +1,19 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::cast::cast_value_helpers::{
     apply_unary_cast, format_fraction_to_string, format_value_to_string_repr,
-    is_boolean_value, is_number_value, is_string_value,
+    is_boolean_value, is_number_value, is_string_value_with_hint,
 };
 use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
 use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
-use crate::types::Value;
+use crate::types::{DisplayHint, Value};
 
-fn convert_value_to_string(val: &Value) -> Result<Value> {
+fn convert_value_to_string(val: &Value, hint: DisplayHint) -> Result<Value> {
     if val.is_nil() {
         return Ok(Value::nil());
     }
 
-    if is_string_value(val) {
+    if is_string_value_with_hint(val, hint) {
         return Err(AjisaiError::NoChange { word: "STR".into() });
     }
 
@@ -32,8 +32,8 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_string)
 }
 
-fn convert_value_to_number(val: &Value) -> Result<Value> {
-    if is_string_value(val) {
+fn convert_value_to_number(val: &Value, hint: DisplayHint) -> Result<Value> {
+    if is_string_value_with_hint(val, hint) {
         let s = value_as_string(val).unwrap_or_default();
         match Fraction::from_str(&s) {
             Ok(fraction) => return Ok(create_number_value(fraction)),
@@ -59,13 +59,13 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_number)
 }
 
-fn convert_value_to_boolean(val: &Value) -> Result<Value> {
+fn convert_value_to_boolean(val: &Value, hint: DisplayHint) -> Result<Value> {
     if is_boolean_value(val) {
         return Err(AjisaiError::NoChange {
             word: "BOOL".into(),
         });
     }
-    if is_string_value(val) {
+    if is_string_value_with_hint(val, hint) {
         let s = value_as_string(val).unwrap_or_default();
         let upper = s.to_uppercase();
         if upper == "TRUE" {
@@ -101,6 +101,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
+    let hint: DisplayHint = interp.semantic_registry.lookup_last_hint();
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if val.is_nil() {
@@ -108,7 +109,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::NoChange { word: "NIL".into() });
     }
 
-    if is_string_value(&val) {
+    if is_string_value_with_hint(&val, hint) {
         let s = value_as_string(&val).unwrap_or_default();
         let upper = s.to_uppercase();
         if upper == "NIL" {
@@ -155,7 +156,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
 /// - 入力が有効なUnicodeコードポイントでない場合
 /// - 入力が数値でない場合
 /// CHR の単一値変換（内部ヘルパー）
-fn convert_codepoint_to_char(val: &Value) -> Result<Value> {
+fn convert_codepoint_to_char(val: &Value, hint: DisplayHint) -> Result<Value> {
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
             if let Some(code) = f.to_i64() {
@@ -177,7 +178,7 @@ fn convert_codepoint_to_char(val: &Value) -> Result<Value> {
             }
         }
     }
-    if is_string_value(val) {
+    if is_string_value_with_hint(val, hint) {
         return Err(AjisaiError::from("CHR: expected Number, got String"));
     }
     if is_boolean_value(val) {

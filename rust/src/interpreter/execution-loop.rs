@@ -9,8 +9,10 @@ use crate::types::SemanticRegistry;
 fn apply_word_hint_override(registry: &mut SemanticRegistry, word: &str) {
     let hint: Option<DisplayHint> = match word {
         "STR" | "CHR" | "CHARS" | "JOIN" => Some(DisplayHint::String),
-        "NUM" => Some(DisplayHint::Number),
-        "BOOL" => Some(DisplayHint::Boolean),
+        "NUM" | "+" | "-" | "*" | "/" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "FOLD"
+            => Some(DisplayHint::Number),
+        "BOOL" | "<" | "<=" | "=" | "AND" | "OR" | "NOT"
+            => Some(DisplayHint::Boolean),
         "NOW" | "DATETIME" | "TIMESTAMP" => Some(DisplayHint::DateTime),
         _ => None,
     };
@@ -26,7 +28,7 @@ impl Interpreter {
         &mut self,
         tokens: &[Token],
         start_index: usize,
-    ) -> Result<(Vec<Value>, usize)> {
+    ) -> Result<(Vec<Value>, usize, DisplayHint)> {
         self.collect_vector_with_depth(tokens, start_index, 1)
     }
 
@@ -35,7 +37,7 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
         depth: usize,
-    ) -> Result<(Vec<Value>, usize)> {
+    ) -> Result<(Vec<Value>, usize, DisplayHint)> {
         if depth > MAX_VISIBLE_DIMENSIONS {
             return Err(AjisaiError::DimensionLimitExceeded { depth });
         }
@@ -46,11 +48,14 @@ impl Interpreter {
 
         let mut values = Vec::new();
         let mut i = start_index + 1;
+        let mut has_bool: bool = false;
+        let mut has_number: bool = false;
+        let mut has_other: bool = false;
 
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart => {
-                    let (nested_values, consumed) =
+                    let (nested_values, consumed, _nested_hint) =
                         self.collect_vector_with_depth(tokens, i, depth + 1)?;
                     if nested_values.is_empty() {
                         return Err(AjisaiError::from(
@@ -58,27 +63,48 @@ impl Interpreter {
                         ));
                     }
                     values.push(Value::from_vector(nested_values));
+                    has_other = true;
                     i += consumed;
                 }
                 Token::VectorEnd => {
-                    return Ok((values, i - start_index + 1));
+                    let element_hint: DisplayHint = if has_other {
+                        DisplayHint::Auto
+                    } else if has_bool && !has_number {
+                        DisplayHint::Boolean
+                    } else if has_number && !has_bool {
+                        DisplayHint::Number
+                    } else {
+                        DisplayHint::Auto
+                    };
+                    return Ok((values, i - start_index + 1, element_hint));
                 }
                 Token::Number(n) => {
                     values.push(Value::from_number(
                         Fraction::parse_unreduced_from_str(n).map_err(AjisaiError::from)?,
                     ));
+                    has_number = true;
                     i += 1;
                 }
                 Token::String(s) => {
                     values.push(Value::from_string(s));
+                    has_other = true;
                     i += 1;
                 }
                 Token::Symbol(s) => {
                     let upper = Self::normalize_symbol(s);
                     match upper.as_ref() {
-                        "TRUE" => values.push(Value::from_bool(true)),
-                        "FALSE" => values.push(Value::from_bool(false)),
-                        "NIL" => values.push(Value::nil()),
+                        "TRUE" => {
+                            values.push(Value::from_bool(true));
+                            has_bool = true;
+                        }
+                        "FALSE" => {
+                            values.push(Value::from_bool(false));
+                            has_bool = true;
+                        }
+                        "NIL" => {
+                            values.push(Value::nil());
+                            has_other = true;
+                        }
                         _ => {
                             let resolved = if let Some(def) = self.resolve_word(upper.as_ref()) {
                                 !def.is_builtin
@@ -96,18 +122,22 @@ impl Interpreter {
                                         self.output_buffer = output_backup;
                                         if results.is_empty() {
                                             values.push(Value::from_string(s));
+                                            has_other = true;
                                         } else {
                                             values.extend(results);
+                                            has_other = true;
                                         }
                                     }
                                     Err(_) => {
                                         self.stack = stack_backup;
                                         self.output_buffer = output_backup;
                                         values.push(Value::from_string(s));
+                                        has_other = true;
                                     }
                                 }
                             } else {
                                 values.push(Value::from_string(s));
+                                has_other = true;
                             }
                         }
                     }
@@ -145,14 +175,14 @@ impl Interpreter {
                     self.semantic_registry.push_hint(DisplayHint::String);
                 }
                 Token::VectorStart => {
-                    let (values, consumed) = self.collect_vector(execute_tokens, i)?;
+                    let (values, consumed, element_hint) = self.collect_vector(execute_tokens, i)?;
                     if values.is_empty() {
                         return Err(AjisaiError::from(
                             "Empty vector is not allowed. Use NIL for empty values.",
                         ));
                     }
                     self.stack.push(Value::from_vector(values));
-                    self.semantic_registry.push_hint(DisplayHint::Auto);
+                    self.semantic_registry.push_hint(element_hint);
                     i += consumed;
                     continue;
                 }
