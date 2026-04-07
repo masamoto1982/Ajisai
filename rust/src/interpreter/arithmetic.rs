@@ -1,6 +1,7 @@
 use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, extract_operands_with_flow, push_result, push_flow_result};
+use crate::interpreter::optimization_hooks;
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast;
 use crate::types::{FlowToken, Value, ValueData};
@@ -34,6 +35,14 @@ where
             let (operands, flow_tokens): (Vec<Value>, Option<Vec<FlowToken>>) = extract_operands_with_flow(interp, 2)?;
             let a_val = &operands[0];
             let b_val = &operands[1];
+
+            // Linear consumption optimization hook (advisory, no behavior change).
+            // Detects safe in-place update candidates: remaining == total and no aliases.
+            // Results are reserved for future optimization passes.
+            let _in_place_candidates = flow_tokens.as_ref().map(|tokens| [
+                optimization_hooks::check_in_place_candidate(a_val, tokens.get(0)),
+                optimization_hooks::check_in_place_candidate(b_val, tokens.get(1)),
+            ]);
 
             let result = match apply_binary_broadcast(a_val, b_val, op) {
                 Ok(r) => r,

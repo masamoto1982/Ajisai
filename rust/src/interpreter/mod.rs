@@ -15,6 +15,8 @@ pub mod execute_lookup;
 pub mod hash;
 #[path = "naming-convention-checker.rs"]
 pub(crate) mod naming_convention_checker;
+#[path = "optimization-hooks.rs"]
+pub(crate) mod optimization_hooks;
 #[path = "value-extraction-helpers.rs"]
 pub(crate) mod value_extraction_helpers;
 #[path = "higher-order-operations.rs"]

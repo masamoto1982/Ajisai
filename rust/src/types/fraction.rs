@@ -93,6 +93,17 @@ impl Fraction {
         }
     }
 
+    /// Returns `true` if this fraction is stored in the stack-allocated Small
+    /// representation (`FractionRepr::Small(i64, i64)`), meaning its numerator
+    /// and denominator both fit in i64 and no heap memory is required.
+    ///
+    /// Callers can use this to select heap-free hot paths in arithmetic and
+    /// tensor operations when all operands are known to be Small.
+    #[inline]
+    pub fn is_small(&self) -> bool {
+        matches!(self.repr, FractionRepr::Small(..))
+    }
+
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
         if denominator.is_zero() { panic!("Division by zero"); }
 
