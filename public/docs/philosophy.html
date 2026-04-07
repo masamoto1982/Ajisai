@@ -4,8 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ajisai | Philosophy</title>
-  <meta name="description" content="Ajisai design philosophy - vector-oriented fractional dataflow, two-layer architecture, and core principles">
-  <!-- 共通設定・テーマ（CSSより先に読み込み） -->
   <script src="../ajisai-config.js?v=20251230"></script>
   <script src="../ajisai-theme.js?v=20251230"></script>
   <style id="theme-vars"></style>
@@ -32,105 +30,8 @@
       <nav id="js-side-nav" class="side-nav"></nav>
 
       <article id="main-content" class="main-content">
-        <h2>Design Philosophy</h2>
-
-        <section class="manifesto" style="background: var(--bg-secondary, #f0f4f8); border-left: 4px solid var(--accent, #6366f1); padding: 1em 1.5em; margin-bottom: 1.5em; border-radius: 4px;">
-          <p><strong>Manifesto:</strong> Data flows like water. In Ajisai, every value is a fraction that streams through operations &mdash; each word consumes a portion and passes the remainder downstream. The <em>DisplayHint</em> is merely the surface ripple, not the substance beneath. What you see at the output boundary is interpretation; what flows through the pipeline is pure fractional data, conserved without loss.</p>
-        </section>
-
-        <section>
-          <h3>The Name "Ajisai"</h3>
-          <p>The name "Ajisai" (紫陽花, hydrangea) captures the essence of the language. A hydrangea bloom is not a single flower but a cluster of many small flowers, each one contributing to the whole. In the same way, Ajisai programs are built from small, composable words &mdash; each one a simple operation that, when combined, forms complex functionality.</p>
-          <p>Each small flower is a fraction flowing into the cluster. The whole is exactly the sum of its parts &mdash; nothing lost, nothing created from nothing.</p>
-        </section>
-
-        <section>
-          <h3>Core Design Principles</h3>
-
-          <h4>1. Fractional Dataflow Computation</h4>
-          <p>Ajisai uses postfix (Reverse Polish) notation inherited from FORTH. Values are pushed onto the stack, and words consume them to produce results:</p>
-          <ul>
-            <li>Each value carries a <strong>FlowToken</strong> with <code>id</code>, <code>total</code>, <code>remaining</code>, and <code>shape</code> fields that track consumption</li>
-            <li>Operations consume from the remaining flow mass and produce results</li>
-            <li>The <strong>conservation law</strong> is enforced at all times: <code>initial_total = sum(consumed) + final_remainder</code></li>
-            <li>Bifurcation (<code>,,</code>) splits flow mass into child branches &mdash; it does not copy values</li>
-          </ul>
-
-          <h4>2. Vector-oriented Data Model</h4>
-          <p>All data in Ajisai is <code>Fraction</code> (arbitrary-precision BigInt numerator/denominator). The <code>ValueData</code> enum has five variants: <code>Scalar(Fraction)</code>, <code>Vector(Rc&lt;Vec&lt;Value&gt;&gt;)</code>, <code>Record { pairs, index }</code>, <code>Nil</code>, and <code>CodeBlock(Vec&lt;Token&gt;)</code>.</p>
-          <p>Vectors are the primary data structure &mdash; not the stack. The stack is a mechanism for passing arguments, not a data structure to be manipulated. Accordingly:</p>
-          <ul>
-            <li><strong>DUP, SWAP, ROT, OVER are prohibited.</strong> These stack manipulation words do not exist in Ajisai.</li>
-            <li>Instead, use <code>REORDER</code> to rearrange vector elements, <code>.. GET</code> to access stack items structurally, or <code>,,</code> bifurcation to preserve values while consuming them.</li>
-            <li>NumPy/APL-style broadcasting applies to all arithmetic operations across vectors of different shapes.</li>
-          </ul>
-
-          <h4>3. Two-layer Architecture</h4>
-          <p>Ajisai strictly separates computation from presentation:</p>
-          <ul>
-            <li><strong>Data Plane:</strong> Pure <code>Value</code>/<code>ValueData</code> stack. All computation happens here. The <code>Value</code> struct contains only <code>data: ValueData</code> &mdash; no display hints, no metadata.</li>
-            <li><strong>Semantic Plane:</strong> The <code>SemanticRegistry</code> holds <code>DisplayHint</code> (Auto, Number, String, Boolean, DateTime, Nil) and <code>ValueExt</code> metadata. This layer is queried <em>only</em> at output boundaries: PRINT, STR, and GUI rendering.</li>
-          </ul>
-          <p>Computation never touches the semantic plane. Strings are vectors of Unicode code points with a String display hint. Booleans are <code>Scalar(1/1)</code> or <code>Scalar(0/1)</code> with a Boolean display hint. The hint is the ripple on the surface; the fraction beneath is the substance.</p>
-
-          <h4>4. Dimension Model (10D)</h4>
-          <p>Ajisai supports up to 10 nesting dimensions &mdash; "fingers on both hands." The stack itself is the implicit 1st dimension, and Vectors can nest up to 9 levels deep within it.</p>
-          <table>
-            <tr><th>Bracket</th><th>Role</th></tr>
-            <tr><td><code>[ ]</code></td><td>Vector delimiter (data structures)</td></tr>
-            <tr><td><code>{ }</code> / <code>( )</code></td><td>Code block delimiter (DEF, MAP, FILTER, FOLD, COND)</td></tr>
-          </table>
-          <p>Vectors are always displayed with <code>[ ]</code>. Nesting depth is distinguished by color in the GUI (9-color palette). Exceeding 10 dimensions raises a <code>DimensionLimitExceeded</code> error.</p>
-
-          <h4>5. Conservation-Preserving Fraction Arithmetic</h4>
-          <p>All numbers are internally represented as fractions (arbitrary-precision BigInt numerator and denominator), eliminating rounding errors entirely:</p>
-          <ul>
-            <li><code>5</code> is stored as <code>Fraction(5, 1)</code></li>
-            <li><code>0.5</code> is stored as <code>Fraction(1, 2)</code></li>
-            <li>Fractions are auto-reduced via GCD after every operation</li>
-            <li>No floating-point representation exists &mdash; every arithmetic result is exact, upholding the conservation law</li>
-          </ul>
-
-          <h4>6. "No Change is Error"</h4>
-          <p>If an operation produces output identical to its input, it is an error (<code>AjisaiError::NoChange</code>). This is mandatory, not optional:</p>
-          <ul>
-            <li><code>[ 1 ] REVERSE</code> &mdash; error (single-element vector is unchanged by reversal)</li>
-            <li><code>[ 1 2 3 ] SORT</code> &mdash; error (already sorted)</li>
-            <li>This prevents silent no-ops that hide bugs and ensures every operation in the dataflow chain contributes meaningful transformation</li>
-          </ul>
-
-          <h4>7. Structural Limits</h4>
-          <p>Ajisai enforces two hard limits based on the human hand:</p>
-          <ul>
-            <li><strong>Nesting: 10 dimensions</strong> &mdash; "fingers on both hands." Exceeding this raises <code>DimensionLimitExceeded</code>.</li>
-            <li><strong>Call depth: 5 levels</strong> &mdash; "fingers on one hand." Main context + 4 custom word chain steps. <code>MAX_CALL_DEPTH = 4</code> counts the chain steps; built-in words do not count against this limit.</li>
-          </ul>
-
-          <h4>8. Default Consumption</h4>
-          <p>All words consume their operands by default. This is the fundamental behavior of the dataflow model &mdash; values enter an operation and are spent. To preserve values while also producing a result, use the <code>,,</code> bifurcation modifier, which splits flow mass into child branches rather than copying values.</p>
-          <p>Modifiers that alter default behavior:</p>
-          <table>
-            <tr><th>Modifier</th><th>Effect</th></tr>
-            <tr><td><code>.</code></td><td>Target stack top (default)</td></tr>
-            <tr><td><code>..</code></td><td>Target entire stack</td></tr>
-            <tr><td><code>,</code></td><td>Consume operands (default)</td></tr>
-            <tr><td><code>,,</code></td><td>Bifurcation &mdash; keep operands + result</td></tr>
-            <tr><td><code>~</code></td><td>Safe mode &mdash; errors become NIL</td></tr>
-            <tr><td><code>!</code></td><td>Force flag &mdash; allow DEL/DEF of dependent words</td></tr>
-            <tr><td><code>==</code></td><td>Pipeline &mdash; visual no-op marker</td></tr>
-            <tr><td><code>=&gt;</code></td><td>Nil coalescing &mdash; fallback if NIL</td></tr>
-          </table>
-        </section>
-
-        <section>
-          <h3>Influences</h3>
-          <ul>
-            <li><strong>FORTH:</strong> Postfix notation, dictionary-based word definitions, and the execute-as-you-go model form Ajisai's syntactic and operational foundation.</li>
-            <li><strong>APL/J:</strong> Array-oriented computation where operations apply uniformly across entire data structures, inspiring Ajisai's vector-first approach.</li>
-            <li><strong>NumPy:</strong> Shape broadcasting rules that allow arithmetic between arrays of different dimensions, adopted directly into Ajisai's broadcast system.</li>
-            <li><strong>LISP:</strong> Nested list structures as a universal data representation, reflected in Ajisai's recursive vector nesting.</li>
-          </ul>
-        </section>
+        <h2>Philosophy</h2>
+        <p>Ajisai is currently under active development. Documentation is not yet publicly available.</p>
       </article>
     </main>
 

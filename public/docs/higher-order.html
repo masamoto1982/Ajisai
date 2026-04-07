@@ -3,9 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ajisai | Higher-Order Functions</title>
-  <meta name="description" content="Ajisai higher-order functions reference">
-  <!-- 共通設定・テーマ（CSSより先に読み込み） -->
+  <title>Ajisai | Higher-Order</title>
   <script src="../ajisai-config.js?v=20251230"></script>
   <script src="../ajisai-theme.js?v=20251230"></script>
   <style id="theme-vars"></style>
@@ -32,95 +30,8 @@
       <nav id="js-side-nav" class="side-nav"></nav>
 
       <article id="main-content" class="main-content">
-        <h2>Higher-Order Functions</h2>
-
-        <section>
-          <h3>MAP <span class="signature-type">(Form)</span></h3>
-          <p>Apply a word or code block to each element of a vector, producing a new vector of the same length.</p>
-<pre><code>[ elements ] 'WORD' MAP
-[ elements ] { code } MAP</code></pre>
-
-          <h4>Examples</h4>
-<pre><code>{ [ 2 ] * } 'DOUBLE' DEF
-[ 1 2 3 4 5 ] 'DOUBLE' MAP       # Result: [ 2 4 6 8 10 ]
-
-# Using inline code block
-[ 1 2 3 ] { [ 10 ] * } MAP       # Result: [ 10 20 30 ]
-
-# Convert types
-[ 1 2 3 ] { STR } MAP            # Result: [ '1' '2' '3' ]</code></pre>
-        </section>
-
-        <section>
-          <h3>FILTER <span class="signature-type">(Form)</span></h3>
-          <p>Keep elements matching a predicate. Returns NIL if no elements match.</p>
-<pre><code>[ elements ] 'PREDICATE' FILTER
-[ elements ] { code } FILTER</code></pre>
-
-          <h4>Examples</h4>
-<pre><code>{ [ 2 ] MOD [ 0 ] = } 'IS-EVEN' DEF
-[ 1 2 3 4 5 6 7 8 ] 'IS-EVEN' FILTER     # Result: [ 2 4 6 8 ]
-
-# Inline code block
-[ -2 -1 0 1 2 3 ] { [ 0 ] < NOT } FILTER  # Result: [ 0 1 2 3 ]
-
-# No matches &rarr; NIL
-[ 1 2 3 ] { [ 10 ] < NOT } FILTER         # Result: NIL
-[ 1 2 3 ] { [ 10 ] < NOT } FILTER => [ 0 ]  # With default: [ 0 ]</code></pre>
-        </section>
-
-        <section>
-          <h3>FOLD <span class="signature-type">(Form)</span></h3>
-          <p>Reduce a vector to a single value using an initial accumulator and a binary operation.</p>
-<pre><code>[ elements ] [ initial ] { binary_op } FOLD
-[ elements ] [ initial ] 'WORD' FOLD</code></pre>
-
-          <h4>How it works</h4>
-          <ol>
-            <li>Start with initial value as accumulator</li>
-            <li>Apply binary operation to (accumulator, element)</li>
-            <li>Result becomes new accumulator</li>
-            <li>Return final accumulator</li>
-          </ol>
-
-          <h4>Examples</h4>
-<pre><code># Sum
-[ 1 2 3 4 5 ] [ 0 ] { + } FOLD       # Result: [ 15 ]
-
-# Product
-[ 1 2 3 4 5 ] [ 1 ] { * } FOLD       # Result: [ 120 ]
-
-# Factorial
-[ 1 ] [ 5 ] RANGE [ 1 ] { * } FOLD   # 5! = [ 120 ]</code></pre>
-        </section>
-
-        <section>
-          <h3>Chaining with Pipeline Operator</h3>
-          <p>Use <code>==</code> for readable data flow visualization. The pipeline operator is a no-op that serves as a visual marker between transformation steps:</p>
-<pre><code># Pipeline: filter, map, reduce
-[ 1 2 3 4 5 6 7 8 9 10 ]
-  == { [ 2 ] MOD [ 0 ] = } FILTER    # [ 2 4 6 8 10 ]
-  == { [ 2 ] * } MAP                  # [ 4 8 12 16 20 ]
-  == [ 0 ] { + } FOLD                 # [ 60 ]
-
-# With named words
-{ [ 2 ] MOD [ 0 ] = } 'IS-EVEN' DEF
-{ [ 2 ] * } 'DOUBLE' DEF
-[ 1 2 3 4 5 ]
-  == 'IS-EVEN' FILTER
-  == 'DOUBLE' MAP
-  == [ 0 ] { + } FOLD</code></pre>
-        </section>
-
-        <section>
-          <h3>Summary</h3>
-          <table>
-            <tr><th>Function</th><th>Purpose</th><th>Input &rarr; Output</th></tr>
-            <tr><td><code>MAP</code></td><td>Transform each</td><td>[n] &rarr; [n]</td></tr>
-            <tr><td><code>FILTER</code></td><td>Keep matching</td><td>[n] &rarr; [0..n] or NIL</td></tr>
-            <tr><td><code>FOLD</code></td><td>Reduce to one</td><td>[n] &rarr; [1]</td></tr>
-          </table>
-        </section>
+        <h2>Higher-Order Operations</h2>
+        <p>Ajisai is currently under active development. Documentation is not yet publicly available.</p>
       </article>
     </main>
 
