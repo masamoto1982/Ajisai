@@ -350,14 +350,20 @@ pub struct Interpreter {
      `FlatTensor { data: Vec<Fraction>, shape: Vec<usize>, strides: Vec<usize> }` 相当へ正規化して処理する。
    - 目的はキャッシュ効率向上・SIMD/TPU最適化準備・AIによるコード変換容易性である。
 
-2. **Fractional Dataflow の線形消費最適化フック（未実装）**
+2. **Fractional Dataflow の線形消費最適化フック**
    - `FlowToken` は線形型検証の中間表現として扱う。
    - 演算器に「安全なインプレース更新候補」を判断できるフックを導入する。
    - フックは挙動変更ではなく、`remaining == total` かつエイリアスなしのケースを検出するための内部判定APIとする。
+   - 実装: `interpreter/optimization-hooks.rs` の `InPlaceJudgment` enum と `check_in_place_candidate` 関数。
+     `interpreter/arithmetic.rs` の二項演算器がフックを呼び出す。結果は現時点では `_in_place_candidates` として保持（将来の最適化パスで利用予定）。
 
-3. **Fraction Small Value Optimization（未実装）**
+3. **Fraction Small Value Optimization**
    - **演算ホットパスをヒープ非依存に保つ**ことを必須とする。
    - 特にテンソル演算経路では不要な `Value` 再帰クローンを禁止し、`Fraction` 配列の走査を優先する。
+   - 実装:
+     - `Fraction::is_small()` メソッドを追加（`FractionRepr::Small` 判定）。
+     - `apply_unary_flat`: `iter()` → `into_iter()` に変更し、`Big` Fraction の二重保持を排除。
+     - `apply_binary_broadcast`: 同一shape fast path を追加。同形状オペランド時に `unravel_index` / `project_broadcast_index` / `ravel_index`（各呼び出しで `Vec<usize>` をヒープ確保）を省略する。
 
 4. **AIファースト実装規約（Ajisai全体に適用開始）**
    - 「人間向けの技巧」よりも「生成AIが局所解析しやすい構造」を優先する。

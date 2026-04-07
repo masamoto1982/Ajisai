@@ -203,8 +203,22 @@ where
     } else {
         out_shape.iter().product()
     };
-    let out_strides = compute_strides(&out_shape);
 
+    // SVO fast path: when both operands share the same shape no broadcasting
+    // index math is needed. This eliminates one unravel_index call and two
+    // project_broadcast_index + ravel_index calls per element — each of which
+    // heap-allocates a Vec<usize>. For Small(i64, i64) fractions the element
+    // loop itself is fully stack-resident.
+    if tensor_a.shape == tensor_b.shape {
+        let mut out_data = Vec::with_capacity(out_size);
+        for i in 0..out_size {
+            out_data.push(op(&tensor_a.data[i], &tensor_b.data[i])?);
+        }
+        let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
+        return Ok(out_tensor.to_value());
+    }
+
+    let out_strides = compute_strides(&out_shape);
     let mut out_data = Vec::with_capacity(out_size);
 
     for linear in 0..out_size {
@@ -228,7 +242,11 @@ where
     F: Fn(&Fraction) -> Fraction,
 {
     let tensor = FlatTensor::from_value(val)?;
-    let result_data: Vec<Fraction> = tensor.data.iter().map(&op).collect();
+    // SVO: consume the flat Fraction buffer via into_iter so that each element
+    // is moved rather than borrowed. For Small(i64, i64) fractions this is a
+    // stack-only move at zero heap cost. For Big fractions it avoids holding
+    // the source and result allocations alive simultaneously.
+    let result_data: Vec<Fraction> = tensor.data.into_iter().map(|f| op(&f)).collect();
     let result_tensor = FlatTensor::from_shape_and_data(tensor.shape, result_data)?;
     Ok(result_tensor.to_value())
 }
