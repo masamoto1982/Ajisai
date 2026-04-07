@@ -200,11 +200,9 @@ If implementing backward-compatibility shims, deprecated paths, or feature flags
 
 ## Docs
 
+> **Note:** Ajisai is under active development. All documentation other than `SPECIFICATION.md` has been cleared and replaced with placeholder notices. They will be published once the language stabilizes.
+
 | Document | Content |
 |----------|---------|
-| `SPECIFICATION.md` | Canonical language specification (all sections, section IDs for cross-reference) |
-| `docs/guide-file-naming-convention.md` | File naming rules (kebab-case, AI-first criteria) |
-| `docs/migration-file-renaming-inventory.md` | File rename tracking |
-| `public/docs/` | User-facing HTML documentation (syntax, types, words, tutorial, etc.) |
-| `README.md` | Project overview |
+| `SPECIFICATION.md` | Canonical language specification (single source of truth) |
 | `examples/*.ajisai` | Sample programs |
