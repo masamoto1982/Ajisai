@@ -102,6 +102,14 @@ where
                 return Err(AjisaiError::from("+: expected scalar values in Stack mode"));
             }
 
+            // Optimization hook: advisory in-place judgment for each fold operand.
+            // No flow context in Stack mode; NoFlowContext is the correct result for all items.
+            // Scalars are inherently uniquely owned, so the binding condition would be met
+            // if flow context were available.
+            let _in_place_candidates = items.iter()
+                .map(|item| optimization_hooks::check_in_place_candidate(item, None))
+                .collect::<Vec<_>>();
+
             let first_scalar: Fraction = extract_scalar_from_value(&items[0]).unwrap().clone();
             let mut acc = first_scalar.clone();
             let original_first = acc.clone();
@@ -133,6 +141,13 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_add(a, b) {
+            // Optimization hook: called here because this SIMD fast path bypasses
+            // apply_binary_arithmetic. No flow context in the SIMD path; NoFlowContext
+            // accurately reflects that SIMD execution does not participate in flow tracking.
+            let _in_place_candidates = [
+                optimization_hooks::check_in_place_candidate(a, None),
+                optimization_hooks::check_in_place_candidate(b, None),
+            ];
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -144,6 +159,11 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
         if let Some(result) = simd_ops::apply_simd_scalar_add(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_add(b, a))
         {
+            // Optimization hook: same rationale as the SIMD vector path above.
+            let _in_place_candidates = [
+                optimization_hooks::check_in_place_candidate(a, None),
+                optimization_hooks::check_in_place_candidate(b, None),
+            ];
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -162,6 +182,12 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_sub(a, b) {
+            // Optimization hook: called here because this SIMD fast path bypasses
+            // apply_binary_arithmetic. No flow context in the SIMD path.
+            let _in_place_candidates = [
+                optimization_hooks::check_in_place_candidate(a, None),
+                optimization_hooks::check_in_place_candidate(b, None),
+            ];
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -180,6 +206,12 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_mul(a, b) {
+            // Optimization hook: called here because this SIMD fast path bypasses
+            // apply_binary_arithmetic. No flow context in the SIMD path.
+            let _in_place_candidates = [
+                optimization_hooks::check_in_place_candidate(a, None),
+                optimization_hooks::check_in_place_candidate(b, None),
+            ];
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -191,6 +223,11 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         if let Some(result) = simd_ops::apply_simd_scalar_mul(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_mul(b, a))
         {
+            // Optimization hook: same rationale as the SIMD vector path above.
+            let _in_place_candidates = [
+                optimization_hooks::check_in_place_candidate(a, None),
+                optimization_hooks::check_in_place_candidate(b, None),
+            ];
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
