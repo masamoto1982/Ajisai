@@ -135,25 +135,17 @@ FALSE
         <!-- Vector & Dimension Model -->
         <section>
           <h3>Vector &amp; Dimension Model</h3>
-          <p>Vectors can nest up to <strong>10 dimensions</strong> (fingers on both hands). Three bracket types cycle through the nesting levels for display:</p>
+          <p>Vectors can nest up to <strong>10 dimensions</strong> (fingers on both hands). The stack itself is the implicit 1st dimension, and Vectors can nest up to 9 levels deep within it.</p>
           <table>
-            <tr><th>Dimension</th><th>Bracket</th><th>Notes</th></tr>
-            <tr><td>1</td><td><code>[]</code></td><td>Stack outermost (implicit)</td></tr>
-            <tr><td>2</td><td><code>{}</code></td><td></td></tr>
-            <tr><td>3</td><td><code>()</code></td><td></td></tr>
-            <tr><td>4</td><td><code>[]</code></td><td>Cycle 2</td></tr>
-            <tr><td>5</td><td><code>{}</code></td><td></td></tr>
-            <tr><td>6</td><td><code>()</code></td><td></td></tr>
-            <tr><td>7</td><td><code>[]</code></td><td>Cycle 3</td></tr>
-            <tr><td>8</td><td><code>{}</code></td><td></td></tr>
-            <tr><td>9</td><td><code>()</code></td><td></td></tr>
-            <tr><td>10</td><td><code>[]</code></td><td>Maximum</td></tr>
+            <tr><th>Bracket</th><th>Role</th></tr>
+            <tr><td><code>[ ]</code></td><td>Vector delimiter &mdash; used for all data structures</td></tr>
+            <tr><td><code>{ }</code> / <code>( )</code></td><td>Code block delimiter &mdash; used for DEF, MAP, FILTER, FOLD, COND</td></tr>
           </table>
 
-          <h4>Bracket Display</h4>
-          <p>On input, all bracket types (<code>[]</code>, <code>{}</code>, <code>()</code>) are interchangeable. On display, brackets are auto-converted to match the depth-cycling convention:</p>
-<pre><code>[ 1 2 3 ]                    # Display: { 1 2 3 }
-[ [ 1 2 ] [ 3 4 ] ]          # Display: { ( 1 2 ) ( 3 4 ) }</code></pre>
+          <h4>Display</h4>
+          <p>Vectors are always displayed with <code>[ ]</code>. Nesting depth is distinguished by color in the GUI (9-color palette):</p>
+<pre><code>[ 1 2 3 ]                    # Display: [ 1 2 3 ]
+[ [ 1 2 ] [ 3 4 ] ]          # Display: [ [ 1 2 ] [ 3 4 ] ]</code></pre>
 
           <h4>Rectangular Constraint</h4>
           <p>Elements at the same nesting dimension must have the same shape. A vector like <code>[ [ 1 2 ] [ 3 ] ]</code> is invalid because the inner vectors have different lengths.</p>

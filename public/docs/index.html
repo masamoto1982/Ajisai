@@ -59,7 +59,7 @@
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F9EE;</div>
             <h4>Vector-oriented Processing</h4>
-            <p>NumPy/APL-style shape broadcasting for arithmetic. Support for up to 10 dimensions, with bracket types <code>[] {} ()</code> cycling every 3 levels for display.</p>
+            <p>NumPy/APL-style shape broadcasting for arithmetic. Support for up to 10 dimensions with color-coded nesting depth in the GUI.</p>
           </div>
           <div class="feature">
             <div class="feature-icon" role="img" aria-hidden="true">&#x1F522;</div>
@@ -80,16 +80,16 @@
 [ [ 1 2 ] [ 3 4 ] ]     # 2D nested vector
 
 # Broadcasting arithmetic
-[ 5 ] [ 1 2 3 ] +       # Result: { 6 7 8 }
+[ 5 ] [ 1 2 3 ] +       # Result: [ 6 7 8 ]
 
 # User word definition
 { [ 2 ] * } 'DOUBLE' DEF
-[ 5 ] DOUBLE             # Result: { 10 }
+[ 5 ] DOUBLE             # Result: [ 10 ]
 
 # Higher-order functions with pipeline
 [ 1 2 3 4 5 ]
-  == { [ 2 ] * } MAP           # Result: { 2 4 6 8 10 }
-  == [ 0 ] { + } FOLD          # Sum: { 30 }</code></pre>
+  == { [ 2 ] * } MAP           # Result: [ 2 4 6 8 10 ]
+  == [ 0 ] { + } FOLD          # Sum: [ 30 ]</code></pre>
         </section>
 
         <section>

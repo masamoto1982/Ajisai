@@ -63,18 +63,18 @@
         <section>
           <h3>Nil Coalescing (=>)</h3>
           <p>Returns an alternative value when the first value is NIL. If the value is not NIL, the alternative is ignored:</p>
-<pre><code>NIL => [ 0 ]       # Result: { 0 }
-[ 42 ] => [ 0 ]    # Result: { 42 }
+<pre><code>NIL => [ 0 ]       # Result: [ 0 ]
+[ 42 ] => [ 0 ]    # Result: [ 42 ]
 
 # Combine with FILTER
-[ 1 2 3 ] { [ 10 ] < NOT } FILTER => [ 0 ]   # { 0 }</code></pre>
+[ 1 2 3 ] { [ 10 ] < NOT } FILTER => [ 0 ]   # [ 0 ]</code></pre>
         </section>
 
         <section>
           <h3>Safe Mode (~)</h3>
           <p>Errors become NIL instead of halting execution. Useful for graceful error handling:</p>
 <pre><code>[ 1 2 3 ] [ 10 ] ~ GET            # NIL (instead of index error)
-[ 1 2 3 ] [ 10 ] ~ GET => [ 0 ]   # { 0 } (safe + default)
+[ 1 2 3 ] [ 10 ] ~ GET => [ 0 ]   # [ 0 ] (safe + default)
 
 # "No Change is Error" also caught
 [ 1 ] ~ REVERSE                    # NIL (no change &rarr; NIL)</code></pre>
@@ -107,8 +107,8 @@
         <section>
           <h3>Metaprogramming</h3>
           <ul>
-            <li><code>EXEC</code> &mdash; Execute a vector as code: <code>[ [ 2 ] [ 3 ] * ] EXEC</code> &rarr; <code>{ 6 }</code></li>
-            <li><code>EVAL</code> &mdash; Parse and execute a string: <code>'[ 2 ] [ 3 ] *' EVAL</code> &rarr; <code>{ 6 }</code></li>
+            <li><code>EXEC</code> &mdash; Execute a vector as code: <code>[ [ 2 ] [ 3 ] * ] EXEC</code> &rarr; <code>[ 6 ]</code></li>
+            <li><code>EVAL</code> &mdash; Parse and execute a string: <code>'[ 2 ] [ 3 ] *' EVAL</code> &rarr; <code>[ 6 ]</code></li>
           </ul>
         </section>
 
