@@ -82,18 +82,16 @@ FALSE</code></pre>
         <!-- Vectors -->
         <section>
           <h3>Vectors</h3>
-          <p>Vectors are created with brackets. All three bracket types (<code>[]</code>, <code>{}</code>, <code>()</code>) are interchangeable on input:</p>
-<pre><code># These are all equivalent on input
+          <p>Vectors are created with square brackets <code>[ ]</code>. Curly braces <code>{ }</code> and parentheses <code>( )</code> are reserved for code blocks.</p>
+<pre><code># 1D vector
 [ 1 2 3 ]
-{ 1 2 3 }
-( 1 2 3 )
 
 # Nested vectors
 [ [ 1 2 ] [ 3 4 ] ]
 
 # Mixed value types
 [ 1 'hello' TRUE ]</code></pre>
-          <p>On display, Ajisai auto-converts brackets based on depth-cycling: dimension 1 uses <code>{}</code>, dimension 2 uses <code>()</code>, dimension 3 uses <code>[]</code>, then the cycle repeats. Vectors can nest up to <strong>10 dimensions</strong>.</p>
+          <p>Vectors can nest up to <strong>10 dimensions</strong> (stack as implicit 1st dimension + 9 nesting levels). Nesting depth is distinguished by color in the GUI. All vectors are displayed with <code>[ ]</code>.</p>
           <p>Empty brackets <code>[ ]</code> are errors. Use <code>NIL</code> to represent absence.</p>
         </section>
 

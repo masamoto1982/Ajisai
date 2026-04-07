@@ -74,21 +74,13 @@
           <p>Computation never touches the semantic plane. Strings are vectors of Unicode code points with a String display hint. Booleans are <code>Scalar(1/1)</code> or <code>Scalar(0/1)</code> with a Boolean display hint. The hint is the ripple on the surface; the fraction beneath is the substance.</p>
 
           <h4>4. Dimension Model (10D)</h4>
-          <p>Ajisai supports up to 10 nesting dimensions &mdash; "fingers on both hands." Three bracket types cycle every 3 levels for display clarity:</p>
+          <p>Ajisai supports up to 10 nesting dimensions &mdash; "fingers on both hands." The stack itself is the implicit 1st dimension, and Vectors can nest up to 9 levels deep within it.</p>
           <table>
-            <tr><th>Dimension</th><th>Bracket</th></tr>
-            <tr><td>1</td><td><code>[ ]</code></td></tr>
-            <tr><td>2</td><td><code>{ }</code></td></tr>
-            <tr><td>3</td><td><code>( )</code></td></tr>
-            <tr><td>4</td><td><code>[ ]</code></td></tr>
-            <tr><td>5</td><td><code>{ }</code></td></tr>
-            <tr><td>6</td><td><code>( )</code></td></tr>
-            <tr><td>7</td><td><code>[ ]</code></td></tr>
-            <tr><td>8</td><td><code>{ }</code></td></tr>
-            <tr><td>9</td><td><code>( )</code></td></tr>
-            <tr><td>10</td><td><code>[ ]</code></td></tr>
+            <tr><th>Bracket</th><th>Role</th></tr>
+            <tr><td><code>[ ]</code></td><td>Vector delimiter (data structures)</td></tr>
+            <tr><td><code>{ }</code> / <code>( )</code></td><td>Code block delimiter (DEF, MAP, FILTER, FOLD, COND)</td></tr>
           </table>
-          <p>Exceeding 10 dimensions raises a <code>DimensionLimitExceeded</code> error. The formula: 3 bracket types &times; 3 full cycles + the stack itself = 10.</p>
+          <p>Vectors are always displayed with <code>[ ]</code>. Nesting depth is distinguished by color in the GUI (9-color palette). Exceeding 10 dimensions raises a <code>DimensionLimitExceeded</code> error.</p>
 
           <h4>5. Conservation-Preserving Fraction Arithmetic</h4>
           <p>All numbers are internally represented as fractions (arbitrary-precision BigInt numerator and denominator), eliminating rounding errors entirely:</p>

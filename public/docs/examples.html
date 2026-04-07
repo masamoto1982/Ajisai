@@ -41,49 +41,49 @@
 [ [ 1 2 ] [ 3 4 ] ]
 
 # Access elements
-[ 10 20 30 ] [ 0 ] GET       # { 10 }
-[ 10 20 30 ] [ -1 ] GET      # { 30 }
+[ 10 20 30 ] [ 0 ] GET       # [ 10 ]
+[ 10 20 30 ] [ -1 ] GET      # [ 30 ]
 
 # Modify
-[ 1 3 ] [ 1 2 ] INSERT       # { 1 2 3 }
-[ 1 2 3 ] [ 0 9 ] REPLACE    # { 9 2 3 }
-[ 1 2 3 ] [ 1 ] REMOVE       # { 1 3 }
+[ 1 3 ] [ 1 2 ] INSERT       # [ 1 2 3 ]
+[ 1 2 3 ] [ 0 9 ] REPLACE    # [ 9 2 3 ]
+[ 1 2 3 ] [ 1 ] REMOVE       # [ 1 3 ]
 
 # Broadcasting arithmetic
-[ 1 2 3 ] [ 10 ] +                # { 11 12 13 }
-[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] +   # { ( 11 22 ) ( 13 24 ) }</code></pre>
+[ 1 2 3 ] [ 10 ] +                # [ 11 12 13 ]
+[ [ 1 2 ] [ 3 4 ] ] [ 10 20 ] +   # [ [ 11 22 ] [ 13 24 ] ]</code></pre>
         </section>
 
         <section>
           <h3>Defining Words</h3>
           <p>Define reusable words with code blocks. Ajisai has no stack manipulation words (no DUP, SWAP, ROT, or OVER). Instead, use <code>,,</code> bifurcation, <code>.. GET</code>, or REORDER to access values:</p>
 <pre><code>{ [ 2 ] * } 'DOUBLE' DEF
-[ 5 ] DOUBLE                  # { 10 }
+[ 5 ] DOUBLE                  # [ 10 ]
 
 { [ 2 ] MOD [ 0 ] = } 'IS-EVEN' DEF
-[ 6 ] IS-EVEN                 # { TRUE }
+[ 6 ] IS-EVEN                 # [ TRUE ]
 
 { [ 1 ] + } 'INCREMENT' DEF
-[ 9 ] INCREMENT               # { 10 }</code></pre>
+[ 9 ] INCREMENT               # [ 10 ]</code></pre>
         </section>
 
         <section>
           <h3>Higher-Order Functions</h3>
 <pre><code># MAP - apply a function to each element
-[ 1 2 3 4 5 ] { [ 2 ] * } MAP       # { 2 4 6 8 10 }
+[ 1 2 3 4 5 ] { [ 2 ] * } MAP       # [ 2 4 6 8 10 ]
 
 # FILTER - keep elements matching a condition
-[ 1 2 3 4 5 6 ] { [ 2 ] MOD [ 0 ] = } FILTER   # { 2 4 6 }
+[ 1 2 3 4 5 6 ] { [ 2 ] MOD [ 0 ] = } FILTER   # [ 2 4 6 ]
 
 # FOLD - reduce to a single value
-[ 1 2 3 4 5 ] [ 0 ] { + } FOLD      # { 15 }
-[ 1 2 3 4 5 ] [ 1 ] { * } FOLD      # { 120 }
+[ 1 2 3 4 5 ] [ 0 ] { + } FOLD      # [ 15 ]
+[ 1 2 3 4 5 ] [ 1 ] { * } FOLD      # [ 120 ]
 
 # Chaining with the pipeline operator (==)
 [ 1 2 3 4 5 6 7 8 9 10 ]
-  == { [ 2 ] MOD [ 0 ] = } FILTER    # { 2 4 6 8 10 }
-  == { [ 2 ] * } MAP                  # { 4 8 12 16 20 }
-  == [ 0 ] { + } FOLD                 # { 60 }</code></pre>
+  == { [ 2 ] MOD [ 0 ] = } FILTER    # [ 2 4 6 8 10 ]
+  == { [ 2 ] * } MAP                  # [ 4 8 12 16 20 ]
+  == [ 0 ] { + } FOLD                 # [ 60 ]</code></pre>
         </section>
 
         <section>
@@ -99,24 +99,24 @@
         <section>
           <h3>Fraction Arithmetic</h3>
           <p>All values are exact fractions with arbitrary precision. No floating-point rounding errors:</p>
-<pre><code>[ 1/3 ] [ 1/6 ] +             # { 1/2 }
-[ 1/3 ] [ 2 ] *               # { 2/3 }
-[ 0.1 ] [ 0.2 ] +             # { 3/10 }</code></pre>
+<pre><code>[ 1/3 ] [ 1/6 ] +             # [ 1/2 ]
+[ 1/3 ] [ 2 ] *               # [ 2/3 ]
+[ 0.1 ] [ 0.2 ] +             # [ 3/10 ]</code></pre>
         </section>
 
         <section>
           <h3>Matrix Operations</h3>
 <pre><code># Create a 3x3 matrix from a range
 [ 1 ] [ 9 ] RANGE [ 3 3 ] RESHAPE
-# { ( 1 2 3 ) ( 4 5 6 ) ( 7 8 9 ) }
+# [ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ]
 
 # Transpose a matrix
 [ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE
-# { ( 1 4 ) ( 2 5 ) ( 3 6 ) }
+# [ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]
 
 # Fill a shape with a value
 [ 3 3 ] [ 0 ] FILL
-# { ( 0 0 0 ) ( 0 0 0 ) ( 0 0 0 ) }</code></pre>
+# [ [ 0 0 0 ] [ 0 0 0 ] [ 0 0 0 ] ]</code></pre>
         </section>
 
         <section>
@@ -125,7 +125,7 @@
 'hello' CHARS REVERSE JOIN     # 'olleh'
 
 # String length
-'hello' CHARS LENGTH           # { 5 }</code></pre>
+'hello' CHARS LENGTH           # [ 5 ]</code></pre>
         </section>
 
         <section>
@@ -149,9 +149,9 @@ NOW 'LOCAL' DATETIME
 .. CONCAT            # Combines all stack items into one vector</code></pre>
 
           <p>Examples of bifurcation with individual operations:</p>
-<pre><code>[ 5 ] ,, LENGTH                # { 5 } { 1 }
-[ 3 ] [ 4 ] ,, +              # { 3 } { 4 } { 7 }
-[ 3 1 2 ] ,, SORT             # { 3 1 2 } { 1 2 3 }</code></pre>
+<pre><code>[ 5 ] ,, LENGTH                # [ 5 ] [ 1 ]
+[ 3 ] [ 4 ] ,, +              # [ 3 ] [ 4 ] [ 7 ]
+[ 3 1 2 ] ,, SORT             # [ 3 1 2 ] [ 1 2 3 ]</code></pre>
         </section>
 
         <section>
@@ -161,13 +161,13 @@ NOW 'LOCAL' DATETIME
 [ 1 2 3 ] [ 10 ] ~ GET        # NIL
 
 # Combine with nil coalescing (=&gt;) for default values
-[ 1 2 3 ] [ 10 ] ~ GET =&gt; [ 0 ] # { 0 }</code></pre>
+[ 1 2 3 ] [ 10 ] ~ GET =&gt; [ 0 ] # [ 0 ]</code></pre>
         </section>
 
         <section>
           <h3>Practical: Factorial</h3>
 <pre><code># 5! using RANGE and FOLD
-[ 1 ] [ 5 ] RANGE [ 1 ] { * } FOLD    # 5! = { 120 }</code></pre>
+[ 1 ] [ 5 ] RANGE [ 1 ] { * } FOLD    # 5! = [ 120 ]</code></pre>
         </section>
       </article>
     </main>
