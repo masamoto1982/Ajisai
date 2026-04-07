@@ -152,7 +152,7 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    let result_tensor: FlatTensor = FlatTensor::from_shape_and_data(new_shape, input_tensor.data.clone())?;
+    let result_tensor: FlatTensor = FlatTensor::from_shape_and_data(new_shape, input_tensor.data)?;
 
     if interp.consumption_mode == ConsumptionMode::Keep {
         interp.stack.push(data_val);
