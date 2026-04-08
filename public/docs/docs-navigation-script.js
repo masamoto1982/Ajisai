@@ -58,21 +58,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // ------------------------------------------------------------------------
     const headerEl = document.getElementById('js-header');
     if (headerEl) {
-        // ナビゲーションボタンを生成（アプリ側の.header-actionsと同様）
-        const navButtons = c.globalMenu.map(item =>
-            `<a href="${item.link}" class="header-btn">${item.label}</a>`
-        ).join('');
-
-        // Demoボタンを追加
-        const demoButton = `<a href="${c.social.demo.url}" class="header-btn" target="_blank" rel="noopener noreferrer">Demo</a>`;
+        // Homeはロゴリンクに統合、Demoは不要のため除外
+        const navButtons = c.globalMenu
+            .filter(item => item.label !== 'Home')
+            .map(item => `<a href="${item.link}" class="header-btn">${item.label}</a>`)
+            .join('');
 
         headerEl.innerHTML = `
-            <img src="../images/ajisai-logo-thumbnail-w40.jpg" alt="Ajisai Logo" class="logo">
-            <h1>${c.meta.title}</h1>
-            <span class="version">${c.meta.subTitle}</span>
+            <div class="app-header-top">
+                <a href="https://masamoto1982.github.io/Ajisai/docs/index.html" class="app-brand-block" aria-label="Ajisai Documentation">
+                    <img src="../images/ajisai-logo-thumbnail-w40.jpg" alt="Ajisai Logo" class="logo">
+                    <div class="app-brand-meta">
+                        <h1>${c.meta.title}</h1>
+                        <span class="version">${c.meta.subTitle}</span>
+                    </div>
+                </a>
+            </div>
             <div class="header-actions">
                 ${navButtons}
-                ${demoButton}
             </div>
         `;
     }
