@@ -5,7 +5,7 @@ use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-pub const MAX_CALL_DEPTH: usize = 4;
+pub const DEFAULT_MAX_EXECUTION_STEPS: usize = 100_000;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTargetMode {
@@ -48,6 +48,8 @@ pub struct Interpreter {
     pub(crate) module_state: HashMap<String, Box<dyn std::any::Any>>,
     pub(crate) imported_modules: HashSet<String>,
     pub(crate) call_stack: SmallVec<[String; 5]>,
+    pub(crate) execution_step_count: usize,
+    pub(crate) max_execution_steps: usize,
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
     /// When true, Form-type operations (GET, LENGTH) preserve their source vector,
@@ -79,13 +81,15 @@ impl Interpreter {
             operation_target_mode: OperationTargetMode::StackTop,
             consumption_mode: ConsumptionMode::Consume,
             force_flag: false,
-            disable_no_change_check: false,
+            disable_no_change_check: true,
             safe_mode: false,
             pending_tokens: None,
             pending_token_index: 0,
             module_state: HashMap::new(),
             imported_modules: HashSet::new(),
             call_stack: SmallVec::new(),
+            execution_step_count: 0,
+            max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             input_buffer: String::new(),
             io_output_buffer: String::new(),
             gui_mode: false,

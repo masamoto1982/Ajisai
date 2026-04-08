@@ -741,6 +741,8 @@ async fn test_error_empty_vector() {
 }
 
 #[tokio::test]
-async fn test_error_no_change_sort_already_sorted() {
-    assert!(run_expect_error("[ 1 2 3 ] SORT").await);
+async fn test_sort_already_sorted_succeeds() {
+    let stack = run("[ 1 2 3 ] SORT").await.unwrap();
+    assert_eq!(stack.len(), 1);
+    assert_vector_numbers(&stack[0], &[(1, 1), (2, 1), (3, 1)]);
 }
