@@ -121,7 +121,6 @@
 /* 作業領域パネル / 状態表示パネル — 背景を透過して main-layout に委ねる */
 #editor-panel,
 #state-panel {
-    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -131,6 +130,10 @@
     background: transparent;
     position: relative;
 }
+
+/* 左右分割比 — --col-left-flex / --col-right-flex で制御（ajisai-theme.js がデフォルト 1:1） */
+#editor-panel { flex: var(--col-left-flex); }
+#state-panel  { flex: var(--col-right-flex); }
 
 /* 左パネルと右パネルの間に仕切り線（タブグループの仕切りと連続） */
 #editor-panel {
