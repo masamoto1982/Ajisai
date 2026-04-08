@@ -58,24 +58,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // ------------------------------------------------------------------------
     const headerEl = document.getElementById('js-header');
     if (headerEl) {
-        // Homeはロゴリンクに統合、Demoは不要のため除外
-        const navButtons = c.globalMenu
-            .filter(item => item.label !== 'Home')
-            .map(item => `<a href="${item.link}" class="header-btn">${item.label}</a>`)
-            .join('');
-
+        // メイン画面と同一のヘッダー構造を生成
         headerEl.innerHTML = `
             <div class="app-header-top">
-                <a href="https://masamoto1982.github.io/Ajisai/docs/index.html" class="app-brand-block" aria-label="Ajisai Documentation">
+                <a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai">
                     <img src="../images/ajisai-logo-thumbnail-w40.jpg" alt="Ajisai Logo" class="logo">
                     <div class="app-brand-meta">
                         <h1>${c.meta.title}</h1>
-                        <span class="version">${c.meta.subTitle}</span>
+                        <span class="version">ver.202604080203</span>
                     </div>
                 </a>
             </div>
             <div class="header-actions">
-                ${navButtons}
+                <a href="index.html" class="reference-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+                    </svg>
+                    Reference
+                </a>
+                <a href="${c.social.demo.url}" class="test-btn" target="_blank" rel="noopener noreferrer">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Test
+                </a>
             </div>
         `;
     }
