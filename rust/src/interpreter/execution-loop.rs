@@ -340,6 +340,7 @@ impl Interpreter {
     }
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
+        self.execution_step_count = 0;
         let tokens: Vec<Token> = crate::tokenizer::tokenize(code)?;
         let lines: Vec<ExecutionLine> = self.split_tokens_to_lines(&tokens)?;
         self.execute_guard_structure(&lines)?;

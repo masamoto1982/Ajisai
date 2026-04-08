@@ -24,6 +24,9 @@ pub enum AjisaiError {
         depth: usize,
         chain: String,
     },
+    ExecutionLimitExceeded {
+        limit: usize,
+    },
     DimensionLimitExceeded {
         depth: usize,
     },
@@ -94,6 +97,9 @@ impl fmt::Display for AjisaiError {
             }
             AjisaiError::DepthLimitExceeded { depth, chain } => {
                 write!(f, "Call depth limit ({}) exceeded: {}", depth, chain)
+            }
+            AjisaiError::ExecutionLimitExceeded { limit } => {
+                write!(f, "Execution step limit ({}) exceeded", limit)
             }
             AjisaiError::DimensionLimitExceeded { depth } => {
                 write!(f, "Nesting depth limit exceeded: Ajisai supports up to 10 dimensions. Nesting depth {} exceeds the limit.", depth)

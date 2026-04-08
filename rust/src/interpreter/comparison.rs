@@ -47,7 +47,7 @@ fn check_all_adjacent_equal(items: &[Value]) -> bool {
     items.windows(2).all(|pair| pair[0].data == pair[1].data)
 }
 
-fn apply_binary_comparison<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
+fn apply_binary_comparison<F>(interp: &mut Interpreter, op: F, _op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> bool,
 {
@@ -108,9 +108,7 @@ where
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::NoChange {
-                    word: op_name.into(),
-                });
+                return Ok(());
             }
 
             if interp.stack.len() < count {
@@ -204,7 +202,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::NoChange { word: "=".into() });
+                return Ok(());
             }
 
             if interp.stack.len() < count {

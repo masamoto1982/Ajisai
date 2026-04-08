@@ -14,7 +14,7 @@ fn convert_value_to_string(val: &Value, hint: DisplayHint) -> Result<Value> {
     }
 
     if is_string_value_with_hint(val, hint) {
-        return Err(AjisaiError::NoChange { word: "STR".into() });
+        return Ok(val.clone());
     }
 
     if is_number_value(val) {
@@ -42,7 +42,7 @@ fn convert_value_to_number(val: &Value, hint: DisplayHint) -> Result<Value> {
     }
 
     if is_number_value(val) {
-        return Err(AjisaiError::NoChange { word: "NUM".into() });
+        return Ok(val.clone());
     }
     if is_boolean_value(val) {
         return Err(AjisaiError::from(
@@ -61,9 +61,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
 
 fn convert_value_to_boolean(val: &Value, hint: DisplayHint) -> Result<Value> {
     if is_boolean_value(val) {
-        return Err(AjisaiError::NoChange {
-            word: "BOOL".into(),
-        });
+        return Ok(val.clone());
     }
     if is_string_value_with_hint(val, hint) {
         let s = value_as_string(val).unwrap_or_default();
@@ -106,7 +104,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
 
     if val.is_nil() {
         interp.stack.push(val);
-        return Err(AjisaiError::NoChange { word: "NIL".into() });
+        return Ok(());
     }
 
     if is_string_value_with_hint(&val, hint) {

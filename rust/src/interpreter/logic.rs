@@ -141,7 +141,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::NoChange { word: "AND".into() });
+                return Ok(());
             }
 
             if interp.stack.len() < count {
@@ -232,7 +232,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::NoChange { word: "OR".into() });
+                return Ok(());
             }
 
             if interp.stack.len() < count {

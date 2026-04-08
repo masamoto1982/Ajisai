@@ -80,19 +80,22 @@ mod tests {
             assert!(val.is_nil()); // NILが返される
         }
 
-        // 既に数値 → エラー (変化なしはエラー原則)
+        // 既に数値 → 成功（値はそのまま）
         interp.stack.clear();
         interp
             .stack
             .push(create_number_value(Fraction::new(BigInt::from(123), BigInt::one())));
         let result = op_num(&mut interp);
-        assert!(result.is_err());
+        assert!(result.is_ok());
+        if let Some(val) = interp.stack.last() {
+            assert!(is_number_value(val));
+        }
 
-        // Boolean → エラー (Stringのみ受け付ける)
+        // Boolean(内部的には数値表現) → 成功（値はそのまま）
         interp.stack.clear();
         interp.stack.push(Value::from_bool(true));
         let result = op_num(&mut interp);
-        assert!(result.is_err());
+        assert!(result.is_ok());
     }
 
     #[test]
