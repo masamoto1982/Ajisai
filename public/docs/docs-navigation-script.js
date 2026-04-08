@@ -40,17 +40,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ------------------------------------------------------------------------
-    // 0. テーマカラーの適用 (共通テーマから)
+    // 0. テーマカラーの適用
+    //    <head> のインラインスクリプトが <style id="theme-vars"> 経由で適用済み。
+    //    ここで AjisaiTheme.apply() を呼ぶとインラインスタイルとして上書きされ、
+    //    docs-reference-styles.css による CSS 変数オーバーライド（黄金比等）が
+    //    無効になるため、呼び出しを行わない。
     // ------------------------------------------------------------------------
-    if (typeof AjisaiTheme !== 'undefined') {
-        AjisaiTheme.apply();
-    } else if (c.theme) {
-        // フォールバック: SiteConfigのテーマを使用
-        const root = document.documentElement;
-        for (const [key, value] of Object.entries(c.theme)) {
-            root.style.setProperty(key, value);
-        }
-    }
 
     // ------------------------------------------------------------------------
     // 1. ヘッダー情報の生成 (#js-header)
