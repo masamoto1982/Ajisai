@@ -79,7 +79,7 @@ where
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
-                return Err(AjisaiError::NoChange { word: op_name.into() });
+                return Ok(());
             }
 
             if interp.stack.len() < count {

@@ -2,7 +2,6 @@ use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, FlowToken, Token, Value};
 
-use super::interpreter_core::MAX_CALL_DEPTH;
 use super::{
     arithmetic, cast, comparison, control, control_cond, datetime, execute_def, execute_del,
     execute_lookup, hash, higher_order, higher_order_fold, io, logic, modules, random, sort, tensor_cmds,
@@ -25,16 +24,15 @@ impl Interpreter {
                 }
             })?;
 
-        if def.lines.is_empty() {
-            return self.execute_builtin(&resolved_name);
+        self.execution_step_count += 1;
+        if self.execution_step_count > self.max_execution_steps {
+            return Err(AjisaiError::ExecutionLimitExceeded {
+                limit: self.max_execution_steps,
+            });
         }
 
-        if self.call_stack.len() >= MAX_CALL_DEPTH {
-            let chain = format!("{} -> {}", self.call_stack.join(" -> "), resolved_name);
-            return Err(AjisaiError::DepthLimitExceeded {
-                depth: MAX_CALL_DEPTH,
-                chain,
-            });
+        if def.lines.is_empty() {
+            return self.execute_builtin(&resolved_name);
         }
 
         self.call_stack.push(resolved_name.clone());

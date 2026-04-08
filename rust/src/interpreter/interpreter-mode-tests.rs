@@ -289,23 +289,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_safe_mode_with_no_change_error() {
+    async fn test_safe_mode_with_no_change_operation() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1 ] ~ REVERSE").await;
         assert!(
             result.is_ok(),
-            "Safe mode should suppress no-change error: {:?}",
+            "Safe mode should allow no-change operation: {:?}",
             result
         );
-        assert_eq!(
-            interp.stack.len(),
-            2,
-            "Stack should have 2 elements: {:?}",
-            interp.stack
-        );
-        assert!(
-            interp.stack.last().unwrap().is_nil(),
-            "Top should be NIL for no-change error"
-        );
+        assert_eq!(interp.stack.len(), 1, "Stack should remain unchanged: {:?}", interp.stack);
+        assert!(interp.stack.last().unwrap().is_vector(), "Top should be the reversed vector");
     }
 }

@@ -295,7 +295,7 @@ mod tests {
         assert!(val.is_truthy(), "TRUE OR NIL should be truthy");
     }
 
-    // === Call depth tests ===
+    // === Execution limit / recursion guard tests ===
 
     #[tokio::test]
     async fn test_call_depth_4_ok() {
@@ -311,7 +311,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_call_depth_5_exceeds() {
+    async fn test_deep_call_chain_succeeds_without_depth_limit() {
         let mut interp = Interpreter::new();
         interp.execute("{ B } 'A' DEF").await.unwrap();
         interp.execute("{ C } 'B' DEF").await.unwrap();
@@ -320,26 +320,21 @@ mod tests {
         interp.execute("{ [ 1 ] } 'E' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
-        assert!(result.is_err(), "Call depth 5 should fail");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("Call depth limit"),
-            "Error message should mention call depth limit: {}",
-            err_msg
-        );
+        assert!(result.is_ok(), "Deep call chain should succeed: {:?}", result);
     }
 
     #[tokio::test]
-    async fn test_direct_recursion_limited() {
+    async fn test_direct_recursion_hits_execution_limit() {
         let mut interp = Interpreter::new();
+        interp.max_execution_steps = 64;
         interp.execute("{ REC } 'REC' DEF").await.unwrap();
 
         let result = interp.execute("REC").await;
-        assert!(result.is_err(), "Direct recursion should hit depth limit");
+        assert!(result.is_err(), "Direct recursion should hit execution limit");
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("Call depth limit"),
-            "Error message should mention call depth limit: {}",
+            err_msg.contains("Execution step limit"),
+            "Error message should mention execution step limit: {}",
             err_msg
         );
     }
@@ -361,23 +356,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_call_depth_error_shows_trace() {
+    async fn test_execution_limit_error_message() {
         let mut interp = Interpreter::new();
-        interp.execute("{ B } 'A' DEF").await.unwrap();
-        interp.execute("{ C } 'B' DEF").await.unwrap();
-        interp.execute("{ D } 'C' DEF").await.unwrap();
-        interp.execute("{ E } 'D' DEF").await.unwrap();
-        interp.execute("{ [ 1 ] } 'E' DEF").await.unwrap();
-
-        let result = interp.execute("A").await;
+        interp.max_execution_steps = 64;
+        interp.execute("{ REC } 'REC' DEF").await.unwrap();
+        let result = interp.execute("REC").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("A")
-                && err_msg.contains("B")
-                && err_msg.contains("C")
-                && err_msg.contains("D"),
-            "Error message should show call trace: {}",
+            err_msg.contains("Execution step limit"),
+            "Error message should mention execution step limit: {}",
             err_msg
         );
     }
