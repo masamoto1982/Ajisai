@@ -207,7 +207,7 @@ const AjisaiTheme = {
             "--max-width-container": "1200px",
             "--breakpoint-mobile": "768px",
             "--side-nav-flex-ratio": "1",
-            "--main-content-flex-ratio": "3",
+            "--main-content-flex-ratio": "1.618",
 
             // ====== 後方互換性のための変数（既存CSSとの互換） ======
             "--border-color": this.getBorderColor(bg.article),
