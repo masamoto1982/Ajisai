@@ -26,6 +26,11 @@ pub enum BuiltinExecutorKey {
     Map,
     Filter,
     Fold,
+    Unfold,
+    Any,
+    All,
+    Count,
+    Scan,
     Get,
     Length,
     Concat,
@@ -544,6 +549,51 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Fold)
+    ),
+    builtin_spec!(
+        "UNFOLD",
+        "higher-order",
+        "Form: Generate sequence from state transition. State, CodeBlock -> Vector/NIL",
+        "[ 1 ] { { [ 1 ] = } { [ 1 2 ] } { [ 2 ] = } { [ 2 3 ] } { [ 3 ] = } { [ 3 NIL ] } { IDLE } { NIL } COND } UNFOLD",
+        "form",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Unfold)
+    ),
+    builtin_spec!(
+        "ANY",
+        "higher-order",
+        "Form: Return TRUE if any element satisfies predicate. Vector, CodeBlock -> Boolean",
+        "[ 1 3 5 8 ] { [ 2 ] MOD [ 0 ] = } ANY → TRUE",
+        "form",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Any)
+    ),
+    builtin_spec!(
+        "ALL",
+        "higher-order",
+        "Form: Return TRUE if all elements satisfy predicate. Vector, CodeBlock -> Boolean",
+        "[ 2 4 6 8 ] { [ 2 ] MOD [ 0 ] = } ALL → TRUE",
+        "form",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::All)
+    ),
+    builtin_spec!(
+        "COUNT",
+        "higher-order",
+        "Form: Count elements satisfying predicate. Vector, CodeBlock -> Scalar",
+        "[ 1 2 3 4 5 6 ] { [ 2 ] MOD [ 0 ] = } COUNT → [ 3 ]",
+        "form",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Count)
+    ),
+    builtin_spec!(
+        "SCAN",
+        "higher-order",
+        "Form: Return intermediate fold accumulators. Vector, Scalar, CodeBlock -> Vector/NIL",
+        "[ 1 2 3 4 ] [ 0 ] { + } SCAN → [ 1 3 6 10 ]",
+        "form",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Scan)
     ),
     builtin_spec!(
         "PRINT",

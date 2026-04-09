@@ -228,6 +228,144 @@ NIL [ 42 ] + | FOLD            # → [ 42 ]
 - 組み込みワード（+, -, *, /）とユーザーワードの両方が使用可能
 - コードブロック（... |）またはワード名を指定"#,
 
+        "UNFOLD" => r#"# UNFOLD - 状態遷移から列を生成
+
+## 機能
+初期状態からコードを反復実行し、`[element next_state]` を返す限り
+element を出力列に追加して継続します。`NIL` で終了します。
+
+## 使用法（StackTopモード）
+[ 初期状態 ] code | UNFOLD
+[ 初期状態 ] 'WORD' UNFOLD
+→ 生成列（要素なしならNIL）
+
+## 使用法（Stackモード）
+状態 [ 1 ] code | .. UNFOLD
+→ StackTopと同様に状態遷移で列を生成
+
+## 使用例
+[ 1 ]
+  {
+    { [ 1 ] = } { [ 1 2 ] }
+    { [ 2 ] = } { [ 2 3 ] }
+    { [ 3 ] = } { [ 3 NIL ] }
+    { IDLE }    { NIL }
+    COND
+  }
+UNFOLD
+# → [ 1 2 3 ]
+
+## NIL時の挙動
+- 最初の評価でNILなら結果はNIL
+- `next_state` がNILなら、その要素を追加した直後に終了
+
+## 注意
+- 各反復の返り値は `NIL` または `[element next_state]`
+- 10000回連続で終了しない場合はエラー"#,
+
+        "ANY" => r#"# ANY - 1つでも条件を満たすか判定
+
+## 機能
+ベクタの各要素に述語を適用し、1つでも真ならTRUEを返します。
+真が見つかった時点で短絡終了します。
+
+## 使用法（StackTopモード）
+[ 要素... ] condition | ANY
+[ 要素... ] 'WORD' ANY
+→ TRUE / FALSE
+
+## 使用法（Stackモード）
+要素... [ 個数 ] condition | .. ANY
+→ 指定個数を対象にTRUE / FALSE
+
+## 使用例
+[ 1 3 5 8 ] { [ 2 ] MOD [ 0 ] = } ANY
+# → TRUE
+
+## NIL時の挙動
+NIL ANY は FALSE
+
+## 注意
+- 述語は boolean（単一要素ベクタ）を返す必要があります
+- 述語が非booleanを返すとエラー"#,
+
+        "ALL" => r#"# ALL - 全要素が条件を満たすか判定
+
+## 機能
+ベクタの各要素に述語を適用し、全件真ならTRUEを返します。
+偽が見つかった時点で短絡終了します。
+
+## 使用法（StackTopモード）
+[ 要素... ] condition | ALL
+[ 要素... ] 'WORD' ALL
+→ TRUE / FALSE
+
+## 使用法（Stackモード）
+要素... [ 個数 ] condition | .. ALL
+→ 指定個数を対象にTRUE / FALSE
+
+## 使用例
+[ 2 4 6 8 ] { [ 2 ] MOD [ 0 ] = } ALL
+# → TRUE
+
+## NIL時の挙動
+NIL ALL は TRUE
+
+## 注意
+- 述語は boolean（単一要素ベクタ）を返す必要があります
+- 述語が非booleanを返すとエラー"#,
+
+        "COUNT" => r#"# COUNT - 条件一致件数を数える
+
+## 機能
+ベクタの各要素に述語を適用し、真になった件数を返します。
+中間ベクタは生成しません。
+
+## 使用法（StackTopモード）
+[ 要素... ] condition | COUNT
+[ 要素... ] 'WORD' COUNT
+→ 件数（数値）
+
+## 使用法（Stackモード）
+要素... [ 個数 ] condition | .. COUNT
+→ 指定個数を対象に件数を返す
+
+## 使用例
+[ 1 2 3 4 5 6 ] { [ 2 ] MOD [ 0 ] = } COUNT
+# → [ 3 ]
+
+## NIL時の挙動
+NIL COUNT は [ 0 ]
+
+## 注意
+- 述語は boolean（単一要素ベクタ）を返す必要があります
+- 述語が非booleanを返すとエラー"#,
+
+        "SCAN" => r#"# SCAN - FOLD の途中経過を返す
+
+## 機能
+初期値から左畳み込みを行い、各ステップ後の累積値をベクタで返します。
+
+## 使用法（StackTopモード）
+[ 要素... ] [ 初期値 ] op | SCAN
+[ 要素... ] [ 初期値 ] 'WORD' SCAN
+→ 累積値の列（空ならNIL）
+
+## 使用法（Stackモード）
+要素... [ 個数 ] [ 初期値 ] op | .. SCAN
+→ 指定個数を左から畳み込み、累積値列を返す
+
+## 使用例
+[ 1 2 3 4 ] [ 0 ] { + } SCAN
+# → [ 1 3 6 10 ]
+
+## NIL時の挙動
+NIL [ init ] op SCAN は NIL
+
+## 注意
+- 演算コードは `accumulator` と `current element` を受け取り1値を返す必要があります
+- 返り値が空スタックの場合はエラー"#,
+
         _ => return None,
     };
     Some(result.to_string())

@@ -45,7 +45,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             return Err("'$' (branch guard) has been removed. Use COND for conditional branching.".to_string());
         }
         if chars[i] == '&' {
-            return Err("'&' (loop guard) has been removed. Use FOLD or recursive COND for iteration.".to_string());
+            return Err("'&' (loop guard) has been removed. Use FOLD, UNFOLD, or recursive COND for iteration.".to_string());
         }
 
         // 3. 単一文字トークン（括弧、|など）

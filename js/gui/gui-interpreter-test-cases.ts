@@ -440,6 +440,36 @@ export const TEST_CASES: TestCase[] = [
         expectedStack: [createVector([createNumber('10')])],
         category: "Higher-Order Functions"
     },
+    {
+        name: "UNFOLD - basic",
+        code: "[ 1 ] { { [ 1 ] = } { [ 1 2 ] } { [ 2 ] = } { [ 2 3 ] } { [ 3 ] = } { [ 3 NIL ] } { IDLE } { NIL } COND } UNFOLD",
+        expectedStack: [createVector([createNumber('1'), createNumber('2'), createNumber('3'), createNumber('4')])],
+        category: "Higher-Order Functions"
+    },
+    {
+        name: "ANY - basic",
+        code: "[ 1 3 5 8 ] { [ 2 ] MOD [ 0 ] = } ANY",
+        expectedStack: [createBoolean(true)],
+        category: "Higher-Order Functions"
+    },
+    {
+        name: "ALL - basic",
+        code: "[ 2 4 6 8 ] { [ 2 ] MOD [ 0 ] = } ALL",
+        expectedStack: [createBoolean(true)],
+        category: "Higher-Order Functions"
+    },
+    {
+        name: "COUNT - basic",
+        code: "[ 1 2 3 4 5 6 ] { [ 2 ] MOD [ 0 ] = } COUNT",
+        expectedStack: [createVector([createNumber('3')])],
+        category: "Higher-Order Functions"
+    },
+    {
+        name: "SCAN - prefix sum",
+        code: "[ 1 2 3 4 ] [ 0 ] '+' SCAN",
+        expectedStack: [createVector([createNumber('1'), createNumber('3'), createNumber('6'), createNumber('10')])],
+        category: "Higher-Order Functions"
+    },
 
     // ============================================
     // Type Conversion
