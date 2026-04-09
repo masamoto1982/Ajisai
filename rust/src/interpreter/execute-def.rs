@@ -159,13 +159,15 @@ pub(crate) fn op_def_inner(
         });
     }
 
-    if let Some(warning) = crate::interpreter::naming_convention_checker::check_word_name_convention(name) {
+    if let Some(warning) =
+        crate::interpreter::naming_convention_checker::check_word_name_convention(name)
+    {
         interp.output_buffer.push_str(&format!("{}\n", warning));
     }
 
     // Module sample collision check — warn but allow DEF
     let mut collision_modules = Vec::new();
-    for (module_name, module_dict) in &interp.module_samples {
+    for (module_name, module_dict) in &interp.module_vocabulary {
         if module_dict.sample_words.contains_key(&upper_name) {
             collision_modules.push(module_name.clone());
         }
@@ -244,22 +246,35 @@ pub(crate) fn op_def_inner(
         .get(&dict_name)
         .map(|dict| dict.order)
         .unwrap_or_else(|| new_def.registration_order);
-    interp.user_dictionaries.entry(dict_name.clone()).or_insert_with(|| crate::interpreter::UserDictionary {
-        order: dict_order,
-        words: std::collections::HashMap::new(),
-    }).words.insert(upper_name.clone(), Arc::new(new_def));
+    interp
+        .user_dictionaries
+        .entry(dict_name.clone())
+        .or_insert_with(|| crate::interpreter::UserDictionary {
+            order: dict_order,
+            words: std::collections::HashMap::new(),
+        })
+        .words
+        .insert(upper_name.clone(), Arc::new(new_def));
     interp.sync_user_words_cache();
     interp
         .output_buffer
         .push_str(&format!("Defined word: {}@{}\n", dict_name, name));
     // Warn about collisions with module sample words
     if !collision_modules.is_empty() {
-        let module_paths: Vec<String> = collision_modules.iter().map(|m| format!("{}@{}", m, upper_name)).collect();
+        let module_paths: Vec<String> = collision_modules
+            .iter()
+            .map(|m| format!("{}@{}", m, upper_name))
+            .collect();
         let user_path = format!("{}@{}", dict_name, upper_name);
-        let all_paths: Vec<String> = module_paths.iter().chain(std::iter::once(&user_path)).cloned().collect();
+        let all_paths: Vec<String> = module_paths
+            .iter()
+            .chain(std::iter::once(&user_path))
+            .cloned()
+            .collect();
         interp.output_buffer.push_str(&format!(
             "Warning: '{}' now exists in both {}. Use a qualified path when calling this word.\n",
-            upper_name, all_paths.join(" and ")
+            upper_name,
+            all_paths.join(" and ")
         ));
     }
     interp.force_flag = false;

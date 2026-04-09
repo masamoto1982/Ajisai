@@ -44,9 +44,9 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        if interp.module_samples.contains_key(&word_name) {
-            interp.module_samples.remove(&word_name);
-            interp.imported_modules.remove(&word_name);
+        if interp.module_vocabulary.contains_key(&word_name) {
+            interp.module_vocabulary.remove(&word_name);
+            interp.import_table.modules.remove(&word_name);
             interp.sync_user_words_cache();
             interp.rebuild_dependencies()?;
             interp
@@ -83,7 +83,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     // 削除実行
     let removed_def = if is_module {
         interp
-            .module_samples
+            .module_vocabulary
             .get_mut(&owner_name)
             .and_then(|dict| dict.sample_words.remove(&word_name))
     } else {
@@ -137,7 +137,7 @@ fn find_word_owner(
                 return Ok((dict_name.to_string(), false));
             }
         }
-        if let Some(module) = interp.module_samples.get(dict_name) {
+        if let Some(module) = interp.module_vocabulary.get(dict_name) {
             if module.sample_words.contains_key(word_name) {
                 return Ok((dict_name.to_string(), true));
             }
@@ -153,7 +153,7 @@ fn find_word_owner(
                 return Ok((dict_name.clone(), false));
             }
         }
-        for (module_name, module) in &interp.module_samples {
+        for (module_name, module) in &interp.module_vocabulary {
             if module.sample_words.contains_key(word_name) {
                 return Ok((module_name.clone(), true));
             }

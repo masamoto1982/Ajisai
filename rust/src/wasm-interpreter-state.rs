@@ -57,7 +57,7 @@ impl AjisaiInterpreter {
 
     pub(crate) fn collect_imported_modules_array(&self) -> JsValue {
         let arr = js_sys::Array::new();
-        for name in &self.interpreter.imported_modules {
+        for name in self.interpreter.import_table.modules.keys() {
             arr.push(&JsValue::from_str(name));
         }
         arr.into()
@@ -95,7 +95,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_imported_modules(&self) -> JsValue {
         let arr = js_sys::Array::new();
-        for name in &self.interpreter.imported_modules {
+        for name in self.interpreter.import_table.modules.keys() {
             arr.push(&JsValue::from_str(name));
         }
         arr.into()
@@ -107,7 +107,7 @@ impl AjisaiInterpreter {
     pub fn collect_module_sample_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
         let arr = js_sys::Array::new();
-        if let Some(module_dict) = self.interpreter.module_samples.get(&upper) {
+        if let Some(module_dict) = self.interpreter.module_vocabulary.get(&upper) {
             for (name, def) in &module_dict.sample_words {
                 let item = js_sys::Array::new();
                 item.push(&JsValue::from_str(name));
@@ -128,10 +128,9 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_module_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
-        let prefix = format!("{}@", upper);
         let arr = js_sys::Array::new();
-        for (name, def) in &self.interpreter.core_vocabulary {
-            if name.starts_with(&prefix) {
+        if let Some(module_dict) = self.interpreter.module_vocabulary.get(&upper) {
+            for (name, def) in &module_dict.words {
                 let item = js_sys::Array::new();
                 item.push(&JsValue::from_str(name));
                 item.push(
@@ -142,6 +141,29 @@ impl AjisaiInterpreter {
                 );
                 arr.push(&item);
             }
+        }
+        arr.into()
+    }
+
+    #[wasm_bindgen]
+    pub fn collect_dictionary_dependencies(&self) -> JsValue {
+        let arr = js_sys::Array::new();
+        for (dict_name, dep) in &self.interpreter.dictionary_dependencies {
+            let item = js_sys::Array::new();
+            item.push(&JsValue::from_str(dict_name));
+
+            let depends_on = js_sys::Array::new();
+            for name in &dep.depends_on {
+                depends_on.push(&JsValue::from_str(name));
+            }
+            item.push(&depends_on.into());
+
+            let depended_by = js_sys::Array::new();
+            for name in &dep.depended_by {
+                depended_by.push(&JsValue::from_str(name));
+            }
+            item.push(&depended_by.into());
+            arr.push(&item);
         }
         arr.into()
     }
@@ -174,7 +196,7 @@ impl AjisaiInterpreter {
             if let Some(dict) = self.interpreter.user_dictionaries.get_mut(&dict_name) {
                 dict.words.remove(&short_name);
             }
-            if let Some(dict) = self.interpreter.module_samples.get_mut(&dict_name) {
+            if let Some(dict) = self.interpreter.module_vocabulary.get_mut(&dict_name) {
                 dict.sample_words.remove(&short_name);
             }
             let _ = self.interpreter.rebuild_dependencies();
@@ -187,7 +209,7 @@ impl AjisaiInterpreter {
                 return;
             }
         }
-        for dict in self.interpreter.module_samples.values_mut() {
+        for dict in self.interpreter.module_vocabulary.values_mut() {
             if dict.sample_words.remove(&upper_name).is_some() {
                 let _ = self.interpreter.rebuild_dependencies();
                 return;
