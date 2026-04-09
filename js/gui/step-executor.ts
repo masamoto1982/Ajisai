@@ -2,6 +2,11 @@
 
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter, UserWord, ExecuteResult } from '../wasm-interpreter-types';
+import {
+    applyInterpreterSnapshot,
+    createInterpreterSnapshot,
+    type InterpreterSnapshot
+} from '../workers/interpreter-snapshot';
 
 export interface StepState {
     readonly active: boolean;
@@ -16,11 +21,6 @@ export interface StepExecutorCallbacks {
     readonly showExecutionResult: (result: ExecuteResult) => void;
     readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
-}
-
-interface StepExecutionSnapshot {
-    readonly stack: ReturnType<AjisaiInterpreter['collect_stack']>;
-    readonly userWords: UserWord[];
 }
 
 export interface StepExecutor {
@@ -72,10 +72,12 @@ const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
 
 const createStepExecutionSnapshot = (
     interpreter: AjisaiInterpreter
-): StepExecutionSnapshot => ({
-    stack: interpreter.collect_stack(),
-    userWords: collectUserWords(interpreter)
-});
+): InterpreterSnapshot =>
+    createInterpreterSnapshot({
+        stack: interpreter.collect_stack(),
+        userWords: collectUserWords(interpreter),
+        importedModules: interpreter.collect_imported_modules()
+    });
 
 const resolveStepExecutionException = (
     error: unknown,
@@ -96,13 +98,11 @@ const syncInterpreterState = (
 ): void => {
     if (!result || result.error) return;
 
-    interpreter.reset();
-    if (result.stack) {
-        interpreter.restore_stack(result.stack);
-    }
-    if (result.userWords) {
-        interpreter.restore_user_words(result.userWords);
-    }
+    applyInterpreterSnapshot(interpreter, {
+        stack: result.stack,
+        userWords: result.userWords,
+        importedModules: result.importedModules
+    });
 };
 
 export const createStepExecutor = (

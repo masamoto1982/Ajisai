@@ -1,11 +1,12 @@
+use crate::builtins::{lookup_builtin_spec, BuiltinExecutorKey};
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, FlowToken, Token, Value};
 
 use super::{
     arithmetic, cast, comparison, control, control_cond, datetime, execute_def, execute_del,
-    execute_lookup, hash, higher_order, higher_order_fold, io, logic, modules, random, sort, tensor_cmds,
-    vector_ops, Interpreter,
+    execute_lookup, hash, higher_order, higher_order_fold, io, logic, modules, random, sort,
+    tensor_cmds, vector_ops, Interpreter,
 };
 
 impl Interpreter {
@@ -74,83 +75,92 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_builtin_with_conservation(&mut self, name: &str) -> Result<()> {
-        match name {
-            "+" => arithmetic::op_add(self),
-            "-" => arithmetic::op_sub(self),
-            "*" => arithmetic::op_mul(self),
-            "/" => arithmetic::op_div(self),
-            "=" => comparison::op_eq(self),
-            "<" => comparison::op_lt(self),
-            "<=" => comparison::op_le(self),
-            "MAP" => higher_order::op_map(self),
-            "FILTER" => higher_order::op_filter(self),
-            "FOLD" => higher_order_fold::op_fold(self),
-            "GET" => vector_ops::op_get(self),
-            "LENGTH" => vector_ops::op_length(self),
-            "CONCAT" => vector_ops::op_concat(self),
-            "AND" => logic::op_and(self),
-            "OR" => logic::op_or(self),
-            "NOT" => logic::op_not(self),
-            "TRUE" => {
+        if let Some(spec) = lookup_builtin_spec(name) {
+            if let Some(executor_key) = spec.executor_key {
+                return self.execute_builtin_by_key(executor_key);
+            }
+        }
+
+        modules::execute_module_word(self, name)
+            .unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string())))
+    }
+
+    fn execute_builtin_by_key(&mut self, key: BuiltinExecutorKey) -> Result<()> {
+        match key {
+            BuiltinExecutorKey::Add => arithmetic::op_add(self),
+            BuiltinExecutorKey::Sub => arithmetic::op_sub(self),
+            BuiltinExecutorKey::Mul => arithmetic::op_mul(self),
+            BuiltinExecutorKey::Div => arithmetic::op_div(self),
+            BuiltinExecutorKey::Eq => comparison::op_eq(self),
+            BuiltinExecutorKey::Lt => comparison::op_lt(self),
+            BuiltinExecutorKey::Le => comparison::op_le(self),
+            BuiltinExecutorKey::Map => higher_order::op_map(self),
+            BuiltinExecutorKey::Filter => higher_order::op_filter(self),
+            BuiltinExecutorKey::Fold => higher_order_fold::op_fold(self),
+            BuiltinExecutorKey::Get => vector_ops::op_get(self),
+            BuiltinExecutorKey::Length => vector_ops::op_length(self),
+            BuiltinExecutorKey::Concat => vector_ops::op_concat(self),
+            BuiltinExecutorKey::And => logic::op_and(self),
+            BuiltinExecutorKey::Or => logic::op_or(self),
+            BuiltinExecutorKey::Not => logic::op_not(self),
+            BuiltinExecutorKey::True => {
                 self.stack.push(Value::from_bool(true));
                 self.semantic_registry.push_hint(DisplayHint::Boolean);
                 Ok(())
             }
-            "FALSE" => {
+            BuiltinExecutorKey::False => {
                 self.stack.push(Value::from_bool(false));
                 self.semantic_registry.push_hint(DisplayHint::Boolean);
                 Ok(())
             }
-            "NIL" => {
+            BuiltinExecutorKey::Nil => {
                 self.stack.push(Value::nil());
                 self.semantic_registry.push_hint(DisplayHint::Nil);
                 Ok(())
             }
-            "IDLE" => Ok(()),
-            "EXEC" => control::op_exec(self),
-            "EVAL" => control::op_eval(self),
-            "COND" => control_cond::op_cond(self),
-            "DEF" => execute_def::op_def(self),
-            "DEL" => execute_del::op_del(self),
-            "?" => execute_lookup::op_lookup(self),
-            "IMPORT" => modules::op_import(self),
-            "!" => {
+            BuiltinExecutorKey::Idle => Ok(()),
+            BuiltinExecutorKey::Exec => control::op_exec(self),
+            BuiltinExecutorKey::Eval => control::op_eval(self),
+            BuiltinExecutorKey::Cond => control_cond::op_cond(self),
+            BuiltinExecutorKey::Def => execute_def::op_def(self),
+            BuiltinExecutorKey::Del => execute_del::op_del(self),
+            BuiltinExecutorKey::Lookup => execute_lookup::op_lookup(self),
+            BuiltinExecutorKey::Import => modules::op_import(self),
+            BuiltinExecutorKey::Force => {
                 self.force_flag = true;
                 Ok(())
             }
-            "PRINT" => io::op_print(self),
-            "INSERT" => vector_ops::op_insert(self),
-            "REPLACE" => vector_ops::op_replace(self),
-            "REMOVE" => vector_ops::op_remove(self),
-            "TAKE" => vector_ops::op_take(self),
-            "SPLIT" => vector_ops::op_split(self),
-            "REVERSE" => vector_ops::op_reverse(self),
-            "RANGE" => vector_ops::op_range(self),
-            "REORDER" => vector_ops::op_reorder(self),
-            "COLLECT" => vector_ops::op_collect(self),
-            "SORT" => sort::op_sort(self),
-            "SHAPE" => tensor_cmds::op_shape(self),
-            "RANK" => tensor_cmds::op_rank(self),
-            "RESHAPE" => tensor_cmds::op_reshape(self),
-            "TRANSPOSE" => tensor_cmds::op_transpose(self),
-            "FILL" => tensor_cmds::op_fill(self),
-            "FLOOR" => tensor_cmds::op_floor(self),
-            "CEIL" => tensor_cmds::op_ceil(self),
-            "ROUND" => tensor_cmds::op_round(self),
-            "MOD" => tensor_cmds::op_mod(self),
-            "STR" => cast::op_str(self),
-            "NUM" => cast::op_num(self),
-            "BOOL" => cast::op_bool(self),
-            "CHR" => cast::op_chr(self),
-            "CHARS" => cast::op_chars(self),
-            "JOIN" => cast::op_join(self),
-            "NOW" => datetime::op_now(self),
-            "DATETIME" => datetime::op_datetime(self),
-            "TIMESTAMP" => datetime::op_timestamp(self),
-            "CSPRNG" => random::op_csprng(self),
-            "HASH" => hash::op_hash(self),
-            _ => modules::execute_module_word(self, name)
-                .unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string()))),
+            BuiltinExecutorKey::Print => io::op_print(self),
+            BuiltinExecutorKey::Insert => vector_ops::op_insert(self),
+            BuiltinExecutorKey::Replace => vector_ops::op_replace(self),
+            BuiltinExecutorKey::Remove => vector_ops::op_remove(self),
+            BuiltinExecutorKey::Take => vector_ops::op_take(self),
+            BuiltinExecutorKey::Split => vector_ops::op_split(self),
+            BuiltinExecutorKey::Reverse => vector_ops::op_reverse(self),
+            BuiltinExecutorKey::Range => vector_ops::op_range(self),
+            BuiltinExecutorKey::Reorder => vector_ops::op_reorder(self),
+            BuiltinExecutorKey::Collect => vector_ops::op_collect(self),
+            BuiltinExecutorKey::Sort => sort::op_sort(self),
+            BuiltinExecutorKey::Shape => tensor_cmds::op_shape(self),
+            BuiltinExecutorKey::Rank => tensor_cmds::op_rank(self),
+            BuiltinExecutorKey::Reshape => tensor_cmds::op_reshape(self),
+            BuiltinExecutorKey::Transpose => tensor_cmds::op_transpose(self),
+            BuiltinExecutorKey::Fill => tensor_cmds::op_fill(self),
+            BuiltinExecutorKey::Floor => tensor_cmds::op_floor(self),
+            BuiltinExecutorKey::Ceil => tensor_cmds::op_ceil(self),
+            BuiltinExecutorKey::Round => tensor_cmds::op_round(self),
+            BuiltinExecutorKey::Mod => tensor_cmds::op_mod(self),
+            BuiltinExecutorKey::Str => cast::op_str(self),
+            BuiltinExecutorKey::Num => cast::op_num(self),
+            BuiltinExecutorKey::Bool => cast::op_bool(self),
+            BuiltinExecutorKey::Chr => cast::op_chr(self),
+            BuiltinExecutorKey::Chars => cast::op_chars(self),
+            BuiltinExecutorKey::Join => cast::op_join(self),
+            BuiltinExecutorKey::Now => datetime::op_now(self),
+            BuiltinExecutorKey::Datetime => datetime::op_datetime(self),
+            BuiltinExecutorKey::Timestamp => datetime::op_timestamp(self),
+            BuiltinExecutorKey::Csprng => random::op_csprng(self),
+            BuiltinExecutorKey::Hash => hash::op_hash(self),
         }
     }
 

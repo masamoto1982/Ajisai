@@ -8,6 +8,69 @@ use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, n
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::Value;
 
+fn pop_index_operand(interp: &mut Interpreter) -> Result<(Value, i64)> {
+    let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let index = match extract_integer_from_value(&index_val) {
+        Ok(value) => value,
+        Err(error) => {
+            interp.stack.push(index_val);
+            return Err(error);
+        }
+    };
+    Ok((index_val, index))
+}
+
+fn acquire_stacktop_target(
+    interp: &mut Interpreter,
+    arg_to_restore: &Value,
+    preserve_source: bool,
+) -> Result<Value> {
+    if preserve_source {
+        return interp.stack.last().cloned().ok_or_else(|| {
+            interp.stack.push(arg_to_restore.clone());
+            AjisaiError::StackUnderflow
+        });
+    }
+
+    interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(arg_to_restore.clone());
+        AjisaiError::StackUnderflow
+    })
+}
+
+fn with_stacktop_vector_target<R, F>(
+    interp: &mut Interpreter,
+    arg_to_restore: &Value,
+    preserve_source: bool,
+    action: F,
+) -> Result<R>
+where
+    F: FnOnce(&Value) -> Result<R>,
+{
+    let target_val = acquire_stacktop_target(interp, arg_to_restore, preserve_source)?;
+    if !target_val.is_vector() {
+        if !preserve_source {
+            interp.stack.push(target_val);
+        }
+        interp.stack.push(arg_to_restore.clone());
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
+    }
+
+    match action(&target_val) {
+        Ok(result) => Ok(result),
+        Err(error) => {
+            if !preserve_source {
+                interp.stack.push(target_val);
+            }
+            interp.stack.push(arg_to_restore.clone());
+            Err(error)
+        }
+    }
+}
+
 fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)> {
     if !args_val.is_vector() || args_val.len() != 2 {
         return Err(AjisaiError::from(format!(
@@ -29,68 +92,30 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
 /// - Keep（,,）: 対象ベクタを保持し、取得した要素を追加する
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index = match extract_integer_from_value(&index_val) {
-        Ok(v) => v,
-        Err(e) => {
-            interp.stack.push(index_val);
-            return Err(e);
-        }
-    };
+    let (index_val, index) = pop_index_operand(interp)?;
 
     // In gui_mode, GET always preserves the source vector (Form型)
     let preserve_source = interp.gui_mode || is_keep_mode;
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let target_val = if preserve_source {
-                // Preserve mode: peek without removing
-                interp.stack.last().cloned().ok_or_else(|| {
-                    interp.stack.push(index_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            } else {
-                // Consume mode: pop
-                interp.stack.pop().ok_or_else(|| {
-                    interp.stack.push(index_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            };
-
-            if target_val.is_vector() {
-                let len = target_val.len();
-                if len == 0 {
-                    if !preserve_source {
-                        interp.stack.push(target_val);
+            let result_elem =
+                with_stacktop_vector_target(interp, &index_val, preserve_source, |target_val| {
+                    let len = target_val.len();
+                    if len == 0 {
+                        return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
                     }
-                    interp.stack.push(index_val);
-                    return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
-                }
 
-                let actual_index = match normalize_index(index, len) {
-                    Some(idx) => idx,
-                    None => {
-                        if !preserve_source {
-                            interp.stack.push(target_val);
-                        }
-                        interp.stack.push(index_val);
-                        return Err(AjisaiError::IndexOutOfBounds { index, length: len });
-                    }
-                };
+                    let actual_index = normalize_index(index, len)
+                        .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
+                    Ok(target_val.get_child(actual_index).unwrap().clone())
+                })?;
 
-                let result_elem = target_val.get_child(actual_index).unwrap().clone();
-                if is_keep_mode {
-                    interp.stack.push(index_val);
-                }
-                interp.stack.push(result_elem);
-                Ok(())
-            } else {
-                if !preserve_source {
-                    interp.stack.push(target_val);
-                }
+            if is_keep_mode {
                 interp.stack.push(index_val);
-                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
+            interp.stack.push(result_elem);
+            Ok(())
         }
         OperationTargetMode::Stack => {
             let stack_len = interp.stack.len();
@@ -143,40 +168,25 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let vector_val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or_else(|| {
-                    interp.stack.push(args_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            } else {
-                interp.stack.pop().ok_or_else(|| {
-                    interp.stack.push(args_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            };
+            let inserted =
+                with_stacktop_vector_target(interp, &args_val, is_keep_mode, |vector_val| {
+                    let mut values = extract_vector_elements(vector_val).to_vec();
+                    let len = values.len() as i64;
+                    let insert_index = if index < 0 {
+                        (len + index).max(0) as usize
+                    } else {
+                        (index as usize).min(values.len())
+                    };
 
-            if vector_val.is_vector() {
-                let mut v = extract_vector_elements(&vector_val).to_vec();
-                let len = v.len() as i64;
-                let insert_index = if index < 0 {
-                    (len + index).max(0) as usize
-                } else {
-                    (index as usize).min(v.len())
-                };
+                    values.insert(insert_index, element.clone());
+                    Ok(Value::from_vector(values))
+                })?;
 
-                v.insert(insert_index, element.clone());
-                if is_keep_mode {
-                    interp.stack.push(args_val);
-                }
-                interp.stack.push(Value::from_vector(v));
-                Ok(())
-            } else {
-                if !is_keep_mode {
-                    interp.stack.push(vector_val);
-                }
+            if is_keep_mode {
                 interp.stack.push(args_val);
-                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
+            interp.stack.push(inserted);
+            Ok(())
         }
         OperationTargetMode::Stack => {
             let len = interp.stack.len() as i64;
@@ -212,45 +222,22 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let vector_val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or_else(|| {
-                    interp.stack.push(args_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            } else {
-                interp.stack.pop().ok_or_else(|| {
-                    interp.stack.push(args_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            };
+            let replaced =
+                with_stacktop_vector_target(interp, &args_val, is_keep_mode, |vector_val| {
+                    let mut values = extract_vector_elements(vector_val).to_vec();
+                    let len = values.len();
+                    let actual_index = normalize_index(index, len)
+                        .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
 
-            if vector_val.is_vector() {
-                let mut v = extract_vector_elements(&vector_val).to_vec();
-                let len = v.len();
-                let actual_index = match normalize_index(index, len) {
-                    Some(idx) => idx,
-                    None => {
-                        if !is_keep_mode {
-                            interp.stack.push(Value::from_vector(v));
-                        }
-                        interp.stack.push(args_val);
-                        return Err(AjisaiError::IndexOutOfBounds { index, length: len });
-                    }
-                };
+                    values[actual_index] = new_element.clone();
+                    Ok(Value::from_vector(values))
+                })?;
 
-                v[actual_index] = new_element;
-                if is_keep_mode {
-                    interp.stack.push(args_val);
-                }
-                interp.stack.push(Value::from_vector(v));
-                Ok(())
-            } else {
-                if !is_keep_mode {
-                    interp.stack.push(vector_val);
-                }
+            if is_keep_mode {
                 interp.stack.push(args_val);
-                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
+            interp.stack.push(replaced);
+            Ok(())
         }
         OperationTargetMode::Stack => {
             let len = interp.stack.len();
@@ -286,60 +273,29 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
 /// - Keep（,,）: 対象ベクタを保持し、削除結果を追加する
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let index = match extract_integer_from_value(&index_val) {
-        Ok(v) => v,
-        Err(e) => {
-            interp.stack.push(index_val);
-            return Err(e);
-        }
-    };
+    let (index_val, index) = pop_index_operand(interp)?;
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let vector_val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or_else(|| {
-                    interp.stack.push(index_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            } else {
-                interp.stack.pop().ok_or_else(|| {
-                    interp.stack.push(index_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            };
+            let removed =
+                with_stacktop_vector_target(interp, &index_val, is_keep_mode, |vector_val| {
+                    let mut values = extract_vector_elements(vector_val).to_vec();
+                    let len = values.len();
+                    let actual_index = normalize_index(index, len)
+                        .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
 
-            if vector_val.is_vector() {
-                let mut v = extract_vector_elements(&vector_val).to_vec();
-                let len = v.len();
-                let actual_index = match normalize_index(index, len) {
-                    Some(idx) => idx,
-                    None => {
-                        if !is_keep_mode {
-                            interp.stack.push(Value::from_vector(v));
-                        }
-                        interp.stack.push(index_val);
-                        return Err(AjisaiError::IndexOutOfBounds { index, length: len });
+                    values.remove(actual_index);
+                    if values.is_empty() {
+                        return Ok(Value::nil());
                     }
-                };
+                    Ok(Value::from_vector(values))
+                })?;
 
-                v.remove(actual_index);
-                if is_keep_mode {
-                    interp.stack.push(index_val);
-                }
-                if v.is_empty() {
-                    interp.stack.push(Value::nil());
-                } else {
-                    interp.stack.push(Value::from_vector(v));
-                }
-                Ok(())
-            } else {
-                if !is_keep_mode {
-                    interp.stack.push(vector_val);
-                }
+            if is_keep_mode {
                 interp.stack.push(index_val);
-                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
+            interp.stack.push(removed);
+            Ok(())
         }
         OperationTargetMode::Stack => {
             let len = interp.stack.len();

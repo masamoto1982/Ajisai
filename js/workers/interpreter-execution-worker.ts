@@ -1,6 +1,7 @@
 // js/workers/interpreter-execution-worker.ts
 
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
+import { applyInterpreterSnapshot } from './interpreter-snapshot';
 
 let interpreter: AjisaiInterpreter | null = null;
 let isAborted = false;
@@ -81,16 +82,7 @@ self.onmessage = async (event: MessageEvent) => {
 
     try {
         // 実行前に状態を復元
-        interpreter!.reset();
-        if (event.data.state?.importedModules?.length) {
-            interpreter!.restore_imported_modules(event.data.state.importedModules);
-        }
-        if (event.data.state?.stack) {
-            interpreter!.restore_stack(event.data.state.stack);
-        }
-        if (event.data.state?.userWords) {
-            interpreter!.restore_user_words(event.data.state.userWords);
-        }
+        applyInterpreterSnapshot(interpreter!, event.data.state);
 
         if (isAborted) throw new Error('aborted');
 
