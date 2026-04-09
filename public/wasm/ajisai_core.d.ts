@@ -1,5 +1,5 @@
-/* tslint:disable */
-/* eslint-disable */
+
+
 
 export class AjisaiInterpreter {
     free(): void;
@@ -9,16 +9,16 @@ export class AjisaiInterpreter {
     execute_step(code: string): any;
     get_core_words_info(): any;
     get_idiolect_words_info(): any;
-    /**
-     * IMPORT済みモジュール名の一覧を返す。
-     * 例: ["MUSIC", "JSON"]
-     */
+
+
+
+
     get_imported_modules(): any;
     get_io_output_buffer(): string;
-    /**
-     * 指定モジュールが公開するワード情報を返す。
-     * 返却形式は Array<[name, description]>
-     */
+
+
+
+
     get_module_words_info(module_name: string): any;
     get_stack(): any;
     get_word_definition(name: string): any;
@@ -27,10 +27,10 @@ export class AjisaiInterpreter {
     remove_word(name: string): void;
     reset(): any;
     restore_idiolect(words_js: any): void;
-    /**
-     * JS側からモジュール状態を復元する。
-     * 配列 ["MUSIC", "JSON"] のような形式で受け取り、各モジュールを再登録する。
-     */
+
+
+
+
     restore_imported_modules(modules_js: any): void;
     restore_stack(stack_js: any): void;
     set_input_buffer(text: string): void;
@@ -76,22 +76,22 @@ export interface InitOutput {
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
 
-/**
- * Instantiates the given `module`, which can either be bytes or
- * a precompiled `WebAssembly.Module`.
- *
- * @param {{ module: SyncInitInput }} module - Passing `SyncInitInput` directly is deprecated.
- *
- * @returns {InitOutput}
- */
+
+
+
+
+
+
+
+
 export function initSync(module: { module: SyncInitInput } | SyncInitInput): InitOutput;
 
-/**
- * If `module_or_path` is {RequestInfo} or {URL}, makes a request and
- * for everything else, calls `WebAssembly.instantiate` directly.
- *
- * @param {{ module_or_path: InitInput | Promise<InitInput> }} module_or_path - Passing `InitInput` directly is deprecated.
- *
- * @returns {Promise<InitOutput>}
- */
+
+
+
+
+
+
+
+
 export default function __wbg_init (module_or_path?: { module_or_path: InitInput | Promise<InitInput> } | InitInput | Promise<InitInput>): Promise<InitOutput>;

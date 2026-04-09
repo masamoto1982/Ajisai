@@ -1,6 +1,6 @@
-// rust/src/interpreter/vector_ops/structure.rs
-//
-// ベクタ構造操作: CONCAT, REVERSE, RANGE, REORDER, COLLECT
+
+
+
 
 use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
@@ -199,7 +199,7 @@ fn parse_reorder_indices(indices_val: &Value) -> Result<Vec<i64>> {
     Ok(vec![single])
 }
 
-/// CONCAT - 複数のベクタを連結する（Form型）
+
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -237,11 +237,11 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// REVERSE - 要素の順序を反転する（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタを消費し、反転結果を返す
-/// - Keep（,,）: 対象ベクタを保持し、反転結果を追加する
+
+
+
+
+
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -274,7 +274,7 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTargetMode::Stack => {
             if is_keep_mode {
-                // Keep mode: preserve original, add reversed elements
+
                 let original = interp.stack.clone();
                 if !interp.disable_no_change_check {
                     if original.len() < 2 {
@@ -319,12 +319,12 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// RANGE - 数値範囲を生成する（Form型）
+
 pub fn op_range(interp: &mut Interpreter) -> Result<()> {
-    // 引数ベクタを取得
+
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 引数ベクタから start, end, step を抽出
+
     let (start, end, step) = match parse_range_args(&args_val) {
         Ok(values) => values,
         Err(error) => {
@@ -365,18 +365,18 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// REORDER - インデックスリストで要素を並べ替える（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタと引数を消費し、並べ替え結果を返す
-/// - Keep（,,）: 対象ベクタと引数を保持し、並べ替え結果を追加する
+
+
+
+
+
 pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    // インデックスリストをポップ
+
     let indices_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // インデックスリストを抽出
+
     let indices = match parse_reorder_indices(&indices_val) {
         Ok(values) => values,
         Err(error) => {
@@ -449,7 +449,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// COLLECT - スタックからN個の値を収集してベクタを作成する
+
 pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 

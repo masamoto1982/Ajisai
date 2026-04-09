@@ -140,7 +140,7 @@ pub(crate) fn try_char_from_value(val: &Value) -> Option<char> {
     char::from_u32(code as u32)
 }
 
-/// 値を文字列表現に変換する（内部ヘルパー）
+
 pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
     if value.is_nil() {
         return "NIL".to_string();
@@ -173,7 +173,7 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
         }
     }
 
-    // ベクタの場合
+
     fn collect_fractions(val: &Value) -> Vec<String> {
         match &val.data {
             ValueData::Nil => vec!["NIL".to_string()],

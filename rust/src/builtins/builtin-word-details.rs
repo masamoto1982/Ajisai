@@ -1,7 +1,7 @@
-// rust/src/builtins/builtin-word-details.rs
-//
-// Detailed documentation for built-in words (used by the ? word).
-// Delegates by registry-defined detail group.
+
+
+
+
 
 use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinDetailGroup};
 use super::detail_lookup_arithmetic_logic::lookup_detail_arithmetic_logic;
@@ -12,8 +12,8 @@ use super::detail_lookup_modifier::lookup_detail_modifier;
 use super::detail_lookup_string_cast::lookup_detail_string_cast;
 use super::detail_lookup_vector_ops::lookup_detail_vector_ops;
 
-/// Returns detailed documentation for a built-in word.
-/// Used by the `?` word to display help information.
+
+
 pub fn lookup_builtin_detail(name: &str) -> String {
     let Some(spec) = lookup_builtin_spec(name) else {
         return format!("'{}' の詳細情報はありません。", name);

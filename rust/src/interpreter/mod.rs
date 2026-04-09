@@ -39,23 +39,23 @@ pub mod tensor_cmds;
 pub mod vector_exec;
 pub mod vector_ops;
 
-// ── Interpreter core (struct, enums, initialization) ────────────
+
 #[path = "interpreter-core.rs"]
 pub mod interpreter_core;
 
-// ── Word resolution and dependency management ───────────────────
+
 #[path = "resolve-word.rs"]
 mod resolve_word;
 
-// ── Main execution loop and guard structures ────────────────────
+
 #[path = "execution-loop.rs"]
 mod execution_loop;
 
-// ── Builtin word dispatch ───────────────────────────────────────
+
 #[path = "execute-builtin.rs"]
 mod execute_builtin;
 
-// ── Tests ───────────────────────────────────────────────────────
+
 #[cfg(test)]
 #[path = "interpreter-execution-tests.rs"]
 mod interpreter_execution_tests;
@@ -89,5 +89,5 @@ mod higher_order_fold_tests;
 
 pub use interpreter_core::*;
 
-// Re-export types that submodules import via `crate::interpreter::`
+
 pub use crate::types::WordDefinition;

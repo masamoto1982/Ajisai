@@ -244,7 +244,7 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
         }
         DisplayHint::Nil => "nil",
         DisplayHint::Auto => {
-            // Fallback to heuristic detection for Auto hint
+
             if is_datetime_value(value) {
                 "datetime"
             } else if is_boolean_value(value) {
@@ -373,7 +373,7 @@ mod test_input_helper {
             "[ [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ] ] [ [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ] ]"
         );
 
-        // 4D: still [ ] with deeper nesting
+
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 1, 1, 1]),
             "[ [ [ [ ] ] ] ]"

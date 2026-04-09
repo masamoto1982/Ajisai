@@ -138,22 +138,22 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     Err(AjisaiError::from("NIL: expected String input"))
 }
 
-/// CHR - 数値（Unicodeコードポイント）を1文字の文字列に変換
-///
-/// 【使用法】
-/// ```ajisai
-/// 65 CHR → 'A'
-/// 10 CHR → '\n' (改行文字)
-/// 12354 CHR → 'あ'
-/// ```
-///
-/// 【動作】
-/// - 数値をUnicodeスカラ値として解釈し、対応する1文字のStringを生成
-///
-/// 【エラー】
-/// - 入力が有効なUnicodeコードポイントでない場合
-/// - 入力が数値でない場合
-/// CHR の単一値変換（内部ヘルパー）
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 fn convert_codepoint_to_char(val: &Value, hint: DisplayHint) -> Result<Value> {
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {

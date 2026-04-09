@@ -1,22 +1,22 @@
-// Fractional Dataflow tests
-//
-// Verifies the new consumed/remainder semantics introduced in the v1.0.0-draft
-// specification (SPECIFICATION.md §0).
-//
-// Required test categories:
-//   1. Conservation law (保存則成立テスト)
-//   2. Over-consumption error (過剰消費エラーテスト)
-//   3. Remainder inheritance chain (残余継承チェーンテスト)
-//   4. Complete consumption — terminal remainder zero (完全消費テスト)
+
+
+
+
+
+
+
+
+
+
 
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::types::fraction::Fraction;
 use ajisai_core::types::{FlowToken, Value};
 use num_bigint::BigInt;
 
-// ──────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────
+
+
+
 
 async fn run(code: &str) -> Result<Vec<Value>, String> {
     let mut interp = Interpreter::new();
@@ -40,7 +40,7 @@ fn frac(n: i64, d: i64) -> Fraction {
 
 fn assert_number(val: &Value, num: i64, denom: i64) {
     let expected = Fraction::new(BigInt::from(num), BigInt::from(denom));
-    // In gui_mode, scalars may be wrapped as single-element vectors
+
     if let Some(f) = val.as_scalar() {
         assert_eq!(f, &expected, "Expected {}/{}, got {}", num, denom, f);
     } else if let Some(vec) = val.as_vector() {
@@ -61,13 +61,13 @@ fn assert_number(val: &Value, num: i64, denom: i64) {
     }
 }
 
-// ──────────────────────────────────────────────
-// 1. Conservation law tests (保存則成立テスト)
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_conservation_flow_token_basic() {
-    // Create a flow token from a scalar value and verify conservation holds
+
     let val = Value::from_fraction(frac(10, 1));
     let token = FlowToken::from_value(&val);
 
@@ -75,18 +75,18 @@ async fn test_conservation_flow_token_basic() {
     assert_eq!(token.remaining, frac(10, 1));
     assert!(!token.is_exhausted());
 
-    // Consume 3 units
+
     let (consumed, token2) = token.consume(&frac(3, 1)).unwrap();
     assert_eq!(consumed, frac(3, 1));
     assert_eq!(token2.remaining, frac(7, 1));
 
-    // Verify conservation: total == sum(consumed) + remaining
+
     token2.verify_conservation(&[frac(3, 1)]).unwrap();
 }
 
 #[tokio::test]
 async fn test_conservation_vector_total() {
-    // A vector [3, 5, 2] has total = 3 + 5 + 2 = 10
+
     let val = Value::from_children(vec![
         Value::from_fraction(frac(3, 1)),
         Value::from_fraction(frac(5, 1)),
@@ -98,7 +98,7 @@ async fn test_conservation_vector_total() {
 
 #[tokio::test]
 async fn test_conservation_negative_values() {
-    // For mixed-sign vectors, total uses absolute values: |(-3)| + |5| = 8
+
     let val = Value::from_children(vec![
         Value::from_fraction(frac(-3, 1)),
         Value::from_fraction(frac(5, 1)),
@@ -109,7 +109,7 @@ async fn test_conservation_negative_values() {
 
 #[tokio::test]
 async fn test_conservation_fractional_values() {
-    // 1/3 + 2/3 = 1
+
     let val = Value::from_children(vec![
         Value::from_fraction(frac(1, 3)),
         Value::from_fraction(frac(2, 3)),
@@ -120,7 +120,7 @@ async fn test_conservation_fractional_values() {
 
 #[tokio::test]
 async fn test_conservation_multi_step() {
-    // Consume in multiple steps and verify conservation at each point
+
     let val = Value::from_fraction(frac(100, 1));
     let token = FlowToken::from_value(&val);
 
@@ -134,31 +134,31 @@ async fn test_conservation_multi_step() {
     t3.verify_conservation(&[frac(30, 1), frac(25, 1), frac(45, 1)])
         .unwrap();
 
-    // After consuming exactly 100, remainder should be 0
+
     assert!(t3.is_exhausted());
 }
 
 #[tokio::test]
 async fn test_conservation_with_interpreter_tracking() {
-    // Run a simple arithmetic pipeline with flow tracking enabled
+
     let (stack, interp) = run_with_flow_tracking("[ 5 ] [ 3 ] ! +").await.unwrap();
     assert_eq!(stack.len(), 1);
     assert_number(&stack[0], 8, 1);
 
-    // The interpreter should have tracked flows without conservation violations
+
     assert!(interp.verify_all_flows().is_ok());
 }
 
-// ──────────────────────────────────────────────
-// 2. Over-consumption error tests (過剰消費エラーテスト)
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_over_consumption_error() {
     let val = Value::from_fraction(frac(5, 1));
     let token = FlowToken::from_value(&val);
 
-    // Try to consume more than available
+
     let result = token.consume(&frac(10, 1));
     assert!(
         result.is_err(),
@@ -182,7 +182,7 @@ async fn test_over_consumption_error_type() {
 
 #[tokio::test]
 async fn test_over_consumption_fractional() {
-    // 3/4 remaining, try to consume 1 (= 4/4 > 3/4)
+
     let val = Value::from_fraction(frac(3, 4));
     let token = FlowToken::from_value(&val);
 
@@ -199,15 +199,15 @@ async fn test_over_consumption_after_partial() {
     let (_, t1) = token.consume(&frac(7, 1)).unwrap();
     assert_eq!(t1.remaining, frac(3, 1));
 
-    // Now try to consume 5 from the 3 remaining
+
     let err = t1.consume(&frac(5, 1)).unwrap_err();
     let msg = format!("{}", err);
     assert!(msg.contains("Over-consumption"), "Got: {}", msg);
 }
 
-// ──────────────────────────────────────────────
-// 3. Remainder inheritance chain tests (残余継承チェーンテスト)
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_remainder_chain_id_preserved() {
@@ -243,7 +243,7 @@ async fn test_remainder_inheritance_values() {
     let val = Value::from_fraction(frac(50, 1));
     let token = FlowToken::from_value(&val);
 
-    // Chain of consumptions: 10 -> 15 -> 20 -> 5 = 50 total
+
     let (_, t1) = token.consume(&frac(10, 1)).unwrap();
     assert_eq!(t1.remaining, frac(40, 1));
 
@@ -260,9 +260,9 @@ async fn test_remainder_inheritance_values() {
 
 #[tokio::test]
 async fn test_remainder_hint_preserved() {
-    // TODO: DisplayHint is now in SemanticRegistry, not on FlowToken.
-    // This test verifies that FlowToken preserves value through chain.
-    let val = Value::from_bool(true); // Scalar(1/1)
+
+
+    let val = Value::from_bool(true);
     let token = FlowToken::from_value(&val);
 
     let (_, t1) = token.consume(&frac(1, 1)).unwrap();
@@ -284,9 +284,9 @@ async fn test_flow_id_uniqueness() {
     assert_ne!(t1.id, t2.id, "Different values must get unique flow IDs");
 }
 
-// ──────────────────────────────────────────────
-// 4. Complete consumption tests (完全消費テスト)
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_complete_consumption_success() {
@@ -320,7 +320,7 @@ async fn test_complete_consumption_nil_has_zero_total() {
     let val = Value::nil();
     let token = FlowToken::from_value(&val);
 
-    // NIL contributes nothing to conservation — already exhausted
+
     assert_eq!(token.total, frac(0, 1));
     assert!(token.is_exhausted());
     assert!(token.assert_complete("nil context").is_ok());
@@ -341,16 +341,16 @@ async fn test_complete_consumption_via_chain() {
         .unwrap();
 }
 
-// ──────────────────────────────────────────────
-// 5. Integration with interpreter execution
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_interpreter_flow_tracking_simple_addition() {
     let (stack, interp) = run_with_flow_tracking("[ 10 ] [ 20 ] ! +").await.unwrap();
     assert_eq!(stack.len(), 1);
     assert_number(&stack[0], 30, 1);
-    // Should not violate conservation
+
     assert!(interp.verify_all_flows().is_ok());
 }
 
@@ -360,7 +360,7 @@ async fn test_interpreter_flow_tracking_vector_ops() {
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
-    // [1,2,3] + [10] broadcasts to [11,12,13]
+
     let vec = stack[0].as_vector().unwrap();
     assert_eq!(vec.len(), 3);
     assert!(interp.verify_all_flows().is_ok());
@@ -372,14 +372,14 @@ async fn test_interpreter_flow_tracking_chained_ops() {
         .await
         .unwrap();
     assert_eq!(stack.len(), 1);
-    // (5 + 3) * 2 = 16
+
     assert_number(&stack[0], 16, 1);
     assert!(interp.verify_all_flows().is_ok());
 }
 
 #[tokio::test]
 async fn test_flow_token_shape_tracking() {
-    // 2x3 matrix
+
     let val = Value::from_children(vec![
         Value::from_children(vec![
             Value::from_fraction(frac(1, 1)),
@@ -394,17 +394,17 @@ async fn test_flow_token_shape_tracking() {
     ]);
     let token = FlowToken::from_value(&val);
     assert_eq!(token.shape, vec![2, 3]);
-    // Total = 1+2+3+4+5+6 = 21
+
     assert_eq!(token.total, frac(21, 1));
 }
 
-// ──────────────────────────────────────────────
-// 6. Bifurcation tests (分流テスト)
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_bifurcation_mass_sum_equals_parent() {
-    // Bifurcating a flow into 2 branches: child masses should sum to parent remaining
+
     let val = Value::from_fraction(frac(100, 1));
     let token = FlowToken::from_value(&val);
     let parent_remaining = token.remaining.clone();
@@ -412,17 +412,17 @@ async fn test_bifurcation_mass_sum_equals_parent() {
     let (_parent, children) = token.bifurcate(2).unwrap();
     assert_eq!(children.len(), 2);
 
-    // Each child gets half
+
     assert_eq!(children[0].total, frac(50, 1));
     assert_eq!(children[1].total, frac(50, 1));
 
-    // Sum of children == parent remaining
+
     FlowToken::verify_bifurcation_conservation(&parent_remaining, &children).unwrap();
 }
 
 #[tokio::test]
 async fn test_bifurcation_three_branches() {
-    // Bifurcating into 3 branches (e.g., ,, on a Fold-type word with 2 operands + result)
+
     let val = Value::from_fraction(frac(90, 1));
     let token = FlowToken::from_value(&val);
     let parent_remaining = token.remaining.clone();
@@ -430,7 +430,7 @@ async fn test_bifurcation_three_branches() {
     let (_parent, children) = token.bifurcate(3).unwrap();
     assert_eq!(children.len(), 3);
 
-    // Each child gets 30
+
     assert_eq!(children[0].total, frac(30, 1));
     assert_eq!(children[1].total, frac(30, 1));
     assert_eq!(children[2].total, frac(30, 1));
@@ -440,7 +440,7 @@ async fn test_bifurcation_three_branches() {
 
 #[tokio::test]
 async fn test_bifurcation_fractional_mass() {
-    // 1/3 bifurcated into 2: each child gets 1/6
+
     let val = Value::from_fraction(frac(1, 3));
     let token = FlowToken::from_value(&val);
     let parent_remaining = token.remaining.clone();
@@ -454,7 +454,7 @@ async fn test_bifurcation_fractional_mass() {
 
 #[tokio::test]
 async fn test_bifurcation_parent_exhausted() {
-    // After bifurcation, parent's remaining should be 0
+
     let val = Value::from_fraction(frac(42, 1));
     let token = FlowToken::from_value(&val);
 
@@ -470,12 +470,12 @@ async fn test_bifurcation_parent_child_ids() {
 
     let (parent, children) = token.bifurcate(2).unwrap();
 
-    // Parent should record child IDs
+
     assert_eq!(parent.child_flow_ids.len(), 2);
     assert_eq!(parent.child_flow_ids[0], children[0].id);
     assert_eq!(parent.child_flow_ids[1], children[1].id);
 
-    // Children should reference parent
+
     assert_eq!(children[0].parent_flow_id, Some(parent.id));
     assert_eq!(children[1].parent_flow_id, Some(parent.id));
 }
@@ -493,12 +493,12 @@ async fn test_bifurcation_mass_ratio() {
 
 #[tokio::test]
 async fn test_bifurcation_child_overconsumption() {
-    // After bifurcation, each child has limited mass; consuming too much should fail
+
     let val = Value::from_fraction(frac(10, 1));
     let token = FlowToken::from_value(&val);
 
     let (_parent, children) = token.bifurcate(2).unwrap();
-    // Each child has mass 5
+
 
     let err = children[0].consume(&frac(6, 1)).unwrap_err();
     let msg = format!("{}", err);
@@ -507,12 +507,12 @@ async fn test_bifurcation_child_overconsumption() {
 
 #[tokio::test]
 async fn test_bifurcation_child_unconsumed_leak() {
-    // If a child is only partially consumed, assert_complete should fail
+
     let val = Value::from_fraction(frac(10, 1));
     let token = FlowToken::from_value(&val);
 
     let (_parent, children) = token.bifurcate(2).unwrap();
-    // Each child has mass 5
+
 
     let (_, child_after) = children[0].consume(&frac(3, 1)).unwrap();
     let err = child_after
@@ -524,7 +524,7 @@ async fn test_bifurcation_child_unconsumed_leak() {
 
 #[tokio::test]
 async fn test_bifurcation_zero_mass() {
-    // NIL (zero mass) bifurcation should succeed with zero-mass children
+
     let val = Value::nil();
     let token = FlowToken::from_value(&val);
 
@@ -538,15 +538,15 @@ async fn test_bifurcation_zero_mass() {
 
 #[tokio::test]
 async fn test_bifurcation_with_dot_dot_combined() {
-    // ,, with .. mode: the interpreter should still produce correct results
+
     let result = run("[ 1 2 3 4 5 ] ,, LENGTH").await.unwrap();
-    assert_eq!(result.len(), 2); // original + length
+    assert_eq!(result.len(), 2);
     assert_number(&result[1], 5, 1);
 }
 
 #[tokio::test]
 async fn test_bifurcation_interpreter_keep_mode() {
-    // ,, GET should produce 3 values on stack (original vec, index, result)
+
     let result = run("[ 10 20 30 ] [ 1 ] ,, GET").await.unwrap();
     assert_eq!(result.len(), 3);
     assert_number(&result[2], 20, 1);
@@ -554,7 +554,7 @@ async fn test_bifurcation_interpreter_keep_mode() {
 
 #[tokio::test]
 async fn test_bifurcation_interpreter_arithmetic() {
-    // ,, + should produce 3 values on stack
+
     let result = run("[ 3 ] [ 4 ] ,, +").await.unwrap();
     assert_eq!(result.len(), 3);
     assert_number(&result[0], 3, 1);
@@ -562,16 +562,16 @@ async fn test_bifurcation_interpreter_arithmetic() {
     assert_number(&result[2], 7, 1);
 }
 
-// ──────────────────────────────────────────────
-// §0.10.2  Linear-consumption optimization hook
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_can_update_in_place_uniquely_owned_scalar() {
     let val = Value::from_fraction(frac(42, 1));
     let token = FlowToken::from_value(&val);
 
-    // Scalar with full remaining and unique ownership → safe
+
     assert!(token.can_update_in_place(&val));
 }
 
@@ -584,7 +584,7 @@ async fn test_can_update_in_place_uniquely_owned_vector() {
     ]);
     let token = FlowToken::from_value(&val);
 
-    // Uniquely owned vector with full remaining → safe
+
     assert!(token.can_update_in_place(&val));
 }
 
@@ -593,7 +593,7 @@ async fn test_can_update_in_place_after_partial_consumption() {
     let val = Value::from_fraction(frac(10, 1));
     let token = FlowToken::from_value(&val);
 
-    // Consume partial → remaining != total → not safe
+
     let (_, consumed_token) = token.consume(&frac(3, 1)).unwrap();
     assert!(!consumed_token.can_update_in_place(&val));
 }
@@ -604,11 +604,11 @@ async fn test_can_update_in_place_with_aliased_vector() {
     use ajisai_core::types::ValueData;
 
     let children = Rc::new(vec![Value::from_int(1), Value::from_int(2)]);
-    let _alias = children.clone(); // Create alias (strong_count > 1)
+    let _alias = children.clone();
     let val = Value { data: ValueData::Vector(children) };
     let token = FlowToken::from_value(&val);
 
-    // Aliased vector → not safe even though flow is reusable
+
     assert!(!val.is_uniquely_owned());
     assert!(token.is_reusable_allocation());
     assert!(!token.can_update_in_place(&val));
@@ -619,11 +619,11 @@ async fn test_can_update_in_place_after_bifurcation() {
     let val = Value::from_fraction(frac(100, 1));
     let token = FlowToken::from_value(&val);
 
-    // Bifurcate → children exist → not reusable
+
     let (parent, children) = token.bifurcate(2).unwrap();
     assert!(!parent.can_update_in_place(&val));
 
-    // Children have parent_flow_id set → also not reusable
+
     assert!(!children[0].can_update_in_place(&val));
 }
 
@@ -639,13 +639,13 @@ async fn test_is_uniquely_owned_code_block() {
     assert!(!val.is_uniquely_owned());
 }
 
-// ──────────────────────────────────────────────
-// §0.10.3  Fraction Small Value Optimization
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_fraction_svo_small_construction() {
-    // Small values should not allocate (verified by correct behavior)
+
     let f = Fraction::from(42i64);
     assert_eq!(f.to_i64(), Some(42));
     assert!(f.is_integer());
@@ -670,7 +670,7 @@ async fn test_fraction_svo_nil() {
 
 #[tokio::test]
 async fn test_fraction_svo_arithmetic_stays_small() {
-    // i64 + i64 should stay in small repr
+
     let a = Fraction::from(100i64);
     let b = Fraction::from(200i64);
     let c = a.add(&b);
@@ -679,7 +679,7 @@ async fn test_fraction_svo_arithmetic_stays_small() {
 
 #[tokio::test]
 async fn test_fraction_svo_fractional_arithmetic() {
-    // 1/3 + 1/6 = 1/2 — entirely in i64 fast path
+
     let a = Fraction::new(BigInt::from(1), BigInt::from(3));
     let b = Fraction::new(BigInt::from(1), BigInt::from(6));
     let c = a.add(&b);
@@ -688,7 +688,7 @@ async fn test_fraction_svo_fractional_arithmetic() {
 
 #[tokio::test]
 async fn test_fraction_svo_clone_is_cheap() {
-    // Clone of a small fraction should be trivial (no heap)
+
     let f = Fraction::from(999i64);
     let g = f.clone();
     assert_eq!(f, g);
@@ -722,12 +722,12 @@ async fn test_fraction_svo_accessor_methods() {
 
 #[tokio::test]
 async fn test_fraction_svo_floor_ceil_round() {
-    let f = Fraction::new(BigInt::from(7), BigInt::from(3)); // 7/3 = 2.333...
+    let f = Fraction::new(BigInt::from(7), BigInt::from(3));
     assert_eq!(f.floor().to_i64(), Some(2));
     assert_eq!(f.ceil().to_i64(), Some(3));
     assert_eq!(f.round().to_i64(), Some(2));
 
-    let neg = Fraction::new(BigInt::from(-7), BigInt::from(3)); // -7/3 = -2.333...
+    let neg = Fraction::new(BigInt::from(-7), BigInt::from(3));
     assert_eq!(neg.floor().to_i64(), Some(-3));
     assert_eq!(neg.ceil().to_i64(), Some(-2));
     assert_eq!(neg.round().to_i64(), Some(-2));
@@ -740,9 +740,9 @@ async fn test_fraction_svo_modulo() {
     assert_eq!(a.modulo(&b).to_i64(), Some(2));
 }
 
-// ──────────────────────────────────────────────
-// §0.10.3 Tensor path: collect_fractions_flat_into
-// ──────────────────────────────────────────────
+
+
+
 
 #[tokio::test]
 async fn test_collect_fractions_flat_into_preallocated() {
@@ -752,10 +752,10 @@ async fn test_collect_fractions_flat_into_preallocated() {
         Value::from_int(30),
     ]);
 
-    // count_fractions gives correct count
+
     assert_eq!(val.count_fractions(), 3);
 
-    // collect_fractions_flat_into uses pre-allocated buffer
+
     let mut buf = Vec::with_capacity(val.count_fractions());
     val.collect_fractions_flat_into(&mut buf);
     assert_eq!(buf.len(), 3);
@@ -766,7 +766,7 @@ async fn test_collect_fractions_flat_into_preallocated() {
 
 #[tokio::test]
 async fn test_collect_fractions_nested_tensor() {
-    // 2x3 matrix
+
     let val = Value::from_vector(vec![
         Value::from_vector(vec![Value::from_int(1), Value::from_int(2), Value::from_int(3)]),
         Value::from_vector(vec![Value::from_int(4), Value::from_int(5), Value::from_int(6)]),

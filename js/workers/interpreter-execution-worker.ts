@@ -1,4 +1,4 @@
-// js/workers/interpreter-execution-worker.ts
+
 
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 import { applyInterpreterSnapshot } from './interpreter-snapshot';
@@ -7,16 +7,16 @@ let interpreter: AjisaiInterpreter | null = null;
 let isAborted = false;
 let currentTaskId: string | null = null;
 
-// JSグルーコードを先行ロード。
-// import()はJSバインディングの読み込みのみ行い、
-// WASMコンパイルはinitSync/default呼び出し時まで発生しない。
+
+
+
 const bindingsPromise = import('../pkg/ajisai_core.js');
 
-/**
- * メインスレッドから受け取ったコンパイル済みWebAssembly.Moduleで初期化する。
- * initSync()はコンパイル済みモジュールからのインスタンス化のみ行うため、
- * WASMの再コンパイルが発生せず、ほぼ瞬時に完了する。
- */
+
+
+
+
+
 async function initFromCompiledModule(wasmModule: WebAssembly.Module): Promise<boolean> {
     try {
         const bindings = await bindingsPromise;
@@ -30,10 +30,10 @@ async function initFromCompiledModule(wasmModule: WebAssembly.Module): Promise<b
     }
 }
 
-/**
- * フォールバック: コンパイル済みモジュールが提供されない場合、
- * default()で自力初期化する（WASMコンパイルが発生するため低速）。
- */
+
+
+
+
 async function initFallback(): Promise<boolean> {
     if (interpreter) return true;
     try {
@@ -52,7 +52,7 @@ self.onmessage = async (event: MessageEvent) => {
     const { type, id } = event.data;
 
     if (type === 'init') {
-        // メインスレッドからコンパイル済みWebAssembly.Moduleを受信
+
         if (event.data.wasmModule instanceof WebAssembly.Module) {
             await initFromCompiledModule(event.data.wasmModule);
         }
@@ -68,7 +68,7 @@ self.onmessage = async (event: MessageEvent) => {
 
     if (type !== 'execute') return;
 
-    // インタプリタ未初期化の場合、フォールバックで初期化を試行
+
     if (!interpreter) {
         const success = await initFallback();
         if (!success) {
@@ -81,7 +81,7 @@ self.onmessage = async (event: MessageEvent) => {
     currentTaskId = id;
 
     try {
-        // 実行前に状態を復元
+
         applyInterpreterSnapshot(interpreter!, event.data.state);
 
         if (isAborted) throw new Error('aborted');

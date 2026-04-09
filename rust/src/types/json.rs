@@ -283,8 +283,8 @@ mod tests {
 
     #[test]
     fn test_serialize_value_to_json_bool() {
-        // from_bool(true) creates Scalar(1) — no DisplayHint, so serialize_value_to_json
-        // produces Number(1) rather than Bool(true).
+
+
         let val = Value::from_bool(true);
         assert_eq!(serialize_value_to_json(&val), serde_json::json!(1));
     }
@@ -297,8 +297,8 @@ mod tests {
 
     #[test]
     fn test_serialize_value_to_json_array() {
-        // Use negative numbers to avoid the is_string_like heuristic
-        // (all-valid-codepoint vectors are now serialized as strings).
+
+
         let val = Value {
             data: ValueData::Vector(Rc::new(vec![
                 Value::from_int(-1),
@@ -311,9 +311,9 @@ mod tests {
 
     #[test]
     fn test_roundtrip_array() {
-        // Use negative numbers so is_string_like doesn't kick in;
-        // small positive integers are valid codepoints and round-trip
-        // as a JSON string instead of an array.
+
+
+
         let json = serde_json::json!([-1, -2, -3]);
         let val = deserialize_json_to_value(json.clone(), 1).unwrap();
         let back = serialize_value_to_json(&val);

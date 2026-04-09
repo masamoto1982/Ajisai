@@ -1,7 +1,7 @@
 import type { UserWord } from '../wasm-interpreter-types';
 
-// サンプルワードの定義を更新した際はバージョンをインクリメントすること。
-// persistence.ts のマイグレーションロジックが IndexedDB の古い定義を自動更新する。
+
+
 export const DEMO_WORDS_VERSION = 8;
 
 export const DEMO_USER_WORDS: UserWord[] = [

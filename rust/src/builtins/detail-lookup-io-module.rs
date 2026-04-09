@@ -1,13 +1,13 @@
-// rust/src/builtins/detail-lookup-io-module.rs
-//
-// Detailed documentation for I/O, JSON module, and Music module words
 
-/// Returns detailed documentation for I/O, JSON module, and Music module words.
+
+
+
+
 pub(crate) fn lookup_detail_io_module(name: &str) -> Option<String> {
     let result = match name {
-        // ============================================================================
-        // 入出力
-        // ============================================================================
+
+
+
 
         "PRINT" => r#"# PRINT - 要素を出力
 
@@ -32,9 +32,9 @@ PRINT PRINT PRINT         # 出力: 1 2 3
 - 出力後、要素はスタックから削除されます
 - 出力フォーマットは要素の型によって自動的に決定されます"#,
 
-        // ============================================================================
-        // JSON / IO モジュール
-        // ============================================================================
+
+
+
 
         "JSON@PARSE" => r#"# JSON@PARSE - JSON文字列をAjisai値に変換
 

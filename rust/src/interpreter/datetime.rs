@@ -1,44 +1,44 @@
-// rust/src/interpreter/datetime.rs
-//
-// 【責務】
-// 日付時刻変換ワード群を実装する。
-// NOW: 現在のUnixタイムスタンプを取得
-// DATETIME: タイムスタンプ（数値） → Vector（日付時刻）
-// TIMESTAMP: Vector（日付時刻） → タイムスタンプ（数値）
-//
-// 統一Value宇宙アーキテクチャ版
-//
-// ============================================================================
-// 【設計思想】タイムゾーン処理における設計選択
-// ============================================================================
-//
-// この実装は、他の言語・システムにおけるタイムゾーン処理の設計を分析し、
-// それぞれのアプローチの特性を踏まえて設計されている。将来的な拡張を考慮し、
-// 以下の設計原則を厳守すること。
-//
-// ## 原則1: タイムゾーンをデータ型ではなく変換パラメータとして扱う
-//
-// AjisaiではアプローチBを採用：
-//   - タイムスタンプは常に単一の数値（Unix時刻）として保持
-//   - DATETIME/TIMESTAMPワードは変換パラメータとしてタイムゾーンを要求
-//   - データとしてタイムゾーン情報を保持しない
-//
-// ## 原則2: タイムゾーン指定を必須とする
-//
-// AjisaiではアプローチBを採用：
-//   - DATETIME/TIMESTAMPワードは必ずタイムゾーン文字列を要求
-//   - タイムゾーンを省略するとスタックアンダーフローエラー
-//   - 毎回の変換で明示的にタイムゾーンを指定することを強制
-//
-// ============================================================================
-// 【設計原則】実装詳細
-// ============================================================================
-//
-// - タイムゾーンはブラウザのローカルタイムゾーンを使用（将来拡張予定）
-// - タイムスタンプはUnix時刻（1970-01-01 00:00:00 UTCからの秒数）
-// - Vectorフォーマット: [年 月 日 時 分 秒] または [年 月 日 時 分 秒 サブ秒]
-// - 実在しない日時（2023-13-32など）はエラー
-// - 分数システムと親和性を保つ（サブ秒精度を分数で表現可能）
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{
@@ -84,7 +84,7 @@ fn parse_timezone_from_value(tz_val: &Value, word: &str) -> Result<String> {
     Ok(timezone)
 }
 
-/// NOW - 現在のUnixタイムスタンプを取得
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = Date, js_name = now)]
@@ -92,7 +92,7 @@ extern "C" {
 }
 
 pub fn op_now(interp: &mut Interpreter) -> Result<()> {
-    // NOWはStackモードをサポートしない（日付時刻ワード）
+
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported {
             word: "NOW".into(),
@@ -100,22 +100,22 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    // JavaScriptのDate.now()を呼び出し（ミリ秒単位）
+
     let now_ms = date_now();
 
-    // ミリ秒を秒に変換して分数として表現
+
     let ms_bigint = BigInt::from(now_ms as i64);
     let thousand = BigInt::from(1000);
 
     let timestamp = Fraction::new(ms_bigint, thousand);
 
-    // DateTime結果を単一要素Vectorとして返す
+
     interp.stack.push(create_datetime_value(timestamp));
 
     Ok(())
 }
 
-/// DATETIME - タイムスタンプをローカル日付時刻Vectorに変換
+
 #[wasm_bindgen]
 extern "C" {
     type Date;
@@ -282,7 +282,7 @@ pub fn op_datetime(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// TIMESTAMP - ローカル日付時刻Vectorをタイムスタンプに変換
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(static_method_of = Date, js_name = UTC)]

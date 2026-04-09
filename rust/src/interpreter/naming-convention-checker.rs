@@ -1,6 +1,6 @@
-/// Naming convention checker for user word definitions.
-/// Validates that user-defined word names follow the AI-first naming convention (§DEV-NAMING-INDEX).
-/// Produces warnings (not errors) for violations, guiding users toward clearer names.
+
+
+
 
 const AMBIGUOUS_PREFIXES: &[&str] = &["DO-", "HANDLE-", "PROCESS-", "MANAGE-", "UTIL-", "HELPER-"];
 
@@ -8,16 +8,16 @@ const AMBIGUOUS_NAMES: &[&str] = &[
     "CALC", "RUN", "EXEC2", "TEMP", "MAIN", "TEST", "STUFF", "THING",
 ];
 
-/// Maximum length for short, unstructured names that are considered acceptable
-/// without requiring an action-object pattern (e.g., GREET, DOUBLE).
+
+
 const SHORT_NAME_MAX_LENGTH: usize = 6;
 
-/// Checks if a user word name follows the AI-first naming convention.
-/// Returns Some(warning_message) if a violation is detected, None if compliant.
+
+
 pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
     let upper = name.to_uppercase();
 
-    // Check ambiguous verb prefixes
+
     for prefix in AMBIGUOUS_PREFIXES {
         if upper.starts_with(prefix) {
             let verb = prefix.trim_end_matches('-');
@@ -30,7 +30,7 @@ pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
         }
     }
 
-    // Check ambiguous standalone names
+
     if AMBIGUOUS_NAMES.contains(&upper.as_str()) {
         return Some(format!(
             "Warning: '{}': naming convention violation: ambiguous word name. \
@@ -40,23 +40,23 @@ pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
         ));
     }
 
-    // Short, clear names without hyphens are acceptable
+
     if !upper.contains('-') && upper.len() <= SHORT_NAME_MAX_LENGTH {
         return None;
     }
 
-    // Accepted structured patterns: ACTION-OBJECT, IS-*, HAS-*
+
     if upper.starts_with("IS-") || upper.starts_with("HAS-") {
         return None;
     }
 
-    // Any hyphenated name that passed the ambiguous prefix check is accepted
+
     if upper.contains('-') {
         return None;
     }
 
-    // Long single-word names (> SHORT_NAME_MAX_LENGTH) without structure
-    // are not flagged — user may have a valid reason
+
+
     None
 }
 

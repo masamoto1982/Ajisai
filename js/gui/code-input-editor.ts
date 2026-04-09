@@ -1,4 +1,4 @@
-// js/gui/code-input-editor.ts
+
 
 export interface EditorCallbacks {
     readonly onContentChange?: (content: string) => void;

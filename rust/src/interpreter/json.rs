@@ -103,7 +103,7 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
     };
 
     if let Some(index) = index {
-        // O(1) lookup via pre-built index
+
         if let Some(&idx) = index.get(&key_str) {
             if let Some(pair) = pairs.get(idx) {
                 if let ValueData::Vector(kv) = &pair.data {
@@ -115,7 +115,7 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
             }
         }
     } else {
-        // O(n) fallback for plain vectors
+
         for pair in pairs {
             if let ValueData::Vector(kv) = &pair.data {
                 if kv.len() == 2 {
@@ -199,7 +199,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         let found_idx = if let Some(idx) = old_index {
             idx.get(&key_str).copied()
         } else {
-            // O(n) fallback for plain vectors
+
             old_pairs.iter().position(|pair| {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
@@ -234,7 +234,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             });
         }
 
-        // Rebuild index from scratch if we didn't have one
+
         if old_index.is_none() {
             new_index.clear();
             for (i, pair) in new_pairs.iter().enumerate() {

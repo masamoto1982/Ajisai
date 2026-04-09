@@ -1,4 +1,4 @@
-// js/gui/interpreter-state-persistence.ts
+
 
 import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-types';
 import type DB from '../indexeddb-user-word-store';
@@ -153,7 +153,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
             }
         }
-        // すべてのリトライが失敗した場合
+
         console.warn('Persistence database initialization failed after all retries. Data will not be persisted.');
         showError?.(new Error('Failed to initialize database. Changes will not be saved.'));
     };
@@ -204,23 +204,23 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
 
                 if (state.userWords && state.userWords.length > 0) {
-                    // サンプルワードのバージョンチェックとマイグレーション
+
                     const savedVersion = state.demoWordsVersion || 0;
                     let wordsToRestore = state.userWords;
 
                     if (savedVersion < DEMO_WORDS_VERSION) {
-                        // 過去バージョンのサンプルワード名を集約（マイグレーション時に除去する）
+
                         const oldSampleNames = new Set([
-                            // v3→v4: 旧音階サンプル（Rust側モジュールサンプルに移行済み）
+
                             'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5',
-                            // v4→v5: 旧Hello worldサンプル（サンプルワード刷新）
+
                             'GREETING', 'WORLD', 'HELLO-WORLD',
                         ]);
                         const newSampleWordNames = new Set(
                             DEMO_USER_WORDS.map(w => w.name.toUpperCase())
                         );
 
-                        // 旧サンプルワード名と新サンプルワード名を除去し、ユーザー定義のみ残す
+
                         const userWords = state.userWords.filter(
                             (w: UserWord) =>
                                 !oldSampleNames.has(w.name.toUpperCase()) &&
@@ -232,9 +232,9 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
-                    // ユーザーが DEL で削除したエクステンションワードを反映する。
-                    // new AjisaiInterpreter() は全エクステンションを登録するが、
-                    // 保存データに含まれないワードは削除済みなので除去する。
+
+
+
                     const savedWordNames = new Set(wordsToRestore.map((w: UserWord) => w.name.toUpperCase()));
                     const currentWords = window.ajisaiInterpreter.collect_user_words_info();
                     for (const [name] of currentWords) {
@@ -243,7 +243,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                         }
                     }
 
-                    // マイグレーション後は新バージョンで保存
+
                     if (savedVersion < DEMO_WORDS_VERSION) {
                         await saveCurrentState();
                     }
@@ -312,7 +312,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             try {
                 const jsonString = await readFileAsText(file);
 
-                // JSONとして有効か検証
+
                 try {
                     JSON.parse(jsonString);
                 } catch {

@@ -1,4 +1,4 @@
-// js/indexeddb-user-word-store.ts
+
 
 interface TableData {
     name: string;
@@ -13,7 +13,7 @@ interface InterpreterState {
     userWords: any;
     demoWordsVersion?: number;
     updatedAt: string;
-    // Legacy field names (read-only, for migration from older DB)
+
     customWords?: any;
     sampleWordsVersion?: number;
 }
@@ -49,12 +49,12 @@ class AjisaiDB {
     private openPromise: Promise<IDBDatabase> | null = null;
 
     async open(): Promise<IDBDatabase> {
-        // 既に開いている場合はそのまま返す
+
         if (this.db) {
             return this.db;
         }
 
-        // 初期化中の場合は同じPromiseを返す（競合防止）
+
         if (this.openPromise) {
             return this.openPromise;
         }
@@ -109,7 +109,7 @@ class AjisaiDB {
 
     async loadTable(name: string): Promise<{ schema: any; records: any } | null> {
         if (!this.db) await this.open();
-        
+
         return withObjectStore(this.db!, this.storeName, 'readonly', async store => {
             const result = await promisifyRequest(store.get(name));
             return result ? { schema: result.schema, records: result.records } : null;
@@ -118,7 +118,7 @@ class AjisaiDB {
 
     async collectTableNames(): Promise<string[]> {
         if (!this.db) await this.open();
-        
+
         return withObjectStore(this.db!, this.storeName, 'readonly', async store =>
             (await promisifyRequest(store.getAllKeys())) as string[]
         );
@@ -126,7 +126,7 @@ class AjisaiDB {
 
     async deleteTable(name: string): Promise<void> {
         if (!this.db) await this.open();
-        
+
         return withObjectStore(this.db!, this.storeName, 'readwrite', async store => {
             await promisifyRequest(store.delete(name));
         });
@@ -134,7 +134,7 @@ class AjisaiDB {
 
     async saveInterpreterState(state: Omit<InterpreterState, 'key' | 'updatedAt'>): Promise<void> {
         if (!this.db) await this.open();
-        
+
         return withObjectStore(this.db!, this.stateStoreName, 'readwrite', async store => {
             const stateData: InterpreterState = {
                 key: 'interpreter_state',
@@ -147,7 +147,7 @@ class AjisaiDB {
 
     async loadInterpreterState(): Promise<Omit<InterpreterState, 'key' | 'updatedAt'> | null> {
         if (!this.db) await this.open();
-        
+
         return withObjectStore(this.db!, this.stateStoreName, 'readonly', async store => {
             const result = await promisifyRequest(store.get('interpreter_state'));
             if (!result) {
@@ -163,16 +163,16 @@ class AjisaiDB {
 
     async clearAll(): Promise<void> {
         if (!this.db) await this.open();
-        
+
         return new Promise((resolve, reject) => {
             const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readwrite');
-            
+
             const tableStore = transaction.objectStore(this.storeName);
             const stateStore = transaction.objectStore(this.stateStoreName);
-            
+
             tableStore.clear();
             stateStore.clear();
-            
+
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
         });
@@ -180,56 +180,56 @@ class AjisaiDB {
 
     async exportAll(): Promise<ExportData> {
         if (!this.db) await this.open();
-        
+
         return new Promise((resolve, reject) => {
             const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readonly');
-            
+
             const result: ExportData = {
                 tables: [],
                 interpreterState: null
             };
-            
+
             const tableStore = transaction.objectStore(this.storeName);
             const tableRequest = tableStore.getAll();
-            
+
             tableRequest.onsuccess = () => {
                 result.tables = tableRequest.result;
-                
+
                 const stateStore = transaction.objectStore(this.stateStoreName);
                 const stateRequest = stateStore.get('interpreter_state');
-                
+
                 stateRequest.onsuccess = () => {
                     result.interpreterState = stateRequest.result;
                     resolve(result);
                 };
             };
-            
+
             tableRequest.onerror = () => reject(tableRequest.error);
         });
     }
 
     async importAll(data: ExportData): Promise<void> {
         if (!this.db) await this.open();
-        
+
         return new Promise((resolve, reject) => {
             const transaction = this.db!.transaction([this.storeName, this.stateStoreName], 'readwrite');
-            
+
             const tableStore = transaction.objectStore(this.storeName);
             const stateStore = transaction.objectStore(this.stateStoreName);
-            
+
             tableStore.clear();
             stateStore.clear();
-            
+
             if (data.tables && data.tables.length > 0) {
                 for (const table of data.tables) {
                     tableStore.put(table);
                 }
             }
-            
+
             if (data.interpreterState) {
                 stateStore.put(data.interpreterState);
             }
-            
+
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
         });
@@ -238,16 +238,16 @@ class AjisaiDB {
     async test(): Promise<boolean> {
         try {
             await this.open();
-            
+
             await this.saveTable('test_table', ['id', 'name'], [
                 [1, 'Test Record 1'],
                 [2, 'Test Record 2']
             ]);
-            
+
             await this.loadTable('test_table');
             await this.collectTableNames();
             await this.deleteTable('test_table');
-            
+
             return true;
         } catch (error) {
             console.error('IndexedDB test failed:', error);

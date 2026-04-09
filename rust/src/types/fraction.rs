@@ -33,9 +33,9 @@ pub(crate) fn create_bigint_from_i128(n: i128) -> BigInt {
     }
 }
 
-// SVO: Small(num, den) stores both parts inline on the stack (no heap allocation).
-// Invariant: den >= 0. den == 0 represents NIL. When den > 0, reduced form.
-// Big is the fallback for values that overflow i64.
+
+
+
 #[derive(Debug, Clone)]
 pub(crate) enum FractionRepr {
     Small(i64, i64),
@@ -93,12 +93,12 @@ impl Fraction {
         }
     }
 
-    /// Returns `true` if this fraction is stored in the stack-allocated Small
-    /// representation (`FractionRepr::Small(i64, i64)`), meaning its numerator
-    /// and denominator both fit in i64 and no heap memory is required.
-    ///
-    /// Callers can use this to select heap-free hot paths in arithmetic and
-    /// tensor operations when all operands are known to be Small.
+
+
+
+
+
+
     #[inline]
     pub fn is_small(&self) -> bool {
         matches!(self.repr, FractionRepr::Small(..))
@@ -269,7 +269,7 @@ impl Fraction {
             n = -n;
             d = -d;
         }
-        // SVO: store as Small when result fits in i64
+
         if n >= i64::MIN as i128 && n <= i64::MAX as i128
             && d >= 0 && d <= i64::MAX as i128
         {
@@ -317,7 +317,7 @@ impl Fraction {
             Ok(Fraction::new(if int_part < BigInt::zero() { -total_num } else { total_num }, frac_den))
         } else {
             let num: BigInt = BigInt::from_str(s).map_err(|e| e.to_string())?;
-            // Already in lowest terms -- skip GCD
+
             if let Some(n) = num.to_i64() {
                 return Ok(Fraction { repr: FractionRepr::Small(n, 1) });
             }
@@ -325,7 +325,7 @@ impl Fraction {
         }
     }
 
-    // Skip GCD reduction for explicit a/b forms to preserve frequency/duration semantics
+
     pub fn parse_unreduced_from_str(s: &str) -> std::result::Result<Self, String> {
         if s.is_empty() { return Err("Empty string".to_string()); }
 

@@ -3,7 +3,7 @@ mod tests {
     use crate::interpreter::Interpreter;
     use crate::types::ValueData;
 
-    // === Map and vector tests ===
+
 
     #[tokio::test]
     async fn test_map_with_increment() {
@@ -87,7 +87,7 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Empty vector"));
     }
 
-    // === Force flag tests ===
+
 
     #[tokio::test]
     async fn test_force_flag_del_without_dependents() {
@@ -178,7 +178,7 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // === NIL tests ===
+
 
     #[tokio::test]
     async fn test_nil_keyword_works() {
@@ -295,7 +295,7 @@ mod tests {
         assert!(val.is_truthy(), "TRUE OR NIL should be truthy");
     }
 
-    // === Execution limit / recursion guard tests ===
+
 
     #[tokio::test]
     async fn test_call_depth_4_ok() {

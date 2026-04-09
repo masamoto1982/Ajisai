@@ -1,13 +1,13 @@
-// rust/src/interpreter/audio/audio-effect-tests.rs
-//
-// 【責務】
-// 音楽DSLのエフェクト統合テスト（SLOT, GAIN, PAN, FX-RESET, 歌詞）
+
+
+
+
 
 use crate::interpreter::Interpreter;
 
-// ============================================================================
-// MUSIC@SLOT ワードテスト
-// ============================================================================
+
+
+
 
 #[tokio::test]
 async fn test_slot_basic() {
@@ -46,7 +46,7 @@ async fn test_slot_fraction() {
 async fn test_slot_negative_error() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-    // Create negative number via arithmetic: 0 - 0.5 = -0.5
+
     let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC@SLOT").await;
     assert!(result.is_err(), "Negative MUSIC@SLOT should fail");
 }
@@ -120,14 +120,14 @@ async fn test_slot_one_second() {
 async fn test_chord_can_be_defined_and_reused() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-    // CHORD is now a no-op. Use code block for DEF since vector duality
-    // no longer preserves MUSIC@ word names.
+
+
     let result = interp
         .execute(": [ 440 550 660 ] MUSIC@CHORD ; 'C_MAJOR' DEF")
         .await;
     assert!(result.is_ok(), "DEF should succeed: {:?}", result);
 
-    // Use it
+
     let result = interp.execute("C_MAJOR MUSIC@PLAY").await;
     assert!(
         result.is_ok(),
@@ -136,16 +136,16 @@ async fn test_chord_can_be_defined_and_reused() {
     );
 
     let output = interp.collect_output();
-    // CHORD is no-op and vectors are treated as lyrics, so AUDIO has empty structure
+
     assert!(
         output.contains("AUDIO:"),
         "Should contain AUDIO command"
     );
 }
 
-// ============================================================================
-// MUSIC@GAIN/PAN ワードテスト
-// ============================================================================
+
+
+
 
 #[tokio::test]
 async fn test_gain_basic() {
@@ -175,7 +175,7 @@ async fn test_gain_clamp_high() {
 async fn test_gain_clamp_low() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-    // Use arithmetic to get negative: 0 - 0.5 = -0.5
+
     let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC@GAIN").await;
     assert!(result.is_ok(), "GAIN should succeed with clamping");
 
@@ -209,7 +209,7 @@ async fn test_gain_reset() {
 async fn test_pan_basic() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-    // Use arithmetic to get negative: 0 - 0.5 = -0.5
+
     let result = interp.execute("[ 0 ] [ 0.5 ] - MUSIC@PAN").await;
     assert!(result.is_ok(), "PAN should succeed");
 
@@ -283,17 +283,17 @@ async fn test_combined_gain_pan_play() {
     assert!(output.contains("AUDIO:"), "Should have AUDIO command");
 }
 
-// ============================================================================
-// 歌詞（文字列混在ベクタ）テスト
-// ============================================================================
+
+
+
 
 #[tokio::test]
 async fn test_play_with_lyrics() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-    // Without DisplayHint, the outer vector is treated as lyrics by
-    // is_string_value. The entire vector (including nested string vectors)
-    // is rendered as codepoint characters.
+
+
+
     let result = interp
         .execute("[ 440/2 'Hello' 550/2 'World' ] MUSIC@PLAY")
         .await;
@@ -304,7 +304,7 @@ async fn test_play_with_lyrics() {
     );
 
     let output = interp.collect_output();
-    // AUDIO command is emitted (with empty seq structure)
+
     assert!(
         output.contains("AUDIO:"),
         "Should contain AUDIO command"
@@ -313,8 +313,8 @@ async fn test_play_with_lyrics() {
 
 #[tokio::test]
 async fn test_play_with_duration_unreduced() {
-    // Without DisplayHint, is_string_value treats all vectors as strings,
-    // so [440/2, 550/2] is treated as lyrics (codepoints).
+
+
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
     let result = interp.execute("[ 440/2 550/2 ] MUSIC@PLAY").await;

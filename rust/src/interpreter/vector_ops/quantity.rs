@@ -1,6 +1,6 @@
-// rust/src/interpreter/vector_ops/quantity.rs
-//
-// 量指定操作（1オリジン）: LENGTH, TAKE, SPLIT
+
+
+
 
 use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
@@ -92,14 +92,14 @@ fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, u
     Ok((0, take))
 }
 
-/// LENGTH - 要素数を取得する（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタを消費し、要素数を返す
-/// - Keep（,,）: 対象ベクタを保持し、要素数を追加する
+
+
+
+
+
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    // In gui_mode, LENGTH always preserves the source vector (Form型)
+
     let preserve_source = interp.gui_mode || is_keep_mode;
 
     let len = match interp.operation_target_mode {
@@ -148,11 +148,11 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// TAKE - 先頭または末尾から指定数の要素を取得する（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタと引数を消費し、取得結果を返す
-/// - Keep（,,）: 対象ベクタと引数を保持し、取得結果を追加する
+
+
+
+
+
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -211,18 +211,18 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// SPLIT - 指定サイズで分割する（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタと引数を消費し、分割結果を返す
-/// - Keep（,,）: 対象ベクタと引数を保持し、分割結果を追加する
+
+
+
+
+
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    // 引数ベクタ [sizes...] を取得
+
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // サイズを抽出
+
     let sizes: Vec<usize> = if args_val.is_vector() {
         let n = args_val.len();
         if n == 0 {
@@ -295,7 +295,7 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
             }
 
             if is_keep_mode {
-                // Keep mode: preserve original stack elements, then push split results
+
                 let original_elements: Vec<Value> = interp.stack.iter().cloned().collect();
                 let mut result_stack = Vec::new();
                 let mut pos = 0;

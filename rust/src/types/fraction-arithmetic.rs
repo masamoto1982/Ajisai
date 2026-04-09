@@ -306,7 +306,7 @@ impl Fraction {
         }
     }
 
-    // Formula: floor((2*|num| + den) / (2*den)), half away from zero
+
     pub fn round(&self) -> Fraction {
         if self.is_integer() {
             return self.clone();
@@ -342,7 +342,7 @@ impl Fraction {
         }
     }
 
-    // Mathematical modulo: result has the same sign as b
+
     pub fn modulo(&self, other: &Fraction) -> Fraction {
         if other.is_zero() {
             panic!("Modulo by zero");

@@ -8,7 +8,7 @@ impl fmt::Display for Value {
     }
 }
 
-/// Format a value using a specific display hint (for SemanticRegistry-aware formatting).
+
 pub fn format_with_hint(value: &Value, hint: DisplayHint) -> String {
     match hint {
         DisplayHint::Nil => {
@@ -215,7 +215,7 @@ fn format_as_datetime(data: &ValueData) -> String {
     match data {
         ValueData::Nil => format_value_recursive(data, 0),
         ValueData::Scalar(f) => {
-            // @プレフィックスでJS側に日時フォーマットを委譲
+
             if f.is_integer() {
                 format!("@{}", f.numerator())
             } else {

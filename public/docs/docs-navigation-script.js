@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 設定ファイルチェック（フォールバック付き）
+
     const c = (typeof AjisaiConfig !== 'undefined') ? AjisaiConfig : {
-        // フォールバック設定
+
         primaryColor: '#6b5b95',
         meta: {
             title: "Ajisai",
@@ -39,21 +39,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ------------------------------------------------------------------------
-    // 0. テーマカラーの適用
-    //    <head> のインラインスクリプトが <style id="theme-vars"> 経由で適用済み。
-    //    ここで AjisaiTheme.apply() を呼ぶとインラインスタイルとして上書きされ、
-    //    docs-reference-styles.css による CSS 変数オーバーライド（黄金比等）が
-    //    無効になるため、呼び出しを行わない。
-    // ------------------------------------------------------------------------
 
-    // ------------------------------------------------------------------------
-    // 1. ヘッダー情報の生成 (#js-header)
-    //    アプリ側と完全に同じレイアウト（画像ロゴ + タイトル + ナビボタン）
-    // ------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
     const headerEl = document.getElementById('js-header');
     if (headerEl) {
-        // メイン画面と同一のヘッダー構造を生成
+
         headerEl.innerHTML = `
             <div class="app-header-top">
                 <a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai">
@@ -81,9 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // ------------------------------------------------------------------------
-    // 2. サイドバーの生成 (#js-side-nav)
-    // ------------------------------------------------------------------------
+
+
+
     const sideNavEl = document.getElementById('js-side-nav');
     if (sideNavEl) {
         const serviceItems = c.serviceMenu.map(item =>
@@ -117,9 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // ------------------------------------------------------------------------
-    // 3. プロジェクト情報テーブル (#js-company-table)
-    // ------------------------------------------------------------------------
+
+
+
     const companyTableEl = document.getElementById('js-company-table');
     if (companyTableEl) {
         companyTableEl.innerHTML = `
@@ -143,10 +143,10 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // ------------------------------------------------------------------------
-    // 4. フッター (#js-footer)
-    //    アプリ側と同じ形式（年は自動更新）
-    // ------------------------------------------------------------------------
+
+
+
+
     const footerEl = document.getElementById('js-footer');
     if (footerEl) {
         const currentYear = new Date().getFullYear();

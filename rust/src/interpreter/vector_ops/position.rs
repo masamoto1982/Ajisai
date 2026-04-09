@@ -1,6 +1,6 @@
-// rust/src/interpreter/vector_ops/position.rs
-//
-// 位置指定操作（0オリジン）: GET, INSERT, REPLACE, REMOVE
+
+
+
 
 use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
@@ -85,16 +85,16 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
     Ok((index, element))
 }
 
-/// GET - 指定位置の要素を取得する（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタを消費し、取得した要素を返す
-/// - Keep（,,）: 対象ベクタを保持し、取得した要素を追加する
+
+
+
+
+
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (index_val, index) = pop_index_operand(interp)?;
 
-    // In gui_mode, GET always preserves the source vector (Form型)
+
     let preserve_source = interp.gui_mode || is_keep_mode;
 
     match interp.operation_target_mode {
@@ -137,7 +137,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 
             let result_elem = interp.stack[actual_index].clone();
             if !preserve_source {
-                // Consume mode: スタック全体を消費し、取得した要素のみを残す
+
                 interp.stack.clear();
             }
             interp.stack.push(result_elem);
@@ -146,18 +146,18 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// INSERT - 指定位置に要素を挿入する（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタと引数を消費し、挿入結果を返す
-/// - Keep（,,）: 対象ベクタと引数を保持し、挿入結果を追加する
+
+
+
+
+
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    // 引数ベクタ [index element] を取得
+
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    // 引数から index と element を抽出
+
     let (index, element) = match parse_index_element_args("INSERT", &args_val) {
         Ok(parsed) => parsed,
         Err(error) => {
@@ -201,15 +201,15 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// REPLACE - 指定位置の要素を置き換える（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタと引数を消費し、置換結果を返す
-/// - Keep（,,）: 対象ベクタと引数を保持し、置換結果を追加する
+
+
+
+
+
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    // 引数ベクタ [index new_element] を取得
+
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let (index, new_element) = match parse_index_element_args("REPLACE", &args_val) {
@@ -252,12 +252,12 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             if is_keep_mode {
                 let original_stack = interp.stack.clone();
                 interp.stack[actual_index] = new_element;
-                // In Keep mode for stack, we already modified in-place.
-                // The spec for Stack+Keep says "preserve originals and add result".
-                // For REPLACE in stack mode, the stack IS the result.
-                // Keep original + push modified doesn't quite make sense for stack mutations.
-                // We follow existing behavior.
-                let _ = original_stack; // Keep mode doesn't fundamentally change stack-mode REPLACE
+
+
+
+
+
+                let _ = original_stack;
             } else {
                 interp.stack[actual_index] = new_element;
             }
@@ -266,11 +266,11 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-/// REMOVE - 指定位置の要素を削除する（Form型）
-///
-/// 【消費モード】
-/// - Consume（デフォルト）: 対象ベクタを消費し、削除結果を返す
-/// - Keep（,,）: 対象ベクタを保持し、削除結果を追加する
+
+
+
+
+
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (index_val, index) = pop_index_operand(interp)?;

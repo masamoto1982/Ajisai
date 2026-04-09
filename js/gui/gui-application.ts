@@ -73,7 +73,7 @@ const collectAutocompleteWords = (): string[] => {
                 moduleWords.push(sampleName);
             }
         }
-    } catch { /* modules not imported */ }
+    } catch {  }
 
     const allWords: Set<string> = new Set([...coreWords, ...userWords, ...moduleWords]);
     return Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));

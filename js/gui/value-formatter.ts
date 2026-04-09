@@ -1,14 +1,14 @@
-// js/gui/value-formatter.ts - 値のフォーマットと比較
+
 
 import type { Value, Fraction } from '../wasm-interpreter-types';
 
-// フォーマット設定
-const SCIENTIFIC_THRESHOLD = 10; // 10桁以上で科学的記数法
-const MANTISSA_PRECISION = 6;    // 仮数部の精度
 
-/**
- * 整数を科学的記数法でフォーマット
- */
+const SCIENTIFIC_THRESHOLD = 10;
+const MANTISSA_PRECISION = 6;
+
+
+
+
 export function formatIntegerScientific(numStr: string): string {
     const isNegative = numStr.startsWith('-');
     const absNumStr = isNegative ? numStr.substring(1) : numStr;
@@ -35,9 +35,9 @@ export function formatIntegerScientific(numStr: string): string {
     return `${mantissa}e${exponent}`;
 }
 
-/**
- * 分数を科学的記数法でフォーマット
- */
+
+
+
 export function formatFractionScientific(numerStr: string, denomStr: string): string {
     if (denomStr === '1') {
         return formatIntegerScientific(numerStr);
@@ -76,18 +76,18 @@ export function formatFractionScientific(numerStr: string, denomStr: string): st
     return `${numSci}/${denSci}`;
 }
 
-/**
- * 分数をフォーマット（シンプル版）
- */
+
+
+
 export function formatFraction(frac: Fraction): string {
     const denomStr = String(frac.denominator);
     const numerStr = String(frac.numerator);
     return formatFractionScientific(numerStr, denomStr);
 }
 
-/**
- * 値をフォーマット（テスト用シンプル版）
- */
+
+
+
 export function formatValueSimple(value: Value): string {
     switch (value.type) {
         case 'number': {
@@ -114,9 +114,9 @@ export function formatValueSimple(value: Value): string {
     }
 }
 
-/**
- * スタックをフォーマット（テスト用）
- */
+
+
+
 export function formatStack(stack: Value[]): string {
     if (stack.length === 0) {
         return '[]';
@@ -125,9 +125,9 @@ export function formatStack(stack: Value[]): string {
     return `[${formatted}]`;
 }
 
-/**
- * 値を比較
- */
+
+
+
 export function compareValue(actual: Value, expected: Value): boolean {
     if (actual.type !== expected.type) {
         return false;
@@ -155,9 +155,9 @@ export function compareValue(actual: Value, expected: Value): boolean {
     }
 }
 
-/**
- * スタックを比較
- */
+
+
+
 export function compareStack(actual: Value[], expected: Value[]): boolean {
     if (actual.length !== expected.length) {
         return false;

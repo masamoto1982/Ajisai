@@ -12,7 +12,7 @@ pub(crate) fn is_vector_value(val: &Value) -> bool {
 
 #[inline]
 pub(crate) fn is_string_value(val: &Value) -> bool {
-    // Structurally: a string is a Vector (of scalar codepoints)
+
     matches!(&val.data, ValueData::Vector(_))
 }
 
@@ -157,12 +157,12 @@ pub(crate) fn push_result(interp: &mut Interpreter, result: Value) {
     interp.stack.push(result);
 }
 
-// ── Fractional Dataflow helpers ──────────────────────────────────────
+
 
 use crate::types::FlowToken;
 
-/// Wrap `extract_operands` with FlowToken creation when flow tracking is on.
-/// Returns (operands, Option<Vec<FlowToken>>).
+
+
 pub(crate) fn extract_operands_with_flow(
     interp: &mut Interpreter,
     count: usize,
@@ -176,7 +176,7 @@ pub(crate) fn extract_operands_with_flow(
     Ok((operands, tokens))
 }
 
-/// Push a result and record flow consumption when tracking is active.
+
 pub(crate) fn push_flow_result(
     interp: &mut Interpreter,
     result: Value,

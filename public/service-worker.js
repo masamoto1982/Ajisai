@@ -8,7 +8,7 @@ const urlsToCache = [
   './ajisai-theme.js'
 ];
 
-// ネットワーク優先で取得すべきファイル（設定・テーマ関連）
+
 const networkFirstPatterns = [
   'ajisai-config.js',
   'ajisai-theme.js',
@@ -60,17 +60,17 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Chrome拡張機能などのリクエストは無視
+
   if (!event.request.url.startsWith('http')) {
     return;
   }
 
-  // テーマ関連ファイルはネットワーク優先
+
   if (shouldUseNetworkFirst(event.request.url)) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // 有効なレスポンスをキャッシュに保存
+
           if (response && response.status === 200) {
             const responseToCache = response.clone();
             caches.open(CACHE_NAME)
@@ -80,7 +80,7 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // ネットワーク失敗時はキャッシュから
+
           console.log('[SW] Network failed, serving from cache:', event.request.url);
           return caches.match(event.request);
         })
@@ -88,7 +88,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // その他のファイルはキャッシュ優先
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {

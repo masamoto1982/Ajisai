@@ -1,12 +1,12 @@
-// js/gui/gui-test-runner.ts - テストランナー（関数型スタイル）
+
 
 import type { Value } from '../wasm-interpreter-types';
 import { TEST_CASES, type TestCase } from './gui-interpreter-test-cases';
 import { formatStack, formatValueSimple, compareStack, compareValue } from './value-formatter';
 
-// ============================================================
-// 型定義
-// ============================================================
+
+
+
 
 export interface TestResult {
     readonly passed: boolean;
@@ -34,13 +34,13 @@ export interface TestRunner {
 
 type InfoType = 'success' | 'error' | 'info';
 
-// ============================================================
-// 純粋関数
-// ============================================================
 
-/**
- * テストケースをカテゴリ別にグループ化
- */
+
+
+
+
+
+
 const groupByCategory = (testCases: TestCase[]): Map<string, TestCase[]> => {
     const groups = new Map<string, TestCase[]>();
 
@@ -53,14 +53,14 @@ const groupByCategory = (testCases: TestCase[]): Map<string, TestCase[]> => {
     return groups;
 };
 
-/**
- * テスト結果が成功かどうか判定
- */
+
+
+
 const checkIsTestPassed = (result: TestResult): boolean => result.passed;
 
-/**
- * スタック差分を計算
- */
+
+
+
 const calculateStackDifference = (
     expected: Value[],
     actual: Value[]
@@ -85,16 +85,16 @@ const calculateStackDifference = (
     return differences;
 };
 
-// ============================================================
-// ファクトリ関数: TestRunner作成
-// ============================================================
+
+
+
 
 export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner => {
-    // 出力要素を取得（直接DOMアクセス）
+
     const lookupOutputElement = (): HTMLElement | null =>
         document.getElementById('output-display');
 
-    // 色付きメッセージを表示
+
     const showColoredInfo = (text: string, type: InfoType): void => {
         const outputElement = lookupOutputElement();
         if (!outputElement) return;
@@ -119,7 +119,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         outputElement.appendChild(span);
     };
 
-    // インタープリタのリセット
+
     const resetInterpreter = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
 
@@ -133,7 +133,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         }
     };
 
-    // 期待値のチェック
+
     const checkExpectations = async (testCase: TestCase): Promise<TestResult> => {
         if (testCase.expectedStack) {
             const stack = window.ajisaiInterpreter.collect_stack();
@@ -159,11 +159,11 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         return { passed: true, reason: 'Test completed successfully' };
     };
 
-    // DEFを含むテストの実行
+
     const executeWithDef = async (testCase: TestCase): Promise<TestResult> => {
         const lines = testCase.code.split('\n');
 
-        // 最後のDEF行を探す
+
         let defEndIndex = -1;
         for (let i = lines.length - 1; i >= 0; i--) {
             if (lines[i]?.trim().includes(' DEF')) {
@@ -176,7 +176,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
             return { passed: false, reason: 'DEF not found' };
         }
 
-        // DEFまでの部分を実行
+
         const defPart = lines.slice(0, defEndIndex + 1).join('\n');
         const defResult = await window.ajisaiInterpreter.execute(defPart);
 
@@ -188,7 +188,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
             };
         }
 
-        // DEF後の部分があれば実行
+
         if (defEndIndex + 1 < lines.length) {
             const execPart = lines.slice(defEndIndex + 1)
                 .map(line => line.trim())
@@ -221,16 +221,16 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         return checkExpectations(testCase);
     };
 
-    // 単一テストの実行
+
     const runSingleTest = async (testCase: TestCase): Promise<TestResult> => {
         await resetInterpreter();
 
-        // DEFを含む場合の処理
+
         if (testCase.code.includes(' DEF')) {
             return executeWithDef(testCase);
         }
 
-        // 通常のテスト
+
         const result = await window.ajisaiInterpreter.execute(testCase.code);
 
         if (testCase.expectError) {
@@ -254,7 +254,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         return checkExpectations(testCase);
     };
 
-    // スタック差分の表示
+
     const showStackDifference = (expected: Value[], actual: Value[]): void => {
         if (expected.length !== actual.length) {
             showColoredInfo(
@@ -281,7 +281,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         });
     };
 
-    // テスト結果の表示
+
     const showTestResult = (testCase: TestCase, result: TestResult, passed: boolean): void => {
         const statusIcon = passed ? '[OK]' : '[NG]';
         const statusText = passed ? 'PASS' : 'FAIL';
@@ -290,7 +290,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         console.log(`${statusIcon} ${statusText} → ${testCase.name}`);
         showColoredInfo(`${statusIcon} ${statusText} → ${testCase.name}`, statusColor);
 
-        // コードを表示
+
         const codeLines = testCase.code.split('\n');
         if (codeLines.length === 1) {
             showColoredInfo(`  Code → ${testCase.code}`, 'info');
@@ -301,7 +301,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
             });
         }
 
-        // 期待値と実際の値を表示
+
         if (testCase.expectError) {
             showColoredInfo(`  Expected → Error should occur`, 'info');
             if (result.errorMessage) {
@@ -345,7 +345,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         showColoredInfo('', 'info');
     };
 
-    // テストエラーの表示
+
     const showTestError = (testCase: TestCase, error: unknown): void => {
         showColoredInfo(`[NG] ERROR → ${testCase.name}`, 'error');
         showColoredInfo(`  Code → ${testCase.code}`, 'info');
@@ -353,7 +353,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         showColoredInfo('', 'info');
     };
 
-    // 全テスト実行
+
     const runAllTests = async (): Promise<TestSummary> => {
         let totalPassed = 0;
         let totalFailed = 0;
@@ -411,7 +411,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
     return { runAllTests };
 };
 
-// 純粋関数をエクスポート（テスト用）
+
 export const testUtils = {
     groupByCategory,
     checkIsTestPassed,

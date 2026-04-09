@@ -1,4 +1,4 @@
-// js/gui/gui-interpreter-test-cases.ts - Test case definitions
+
 
 import type { Value } from '../wasm-interpreter-types';
 
@@ -11,7 +11,7 @@ export interface TestCase {
     category?: string;
 }
 
-// ヘルパー関数：値の生成
+
 export function createNumber(numerator: string, denominator: string = '1'): Value {
     return { type: 'number', value: { numerator, denominator } };
 }
@@ -32,11 +32,11 @@ export function createNil(): Value {
     return { type: 'nil', value: null };
 }
 
-// Test case definitions
+
 export const TEST_CASES: TestCase[] = [
-    // ============================================
-    // Basic Types
-    // ============================================
+
+
+
     {
         name: "Number - integer",
         code: "[ 42 ]",
@@ -92,9 +92,9 @@ export const TEST_CASES: TestCase[] = [
         category: "Basic Types"
     },
 
-    // ============================================
-    // Arithmetic
-    // ============================================
+
+
+
     {
         name: "Addition - integers",
         code: "[ 2 ] [ 3 ] +",
@@ -156,10 +156,10 @@ export const TEST_CASES: TestCase[] = [
         category: "Arithmetic"
     },
 
-    // ============================================
-    // Comparison
-    // 仕様: > と >= は提供しない。< と <= のみ使用する（セクション6.2）
-    // ============================================
+
+
+
+
     {
         name: "Less than - true",
         code: "[ 3 ] [ 5 ] <",
@@ -203,9 +203,9 @@ export const TEST_CASES: TestCase[] = [
         category: "Comparison"
     },
 
-    // ============================================
-    // Logic
-    // ============================================
+
+
+
     {
         name: "AND - true && true",
         code: "[ TRUE ] [ TRUE ] AND",
@@ -237,9 +237,9 @@ export const TEST_CASES: TestCase[] = [
         category: "Logic"
     },
 
-    // ============================================
-    // Conditional
-    // ============================================
+
+
+
     {
         name: "COND - basic branch",
         code: "[ -1 ] { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND",
@@ -259,9 +259,9 @@ export const TEST_CASES: TestCase[] = [
         category: "Conditional"
     },
 
-    // ============================================
-    // Vector Operations
-    // ============================================
+
+
+
     {
         name: "LENGTH",
         code: "[ 1 2 3 4 5 ] LENGTH",
@@ -314,14 +314,14 @@ export const TEST_CASES: TestCase[] = [
         category: "Vector Operations"
     },
     {
-        // 仕様: INSERT は [index element] を単一ベクタとして受け取る
+
         name: "INSERT",
         code: "[ 1 3 ] [ 1 2 ] INSERT",
         expectedStack: [createVector([createNumber('1'), createNumber('2'), createNumber('3')])],
         category: "Vector Operations"
     },
     {
-        // 仕様: REPLACE は [index new_element] を単一ベクタとして受け取る
+
         name: "REPLACE",
         code: "[ 1 2 3 ] [ 1 9 ] REPLACE",
         expectedStack: [createVector([createNumber('1'), createNumber('9'), createNumber('3')])],
@@ -334,11 +334,11 @@ export const TEST_CASES: TestCase[] = [
         category: "Vector Operations"
     },
 
-    // ============================================
-    // Tensor Operations
-    // ============================================
+
+
+
     {
-        // 仕様: SHAPE はデフォルトで入力を消費し、形状ベクタを返す
+
         name: "SHAPE - 1D",
         code: "[ 1 2 3 ] SHAPE",
         expectedStack: [
@@ -355,7 +355,7 @@ export const TEST_CASES: TestCase[] = [
         category: "Tensor Operations"
     },
     {
-        // 仕様: RANK はデフォルトで入力を消費し、ランクのスカラーを返す
+
         name: "RANK - 1D",
         code: "[ 1 2 3 ] RANK",
         expectedStack: [
@@ -395,9 +395,9 @@ export const TEST_CASES: TestCase[] = [
         category: "Tensor Operations"
     },
 
-    // ============================================
-    // Broadcasting
-    // ============================================
+
+
+
     {
         name: "Broadcast - scalar + vector",
         code: "[ 10 ] [ 1 2 3 ] +",
@@ -417,10 +417,10 @@ export const TEST_CASES: TestCase[] = [
         category: "Broadcasting"
     },
 
-    // ============================================
-    // Higher-Order Functions
-    // 仕様: DEF構文は { code } 'NAME' DEF（セクション6.3）
-    // ============================================
+
+
+
+
     {
         name: "MAP - double",
         code: "{ [ 2 ] * } 'DBL' DEF\n[ 1 2 3 ] 'DBL' MAP",
@@ -428,7 +428,7 @@ export const TEST_CASES: TestCase[] = [
         category: "Higher-Order Functions"
     },
     {
-        // 仕様: > は提供しない。<= NOT で代替する
+
         name: "FILTER - positive",
         code: "{ [ 0 ] <= NOT } 'POS' DEF\n[ -2 -1 0 1 2 ] 'POS' FILTER",
         expectedStack: [createVector([createNumber('1'), createNumber('2')])],
@@ -471,10 +471,10 @@ export const TEST_CASES: TestCase[] = [
         category: "Higher-Order Functions"
     },
 
-    // ============================================
-    // Type Conversion
-    // 仕様: STR は Map型ワードで、入力を消費して文字列を返す（セクション5.1）
-    // ============================================
+
+
+
+
     {
         name: "STR - number to string",
         code: "[ 42 ] STR",
@@ -488,16 +488,16 @@ export const TEST_CASES: TestCase[] = [
         category: "Type Conversion"
     },
     {
-        // 仕様: NUM は文字列を数値にパースする（セクション2.2）
-        // 入力は文字列（ベクタに包まない）
+
+
         name: "NUM - string to number",
         code: "'42' NUM",
         expectedStack: [createNumber('42')],
         category: "Type Conversion"
     },
     {
-        // 仕様: BOOL はスカラー数値を真偽値に変換する
-        // 入力はスカラー（ベクタに包まない）
+
+
         name: "BOOL - 1 to true",
         code: "1 BOOL",
         expectedStack: [createBoolean(true)],
@@ -510,10 +510,10 @@ export const TEST_CASES: TestCase[] = [
         category: "Type Conversion"
     },
 
-    // ============================================
-    // String Operations
-    // 仕様: CHARS は文字列に対して操作する（ベクタに包まない）
-    // ============================================
+
+
+
+
     {
         name: "CHARS - split string",
         code: "'hello' CHARS",
@@ -527,16 +527,16 @@ export const TEST_CASES: TestCase[] = [
         category: "String Operations"
     },
     {
-        // 仕様: JOIN は文字列ベクタを結合し、単一文字列を返す
+
         name: "JOIN - join strings",
         code: "[ 'h' 'e' 'l' 'l' 'o' ] JOIN",
         expectedStack: [createString('hello')],
         category: "String Operations"
     },
 
-    // ============================================
-    // Stack Mode (..)
-    // ============================================
+
+
+
     {
         name: "Stack mode - LENGTH",
         code: "[ 1 ] [ 2 ] [ 3 ] .. LENGTH",
@@ -570,10 +570,10 @@ export const TEST_CASES: TestCase[] = [
         category: "Stack Mode"
     },
 
-    // ============================================
-    // User Word Definition
-    // 仕様: DEF構文は { code } 'NAME' DEF（セクション6.3）
-    // ============================================
+
+
+
+
     {
         name: "DEF and call",
         code: "{ [ 2 ] * } 'DOUBLE' DEF\n[ 5 ] DOUBLE",
@@ -587,11 +587,11 @@ export const TEST_CASES: TestCase[] = [
         category: "User Words"
     },
 
-    // ============================================
-    // Tensor Generation
-    // ============================================
+
+
+
     {
-        // 仕様: FILL は [ shape... value ] を単一ベクタとして受け取る
+
         name: "FILL",
         code: "[ 3 7 ] FILL",
         expectedStack: [createVector([
@@ -602,11 +602,11 @@ export const TEST_CASES: TestCase[] = [
         category: "Tensor Generation"
     },
 
-    // ============================================
-    // NIL Safety (セクション7)
-    // ============================================
+
+
+
     {
-        // 仕様: NIL Coalescing演算子 => （セクション4.4）
+
         name: "Nil Coalescing - NIL case",
         code: "NIL => [ 0 ]",
         expectedStack: [createVector([createNumber('0')])],
@@ -619,9 +619,9 @@ export const TEST_CASES: TestCase[] = [
         category: "NIL Safety"
     },
 
-    // ============================================
-    // Error Cases
-    // ============================================
+
+
+
     {
         name: "Error - stack underflow",
         code: "+",
@@ -641,21 +641,21 @@ export const TEST_CASES: TestCase[] = [
         category: "Error Cases"
     },
     {
-        // 仕様: 互換性のない形状ではブロードキャストできずエラー（セクション2.5）
+
         name: "Error - incompatible shapes",
         code: "[ 1 2 3 ] [ 1 2 ] +",
         expectError: true,
         category: "Error Cases"
     },
     {
-        // 仕様: 空ブラケットは禁止（セクション2.7）
+
         name: "Error - empty vector",
         code: "[ ]",
         expectError: true,
         category: "Error Cases"
     },
     {
-        // 仕様: 「変化なしはエラー」原則（セクション2.6）
+
         name: "Error - no change (sort already sorted)",
         code: "[ 1 2 3 ] SORT",
         expectError: true,
