@@ -298,7 +298,7 @@ mod tests {
 
 
     #[tokio::test]
-    async fn test_call_depth_4_ok() {
+    async fn test_nested_call_chain_4_levels_ok() {
         let mut interp = Interpreter::new();
         interp.execute("{ B } 'A' DEF").await.unwrap();
         interp.execute("{ C } 'B' DEF").await.unwrap();
@@ -306,12 +306,12 @@ mod tests {
         interp.execute("{ [ 1 ] } 'D' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
-        assert!(result.is_ok(), "Call depth 4 should succeed: {:?}", result);
+        assert!(result.is_ok(), "4-level nested call chain should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
     }
 
     #[tokio::test]
-    async fn test_deep_call_chain_succeeds_without_depth_limit() {
+    async fn test_deep_call_chain_succeeds() {
         let mut interp = Interpreter::new();
         interp.execute("{ B } 'A' DEF").await.unwrap();
         interp.execute("{ C } 'B' DEF").await.unwrap();
@@ -340,7 +340,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_call_depth_resets_after_completion() {
+    async fn test_call_chain_state_resets_after_completion() {
         let mut interp = Interpreter::new();
         interp.execute("{ B } 'A' DEF").await.unwrap();
         interp.execute("{ [ 1 ] } 'B' DEF").await.unwrap();
