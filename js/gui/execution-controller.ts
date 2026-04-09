@@ -1,4 +1,9 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
+import {
+    applyInterpreterSnapshot,
+    createInterpreterSnapshot,
+    type InterpreterSnapshot
+} from '../workers/interpreter-snapshot';
 import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import type { ViewMode } from './mobile-view-switcher';
@@ -25,12 +30,6 @@ export interface ExecutionController {
     readonly abortExecution: () => void;
 }
 
-interface ExecutionSnapshot {
-    readonly stack: ReturnType<AjisaiInterpreter['collect_stack']>;
-    readonly userWords: UserWord[];
-    readonly importedModules: string[];
-}
-
 const mapWordDataToUserWord = (
     interpreter: AjisaiInterpreter,
     wordData: [string, string, string | null, boolean]
@@ -52,16 +51,11 @@ const restoreInterpreterState = (
 ): void => {
     if (!result || result.error) return;
 
-    interpreter.reset();
-    if (result.importedModules?.length) {
-        interpreter.restore_imported_modules(result.importedModules);
-    }
-    if (result.stack) {
-        interpreter.restore_stack(result.stack);
-    }
-    if (result.userWords) {
-        interpreter.restore_user_words(result.userWords);
-    }
+    applyInterpreterSnapshot(interpreter, {
+        stack: result.stack,
+        userWords: result.userWords,
+        importedModules: result.importedModules
+    });
 };
 
 const checkIsResetCommand = (code: string): boolean =>
@@ -70,11 +64,12 @@ const checkIsResetCommand = (code: string): boolean =>
 const isAbortError = (error: Error): boolean =>
     error.message.includes('aborted');
 
-const createExecutionSnapshot = (interpreter: AjisaiInterpreter): ExecutionSnapshot => ({
-    stack: interpreter.collect_stack(),
-    userWords: collectUserWords(interpreter),
-    importedModules: interpreter.collect_imported_modules()
-});
+const createExecutionSnapshot = (interpreter: AjisaiInterpreter): InterpreterSnapshot =>
+    createInterpreterSnapshot({
+        stack: interpreter.collect_stack(),
+        userWords: collectUserWords(interpreter),
+        importedModules: interpreter.collect_imported_modules()
+    });
 
 const resolveExecutionException = (
     error: unknown,
