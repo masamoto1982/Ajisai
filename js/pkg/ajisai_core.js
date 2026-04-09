@@ -1,4 +1,4 @@
-/* @ts-self-types="./ajisai_core.d.ts" */
+
 
 export class AjisaiInterpreter {
     __destroy_into_raw() {
@@ -14,52 +14,52 @@ export class AjisaiInterpreter {
     clear_io_output_buffer() {
         wasm.ajisaiinterpreter_clear_io_output_buffer(this.__wbg_ptr);
     }
-    /**
-     * @param {string} code
-     * @returns {Promise<any>}
-     */
+
+
+
+
     execute(code) {
         const ptr0 = passStringToWasm0(code, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.ajisaiinterpreter_execute(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
-    /**
-     * @param {string} code
-     * @returns {any}
-     */
+
+
+
+
     execute_step(code) {
         const ptr0 = passStringToWasm0(code, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.ajisaiinterpreter_execute_step(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
-    /**
-     * @returns {any}
-     */
+
+
+
     get_core_words_info() {
         const ret = wasm.ajisaiinterpreter_get_builtin_words_info(this.__wbg_ptr);
         return ret;
     }
-    /**
-     * @returns {any}
-     */
+
+
+
     get_idiolect_words_info() {
         const ret = wasm.ajisaiinterpreter_get_custom_words_info(this.__wbg_ptr);
         return ret;
     }
-    /**
-     * IMPORT済みモジュール名の一覧を返す。
-     * 例: ["MUSIC", "JSON"]
-     * @returns {any}
-     */
+
+
+
+
+
     get_imported_modules() {
         const ret = wasm.ajisaiinterpreter_get_imported_modules(this.__wbg_ptr);
         return ret;
     }
-    /**
-     * @returns {string}
-     */
+
+
+
     get_io_output_buffer() {
         let deferred1_0;
         let deferred1_1;
@@ -72,29 +72,29 @@ export class AjisaiInterpreter {
             wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
     }
-    /**
-     * 指定モジュールが公開するワード情報を返す。
-     * 返却形式は Array<[name, description]>
-     * @param {string} module_name
-     * @returns {any}
-     */
+
+
+
+
+
+
     get_module_words_info(module_name) {
         const ptr0 = passStringToWasm0(module_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.ajisaiinterpreter_get_module_words_info(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
-    /**
-     * @returns {any}
-     */
+
+
+
     get_stack() {
         const ret = wasm.ajisaiinterpreter_get_stack(this.__wbg_ptr);
         return ret;
     }
-    /**
-     * @param {string} name
-     * @returns {any}
-     */
+
+
+
+
     get_word_definition(name) {
         const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
@@ -107,10 +107,10 @@ export class AjisaiInterpreter {
         AjisaiInterpreterFinalization.register(this, this.__wbg_ptr, this);
         return this;
     }
-    /**
-     * @param {string} json_string
-     * @returns {any}
-     */
+
+
+
+
     push_json_string(json_string) {
         const ptr0 = passStringToWasm0(json_string, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
@@ -120,50 +120,50 @@ export class AjisaiInterpreter {
         }
         return takeFromExternrefTable0(ret[0]);
     }
-    /**
-     * @param {string} name
-     */
+
+
+
     remove_word(name) {
         const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.ajisaiinterpreter_remove_word(this.__wbg_ptr, ptr0, len0);
     }
-    /**
-     * @returns {any}
-     */
+
+
+
     reset() {
         const ret = wasm.ajisaiinterpreter_reset(this.__wbg_ptr);
         return ret;
     }
-    /**
-     * @param {any} words_js
-     */
+
+
+
     restore_idiolect(words_js) {
         const ret = wasm.ajisaiinterpreter_restore_custom_words(this.__wbg_ptr, words_js);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
-    /**
-     * JS側からモジュール状態を復元する。
-     * 配列 ["MUSIC", "JSON"] のような形式で受け取り、各モジュールを再登録する。
-     * @param {any} modules_js
-     */
+
+
+
+
+
     restore_imported_modules(modules_js) {
         wasm.ajisaiinterpreter_restore_imported_modules(this.__wbg_ptr, modules_js);
     }
-    /**
-     * @param {any} stack_js
-     */
+
+
+
     restore_stack(stack_js) {
         const ret = wasm.ajisaiinterpreter_restore_stack(this.__wbg_ptr, stack_js);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
-    /**
-     * @param {string} text
-     */
+
+
+
     set_input_buffer(text) {
         const ptr0 = passStringToWasm0(text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
@@ -492,27 +492,27 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 86, function: Function { arguments: [Externref], shim_idx: 87, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+
             const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h881c6ff590a92e5d, wasm_bindgen__convert__closures_____invoke__h1a9b24889a5b283c);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 99, function: Function { arguments: [], shim_idx: 100, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+
             const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hf49e72bbb773a9bc, wasm_bindgen__convert__closures_____invoke__he32a8c35689af319);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0) {
-            // Cast intrinsic for `F64 -> Externref`.
+
             const ret = arg0;
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0, arg1) {
-            // Cast intrinsic for `Ref(Slice(U8)) -> NamedExternref("Uint8Array")`.
+
             const ret = getArrayU8FromWasm0(arg0, arg1);
             return ret;
         },
         __wbindgen_cast_0000000000000005: function(arg0, arg1) {
-            // Cast intrinsic for `Ref(String) -> Externref`.
+
             const ret = getStringFromWasm0(arg0, arg1);
             return ret;
         },
@@ -562,7 +562,7 @@ const CLOSURE_DTORS = (typeof FinalizationRegistry === 'undefined')
     : new FinalizationRegistry(state => state.dtor(state.a, state.b));
 
 function debugString(val) {
-    // primitive types
+
     const type = typeof val;
     if (type == 'number' || type == 'boolean' || val == null) {
         return  `${val}`;
@@ -586,7 +586,7 @@ function debugString(val) {
             return 'Function';
         }
     }
-    // objects
+
     if (Array.isArray(val)) {
         const length = val.length;
         let debug = '[';
@@ -599,30 +599,30 @@ function debugString(val) {
         debug += ']';
         return debug;
     }
-    // Test for built-in
+
     const builtInMatches = /\[object ([^\]]+)\]/.exec(toString.call(val));
     let className;
     if (builtInMatches && builtInMatches.length > 1) {
         className = builtInMatches[1];
     } else {
-        // Failed to match the standard '[object ClassName]'
+
         return toString.call(val);
     }
     if (className == 'Object') {
-        // we're a user defined class or Object
-        // JSON.stringify avoids problems with cycles, and is generally much
-        // easier than looping through ownProperties of `val`.
+
+
+
         try {
             return 'Object(' + JSON.stringify(val) + ')';
         } catch (_) {
             return 'Object';
         }
     }
-    // errors
+
     if (val instanceof Error) {
         return `${val.name}: ${val.message}\n${val.stack}`;
     }
-    // TODO we could test for more things here, like `Set`s and `Map`s.
+
     return className;
 }
 
@@ -669,9 +669,9 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     const state = { a: arg0, b: arg1, cnt: 1, dtor };
     const real = (...args) => {
 
-        // First up with a closure we increment the internal reference
-        // count. This ensures that the Rust closure environment won't
-        // be deallocated while we're invoking it.
+
+
+
         state.cnt++;
         const a = state.a;
         state.a = 0;

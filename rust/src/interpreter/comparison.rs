@@ -171,7 +171,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
             let result: bool = if a_val.data == b_val.data {
                 true
             } else {
-                // Scalar(x) と Vector([Scalar(x)]) は意味的に等価として扱う
+
                 match (&a_val.data, &b_val.data) {
                     (ValueData::Scalar(_), ValueData::Vector(children))
                         if children.len() == 1 =>

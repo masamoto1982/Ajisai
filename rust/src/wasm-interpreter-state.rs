@@ -90,8 +90,8 @@ impl AjisaiInterpreter {
         to_value(&builtins::collect_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
 
-    /// IMPORT済みモジュール名の一覧を返す。
-    /// 例: ["MUSIC", "JSON"]
+
+
     #[wasm_bindgen]
     pub fn collect_imported_modules(&self) -> JsValue {
         let arr = js_sys::Array::new();
@@ -101,8 +101,8 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    /// 指定モジュールのサンプルワード情報を返す。
-    /// 返却形式は Array<[name, description]>
+
+
     #[wasm_bindgen]
     pub fn collect_module_sample_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
@@ -123,8 +123,8 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    /// 指定モジュールが公開するワード情報を返す。
-    /// 返却形式は Array<[name, description]>
+
+
     #[wasm_bindgen]
     pub fn collect_module_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
@@ -168,8 +168,8 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    /// JS側からモジュール状態を復元する。
-    /// 配列 ["MUSIC", "JSON"] のような形式で受け取り、各モジュールを再登録する。
+
+
     #[wasm_bindgen]
     pub fn restore_imported_modules(&mut self, modules_js: JsValue) {
         let arr = js_sys::Array::from(&modules_js);
@@ -308,7 +308,7 @@ impl AjisaiInterpreter {
             .rebuild_dependencies()
             .map_err(|e| e.to_string())?;
 
-        // 復元時の内部メッセージはユーザーに見せない
+
         let _ = self.interpreter.collect_output();
 
         Ok(())

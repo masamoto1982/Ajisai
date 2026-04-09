@@ -165,7 +165,7 @@ pub(crate) fn op_def_inner(
         interp.output_buffer.push_str(&format!("{}\n", warning));
     }
 
-    // Module sample collision check — warn but allow DEF
+
     let mut collision_modules = Vec::new();
     for (module_name, module_dict) in &interp.module_vocabulary {
         if module_dict.sample_words.contains_key(&upper_name) {
@@ -259,7 +259,7 @@ pub(crate) fn op_def_inner(
     interp
         .output_buffer
         .push_str(&format!("Defined word: {}@{}\n", dict_name, name));
-    // Warn about collisions with module sample words
+
     if !collision_modules.is_empty() {
         let module_paths: Vec<String> = collision_modules
             .iter()

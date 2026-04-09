@@ -1,16 +1,16 @@
-// rust/src/interpreter/audio/audio-types.rs
-//
-// 【責務】
-// 音楽DSLの型定義。WaveformType, Envelope, AudioHint, MusicState, PlayMode,
-// AudioStructure, PlayCommand の定義。
+
+
+
+
+
 
 use super::super::Interpreter;
 use crate::types::ValueExt;
 use serde::Serialize;
 
-// ============================================================================
-// Audio types (module-local, decoupled from core types)
-// ============================================================================
+
+
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -60,9 +60,9 @@ impl ValueExt for AudioHint {
     }
 }
 
-// ============================================================================
-// Music module state (stored in interpreter's module_state)
-// ============================================================================
+
+
+
 
 pub(crate) struct MusicState {
     pub play_mode: PlayMode,
@@ -90,30 +90,30 @@ pub(crate) fn update_play_mode(interp: &mut Interpreter, mode: PlayMode) {
     );
 }
 
-// ============================================================================
-// PlayMode - 再生モード
-// ============================================================================
 
-/// 再生モード（SEQ/SIM指定用）
+
+
+
+
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum PlayMode {
     #[default]
-    Sequential, // 順次再生
-    Simultaneous, // 同時再生
+    Sequential,
+    Simultaneous,
 }
 
-// ============================================================================
-// AudioStructure - 音声構造
-// ============================================================================
 
-/// 音声構造（再帰的）
+
+
+
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 pub enum AudioStructure {
     #[serde(rename = "tone")]
     Tone {
         frequency: f64,
-        duration: f64, // スロット数
+        duration: f64,
         #[serde(skip_serializing_if = "Option::is_none")]
         envelope: Option<Envelope>,
         #[serde(skip_serializing_if = "is_default_waveform")]
@@ -139,14 +139,14 @@ pub enum AudioStructure {
     },
 }
 
-/// デフォルト波形（Sine）かどうかを判定（シリアライズ用）
+
 pub(crate) fn is_default_waveform(wf: &WaveformType) -> bool {
     *wf == WaveformType::Sine
 }
 
-// ============================================================================
-// PlayCommand - JSON出力用
-// ============================================================================
+
+
+
 
 #[derive(Debug, Serialize)]
 pub(crate) struct PlayCommand {

@@ -1,4 +1,4 @@
-// js/gui/step-executor.ts
+
 
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter, UserWord, ExecuteResult } from '../wasm-interpreter-types';

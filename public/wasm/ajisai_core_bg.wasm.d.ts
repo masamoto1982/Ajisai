@@ -1,5 +1,5 @@
-/* tslint:disable */
-/* eslint-disable */
+
+
 export const memory: WebAssembly.Memory;
 export const __wbg_ajisaiinterpreter_free: (a: number, b: number) => void;
 export const ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;

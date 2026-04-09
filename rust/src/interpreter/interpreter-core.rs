@@ -73,20 +73,20 @@ pub struct Interpreter {
     pub(crate) max_execution_steps: usize,
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
-    /// When true, Form-type operations (GET, LENGTH) preserve their source vector,
-    /// and comparison results on vector inputs are wrapped in vectors.
-    /// Set to true by the WASM API for GUI compatibility.
+
+
+
     pub gui_mode: bool,
-    // ── Fractional Dataflow tracking ──────────────────────────────────
+
     pub(crate) flow_tracking: bool,
     pub(crate) active_flows: Vec<FlowToken>,
     pub(crate) flow_consumed_log: Vec<(u64, Fraction)>,
-    // ── Module-scoped sample words ───────────────────────────────────
+
     pub(crate) module_vocabulary: HashMap<String, ModuleDictionary>,
     pub(crate) dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
     pub(crate) next_registration_order: u64,
     pub(crate) active_user_dictionary: String,
-    // ── Semantic plane ──────────────────────────────────────────────
+
     pub(crate) semantic_registry: SemanticRegistry,
 }
 
@@ -128,7 +128,7 @@ impl Interpreter {
         interpreter
     }
 
-    // ── Fractional Dataflow API ──────────────────────────────────────
+
 
     pub fn update_flow_tracking(&mut self, enabled: bool) {
         self.flow_tracking = enabled;
@@ -194,7 +194,7 @@ impl Interpreter {
         Ok(children)
     }
 
-    // ── Mode management ─────────────────────────────────────────────
+
 
     pub(crate) fn update_operation_target_mode(&mut self, mode: OperationTargetMode) {
         self.operation_target_mode = mode;
@@ -224,7 +224,7 @@ impl Interpreter {
         order
     }
 
-    // ── Reset and accessors ─────────────────────────────────────────
+
 
     pub fn execute_reset(&mut self) -> Result<()> {
         self.stack.clear();

@@ -26,7 +26,7 @@ use crate::types::WordDefinition;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-/// Registers core built-in words into the dictionary.
+
 pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) {
     for spec in builtin_specs() {
         let name = spec.name;

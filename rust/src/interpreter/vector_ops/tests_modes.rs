@@ -1,11 +1,11 @@
-// rust/src/interpreter/vector_ops/tests_modes.rs
-// COLLECT tests and consumption mode tests
+
+
 
 use crate::interpreter::Interpreter;
 
-// ============================================================================
-// COLLECT tests
-// ============================================================================
+
+
+
 
 #[tokio::test]
 async fn test_collect_basic() {
@@ -83,9 +83,9 @@ async fn test_collect_error_negative_count() {
     assert!(result.is_err(), "COLLECT with negative count should fail");
 }
 
-// ============================================================================
-// ConsumptionMode tests
-// ============================================================================
+
+
+
 
 #[tokio::test]
 async fn test_get_consume_mode() {
@@ -181,9 +181,9 @@ async fn test_take_keep_mode() {
     );
 }
 
-// ============================================================================
-// Keep mode exhaustive verification tests
-// ============================================================================
+
+
+
 
 #[tokio::test]
 async fn test_get_keep_mode_preserves_all_operands() {

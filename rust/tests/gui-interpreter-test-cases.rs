@@ -1,5 +1,5 @@
-// Integration tests mirroring js/gui/gui-interpreter-test-cases.ts
-// These tests verify the interpreter produces the same results as expected by the GUI tests.
+
+
 
 mod test_support;
 
@@ -7,7 +7,7 @@ use ajisai_core::types::fraction::Fraction;
 use ajisai_core::types::Value;
 use num_bigint::BigInt;
 
-// Helper: check a scalar value on the stack
+
 fn assert_number(val: &Value, num: i64, denom: i64) {
     let frac = val
         .as_scalar()
@@ -21,7 +21,7 @@ fn assert_number(val: &Value, num: i64, denom: i64) {
 }
 
 fn assert_bool_val(val: &Value, expected: bool) {
-    // TODO: DisplayHint check will use SemanticRegistry
+
     let frac = val.as_scalar().unwrap();
     if expected {
         assert!(!frac.is_zero(), "Expected TRUE but got FALSE");
@@ -31,8 +31,8 @@ fn assert_bool_val(val: &Value, expected: bool) {
 }
 
 fn assert_string_val(val: &Value, expected: &str) {
-    // TODO: DisplayHint check will use SemanticRegistry
-    // String is stored as vector of char codes
+
+
     if expected.is_empty() {
         assert!(val.is_nil(), "Expected NIL for empty string");
         return;
@@ -54,7 +54,7 @@ fn assert_nil(val: &Value) {
     assert!(val.is_nil(), "Expected NIL, got {:?}", val);
 }
 
-// Check a vector element by element
+
 fn assert_vector_numbers(val: &Value, nums: &[(i64, i64)]) {
     assert!(val.is_vector(), "Expected vector, got {:?}", val);
     let vec = val.as_vector().unwrap();
@@ -70,9 +70,9 @@ fn assert_vector_numbers(val: &Value, nums: &[(i64, i64)]) {
     }
 }
 
-// ============================================
-// Basic Types
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_number_integer() {
@@ -151,9 +151,9 @@ async fn test_nil() {
     assert_nil(&vec[0]);
 }
 
-// ============================================
-// Arithmetic
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_addition_integers() {
@@ -227,9 +227,9 @@ async fn test_round() {
     assert_vector_numbers(&stack[0], &[(3, 1)]);
 }
 
-// ============================================
-// Comparison
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_less_than_true() {
@@ -293,9 +293,9 @@ async fn test_equal_fraction_auto_reduction() {
     assert_bool_val(&vec[0], true);
 }
 
-// ============================================
-// Logic
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_and_true_true() {
@@ -343,9 +343,9 @@ async fn test_not_false() {
     assert_bool_val(&vec[0], true);
 }
 
-// ============================================
-// Vector Operations
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_length() {
@@ -354,7 +354,7 @@ async fn test_length() {
         .unwrap();
     assert_eq!(stack.len(), 2);
     assert_vector_numbers(&stack[0], &[(1, 1), (2, 1), (3, 1), (4, 1), (5, 1)]);
-    // LENGTH returns a scalar number
+
     assert_number(&stack[1], 5, 1);
 }
 
@@ -441,9 +441,9 @@ async fn test_remove() {
     assert_vector_numbers(&stack[0], &[(1, 1), (3, 1)]);
 }
 
-// ============================================
-// Tensor Operations
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_shape_1d() {
@@ -502,9 +502,9 @@ async fn test_reshape() {
     assert_vector_numbers(&outer[1], &[(4, 1), (5, 1), (6, 1)]);
 }
 
-// ============================================
-// Broadcasting
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_broadcast_scalar_plus_vector() {
@@ -545,9 +545,9 @@ async fn test_broadcast_matrix_plus_row_vector() {
     assert_vector_numbers(&outer[1], &[(14, 1), (25, 1), (36, 1)]);
 }
 
-// ============================================
-// Higher-Order Functions
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_map_double() {
@@ -577,13 +577,13 @@ async fn test_fold_sum() {
     assert_vector_numbers(&stack[0], &[(10, 1)]);
 }
 
-// ============================================
-// Type Conversion
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_str_number_to_string() {
-    // Use scalar 42 (not vector [42], which is now heuristically a string '*')
+
     let stack = test_support::exec_ok_gui("42 STR").await.unwrap();
     assert_eq!(stack.len(), 1);
     assert_string_val(&stack[0], "42");
@@ -617,9 +617,9 @@ async fn test_bool_0_to_false() {
     assert_bool_val(&stack[0], false);
 }
 
-// ============================================
-// String Operations
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_chars_split_string() {
@@ -643,9 +643,9 @@ async fn test_join_strings() {
     assert_string_val(&stack[0], "hello");
 }
 
-// ============================================
-// Stack Mode (..)
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_stack_mode_length() {
@@ -665,14 +665,14 @@ async fn test_stack_mode_get() {
         .await
         .unwrap();
     assert_eq!(stack.len(), 4);
-    // First 3 are original vectors
+
     let vec0 = stack[0].as_vector().unwrap();
     assert_string_val(&vec0[0], "a");
     let vec1 = stack[1].as_vector().unwrap();
     assert_string_val(&vec1[0], "b");
     let vec2 = stack[2].as_vector().unwrap();
     assert_string_val(&vec2[0], "c");
-    // Last is the GET result: stack[1] which is [ 'b' ]
+
     let result = stack[3].as_vector().unwrap();
     assert_string_val(&result[0], "b");
 }
@@ -688,9 +688,9 @@ async fn test_stack_mode_reverse() {
     assert_vector_numbers(&stack[2], &[(1, 1)]);
 }
 
-// ============================================
-// User Word Definition
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_def_and_call() {
@@ -703,8 +703,8 @@ async fn test_def_and_call() {
 
 #[tokio::test]
 async fn test_def_with_branch_guard() {
-    // [ 3 ] < 10 → TRUE, so first branch runs: 3 * 2 = 6
-    // Migrated from legacy `$` branch guard syntax to COND
+
+
     let stack = test_support::exec_ok_gui(
         "{ { ,, [ 10 ] < } { [ 2 ] * } { IDLE } { [ 3 ] * } COND } 'GUARD' DEF\n[ 3 ] GUARD",
     )
@@ -719,15 +719,15 @@ async fn test_del_delete_user_word() {
     assert!(test_support::exec_err_gui("{ [ 2 ] * } 'TEMP' DEF\n'TEMP' DEL\nTEMP").await);
 }
 
-// ============================================
-// Control Flow
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_cond_multi_branch() {
-    // Test multi-branch COND: [ 10 ] matches second guard (> 5 via reversed <)
-    // Migrated from legacy `&` loop guard syntax; loop construct removed from spec.
-    // Tests COND with multiple guard/body pairs instead.
+
+
+
     let stack = test_support::exec_ok_gui(
         "[ 10 ] { ,, [ 0 ] < } { 'negative' } { ,, [ 5 ] < } { 'small' } { IDLE } { 'big' } COND",
     )
@@ -737,9 +737,9 @@ async fn test_cond_multi_branch() {
     assert_string_val(&stack[0], "big");
 }
 
-// ============================================
-// Tensor Generation
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_fill() {
@@ -748,9 +748,9 @@ async fn test_fill() {
     assert_vector_numbers(&stack[0], &[(7, 1), (7, 1), (7, 1)]);
 }
 
-// ============================================
-// NIL Safety
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_nil_coalescing_nil_case() {
@@ -766,9 +766,9 @@ async fn test_nil_coalescing_non_nil_case() {
     assert_vector_numbers(&stack[0], &[(42, 1)]);
 }
 
-// ============================================
-// Error Cases
-// ============================================
+
+
+
 
 #[tokio::test]
 async fn test_error_stack_underflow() {

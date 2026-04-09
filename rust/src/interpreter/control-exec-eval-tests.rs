@@ -3,7 +3,7 @@ mod tests {
     use crate::interpreter::Interpreter;
     use crate::types::ValueData;
 
-    // === EXEC tests ===
+
 
     #[tokio::test]
     async fn test_exec_stack_top_simple() {
@@ -100,7 +100,7 @@ mod tests {
         }
     }
 
-    // === EVAL tests ===
+
 
     #[tokio::test]
     async fn test_eval_stack_top_simple() {

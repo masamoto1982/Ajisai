@@ -452,8 +452,8 @@ pub fn op_import_only(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// Re-import a module by name without requiring a stack value.
-/// Used for restoring module state from JS side.
+
+
 pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
     let upper = module_name.to_uppercase();
     import_all_public(interp, &upper).is_ok()

@@ -183,7 +183,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             )))
         }
         OperationTargetMode::Stack => {
-            // スタック上の各ベクタに対してJOINを適用
+
             let stack_len = interp.stack.len();
             if stack_len == 0 {
                 return Err(AjisaiError::StackUnderflow);
@@ -193,14 +193,14 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             let elements: Vec<Value> = interp.stack.drain(..).collect();
 
             for elem in elements {
-                // NILの場合
+
                 if elem.is_nil() {
                     interp.stack = results;
                     interp.stack.push(elem);
                     return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
                 }
 
-                // ベクタの場合
+
                 if let ValueData::Vector(children) = &elem.data {
                     if children.is_empty() {
                         interp.stack = results;
@@ -212,7 +212,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 
                     let mut result_str = String::new();
                     for (i, v) in children.iter().enumerate() {
-                        // 文字列の場合
+
                         if is_string_value(v) {
                             if let Some(s) = value_as_string(v) {
                                 result_str.push_str(&s);
@@ -220,7 +220,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                             }
                         }
 
-                        // 数値の場合（文字コードとして解釈）
+
                         if is_number_value(v) {
                             if let Some(f) = v.as_scalar() {
                                 if let Some(code) = f.to_i64() {
@@ -240,7 +240,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                             )));
                         }
 
-                        // その他の型
+
                         let type_name = if v.is_nil() {
                             "nil"
                         } else if is_boolean_value(v) {
@@ -260,7 +260,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     continue;
                 }
 
-                // 単一要素の場合（ベクタではない）
+
                 let type_name = if is_string_value(&elem) {
                     "String"
                 } else if is_number_value(&elem) {
@@ -295,7 +295,7 @@ mod tests {
     #[tokio::test]
     async fn test_chars_basic() {
         let mut interp = Interpreter::new();
-        // 直接文字列を使用（'hello' は文字列、[ 'hello' ] はベクター）
+
         interp.execute("'hello' CHARS JOIN").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
 
@@ -308,8 +308,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_chars_structure_error() {
-        // In new architecture, [ 42 ] is a Vector (treated as string).
-        // CHARS interprets scalar 42 as Unicode codepoint '*', so it succeeds.
+
+
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 42 ] CHARS").await;
         assert!(result.is_ok());
@@ -341,7 +341,7 @@ mod tests {
     #[tokio::test]
     async fn test_chars_join_roundtrip() {
         let mut interp = Interpreter::new();
-        // 直接文字列を使用（'hello' は文字列、[ 'hello' ] はベクター）
+
         interp.execute("'hello' CHARS JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
@@ -354,7 +354,7 @@ mod tests {
     #[tokio::test]
     async fn test_chars_reverse_join() {
         let mut interp = Interpreter::new();
-        // 直接文字列を使用（'hello' は文字列、[ 'hello' ] はベクター）
+
         interp.execute("'hello' CHARS REVERSE JOIN").await.unwrap();
 
         if let Some(val) = interp.stack.last() {
@@ -366,7 +366,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_nil_pushes_constant() {
-        // NILは常に定数としてNILをプッシュする
+
         let mut interp = Interpreter::new();
         let result = interp.execute("NIL").await;
         assert!(result.is_ok());
@@ -379,7 +379,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_nil_multiple() {
-        // NILを複数回呼ぶと複数のNILがスタックに積まれる
+
         let mut interp = Interpreter::new();
         let result = interp.execute("NIL NIL NIL").await;
         assert!(result.is_ok());

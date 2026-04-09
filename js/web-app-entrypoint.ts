@@ -1,4 +1,4 @@
-// js/web-app-entrypoint.ts
+
 
 import { GUI_INSTANCE } from './gui/gui-application';
 import { initWasm } from './wasm-module-loader';
@@ -31,7 +31,7 @@ async function main(): Promise<void> {
 
         GUI_INSTANCE.updateAllDisplays();
 
-        // GUI初期化完了後にオンライン状態を設定
+
         setupOnlineStatusMonitoring();
 
         console.log('[Main] Application initialization completed successfully');
@@ -49,27 +49,27 @@ async function main(): Promise<void> {
     }
 }
 
-// Service Worker Registration for PWA/Offline support
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js')
             .then(registration => {
                 console.log('[Main] Service Worker registered:', registration.scope);
 
-                // 更新チェック
+
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
                     console.log('[Main] New service worker found');
 
                     newWorker?.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // 新しいバージョンが利用可能
+
                             console.log('[Main] New version available');
                             try {
                                 const display = GUI_INSTANCE.extractDisplay();
                                 display.renderInfo('New version available. Please reload.', true);
                             } catch {
-                                // GUI not yet initialized
+
                             }
                         }
                     });
@@ -81,7 +81,7 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// オフライン/オンライン状態の監視（GUI初期化後に呼ばれる）
+
 function setupOnlineStatusMonitoring(): void {
     const offlineIndicator = document.getElementById('offline-indicator');
     let isInitialCheck = true;
@@ -90,13 +90,13 @@ function setupOnlineStatusMonitoring(): void {
         if (navigator.onLine) {
             console.log('[Main] Online');
             if (offlineIndicator) offlineIndicator.style.display = 'none';
-            // 初回チェック時はオンラインメッセージを表示しない（サンプルワードメッセージを維持）
+
             if (!isInitialCheck) {
                 try {
                     const display = GUI_INSTANCE.extractDisplay();
                     display.renderInfo('Online mode', true);
                 } catch {
-                    // GUI not yet initialized
+
                 }
             }
         } else {
@@ -106,7 +106,7 @@ function setupOnlineStatusMonitoring(): void {
                 const display = GUI_INSTANCE.extractDisplay();
                 display.renderInfo('Offline mode', true);
             } catch {
-                // GUI not yet initialized
+
             }
         }
         isInitialCheck = false;
@@ -115,7 +115,7 @@ function setupOnlineStatusMonitoring(): void {
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
 
-    // 初期状態をチェック
+
     updateOnlineStatus();
 }
 

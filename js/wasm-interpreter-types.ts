@@ -1,4 +1,4 @@
-// js/wasm-interpreter-types.ts
+
 
 export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
@@ -33,13 +33,13 @@ export interface AjisaiInterpreter {
 export interface ExecuteResult {
     status: 'OK' | 'ERROR';
     output?: string;
-    debugOutput?: string; // Add this back for debug messages
+    debugOutput?: string;
     message?: string;
     error?: boolean;
     hasMore?: boolean;
     definition_to_load?: string;
-    inputHelper?: string; // Input helper text to insert into the editor
-    // Workerから返されるインタプリタの状態
+    inputHelper?: string;
+
     stack?: Value[];
     userWords?: UserWord[];
     importedModules?: string[];

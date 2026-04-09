@@ -1,6 +1,6 @@
-// rust/src/builtins/builtin-word-definitions.rs
-//
-// Built-in word registry (single source of truth for metadata + execution binding key)
+
+
+
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BuiltinDetailGroup {
@@ -785,9 +785,9 @@ pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
     BUILTIN_SPECS.iter().find(|spec| spec.name == name)
 }
 
-/// Returns the list of all built-in word definitions.
-/// Each tuple contains: (word_name, description, syntax_example, signature_type)
-/// signature_type: "map" | "form" | "fold" | "none"
+
+
+
 pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)>
 {
     BUILTIN_SPECS

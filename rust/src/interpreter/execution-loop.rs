@@ -258,7 +258,7 @@ impl Interpreter {
                     return Err(AjisaiError::from("Unexpected code block end"));
                 }
                 Token::Pipeline => {
-                    // no-op visual marker
+
                 }
                 Token::NilCoalesce => {
                     let value = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;

@@ -1,7 +1,7 @@
-// rust/src/interpreter/audio/build-audio-structure.rs
-//
-// 【責務】
-// 値からAudioStructureを構築し、PLAYコマンドを実行する。
+
+
+
+
 
 use super::audio_types::{
     update_play_mode, AudioStructure, Envelope, PlayCommand, PlayMode, WaveformType,
@@ -12,36 +12,36 @@ use crate::interpreter::value_extraction_helpers::{is_string_value, is_vector_va
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
-// ============================================================================
-// MUSIC@PLAY ワード実装
-// ============================================================================
 
-/// MUSIC@PLAY ワードのエントリポイント
+
+
+
+
 pub fn op_play(interp: &mut Interpreter) -> Result<()> {
     let mode = super::lookup_play_mode(interp);
     let target = interp.operation_target_mode;
 
     match target {
         OperationTargetMode::StackTop => {
-            // スタックトップのベクタを処理
+
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let structure = build_audio_structure(&val, mode, &mut interp.output_buffer)?;
             emit_play_command(&structure, &mut interp.output_buffer);
         }
         OperationTargetMode::Stack => {
-            // スタック全体の各要素を処理
+
             let values: Vec<Value> = interp.stack.drain(..).collect();
             if values.is_empty() {
                 return Err(AjisaiError::StackUnderflow);
             }
 
-            // 各値を順次再生として構築
+
             let structures: Vec<AudioStructure> = values
                 .iter()
                 .map(|v| build_audio_structure(v, PlayMode::Sequential, &mut interp.output_buffer))
                 .collect::<Result<Vec<_>>>()?;
 
-            // モードに応じて結合
+
             let combined = match mode {
                 PlayMode::Sequential => AudioStructure::Seq {
                     children: structures,
@@ -59,35 +59,35 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    // リセット
+
     update_play_mode(interp, PlayMode::Sequential);
     interp.operation_target_mode = OperationTargetMode::StackTop;
 
     Ok(())
 }
 
-// ============================================================================
-// build_audio_structure 関数
-// ============================================================================
 
-/// 値からAudioStructureを構築
+
+
+
+
 pub(crate) fn build_audio_structure(
     value: &Value,
     mode: PlayMode,
     output: &mut String,
 ) -> Result<AudioStructure> {
-    // TODO: AudioHint metadata will be read from SemanticRegistry
-    // For now, use defaults since ext is no longer on Value
+
+
     let envelope: Option<Envelope> = None;
     let waveform = WaveformType::default();
     let is_chord = false;
 
-    // NIL判定
+
     if value.is_nil() {
         return Ok(AudioStructure::Rest { duration: 1.0 });
     }
 
-    // 文字列判定（歌詞: Outputに出力、時間消費なし）
+
     if is_string_value(value) {
         let s = value_as_string(value).unwrap_or_default();
         output.push_str(&s);
@@ -99,7 +99,7 @@ pub(crate) fn build_audio_structure(
         });
     }
 
-    // ベクタ判定
+
     if is_vector_value(value) {
         if let Some(children) = value.as_vector() {
             if children.is_empty() {
@@ -116,7 +116,7 @@ pub(crate) fn build_audio_structure(
                 )
                 .collect();
 
-            // MUSIC@CHORDフラグがあれば同時再生、なければモードに従う
+
             let effective_mode = if is_chord {
                 PlayMode::Simultaneous
             } else {
@@ -138,7 +138,7 @@ pub(crate) fn build_audio_structure(
         }
     }
 
-    // 数値判定（単一スカラー）
+
     if let Some(frac) = value.as_scalar() {
         let freq = frac
             .numerator()
@@ -168,7 +168,7 @@ pub(crate) fn build_audio_structure(
         }
     }
 
-    // Boolean等は無視（空のSeqとして返す）
+
     Ok(AudioStructure::Seq {
         children: vec![],
         envelope: None,
@@ -176,11 +176,11 @@ pub(crate) fn build_audio_structure(
     })
 }
 
-// ============================================================================
-// ヘルパー関数
-// ============================================================================
 
-/// 可聴域（20Hz〜20,000Hz）のチェックと警告出力
+
+
+
+
 fn check_audible_range(freq: f64, output: &mut String) {
     const MIN_AUDIBLE: f64 = 20.0;
     const MAX_AUDIBLE: f64 = 20000.0;
@@ -198,7 +198,7 @@ fn check_audible_range(freq: f64, output: &mut String) {
     }
 }
 
-/// PlayCommand を JSON として output_buffer に出力
+
 fn emit_play_command(structure: &AudioStructure, output: &mut String) {
     let command = PlayCommand {
         command_type: "play".to_string(),
@@ -206,7 +206,7 @@ fn emit_play_command(structure: &AudioStructure, output: &mut String) {
     };
 
     if let Ok(json) = serde_json::to_string(&command) {
-        // AUDIOコマンドが必ず行頭から始まるようにする
+
         if !output.is_empty() && !output.ends_with('\n') {
             output.push('\n');
         }

@@ -1,4 +1,4 @@
-// js/workers/execution-worker-manager.ts
+
 
 import type { ExecuteResult } from '../wasm-interpreter-types';
 import type { InterpreterSnapshot } from './interpreter-snapshot';
@@ -34,17 +34,17 @@ export class WorkerManager {
         console.log('[WorkerManager] Initializing worker pool...');
         this.workers = [];
 
-        // メインスレッドでコンパイル済みのWASMモジュールを取得。
-        // これをワーカーに転送することで、ワーカー側での再コンパイルを回避する。
+
+
         this.compiledModule = extractCompiledWasmModule();
 
         if (!this.compiledModule) {
             console.warn('[WorkerManager] Compiled WASM module not available; workers will init independently');
         }
 
-        // コンパイル済みモジュールを転送するため、モバイルでも遅延なしで
-        // 全ワーカーを即座に作成できる。initSyncによるインスタンス化は
-        // WASMコンパイルを伴わないため、CPU負荷がほぼ発生しない。
+
+
+
         for (let i = 0; i < this.maxWorkers; i++) {
             this.createWorker();
         }
@@ -57,9 +57,9 @@ export class WorkerManager {
         worker.onmessage = (event) => this.resolveWorkerMessage(instance, event.data);
         worker.onerror = (error) => this.resolveWorkerError(instance, error);
 
-        // コンパイル済みモジュールをワーカーに転送。
-        // WebAssembly.Moduleはstructured-cloneableなので、
-        // postMessageで効率的に転送できる。
+
+
+
         if (this.compiledModule) {
             worker.postMessage({ type: 'init', wasmModule: this.compiledModule });
         }
@@ -67,7 +67,7 @@ export class WorkerManager {
         this.workers.push(instance);
     }
 
-    // コード実行時にワーカーが未作成の場合、即座に作成する
+
     private ensureWorkers(): void {
         if (this.workers.length > 0) return;
         for (let i = 0; i < this.maxWorkers; i++) {
@@ -136,11 +136,11 @@ export class WorkerManager {
     }
 
     private createTaskId(): string {
-        // crypto.randomUUID()が利用可能な場合はそれを使用、そうでなければフォールバック
+
         if (typeof crypto !== 'undefined' && crypto.randomUUID) {
             return crypto.randomUUID();
         }
-        // フォールバック: タイムスタンプ + ランダム値
+
         return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     }
 
@@ -162,14 +162,14 @@ export class WorkerManager {
     abortAll(): void {
         console.log('[WorkerManager] Aborting all tasks...');
 
-        // キュー内のタスクのPromiseをrejectしてからクリア
+
         const abortError = new Error('Execution aborted');
         for (const task of this.taskQueue) {
             task.reject(abortError);
         }
         this.taskQueue = [];
 
-        // 実行中のタスクにabortメッセージを送信
+
         for (const id of this.activeTasks.keys()) {
             const worker = this.workers.find(w => w.currentTaskId === id)?.worker;
             if (worker) {

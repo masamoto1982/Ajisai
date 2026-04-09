@@ -16,7 +16,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name.to_uppercase();
 
-    // FQN（DICT@WORD）形式の場合、辞書名とワード名に分離
+
     let (target_dict, word_name) = if let Some((ns, w)) = interp.split_qualified_name(&upper_name) {
         (Some(ns), w)
     } else {
@@ -31,7 +31,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    // 辞書全体の削除（FQNでない場合のみ）
+
     if target_dict.is_none() {
         if interp.user_dictionaries.contains_key(&word_name) {
             interp.user_dictionaries.remove(&word_name);
@@ -57,10 +57,10 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    // 個別ワードの所在を特定
+
     let (owner_name, is_module) = find_word_owner(interp, target_dict.as_deref(), &word_name)?;
 
-    // モジュールサンプルワードはforceフラグ必須
+
     if is_module && !interp.force_flag {
         interp.force_flag = false;
         return Err(AjisaiError::from(format!(
@@ -80,7 +80,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    // 削除実行
+
     let removed_def = if is_module {
         interp
             .module_vocabulary
@@ -122,16 +122,16 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// ワードの所有辞書を特定する。
-/// target_dict が指定されていれば、その辞書のみ検索する。
-/// 返値は (辞書名, モジュールか否か)。
+
+
+
 fn find_word_owner(
     interp: &Interpreter,
     target_dict: Option<&str>,
     word_name: &str,
 ) -> Result<(String, bool)> {
     if let Some(dict_name) = target_dict {
-        // FQN指定: 指定された辞書から検索
+
         if let Some(dict) = interp.user_dictionaries.get(dict_name) {
             if dict.words.contains_key(word_name) {
                 return Ok((dict_name.to_string(), false));
@@ -147,7 +147,7 @@ fn find_word_owner(
             dict_name, word_name
         )))
     } else {
-        // 短縮名: 全辞書を検索（user_dictionaries優先）
+
         for (dict_name, dict) in &interp.user_dictionaries {
             if dict.words.contains_key(word_name) {
                 return Ok((dict_name.clone(), false));

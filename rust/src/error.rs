@@ -39,27 +39,27 @@ pub enum AjisaiError {
         operation: String,
     },
     Custom(String),
-    /// Fractional Dataflow: requested consumption exceeds remaining flow
+
     OverConsumption {
         requested: String,
         remaining: String,
     },
-    /// Fractional Dataflow: non-zero remainder at a complete-consumption boundary
+
     UnconsumedLeak {
         remainder: String,
         context: String,
     },
-    /// Fractional Dataflow: flow chain ID discontinuity — remainder cannot be inherited
+
     FlowBreak {
         flow_id: u64,
         reason: String,
     },
-    /// Fractional Dataflow: bifurcation conservation violation
+
     BifurcationViolation {
         parent_mass: String,
         children_sum: String,
     },
-    /// COND: all guards failed and no else clause
+
     CondExhausted,
 }
 

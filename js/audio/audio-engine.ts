@@ -1,21 +1,21 @@
-// js/audio/audio-engine.ts
-//
-// Audio playback engine for Ajisai's music DSL.
-// Recursively processes SEQ/SIM structures and plays audio via Web Audio API.
-//
-// AudioStructure format:
-// - tone: { type: 'tone', frequency: number, duration: number, envelope?, waveform? }
-// - rest: { type: 'rest', duration: number }
-// - seq: { type: 'seq', children: AudioStructure[], envelope?, waveform? }
-// - sim: { type: 'sim', children: AudioStructure[], envelope?, waveform? }
+
+
+
+
+
+
+
+
+
+
 
 type WaveformType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
 interface Envelope {
-    attack: number;   // 立ち上がり時間（秒）
-    decay: number;    // 減衰時間（秒）
-    sustain: number;  // 持続レベル（0.0-1.0）
-    release: number;  // 余韻時間（秒）
+    attack: number;
+    decay: number;
+    sustain: number;
+    release: number;
 }
 
 interface AudioStructure {
@@ -32,7 +32,7 @@ interface PlayCommand {
     structure: AudioStructure;
 }
 
-// デフォルトエンベロープ
+
 const DEFAULT_ENVELOPE: Envelope = {
     attack: 0.01,
     decay: 0.0,
@@ -43,9 +43,9 @@ const DEFAULT_ENVELOPE: Envelope = {
 export class AudioEngine {
     private audioContext: AudioContext | null = null;
     private isInitialized = false;
-    private slotDuration = 0.5; // 0.5 seconds per slot
-    private currentGain = 1.0; // 音量（0.0〜1.0）
-    private currentPan = 0.0;  // 定位（-1.0〜1.0）
+    private slotDuration = 0.5;
+    private currentGain = 1.0;
+    private currentPan = 0.0;
 
     async init(): Promise<void> {
         if (this.isInitialized) return;
@@ -69,7 +69,7 @@ export class AudioEngine {
             return;
         }
 
-        // Resume audio context if suspended (required by some browsers)
+
         if (this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
         }
@@ -86,7 +86,7 @@ export class AudioEngine {
     ): Promise<number> {
         if (!this.audioContext) return startTime;
 
-        // 継承されたパラメータまたはデフォルトを使用
+
         const envelope = structure.envelope || inheritedEnvelope || DEFAULT_ENVELOPE;
         const waveform = structure.waveform || inheritedWaveform || 'sine';
 
@@ -101,7 +101,7 @@ export class AudioEngine {
                 return startTime + restDuration;
 
             case 'seq':
-                // Sequential: play children one after another
+
                 let seqTime = startTime;
                 for (const child of structure.children || []) {
                     seqTime = await this.playStructure(child, seqTime, envelope, waveform);
@@ -109,7 +109,7 @@ export class AudioEngine {
                 return seqTime;
 
             case 'sim':
-                // Simultaneous: play all children at the same time
+
                 const endTimes = await Promise.all(
                     (structure.children || []).map(child =>
                         this.playStructure(child, startTime, envelope, waveform)
@@ -136,7 +136,7 @@ export class AudioEngine {
         const gainNode = this.audioContext.createGain();
         const panNode = this.audioContext.createStereoPanner();
 
-        // 接続: oscillator → gainNode → panNode → destination
+
         oscillator.connect(gainNode);
         gainNode.connect(panNode);
         panNode.connect(this.audioContext.destination);
@@ -144,28 +144,28 @@ export class AudioEngine {
         oscillator.frequency.setValueAtTime(frequency, startTime);
         oscillator.type = waveform;
 
-        // パンニング設定
+
         panNode.pan.setValueAtTime(this.currentPan, startTime);
 
-        // ADSR Envelope（currentGainを適用）
+
         const { attack, decay, sustain, release } = envelope;
-        const peakLevel = 0.3 * this.currentGain;  // currentGainを適用
+        const peakLevel = 0.3 * this.currentGain;
         const sustainLevel = peakLevel * sustain;
 
-        // リリースを考慮した実効音長
+
         const effectiveDuration = Math.max(duration - release, attack + decay);
 
-        // Attack: 0 → peakLevel
+
         gainNode.gain.setValueAtTime(0, startTime);
         gainNode.gain.linearRampToValueAtTime(peakLevel, startTime + attack);
 
-        // Decay: peakLevel → sustainLevel
+
         if (decay > 0) {
             gainNode.gain.linearRampToValueAtTime(sustainLevel, startTime + attack + decay);
         }
 
-        // Sustain: sustainLevel を維持
-        // Release: sustainLevel → 0
+
+
         const releaseStart = startTime + effectiveDuration;
         gainNode.gain.setValueAtTime(sustainLevel, releaseStart);
         gainNode.gain.exponentialRampToValueAtTime(0.001, releaseStart + release);

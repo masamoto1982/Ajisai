@@ -1,7 +1,7 @@
-// rust/src/interpreter/audio/audio-unit-tests.rs
-//
-// 【責務】
-// 音楽DSLの単体テスト（build_audio_structure のユニットテスト）
+
+
+
+
 
 use super::build_audio_structure::build_audio_structure;
 use super::audio_types::{AudioStructure, PlayMode};
@@ -30,7 +30,7 @@ fn create_vector(elements: Vec<Value>) -> Value {
 
 #[test]
 fn test_tone_from_integer() {
-    // 440 → 440Hz, 1スロット
+
     let val = create_number(440);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -50,7 +50,7 @@ fn test_tone_from_integer() {
 
 #[test]
 fn test_tone_from_fraction() {
-    // 440/3 → 440Hz, 3スロット (440 and 3 are coprime, no normalization)
+
     let val = create_fraction(440, 3);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -70,8 +70,8 @@ fn test_tone_from_fraction() {
 
 #[test]
 fn test_tone_from_fraction_unreduced() {
-    // 440/2 is preserved as-is (no GCD reduction) for music DSL
-    // This becomes 440Hz, 2スロット
+
+
     let val = create_fraction(440, 2);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -91,7 +91,7 @@ fn test_tone_from_fraction_unreduced() {
 
 #[test]
 fn test_rest_from_zero() {
-    // 0/4 is preserved as-is for music DSL → 4-slot rest
+
     let val = create_fraction(0, 4);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -106,7 +106,7 @@ fn test_rest_from_zero() {
 
 #[test]
 fn test_rest_from_zero_coprime() {
-    // 0/3 is preserved as-is for music DSL → 3-slot rest
+
     let val = create_fraction(0, 3);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -121,7 +121,7 @@ fn test_rest_from_zero_coprime() {
 
 #[test]
 fn test_rest_from_nil() {
-    // NIL → 1スロット休符
+
     let val = create_nil();
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -136,12 +136,12 @@ fn test_rest_from_nil() {
 
 #[test]
 fn test_nil_becomes_rest() {
-    // NIL値は休符として処理される
+
     let val = Value::nil();
     let mut output = String::new();
     let result = build_audio_structure(&val, PlayMode::Sequential, &mut output);
 
-    // NILは休符になる
+
     match result {
         Ok(AudioStructure::Rest { duration }) => {
             assert_eq!(duration, 1.0, "NIL should become 1-slot rest");
@@ -153,9 +153,9 @@ fn test_nil_becomes_rest() {
 
 #[test]
 fn test_seq_structure() {
-    // Without DisplayHint, is_string_value returns true for all vectors,
-    // so a vector of scalars [440, 550] is treated as lyrics (codepoints).
-    // build_audio_structure outputs the characters and returns an empty Seq.
+
+
+
     let elements = vec![create_number(440), create_number(550)];
     let val = create_vector(elements);
     let mut output = String::new();
@@ -171,15 +171,15 @@ fn test_seq_structure() {
 
 #[test]
 fn test_sim_structure() {
-    // Without DisplayHint, is_string_value returns true for all vectors,
-    // so a vector of scalars is treated as lyrics (codepoints).
+
+
     let elements = vec![create_number(440), create_number(550)];
     let val = create_vector(elements);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Simultaneous, &mut output).unwrap();
 
-    // Even with Simultaneous mode, the string check happens first
-    // and returns an empty Seq (lyrics path).
+
+
     match structure {
         AudioStructure::Seq { children, .. } => {
             assert_eq!(children.len(), 0, "String-treated vector yields empty seq");
@@ -199,7 +199,7 @@ fn test_negative_frequency_error() {
 
 #[test]
 fn test_audible_range_warning_low() {
-    let val = create_number(10); // 10Hz - below audible
+    let val = create_number(10);
     let mut output = String::new();
     let _ = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -215,7 +215,7 @@ fn test_audible_range_warning_low() {
 
 #[test]
 fn test_audible_range_warning_high() {
-    let val = create_number(25000); // 25kHz - above audible
+    let val = create_number(25000);
     let mut output = String::new();
     let _ = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 
@@ -231,7 +231,7 @@ fn test_audible_range_warning_high() {
 
 #[test]
 fn test_audible_range_no_warning() {
-    let val = create_number(440); // 440Hz - audible
+    let val = create_number(440);
     let mut output = String::new();
     let _ = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
 

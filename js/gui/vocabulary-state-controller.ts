@@ -1,4 +1,4 @@
-// js/gui/vocabulary-state-controller.ts
+
 
 import {
     checkWordMatchesFilter,
@@ -190,7 +190,7 @@ export const createVocabularyManager = (
 
     [elements.builtInWordInfo, elements.userWordInfo].forEach(resetWordInfoDisplay);
 
-    // 検索フィルターとユーザーワードのキャッシュ
+
     let searchFilter = '';
     let cachedUserWords: Array<[string, string, string | null, boolean]> = [];
     let selectedDictionary = 'DEMO';
@@ -239,23 +239,23 @@ export const createVocabularyManager = (
     ): void => {
         clearElement(container);
 
-        // Filter out ';' and '"'
+
         const filtered = coreWords.filter(
             (wd): wd is unknown[] =>
                 Array.isArray(wd) && wd[0] !== ';' && wd[0] !== '"'
         );
 
-        // Sort: symbols first, then alphabetic
+
         const sorted = [...filtered].sort((a, b) =>
             compareWordName(a[0] as string, b[0] as string)
         );
 
-        // Apply search filter
+
         const matched = sorted.filter(wd =>
             checkWordMatchesFilter(wd[0] as string, searchFilter)
         );
 
-        // Create buttons
+
         matched.forEach(wordData => {
             const name = wordData[0] as string;
             const description = (wordData[1] as string) || name;
@@ -286,12 +286,12 @@ export const createVocabularyManager = (
     ): void => {
         clearElement(container);
 
-        // フィルタリング: マッチするワードのみ抽出
+
         const filteredWords = words.filter(wordInfo =>
             checkWordMatchesFilter(wordInfo.name, searchFilter)
         );
 
-        // Sort: symbols first, then alphabetic
+
         const sortedFiltered = [...filteredWords].sort((a, b) =>
             compareWordName(a.name, b.name)
         );
@@ -326,8 +326,8 @@ export const createVocabularyManager = (
             container.appendChild(button);
         });
 
-        // フィルターが設定されているが結果がない場合
-        // (ただし、元のワードリストが空の場合は表示しない)
+
+
         if (searchFilter && words.length > 0 && filteredWords.length === 0) {
             container.classList.add('is-empty');
             container.appendChild(createNoResultsElement());
@@ -357,7 +357,7 @@ export const createVocabularyManager = (
     const updateUserWords = (
         userWordsInfo: Array<[string, string, string | null, boolean]>
     ): void => {
-        // キャッシュを更新
+
         cachedUserWords = userWordsInfo || [];
         const dictionaries = Array.from(new Set(cachedUserWords.map(([dictionary]) => dictionary))).sort();
         elements.userDictionarySelect.innerHTML = '';
@@ -377,7 +377,7 @@ export const createVocabularyManager = (
 
     const updateSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
-        // 両方のワードリストを再レンダリング
+
         renderBuiltInWords();
         const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
         renderUserWordButtons(elements.userWordsDisplay, words);

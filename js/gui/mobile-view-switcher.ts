@@ -1,4 +1,4 @@
-// js/gui/mobile-view-switcher.ts
+
 
 export interface MobileElements {
     readonly inputArea: HTMLElement;

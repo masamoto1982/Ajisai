@@ -1,35 +1,35 @@
-/* ============================================================================
- * Ajisai アプリ固有スタイル
- * ============================================================================
- * 共通スタイルは ajisai-base.css を参照
- * このファイルにはアプリ（インタプリタUI）固有のスタイルのみ記述
- */
 
-/* ==========================================================================
- * 0. 上詰め保証ルール (Top-alignment guarantee)
- * ==========================================================================
- * 全コンテンツエリア（Input, Output, Stack, Dictionary およびその内部）の
- * 部品は、デスクトップ・モバイル問わず常に上詰め（top-aligned）であること。
- *
- * 根本原因: flex コンテナが flex:1 等で引き伸ばされたとき、子要素の
- * 配置は align-items / align-content / justify-content に依存する。
- * これらが未指定だと stretch（中央寄せや下詰め）になり得る。
- *
- * 対策: コンテナの flex-direction に応じて適切なプロパティを設定する。
- *
- *   ■ column 方向コンテナ (主軸=縦):
- *     - justify-content が縦方向の配置を制御 → flex-start で上詰め
- *     - align-items はデフォルト stretch のまま（子要素が横幅いっぱいに広がる）
- *     ※ align-items: flex-start を設定すると子要素が横方向に縮む！
- *
- *   ■ row + wrap 方向コンテナ (主軸=横):
- *     - align-content が複数行の縦方向配置を制御 → flex-start で上詰め
- *     - align-items が行内の縦方向配置を制御 → flex-start で上詰め
- *     - justify-content が横方向配置を制御 → flex-start で左詰め
- * ------------------------------------------------------------------------ */
 
-/* column 方向コンテナ: 縦方向の上詰めのみ指定。
-   align-items は stretch (デフォルト) を維持し、子要素を横幅いっぱいに広げる */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .main-layout .output-area,
 .main-layout .input-area,
 .main-layout .stack-area,
@@ -41,7 +41,7 @@
     align-content: flex-start;
 }
 
-/* row + wrap 方向コンテナ: 縦横すべて flex-start で上詰め・左詰め */
+
 .main-layout .display-area,
 .main-layout .state-display,
 .main-layout .words-display,
@@ -51,11 +51,11 @@
     justify-content: flex-start;
 }
 
-/* --------------------------------------------------------------------------
- * 1. アプリ用レイアウト
- * -------------------------------------------------------------------------- */
 
-/* デスクトップレイアウト — アーティクル枠 */
+
+
+
+
 .main-layout {
     display: flex;
     flex: 1;
@@ -66,9 +66,9 @@
     background: var(--gradient-child, #fff);
 }
 
-/* --------------------------------------------------------------------------
- * 1.1 エリアセレクタ（パネル切替）
- * -------------------------------------------------------------------------- */
+
+
+
 .area-selector {
     padding: 0;
     flex-shrink: 0;
@@ -86,7 +86,7 @@
     cursor: pointer;
 }
 
-/* モバイルセレクタはデスクトップで非表示 */
+
 .area-selector-mobile {
     display: none;
 }
@@ -108,8 +108,8 @@
     display: none !important;
 }
 
-/* アプリ内セクション — base.css の section ボーダーを打ち消し、
-   外枠（main-layout）だけでシートを形成する */
+
+
 .main-layout section {
     margin-bottom: 0;
     border: none;
@@ -118,7 +118,7 @@
     padding: 0;
 }
 
-/* 作業領域パネル / 状態表示パネル — 背景を透過して main-layout に委ねる */
+
 #editor-panel,
 #state-panel {
     display: flex;
@@ -131,17 +131,17 @@
     position: relative;
 }
 
-/* 左右分割比 — --col-left-flex / --col-right-flex で制御（ajisai-theme.js がデフォルト 1:1） */
+
 #editor-panel { flex: var(--col-left-flex); }
 #state-panel  { flex: var(--col-right-flex); }
 
-/* 左パネルと右パネルの間に仕切り線（タブグループの仕切りと連続） */
+
 #editor-panel {
     border-right: 1px solid var(--color-border-strong, #999);
 }
 
 
-/* アクティブエリアを広く使うためのレイアウト最適化 */
+
 #editor-panel,
 #state-panel,
 .input-area,
@@ -179,7 +179,7 @@ body[data-active-area] #state-panel {
     padding: 0.75rem;
 }
 
-/* デスクトップ: アクティブセクションをパネル内で伸長 */
+
 @media (min-width: 769px) {
     body[data-active-area] .main-layout section {
         margin-bottom: 0;
@@ -197,7 +197,7 @@ body[data-active-area] #state-panel {
     }
 }
 
-/* 入力・出力エリア */
+
 .output-area,
 .input-area {
     flex: 1 1 0;
@@ -206,9 +206,9 @@ body[data-active-area] #state-panel {
     flex-direction: column;
 }
 
-/* --------------------------------------------------------------------------
- * 2. コード入力
- * -------------------------------------------------------------------------- */
+
+
+
 .textarea-wrapper {
     position: relative;
     flex: 1;
@@ -239,7 +239,7 @@ body[data-active-area] #state-panel {
     color: var(--code-comment);
 }
 
-/* インラインクリアボタン（×）共通スタイル */
+
 .inline-clear-btn {
     position: absolute;
     width: 1.5rem;
@@ -262,7 +262,7 @@ body[data-active-area] #state-panel {
     opacity: 1;
 }
 
-/* テキストエディタ用×ボタン配置 */
+
 #clear-btn {
     top: 0.5rem;
     right: 0.5rem;
@@ -276,7 +276,7 @@ body[data-active-area] #state-panel {
 
 .editor-suggestions {
     position: absolute;
-    /* top / left は JS が動的に設定 */
+
     min-width: 180px;
     max-width: calc(100% - 1rem);
     max-height: 220px;
@@ -309,7 +309,7 @@ body[data-active-area] #state-panel {
     background: rgba(0, 0, 0, 0.06);
 }
 
-/* JSONエクスポート ダウンロードリンク */
+
 .json-download-link {
     display: inline-block;
     padding: 0.25rem 0.5rem;
@@ -324,9 +324,9 @@ body[data-active-area] #state-panel {
     color: var(--color-secondary);
 }
 
-/* --------------------------------------------------------------------------
- * 3. 出力表示
- * -------------------------------------------------------------------------- */
+
+
+
 #output-display {
     flex: 1;
     min-height: 0;
@@ -352,9 +352,9 @@ body[data-active-area] #state-panel {
     background: var(--color-secondary);
 }
 
-/* --------------------------------------------------------------------------
- * 4. スタック・辞書エリア
- * -------------------------------------------------------------------------- */
+
+
+
 .stack-area {
     width: 100%;
     display: flex;
@@ -362,7 +362,7 @@ body[data-active-area] #state-panel {
     min-height: 0;
 }
 
-/* スタック表示を親いっぱいに広げる */
+
 #stack-display {
     flex: 1;
     min-height: 0;
@@ -376,7 +376,7 @@ body[data-active-area] #state-panel {
     justify-content: center;
 }
 
-/* 辞書ヘッダー（検索窓） */
+
 .vocabulary-header {
     display: flex;
     align-items: center;
@@ -384,7 +384,7 @@ body[data-active-area] #state-panel {
     margin-bottom: 0.75rem;
 }
 
-/* 検索窓ラッパー */
+
 .search-wrapper {
     position: relative;
     display: flex;
@@ -421,7 +421,7 @@ body[data-active-area] #state-panel {
     display: none;
 }
 
-/* 検索結果なしメッセージ */
+
 .no-results-message {
     width: 100%;
     color: var(--color-text-light);
@@ -503,7 +503,7 @@ body[data-active-area] #state-panel {
 }
 
 
-/* empty表示 */
+
 .state-display {
     color: var(--color-text);
 }
@@ -513,8 +513,8 @@ body[data-active-area] #state-panel {
     color: var(--color-text-light);
 }
 
-/* #stack-display > div の !important 個別修正は削除。
-   セクション 0 の上詰め保証ルールで一括カバーされる。 */
+
+
 
 .area-content-flow {
     display: flex;
@@ -523,23 +523,23 @@ body[data-active-area] #state-panel {
     align-items: flex-start;
     align-content: flex-start;
     width: 100%;
-    /* min-height: 100% を削除。親が flex:1 で引き伸ばされるとき、
-       この値があるとコンテナも同様に伸び、align-content の設定次第で
-       下詰め/中央寄せが発生する根本原因となっていた。
-       コンテナはコンテンツ量に応じた自然な高さを持つべきである。 */
+
+
+
+
 }
 
-/* Stack は wrap-reverse で行を下→上に積む。
-   align-items: center でアイテム同士の垂直中央揃えを保つ。 */
+
+
 #stack-display .stack-content-flow {
     flex-wrap: wrap-reverse;
     align-content: flex-end;
     align-items: center;
 }
 
-/* --------------------------------------------------------------------------
- * 4.1 Dictionary パネル
- * -------------------------------------------------------------------------- */
+
+
+
 .dictionary-area {
     flex: 1;
     display: flex;
@@ -555,20 +555,20 @@ body[data-active-area] #state-panel {
     flex-shrink: 0;
 }
 
-/* ツールバー (row flex) 内での横幅比率 */
+
 .dictionary-sheet-selector {
     flex: 1.618 1 0%;
 }
 
-/* words-area (column flex) 内では縦方向に伸長させない。
-   flex: 1.618 のままだと縦に引き伸ばされ、words-display が下詰めになる */
+
+
 .words-area .dictionary-sheet-selector {
     flex: 0 0 auto;
     padding: 0 0 0.5rem 0;
 }
 
-/* words-area は overflow: hidden のため、正の outline-offset だと
-   フォーカス枠が親にクリップされる。内側描画で回避する */
+
+
 .words-area .dictionary-sheet-selector select:focus-visible {
     outline-offset: -2px;
     box-shadow: none;
@@ -607,9 +607,9 @@ body[data-active-area] #state-panel {
     display: none;
 }
 
-/* --------------------------------------------------------------------------
- * 5. ワードボタン（色覚配慮カラー）
- * -------------------------------------------------------------------------- */
+
+
+
 .word-button {
     margin: 2px;
     padding: 0.2rem 0.4rem;
@@ -627,7 +627,7 @@ body[data-active-area] #state-panel {
     background: var(--color-light);
 }
 
-/* 組み込みワード - 色覚配慮カラー */
+
 .word-button.core {
     border-color: var(--color-core);
     background: #fff;
@@ -641,7 +641,7 @@ body[data-active-area] #state-panel {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* 依存されているユーザーワード - 色覚配慮カラー */
+
 .word-button.dependency {
     border-color: var(--color-dependency);
     background: #fff;
@@ -655,7 +655,7 @@ body[data-active-area] #state-panel {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* 依存されていないユーザーワード - 色覚配慮カラー */
+
 .word-button.non-dependency {
     border-color: var(--color-non-dependency);
     background: #fff;
@@ -669,7 +669,7 @@ body[data-active-area] #state-panel {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* モジュールワードボタン */
+
 .word-button.module {
     border-color: var(--color-module, #0277BD);
     background: #fff;
@@ -683,7 +683,7 @@ body[data-active-area] #state-panel {
     box-shadow: 0 0 0 var(--color-medium);
 }
 
-/* シグネチャ型背景色 */
+
 .word-button.signature-map {
     background: var(--color-signature-map);
 }
@@ -696,9 +696,9 @@ body[data-active-area] #state-panel {
     background: var(--color-signature-fold);
 }
 
-/* --------------------------------------------------------------------------
- * 6. スタック項目（色覚配慮カラー）
- * -------------------------------------------------------------------------- */
+
+
+
 .stack-item {
     font-family: var(--font-stack-mono);
     font-size: 0.75rem;
@@ -722,25 +722,25 @@ body[data-active-area] #state-panel {
     display: inline;
 }
 
-/* ブラケット着色（Paul Tol "Muted" パレット — 色覚障碍対応） */
+
 .stack-bracket {
     font-weight: bold;
     font-size: 1.1em;
     line-height: 1;
 }
 
-/* ベクターノードは背景透明、テキスト色はスタック色を継承 */
+
 .stack-node-vector {
     background-color: transparent;
     color: var(--color-stack);
 }
 
-/* スタックトップ（最新の要素）を強調 */
+
 .stack-item:last-child {
     font-weight: bold;
 }
 
-/* ..ターゲット：全スタック要素の最浅階層に一貫した強調を付ける */
+
 #stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
     background-color: #DDDDDD;
@@ -749,7 +749,7 @@ body[data-active-area] #state-panel {
     border-radius: 4px;
 }
 
-/* .ターゲット：スタックトップの最浅階層のみを強調 */
+
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
     background-color: #DDDDDD;
@@ -758,12 +758,12 @@ body[data-active-area] #state-panel {
 }
 
 
-/* --------------------------------------------------------------------------
- * 7. モバイル対応（アプリ固有）
- * -------------------------------------------------------------------------- */
+
+
+
 @media (max-width: 768px) {
-    /* アプリページ専用: height チェーンを確定させて flex: 1 を有効にする
-       （ajisai-base.css の height: auto をオーバーライド） */
+
+
     html,
     body {
         height: 100%;
@@ -772,11 +772,11 @@ body[data-active-area] #state-panel {
 
     .container {
         height: 100vh;
-        height: 100dvh;   /* モバイルブラウザのアドレスバーを考慮 */
+        height: 100dvh;
         min-height: 0;
     }
 
-    /* モバイル: 左右セレクタを非表示、モバイルセレクタを表示 */
+
     .area-selector-left,
     .area-selector-right {
         display: none;
@@ -805,7 +805,7 @@ body[data-active-area] #state-panel {
         gap: 0;
     }
 
-    /* モバイルでは左右仕切り線を消す */
+
     #editor-panel {
         border-right: none;
     }
@@ -814,7 +814,7 @@ body[data-active-area] #state-panel {
         margin-bottom: 0;
     }
 
-    /* モバイル: セクションをパネル内で伸長（height: 100%は使わずflexのみ） */
+
     #editor-panel .input-area,
     #editor-panel .output-area,
     #state-panel .stack-area,
@@ -855,7 +855,7 @@ body[data-active-area] #state-panel {
     }
 }
 
-/* タブレット対応 */
+
 @media (min-width: 769px) and (max-width: 1024px) {
     .main-layout {
         gap: 0;

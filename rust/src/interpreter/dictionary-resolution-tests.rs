@@ -25,7 +25,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_short_name_no_collision() {
-        // Short name resolves when no collision exists
+
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -42,7 +42,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_dict_at_word() {
-        // DEMO@WORD resolves user word
+
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -59,7 +59,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_user_dict_word() {
-        // USER@DEMO@WORD resolves user word
+
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -76,7 +76,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_fully_qualified_user() {
-        // DICT@USER@DEMO@WORD resolves user word
+
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -93,7 +93,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_module_at_word() {
-        // MUSIC@PLAY resolves module word
+
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
@@ -111,7 +111,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_dict_module_word() {
-        // DICT@MUSIC@C4 resolves module sample word
+
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
@@ -129,7 +129,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_core_at_word() {
-        // CORE@GET resolves built-in word
+
         let mut interp = Interpreter::new();
         interp.execute("[ 10 20 30 ]").await.unwrap();
 
@@ -143,7 +143,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_dict_core_word() {
-        // DICT@CORE@GET resolves built-in word
+
         let mut interp = Interpreter::new();
         interp.execute("[ 10 20 30 ]").await.unwrap();
 
@@ -157,7 +157,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_case_insensitive() {
-        // Case normalization: music@play → MUSIC@PLAY
+
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
@@ -175,7 +175,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_path_case_insensitive_user() {
-        // Case normalization for user words
+
         let mut interp = Interpreter::new();
         let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
         restore_sample_words(&mut interp, &sample_words);
@@ -192,7 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ambiguous_word_error() {
-        // Word existing in both module and user dictionary should produce ambiguity error
+
         let mut interp = Interpreter::new();
         interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
         let _ = interp.collect_output();
@@ -200,7 +200,7 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        // C4 now exists in both MUSIC (sample) and DEMO (user)
+
         let result = interp.execute("C4").await;
         assert!(result.is_err(), "C4 should be ambiguous");
         let err_msg = result.unwrap_err().to_string();
@@ -223,7 +223,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ambiguous_resolved_by_qualified_path() {
-        // Ambiguous word resolved via qualified path
+
         let mut interp = Interpreter::new();
         interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
         let _ = interp.collect_output();
@@ -231,7 +231,7 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        // MUSIC@C4 should resolve to 264
+
         let result = interp.execute("MUSIC@C4").await;
         assert!(
             result.is_ok(),
@@ -242,7 +242,7 @@ mod tests {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
 
-        // DEMO@C4 should resolve to 999
+
         let result = interp.execute("DEMO@C4").await;
         assert!(result.is_ok(), "DEMO@C4 should resolve: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
@@ -260,11 +260,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_builtin_not_ambiguous() {
-        // Built-in words are never ambiguous, even if user word with same name exists
+
         let mut interp = Interpreter::new();
 
-        // GET is a built-in. Even if we somehow had a user GET (blocked by protection),
-        // the built-in always wins without ambiguity
+
+
         let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
         assert!(
             result.is_ok(),
@@ -275,12 +275,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_module_builtin_word_via_qualified_path() {
-        // Module built-in words (MUSIC@PLAY etc.) via qualified path
+
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        // MUSIC@SEQ is a module built-in (not a sample word)
+
         let result = interp.execute("[ 440 ] MUSIC@SEQ MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
@@ -321,7 +321,7 @@ mod tests {
     async fn test_split_path_unit() {
         use crate::interpreter::Interpreter;
 
-        // Test the split_path function directly
+
         let (layers, word) = Interpreter::split_path("MUSIC@PLAY");
         assert_eq!(layers, vec!["MUSIC"]);
         assert_eq!(word, "PLAY");
@@ -338,7 +338,7 @@ mod tests {
         assert!(layers.is_empty());
         assert_eq!(word, "SAY-HELLO");
 
-        // Case insensitive
+
         let (layers, word) = Interpreter::split_path("music@play");
         assert_eq!(layers, vec!["MUSIC"]);
         assert_eq!(word, "PLAY");

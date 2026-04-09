@@ -1,13 +1,13 @@
-// rust/src/builtins/detail-lookup-control-higher-order.rs
-//
-// Detailed documentation for control structure and higher-order function words
 
-/// Returns detailed documentation for control structure and higher-order function words.
+
+
+
+
 pub(crate) fn lookup_detail_control_higher_order(name: &str) -> Option<String> {
     let result = match name {
-        // ============================================================================
-        // 制御構造
-        // ============================================================================
+
+
+
 
         ":" => r#"# - コードブロック開始
 
@@ -101,9 +101,9 @@ value => fallback1 => fallback2
 - NILのみを置換します（FALSEは置換しません）
 - 左結合です（左から順に評価）"#,
 
-        // ============================================================================
-        // 高階関数
-        // ============================================================================
+
+
+
 
         "MAP" => r#"# MAP - 各要素に関数を適用
 

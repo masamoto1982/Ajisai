@@ -1,45 +1,45 @@
-// rust/src/interpreter/hash.rs
-//
-// 【責務】
-// 分数システムを活用した強力なハッシュ関数を実装する。
-// HASH: 任意のAjisai値を決定論的にハッシュ化
-//
-// ============================================================================
-// 【設計思想】分数システムを活用した効率的かつ強力なハッシュ
-// ============================================================================
-//
-// Ajisaiの分数システムの特性を最大限活用したハッシュ関数：
-//
-// ## 従来のハッシュアプローチ
-//
-// 多くの言語では固定長の整数（32bit/64bit）をハッシュ値として返す：
-//   hash("hello") → 0x1234ABCD
-//
-// ## Ajisaiのアプローチ：分数ハッシュ
-//
-// 分数として結果を返すことで：
-//   1. ハッシュ値が [0, 1) の範囲に正規化される
-//   2. 任意精度の出力ビット数を指定可能
-//   3. 他の数学演算とシームレスに統合
-//   4. 正規化された分数（1/2 = 2/4）は同じハッシュを生成
-//
-// ## アルゴリズム: 多項式モジュラーハッシュ
-//
-// 複数の大きな素数を使用し、中国剰余定理風の混合で強度を確保：
-//   1. 入力値を正規バイト列にシリアライズ
-//   2. バイト列を多項式の係数として解釈
-//   3. 複数の素数で評価し、結果を混合
-//   4. 分数（hash / 2^bits）として返す
-//
-// ## 使用例
-//
-// 'hello' HASH               # デフォルト256ビットハッシュ
-// [ 1 2 3 ] HASH             # ベクタのハッシュ
-// [ 1/2 ] HASH               # 分数のハッシュ（正規形を使用）
-// [ 128 ] 'hello' HASH       # 128ビット出力
-// [ 512 ] 'hello' HASH       # 512ビット出力
-//
-// ============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::tensor_ops::FlatTensor;
@@ -49,36 +49,36 @@ use crate::types::{Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive, Zero};
 
-/// デフォルトのハッシュビット数
+
 const DEFAULT_HASH_BITS: u32 = 256;
 
-/// ハッシュ計算に使用する大きな素数群
-/// これらの素数は互いに素で、十分に大きいため衝突耐性が高い
+
+
 const PRIME_BITS: u32 = 127;
 
 lazy_static::lazy_static! {
-    /// 第1素数: 2^127 - 1 (メルセンヌ素数)
+
     static ref PRIME1: BigInt = BigInt::parse_bytes(
         b"170141183460469231731687303715884105727", 10
     ).unwrap();
 
-    /// 第2素数: 2^127 - 73 (別の大きな素数)
+
     static ref PRIME2: BigInt = BigInt::parse_bytes(
         b"170141183460469231731687303715884105655", 10
     ).unwrap();
 
-    /// 第3素数: 2^127 - 735 (さらに別の大きな素数)
+
     static ref PRIME3: BigInt = BigInt::parse_bytes(
         b"170141183460469231731687303715884104993", 10
     ).unwrap();
 
-    /// 多項式ハッシュの基数
+
     static ref HASH_BASE: BigInt = BigInt::from(257u32);
 }
 
-/// 値を正規バイト列にシリアライズ
-///
-/// 分数の正規形を使用するため、1/2と2/4は同じバイト列を生成
+
+
+
 fn serialize_value_for_hash(value: &Value) -> Vec<u8> {
     let mut bytes = Vec::new();
     serialize_value_inner_for_hash(value, &mut bytes);
@@ -86,17 +86,17 @@ fn serialize_value_for_hash(value: &Value) -> Vec<u8> {
 }
 
 fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
-    // NIL判定
+
     if val.is_nil() {
         bytes.push(0x06);
         return;
     }
 
-    // 数値判定（単一スカラー）
-    // 正規形（GCD約分済み）でハッシュ化することで、1/2 と 2/4 が同じハッシュを生成
+
+
     if val.is_scalar() {
         if let Some(frac) = val.as_scalar() {
-            // Normalize to canonical (GCD-reduced) form so 1/2 and 2/4 hash identically
+
             let canonical = Fraction::new(frac.numerator(), frac.denominator());
             let (can_num, can_den) = canonical.to_bigint_pair();
             bytes.push(0x01);
@@ -119,7 +119,7 @@ fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
         }
     }
 
-    // ベクタ判定
+
     if let ValueData::Vector(children) = &val.data {
         bytes.push(0x04);
         bytes.extend_from_slice(&(children.len() as u32).to_le_bytes());
@@ -129,54 +129,54 @@ fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
     }
 }
 
-/// 多項式ハッシュを計算
-///
-/// bytes を多項式の係数として解釈し、HASH_BASE を変数として
-/// 指定された素数でモジュロ評価する
+
+
+
+
 fn compute_polynomial_hash(bytes: &[u8], prime: &BigInt) -> BigInt {
     let mut hash = BigInt::zero();
     let mut power = BigInt::one();
 
     for &byte in bytes {
-        // hash += byte * power (mod prime)
+
         hash = (&hash + &power * BigInt::from(byte)) % prime;
-        // power *= HASH_BASE (mod prime)
+
         power = (&power * &*HASH_BASE) % prime;
     }
 
     hash
 }
 
-/// 複数の素数でハッシュを計算し、混合する
-///
-/// 中国剰余定理風の混合により、各素数のハッシュを結合して
-/// より大きなハッシュ空間を生成
+
+
+
+
 fn compute_multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
     let h1 = compute_polynomial_hash(bytes, &PRIME1);
     let h2 = compute_polynomial_hash(bytes, &PRIME2);
     let h3 = compute_polynomial_hash(bytes, &PRIME3);
 
-    // 各ハッシュを結合（ビットシフトと加算）
+
     let combined = &h1 + (&h2 << PRIME_BITS as usize) + (&h3 << (2 * PRIME_BITS) as usize);
 
-    // 出力ビット数に調整
+
     let output_modulus = BigInt::one() << output_bits as usize;
 
-    // 追加の混合: combined を output_modulus で割った余りを取る前に
-    // さらにビット拡散を行う
+
+
     let mut result = combined.clone();
 
-    // 自己フィードバック混合（より均一な分布のため）
+
     let shift1 = output_bits / 3;
     let shift2 = output_bits * 2 / 3;
     result = &result ^ (&result >> shift1 as usize);
     result = &result ^ (&result >> shift2 as usize);
 
-    // 最終的に output_bits に収める
+
     result % output_modulus
 }
 
-/// スタックから整数を抽出（単一要素Vectorの数値）
+
 fn extract_positive_integer_from_value(val: &Value) -> Option<u32> {
     let tensor = FlatTensor::from_value(val).ok()?;
     if tensor.data.len() != 1 {
@@ -205,35 +205,35 @@ fn parse_hash_args_in_keep_mode(interp: &Interpreter) -> Result<(u32, Value)> {
     Ok((DEFAULT_HASH_BITS, target))
 }
 
-/// HASH - 任意のAjisai値を決定論的にハッシュ化
-///
-/// 【責務】
-/// - 任意のAjisai値（数値、文字列、ベクタ、真偽値など）をハッシュ化
-/// - 同じ値は常に同じハッシュを生成（決定論的）
-/// - 分数は正規形でハッシュ化（1/2と2/4は同じハッシュ）
-///
-/// 【使用法】
-/// ```ajisai
-/// 'hello' HASH              # デフォルト256ビットハッシュ
-/// [ 1 2 3 ] HASH            # ベクタのハッシュ
-/// [ 1/2 ] HASH              # 分数のハッシュ
-/// [ 128 ] 'hello' HASH      # 128ビット出力
-/// [ 512 ] [ 1 2 3 ] HASH    # 512ビット出力
-/// ```
-///
-/// 【引数】
-/// - 必須: ハッシュ対象の値（スタックトップ）
-/// - オプション: [ ビット数 ] 出力ビット数（32～1024、デフォルト256）
-///
-/// 【戻り値】
-/// - 単一要素のVector: [ ハッシュ値 / 2^bits ]
-/// - ハッシュ値は [0, 1) の範囲の分数
-///
-/// 【エラー】
-/// - スタックが空
-/// - ビット数が32未満または1024超
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
-    // HASHはStackモード(..)をサポートしない
+
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported {
             word: "HASH".into(),
@@ -252,24 +252,24 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
         parse_hash_args(interp)?
     };
 
-    // ビット数の検証
+
     if output_bits < 32 || output_bits > 1024 {
         return Err(AjisaiError::from(
             "HASH: output bits must be between 32 and 1024",
         ));
     }
 
-    // 値をシリアライズ
+
     let bytes = serialize_value_for_hash(&target_value);
 
-    // ハッシュを計算
+
     let hash_value = compute_multi_prime_hash(&bytes, output_bits);
 
-    // 分数として結果を構築: hash_value / 2^output_bits
+
     let denominator = BigInt::one() << output_bits as usize;
     let result_fraction = Fraction::new(hash_value, denominator);
 
-    // 結果をスタックにプッシュ
+
     interp
         .stack
         .push(Value::from_vector(vec![Value::from_number(
@@ -279,7 +279,7 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-/// HASHの引数を解析
+
 fn parse_hash_args(interp: &mut Interpreter) -> Result<(u32, Value)> {
     let target = interp
         .stack

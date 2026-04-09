@@ -157,11 +157,11 @@ mod demo_word_gui_mode_tests {
         assert!(output.contains("World"), "Expected World in output, got: {}", output);
         assert!(output.contains("!"), "Expected ! in output, got: {}", output);
 
-        // Stack result should preserve string structure for '!'
+
         assert_eq!(interp.stack.len(), 1);
         let result = &interp.stack[0];
         assert_eq!(result.len(), 3);
-        // '!' should remain as Vector([Scalar(33)]), not unwrapped to bare Scalar(33)
+
         let bang = result.get_child(2).unwrap();
         assert!(
             matches!(bang.data, ValueData::Vector(_)),

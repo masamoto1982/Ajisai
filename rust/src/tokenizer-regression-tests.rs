@@ -1,11 +1,11 @@
-// rust/src/tokenizer-regression-tests.rs - 空白区切りトークナイザーのテスト
+
 
 #[cfg(test)]
 mod tokenizer_regression_tests {
     use crate::tokenizer::tokenize;
     use crate::types::Token;
 
-    // === コメント処理のテスト ===
+
 
     #[test]
     fn test_comment_basic() {
@@ -70,7 +70,7 @@ mod tokenizer_regression_tests {
         );
     }
 
-    // === 引用文字列のテスト ===
+
 
     #[test]
     fn test_flexible_quotes_single_with_single_inside() {
@@ -106,7 +106,7 @@ mod tokenizer_regression_tests {
         );
     }
 
-    // === 日本語ワードサポートのテスト ===
+
 
     #[test]
     fn test_japanese_word_with_whitespace() {
@@ -180,7 +180,7 @@ mod tokenizer_regression_tests {
         );
     }
 
-    // === 数値のテスト ===
+
 
     #[test]
     fn test_number_parsing() {
@@ -218,7 +218,7 @@ mod tokenizer_regression_tests {
         );
     }
 
-    // === キーワードのテスト ===
+
 
     #[test]
     fn test_keywords() {
@@ -243,7 +243,7 @@ mod tokenizer_regression_tests {
         );
     }
 
-    // === ブラケットのテスト ===
+
 
     #[test]
     fn test_brackets() {
@@ -336,7 +336,7 @@ mod tokenizer_regression_tests {
         assert_eq!(starts, ends);
     }
 
-    // === 複雑なパターンのテスト ===
+
 
     #[test]
     fn test_complex_expression() {
@@ -373,7 +373,7 @@ mod tokenizer_regression_tests {
         );
     }
 
-    // === Removed syntax: explicit tokenizer errors ===
+
 
     #[test]
     fn test_removed_dollar_branch_guard() {

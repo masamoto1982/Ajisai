@@ -36,9 +36,9 @@ where
             let a_val = &operands[0];
             let b_val = &operands[1];
 
-            // Linear consumption optimization hook (advisory, no behavior change).
-            // Detects safe in-place update candidates: remaining == total and no aliases.
-            // Results are reserved for future optimization passes.
+
+
+
             let _in_place_candidates = flow_tokens.as_ref().map(|tokens| [
                 optimization_hooks::check_in_place_candidate(a_val, tokens.get(0)),
                 optimization_hooks::check_in_place_candidate(b_val, tokens.get(1)),
@@ -102,10 +102,10 @@ where
                 return Err(AjisaiError::from("+: expected scalar values in Stack mode"));
             }
 
-            // Optimization hook: advisory in-place judgment for each fold operand.
-            // No flow context in Stack mode; NoFlowContext is the correct result for all items.
-            // Scalars are inherently uniquely owned, so the binding condition would be met
-            // if flow context were available.
+
+
+
+
             let _in_place_candidates = items.iter()
                 .map(|item| optimization_hooks::check_in_place_candidate(item, None))
                 .collect::<Vec<_>>();
@@ -141,9 +141,9 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_add(a, b) {
-            // Optimization hook: called here because this SIMD fast path bypasses
-            // apply_binary_arithmetic. No flow context in the SIMD path; NoFlowContext
-            // accurately reflects that SIMD execution does not participate in flow tracking.
+
+
+
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -159,7 +159,7 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
         if let Some(result) = simd_ops::apply_simd_scalar_add(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_add(b, a))
         {
-            // Optimization hook: same rationale as the SIMD vector path above.
+
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -182,8 +182,8 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_sub(a, b) {
-            // Optimization hook: called here because this SIMD fast path bypasses
-            // apply_binary_arithmetic. No flow context in the SIMD path.
+
+
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -206,8 +206,8 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_mul(a, b) {
-            // Optimization hook: called here because this SIMD fast path bypasses
-            // apply_binary_arithmetic. No flow context in the SIMD path.
+
+
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -223,7 +223,7 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         if let Some(result) = simd_ops::apply_simd_scalar_mul(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_mul(b, a))
         {
-            // Optimization hook: same rationale as the SIMD vector path above.
+
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),

@@ -6,9 +6,9 @@ use num_traits::One;
 use ajisai_core::types::fraction::Fraction;
 use ajisai_core::interpreter::Interpreter;
 
-// ---------------------------------------------------------------------------
-// 1. Dictionary Lookup Benchmarks (HashMap)
-// ---------------------------------------------------------------------------
+
+
+
 
 fn build_ajisai_dictionary() -> HashMap<String, String> {
     let words = vec![
@@ -63,9 +63,9 @@ fn bench_hashmap_lookup_miss(c: &mut Criterion) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// 2. Fraction Construction Benchmarks (GCD cost)
-// ---------------------------------------------------------------------------
+
+
+
 
 fn bench_fraction_new_small_integers(c: &mut Criterion) {
     c.bench_function("fraction_new_small_integers", |b| {
@@ -93,9 +93,9 @@ fn bench_fraction_new_large_gcd(c: &mut Criterion) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// 3. Fraction Arithmetic Benchmarks
-// ---------------------------------------------------------------------------
+
+
+
 
 fn bench_fraction_add_i64_path(c: &mut Criterion) {
     let a = Fraction::new(BigInt::from(3), BigInt::from(7));
@@ -209,9 +209,9 @@ fn bench_fraction_eq_fraction(c: &mut Criterion) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// 4. Full Interpreter Benchmarks (end-to-end)
-// ---------------------------------------------------------------------------
+
+
+
 
 fn bench_interpreter_simple_arithmetic(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
@@ -336,9 +336,9 @@ fn bench_interpreter_reuse(c: &mut Criterion) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// 5. Trie vs HashMap comparison (standalone)
-// ---------------------------------------------------------------------------
+
+
+
 
 const TRIE_ALPHABET_SIZE: usize = 40;
 
@@ -457,9 +457,9 @@ fn bench_trie_lookup_miss(c: &mut Criterion) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// Groups
-// ---------------------------------------------------------------------------
+
+
+
 
 criterion_group!(
     dictionary_benches,

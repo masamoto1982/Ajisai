@@ -21,7 +21,7 @@ mod tests {
     async fn test_can_override_user_word() {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        // Use code block syntax since vector duality no longer preserves operators.
+
         let result1 = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
 
@@ -167,7 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_del_sample_user_words_with_fqn() {
-        // GUI経由のDEL: FQN（DEMO@WORD）形式での削除
+
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
@@ -179,20 +179,20 @@ mod tests {
 
         assert!(interp.user_words.contains_key("D4"));
 
-        // FQN形式で削除
+
         let result = interp.execute("'DEMO@D4' DEL").await;
         assert!(result.is_ok(), "Should delete D4 via FQN: {:?}", result.err());
         assert!(!interp.user_words.contains_key("D4"));
 
-        // 存在しないFQNは適切にエラー
+
         let result = interp.execute("'DEMO@NONEXISTENT' DEL").await;
         assert!(result.is_err(), "Should error for non-existent FQN word");
 
-        // 依存関係ありの場合もFQNで正しくエラー
+
         let result = interp.execute("'DEMO@C4' DEL").await;
         assert!(result.is_err(), "Should not delete C4 via FQN (has dependents)");
 
-        // forceフラグ付きFQNで強制削除
+
         let result = interp.execute("! 'DEMO@C4' DEL").await;
         assert!(result.is_ok(), "Should force delete C4 via FQN: {:?}", result.err());
         assert!(!interp.user_words.contains_key("C4"));
@@ -227,15 +227,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_sample_words_in_vector_literal_play() {
-        // Module sample words (C4, D4 etc.) resolve to scalars inside vector literals.
-        // Without DisplayHint, is_string_value treats all vectors as strings,
-        // so the audio system interprets scalar elements as lyrics (codepoints).
-        // The AUDIO command is still emitted but with an empty seq structure.
+
+
+
+
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        // User word names inside a vector literal resolve to their scalar values
+
         let result = interp.execute("[ C4 D4 E4 ] MUSIC@SEQ MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
@@ -244,7 +244,7 @@ mod tests {
         );
 
         let output = interp.collect_output();
-        // AUDIO command is still emitted (with empty seq since elements are treated as lyrics)
+
         assert!(
             output.contains("AUDIO:"),
             "Should contain AUDIO command, got: {}",
@@ -254,7 +254,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sample_words_scalar_output() {
-        // Sample words should push scalar values (not vectors)
+
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
@@ -287,12 +287,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_builtin_symbols_remain_strings_in_vector() {
-        // Built-in operator symbols should still become strings in vectors
-        // (preserving Vector Duality behavior for DEF)
+
+
         let mut interp = Interpreter::new();
 
-        // Use code block syntax since vector duality no longer preserves
-        // builtin operator symbols (from_string creates codepoint vectors).
+
+
         let result = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
@@ -318,14 +318,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_user_word_resolved_in_nested_vector() {
-        // Module sample words should also resolve inside nested vectors
+
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        // Nested vector: [ [ C4 E4 G4 ] ] should create a vector of a vector of scalars.
-        // Without DisplayHint, is_string_value treats all vectors as strings,
-        // so audio treats nested scalar vectors as lyrics (no frequency output).
+
+
+
         let result = interp
             .execute("[ [ C4 E4 G4 ] ] MUSIC@SIM MUSIC@PLAY")
             .await;
@@ -343,7 +343,7 @@ mod tests {
     async fn test_def_with_vector_duality() {
         let mut interp = Interpreter::new();
 
-        // Use code block syntax since vector duality no longer preserves operators.
+
         let result = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
@@ -375,7 +375,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_def_with_module_collision_warns() {
-        // DEF of a name that collides with a module sample now succeeds with a warning
+
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
@@ -391,14 +391,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_import_keeps_user_word_qualified() {
-        // IMPORT keeps conflicting user-defined words accessible via qualified path
+
         let mut interp = Interpreter::new();
 
-        // Define C4 before importing music
+
         interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
         assert!(interp.user_words.contains_key("C4"));
 
-        // Import music module — user word remains, short name becomes ambiguous
+
         interp.execute("'music' IMPORT").await.unwrap();
         let output = interp.collect_output();
 
@@ -407,14 +407,14 @@ mod tests {
         assert!(output.contains("Warning"),
             "Should warn about the conflict: {}", output);
 
-        // C4 is now ambiguous (exists in both MUSIC and DEMO), should error
+
         let result = interp.execute("C4").await;
         assert!(result.is_err(), "C4 should be ambiguous");
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Ambiguous"),
             "Expected ambiguity error, got: {}", err_msg);
 
-        // Qualified access to DEMO@C4 should work
+
         let result = interp.execute("DEMO@C4").await;
         assert!(result.is_ok(), "Qualified DEMO@C4 should work: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
@@ -430,7 +430,7 @@ mod tests {
                 "DEMO@C4 should remain the user-defined value");
         }
 
-        // Qualified access to MUSIC@C4 should work too
+
         let result = interp.execute("MUSIC@C4").await;
         assert!(result.is_ok(), "Qualified MUSIC@C4 should work: {:?}", result.err());
     }
@@ -451,7 +451,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_module_first_builtin_still_protected() {
-        // Module-first: core built-in words are still protected from override
+
         let mut interp = Interpreter::new();
         let result = interp.execute("{ [ 1 ] } 'GET' DEF").await;
         assert!(result.is_err(), "Should not be able to override built-in GET");

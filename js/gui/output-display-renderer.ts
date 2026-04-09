@@ -25,17 +25,17 @@ export interface Display {
 
 const lookupBracketsAtDepth = (_depth: number): [string, string] => ['[', ']'];
 
-// Paul Tol "Muted" palette — color-vision-deficiency safe (9 chromatic colors, excluding pale grey)
+
 const BRACKET_DEPTH_COLORS: readonly string[] = [
-    '#332288', // indigo
-    '#88CCEE', // cyan
-    '#44AA99', // teal
-    '#117733', // green
-    '#999933', // olive
-    '#DDCC77', // sand
-    '#CC6677', // rose
-    '#882255', // wine
-    '#AA4499', // purple
+    '#332288',
+    '#88CCEE',
+    '#44AA99',
+    '#117733',
+    '#999933',
+    '#DDCC77',
+    '#CC6677',
+    '#882255',
+    '#AA4499',
 ] as const;
 
 const lookupBracketColor = (depth: number): string =>
@@ -185,9 +185,9 @@ const formatVector = (value: unknown, depth: number): string => {
     return `${open}${close}`;
 };
 
-// ---------------------------------------------------------------------------
-// Color-coded bracket rendering for Stack area
-// ---------------------------------------------------------------------------
+
+
+
 
 const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
     const node = document.createElement('span');

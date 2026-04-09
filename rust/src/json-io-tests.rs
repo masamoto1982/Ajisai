@@ -2,9 +2,9 @@
 mod json_io_tests {
     use crate::interpreter::Interpreter;
 
-    // ========================================================================
-    // JSON@PARSE tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_parse_integer() {
@@ -103,9 +103,9 @@ mod json_io_tests {
         assert_eq!(parsed, "42");
     }
 
-    // ========================================================================
-    // JSON@STRINGIFY tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_stringify_integer() {
@@ -162,9 +162,9 @@ mod json_io_tests {
         assert_eq!(result, "'[1,2,3]'");
     }
 
-    // ========================================================================
-    // IO@INPUT / IO@OUTPUT tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_input_empty() {
@@ -209,9 +209,9 @@ mod json_io_tests {
         assert!(!interp.io_output_buffer.is_empty());
     }
 
-    // ========================================================================
-    // JSON@GET tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_json_get_existing_key() {
@@ -254,9 +254,9 @@ mod json_io_tests {
         assert_eq!(result, "42");
     }
 
-    // ========================================================================
-    // JSON@KEYS tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_json_keys() {
@@ -282,9 +282,9 @@ mod json_io_tests {
         assert!(stack[0].is_nil());
     }
 
-    // ========================================================================
-    // JSON@SET tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_json_set_new_key() {
@@ -325,9 +325,9 @@ mod json_io_tests {
         assert_eq!(stack[0].len(), 1);
     }
 
-    // ========================================================================
-    // Roundtrip tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_parse_stringify_roundtrip_number() {
@@ -357,9 +357,9 @@ mod json_io_tests {
         assert_eq!(result, "'[1,2,3]'");
     }
 
-    // ========================================================================
-    // IO pipeline tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_input_parse_process_stringify_output() {
@@ -375,9 +375,9 @@ mod json_io_tests {
         assert_eq!(interp.io_output_buffer, "'[2,4,6]'");
     }
 
-    // ========================================================================
-    // JSON optimization correctness tests
-    // ========================================================================
+
+
+
 
     #[tokio::test]
     async fn test_json_get_large_object() {
