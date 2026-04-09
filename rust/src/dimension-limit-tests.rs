@@ -51,39 +51,28 @@ mod dimension_limit_tests {
     }
 
     #[tokio::test]
-    async fn test_dimension_limit_exceeds_at_10_visible() {
+    async fn test_dimension_10_visible_succeeds() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         let result = interp
             .execute("[ [ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ] ]")
             .await;
         assert!(
-            result.is_err(),
-            "10 visible dimensions (11 total) should result in an error"
-        );
-
-        let error_msg = result.unwrap_err().to_string();
-        assert!(
-            error_msg.contains("10 dimensions"),
-            "Error message should mention '10 dimensions', got: {}",
-            error_msg
+            result.is_ok(),
+            "10 visible dimensions should succeed after removing the dimension limit"
         );
     }
 
     #[tokio::test]
-    async fn test_dimension_error_message_format() {
+    async fn test_deeply_nested_vector_succeeds() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         let result = interp
-            .execute("[ [ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ] ]")
+            .execute("[ [ [ [ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ] ] ] ]")
             .await;
-        assert!(result.is_err());
-
-        let error_msg = result.unwrap_err().to_string();
         assert!(
-            error_msg.contains("Nesting depth limit exceeded"),
-            "Error message should mention 'Nesting depth limit exceeded', got: {}",
-            error_msg
+            result.is_ok(),
+            "Deeply nested vectors should succeed after removing the dimension limit"
         );
     }
 
