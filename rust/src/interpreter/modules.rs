@@ -366,6 +366,7 @@ fn import_all_public(interp: &mut Interpreter, module_name: &str) -> Result<()> 
     entry.import_all_public = true;
     entry.imported_words = imported_words;
     entry.imported_samples = imported_samples;
+    emit_import_conflict_warnings(interp, module_name);
     Ok(())
 }
 
@@ -446,6 +447,7 @@ pub fn op_import_only(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
+    emit_import_conflict_warnings(interp, &module_name);
     interp.rebuild_dependencies()?;
     Ok(())
 }
@@ -534,4 +536,30 @@ fn parse_sample_definition_body(
     }
 
     Ok(lines)
+}
+
+fn emit_import_conflict_warnings(interp: &mut Interpreter, module_name: &str) {
+    let Some(module_dict) = interp.module_vocabulary.get(module_name) else {
+        return;
+    };
+
+    for short_name in module_dict.sample_words.keys() {
+        let mut collisions: Vec<String> = Vec::new();
+        for (dict_name, dict) in &interp.user_dictionaries {
+            if dict.words.contains_key(short_name) {
+                collisions.push(format!("{}@{}", dict_name, short_name));
+            }
+        }
+        if collisions.is_empty() {
+            continue;
+        }
+
+        let mut all_paths = vec![format!("{}@{}", module_name, short_name)];
+        all_paths.extend(collisions);
+        interp.output_buffer.push_str(&format!(
+            "Warning: '{}' now exists in both {}. Use a qualified path when calling this word.\n",
+            short_name,
+            all_paths.join(" and ")
+        ));
+    }
 }
