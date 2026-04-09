@@ -1,9 +1,7 @@
+use super::wasm_value_conversion::{build_bracket_structure_from_shape, is_vector_value};
+use super::{set_js_prop, AjisaiInterpreter};
 use crate::tokenizer;
 use crate::types::{ExecutionLine, ValueData};
-use super::wasm_value_conversion::{
-    build_bracket_structure_from_shape, is_vector_value,
-};
-use super::AjisaiInterpreter;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -32,10 +30,9 @@ impl AjisaiInterpreter {
                     let prefix_code = &trimmed[..prefix_len].trim();
                     if !prefix_code.is_empty() {
                         if let Err(e) = self.interpreter.execute(prefix_code).await {
-                            js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                            js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into())
-                                .unwrap();
-                            js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                            set_js_prop(&obj, "status", &("ERROR".into()));
+                            set_js_prop(&obj, "message", &(e.to_string().into()));
+                            set_js_prop(&obj, "error", &(true.into()));
                             return Ok(obj.into());
                         }
                     }
@@ -79,21 +76,20 @@ impl AjisaiInterpreter {
                 if let Some(shape_vec) = shape {
                     self.interpreter.stack.pop();
                     let helper_text = build_bracket_structure_from_shape(&shape_vec);
-                    js_sys::Reflect::set(&obj, &"inputHelper".into(), &helper_text.into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
-                    js_sys::Reflect::set(
+                    set_js_prop(&obj, "inputHelper", &(helper_text.into()));
+                    set_js_prop(&obj, "status", &("OK".into()));
+                    set_js_prop(&obj, "stack", &(self.collect_stack()));
+                    set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
+                    set_js_prop(
                         &obj,
-                        &"userWords".into(),
-                        &self.collect_user_words_for_state(),
-                    )
-                    .unwrap();
-                    js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
+                        "importedModules",
+                        &(self.collect_imported_modules_array()),
+                    );
                     return Ok(obj.into());
                 } else {
-                    js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"message".into(), &"FRAME requires a shape vector [ dim1 dim2 ... ] (1-9 dimensions, values 1-100)".into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                    set_js_prop(&obj, "status", &("ERROR".into()));
+                    set_js_prop(&obj, "message", &("FRAME requires a shape vector [ dim1 dim2 ... ] (1-9 dimensions, values 1-100)".into()));
+                    set_js_prop(&obj, "error", &(true.into()));
                     return Ok(obj.into());
                 }
             }
@@ -101,28 +97,26 @@ impl AjisaiInterpreter {
 
         match self.interpreter.execute(code).await {
             Ok(()) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                set_js_prop(&obj, "status", &("OK".into()));
                 let output = self.interpreter.collect_output();
-                js_sys::Reflect::set(&obj, &"output".into(), &output.clone().into()).unwrap();
-                js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
-                js_sys::Reflect::set(
+                set_js_prop(&obj, "output", &(output.clone().into()));
+                set_js_prop(&obj, "stack", &(self.collect_stack()));
+                set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
+                set_js_prop(
                     &obj,
-                    &"userWords".into(),
-                    &self.collect_user_words_for_state(),
-                )
-                .unwrap();
-                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
+                    "importedModules",
+                    &(self.collect_imported_modules_array()),
+                );
 
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
-                    js_sys::Reflect::set(&obj, &"definition_to_load".into(), &def_str.into())
-                        .unwrap();
+                    set_js_prop(&obj, "definition_to_load", &(def_str.into()));
                 }
             }
             Err(e) => {
                 let error_msg = e.to_string();
-                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &error_msg.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                set_js_prop(&obj, "status", &("ERROR".into()));
+                set_js_prop(&obj, "message", &(error_msg.into()));
+                set_js_prop(&obj, "error", &(true.into()));
             }
         }
         Ok(obj.into())
@@ -143,14 +137,13 @@ impl AjisaiInterpreter {
                 }
                 Err(e) => {
                     self.step_mode = false;
-                    js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                    js_sys::Reflect::set(
+                    set_js_prop(&obj, "status", &("ERROR".into()));
+                    set_js_prop(
                         &obj,
-                        &"message".into(),
-                        &format!("Tokenization error: {}", e).into(),
-                    )
-                    .unwrap();
-                    js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                        "message",
+                        &(format!("Tokenization error: {}", e).into()),
+                    );
+                    set_js_prop(&obj, "error", &(true.into()));
                     return obj.into();
                 }
             }
@@ -158,10 +151,9 @@ impl AjisaiInterpreter {
 
         if self.step_position >= self.step_tokens.len() {
             self.step_mode = false;
-            js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"output".into(), &"Step execution completed".into())
-                .unwrap();
-            js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
+            set_js_prop(&obj, "status", &("OK".into()));
+            set_js_prop(&obj, "output", &("Step execution completed".into()));
+            set_js_prop(&obj, "hasMore", &(false.into()));
             return obj.into();
         }
 
@@ -176,41 +168,29 @@ impl AjisaiInterpreter {
             Ok(()) => {
                 let output = self.interpreter.collect_output();
                 self.step_position += 1;
-                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"output".into(), &output.into()).unwrap();
-                js_sys::Reflect::set(
+                set_js_prop(&obj, "status", &("OK".into()));
+                set_js_prop(&obj, "output", &(output.into()));
+                set_js_prop(
                     &obj,
-                    &"hasMore".into(),
-                    &(self.step_position < self.step_tokens.len()).into(),
-                )
-                .unwrap();
-                js_sys::Reflect::set(
+                    "hasMore",
+                    &((self.step_position < self.step_tokens.len()).into()),
+                );
+                set_js_prop(&obj, "position", &((self.step_position as u32).into()));
+                set_js_prop(&obj, "total", &((self.step_tokens.len() as u32).into()));
+                set_js_prop(&obj, "stack", &(self.collect_stack()));
+                set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
+                set_js_prop(
                     &obj,
-                    &"position".into(),
-                    &(self.step_position as u32).into(),
-                )
-                .unwrap();
-                js_sys::Reflect::set(
-                    &obj,
-                    &"total".into(),
-                    &(self.step_tokens.len() as u32).into(),
-                )
-                .unwrap();
-                js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
-                js_sys::Reflect::set(
-                    &obj,
-                    &"userWords".into(),
-                    &self.collect_user_words_for_state(),
-                )
-                .unwrap();
-                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
+                    "importedModules",
+                    &(self.collect_imported_modules_array()),
+                );
             }
             Err(e) => {
                 self.step_mode = false;
-                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
-                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
-                js_sys::Reflect::set(&obj, &"hasMore".into(), &false.into()).unwrap();
+                set_js_prop(&obj, "status", &("ERROR".into()));
+                set_js_prop(&obj, "message", &(e.to_string().into()));
+                set_js_prop(&obj, "error", &(true.into()));
+                set_js_prop(&obj, "hasMore", &(false.into()));
             }
         }
 
@@ -228,22 +208,20 @@ impl AjisaiInterpreter {
 
         match self.interpreter.execute_reset() {
             Ok(()) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"output".into(), &"System reinitialized.".into())
-                    .unwrap();
-                js_sys::Reflect::set(&obj, &"stack".into(), &self.collect_stack()).unwrap();
-                js_sys::Reflect::set(
+                set_js_prop(&obj, "status", &("OK".into()));
+                set_js_prop(&obj, "output", &("System reinitialized.".into()));
+                set_js_prop(&obj, "stack", &(self.collect_stack()));
+                set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
+                set_js_prop(
                     &obj,
-                    &"userWords".into(),
-                    &self.collect_user_words_for_state(),
-                )
-                .unwrap();
-                js_sys::Reflect::set(&obj, &"importedModules".into(), &self.collect_imported_modules_array()).unwrap();
+                    "importedModules",
+                    &(self.collect_imported_modules_array()),
+                );
             }
             Err(e) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"message".into(), &e.to_string().into()).unwrap();
-                js_sys::Reflect::set(&obj, &"error".into(), &true.into()).unwrap();
+                set_js_prop(&obj, "status", &("ERROR".into()));
+                set_js_prop(&obj, "message", &(e.to_string().into()));
+                set_js_prop(&obj, "error", &(true.into()));
             }
         }
         obj.into()

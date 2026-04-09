@@ -4,11 +4,102 @@
 
 use super::extract_vector_elements;
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_bigint_from_value, extract_integer_from_value, normalize_index};
+use crate::interpreter::value_extraction_helpers::{
+    extract_bigint_from_value, extract_integer_from_value, normalize_index,
+};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
+
+fn acquire_stacktop_target(
+    interp: &mut Interpreter,
+    arg_to_restore: &Value,
+    preserve_source: bool,
+) -> Result<Value> {
+    if preserve_source {
+        return interp.stack.last().cloned().ok_or_else(|| {
+            interp.stack.push(arg_to_restore.clone());
+            AjisaiError::StackUnderflow
+        });
+    }
+
+    interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(arg_to_restore.clone());
+        AjisaiError::StackUnderflow
+    })
+}
+
+fn with_stacktop_vector_target<R, F>(
+    interp: &mut Interpreter,
+    arg_to_restore: &Value,
+    preserve_source: bool,
+    action: F,
+) -> Result<R>
+where
+    F: FnOnce(&Value) -> Result<R>,
+{
+    let target_val = acquire_stacktop_target(interp, arg_to_restore, preserve_source)?;
+    if !target_val.is_vector() {
+        if !preserve_source {
+            interp.stack.push(target_val);
+        }
+        interp.stack.push(arg_to_restore.clone());
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
+    }
+
+    match action(&target_val) {
+        Ok(result) => Ok(result),
+        Err(error) => {
+            if !preserve_source {
+                interp.stack.push(target_val);
+            }
+            interp.stack.push(arg_to_restore.clone());
+            Err(error)
+        }
+    }
+}
+
+fn with_stacktop_vector_target_no_arg<R, F>(
+    interp: &mut Interpreter,
+    preserve_source: bool,
+    action: F,
+) -> Result<R>
+where
+    F: FnOnce(&Value) -> Result<R>,
+{
+    let target_val = if preserve_source {
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
+    if !target_val.is_vector() {
+        if !preserve_source {
+            interp.stack.push(target_val);
+        }
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
+    }
+
+    match action(&target_val) {
+        Ok(result) => Ok(result),
+        Err(error) => {
+            if !preserve_source {
+                interp.stack.push(target_val);
+            }
+            Err(error)
+        }
+    }
+}
 
 fn parse_concat_count(
     interp: &mut Interpreter,
@@ -156,49 +247,30 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let val = if is_keep_mode {
-                interp
-                    .stack
-                    .last()
-                    .cloned()
-                    .ok_or(AjisaiError::StackUnderflow)?
-            } else {
-                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-            };
-
-            if val.is_vector() {
-                let mut v = extract_vector_elements(&val).to_vec();
-                if !interp.disable_no_change_check {
-                    if v.len() < 2 {
-                        if !is_keep_mode {
-                            interp.stack.push(Value::from_vector(v));
+            let disable_no_change_check = interp.disable_no_change_check;
+            let reversed =
+                with_stacktop_vector_target_no_arg(interp, is_keep_mode, |vector_val| {
+                    let mut v = extract_vector_elements(vector_val).to_vec();
+                    if !disable_no_change_check {
+                        if v.len() < 2 {
+                            return Err(AjisaiError::NoChange {
+                                word: "REVERSE".into(),
+                            });
                         }
-                        return Err(AjisaiError::NoChange {
-                            word: "REVERSE".into(),
-                        });
-                    }
-                    let original_v = v.clone();
-                    v.reverse();
-                    if v == original_v {
-                        if !is_keep_mode {
-                            interp.stack.push(Value::from_vector(original_v));
+                        let original_v = v.clone();
+                        v.reverse();
+                        if v == original_v {
+                            return Err(AjisaiError::NoChange {
+                                word: "REVERSE".into(),
+                            });
                         }
-                        return Err(AjisaiError::NoChange {
-                            word: "REVERSE".into(),
-                        });
+                    } else {
+                        v.reverse();
                     }
-                    interp.stack.push(Value::from_vector(v));
-                } else {
-                    v.reverse();
-                    interp.stack.push(Value::from_vector(v));
-                }
-                Ok(())
-            } else {
-                if !is_keep_mode {
-                    interp.stack.push(val);
-                }
-                Err(AjisaiError::create_structure_error("vector", "other format"))
-            }
+                    Ok(Value::from_vector(v))
+                })?;
+            interp.stack.push(reversed);
+            Ok(())
         }
         OperationTargetMode::Stack => {
             if is_keep_mode {
@@ -315,63 +387,35 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let target_val = if is_keep_mode {
-                interp.stack.last().cloned().ok_or_else(|| {
-                    interp.stack.push(indices_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            } else {
-                interp.stack.pop().ok_or_else(|| {
-                    interp.stack.push(indices_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            };
-
-            if target_val.is_vector() {
-                let len = target_val.len();
-
-                if len == 0 {
-                    if !is_keep_mode {
-                        interp.stack.push(target_val);
+            let reordered =
+                with_stacktop_vector_target(interp, &indices_val, is_keep_mode, |target_val| {
+                    let len = target_val.len();
+                    if len == 0 {
+                        return Err(AjisaiError::from("REORDER: target vector is empty"));
                     }
-                    interp.stack.push(indices_val);
-                    return Err(AjisaiError::from("REORDER: target vector is empty"));
-                }
 
-                let mut result = Vec::with_capacity(indices.len());
-                for &idx in &indices {
-                    let actual = match normalize_index(idx, len) {
-                        Some(i) => i,
-                        None => {
-                            if !is_keep_mode {
-                                interp.stack.push(target_val);
-                            }
-                            interp.stack.push(indices_val);
-                            return Err(AjisaiError::IndexOutOfBounds {
+                    let mut result = Vec::with_capacity(indices.len());
+                    for &idx in &indices {
+                        let actual =
+                            normalize_index(idx, len).ok_or(AjisaiError::IndexOutOfBounds {
                                 index: idx,
                                 length: len,
-                            });
-                        }
-                    };
-                    result.push(target_val.get_child(actual).unwrap().clone());
-                }
+                            })?;
+                        result.push(target_val.get_child(actual).unwrap().clone());
+                    }
 
-                if is_keep_mode {
-                    interp.stack.push(indices_val);
-                }
-                if result.is_empty() {
-                    interp.stack.push(Value::nil());
-                } else {
-                    interp.stack.push(Value::from_vector(result));
-                }
-                Ok(())
-            } else {
-                if !is_keep_mode {
-                    interp.stack.push(target_val);
-                }
+                    if result.is_empty() {
+                        Ok(Value::nil())
+                    } else {
+                        Ok(Value::from_vector(result))
+                    }
+                })?;
+
+            if is_keep_mode {
                 interp.stack.push(indices_val);
-                Err(AjisaiError::create_structure_error("vector", "other format"))
             }
+            interp.stack.push(reordered);
+            Ok(())
         }
         OperationTargetMode::Stack => {
             let len = interp.stack.len();
@@ -413,7 +457,10 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
         Ok(bi) => bi,
         Err(_) => {
             interp.stack.push(count_val);
-            return Err(AjisaiError::create_structure_error("integer", "other format"));
+            return Err(AjisaiError::create_structure_error(
+                "integer",
+                "other format",
+            ));
         }
     };
 
