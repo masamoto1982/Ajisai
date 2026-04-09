@@ -20,10 +20,6 @@ pub enum AjisaiError {
         len1: usize,
         len2: usize,
     },
-    DepthLimitExceeded {
-        depth: usize,
-        chain: String,
-    },
     ExecutionLimitExceeded {
         limit: usize,
     },
@@ -91,9 +87,6 @@ impl fmt::Display for AjisaiError {
             }
             AjisaiError::VectorLengthMismatch { len1, len2 } => {
                 write!(f, "Vector length mismatch: {} vs {}", len1, len2)
-            }
-            AjisaiError::DepthLimitExceeded { depth, chain } => {
-                write!(f, "Call depth limit ({}) exceeded: {}", depth, chain)
             }
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
