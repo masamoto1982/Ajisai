@@ -31,6 +31,27 @@ fn is_truthy_boolean(val: &Value) -> bool {
     false
 }
 
+fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
+    if let Some(f) = condition_result.as_scalar() {
+        return Ok(!f.is_zero());
+    }
+
+    if is_vector_value(&condition_result) {
+        if condition_result.len() == 1 {
+            return Ok(is_truthy_boolean(condition_result.get_child(0).unwrap()));
+        }
+        return Err(AjisaiError::create_structure_error(
+            "boolean result from FILTER code",
+            "other format",
+        ));
+    }
+
+    Err(AjisaiError::create_structure_error(
+        "boolean vector result from FILTER code",
+        "other format",
+    ))
+}
+
 pub(crate) fn execute_executable_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
     match exec {
         ExecutableCode::CodeBlock(tokens) => {
@@ -411,4 +432,521 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         }
     }
     Ok(())
+}
+
+pub fn op_any(interp: &mut Interpreter) -> Result<()> {
+    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+        Ok(exec) => exec,
+        Err(e) => {
+            interp.stack.push(code_val);
+            return Err(e);
+        }
+    };
+
+    if let ExecutableCode::WordName(ref word_name) = executable {
+        if !interp.word_exists(word_name) {
+            interp.stack.push(code_val);
+            return Err(AjisaiError::UnknownWord(word_name.clone()));
+        }
+    }
+
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
+            let target_val: Value = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(code_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
+
+            if target_val.is_nil() {
+                interp.stack.push(Value::from_bool(false));
+                return Ok(());
+            }
+            if !is_vector_value(&target_val) {
+                interp.stack.push(target_val);
+                interp.stack.push(code_val);
+                return Err(AjisaiError::create_structure_error("vector", "other format"));
+            }
+
+            let mut saved_stack: Vec<Value> = Vec::new();
+            std::mem::swap(&mut interp.stack, &mut saved_stack);
+            let saved_target = interp.operation_target_mode;
+            let saved_no_change_check = interp.disable_no_change_check;
+            interp.operation_target_mode = OperationTargetMode::StackTop;
+            interp.disable_no_change_check = true;
+
+            let mut result = false;
+            let mut error: Option<AjisaiError> = None;
+            for i in 0..target_val.len() {
+                let elem = target_val.get_child(i).unwrap().clone();
+                interp.stack.clear();
+                interp.stack.push(elem);
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => {
+                        let condition_result = match interp.stack.pop() {
+                            Some(v) => v,
+                            None => {
+                                error = Some(AjisaiError::from(
+                                    "FILTER: expected boolean value, got empty stack",
+                                ));
+                                break;
+                            }
+                        };
+                        match extract_predicate_boolean(condition_result) {
+                            Ok(is_true) => {
+                                if is_true {
+                                    result = true;
+                                    break;
+                                }
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error = Some(e);
+                        break;
+                    }
+                }
+            }
+
+            interp.operation_target_mode = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = saved_stack;
+
+            if let Some(e) = error {
+                interp.stack.push(target_val);
+                interp.stack.push(code_val);
+                return Err(e);
+            }
+
+            interp.stack.push(Value::from_bool(result));
+            Ok(())
+        }
+        OperationTargetMode::Stack => {
+            let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count: usize = match extract_integer_from_value(&count_val) {
+                Ok(v) => v as usize,
+                Err(e) => {
+                    interp.stack.push(count_val);
+                    interp.stack.push(code_val);
+                    return Err(e);
+                }
+            };
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                interp.stack.push(code_val);
+                return Err(AjisaiError::StackUnderflow);
+            }
+            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+
+            let mut saved_stack: Vec<Value> = Vec::new();
+            std::mem::swap(&mut interp.stack, &mut saved_stack);
+            let saved_target = interp.operation_target_mode;
+            let saved_no_change_check = interp.disable_no_change_check;
+            interp.operation_target_mode = OperationTargetMode::StackTop;
+            interp.disable_no_change_check = true;
+
+            let mut result = false;
+            for item in &targets {
+                interp.stack.clear();
+                interp.stack.push(item.clone());
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => {
+                        let condition_result = match interp.stack.pop() {
+                            Some(v) => v,
+                            None => {
+                                interp.operation_target_mode = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = saved_stack;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                interp.stack.push(code_val);
+                                return Err(AjisaiError::from(
+                                    "FILTER: expected boolean value, got empty stack",
+                                ));
+                            }
+                        };
+                        let is_true = match extract_predicate_boolean(condition_result) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                interp.operation_target_mode = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = saved_stack;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                interp.stack.push(code_val);
+                                return Err(e);
+                            }
+                        };
+                        if is_true {
+                            result = true;
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        interp.operation_target_mode = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
+                        interp.stack = saved_stack;
+                        interp.stack.extend(targets);
+                        interp.stack.push(count_val);
+                        interp.stack.push(code_val);
+                        return Err(e);
+                    }
+                }
+            }
+
+            interp.operation_target_mode = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = saved_stack;
+            interp.stack.push(Value::from_bool(result));
+            Ok(())
+        }
+    }
+}
+
+pub fn op_all(interp: &mut Interpreter) -> Result<()> {
+    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+        Ok(exec) => exec,
+        Err(e) => {
+            interp.stack.push(code_val);
+            return Err(e);
+        }
+    };
+
+    if let ExecutableCode::WordName(ref word_name) = executable {
+        if !interp.word_exists(word_name) {
+            interp.stack.push(code_val);
+            return Err(AjisaiError::UnknownWord(word_name.clone()));
+        }
+    }
+
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
+            let target_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(code_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
+
+            if target_val.is_nil() {
+                interp.stack.push(Value::from_bool(true));
+                return Ok(());
+            }
+            if !is_vector_value(&target_val) {
+                interp.stack.push(target_val);
+                interp.stack.push(code_val);
+                return Err(AjisaiError::create_structure_error("vector", "other format"));
+            }
+
+            let mut saved_stack: Vec<Value> = Vec::new();
+            std::mem::swap(&mut interp.stack, &mut saved_stack);
+            let saved_target = interp.operation_target_mode;
+            let saved_no_change_check = interp.disable_no_change_check;
+            interp.operation_target_mode = OperationTargetMode::StackTop;
+            interp.disable_no_change_check = true;
+
+            let mut result = true;
+            let mut error: Option<AjisaiError> = None;
+            for i in 0..target_val.len() {
+                let elem = target_val.get_child(i).unwrap().clone();
+                interp.stack.clear();
+                interp.stack.push(elem);
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => {
+                        let condition_result = match interp.stack.pop() {
+                            Some(v) => v,
+                            None => {
+                                error = Some(AjisaiError::from(
+                                    "FILTER: expected boolean value, got empty stack",
+                                ));
+                                break;
+                            }
+                        };
+                        match extract_predicate_boolean(condition_result) {
+                            Ok(is_true) => {
+                                if !is_true {
+                                    result = false;
+                                    break;
+                                }
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error = Some(e);
+                        break;
+                    }
+                }
+            }
+
+            interp.operation_target_mode = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = saved_stack;
+
+            if let Some(e) = error {
+                interp.stack.push(target_val);
+                interp.stack.push(code_val);
+                return Err(e);
+            }
+
+            interp.stack.push(Value::from_bool(result));
+            Ok(())
+        }
+        OperationTargetMode::Stack => {
+            let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count: usize = match extract_integer_from_value(&count_val) {
+                Ok(v) => v as usize,
+                Err(e) => {
+                    interp.stack.push(count_val);
+                    interp.stack.push(code_val);
+                    return Err(e);
+                }
+            };
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                interp.stack.push(code_val);
+                return Err(AjisaiError::StackUnderflow);
+            }
+            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+
+            let mut saved_stack: Vec<Value> = Vec::new();
+            std::mem::swap(&mut interp.stack, &mut saved_stack);
+            let saved_target = interp.operation_target_mode;
+            let saved_no_change_check = interp.disable_no_change_check;
+            interp.operation_target_mode = OperationTargetMode::StackTop;
+            interp.disable_no_change_check = true;
+
+            let mut result = true;
+            for item in &targets {
+                interp.stack.clear();
+                interp.stack.push(item.clone());
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => {
+                        let condition_result = match interp.stack.pop() {
+                            Some(v) => v,
+                            None => {
+                                interp.operation_target_mode = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = saved_stack;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                interp.stack.push(code_val);
+                                return Err(AjisaiError::from(
+                                    "FILTER: expected boolean value, got empty stack",
+                                ));
+                            }
+                        };
+                        let is_true = match extract_predicate_boolean(condition_result) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                interp.operation_target_mode = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = saved_stack;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                interp.stack.push(code_val);
+                                return Err(e);
+                            }
+                        };
+                        if !is_true {
+                            result = false;
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        interp.operation_target_mode = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
+                        interp.stack = saved_stack;
+                        interp.stack.extend(targets);
+                        interp.stack.push(count_val);
+                        interp.stack.push(code_val);
+                        return Err(e);
+                    }
+                }
+            }
+
+            interp.operation_target_mode = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = saved_stack;
+            interp.stack.push(Value::from_bool(result));
+            Ok(())
+        }
+    }
+}
+
+pub fn op_count(interp: &mut Interpreter) -> Result<()> {
+    let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+        Ok(exec) => exec,
+        Err(e) => {
+            interp.stack.push(code_val);
+            return Err(e);
+        }
+    };
+
+    if let ExecutableCode::WordName(ref word_name) = executable {
+        if !interp.word_exists(word_name) {
+            interp.stack.push(code_val);
+            return Err(AjisaiError::UnknownWord(word_name.clone()));
+        }
+    }
+
+    match interp.operation_target_mode {
+        OperationTargetMode::StackTop => {
+            let target_val = interp.stack.pop().ok_or_else(|| {
+                interp.stack.push(code_val.clone());
+                AjisaiError::StackUnderflow
+            })?;
+
+            if target_val.is_nil() {
+                interp.stack.push(Value::from_int(0));
+                return Ok(());
+            }
+            if !is_vector_value(&target_val) {
+                interp.stack.push(target_val);
+                interp.stack.push(code_val);
+                return Err(AjisaiError::create_structure_error("vector", "other format"));
+            }
+
+            let mut saved_stack: Vec<Value> = Vec::new();
+            std::mem::swap(&mut interp.stack, &mut saved_stack);
+            let saved_target = interp.operation_target_mode;
+            let saved_no_change_check = interp.disable_no_change_check;
+            interp.operation_target_mode = OperationTargetMode::StackTop;
+            interp.disable_no_change_check = true;
+
+            let mut count: i64 = 0;
+            let mut error: Option<AjisaiError> = None;
+            for i in 0..target_val.len() {
+                let elem = target_val.get_child(i).unwrap().clone();
+                interp.stack.clear();
+                interp.stack.push(elem);
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => {
+                        let condition_result = match interp.stack.pop() {
+                            Some(v) => v,
+                            None => {
+                                error = Some(AjisaiError::from(
+                                    "FILTER: expected boolean value, got empty stack",
+                                ));
+                                break;
+                            }
+                        };
+                        match extract_predicate_boolean(condition_result) {
+                            Ok(is_true) => {
+                                if is_true {
+                                    count += 1;
+                                }
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error = Some(e);
+                        break;
+                    }
+                }
+            }
+
+            interp.operation_target_mode = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = saved_stack;
+
+            if let Some(e) = error {
+                interp.stack.push(target_val);
+                interp.stack.push(code_val);
+                return Err(e);
+            }
+
+            interp.stack.push(Value::from_int(count));
+            Ok(())
+        }
+        OperationTargetMode::Stack => {
+            let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+            let count: usize = match extract_integer_from_value(&count_val) {
+                Ok(v) => v as usize,
+                Err(e) => {
+                    interp.stack.push(count_val);
+                    interp.stack.push(code_val);
+                    return Err(e);
+                }
+            };
+            if interp.stack.len() < count {
+                interp.stack.push(count_val);
+                interp.stack.push(code_val);
+                return Err(AjisaiError::StackUnderflow);
+            }
+            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
+
+            let mut saved_stack: Vec<Value> = Vec::new();
+            std::mem::swap(&mut interp.stack, &mut saved_stack);
+            let saved_target = interp.operation_target_mode;
+            let saved_no_change_check = interp.disable_no_change_check;
+            interp.operation_target_mode = OperationTargetMode::StackTop;
+            interp.disable_no_change_check = true;
+
+            let mut matched_count: i64 = 0;
+            for item in &targets {
+                interp.stack.clear();
+                interp.stack.push(item.clone());
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => {
+                        let condition_result = match interp.stack.pop() {
+                            Some(v) => v,
+                            None => {
+                                interp.operation_target_mode = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = saved_stack;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                interp.stack.push(code_val);
+                                return Err(AjisaiError::from(
+                                    "FILTER: expected boolean value, got empty stack",
+                                ));
+                            }
+                        };
+                        let is_true = match extract_predicate_boolean(condition_result) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                interp.operation_target_mode = saved_target;
+                                interp.disable_no_change_check = saved_no_change_check;
+                                interp.stack = saved_stack;
+                                interp.stack.extend(targets);
+                                interp.stack.push(count_val);
+                                interp.stack.push(code_val);
+                                return Err(e);
+                            }
+                        };
+                        if is_true {
+                            matched_count += 1;
+                        }
+                    }
+                    Err(e) => {
+                        interp.operation_target_mode = saved_target;
+                        interp.disable_no_change_check = saved_no_change_check;
+                        interp.stack = saved_stack;
+                        interp.stack.extend(targets);
+                        interp.stack.push(count_val);
+                        interp.stack.push(code_val);
+                        return Err(e);
+                    }
+                }
+            }
+
+            interp.operation_target_mode = saved_target;
+            interp.disable_no_change_check = saved_no_change_check;
+            interp.stack = saved_stack;
+            interp.stack.push(Value::from_int(matched_count));
+            Ok(())
+        }
+    }
 }
