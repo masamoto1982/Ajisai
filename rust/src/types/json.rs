@@ -1,9 +1,9 @@
 use serde_json;
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::types::{Value, ValueData, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{Value, ValueData};
 use crate::types::fraction::Fraction;
-use crate::error::{Result, AjisaiError};
+use crate::error::Result;
 use num_traits::ToPrimitive;
 
 pub fn deserialize_json_to_value(json_val: serde_json::Value, depth: usize) -> Result<Value> {
@@ -29,9 +29,6 @@ pub fn deserialize_json_to_value(json_val: serde_json::Value, depth: usize) -> R
         serde_json::Value::String(s) => Ok(Value::from_string(&s)),
 
         serde_json::Value::Array(arr) => {
-            if depth > MAX_VISIBLE_DIMENSIONS + 1 {
-                return Err(AjisaiError::DimensionLimitExceeded { depth });
-            }
             if arr.is_empty() {
                 return Ok(Value::nil());
             }
@@ -45,9 +42,6 @@ pub fn deserialize_json_to_value(json_val: serde_json::Value, depth: usize) -> R
         }
 
         serde_json::Value::Object(map) => {
-            if depth > MAX_VISIBLE_DIMENSIONS + 1 {
-                return Err(AjisaiError::DimensionLimitExceeded { depth });
-            }
             if map.is_empty() {
                 return Ok(Value::nil());
             }
@@ -265,14 +259,14 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_json_to_value_nest_limit() {
+    fn test_deserialize_json_to_value_deep_nesting() {
         let deep = serde_json::json!([[[[[[[[[[1]]]]]]]]]]);
         let result = deserialize_json_to_value(deep, 1);
         assert!(result.is_ok());
 
-        let too_deep = serde_json::json!([[[[[[[[[[[1]]]]]]]]]]]);
-        let result = deserialize_json_to_value(too_deep, 1);
-        assert!(result.is_err());
+        let deeper = serde_json::json!([[[[[[[[[[[1]]]]]]]]]]]);
+        let result = deserialize_json_to_value(deeper, 1);
+        assert!(result.is_ok());
     }
 
     #[test]

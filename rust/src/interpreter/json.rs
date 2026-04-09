@@ -32,14 +32,6 @@ pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.push(parsed);
                 Ok(())
             }
-            Err(AjisaiError::DimensionLimitExceeded { depth }) => {
-                interp.output_buffer.push_str(&format!(
-                    "PARSE error: ネスト上限（10次元）を超過しました (depth {})\n",
-                    depth
-                ));
-                interp.stack.push(Value::nil());
-                Ok(())
-            }
             Err(e) => {
                 interp
                     .output_buffer

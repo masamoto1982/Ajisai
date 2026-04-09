@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, ExecutionLine, Token, Value, MAX_VISIBLE_DIMENSIONS};
+use crate::types::{DisplayHint, ExecutionLine, Token, Value};
 
 use super::value_extraction_helpers::create_number_value;
 use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
@@ -38,10 +38,6 @@ impl Interpreter {
         start_index: usize,
         depth: usize,
     ) -> Result<(Vec<Value>, usize, DisplayHint)> {
-        if depth > MAX_VISIBLE_DIMENSIONS {
-            return Err(AjisaiError::DimensionLimitExceeded { depth });
-        }
-
         if !matches!(&tokens[start_index], Token::VectorStart) {
             return Err(AjisaiError::from("Expected vector start"));
         }

@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::create_number_value;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, MAX_VISIBLE_DIMENSIONS};
+use crate::types::Value;
 
 use super::tensor_ops::{
     apply_binary_broadcast, apply_unary_flat, build_nested_value, FlatTensor,
@@ -92,14 +92,6 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
     }
 
     let dim_count: usize = shape_val.len();
-    if dim_count > MAX_VISIBLE_DIMENSIONS {
-        interp.stack.push(data_val);
-        interp.stack.push(shape_val);
-        return Err(AjisaiError::from(format!(
-            "Nesting depth limit exceeded: Ajisai supports up to 10 dimensions. Nesting depth {} exceeds the limit.",
-            dim_count
-        )));
-    }
 
     let mut new_shape: Vec<usize> = Vec::with_capacity(dim_count);
     for i in 0..dim_count {
@@ -385,13 +377,6 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     };
 
     let shape_len = n - 1;
-    if shape_len > MAX_VISIBLE_DIMENSIONS {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::from(format!(
-            "Nesting depth limit exceeded: Ajisai supports up to 10 dimensions. Nesting depth {} exceeds the limit.",
-            shape_len
-        )));
-    }
 
     let mut shape = Vec::with_capacity(shape_len);
     for i in 0..shape_len {
