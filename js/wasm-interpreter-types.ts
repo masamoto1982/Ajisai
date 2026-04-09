@@ -26,6 +26,7 @@ export interface AjisaiInterpreter {
     collect_imported_modules(): string[];
     collect_module_words_info(module_name: string): Array<[string, string | null]>;
     collect_module_sample_words_info(module_name: string): Array<[string, string | null]>;
+    collect_dictionary_dependencies(): Array<[string, string[], string[]]>;
     restore_imported_modules(modules: string[]): void;
 }
 

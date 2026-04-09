@@ -43,6 +43,7 @@ pub enum BuiltinExecutorKey {
     Del,
     Lookup,
     Import,
+    ImportOnly,
     Force,
     Print,
     Insert,
@@ -710,10 +711,19 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         "IMPORT",
         "module",
         "Load standard library module. String -> (dictionary effect)",
-        "'music' IMPORT → registers MUSIC::* words",
+        "'music' IMPORT → imports all public words from MUSIC",
         "none",
         BuiltinDetailGroup::IoModule,
         Some(BuiltinExecutorKey::Import)
+    ),
+    builtin_spec!(
+        "IMPORT-ONLY",
+        "module",
+        "Import selected public words from a module. String Vector -> (dictionary effect)",
+        "'json' [ 'parse' ] IMPORT-ONLY → imports JSON@PARSE only",
+        "none",
+        BuiltinDetailGroup::IoModule,
+        Some(BuiltinExecutorKey::ImportOnly)
     ),
 ];
 

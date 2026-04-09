@@ -27,7 +27,28 @@ pub(crate) struct UserDictionary {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleDictionary {
+    pub words: HashMap<String, Arc<WordDefinition>>,
     pub sample_words: HashMap<String, Arc<WordDefinition>>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ImportedModule {
+    pub module_name: String,
+    pub import_all_public: bool,
+    pub imported_words: HashSet<String>,
+    pub imported_samples: HashSet<String>,
+    pub imported_at: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct ImportTable {
+    pub modules: HashMap<String, ImportedModule>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct DictionaryDependencyInfo {
+    pub depends_on: HashSet<String>,
+    pub depended_by: HashSet<String>,
 }
 
 pub struct Interpreter {
@@ -46,7 +67,7 @@ pub struct Interpreter {
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
     pub(crate) module_state: HashMap<String, Box<dyn std::any::Any>>,
-    pub(crate) imported_modules: HashSet<String>,
+    pub(crate) import_table: ImportTable,
     pub(crate) call_stack: SmallVec<[String; 5]>,
     pub(crate) execution_step_count: usize,
     pub(crate) max_execution_steps: usize,
@@ -61,7 +82,8 @@ pub struct Interpreter {
     pub(crate) active_flows: Vec<FlowToken>,
     pub(crate) flow_consumed_log: Vec<(u64, Fraction)>,
     // ── Module-scoped sample words ───────────────────────────────────
-    pub(crate) module_samples: HashMap<String, ModuleDictionary>,
+    pub(crate) module_vocabulary: HashMap<String, ModuleDictionary>,
+    pub(crate) dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
     pub(crate) next_registration_order: u64,
     pub(crate) active_user_dictionary: String,
     // ── Semantic plane ──────────────────────────────────────────────
@@ -86,7 +108,7 @@ impl Interpreter {
             pending_tokens: None,
             pending_token_index: 0,
             module_state: HashMap::new(),
-            imported_modules: HashSet::new(),
+            import_table: ImportTable::default(),
             call_stack: SmallVec::new(),
             execution_step_count: 0,
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
@@ -96,7 +118,8 @@ impl Interpreter {
             flow_tracking: false,
             active_flows: Vec::new(),
             flow_consumed_log: Vec::new(),
-            module_samples: HashMap::new(),
+            module_vocabulary: HashMap::new(),
+            dictionary_dependencies: HashMap::new(),
             next_registration_order: 1,
             active_user_dictionary: "DEMO".to_string(),
             semantic_registry: SemanticRegistry::new(),
@@ -217,8 +240,9 @@ impl Interpreter {
         self.pending_token_index = 0;
         self.module_state.clear();
         self.call_stack.clear();
-        self.imported_modules.clear();
-        self.module_samples.clear();
+        self.import_table.modules.clear();
+        self.module_vocabulary.clear();
+        self.dictionary_dependencies.clear();
         self.next_registration_order = 1;
         self.active_user_dictionary = "DEMO".to_string();
         self.semantic_registry.clear();
@@ -236,13 +260,15 @@ impl Interpreter {
 
     pub fn update_stack(&mut self, stack: Stack) {
         self.stack = stack;
-        self.semantic_registry.normalize_to_stack_len(self.stack.len());
+        self.semantic_registry
+            .normalize_to_stack_len(self.stack.len());
     }
 
     pub fn update_stack_with_hints(&mut self, stack: Stack, hints: Vec<DisplayHint>) {
         self.stack = stack;
         self.semantic_registry.stack_hints = hints;
-        self.semantic_registry.normalize_to_stack_len(self.stack.len());
+        self.semantic_registry
+            .normalize_to_stack_len(self.stack.len());
     }
 
     pub fn collect_stack_hints(&self) -> &[DisplayHint] {

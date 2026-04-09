@@ -1,11 +1,10 @@
 use crate::types::WordDefinition;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use super::Interpreter;
+use super::{DictionaryDependencyInfo, Interpreter};
 
 impl Interpreter {
-    /// `@` 区切りのパスを解析して (layers, word) を返す。
     pub(crate) fn split_path(name: &str) -> (Vec<String>, String) {
         let parts: Vec<String> = name.split('@').map(|s| s.to_uppercase()).collect();
         if parts.len() == 1 {
@@ -57,51 +56,74 @@ impl Interpreter {
             .unwrap_or_default();
     }
 
+    fn is_module_word_imported(&self, module_name: &str, short_name: &str) -> bool {
+        self.import_table
+            .modules
+            .get(module_name)
+            .map(|m| m.import_all_public || m.imported_words.contains(short_name))
+            .unwrap_or(false)
+    }
+
+    fn is_module_sample_imported(&self, module_name: &str, short_name: &str) -> bool {
+        self.import_table
+            .modules
+            .get(module_name)
+            .map(|m| m.import_all_public || m.imported_samples.contains(short_name))
+            .unwrap_or(false)
+    }
+
     pub(crate) fn resolve_short_name(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
         let upper = name.to_uppercase();
 
-        // 1. Built-in words (always highest priority, no ambiguity check)
         if let Some(def) = self.core_vocabulary.get(&upper) {
             return Some((upper, def.clone()));
         }
 
-        // 2. Check imported module words (e.g., "PLAY" → "MUSIC@PLAY" in core_vocabulary)
-        for module_name in &self.imported_modules {
+        for (module_name, module) in &self.module_vocabulary {
+            if !self.is_module_word_imported(module_name, &upper) {
+                continue;
+            }
             let qualified = format!("{}@{}", module_name, upper);
-            if let Some(def) = self.core_vocabulary.get(&qualified) {
+            if let Some(def) = module.words.get(&qualified) {
                 return Some((qualified, def.clone()));
             }
         }
 
-        // 3. Collect all module sample matches
         let mut module_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
-        for (module_name, dict) in &self.module_samples {
+        for (module_name, dict) in &self.module_vocabulary {
+            if !self.is_module_sample_imported(module_name, &upper) {
+                continue;
+            }
             if let Some(def) = dict.sample_words.get(&upper) {
-                module_matches.push((format!("{}@{}", module_name, upper), def.clone(), def.registration_order));
+                module_matches.push((
+                    format!("{}@{}", module_name, upper),
+                    def.clone(),
+                    def.registration_order,
+                ));
             }
         }
 
-        // 4. Collect all user dictionary matches
         let mut user_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
         for (dict_name, dict) in &self.user_dictionaries {
             if let Some(def) = dict.words.get(&upper) {
-                user_matches.push((format!("{}@{}", dict_name, upper), def.clone(), def.registration_order));
+                user_matches.push((
+                    format!("{}@{}", dict_name, upper),
+                    def.clone(),
+                    def.registration_order,
+                ));
             }
         }
 
-        // 5. Ambiguity detection
         if !module_matches.is_empty() && !user_matches.is_empty() {
             return None;
         }
 
-        // 6. Return best module match
         if !module_matches.is_empty() {
             module_matches.sort_by_key(|(_, _, order)| *order);
             let (name, def, _) = module_matches.into_iter().next().unwrap();
             return Some((name, def));
         }
 
-        // 7. Return best user match
         if !user_matches.is_empty() {
             user_matches.sort_by_key(|(_, _, order)| *order);
             let (name, def, _) = user_matches.into_iter().next().unwrap();
@@ -119,8 +141,10 @@ impl Interpreter {
         }
 
         let mut paths = Vec::new();
-        for (module_name, dict) in &self.module_samples {
-            if dict.sample_words.contains_key(&upper) {
+        for (module_name, dict) in &self.module_vocabulary {
+            if self.is_module_sample_imported(module_name, &upper)
+                && dict.sample_words.contains_key(&upper)
+            {
                 paths.push(format!("{}@{}", module_name, upper));
             }
         }
@@ -130,33 +154,47 @@ impl Interpreter {
             }
         }
 
-        if paths.len() > 1 { paths } else { vec![] }
+        if paths.len() > 1 {
+            paths
+        } else {
+            vec![]
+        }
     }
 
     pub(crate) fn resolve_word_entry(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
         let (layers, word) = Self::split_path(name);
 
         match layers.len() {
-            0 => {
-                self.resolve_short_name(name)
-            }
+            0 => self.resolve_short_name(name),
             1 => {
                 let ns = &layers[0];
                 if ns == "CORE" {
-                    return self.core_vocabulary.get(&word).cloned().map(|def| (word.clone(), def));
+                    return self
+                        .core_vocabulary
+                        .get(&word)
+                        .cloned()
+                        .map(|def| (word.clone(), def));
                 }
-                if let Some(module_dict) = self.module_samples.get(ns.as_str()) {
-                    if let Some(def) = module_dict.sample_words.get(&word) {
-                        return Some((format!("{}@{}", ns, word), def.clone()));
+                if let Some(module_dict) = self.module_vocabulary.get(ns.as_str()) {
+                    let qualified = format!("{}@{}", ns, word);
+                    if self.is_module_word_imported(ns, &word) {
+                        if let Some(def) = module_dict.words.get(&qualified) {
+                            return Some((qualified, def.clone()));
+                        }
                     }
+                    if self.is_module_sample_imported(ns, &word) {
+                        if let Some(def) = module_dict.sample_words.get(&word) {
+                            return Some((format!("{}@{}", ns, word), def.clone()));
+                        }
+                    }
+                    return None;
                 }
                 if let Some(user_dict) = self.user_dictionaries.get(ns.as_str()) {
                     if let Some(def) = user_dict.words.get(&word) {
                         return Some((format!("{}@{}", ns, word), def.clone()));
                     }
                 }
-                let qualified = format!("{}@{}", ns, word);
-                self.core_vocabulary.get(&qualified).cloned().map(|def| (qualified, def))
+                None
             }
             2 => {
                 let first = &layers[0];
@@ -169,15 +207,23 @@ impl Interpreter {
                     }
                 } else if first == "DICT" {
                     if second == "CORE" {
-                        return self.core_vocabulary.get(&word).cloned().map(|def| (word.clone(), def));
+                        return self
+                            .core_vocabulary
+                            .get(&word)
+                            .cloned()
+                            .map(|def| (word.clone(), def));
                     }
-                    let qualified = format!("{}@{}", second, word);
-                    if let Some(def) = self.core_vocabulary.get(&qualified) {
-                        return Some((qualified, def.clone()));
-                    }
-                    if let Some(module_dict) = self.module_samples.get(second.as_str()) {
-                        if let Some(def) = module_dict.sample_words.get(&word) {
-                            return Some((format!("{}@{}", second, word), def.clone()));
+                    if let Some(module_dict) = self.module_vocabulary.get(second.as_str()) {
+                        let qualified = format!("{}@{}", second, word);
+                        if self.is_module_word_imported(second, &word) {
+                            if let Some(def) = module_dict.words.get(&qualified) {
+                                return Some((qualified, def.clone()));
+                            }
+                        }
+                        if self.is_module_sample_imported(second, &word) {
+                            if let Some(def) = module_dict.sample_words.get(&word) {
+                                return Some((format!("{}@{}", second, word), def.clone()));
+                            }
                         }
                     }
                 }
@@ -210,28 +256,33 @@ impl Interpreter {
 
     pub fn rebuild_dependencies(&mut self) -> crate::error::Result<()> {
         self.dependents.clear();
+        self.dictionary_dependencies.clear();
 
-        let mut all_user_words: Vec<(String, Arc<WordDefinition>)> = Vec::new();
+        let mut all_words: Vec<(String, Arc<WordDefinition>)> = Vec::new();
 
         for (dict_name, dict) in &self.user_dictionaries {
             for (name, def) in &dict.words {
-                all_user_words.push((format!("{}@{}", dict_name, name), Arc::clone(def)));
+                all_words.push((format!("{}@{}", dict_name, name), Arc::clone(def)));
             }
         }
 
-        for (module_name, module_dict) in &self.module_samples {
+        for (module_name, module_dict) in &self.module_vocabulary {
             for (name, def) in &module_dict.sample_words {
-                all_user_words.push((format!("{}@{}", module_name, name), Arc::clone(def)));
+                all_words.push((format!("{}@{}", module_name, name), Arc::clone(def)));
             }
         }
 
-        for (word_name, word_def) in &all_user_words {
+        let mut dictionary_edges: HashMap<String, HashSet<String>> = HashMap::new();
+
+        for (word_name, word_def) in &all_words {
             let mut dependencies = HashSet::new();
             for line in word_def.lines.iter() {
                 for token in line.body_tokens.iter() {
                     if let crate::types::Token::Symbol(s) = token {
                         let upper_s = s.to_uppercase();
-                        if let Some((resolved_name, resolved_def)) = self.resolve_word_entry(&upper_s) {
+                        if let Some((resolved_name, resolved_def)) =
+                            self.resolve_word_entry(&upper_s)
+                        {
                             if !resolved_def.is_builtin {
                                 dependencies.insert(resolved_name.clone());
                                 self.dependents
@@ -247,16 +298,49 @@ impl Interpreter {
                 if let Some(dict) = self.user_dictionaries.get_mut(&dict_name) {
                     if let Some(def) = dict.words.get_mut(&short_name) {
                         Arc::make_mut(def).dependencies = dependencies.clone();
-                        continue;
                     }
                 }
-                if let Some(module_dict) = self.module_samples.get_mut(&dict_name) {
+                if let Some(module_dict) = self.module_vocabulary.get_mut(&dict_name) {
                     if let Some(def) = module_dict.sample_words.get_mut(&short_name) {
-                        Arc::make_mut(def).dependencies = dependencies;
+                        Arc::make_mut(def).dependencies = dependencies.clone();
+                    }
+                }
+                let edge_set = dictionary_edges.entry(dict_name.clone()).or_default();
+                for dep in &dependencies {
+                    if let Some((dep_dict, _)) = self.split_qualified_name(dep) {
+                        if dep_dict != dict_name {
+                            edge_set.insert(dep_dict);
+                        }
                     }
                 }
             }
         }
+
+        for dict in self.user_dictionaries.keys() {
+            self.dictionary_dependencies
+                .entry(dict.clone())
+                .or_default();
+        }
+        for dict in self.module_vocabulary.keys() {
+            self.dictionary_dependencies
+                .entry(dict.clone())
+                .or_default();
+        }
+        for (from, tos) in dictionary_edges {
+            for to in tos {
+                self.dictionary_dependencies
+                    .entry(from.clone())
+                    .or_insert_with(DictionaryDependencyInfo::default)
+                    .depends_on
+                    .insert(to.clone());
+                self.dictionary_dependencies
+                    .entry(to)
+                    .or_insert_with(DictionaryDependencyInfo::default)
+                    .depended_by
+                    .insert(from.clone());
+            }
+        }
+
         self.sync_user_words_cache();
         Ok(())
     }
@@ -270,7 +354,7 @@ impl Interpreter {
                 }
             }
         }
-        for (module_name, module_dict) in &self.module_samples {
+        for (module_name, module_dict) in &self.module_vocabulary {
             for (name, def) in &module_dict.sample_words {
                 if def.dependencies.contains(word_name) {
                     result.insert(format!("{}@{}", module_name, name));

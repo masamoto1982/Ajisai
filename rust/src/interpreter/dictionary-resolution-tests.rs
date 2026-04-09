@@ -9,8 +9,13 @@ mod tests {
             let tokens = tokenizer::tokenize(definition)
                 .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
 
-            crate::interpreter::execute_def::op_def_inner(interp, name, &tokens, Some(description.to_string()))
-                .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
+            crate::interpreter::execute_def::op_def_inner(
+                interp,
+                name,
+                &tokens,
+                Some(description.to_string()),
+            )
+            .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
         }
 
         interp
@@ -27,7 +32,11 @@ mod tests {
         let _ = interp.collect_output();
 
         let result = interp.execute("SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "Short name should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Short name should resolve: {:?}",
+            result.err()
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -40,7 +49,11 @@ mod tests {
         let _ = interp.collect_output();
 
         let result = interp.execute("DEMO@SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "DEMO@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "DEMO@SAY-HELLO-WORLD should resolve: {:?}",
+            result.err()
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -53,7 +66,11 @@ mod tests {
         let _ = interp.collect_output();
 
         let result = interp.execute("USER@DEMO@SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "USER@DEMO@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "USER@DEMO@SAY-HELLO-WORLD should resolve: {:?}",
+            result.err()
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -66,7 +83,11 @@ mod tests {
         let _ = interp.collect_output();
 
         let result = interp.execute("DICT@USER@DEMO@SAY-HELLO-WORLD").await;
-        assert!(result.is_ok(), "DICT@USER@DEMO@SAY-HELLO-WORLD should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "DICT@USER@DEMO@SAY-HELLO-WORLD should resolve: {:?}",
+            result.err()
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -78,7 +99,11 @@ mod tests {
         let _ = interp.collect_output();
 
         let result = interp.execute("MUSIC@C4").await;
-        assert!(result.is_ok(), "MUSIC@C4 should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "MUSIC@C4 should resolve: {:?}",
+            result.err()
+        );
         if let Some(val) = interp.stack.last() {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
@@ -92,7 +117,11 @@ mod tests {
         let _ = interp.collect_output();
 
         let result = interp.execute("DICT@MUSIC@C4").await;
-        assert!(result.is_ok(), "DICT@MUSIC@C4 should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "DICT@MUSIC@C4 should resolve: {:?}",
+            result.err()
+        );
         if let Some(val) = interp.stack.last() {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
@@ -105,7 +134,11 @@ mod tests {
         interp.execute("[ 10 20 30 ]").await.unwrap();
 
         let result = interp.execute("[ 1 ] CORE@GET").await;
-        assert!(result.is_ok(), "CORE@GET should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "CORE@GET should resolve: {:?}",
+            result.err()
+        );
     }
 
     #[tokio::test]
@@ -115,7 +148,11 @@ mod tests {
         interp.execute("[ 10 20 30 ]").await.unwrap();
 
         let result = interp.execute("[ 1 ] DICT@CORE@GET").await;
-        assert!(result.is_ok(), "DICT@CORE@GET should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "DICT@CORE@GET should resolve: {:?}",
+            result.err()
+        );
     }
 
     #[tokio::test]
@@ -126,7 +163,11 @@ mod tests {
         let _ = interp.collect_output();
 
         let result = interp.execute("music@c4").await;
-        assert!(result.is_ok(), "music@c4 should resolve (case insensitive): {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "music@c4 should resolve (case insensitive): {:?}",
+            result.err()
+        );
         if let Some(val) = interp.stack.last() {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
@@ -141,7 +182,11 @@ mod tests {
         let _ = interp.collect_output();
 
         let result = interp.execute("demo@say-hello-world").await;
-        assert!(result.is_ok(), "demo@say-hello-world should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "demo@say-hello-world should resolve: {:?}",
+            result.err()
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -159,9 +204,21 @@ mod tests {
         let result = interp.execute("C4").await;
         assert!(result.is_err(), "C4 should be ambiguous");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Ambiguous"), "Expected ambiguity error, got: {}", err_msg);
-        assert!(err_msg.contains("MUSIC@C4"), "Should mention MUSIC@C4: {}", err_msg);
-        assert!(err_msg.contains("DEMO@C4"), "Should mention DEMO@C4: {}", err_msg);
+        assert!(
+            err_msg.contains("Ambiguous"),
+            "Expected ambiguity error, got: {}",
+            err_msg
+        );
+        assert!(
+            err_msg.contains("MUSIC@C4"),
+            "Should mention MUSIC@C4: {}",
+            err_msg
+        );
+        assert!(
+            err_msg.contains("DEMO@C4"),
+            "Should mention DEMO@C4: {}",
+            err_msg
+        );
     }
 
     #[tokio::test]
@@ -176,7 +233,11 @@ mod tests {
 
         // MUSIC@C4 should resolve to 264
         let result = interp.execute("MUSIC@C4").await;
-        assert!(result.is_ok(), "MUSIC@C4 should resolve: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "MUSIC@C4 should resolve: {:?}",
+            result.err()
+        );
         if let Some(val) = interp.stack.last() {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
@@ -205,7 +266,11 @@ mod tests {
         // GET is a built-in. Even if we somehow had a user GET (blocked by protection),
         // the built-in always wins without ambiguity
         let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
-        assert!(result.is_ok(), "Built-in GET should always work: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Built-in GET should always work: {:?}",
+            result.err()
+        );
     }
 
     #[tokio::test]
@@ -217,7 +282,39 @@ mod tests {
 
         // MUSIC@SEQ is a module built-in (not a sample word)
         let result = interp.execute("[ 440 ] MUSIC@SEQ MUSIC@PLAY").await;
-        assert!(result.is_ok(), "MUSIC@SEQ MUSIC@PLAY should work: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "MUSIC@SEQ MUSIC@PLAY should work: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fully_qualified_requires_import() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("JSON@PARSE").await;
+        assert!(
+            result.is_err(),
+            "Unimported module words should not resolve"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_import_only_selective_visibility() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'json' [ 'parse' ] IMPORT-ONLY")
+            .await
+            .unwrap();
+
+        let parse_result = interp.execute("'[1,2]' JSON@PARSE").await;
+        assert!(parse_result.is_ok(), "Selected word should resolve");
+
+        let stringify_result = interp.execute("JSON@STRINGIFY").await;
+        assert!(
+            stringify_result.is_err(),
+            "Unselected word should remain unresolved"
+        );
     }
 
     #[tokio::test]
