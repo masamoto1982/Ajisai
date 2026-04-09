@@ -23,6 +23,23 @@ interface ExportData {
     interpreterState: InterpreterState | null;
 }
 
+const promisifyRequest = <T>(request: IDBRequest<T>): Promise<T> =>
+    new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+const withObjectStore = <T>(
+    db: IDBDatabase,
+    storeName: string,
+    mode: IDBTransactionMode,
+    action: (store: IDBObjectStore, transaction: IDBTransaction) => Promise<T>
+): Promise<T> => {
+    const transaction = db.transaction([storeName], mode);
+    const store = transaction.objectStore(storeName);
+    return action(store, transaction);
+};
+
 class AjisaiDB {
     private dbName = 'AjisaiDB';
     private version = 4;
@@ -78,110 +95,69 @@ class AjisaiDB {
 
     async saveTable(name: string, schema: any, records: any): Promise<void> {
         if (!this.db) await this.open();
-        
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            
+
+        return withObjectStore(this.db!, this.storeName, 'readwrite', async store => {
             const tableData: TableData = {
                 name,
                 schema,
                 records,
                 updatedAt: new Date().toISOString()
             };
-            
-            const request = store.put(tableData);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+            await promisifyRequest(store.put(tableData));
         });
     }
 
     async loadTable(name: string): Promise<{ schema: any; records: any } | null> {
         if (!this.db) await this.open();
         
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            
-            const request = store.get(name);
-            request.onsuccess = () => {
-                const result = request.result;
-                if (result) {
-                    resolve({ schema: result.schema, records: result.records });
-                } else {
-                    resolve(null);
-                }
-            };
-            request.onerror = () => reject(request.error);
+        return withObjectStore(this.db!, this.storeName, 'readonly', async store => {
+            const result = await promisifyRequest(store.get(name));
+            return result ? { schema: result.schema, records: result.records } : null;
         });
     }
 
     async collectTableNames(): Promise<string[]> {
         if (!this.db) await this.open();
         
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            
-            const request = store.getAllKeys();
-            request.onsuccess = () => resolve(request.result as string[]);
-            request.onerror = () => reject(request.error);
-        });
+        return withObjectStore(this.db!, this.storeName, 'readonly', async store =>
+            (await promisifyRequest(store.getAllKeys())) as string[]
+        );
     }
 
     async deleteTable(name: string): Promise<void> {
         if (!this.db) await this.open();
         
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.storeName], 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            
-            const request = store.delete(name);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+        return withObjectStore(this.db!, this.storeName, 'readwrite', async store => {
+            await promisifyRequest(store.delete(name));
         });
     }
 
     async saveInterpreterState(state: Omit<InterpreterState, 'key' | 'updatedAt'>): Promise<void> {
         if (!this.db) await this.open();
         
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.stateStoreName], 'readwrite');
-            const store = transaction.objectStore(this.stateStoreName);
-            
+        return withObjectStore(this.db!, this.stateStoreName, 'readwrite', async store => {
             const stateData: InterpreterState = {
                 key: 'interpreter_state',
                 ...state,
                 updatedAt: new Date().toISOString()
             };
-            
-            const request = store.put(stateData);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+            await promisifyRequest(store.put(stateData));
         });
     }
 
     async loadInterpreterState(): Promise<Omit<InterpreterState, 'key' | 'updatedAt'> | null> {
         if (!this.db) await this.open();
         
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction([this.stateStoreName], 'readonly');
-            const store = transaction.objectStore(this.stateStoreName);
-            
-            const request = store.get('interpreter_state');
-            request.onsuccess = () => {
-                const result = request.result;
-                if (result) {
-                    resolve({
-                        stack: result.stack,
-                        userWords: result.userWords ?? result.customWords,
-                        demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion
-                    });
-                } else {
-                    resolve(null);
-                }
+        return withObjectStore(this.db!, this.stateStoreName, 'readonly', async store => {
+            const result = await promisifyRequest(store.get('interpreter_state'));
+            if (!result) {
+                return null;
+            }
+            return {
+                stack: result.stack,
+                userWords: result.userWords ?? result.customWords,
+                demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion
             };
-            request.onerror = () => reject(request.error);
         });
     }
 

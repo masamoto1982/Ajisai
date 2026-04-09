@@ -1,8 +1,10 @@
+use super::wasm_value_conversion::{
+    extract_display_hint_from_js, js_value_to_value, value_to_js_value_with_hint, UserWordData,
+};
+use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
 use crate::interpreter;
 use crate::tokenizer;
-use super::wasm_value_conversion::{extract_display_hint_from_js, js_value_to_value, value_to_js_value_with_hint, UserWordData};
-use super::AjisaiInterpreter;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
@@ -13,7 +15,10 @@ impl AjisaiInterpreter {
         let js_array = js_sys::Array::new();
         let hints = self.interpreter.collect_stack_hints();
         for (i, value) in self.interpreter.get_stack().iter().enumerate() {
-            let hint = hints.get(i).copied().unwrap_or(crate::types::DisplayHint::Auto);
+            let hint = hints
+                .get(i)
+                .copied()
+                .unwrap_or(crate::types::DisplayHint::Auto);
             js_array.push(&value_to_js_value_with_hint(value, hint));
         }
         js_array.into()
@@ -230,22 +235,20 @@ impl AjisaiInterpreter {
             Ok(json_val) => match deserialize_json_to_value(json_val, 1) {
                 Ok(parsed) => {
                     self.interpreter.stack.push(parsed);
-                    js_sys::Reflect::set(&obj, &"status".into(), &"OK".into()).unwrap();
+                    set_js_prop(&obj, "status", &("OK".into()));
                 }
                 Err(e) => {
-                    js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                    js_sys::Reflect::set(&obj, &"message".into(), &format!("{}", e).into())
-                        .unwrap();
+                    set_js_prop(&obj, "status", &("ERROR".into()));
+                    set_js_prop(&obj, "message", &(format!("{}", e).into()));
                 }
             },
             Err(e) => {
-                js_sys::Reflect::set(&obj, &"status".into(), &"ERROR".into()).unwrap();
-                js_sys::Reflect::set(
+                set_js_prop(&obj, "status", &("ERROR".into()));
+                set_js_prop(
                     &obj,
-                    &"message".into(),
-                    &format!("JSON parse error: {}", e).into(),
-                )
-                .unwrap();
+                    "message",
+                    &(format!("JSON parse error: {}", e).into()),
+                );
             }
         }
         Ok(obj.into())
