@@ -139,6 +139,11 @@ impl Interpreter {
                     }
                     i += 1;
                 }
+                Token::CondClauseSep => {
+                    return Err(AjisaiError::from(
+                        "Unexpected '$' separator outside COND clause parsing",
+                    ));
+                }
                 _ => {
                     i += 1;
                 }
@@ -306,6 +311,11 @@ impl Interpreter {
                 }
                 Token::SafeMode => {
                     self.safe_mode = true;
+                }
+                Token::CondClauseSep => {
+                    return Err(AjisaiError::from(
+                        "Unexpected '$' separator outside COND clause parsing",
+                    ));
                 }
 
                 Token::LineBreak => {}

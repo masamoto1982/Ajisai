@@ -499,8 +499,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "COND",
         "control",
-        "Form: Evaluate guard/body pairs, execute first match. Any, ...CodeBlock pairs -> Any",
-        "value { guard1 } { body1 } { IDLE } { else_body } COND",
+        "Form: Evaluate guard/body clauses, execute first match. Any, ...CodeBlock clauses -> Any",
+        "value { guard1 $ body1 } { IDLE $ else_body } COND",
         "form",
         BuiltinDetailGroup::Cond,
         Some(BuiltinExecutorKey::Cond)

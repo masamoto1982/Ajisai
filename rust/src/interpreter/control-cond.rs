@@ -45,15 +45,43 @@ fn collect_cond_pairs_from_stack(interp: &mut Interpreter) -> Result<Vec<(Vec<To
         break;
     }
 
-    if collected_blocks.is_empty() || collected_blocks.len() % 2 != 0 {
+    collected_blocks.reverse();
+
+    if collected_blocks.is_empty() {
+        return Err(AjisaiError::from(
+            "COND: expected guard/body clauses, got 0 code blocks",
+        ));
+    }
+
+    let has_sep_flags: Vec<bool> = collected_blocks
+        .iter()
+        .map(|block| block.iter().any(|token| matches!(token, Token::CondClauseSep)))
+        .collect();
+    let all_with_sep: bool = has_sep_flags.iter().all(|has_sep| *has_sep);
+    let none_with_sep: bool = has_sep_flags.iter().all(|has_sep| !*has_sep);
+
+    if !all_with_sep && !none_with_sep {
+        return Err(AjisaiError::from(
+            "COND: mixed clause styles are not allowed; use either {guard}{body} pairs or {guard $ body} clauses consistently",
+        ));
+    }
+
+    let mut pairs: Vec<(Vec<Token>, Vec<Token>)> = Vec::new();
+    if all_with_sep {
+        for block in &collected_blocks {
+            let (guard_tokens, body_tokens) = split_cond_clause_block(block)?;
+            pairs.push((guard_tokens, body_tokens));
+        }
+        return Ok(pairs);
+    }
+
+    if collected_blocks.len() % 2 != 0 {
         return Err(AjisaiError::from(format!(
             "COND: expected even number of code blocks (guard/body pairs), got {}",
             collected_blocks.len()
         )));
     }
 
-    collected_blocks.reverse();
-    let mut pairs: Vec<(Vec<Token>, Vec<Token>)> = Vec::new();
     let mut i: usize = 0;
     while i < collected_blocks.len() {
         let guard_tokens: Vec<Token> = collected_blocks[i].clone();
@@ -61,7 +89,33 @@ fn collect_cond_pairs_from_stack(interp: &mut Interpreter) -> Result<Vec<(Vec<To
         pairs.push((guard_tokens, body_tokens));
         i += 2;
     }
+
     Ok(pairs)
+}
+
+fn split_cond_clause_block(tokens: &[Token]) -> Result<(Vec<Token>, Vec<Token>)> {
+    let separator_indexes: Vec<usize> = tokens
+        .iter()
+        .enumerate()
+        .filter_map(|(i, token)| matches!(token, Token::CondClauseSep).then_some(i))
+        .collect();
+
+    if separator_indexes.len() != 1 {
+        return Err(AjisaiError::from(
+            "COND: a $ clause must contain exactly one '$' separator",
+        ));
+    }
+
+    let separator_index: usize = separator_indexes[0];
+    if separator_index == 0 || separator_index + 1 >= tokens.len() {
+        return Err(AjisaiError::from(
+            "COND: both guard and body are required around '$'",
+        ));
+    }
+
+    let guard_tokens = tokens[..separator_index].to_vec();
+    let body_tokens = tokens[(separator_index + 1)..].to_vec();
+    Ok((guard_tokens, body_tokens))
 }
 
 fn evaluate_guard_with_value(interp: &mut Interpreter, guard_tokens: &[Token], value: &Value) -> Result<bool> {

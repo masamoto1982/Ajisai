@@ -38,17 +38,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         if chars[i] == ';' {
             return Err("';' (code block end) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
         }
-        if chars[i] == '|' {
-            return Err("'|' (block separator) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
-        }
-        if chars[i] == '$' {
-            return Err("'$' (branch guard) has been removed. Use COND for conditional branching.".to_string());
-        }
-        if chars[i] == '&' {
-            return Err("'&' (loop guard) has been removed. Use FOLD, UNFOLD, or recursive COND for iteration.".to_string());
-        }
-
-
         if let Some((token, consumed)) = parse_token_from_single_char(chars[i]) {
             tokens.push(token);
             i += consumed;
@@ -155,6 +144,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
     check_bracket_matching(input)?;
     check_single_line_block_constraint(&tokens)?;
+    check_cond_clause_per_line_constraint(&tokens)?;
     Ok(tokens)
 }
 
@@ -163,7 +153,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~' | '$'
     )
 }
 
@@ -174,6 +164,7 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
         '{' | '(' => Some((Token::BlockStart, 1)),
         '}' | ')' => Some((Token::BlockEnd, 1)),
 
+        '$' => Some((Token::CondClauseSep, 1)),
         '~' => Some((Token::SafeMode, 1)),
 
         _ => None,
@@ -304,6 +295,48 @@ fn check_single_line_block_constraint(tokens: &[Token]) -> Result<(), String> {
                 );
             }
             _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+fn check_cond_clause_per_line_constraint(tokens: &[Token]) -> Result<(), String> {
+    let mut i: usize = 0;
+    let mut cond_clause_blocks_in_line: usize = 0;
+
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::LineBreak => {
+                cond_clause_blocks_in_line = 0;
+                i += 1;
+            }
+            Token::BlockStart => {
+                let mut depth: i32 = 1;
+                let mut j: usize = i + 1;
+                let mut has_clause_sep: bool = false;
+                while j < tokens.len() && depth > 0 {
+                    match &tokens[j] {
+                        Token::BlockStart => depth += 1,
+                        Token::BlockEnd => depth -= 1,
+                        Token::CondClauseSep if depth == 1 => has_clause_sep = true,
+                        _ => {}
+                    }
+                    j += 1;
+                }
+
+                if has_clause_sep {
+                    cond_clause_blocks_in_line += 1;
+                    if cond_clause_blocks_in_line > 1 {
+                        return Err("COND: $ clauses must be written one clause per line".to_string());
+                    }
+                }
+
+                i = j;
+            }
+            _ => {
+                i += 1;
+            }
         }
     }
 

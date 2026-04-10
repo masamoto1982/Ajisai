@@ -150,6 +150,7 @@ pub enum Token {
     BlockEnd,
     Pipeline,
     NilCoalesce,
+    CondClauseSep,
     SafeMode,
     LineBreak,
 }
@@ -171,4 +172,3 @@ pub struct WordDefinition {
 }
 
 pub type Stack = Vec<Value>;
-

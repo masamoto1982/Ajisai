@@ -81,6 +81,79 @@ mod tests {
             message
         );
     }
+
+    #[tokio::test]
+    async fn test_cond_new_clause_style_multiple_branches() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("[ 0 ]\n{ [ 0 ] < $ 'negative' }\n{ [ 0 ] = $ 'zero' }\n{ IDLE $ 'positive' }\nCOND")
+            .await;
+        assert!(result.is_ok(), "COND new style should succeed: {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn test_cond_new_clause_style_else_branch() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("[ 42 ]\n{ [ 0 ] < $ 'negative' }\n{ IDLE $ 'positive' }\nCOND")
+            .await;
+        assert!(result.is_ok(), "COND new-style else should succeed: {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn test_cond_mixed_clause_styles_error() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("[ 42 ] { [ 0 ] < $ 'negative' } { IDLE } { 'positive' } COND")
+            .await;
+        assert!(result.is_err(), "mixed clause styles should fail");
+        let message = result.err().unwrap().to_string();
+        assert!(message.contains("mixed clause styles are not allowed"), "unexpected error: {}", message);
+    }
+
+    #[tokio::test]
+    async fn test_cond_clause_requires_exactly_one_separator() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("[ 42 ] { [ 0 ] < $ 'a' $ 'b' } COND")
+            .await;
+        assert!(result.is_err(), "multiple separators should fail");
+        let message = result.err().unwrap().to_string();
+        assert!(message.contains("exactly one '$' separator"), "unexpected error: {}", message);
+    }
+
+    #[tokio::test]
+    async fn test_cond_clause_separator_left_side_required() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 42 ] { $ 'positive' } COND").await;
+        assert!(result.is_err(), "empty guard should fail");
+        let message = result.err().unwrap().to_string();
+        assert!(message.contains("both guard and body are required around '$'"), "unexpected error: {}", message);
+    }
+
+    #[tokio::test]
+    async fn test_cond_clause_separator_right_side_required() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 42 ] { IDLE $ } COND").await;
+        assert!(result.is_err(), "empty body should fail");
+        let message = result.err().unwrap().to_string();
+        assert!(message.contains("both guard and body are required around '$'"), "unexpected error: {}", message);
+    }
+
+    #[tokio::test]
+    async fn test_cond_new_clause_requires_one_clause_per_line() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("[ 42 ] { [ 0 ] < $ 'negative' } { IDLE $ 'positive' } COND")
+            .await;
+        assert!(result.is_err(), "same-line multiple $ clauses should fail");
+        let message = result.err().unwrap().to_string();
+        assert!(
+            message.contains("COND: $ clauses must be written one clause per line"),
+            "unexpected error: {}",
+            message
+        );
+    }
 }
 
 #[cfg(test)]
@@ -170,4 +243,3 @@ mod demo_word_gui_mode_tests {
         );
     }
 }
-

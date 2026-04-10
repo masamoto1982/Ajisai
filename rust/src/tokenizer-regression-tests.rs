@@ -376,17 +376,24 @@ mod tokenizer_regression_tests {
 
 
     #[test]
-    fn test_removed_dollar_branch_guard() {
-        let result = tokenize("[ 1 ] $ { TRUE } { [ 2 ] }");
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("'$' (branch guard) has been removed"));
+    fn test_dollar_tokenized_as_cond_clause_separator() {
+        let result = tokenize("{ IDLE $ 'ok' }").unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::BlockStart,
+                Token::Symbol("IDLE".into()),
+                Token::CondClauseSep,
+                Token::String("ok".into()),
+                Token::BlockEnd,
+            ]
+        );
     }
 
     #[test]
-    fn test_removed_ampersand_loop_guard() {
-        let result = tokenize("[ 0 ] & { ,, [ 5 ] < } { [ 1 ] + }");
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("'&' (loop guard) has been removed"));
+    fn test_ampersand_is_treated_as_symbol() {
+        let result = tokenize("&").unwrap();
+        assert_eq!(result, vec![Token::Symbol("&".into())]);
     }
 
     #[test]
