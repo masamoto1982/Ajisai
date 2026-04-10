@@ -3,6 +3,7 @@
 
 
 use super::extract_vector_elements;
+use super::targeting::with_stacktop_vector_target_with_arg;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, extract_bigint_from_value, extract_integer_from_value,
@@ -11,64 +12,6 @@ use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
-
-fn acquire_stacktop_target(
-    interp: &mut Interpreter,
-    arg_to_restore: &Value,
-    preserve_source: bool,
-    missing_target_error: AjisaiError,
-) -> Result<Value> {
-    if preserve_source {
-        return interp.stack.last().cloned().ok_or_else(|| {
-            interp.stack.push(arg_to_restore.clone());
-            missing_target_error
-        });
-    }
-
-    interp.stack.pop().ok_or_else(|| {
-        interp.stack.push(arg_to_restore.clone());
-        missing_target_error
-    })
-}
-
-fn with_stacktop_vector_target<R, F>(
-    interp: &mut Interpreter,
-    arg_to_restore: &Value,
-    preserve_source: bool,
-    missing_target_error: AjisaiError,
-    action: F,
-) -> Result<R>
-where
-    F: FnOnce(&Value) -> Result<R>,
-{
-    let target_val = acquire_stacktop_target(
-        interp,
-        arg_to_restore,
-        preserve_source,
-        missing_target_error,
-    )?;
-    if !target_val.is_vector() {
-        if !preserve_source {
-            interp.stack.push(target_val);
-        }
-        interp.stack.push(arg_to_restore.clone());
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
-        ));
-    }
-
-    match action(&target_val) {
-        Ok(result) => Ok(result),
-        Err(error) => {
-            if !preserve_source {
-                interp.stack.push(target_val);
-            }
-            interp.stack.push(arg_to_restore.clone());
-            Err(error)
-        }
-    }
-}
 
 fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, usize)> {
     if count < 0 {
@@ -166,11 +109,10 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let result = with_stacktop_vector_target(
+            let result = with_stacktop_vector_target_with_arg(
                 interp,
                 &count_val,
                 is_keep_mode,
-                AjisaiError::StackUnderflow,
                 |vector_val| {
                     let elements = extract_vector_elements(vector_val);
                     let (start, end) = compute_take_bounds(elements.len(), count, "vector")?;
@@ -254,11 +196,10 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let result_vectors = with_stacktop_vector_target(
+            let result_vectors = with_stacktop_vector_target_with_arg(
                 interp,
                 &args_val,
                 is_keep_mode,
-                AjisaiError::from("SPLIT requires a vector to split"),
                 |vector_val| {
                     let elements = extract_vector_elements(vector_val);
                     let total_size: usize = sizes.iter().sum();

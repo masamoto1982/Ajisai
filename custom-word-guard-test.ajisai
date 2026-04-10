@@ -1,2 +1,24 @@
-# Guard clause and custom word definition test cases
-# This file will be rewritten with correct test cases
+# Custom word behavior regression cases (canonical)
+
+# 1) Basic custom word definition and execution
+[ '[ 1 ] [ 2 ] +' ] 'ADD12' DEF
+ADD12 PRINT
+# 期待: [ 3 ]
+
+# 2) Custom word composed from built-ins
+[ '[ 1 ] +' ] 'INC' DEF
+[ 41 ] INC PRINT
+# 期待: [ 42 ]
+
+# 3) Custom word can be redefined intentionally
+[ '[ 2 ] +' ] 'INC' DEF
+[ 40 ] INC PRINT
+# 期待: [ 42 ]
+
+# 4) Guarded branch style with COND
+[ 7 ]
+[
+  [ [ 5 ] > ] $ [ [ 'big' ] ]
+  [ else ] $ [ [ 'small' ] ]
+] COND PRINT
+# 期待: [ 'big' ]

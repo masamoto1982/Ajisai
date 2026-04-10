@@ -23,9 +23,6 @@ pub enum AjisaiError {
     ExecutionLimitExceeded {
         limit: usize,
     },
-    NoChange {
-        word: String,
-    },
     ModeUnsupported {
         word: String,
         mode: String,
@@ -90,9 +87,6 @@ impl fmt::Display for AjisaiError {
             }
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
-            }
-            AjisaiError::NoChange { word } => {
-                write!(f, "No change: {} produced no effect", word)
             }
             AjisaiError::ModeUnsupported { word, mode } => {
                 write!(f, "{} does not support {} mode (..)", word, mode)

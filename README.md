@@ -8,11 +8,21 @@
 
 # Ajisai
 
-Ajisai is a vector-oriented, fractional-dataflow programming language with a Rust (WebAssembly) core and TypeScript web GUI.
+Ajisai is an AI-first, vector-oriented, fractional-dataflow language with a Rust (WASM) core and TypeScript GUI/runtime shell.
 
 - Playground: https://masamoto1982.github.io/Ajisai/
 
-> **Note:** Ajisai is currently under active development. Documentation is not yet publicly available. Please refer to `SPECIFICATION.md` for the canonical language specification.
+## Documentation Authority
+
+- **Canonical language/runtime semantics**: `SPECIFICATION.md`
+- **Secondary docs**: informational only, non-canonical unless explicitly promoted by `SPECIFICATION.md`
+
+## Development Checks
+
+- `cd rust && cargo test --lib`
+- `cd rust && cargo test --tests`
+- `cd rust && cargo test --test gui-interpreter-test-cases`
+- `npm run check`
 
 ## License
 

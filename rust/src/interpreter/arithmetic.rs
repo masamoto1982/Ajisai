@@ -24,7 +24,7 @@ fn is_scalar_value(val: &Value) -> bool {
     extract_scalar_from_value(val).is_some()
 }
 
-fn apply_binary_arithmetic<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
+fn apply_binary_arithmetic<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
@@ -55,15 +55,6 @@ where
                     return Err(e);
                 }
             };
-
-            if !interp.disable_no_change_check && (result == *a_val || result == *b_val) {
-                if !is_keep_mode {
-                    for val in operands {
-                        interp.stack.push(val);
-                    }
-                }
-                return Err(AjisaiError::NoChange { word: op_name.into() });
-            }
 
             if let Some(ref tokens) = flow_tokens {
                 let consumed: Vec<Fraction> = tokens.iter().map(|t| t.total.clone()).collect();
@@ -112,20 +103,11 @@ where
 
             let first_scalar: Fraction = extract_scalar_from_value(&items[0]).unwrap().clone();
             let mut acc = first_scalar.clone();
-            let original_first = acc.clone();
 
             for item in items.iter().skip(1) {
                 if let Some(f) = extract_scalar_from_value(item) {
                     acc = op(&acc, f)?;
                 }
-            }
-
-            if !interp.disable_no_change_check && acc == original_first {
-                if !is_keep_mode {
-                    interp.stack.extend(items);
-                }
-                interp.stack.push(count_val);
-                return Err(AjisaiError::NoChange { word: op_name.into() });
             }
 
             push_result(interp, Value::from_fraction(acc));
@@ -172,7 +154,7 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
-    apply_binary_arithmetic(interp, |a, b| Ok(a.add(b)), "+")
+    apply_binary_arithmetic(interp, |a, b| Ok(a.add(b)))
 }
 
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
@@ -196,7 +178,7 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
-    apply_binary_arithmetic(interp, |a, b| Ok(a.sub(b)), "-")
+    apply_binary_arithmetic(interp, |a, b| Ok(a.sub(b)))
 }
 
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
@@ -236,7 +218,7 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
-    apply_binary_arithmetic(interp, |a, b| Ok(a.mul(b)), "*")
+    apply_binary_arithmetic(interp, |a, b| Ok(a.mul(b)))
 }
 
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
@@ -246,5 +228,5 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         } else {
             Ok(a.div(b))
         }
-    }, "/")
+    })
 }

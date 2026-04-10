@@ -11,6 +11,7 @@
 pub mod position;
 pub mod quantity;
 pub mod structure;
+mod targeting;
 
 #[cfg(test)]
 mod tests;

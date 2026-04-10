@@ -84,6 +84,27 @@ async fn test_conservation_flow_token_basic() {
     token2.verify_conservation(&[frac(3, 1)]).unwrap();
 }
 
+
+#[tokio::test]
+async fn test_conservation_violation_maps_to_flow_break_error() {
+    let val = Value::from_fraction(frac(10, 1));
+    let token = FlowToken::from_value(&val);
+
+    let err = token.verify_conservation(&[frac(1, 1)]).unwrap_err();
+    let msg = format!("{}", err);
+    assert!(msg.contains("Flow break"), "Expected FlowBreak display, got: {}", msg);
+}
+
+#[tokio::test]
+async fn test_bifurcation_violation_maps_to_bifurcation_error() {
+    let parent_remaining = frac(5, 1);
+    let fake_child = FlowToken::from_value(&Value::from_fraction(frac(1, 1)));
+
+    let err = FlowToken::verify_bifurcation_conservation(&parent_remaining, &[fake_child]).unwrap_err();
+    let msg = format!("{}", err);
+    assert!(msg.contains("Bifurcation conservation violation"), "Expected BifurcationViolation display, got: {}", msg);
+}
+
 #[tokio::test]
 async fn test_conservation_vector_total() {
 

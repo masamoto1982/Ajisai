@@ -3,6 +3,7 @@
 
 
 use super::extract_vector_elements;
+use super::targeting::{with_stacktop_vector_target_no_arg, with_stacktop_vector_target_with_arg};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{
     extract_bigint_from_value, extract_integer_from_value, normalize_index,
@@ -11,95 +12,6 @@ use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
-
-fn acquire_stacktop_target(
-    interp: &mut Interpreter,
-    arg_to_restore: &Value,
-    preserve_source: bool,
-) -> Result<Value> {
-    if preserve_source {
-        return interp.stack.last().cloned().ok_or_else(|| {
-            interp.stack.push(arg_to_restore.clone());
-            AjisaiError::StackUnderflow
-        });
-    }
-
-    interp.stack.pop().ok_or_else(|| {
-        interp.stack.push(arg_to_restore.clone());
-        AjisaiError::StackUnderflow
-    })
-}
-
-fn with_stacktop_vector_target<R, F>(
-    interp: &mut Interpreter,
-    arg_to_restore: &Value,
-    preserve_source: bool,
-    action: F,
-) -> Result<R>
-where
-    F: FnOnce(&Value) -> Result<R>,
-{
-    let target_val = acquire_stacktop_target(interp, arg_to_restore, preserve_source)?;
-    if !target_val.is_vector() {
-        if !preserve_source {
-            interp.stack.push(target_val);
-        }
-        interp.stack.push(arg_to_restore.clone());
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
-        ));
-    }
-
-    match action(&target_val) {
-        Ok(result) => Ok(result),
-        Err(error) => {
-            if !preserve_source {
-                interp.stack.push(target_val);
-            }
-            interp.stack.push(arg_to_restore.clone());
-            Err(error)
-        }
-    }
-}
-
-fn with_stacktop_vector_target_no_arg<R, F>(
-    interp: &mut Interpreter,
-    preserve_source: bool,
-    action: F,
-) -> Result<R>
-where
-    F: FnOnce(&Value) -> Result<R>,
-{
-    let target_val = if preserve_source {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
-    if !target_val.is_vector() {
-        if !preserve_source {
-            interp.stack.push(target_val);
-        }
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
-        ));
-    }
-
-    match action(&target_val) {
-        Ok(result) => Ok(result),
-        Err(error) => {
-            if !preserve_source {
-                interp.stack.push(target_val);
-            }
-            Err(error)
-        }
-    }
-}
 
 fn parse_concat_count(
     interp: &mut Interpreter,
@@ -247,26 +159,10 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let disable_no_change_check = interp.disable_no_change_check;
             let reversed =
                 with_stacktop_vector_target_no_arg(interp, is_keep_mode, |vector_val| {
                     let mut v = extract_vector_elements(vector_val).to_vec();
-                    if !disable_no_change_check {
-                        if v.len() < 2 {
-                            return Err(AjisaiError::NoChange {
-                                word: "REVERSE".into(),
-                            });
-                        }
-                        let original_v = v.clone();
-                        v.reverse();
-                        if v == original_v {
-                            return Err(AjisaiError::NoChange {
-                                word: "REVERSE".into(),
-                            });
-                        }
-                    } else {
-                        v.reverse();
-                    }
+                    v.reverse();
                     Ok(Value::from_vector(v))
                 })?;
             interp.stack.push(reversed);
@@ -274,45 +170,11 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
         }
         OperationTargetMode::Stack => {
             if is_keep_mode {
-
-                let original = interp.stack.clone();
-                if !interp.disable_no_change_check {
-                    if original.len() < 2 {
-                        return Err(AjisaiError::NoChange {
-                            word: "REVERSE".into(),
-                        });
-                    }
-                    let mut reversed = original.clone();
-                    reversed.reverse();
-                    if reversed == original {
-                        return Err(AjisaiError::NoChange {
-                            word: "REVERSE".into(),
-                        });
-                    }
-                    interp.stack.extend(reversed);
-                } else {
-                    let mut reversed = original.clone();
-                    reversed.reverse();
-                    interp.stack.extend(reversed);
-                }
+                let mut reversed = interp.stack.clone();
+                reversed.reverse();
+                interp.stack.extend(reversed);
             } else {
-                if !interp.disable_no_change_check {
-                    if interp.stack.len() < 2 {
-                        return Err(AjisaiError::NoChange {
-                            word: "REVERSE".into(),
-                        });
-                    }
-                    let original_stack = interp.stack.clone();
-                    interp.stack.reverse();
-                    if interp.stack == original_stack {
-                        interp.stack = original_stack;
-                        return Err(AjisaiError::NoChange {
-                            word: "REVERSE".into(),
-                        });
-                    }
-                } else {
-                    interp.stack.reverse();
-                }
+                interp.stack.reverse();
             }
             Ok(())
         }
@@ -388,7 +250,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let reordered =
-                with_stacktop_vector_target(interp, &indices_val, is_keep_mode, |target_val| {
+                with_stacktop_vector_target_with_arg(interp, &indices_val, is_keep_mode, |target_val| {
                     let len = target_val.len();
                     if len == 0 {
                         return Err(AjisaiError::from("REORDER: target vector is empty"));

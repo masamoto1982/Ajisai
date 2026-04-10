@@ -289,12 +289,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_safe_mode_with_no_change_operation() {
+    async fn test_safe_mode_with_reverse_singleton() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1 ] ~ REVERSE").await;
         assert!(
             result.is_ok(),
-            "Safe mode should allow no-change operation: {:?}",
+            "Safe mode should allow REVERSE on singleton vector: {:?}",
             result
         );
         assert_eq!(interp.stack.len(), 1, "Stack should remain unchanged: {:?}", interp.stack);
