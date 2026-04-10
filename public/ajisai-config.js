@@ -12,6 +12,8 @@
 
 
 const AjisaiConfig = {
+    // App UI version shown in headers (edit this value when you want to bump the displayed version)
+    appVersion: '202604102001',
 
 
 
