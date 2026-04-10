@@ -20,7 +20,7 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: DisplayHint) -> bool 
         ValueData::Scalar(_) => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
-        ValueData::CodeBlock(_) => return false,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return false,
     };
     children.iter().all(|child| check_char_scalar(child))
 }
@@ -31,7 +31,7 @@ fn check_char_scalar(child: &Value) -> bool {
         ValueData::Vector(_) => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
-        ValueData::CodeBlock(_) => return false,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return false,
     };
     let n: i64 = match f.to_i64() {
         Some(n) if n >= 0 && n <= 0x10FFFF => n,
@@ -182,7 +182,7 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().flat_map(|c| collect_fractions(c)).collect(),
-            ValueData::CodeBlock(_) => vec!["<code>".to_string()],
+            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => vec!["<code>".to_string()],
         }
     }
 

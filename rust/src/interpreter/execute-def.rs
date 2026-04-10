@@ -25,7 +25,7 @@ fn extract_string_from_value(val: &Value) -> Result<String> {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().flat_map(|c| collect_chars(c)).collect(),
-            ValueData::CodeBlock(_) => vec![],
+            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => vec![],
         }
     }
 
@@ -50,7 +50,7 @@ fn is_string_like(val: &Value) -> bool {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().all(|c| check_codepoints(c)),
-            ValueData::CodeBlock(_) => false,
+            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => false,
         }
     }
 

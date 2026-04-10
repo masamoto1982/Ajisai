@@ -109,6 +109,10 @@ export function formatValueSimple(value: Value): string {
                 return `[${elements ? ' ' + elements + ' ' : ''}]`;
             }
             return '[]';
+        case 'process_handle':
+            return `<process:${value.value}>`;
+        case 'supervisor_handle':
+            return `<supervisor:${value.value}>`;
         default:
             return JSON.stringify(value.value);
     }

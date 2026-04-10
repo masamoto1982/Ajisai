@@ -33,7 +33,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 ValueData::Record {
                     pairs: children, ..
                 } => children,
-                ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) => {
+                ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
                     if !is_keep_mode {
                         interp.stack.push(val);
                     }

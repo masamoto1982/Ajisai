@@ -8,7 +8,7 @@ pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
         ValueData::Scalar(_)
         | ValueData::Record { .. }
         | ValueData::Nil
-        | ValueData::CodeBlock(_) => return None,
+        | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return None,
     };
 
     if children.len() < SIMD_THRESHOLD {
@@ -26,7 +26,7 @@ pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
             | ValueData::Vector(_)
             | ValueData::Record { .. }
             | ValueData::Nil
-            | ValueData::CodeBlock(_) => return None,
+            | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return None,
         }
     }
     Some(result)
@@ -44,7 +44,7 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
         | ValueData::Vector(_)
         | ValueData::Record { .. }
         | ValueData::Nil
-        | ValueData::CodeBlock(_) => None,
+        | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
     }
 }
 
