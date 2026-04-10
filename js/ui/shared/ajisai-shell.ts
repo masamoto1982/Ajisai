@@ -1,4 +1,5 @@
 import { renderAjisaiHeader } from './header-view';
+import { AJISAI_APP_VERSION } from './app-version';
 
 export interface NavItem {
     readonly label: string;
@@ -41,7 +42,7 @@ const defaultConfig: DocsShellConfig = {
         github: { url: 'https://github.com/masamoto1982/Ajisai', label: 'GitHub' },
         demo: { url: 'https://masamoto1982.github.io/Ajisai/', label: 'Try Demo' }
     },
-    version: '202604080203'
+    version: AJISAI_APP_VERSION
 };
 
 export const renderDocsShell = (root: ParentNode, config: DocsShellConfig = defaultConfig): void => {
