@@ -24,8 +24,13 @@
 
     const renderDocsShell = (root, config) => {
         const headerEl = root.getElementById('js-header');
-        if (headerEl) {
-            headerEl.innerHTML = `<div class="app-header-top"><a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai"><span class="logo-swap" aria-hidden="true"><img src="../images/ajisai-logo-thumbnail-w40.jpg" alt="" class="logo logo-default"><img src="../images/ajisai-qr.png" alt="" class="logo logo-qr"></span><div class="app-brand-meta"><h1>${config.meta.title}</h1><span class="version">ver.${config.version}</span></div></a></div>`;
+        if (headerEl && window.AjisaiSharedUI?.renderHeader) {
+            window.AjisaiSharedUI.renderHeader(headerEl, {
+                mode: 'reference',
+                version: config.version,
+                assetsPath: '../images',
+                referenceHref: 'index.html'
+            });
         }
 
         const sideNavEl = root.getElementById('js-side-nav');
