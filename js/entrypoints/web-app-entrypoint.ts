@@ -4,6 +4,7 @@ import { createGUI } from '../gui/gui-application';
 import { monitorWebOnlineStatus } from '../infrastructure/web/web-online-status';
 import { registerWebServiceWorker } from '../infrastructure/web/web-service-worker';
 import { createWebPlatformServices } from '../platform/web/create-web-platform-services';
+import { AJISAI_APP_VERSION } from '../ui/shared/app-version';
 
 declare global {
     interface Window {
@@ -37,7 +38,7 @@ export async function startWebApp(): Promise<void> {
         if (headerEl instanceof HTMLElement && window.AjisaiSharedUI?.renderHeader) {
             window.AjisaiSharedUI.renderHeader(headerEl, {
                 mode: 'web',
-                version: '202604102001',
+                version: AJISAI_APP_VERSION,
                 assetsPath: './public/images',
                 referenceHref: 'docs/index.html'
             });

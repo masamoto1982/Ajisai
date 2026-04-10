@@ -1,0 +1,1 @@
+export const AJISAI_APP_VERSION = '202604102001';
