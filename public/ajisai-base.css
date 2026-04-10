@@ -140,6 +140,40 @@ header {
     object-fit: contain;
 }
 
+.logo-swap {
+    position: relative;
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+}
+
+.logo-swap .logo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: opacity 0.18s ease-in-out;
+}
+
+.logo-default {
+    opacity: 1;
+}
+
+.logo-qr {
+    opacity: 0;
+}
+
+.app-brand-block:hover .logo-default,
+.app-brand-block:focus-visible .logo-default,
+.app-brand-block:focus-within .logo-default {
+    opacity: 0;
+}
+
+.app-brand-block:hover .logo-qr,
+.app-brand-block:focus-visible .logo-qr,
+.app-brand-block:focus-within .logo-qr {
+    opacity: 1;
+}
+
 header h1 {
     font-size: 1.5rem;
     color: var(--heading-h1);
