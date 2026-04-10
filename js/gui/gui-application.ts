@@ -6,7 +6,7 @@ import { createModuleTabManager, ModuleTabManager } from './module-selector-shee
 import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter } from '../wasm-interpreter-types';
+import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 import {
     GUIElements,
     cacheElements,
@@ -25,12 +25,6 @@ import {
 } from './gui-layout-state';
 import { switchDictionarySheet } from './gui-dictionary-sheet';
 
-declare global {
-    interface Window {
-        ajisaiInterpreter: AjisaiInterpreter;
-    }
-}
-
 export type { GUIElements };
 
 export interface GUI {
@@ -45,13 +39,11 @@ export interface GUI {
     readonly extractExecutionController: () => ExecutionController;
 }
 
-const collectAutocompleteWords = (): string[] => {
-    if (!window.ajisaiInterpreter) return [];
-
-    const coreWordsInfo = window.ajisaiInterpreter.collect_core_words_info();
+const collectAutocompleteWords = (runtime: AjisaiRuntime): string[] => {
+    const coreWordsInfo = runtime.collectCoreWordsInfo();
     const coreWords: string[] = coreWordsInfo.map(word => word[0]).filter((w): w is string => w !== undefined);
 
-    const userWordsInfo = window.ajisaiInterpreter.collect_user_words_info();
+    const userWordsInfo = runtime.collectUserWordsInfo();
     const userWords: string[] = userWordsInfo.flatMap(word => [
         word[1],
         `${word[0]}@${word[1]}`
@@ -59,15 +51,15 @@ const collectAutocompleteWords = (): string[] => {
 
     const moduleWords: string[] = [];
     try {
-        const importedModules: string[] = window.ajisaiInterpreter.collect_imported_modules();
+        const importedModules: string[] = runtime.collectImportedModules();
         for (const moduleName of importedModules) {
-            const words = window.ajisaiInterpreter.collect_module_words_info(moduleName);
+            const words = runtime.collectModuleWordsInfo(moduleName);
             const prefix: string = `${moduleName}@`;
             for (const word of words) {
                 const name: string = word[0] ?? '';
                 moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);
             }
-            const sampleWords = window.ajisaiInterpreter.collect_module_sample_words_info(moduleName);
+            const sampleWords = runtime.collectModuleSampleWordsInfo(moduleName);
             for (const word of sampleWords) {
                 const sampleName: string = word[0] ?? '';
                 moduleWords.push(sampleName);
@@ -79,7 +71,12 @@ const collectAutocompleteWords = (): string[] => {
     return Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));
 };
 
-export const createGUI = (): GUI => {
+export interface GUIOptions {
+    readonly runtime: AjisaiRuntime;
+    readonly root?: ParentNode;
+}
+
+export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
     let elements: GUIElements;
     let display: Display;
     let editor: Editor;
@@ -100,11 +97,9 @@ export const createGUI = (): GUI => {
     };
 
     const updateAllDisplays = (): void => {
-        if (!window.ajisaiInterpreter) return;
-
         try {
-            display.renderStack(window.ajisaiInterpreter.collect_stack());
-            vocabulary.updateUserWords(window.ajisaiInterpreter.collect_user_words_info());
+            display.renderStack(runtime.collectStack());
+            vocabulary.updateUserWords(runtime.collectUserWordsInfo());
 
             const newSheetIds: string[] = moduleTabManager.syncModuleTabs();
 
@@ -190,6 +185,8 @@ export const createGUI = (): GUI => {
             switchArea('output');
             const { createTestRunner } = await import('./gui-test-runner');
             const testRunner = createTestRunner({
+                runtime,
+                root,
                 showInfo: (text: string, append: boolean) => display.renderInfo(text, append),
                 showError: (error: Error | string) => display.renderError(error),
                 updateDisplays: updateAllDisplays
@@ -254,7 +251,7 @@ export const createGUI = (): GUI => {
     const init = async (): Promise<void> => {
         console.log('[GUI] Initializing GUI...');
 
-        elements = cacheElements();
+        elements = cacheElements(root);
         layoutState = createLayoutState();
         mobile = createMobileHandler(extractMobileElements(elements), {
             onModeChange: (mode) => switchArea(mode)
@@ -264,6 +261,7 @@ export const createGUI = (): GUI => {
         updateEditorPlaceholder(elements, mobile);
 
         moduleTabManager = createModuleTabManager({
+            runtime,
             selectEl: elements.dictionarySheetSelect,
             sheetContainerEl: elements.dictionaryArea,
             onWordClick: (word: string) => {
@@ -301,6 +299,8 @@ export const createGUI = (): GUI => {
         });
 
         persistence = createPersistence({
+            runtime,
+            root,
             showError: (error) => display.renderError(error),
             updateDisplays: updateAllDisplays,
             showInfo: (text, append) => display.renderInfo(text, append)
@@ -310,10 +310,11 @@ export const createGUI = (): GUI => {
         editor = createEditor(elements.codeInput, {
             onContentChange: (content) => updateHighlights(elements, content),
             onSwitchToInputMode: () => switchArea('input'),
-            onRequestSuggestions: () => collectAutocompleteWords()
+            onRequestSuggestions: () => collectAutocompleteWords(runtime)
         });
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
+            runtime,
             onWordClick: (word) => {
                 if (!mobile.isMobile()) {
                     editor.insertWord(word);
@@ -334,7 +335,7 @@ export const createGUI = (): GUI => {
             showInfo: (text, append) => display.renderInfo(text, append)
         });
 
-        executionController = createExecutionController(window.ajisaiInterpreter, {
+        executionController = createExecutionController(runtime, {
             extractEditorValue: () => editor.extractValue(),
             clearEditor: (switchView) => { editor.clear(switchView); },
             updateEditorValue: (value) => editor.updateValue(value),
@@ -372,8 +373,6 @@ export const createGUI = (): GUI => {
         extractExecutionController: () => executionController
     };
 };
-
-export const GUI_INSTANCE = createGUI();
 
 export const guiUtils = {
     cacheElements,
