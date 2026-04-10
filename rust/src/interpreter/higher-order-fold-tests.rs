@@ -183,6 +183,30 @@ mod tests {
         assert_eq!(top_scalar_i64(&interp5), 2);
     }
 
+
+    #[tokio::test]
+    async fn test_count_percent_alias_matches_mod() {
+        let mut mod_interp = Interpreter::new();
+        let mod_result = mod_interp
+            .execute("[ 1 2 3 4 5 6 ] { [ 2 ] MOD [ 0 ] = } COUNT")
+            .await;
+        assert!(mod_result.is_ok(), "COUNT with MOD failed: {:?}", mod_result);
+        let mod_count = top_scalar_i64(&mod_interp);
+
+        let mut alias_interp = Interpreter::new();
+        let alias_result = alias_interp
+            .execute("[ 1 2 3 4 5 6 ] { [ 2 ] % [ 0 ] = } COUNT")
+            .await;
+        assert!(
+            alias_result.is_ok(),
+            "COUNT with % alias failed: {:?}",
+            alias_result
+        );
+        let alias_count = top_scalar_i64(&alias_interp);
+
+        assert_eq!(alias_count, mod_count);
+    }
+
     #[tokio::test]
     async fn test_scan_add_mul_nil_user_word_and_stack_preserve() {
         let mut interp = Interpreter::new();

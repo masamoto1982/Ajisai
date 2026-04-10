@@ -197,6 +197,30 @@ mod tokenizer_regression_tests {
         assert_eq!(result4, vec![Token::Number("1.5e10".into())]);
     }
 
+
+    #[test]
+    fn test_percent_symbol_token() {
+        let result = tokenize("%").unwrap();
+        assert_eq!(result, vec![Token::Symbol("%".into())]);
+    }
+
+    #[test]
+    fn test_percent_symbol_in_mod_context() {
+        let result = tokenize("[ 7 ] [ 3 ] %").unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::VectorStart,
+                Token::Number("7".into()),
+                Token::VectorEnd,
+                Token::VectorStart,
+                Token::Number("3".into()),
+                Token::VectorEnd,
+                Token::Symbol("%".into()),
+            ]
+        );
+    }
+
     #[test]
     fn test_operator_symbols() {
         let result = tokenize("+ -").unwrap();

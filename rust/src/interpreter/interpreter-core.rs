@@ -211,10 +211,15 @@ impl Interpreter {
     }
 
     pub(crate) fn normalize_symbol<'a>(symbol: &'a str) -> std::borrow::Cow<'a, str> {
-        if symbol.as_bytes().iter().any(|b| b.is_ascii_lowercase()) {
-            std::borrow::Cow::Owned(symbol.to_uppercase())
-        } else {
-            std::borrow::Cow::Borrowed(symbol)
+        match symbol {
+            "%" => std::borrow::Cow::Borrowed("MOD"),
+            _ => {
+                if symbol.as_bytes().iter().any(|b| b.is_ascii_lowercase()) {
+                    std::borrow::Cow::Owned(symbol.to_uppercase())
+                } else {
+                    std::borrow::Cow::Borrowed(symbol)
+                }
+            }
         }
     }
 

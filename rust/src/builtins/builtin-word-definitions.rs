@@ -688,8 +688,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "MOD",
         "arithmetic",
-        "Fold: Modulo (broadcast). Numeric, Numeric -> Numeric",
-        "[ 7 ] [ 3 ] MOD → [ 1 ]",
+        "Fold: Modulo (broadcast). Alias: % (postfix sugar). Numeric, Numeric -> Numeric",
+        "[ 7 ] [ 3 ] MOD → [ 1 ], [ 7 ] [ 3 ] % → [ 1 ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Mod)
