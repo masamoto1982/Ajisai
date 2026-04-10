@@ -3,6 +3,7 @@
 import type { Value } from '../wasm-interpreter-types';
 import { TEST_CASES, type TestCase } from './gui-interpreter-test-cases';
 import { formatStack, formatValueSimple, compareStack, compareValue } from './value-formatter';
+import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 
 
 
@@ -23,6 +24,8 @@ export interface TestSummary {
 }
 
 export interface TestRunnerCallbacks {
+    readonly runtime: AjisaiRuntime;
+    readonly root?: ParentNode;
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showError: (error: Error | string) => void;
     readonly updateDisplays: () => void;
@@ -90,9 +93,10 @@ const calculateStackDifference = (
 
 
 export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner => {
+    const { runtime, root = document } = _callbacks;
 
     const lookupOutputElement = (): HTMLElement | null =>
-        document.getElementById('output-display');
+        root.querySelector('#output-display');
 
 
     const showColoredInfo = (text: string, type: InfoType): void => {
@@ -121,12 +125,10 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
 
 
     const resetInterpreter = async (): Promise<void> => {
-        if (!window.ajisaiInterpreter) return;
-
         const outputElement = lookupOutputElement();
         const currentOutput = outputElement?.innerHTML || '';
 
-        await window.ajisaiInterpreter.reset();
+        runtime.reset();
 
         if (outputElement) {
             outputElement.innerHTML = currentOutput;
@@ -136,7 +138,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
 
     const checkExpectations = async (testCase: TestCase): Promise<TestResult> => {
         if (testCase.expectedStack) {
-            const stack = window.ajisaiInterpreter.collect_stack();
+            const stack = runtime.collectStack();
             const matches = compareStack(stack, testCase.expectedStack);
             return {
                 passed: matches,
@@ -147,7 +149,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
 
         if (testCase.expectedOutput) {
             await resetInterpreter();
-            const result = await window.ajisaiInterpreter.execute(testCase.code);
+            const result = await runtime.execute(testCase.code);
             const matches = result.output?.trim() === testCase.expectedOutput.trim();
             return {
                 passed: matches,
@@ -178,7 +180,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
 
 
         const defPart = lines.slice(0, defEndIndex + 1).join('\n');
-        const defResult = await window.ajisaiInterpreter.execute(defPart);
+        const defResult = await runtime.execute(defPart);
 
         if (defResult.status === 'ERROR') {
             return {
@@ -196,7 +198,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
                 .join('\n');
 
             if (execPart) {
-                const execResult = await window.ajisaiInterpreter.execute(execPart);
+                const execResult = await runtime.execute(execPart);
 
                 if (testCase.expectError) {
                     return {
@@ -231,7 +233,7 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
         }
 
 
-        const result = await window.ajisaiInterpreter.execute(testCase.code);
+        const result = await runtime.execute(testCase.code);
 
         if (testCase.expectError) {
             return {
