@@ -4,6 +4,7 @@ import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-typ
 import type DB from '../indexeddb-user-word-store';
 import { DEMO_USER_WORDS, DEMO_WORDS_VERSION } from './demo-words';
 import { Result, ok, err } from './functional-result-helpers';
+import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 
 export interface InterpreterState {
     readonly stack: Value[];
@@ -12,6 +13,8 @@ export interface InterpreterState {
 }
 
 export interface PersistenceCallbacks {
+    readonly runtime: AjisaiRuntime;
+    readonly root?: ParentNode;
     readonly showError?: (error: Error) => void;
     readonly updateDisplays?: () => void;
     readonly showInfo?: (text: string, append: boolean) => void;
@@ -130,8 +133,8 @@ const parseUserWords = (jsonString: string): Result<UserWord[], Error> => {
     }
 };
 
-export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
-    const { showError, updateDisplays, showInfo } = callbacks;
+export const createPersistence = (callbacks: PersistenceCallbacks): Persistence => {
+    const { runtime, root = document, showError, updateDisplays, showInfo } = callbacks;
     let dbInitialized = false;
     const MAX_RETRY_COUNT = 3;
     const RETRY_DELAY_MS = 1000;
@@ -159,14 +162,17 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
     };
 
     const saveCurrentState = async (): Promise<void> => {
-        if (!window.ajisaiInterpreter) return;
         if (!dbInitialized) {
             console.warn('Database not initialized, skipping state save.');
             return;
         }
 
         try {
-            const state = collectCurrentState(window.ajisaiInterpreter);
+            const state = collectCurrentState({
+                collect_user_words_info: runtime.collectUserWordsInfo,
+                lookup_word_definition: runtime.lookupWordDefinition,
+                collect_stack: runtime.collectStack
+            } as AjisaiInterpreter);
             await window.AjisaiDB.saveInterpreterState(state);
             console.log('State saved automatically.');
         } catch (error) {
@@ -176,7 +182,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
     const loadDemoWords = async (): Promise<void> => {
         try {
-            await window.ajisaiInterpreter.restore_user_words(DEMO_USER_WORDS);
+            await runtime.restoreUserWords(DEMO_USER_WORDS);
             await saveCurrentState();
             console.log('Demo user words loaded.');
 
@@ -188,7 +194,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
     };
 
     const loadDatabaseData = async (): Promise<void> => {
-        if (!window.ajisaiInterpreter) return;
         if (!dbInitialized) {
             console.warn('Database not initialized, loading sample words instead.');
             await loadDemoWords();
@@ -200,7 +205,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
 
             if (state) {
                 if (state.stack) {
-                    window.ajisaiInterpreter.restore_stack(state.stack);
+                    runtime.restoreStack(state.stack);
                 }
 
                 if (state.userWords && state.userWords.length > 0) {
@@ -230,16 +235,16 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                         console.log(`Sample words migrated: v${savedVersion} → v${DEMO_WORDS_VERSION}`);
                     }
 
-                    await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
+                    await runtime.restoreUserWords(wordsToRestore);
 
 
 
 
                     const savedWordNames = new Set(wordsToRestore.map((w: UserWord) => w.name.toUpperCase()));
-                    const currentWords = window.ajisaiInterpreter.collect_user_words_info();
+                    const currentWords = runtime.collectUserWordsInfo();
                     for (const [name] of currentWords) {
                         if (!savedWordNames.has(name.toUpperCase())) {
-                            window.ajisaiInterpreter.remove_word(name);
+                            runtime.removeWord(name);
                         }
                     }
 
@@ -262,18 +267,16 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
     };
 
     const exportUserWords = (): void => {
-        if (!window.ajisaiInterpreter) {
-            showError?.(new Error('Interpreter not available'));
-            return;
-        }
-
-        const selectedDictionary = (document.getElementById('user-dictionary-select') as HTMLSelectElement | null)?.value || 'DEMO';
+        const selectedDictionary = (root.querySelector('#user-dictionary-select') as HTMLSelectElement | null)?.value || 'DEMO';
         const suggestedName = selectedDictionary.toLowerCase();
         const requestedName = window.prompt('Export file name', suggestedName)?.trim();
         if (!requestedName) {
             return;
         }
-        const exportData = createExportData(window.ajisaiInterpreter, selectedDictionary);
+        const exportData = createExportData({
+            collect_user_words_info: runtime.collectUserWordsInfo,
+            lookup_word_definition: runtime.lookupWordDefinition
+        } as AjisaiInterpreter, selectedDictionary);
         const filename = buildExportFilename(requestedName);
 
         downloadJson(exportData, filename);
@@ -295,7 +298,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     ...word,
                     dictionary: (word.dictionary || file.name.replace(/\.json$/i, '')).toUpperCase()
                 }));
-                await window.ajisaiInterpreter.restore_user_words(importedWords);
+                await runtime.restoreUserWords(importedWords);
 
                 updateDisplays?.();
                 await saveCurrentState();
@@ -320,7 +323,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     return;
                 }
 
-                const result = window.ajisaiInterpreter.push_json_string(jsonString);
+                const result = runtime.pushJsonString(jsonString);
 
                 if (result.status === 'OK') {
                     updateDisplays?.();

@@ -4,7 +4,8 @@ import {
     createInterpreterSnapshot,
     type InterpreterSnapshot
 } from '../workers/interpreter-snapshot';
-import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
+import type { ExecuteResult, UserWord } from '../wasm-interpreter-types';
+import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import type { ViewMode } from './mobile-view-switcher';
 
@@ -31,22 +32,22 @@ export interface ExecutionController {
 }
 
 const mapWordDataToUserWord = (
-    interpreter: AjisaiInterpreter,
+    interpreter: AjisaiRuntime,
     wordData: [string, string, string | null, boolean]
 ): UserWord => ({
     dictionary: wordData[0],
     name: wordData[1],
-    definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
+    definition: interpreter.lookupWordDefinition(`${wordData[0]}@${wordData[1]}`),
     description: wordData[2]
 });
 
-const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
-    const userWordsInfo = interpreter.collect_user_words_info();
+const collectUserWords = (interpreter: AjisaiRuntime): UserWord[] => {
+    const userWordsInfo = interpreter.collectUserWordsInfo();
     return userWordsInfo.map(wordData => mapWordDataToUserWord(interpreter, wordData));
 };
 
 const restoreInterpreterState = (
-    interpreter: AjisaiInterpreter,
+    interpreter: AjisaiRuntime,
     result: ExecuteResult
 ): void => {
     if (!result || result.error) return;
@@ -64,11 +65,11 @@ const checkIsResetCommand = (code: string): boolean =>
 const isAbortError = (error: Error): boolean =>
     error.message.includes('aborted');
 
-const createExecutionSnapshot = (interpreter: AjisaiInterpreter): InterpreterSnapshot =>
+const createExecutionSnapshot = (interpreter: AjisaiRuntime): InterpreterSnapshot =>
     createInterpreterSnapshot({
-        stack: interpreter.collect_stack(),
+        stack: interpreter.collectStack(),
         userWords: collectUserWords(interpreter),
-        importedModules: interpreter.collect_imported_modules()
+        importedModules: interpreter.collectImportedModules()
     });
 
 const resolveExecutionException = (
@@ -85,7 +86,7 @@ const resolveExecutionException = (
 };
 
 export const createExecutionController = (
-    interpreter: AjisaiInterpreter,
+    interpreter: AjisaiRuntime,
     callbacks: ExecutionCallbacks
 ): ExecutionController => {
     const {
