@@ -3,6 +3,7 @@
 
 
 use super::extract_vector_elements;
+use super::targeting::with_stacktop_vector_target_with_arg;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, normalize_index};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
@@ -18,57 +19,6 @@ fn pop_index_operand(interp: &mut Interpreter) -> Result<(Value, i64)> {
         }
     };
     Ok((index_val, index))
-}
-
-fn acquire_stacktop_target(
-    interp: &mut Interpreter,
-    arg_to_restore: &Value,
-    preserve_source: bool,
-) -> Result<Value> {
-    if preserve_source {
-        return interp.stack.last().cloned().ok_or_else(|| {
-            interp.stack.push(arg_to_restore.clone());
-            AjisaiError::StackUnderflow
-        });
-    }
-
-    interp.stack.pop().ok_or_else(|| {
-        interp.stack.push(arg_to_restore.clone());
-        AjisaiError::StackUnderflow
-    })
-}
-
-fn with_stacktop_vector_target<R, F>(
-    interp: &mut Interpreter,
-    arg_to_restore: &Value,
-    preserve_source: bool,
-    action: F,
-) -> Result<R>
-where
-    F: FnOnce(&Value) -> Result<R>,
-{
-    let target_val = acquire_stacktop_target(interp, arg_to_restore, preserve_source)?;
-    if !target_val.is_vector() {
-        if !preserve_source {
-            interp.stack.push(target_val);
-        }
-        interp.stack.push(arg_to_restore.clone());
-        return Err(AjisaiError::create_structure_error(
-            "vector",
-            "other format",
-        ));
-    }
-
-    match action(&target_val) {
-        Ok(result) => Ok(result),
-        Err(error) => {
-            if !preserve_source {
-                interp.stack.push(target_val);
-            }
-            interp.stack.push(arg_to_restore.clone());
-            Err(error)
-        }
-    }
 }
 
 fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)> {
@@ -100,7 +50,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let result_elem =
-                with_stacktop_vector_target(interp, &index_val, preserve_source, |target_val| {
+                with_stacktop_vector_target_with_arg(interp, &index_val, preserve_source, |target_val| {
                     let len = target_val.len();
                     if len == 0 {
                         return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
@@ -169,7 +119,7 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let inserted =
-                with_stacktop_vector_target(interp, &args_val, is_keep_mode, |vector_val| {
+                with_stacktop_vector_target_with_arg(interp, &args_val, is_keep_mode, |vector_val| {
                     let mut values = extract_vector_elements(vector_val).to_vec();
                     let len = values.len() as i64;
                     let insert_index = if index < 0 {
@@ -223,7 +173,7 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let replaced =
-                with_stacktop_vector_target(interp, &args_val, is_keep_mode, |vector_val| {
+                with_stacktop_vector_target_with_arg(interp, &args_val, is_keep_mode, |vector_val| {
                     let mut values = extract_vector_elements(vector_val).to_vec();
                     let len = values.len();
                     let actual_index = normalize_index(index, len)
@@ -278,7 +228,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let removed =
-                with_stacktop_vector_target(interp, &index_val, is_keep_mode, |vector_val| {
+                with_stacktop_vector_target_with_arg(interp, &index_val, is_keep_mode, |vector_val| {
                     let mut values = extract_vector_elements(vector_val).to_vec();
                     let len = values.len();
                     let actual_index = normalize_index(index, len)

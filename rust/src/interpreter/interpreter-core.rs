@@ -130,6 +130,9 @@ impl Interpreter {
 
 
 
+    /// Internal diagnostic toggle for fractional-flow invariant tracking.
+    ///
+    /// This is not part of user-visible language semantics.
     pub fn update_flow_tracking(&mut self, enabled: bool) {
         self.flow_tracking = enabled;
         if enabled {
@@ -161,6 +164,7 @@ impl Interpreter {
         Ok(new_flow)
     }
 
+    /// Internal invariant verification across tracked flows.
     pub fn verify_all_flows(&self) -> Result<()> {
         for flow in &self.active_flows {
             let consumed_for_flow: Vec<Fraction> = self
@@ -174,6 +178,7 @@ impl Interpreter {
         Ok(())
     }
 
+    /// Internal leak check for tracked flows at pipeline boundaries.
     pub fn assert_all_flows_complete(&self) -> Result<()> {
         for flow in &self.active_flows {
             flow.assert_complete("pipeline end")?;

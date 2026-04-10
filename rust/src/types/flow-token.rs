@@ -6,6 +6,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 static FLOW_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Debug, Clone, PartialEq)]
+/// Internal runtime invariant token.
+///
+/// FlowToken is not a canonical user-facing value type. It exists for
+/// diagnostic tracking, conservation verification, and optimization safety checks.
 pub struct FlowToken {
     pub id: u64,
     pub total: Fraction,
@@ -88,10 +92,13 @@ impl FlowToken {
         }
         let reconstructed: Fraction = sum.add(&self.remaining);
         if reconstructed != self.total {
-            return Err(crate::error::AjisaiError::Custom(format!(
-                "Conservation violation: total={}, Σconsumed + remaining = {}",
-                self.total, reconstructed,
-            )));
+            return Err(crate::error::AjisaiError::FlowBreak {
+                flow_id: self.id,
+                reason: format!(
+                    "conservation mismatch: total={} but consumed+remaining={}",
+                    self.total, reconstructed
+                ),
+            });
         }
         Ok(())
     }
@@ -201,10 +208,10 @@ impl FlowToken {
             sum = sum.add(&child.total);
         }
         if &sum != parent_remaining {
-            return Err(crate::error::AjisaiError::Custom(format!(
-                "Bifurcation conservation violation: parent remaining={}, sum of children={}",
-                parent_remaining, sum,
-            )));
+            return Err(crate::error::AjisaiError::BifurcationViolation {
+                parent_mass: format!("{}", parent_remaining),
+                children_sum: format!("{}", sum),
+            });
         }
         Ok(())
     }

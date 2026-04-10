@@ -656,9 +656,9 @@ export const TEST_CASES: TestCase[] = [
     },
     {
 
-        name: "Error - no change (sort already sorted)",
+        name: "Sort already sorted succeeds",
         code: "[ 1 2 3 ] SORT",
-        expectError: true,
-        category: "Error Cases"
+        expectedStack: [createVector([createNumber('1'), createNumber('2'), createNumber('3')])],
+        category: "Vector Operations"
     }
 ];

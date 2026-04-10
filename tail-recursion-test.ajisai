@@ -1,2 +1,17 @@
-# Tail recursion test cases
-# This file will be rewritten with correct test cases
+# Recursion and execution-limit behavior regression cases (canonical)
+
+# 1) Direct recursion should hit runtime execution guard (implementation policy)
+# 実行時は ExecutionLimitExceeded 相当のエラーを期待
+# [ '[ LOOP ]' ] 'LOOP' DEF
+# LOOP
+
+# 2) Non-recursive custom word chain remains valid
+[ '[ 1 ] [ 2 ] +' ] 'STEP-A' DEF
+[ '[ STEP-A ] [ 3 ] +' ] 'STEP-B' DEF
+STEP-B PRINT
+# 期待: [ 6 ]
+
+# 3) Recursive design is explicit opt-in and testable
+# 下記は意図的にコメントアウトした失敗ケース（手動検証用）
+# [ '[ NXT ]' ] 'NXT' DEF
+# NXT

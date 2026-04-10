@@ -71,24 +71,6 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 .map(|(orig_idx, _)| *orig_idx)
                 .collect::<Vec<usize>>();
             let sorted_v: Vec<Value> = reorder_values_by_permutation(children, &perm);
-
-            if !interp.disable_no_change_check && children.len() < 2 {
-                if !is_keep_mode {
-                    interp.stack.push(Value::from_vector(sorted_v));
-                }
-                return Err(AjisaiError::NoChange {
-                    word: "SORT".into(),
-                });
-            }
-            if !interp.disable_no_change_check && sorted_v == **children {
-                if !is_keep_mode {
-                    interp.stack.push(Value::from_vector(sorted_v));
-                }
-                return Err(AjisaiError::NoChange {
-                    word: "SORT".into(),
-                });
-            }
-
             interp.stack.push(Value::from_vector(sorted_v));
             Ok(())
         }
@@ -111,19 +93,10 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             }
 
             sort_fractions_by_introsort(&mut indexed_fractions);
-
-            let is_identity: bool = indexed_fractions
+            let perm: Vec<usize> = indexed_fractions
                 .iter()
-                .enumerate()
-                .all(|(i, (orig, _))| *orig == i);
-
-            if !interp.disable_no_change_check && (interp.stack.len() < 2 || is_identity) {
-                return Err(AjisaiError::NoChange {
-                    word: "SORT".into(),
-                });
-            }
-
-            let perm: Vec<usize> = indexed_fractions.iter().map(|(orig, _)| *orig).collect::<Vec<usize>>();
+                .map(|(orig, _)| *orig)
+                .collect::<Vec<usize>>();
             let sorted_stack: Vec<Value> = reorder_values_by_permutation(&interp.stack, &perm);
             if is_keep_mode {
                 interp.stack.extend(sorted_stack);
