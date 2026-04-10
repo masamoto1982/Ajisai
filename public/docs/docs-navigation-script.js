@@ -19,7 +19,7 @@
             { label: 'GitHub', link: 'https://github.com/masamoto1982/Ajisai' },
             { label: 'Demo', link: 'https://masamoto1982.github.io/Ajisai/' }
         ],
-        version: '202604102001'
+        version: window.AjisaiConfig?.appVersion || '202604102001'
     });
 
     const renderDocsShell = (root, config) => {
