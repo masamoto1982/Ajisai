@@ -1,10 +1,10 @@
 
-
 import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-types';
-import type DB from '../indexeddb-user-word-store';
 import { DEMO_USER_WORDS, DEMO_WORDS_VERSION } from './demo-words';
 import { Result, ok, err } from './functional-result-helpers';
 import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
+import type { FilePort } from '../platform/file-port';
+import type { StoragePort } from '../platform/storage-port';
 
 export interface InterpreterState {
     readonly stack: Value[];
@@ -15,6 +15,8 @@ export interface InterpreterState {
 export interface PersistenceCallbacks {
     readonly runtime: AjisaiRuntime;
     readonly root?: ParentNode;
+    readonly files: FilePort;
+    readonly storage: StoragePort;
     readonly showError?: (error: Error) => void;
     readonly updateDisplays?: () => void;
     readonly showInfo?: (text: string, append: boolean) => void;
@@ -25,16 +27,9 @@ export interface Persistence {
     readonly saveCurrentState: () => Promise<void>;
     readonly loadDatabaseData: () => Promise<void>;
     readonly fullReset: () => Promise<void>;
-    readonly exportUserWords: () => void;
-    readonly importUserWords: () => void;
-    readonly importJsonAsVector: () => void;
-}
-
-declare global {
-    interface Window {
-        ajisaiInterpreter: AjisaiInterpreter;
-        AjisaiDB: typeof DB;
-    }
+    readonly exportUserWords: () => Promise<void>;
+    readonly importUserWords: () => Promise<void>;
+    readonly importJsonAsVector: () => Promise<void>;
 }
 
 const toUserWord = (
@@ -74,53 +69,6 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
 
 const buildExportFilename = (name: string): string => `${name}.json`;
 
-const downloadJson = (data: unknown, filename: string): void => {
-    const jsonString = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-};
-
-const openFileDialog = (
-    accept: string,
-    onFileSelected: (file: File) => void
-): void => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = accept;
-
-    input.onchange = (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-            onFileSelected(file);
-        }
-    };
-
-    input.click();
-};
-
-const readFileAsText = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const result = event.target?.result;
-            if (typeof result === 'string') {
-                resolve(result);
-            } else {
-                reject(new Error('Failed to read file'));
-            }
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsText(file);
-    });
-
 const parseUserWords = (jsonString: string): Result<UserWord[], Error> => {
     try {
         const parsed = JSON.parse(jsonString);
@@ -134,7 +82,7 @@ const parseUserWords = (jsonString: string): Result<UserWord[], Error> => {
 };
 
 export const createPersistence = (callbacks: PersistenceCallbacks): Persistence => {
-    const { runtime, root = document, showError, updateDisplays, showInfo } = callbacks;
+    const { runtime, root = document, files, storage, showError, updateDisplays, showInfo } = callbacks;
     let dbInitialized = false;
     const MAX_RETRY_COUNT = 3;
     const RETRY_DELAY_MS = 1000;
@@ -145,7 +93,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks): Persistence 
     const init = async (): Promise<void> => {
         for (let attempt = 1; attempt <= MAX_RETRY_COUNT; attempt++) {
             try {
-                await window.AjisaiDB.open();
+                await storage.open();
                 dbInitialized = true;
                 console.log('Database initialized successfully for Persistence.');
                 return;
@@ -173,7 +121,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks): Persistence 
                 lookup_word_definition: runtime.lookupWordDefinition,
                 collect_stack: runtime.collectStack
             } as AjisaiInterpreter);
-            await window.AjisaiDB.saveInterpreterState(state);
+            await storage.saveInterpreterState(state);
             console.log('State saved automatically.');
         } catch (error) {
             console.error('Failed to auto-save state:', error);
@@ -201,7 +149,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks): Persistence 
         }
 
         try {
-            const state = await window.AjisaiDB.loadInterpreterState();
+            const state = await storage.loadInterpreterState();
 
             if (state) {
                 if (state.stack) {
@@ -266,82 +214,96 @@ export const createPersistence = (callbacks: PersistenceCallbacks): Persistence 
         }
     };
 
-    const exportUserWords = (): void => {
+    const exportUserWords = async (): Promise<void> => {
         const selectedDictionary = (root.querySelector('#user-dictionary-select') as HTMLSelectElement | null)?.value || 'DEMO';
-        const suggestedName = selectedDictionary.toLowerCase();
-        const requestedName = window.prompt('Export file name', suggestedName)?.trim();
-        if (!requestedName) {
-            return;
-        }
         const exportData = createExportData({
             collect_user_words_info: runtime.collectUserWordsInfo,
             lookup_word_definition: runtime.lookupWordDefinition
         } as AjisaiInterpreter, selectedDictionary);
-        const filename = buildExportFilename(requestedName);
+        const filename = buildExportFilename(selectedDictionary.toLowerCase());
 
-        downloadJson(exportData, filename);
+        const saved = await files.saveTextFile({
+            suggestedName: filename,
+            text: JSON.stringify(exportData, null, 2),
+            title: 'Export user words'
+        });
+
+        if (!saved) {
+            return;
+        }
         showInfo?.(`User words exported as ${filename}`, true);
     };
 
-    const importUserWords = (): void => {
-        openFileDialog('.json', async (file) => {
-            try {
-                const jsonString = await readFileAsText(file);
-                const parseResult = parseUserWords(jsonString);
-
-                if (!parseResult.ok) {
-                    showError?.(parseResult.error);
-                    return;
-                }
-
-                const importedWords = parseResult.value.map(word => ({
-                    ...word,
-                    dictionary: (word.dictionary || file.name.replace(/\.json$/i, '')).toUpperCase()
-                }));
-                await runtime.restoreUserWords(importedWords);
-
-                updateDisplays?.();
-                await saveCurrentState();
-                showInfo?.(`${importedWords.length} user words imported and saved`, true);
-
-            } catch (error) {
-                showError?.(error as Error);
-            }
+    const importUserWords = async (): Promise<void> => {
+        const fileResult = await files.pickTextFile({
+            accept: '.json',
+            title: 'Import user words JSON'
         });
+
+        if (!fileResult) {
+            return;
+        }
+
+        try {
+            const parseResult = parseUserWords(fileResult.text);
+
+            if (!parseResult.ok) {
+                showError?.(parseResult.error);
+                return;
+            }
+
+            const inferredDictionary = fileResult.name?.replace(/\.json$/i, '') ?? 'IMPORTED';
+            const importedWords = parseResult.value.map(word => ({
+                ...word,
+                dictionary: (word.dictionary || inferredDictionary).toUpperCase()
+            }));
+            await runtime.restoreUserWords(importedWords);
+
+            updateDisplays?.();
+            await saveCurrentState();
+            showInfo?.(`${importedWords.length} user words imported and saved`, true);
+
+        } catch (error) {
+            showError?.(error as Error);
+        }
     };
 
-    const importJsonAsVector = (): void => {
-        openFileDialog('.json', async (file) => {
-            try {
-                const jsonString = await readFileAsText(file);
-
-
-                try {
-                    JSON.parse(jsonString);
-                } catch {
-                    showError?.(new Error('Invalid JSON file.'));
-                    return;
-                }
-
-                const result = runtime.pushJsonString(jsonString);
-
-                if (result.status === 'OK') {
-                    updateDisplays?.();
-                    await saveCurrentState();
-                    showInfo?.(`JSON loaded from ${file.name}`, true);
-                } else {
-                    showError?.(new Error(result.message || 'Failed to parse JSON'));
-                }
-            } catch (error) {
-                showError?.(error as Error);
-            }
+    const importJsonAsVector = async (): Promise<void> => {
+        const fileResult = await files.pickTextFile({
+            accept: '.json',
+            title: 'Import JSON as vector'
         });
+
+        if (!fileResult) {
+            return;
+        }
+
+        try {
+            try {
+                JSON.parse(fileResult.text);
+            } catch {
+                showError?.(new Error('Invalid JSON file.'));
+                return;
+            }
+
+            const result = runtime.pushJsonString(fileResult.text);
+
+            if (result.status === 'OK') {
+                updateDisplays?.();
+                await saveCurrentState();
+                showInfo?.(`JSON loaded from ${fileResult.name ?? 'selected file'}`, true);
+            } else {
+                showError?.(new Error(result.message || 'Failed to parse JSON'));
+            }
+        } catch (error) {
+            showError?.(error as Error);
+        }
     };
 
     const fullReset = async (): Promise<void> => {
         try {
             if (dbInitialized) {
-                await window.AjisaiDB.clearAll();
+                await storage.clearAll();
                 console.log('IndexedDB cleared.');
             } else {
                 console.warn('Database not initialized, skipping clear operation.');

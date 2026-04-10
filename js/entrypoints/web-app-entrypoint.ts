@@ -3,6 +3,7 @@ import { createAjisaiRuntimeFromWasm } from '../core/ajisai-runtime-factory';
 import { createGUI } from '../gui/gui-application';
 import { monitorWebOnlineStatus } from '../infrastructure/web/web-online-status';
 import { registerWebServiceWorker } from '../infrastructure/web/web-service-worker';
+import { createWebPlatformServices } from '../platform/web/create-web-platform-services';
 
 declare global {
     interface Window {
@@ -43,7 +44,8 @@ export async function startWebApp(): Promise<void> {
         }
 
         const runtime = await createAjisaiRuntimeFromWasm();
-        const gui = createGUI({ runtime, root: document });
+        const platform = createWebPlatformServices();
+        const gui = createGUI({ runtime, root: document, platform });
 
         await gui.init();
         gui.updateAllDisplays();

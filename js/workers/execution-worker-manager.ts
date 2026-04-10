@@ -1,8 +1,8 @@
-
-
 import type { ExecuteResult } from '../wasm-interpreter-types';
 import type { InterpreterSnapshot } from './interpreter-snapshot';
 import { extractCompiledWasmModule } from '../wasm-module-loader';
+import type { WindowPort } from '../platform/window-port';
+import { WEB_WINDOW_PORT } from '../platform/web/web-window-port';
 
 interface WorkerTask {
     id: string;
@@ -21,29 +21,31 @@ interface WorkerInstance {
 const MOBILE_BREAKPOINT = 768;
 const MAX_MOBILE_WORKERS = 2;
 
+const resolveMaxWorkers = (windowEnv: WindowPort): number => {
+    const hardware = Math.max(windowEnv.getHardwareConcurrency(), 1);
+    if (windowEnv.getInnerWidth() <= MOBILE_BREAKPOINT) {
+        return Math.min(hardware, MAX_MOBILE_WORKERS);
+    }
+    return Math.min(hardware, 8);
+};
+
 export class WorkerManager {
     private workers: WorkerInstance[] = [];
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
     private compiledModule: WebAssembly.Module | null = null;
-    private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
-        ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
-        : navigator.hardwareConcurrency || 4;
+
+    constructor(private readonly maxWorkers: number) {}
 
     async init(): Promise<void> {
         console.log('[WorkerManager] Initializing worker pool...');
         this.workers = [];
-
-
 
         this.compiledModule = extractCompiledWasmModule();
 
         if (!this.compiledModule) {
             console.warn('[WorkerManager] Compiled WASM module not available; workers will init independently');
         }
-
-
-
 
         for (let i = 0; i < this.maxWorkers; i++) {
             this.createWorker();
@@ -57,16 +59,12 @@ export class WorkerManager {
         worker.onmessage = (event) => this.resolveWorkerMessage(instance, event.data);
         worker.onerror = (error) => this.resolveWorkerError(instance, error);
 
-
-
-
         if (this.compiledModule) {
             worker.postMessage({ type: 'init', wasmModule: this.compiledModule });
         }
 
         this.workers.push(instance);
     }
-
 
     private ensureWorkers(): void {
         if (this.workers.length > 0) return;
@@ -136,7 +134,6 @@ export class WorkerManager {
     }
 
     private createTaskId(): string {
-
         if (typeof crypto !== 'undefined' && crypto.randomUUID) {
             return crypto.randomUUID();
         }
@@ -162,13 +159,11 @@ export class WorkerManager {
     abortAll(): void {
         console.log('[WorkerManager] Aborting all tasks...');
 
-
         const abortError = new Error('Execution aborted');
         for (const task of this.taskQueue) {
             task.reject(abortError);
         }
         this.taskQueue = [];
-
 
         for (const id of this.activeTasks.keys()) {
             const worker = this.workers.find(w => w.currentTaskId === id)?.worker;
@@ -185,4 +180,8 @@ export class WorkerManager {
     }
 }
 
-export const WORKER_MANAGER = new WorkerManager();
+export const createWorkerManager = (windowEnv: WindowPort): WorkerManager =>
+    new WorkerManager(resolveMaxWorkers(windowEnv));
+
+
+export const WORKER_MANAGER = createWorkerManager(WEB_WINDOW_PORT);

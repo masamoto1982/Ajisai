@@ -1,4 +1,5 @@
 
+import type { WindowPort } from '../platform/window-port';
 
 export interface MobileElements {
     readonly inputArea: HTMLElement;
@@ -17,13 +18,12 @@ export interface MobileHandler {
 
 export interface MobileHandlerOptions {
     readonly onModeChange?: (mode: ViewMode) => void;
+    readonly windowEnv: WindowPort;
 }
 
 const MOBILE_BREAKPOINT = 768;
 const SWIPE_THRESHOLD = 50;
 const VIEW_ORDER: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
-
-const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 
 const detectSwipeDirection = (
     startX: number,
@@ -74,11 +74,13 @@ const applyVisibility = (
 
 export const createMobileHandler = (
     elements: MobileElements,
-    options: MobileHandlerOptions = {}
+    options: MobileHandlerOptions
 ): MobileHandler => {
     let currentMode: ViewMode = 'input';
     let touchStartX = 0;
     let touchStartY = 0;
+
+    const isMobile = (): boolean => options.windowEnv.getInnerWidth() <= MOBILE_BREAKPOINT;
 
     const updateView = (mode: ViewMode): void => {
         currentMode = mode;
@@ -97,7 +99,7 @@ export const createMobileHandler = (
     };
 
     const setupSwipeGestures = (): void => {
-        const container = document.body;
+        const container = options.windowEnv.getBody();
 
         container.addEventListener('touchstart', (e: TouchEvent) => {
             const touch = e.changedTouches[0];
@@ -108,7 +110,7 @@ export const createMobileHandler = (
         }, { passive: true });
 
         container.addEventListener('touchend', (e: TouchEvent) => {
-            if (!checkIsMobile()) return;
+            if (!isMobile()) return;
             const touch = e.changedTouches[0];
             if (touch) {
                 resolveSwipeGesture(touch.screenX, touch.screenY);
@@ -119,14 +121,13 @@ export const createMobileHandler = (
     setupSwipeGestures();
 
     return {
-        isMobile: () => checkIsMobile(),
+        isMobile,
         extractCurrentMode: () => currentMode,
         updateView
     };
 };
 
 export const mobileUtils = {
-    checkIsMobile,
     detectSwipeDirection,
     resolveNextViewMode,
     lookupVisibilityForMode,

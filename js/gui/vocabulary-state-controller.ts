@@ -9,6 +9,8 @@ import {
     registerBackgroundClickListeners,
 } from './dictionary-element-builders';
 import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
+import type { DialogPort } from '../platform/dialog-port';
+import type { WindowPort } from '../platform/window-port';
 
 export interface WordInfo {
     readonly dictionary: string;
@@ -33,6 +35,8 @@ export interface VocabularyCallbacks {
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (text: string, append: boolean) => void;
+    readonly dialogs: DialogPort;
+    readonly windowEnv: WindowPort;
 }
 
 export interface VocabularyManager {
@@ -104,6 +108,7 @@ const resetWordInfoDisplay = (element: HTMLElement): void => {
 const DEPENDENCY_DELETE_ERROR = 'Cannot delete';
 
 const createDeleteContextMenuElement = (
+    body: HTMLElement,
     onDelete: () => void
 ): HTMLDivElement => {
     const menu = document.createElement('div');
@@ -143,7 +148,7 @@ const createDeleteContextMenuElement = (
     });
 
     menu.appendChild(deleteButton);
-    document.body.appendChild(menu);
+    body.appendChild(menu);
 
     return menu;
 };
@@ -152,8 +157,8 @@ export const createVocabularyManager = (
     elements: VocabularyElements,
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
-    const { runtime, onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
-    const deleteContextMenu = createDeleteContextMenuElement(() => {
+    const { runtime, onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo, dialogs, windowEnv } = callbacks;
+    const deleteContextMenu = createDeleteContextMenuElement(windowEnv.getBody(), () => {
         if (!activeContextWordName) {
             return;
         }
@@ -176,15 +181,15 @@ export const createVocabularyManager = (
         deleteContextMenu.style.top = `${event.clientY}px`;
     };
 
-    document.addEventListener('click', () => {
+    windowEnv.addDocumentEventListener('click', () => {
         hideDeleteContextMenu();
     });
-    document.addEventListener('contextmenu', (event) => {
+    windowEnv.addDocumentEventListener('contextmenu', (event) => {
         if (!(event.target instanceof HTMLElement) || !event.target.closest('.word-button')) {
             hideDeleteContextMenu();
         }
     });
-    window.addEventListener('blur', hideDeleteContextMenu);
+    windowEnv.addWindowEventListener('blur', hideDeleteContextMenu);
 
     [elements.builtInWordsDisplay, elements.userWordsDisplay].forEach(container => {
         registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);
@@ -206,7 +211,7 @@ export const createVocabularyManager = (
             const result = await runtime.execute(deleteCode);
             if (result.status === 'ERROR') {
                 if (!forceDelete && result.message?.includes(DEPENDENCY_DELETE_ERROR)) {
-                    const confirmed = confirm(
+                    const confirmed = await dialogs.confirm(
                         `Word '${wordName}' is referenced by other user words. Force delete with ! ?`
                     );
 
@@ -217,7 +222,7 @@ export const createVocabularyManager = (
                     return false;
                 }
 
-                alert(`Failed to delete word: ${result.message}`);
+                await dialogs.alert(`Failed to delete word: ${result.message}`);
                 return false;
             }
 
@@ -226,7 +231,7 @@ export const createVocabularyManager = (
             showInfo?.(`Word '${wordName}' deleted`, true);
             return true;
         } catch (error) {
-            alert(`Error deleting word: ${error}`);
+            await dialogs.alert(`Error deleting word: ${error}`);
             return false;
         }
     };
