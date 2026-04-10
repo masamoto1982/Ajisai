@@ -57,6 +57,16 @@ export interface Value {
     displayHint?: 'auto' | 'number' | 'string' | 'boolean' | 'datetime' | 'nil';
 }
 
+export interface ProcessHandleValue extends Value {
+    type: 'process_handle';
+    value: number;
+}
+
+export interface SupervisorHandleValue extends Value {
+    type: 'supervisor_handle';
+    value: number;
+}
+
 export interface WasmModule {
     AjisaiInterpreter: AjisaiInterpreterClass;
     default?: () => Promise<any>;

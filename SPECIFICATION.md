@@ -66,6 +66,8 @@ Canonical runtime values:
 - Record
 - NIL
 - Code block
+- Process handle
+- Supervisor handle
 
 Strings/booleans/datetime-like representations are encoded over core value forms and may be accompanied by semantic hints.
 
@@ -106,6 +108,12 @@ Canonical boundary: FlowToken fields (ID, remaining mass, parent/child links, ra
 
 ### 6.3 Safety mode
 - `~`: safe mode (errors become NIL where defined)
+
+### 6.4 Let-it-crash runtime model
+- `~` is local error absorption for a single operation.
+- Child runtime words (`SPAWN`, `AWAIT`, `STATUS`, `KILL`, `MONITOR`, `SUPERVISE`) provide isolated execution lifecycle control.
+- Child runtimes are isolated from parent stack/user-word mutation during execution.
+- Child failures are observed as exit values (`ok` / `exit` / `killed` / `timeout`) and do not immediately crash the parent interpreter.
 
 Mode composition must be explicit and mechanically testable.
 

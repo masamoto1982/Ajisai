@@ -191,6 +191,14 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             Ok(Value::from_children(children))
         }
         "nil" => Ok(Value::nil()),
+        "process_handle" => {
+            let id = value_js.as_f64().ok_or("Process handle id is not number")? as u64;
+            Ok(Value::from_process_handle(id))
+        }
+        "supervisor_handle" => {
+            let id = value_js.as_f64().ok_or("Supervisor handle id is not number")? as u64;
+            Ok(Value::from_supervisor_handle(id))
+        }
         _ => Err(format!("Unknown type: {}", type_str)),
     }
 }
@@ -257,6 +265,10 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
                 "vector"
             } else if value.is_scalar() {
                 "number"
+            } else if matches!(value.data, ValueData::ProcessHandle(_)) {
+                "process_handle"
+            } else if matches!(value.data, ValueData::SupervisorHandle(_)) {
+                "supervisor_handle"
             } else {
                 "nil"
             }
@@ -312,6 +324,16 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
                 }
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
+        }
+        "process_handle" => {
+            if let ValueData::ProcessHandle(id) = value.data {
+                js_sys::Reflect::set(&obj, &"value".into(), &(id as f64).into()).unwrap();
+            }
+        }
+        "supervisor_handle" => {
+            if let ValueData::SupervisorHandle(id) = value.data {
+                js_sys::Reflect::set(&obj, &"value".into(), &(id as f64).into()).unwrap();
+            }
         }
         _ => {}
     };

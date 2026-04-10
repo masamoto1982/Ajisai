@@ -9,7 +9,7 @@ fn check_value_has_truthy(val: &Value) -> bool {
     match &val.data {
         ValueData::Nil => false,
         ValueData::Scalar(f) => !f.is_zero(),
-        ValueData::CodeBlock(_) => true,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => true,
         ValueData::Vector(_) | ValueData::Record { .. } => {
             if let Ok(tensor) = FlatTensor::from_value(val) {
                 tensor.data.iter().any(|f| !f.is_zero())

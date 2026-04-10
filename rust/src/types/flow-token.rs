@@ -53,7 +53,7 @@ impl FlowToken {
                 }
                 acc
             }
-            ValueData::CodeBlock(_) => Fraction::from(0),
+            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Fraction::from(0),
         }
     }
 

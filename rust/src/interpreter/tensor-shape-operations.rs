@@ -33,7 +33,7 @@ impl FlatTensor {
                     strides,
                 })
             }
-            ValueData::CodeBlock(_) => Err(AjisaiError::from(
+            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Err(AjisaiError::from(
                 "Tensor conversion requires scalar or vector",
             )),
         }
