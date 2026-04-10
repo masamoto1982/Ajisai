@@ -154,6 +154,44 @@ mod tensor_ops_integration_tests {
         assert_eq!(result, "[ [ 101 102 103 ] [ 204 205 206 ] ]");
     }
 
+
+    #[tokio::test]
+    async fn test_percent_alias_matches_mod_basic() {
+        let mut mod_interp = Interpreter::new();
+        mod_interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        mod_interp.execute("[ 7 ] [ 3 ] MOD").await.unwrap();
+        let mod_result = format!("{}", mod_interp.get_stack().last().unwrap());
+
+        let mut alias_interp = Interpreter::new();
+        alias_interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        alias_interp.execute("[ 7 ] [ 3 ] %").await.unwrap();
+        let alias_result = format!("{}", alias_interp.get_stack().last().unwrap());
+
+        assert_eq!(mod_result, "[ 1 ]");
+        assert_eq!(alias_result, mod_result);
+    }
+
+    #[tokio::test]
+    async fn test_percent_alias_matches_mod_broadcast() {
+        let mut mod_interp = Interpreter::new();
+        mod_interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        mod_interp
+            .execute("[ 1 2 3 4 5 ] [ 2 ] MOD")
+            .await
+            .unwrap();
+        let mod_result = format!("{}", mod_interp.get_stack().last().unwrap());
+
+        let mut alias_interp = Interpreter::new();
+        alias_interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        alias_interp
+            .execute("[ 1 2 3 4 5 ] [ 2 ] %")
+            .await
+            .unwrap();
+        let alias_result = format!("{}", alias_interp.get_stack().last().unwrap());
+
+        assert_eq!(alias_result, mod_result);
+    }
+
     #[tokio::test]
     async fn test_shape_nil_propagation() {
         let mut interp = Interpreter::new();

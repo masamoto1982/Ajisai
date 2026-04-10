@@ -277,6 +277,19 @@ async fn test_mod_keep_mode() {
     );
 }
 
+
+#[tokio::test]
+async fn test_percent_alias_keep_mode() {
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 ] [ 3 ] ,, %").await;
+    assert!(result.is_ok(), "% ,, should succeed: {:?}", result);
+    assert_eq!(
+        interp.stack.len(),
+        3,
+        "% alias in keep mode should preserve both operands and add result"
+    );
+}
+
 #[tokio::test]
 async fn test_modifier_order_independence() {
     let mut interp1 = Interpreter::new();
