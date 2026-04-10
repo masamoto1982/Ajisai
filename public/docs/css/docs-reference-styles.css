@@ -7,5 +7,10 @@
 
 
 :root {
-    --col-right-flex: 1.618;
+    --col-left-flex: 3;
+    --col-right-flex: 7;
+}
+
+.main-content section {
+    border-radius: 0;
 }

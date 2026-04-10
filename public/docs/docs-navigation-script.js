@@ -57,7 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
         headerEl.innerHTML = `
             <div class="app-header-top">
                 <a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai">
-                    <img src="../images/ajisai-logo-thumbnail-w40.jpg" alt="Ajisai Logo" class="logo">
+                    <span class="logo-swap" aria-hidden="true">
+                        <img src="../images/ajisai-logo-thumbnail-w40.jpg" alt="" class="logo logo-default">
+                        <img src="../images/ajisai-qr.png" alt="" class="logo logo-qr">
+                    </span>
                     <div class="app-brand-meta">
                         <h1>${c.meta.title}</h1>
                         <span class="version">ver.202604080203</span>
