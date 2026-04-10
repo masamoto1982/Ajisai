@@ -318,6 +318,17 @@ async fn test_and_true_false() {
 }
 
 #[tokio::test]
+async fn test_and_alias_broadcast_matches_and() {
+    let and_stack = test_support::exec_ok_gui("[ TRUE FALSE TRUE ] [ TRUE ] AND")
+        .await
+        .unwrap();
+    let alias_stack = test_support::exec_ok_gui("[ TRUE FALSE TRUE ] [ TRUE ] &")
+        .await
+        .unwrap();
+    assert_eq!(alias_stack, and_stack);
+}
+
+#[tokio::test]
 async fn test_or_false_true() {
     let stack = test_support::exec_ok_gui("[ FALSE ] [ TRUE ] OR")
         .await

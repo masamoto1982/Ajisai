@@ -208,6 +208,27 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_filter_ampersand_alias_matches_and() {
+        let mut and_interp = Interpreter::new();
+        let and_result = and_interp
+            .execute("[ [ TRUE TRUE ] [ TRUE FALSE ] [ FALSE TRUE ] ] { [ 0 ] [ 1 ] AND } FILTER")
+            .await;
+        assert!(and_result.is_ok(), "FILTER with AND failed: {:?}", and_result);
+
+        let mut alias_interp = Interpreter::new();
+        let alias_result = alias_interp
+            .execute("[ [ TRUE TRUE ] [ TRUE FALSE ] [ FALSE TRUE ] ] { [ 0 ] [ 1 ] & } FILTER")
+            .await;
+        assert!(
+            alias_result.is_ok(),
+            "FILTER with & alias failed: {:?}",
+            alias_result
+        );
+
+        assert_eq!(alias_interp.stack, and_interp.stack);
+    }
+
+    #[tokio::test]
     async fn test_scan_add_mul_nil_user_word_and_stack_preserve() {
         let mut interp = Interpreter::new();
         assert!(interp.execute("[ 1 2 3 4 ] [ 0 ] '+' SCAN").await.is_ok());

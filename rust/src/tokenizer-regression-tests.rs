@@ -421,6 +421,23 @@ mod tokenizer_regression_tests {
     }
 
     #[test]
+    fn test_ampersand_symbol_in_and_context() {
+        let result = tokenize("[ TRUE ] [ FALSE ] &").unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::VectorStart,
+                Token::Symbol("TRUE".into()),
+                Token::VectorEnd,
+                Token::VectorStart,
+                Token::Symbol("FALSE".into()),
+                Token::VectorEnd,
+                Token::Symbol("&".into()),
+            ]
+        );
+    }
+
+    #[test]
     fn test_removed_colon_code_block() {
         let result = tokenize(": DUP ;");
         assert!(result.is_err());

@@ -286,6 +286,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_false_and_nil_alias_returns_false() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("FALSE NIL &").await;
+        assert!(result.is_ok(), "FALSE NIL & should work: {:?}", result);
+        let val = interp.stack.pop().unwrap();
+        assert!(!val.is_nil(), "FALSE NIL & should return FALSE, not NIL");
+        assert!(!val.is_truthy(), "FALSE NIL & should be falsy");
+    }
+
+    #[tokio::test]
+    async fn test_true_and_nil_alias_returns_nil() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("TRUE NIL &").await;
+        assert!(result.is_ok(), "TRUE NIL & should work: {:?}", result);
+        let val = interp.stack.pop().unwrap();
+        assert!(val.is_nil(), "TRUE NIL & should return NIL, got {:?}", val);
+    }
+
+    #[tokio::test]
     async fn test_true_or_nil_returns_true() {
         let mut interp = Interpreter::new();
         let result = interp.execute("TRUE NIL OR").await;

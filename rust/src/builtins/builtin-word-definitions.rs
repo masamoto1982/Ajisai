@@ -463,8 +463,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "AND",
         "logic",
-        "Fold: Logical AND (Kleene three-valued). Boolean, Boolean -> Boolean",
-        "[ TRUE FALSE ] [ TRUE TRUE ] AND → [ TRUE FALSE ]",
+        "Fold: Logical AND (Kleene three-valued). Alias: & (postfix sugar). Boolean, Boolean -> Boolean",
+        "[ TRUE FALSE ] [ TRUE TRUE ] AND → [ TRUE FALSE ], [ TRUE FALSE ] [ TRUE TRUE ] & → [ TRUE FALSE ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::And)
