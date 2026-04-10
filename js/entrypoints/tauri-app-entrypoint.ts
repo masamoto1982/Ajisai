@@ -2,7 +2,7 @@ import '../indexeddb-user-word-store';
 import { createAjisaiRuntimeFromWasm } from '../core/ajisai-runtime-factory';
 import { createGUI } from '../gui/gui-application';
 import { createTauriPlatformServices } from '../platform/tauri/create-tauri-platform-services';
-import { AJISAI_APP_VERSION } from '../ui/shared/app-version';
+import { getAjisaiAppVersion } from '../ui/shared/app-version';
 import { renderAjisaiHeader } from '../ui/shared/header-view';
 
 
@@ -25,8 +25,8 @@ export async function startTauriApp(): Promise<void> {
         if (headerEl instanceof HTMLElement) {
             renderAjisaiHeader(headerEl, {
                 mode: 'web',
-                version: AJISAI_APP_VERSION,
-                assetsPath: './public/images',
+                version: getAjisaiAppVersion(),
+                assetsPath: './images',
                 referenceHref: 'docs/index.html'
             });
         }

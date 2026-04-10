@@ -4,7 +4,7 @@ import { createGUI } from '../gui/gui-application';
 import { monitorWebOnlineStatus } from '../infrastructure/web/web-online-status';
 import { registerWebServiceWorker } from '../infrastructure/web/web-service-worker';
 import { createWebPlatformServices } from '../platform/web/create-web-platform-services';
-import { AJISAI_APP_VERSION } from '../ui/shared/app-version';
+import { getAjisaiAppVersion } from '../ui/shared/app-version';
 import { renderAjisaiHeader } from '../ui/shared/header-view';
 
 
@@ -27,8 +27,8 @@ export async function startWebApp(): Promise<void> {
         if (headerEl instanceof HTMLElement) {
             renderAjisaiHeader(headerEl, {
                 mode: 'web',
-                version: AJISAI_APP_VERSION,
-                assetsPath: './public/images',
+                version: getAjisaiAppVersion(),
+                assetsPath: './images',
                 referenceHref: 'docs/index.html'
             });
         }

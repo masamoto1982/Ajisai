@@ -8,5 +8,5 @@ declare global {
 
 const DEFAULT_APP_VERSION = '202604102001';
 
-export const AJISAI_APP_VERSION =
+export const getAjisaiAppVersion = (): string =>
     (typeof window !== 'undefined' && window.AjisaiConfig?.appVersion) || DEFAULT_APP_VERSION;
