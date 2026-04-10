@@ -3,19 +3,7 @@ import { createAjisaiRuntimeFromWasm } from '../core/ajisai-runtime-factory';
 import { createGUI } from '../gui/gui-application';
 import { monitorWebOnlineStatus } from '../infrastructure/web/web-online-status';
 import { registerWebServiceWorker } from '../infrastructure/web/web-service-worker';
-
-declare global {
-    interface Window {
-        AjisaiSharedUI?: {
-            renderHeader: (root: HTMLElement, options?: {
-                mode?: 'web' | 'reference';
-                version?: string;
-                assetsPath?: string;
-                referenceHref?: string;
-            }) => void;
-        };
-    }
-}
+import { renderAjisaiHeader } from '../ui/shared/header-view';
 
 const renderStartupError = (error: unknown): void => {
     const outputDisplay = document.getElementById('output-display');
@@ -33,8 +21,8 @@ export async function startWebApp(): Promise<void> {
 
     try {
         const headerEl = document.getElementById('js-header');
-        if (headerEl && window.AjisaiSharedUI?.renderHeader) {
-            window.AjisaiSharedUI.renderHeader(headerEl, {
+        if (headerEl instanceof HTMLElement) {
+            renderAjisaiHeader(headerEl, {
                 mode: 'web',
                 version: '202604102001',
                 assetsPath: 'public/images',

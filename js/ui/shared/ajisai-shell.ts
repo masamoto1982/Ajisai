@@ -1,3 +1,5 @@
+import { renderAjisaiHeader } from './header-view';
+
 export interface NavItem {
     readonly label: string;
     readonly link: string;
@@ -45,7 +47,12 @@ const defaultConfig: DocsShellConfig = {
 export const renderDocsShell = (root: ParentNode, config: DocsShellConfig = defaultConfig): void => {
     const headerEl = root.querySelector('#js-header');
     if (headerEl instanceof HTMLElement) {
-        headerEl.innerHTML = `<div class="app-header-top"><a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai"><span class="logo-swap" aria-hidden="true"><img src="../images/ajisai-logo-thumbnail-w40.jpg" alt="" class="logo logo-default"><img src="../images/ajisai-qr.png" alt="" class="logo logo-qr"></span><div class="app-brand-meta"><h1>${config.meta.title}</h1><span class="version">ver.${config.version}</span></div></a></div>`;
+        renderAjisaiHeader(headerEl, {
+            mode: 'reference',
+            version: config.version,
+            assetsPath: '../images',
+            referenceHref: 'index.html'
+        });
     }
 
     const sideNavEl = root.querySelector('#js-side-nav');
