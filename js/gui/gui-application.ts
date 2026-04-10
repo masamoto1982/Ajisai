@@ -5,7 +5,8 @@ import { createMobileHandler, MobileHandler, ViewMode } from './mobile-view-swit
 import { createModuleTabManager, ModuleTabManager } from './module-selector-sheets';
 import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
-import { WORKER_MANAGER } from '../workers/execution-worker-manager';
+import { createWorkerManager, WorkerManager } from '../workers/execution-worker-manager';
+import type { PlatformServices } from '../platform/platform-services';
 import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 import {
     GUIElements,
@@ -74,9 +75,10 @@ const collectAutocompleteWords = (runtime: AjisaiRuntime): string[] => {
 export interface GUIOptions {
     readonly runtime: AjisaiRuntime;
     readonly root?: ParentNode;
+    readonly platform: PlatformServices;
 }
 
-export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
+export const createGUI = ({ runtime, root = document, platform }: GUIOptions): GUI => {
     let elements: GUIElements;
     let display: Display;
     let editor: Editor;
@@ -86,6 +88,7 @@ export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
     let executionController: ExecutionController;
     let moduleTabManager: ModuleTabManager;
     let layoutState: LayoutState;
+    let workerManager: WorkerManager;
 
     const doSwitchDictionarySheet = (sheetId: string): void => {
         switchDictionarySheet(elements.dictionaryArea, sheetId);
@@ -122,7 +125,7 @@ export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
     const initializeWorkers = async (): Promise<void> => {
         try {
             display.renderInfo('Initializing...', false);
-            await WORKER_MANAGER.init();
+            await workerManager.init();
             display.renderInfo('Ready', true);
         } catch (error) {
             console.error('[GUI] Failed to initialize workers:', error);
@@ -204,7 +207,7 @@ export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
         elements.copyOutputBtn.addEventListener('click', (e: MouseEvent) => {
             e.stopPropagation();
             const text = display.extractState().mainOutput;
-            navigator.clipboard.writeText(text).then(() => {
+            void platform.clipboard.writeText(text).then(() => {
                 const btn = elements.copyOutputBtn;
                 const original = btn.textContent;
                 btn.textContent = 'Copied!';
@@ -226,20 +229,20 @@ export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
             }
         });
 
-        window.addEventListener('resize', () => {
+        platform.windowEnv.addWindowEventListener('resize', () => {
             applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, layoutState.currentMode);
             updateEditorPlaceholder(elements, mobile);
         });
 
-        window.addEventListener('keydown', (e: KeyboardEvent) => {
+        platform.windowEnv.addWindowEventListener('keydown', async (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                WORKER_MANAGER.abortAll();
+                workerManager.abortAll();
                 executionController.abortExecution();
                 e.preventDefault();
                 e.stopImmediatePropagation();
             }
             if (e.key === 'Enter' && e.ctrlKey && e.altKey) {
-                if (confirm('Are you sure you want to reset the system?')) {
+                if (await platform.dialogs.confirm('Are you sure you want to reset the system?')) {
                     executionController.executeReset();
                 }
                 e.preventDefault();
@@ -254,7 +257,8 @@ export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
         elements = cacheElements(root);
         layoutState = createLayoutState();
         mobile = createMobileHandler(extractMobileElements(elements), {
-            onModeChange: (mode) => switchArea(mode)
+            onModeChange: (mode) => switchArea(mode),
+            windowEnv: platform.windowEnv
         });
         display = createDisplay(extractDisplayElements(elements));
         display.init();
@@ -301,6 +305,8 @@ export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
         persistence = createPersistence({
             runtime,
             root,
+            files: platform.files,
+            storage: platform.storage,
             showError: (error) => display.renderError(error),
             updateDisplays: updateAllDisplays,
             showInfo: (text, append) => display.renderInfo(text, append)
@@ -315,6 +321,8 @@ export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
             runtime,
+            dialogs: platform.dialogs,
+            windowEnv: platform.windowEnv,
             onWordClick: (word) => {
                 if (!mobile.isMobile()) {
                     editor.insertWord(word);
@@ -349,6 +357,7 @@ export const createGUI = ({ runtime, root = document }: GUIOptions): GUI => {
             updateView: (mode) => switchArea(mode)
         });
 
+        workerManager = createWorkerManager(platform.windowEnv);
         setupEventListeners();
         vocabulary.renderBuiltInWords();
         updateAllDisplays();

@@ -1,0 +1,22 @@
+[package]
+name = "ajisai-tauri"
+version = "0.1.0"
+description = "Ajisai desktop app"
+authors = ["Ajisai"]
+edition = "2021"
+
+[lib]
+name = "ajisai_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
