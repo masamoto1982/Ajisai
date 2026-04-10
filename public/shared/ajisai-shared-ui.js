@@ -5,12 +5,16 @@
         const assetsPath = options?.assetsPath || './public/images';
         const referenceHref = options?.referenceHref || 'docs/index.html';
 
+        const normalizedAssetsPath = assetsPath.replace(/\/+$/, '');
+        const logoDefaultSrc = new URL(`${normalizedAssetsPath}/ajisai-logo-thumbnail-w40.jpg`, window.location.href).toString();
+        const logoQrSrc = new URL(`${normalizedAssetsPath}/ajisai-qr.png`, window.location.href).toString();
+
         const headerHtml = `
             <div class="app-header-top">
                 <a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai">
                     <span class="logo-swap" aria-hidden="true">
-                        <img src="${assetsPath}/ajisai-logo-thumbnail-w40.jpg" alt="" class="logo logo-default">
-                        <img src="${assetsPath}/ajisai-qr.png" alt="" class="logo logo-qr">
+                        <img src="${logoDefaultSrc}" alt="" class="logo logo-default">
+                        <img src="${logoQrSrc}" alt="" class="logo logo-qr">
                     </span>
                     <div class="app-brand-meta">
                         <h1>Ajisai</h1>
