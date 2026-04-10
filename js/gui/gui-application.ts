@@ -5,6 +5,8 @@ import { createMobileHandler, MobileHandler, ViewMode } from './mobile-view-swit
 import { createModuleTabManager, ModuleTabManager } from './module-selector-sheets';
 import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
+import { createExecutionService } from '../application/execution-service';
+import { createAutocompleteService } from '../application/autocomplete-service';
 import { createWorkerManager, WorkerManager } from '../workers/execution-worker-manager';
 import type { PlatformServices } from '../platform/platform-services';
 import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
@@ -39,38 +41,6 @@ export interface GUI {
     readonly extractPersistence: () => Persistence;
     readonly extractExecutionController: () => ExecutionController;
 }
-
-const collectAutocompleteWords = (runtime: AjisaiRuntime): string[] => {
-    const coreWordsInfo = runtime.collectCoreWordsInfo();
-    const coreWords: string[] = coreWordsInfo.map(word => word[0]).filter((w): w is string => w !== undefined);
-
-    const userWordsInfo = runtime.collectUserWordsInfo();
-    const userWords: string[] = userWordsInfo.flatMap(word => [
-        word[1],
-        `${word[0]}@${word[1]}`
-    ]);
-
-    const moduleWords: string[] = [];
-    try {
-        const importedModules: string[] = runtime.collectImportedModules();
-        for (const moduleName of importedModules) {
-            const words = runtime.collectModuleWordsInfo(moduleName);
-            const prefix: string = `${moduleName}@`;
-            for (const word of words) {
-                const name: string = word[0] ?? '';
-                moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);
-            }
-            const sampleWords = runtime.collectModuleSampleWordsInfo(moduleName);
-            for (const word of sampleWords) {
-                const sampleName: string = word[0] ?? '';
-                moduleWords.push(sampleName);
-            }
-        }
-    } catch {  }
-
-    const allWords: Set<string> = new Set([...coreWords, ...userWords, ...moduleWords]);
-    return Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));
-};
 
 export interface GUIOptions {
     readonly runtime: AjisaiRuntime;
@@ -236,7 +206,6 @@ export const createGUI = ({ runtime, root = document, platform }: GUIOptions): G
 
         platform.windowEnv.addWindowEventListener('keydown', async (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                workerManager.abortAll();
                 executionController.abortExecution();
                 e.preventDefault();
                 e.stopImmediatePropagation();
@@ -313,10 +282,12 @@ export const createGUI = ({ runtime, root = document, platform }: GUIOptions): G
         });
         await persistence.init();
 
+        const autocompleteService = createAutocompleteService(runtime);
+
         editor = createEditor(elements.codeInput, {
             onContentChange: (content) => updateHighlights(elements, content),
             onSwitchToInputMode: () => switchArea('input'),
-            onRequestSuggestions: () => collectAutocompleteWords(runtime)
+            onRequestSuggestions: () => autocompleteService.collectAutocompleteWords()
         });
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
@@ -343,7 +314,9 @@ export const createGUI = ({ runtime, root = document, platform }: GUIOptions): G
             showInfo: (text, append) => display.renderInfo(text, append)
         });
 
-        executionController = createExecutionController(runtime, {
+        const executionService = createExecutionService(runtime);
+
+        executionController = createExecutionController(runtime, executionService, {
             extractEditorValue: () => editor.extractValue(),
             clearEditor: (switchView) => { editor.clear(switchView); },
             updateEditorValue: (value) => editor.updateValue(value),

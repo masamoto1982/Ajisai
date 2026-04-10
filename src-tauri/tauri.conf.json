@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build:web",
-    "devUrl": "http://localhost:3000/tauri.html",
+    "devUrl": "http://localhost:3000/index.html",
     "frontendDist": "../dist"
   },
   "app": {
@@ -16,7 +16,7 @@
         "width": 1280,
         "height": 820,
         "resizable": true,
-        "url": "tauri.html"
+        "url": "index.html"
       }
     ],
     "security": {
