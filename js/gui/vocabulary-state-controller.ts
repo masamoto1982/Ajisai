@@ -8,6 +8,7 @@ import {
     createWordButtonElement,
     registerBackgroundClickListeners,
 } from './dictionary-element-builders';
+import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 
 export interface WordInfo {
     readonly dictionary: string;
@@ -25,6 +26,7 @@ export interface VocabularyElements {
 }
 
 export interface VocabularyCallbacks {
+    readonly runtime: AjisaiRuntime;
     readonly onWordClick: (word: string) => void;
     readonly onBackgroundClick?: () => void;
     readonly onBackgroundDoubleClick?: () => void;
@@ -150,7 +152,7 @@ export const createVocabularyManager = (
     elements: VocabularyElements,
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
-    const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
+    const { runtime, onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
     const deleteContextMenu = createDeleteContextMenuElement(() => {
         if (!activeContextWordName) {
             return;
@@ -201,7 +203,7 @@ export const createVocabularyManager = (
             : `'${wordName}' DEL`;
 
         try {
-            const result = await window.ajisaiInterpreter.execute(deleteCode);
+            const result = await runtime.execute(deleteCode);
             if (result.status === 'ERROR') {
                 if (!forceDelete && result.message?.includes(DEPENDENCY_DELETE_ERROR)) {
                     const confirmed = confirm(
@@ -308,7 +310,7 @@ export const createVocabularyManager = (
                 () => onWordClick(wordInfo.dictionary === 'DEMO' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
                 () => {
                     const lookupName = `${wordInfo.dictionary}@${wordInfo.name}`;
-                    const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName);
+                    const definition = runtime.lookupWordDefinition(lookupName);
                     const desc = resolveDisplayDescription(wordInfo);
                     const displayText = desc
                         ? `${desc}\n\n${definition ?? ''}`.trim()
@@ -344,10 +346,8 @@ export const createVocabularyManager = (
     };
 
     const renderBuiltInWords = (): void => {
-        if (!window.ajisaiInterpreter) return;
-
         try {
-            const coreWords = window.ajisaiInterpreter.collect_core_words_info();
+            const coreWords = runtime.collectCoreWordsInfo();
             renderBuiltInWordsSorted(elements.builtInWordsDisplay, coreWords);
         } catch (error) {
             console.error('Failed to render core words:', error);

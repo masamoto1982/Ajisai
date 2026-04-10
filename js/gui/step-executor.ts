@@ -1,7 +1,8 @@
 
 
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter, UserWord, ExecuteResult } from '../wasm-interpreter-types';
+import type { UserWord, ExecuteResult } from '../wasm-interpreter-types';
+import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 import {
     applyInterpreterSnapshot,
     createInterpreterSnapshot,
@@ -60,23 +61,23 @@ const formatStepMessage = (
     return `[>] Step ${currentIndex + 1}/${totalTokens}: "${token}" (${remaining} remaining)`;
 };
 
-const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
-    const userWordsInfo = interpreter.collect_user_words_info();
+const collectUserWords = (interpreter: AjisaiRuntime): UserWord[] => {
+    const userWordsInfo = interpreter.collectUserWordsInfo();
     return userWordsInfo.map(wordData => ({
         dictionary: wordData[0],
         name: wordData[1],
-        definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
+        definition: interpreter.lookupWordDefinition(`${wordData[0]}@${wordData[1]}`),
         description: wordData[2]
     }));
 };
 
 const createStepExecutionSnapshot = (
-    interpreter: AjisaiInterpreter
+    interpreter: AjisaiRuntime
 ): InterpreterSnapshot =>
     createInterpreterSnapshot({
-        stack: interpreter.collect_stack(),
+        stack: interpreter.collectStack(),
         userWords: collectUserWords(interpreter),
-        importedModules: interpreter.collect_imported_modules()
+        importedModules: interpreter.collectImportedModules()
     });
 
 const resolveStepExecutionException = (
@@ -93,7 +94,7 @@ const resolveStepExecutionException = (
 };
 
 const syncInterpreterState = (
-    interpreter: AjisaiInterpreter,
+    interpreter: AjisaiRuntime,
     result: ExecuteResult
 ): void => {
     if (!result || result.error) return;
@@ -106,7 +107,7 @@ const syncInterpreterState = (
 };
 
 export const createStepExecutor = (
-    interpreter: AjisaiInterpreter,
+    interpreter: AjisaiRuntime,
     callbacks: StepExecutorCallbacks
 ): StepExecutor => {
     const {
