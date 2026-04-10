@@ -4,19 +4,9 @@ import { createGUI } from '../gui/gui-application';
 import { monitorWebOnlineStatus } from '../infrastructure/web/web-online-status';
 import { registerWebServiceWorker } from '../infrastructure/web/web-service-worker';
 import { createWebPlatformServices } from '../platform/web/create-web-platform-services';
+import { AJISAI_APP_VERSION } from '../ui/shared/app-version';
+import { renderAjisaiHeader } from '../ui/shared/header-view';
 
-declare global {
-    interface Window {
-        AjisaiSharedUI?: {
-            renderHeader: (root: HTMLElement, options: {
-                mode: 'web' | 'reference';
-                version: string;
-                assetsPath: string;
-                referenceHref: string;
-            }) => void;
-        };
-    }
-}
 
 const renderStartupError = (error: unknown): void => {
     const outputDisplay = document.getElementById('output-display');
@@ -34,10 +24,10 @@ export async function startWebApp(): Promise<void> {
 
     try {
         const headerEl = document.getElementById('js-header');
-        if (headerEl instanceof HTMLElement && window.AjisaiSharedUI?.renderHeader) {
-            window.AjisaiSharedUI.renderHeader(headerEl, {
+        if (headerEl instanceof HTMLElement) {
+            renderAjisaiHeader(headerEl, {
                 mode: 'web',
-                version: '202604102001',
+                version: AJISAI_APP_VERSION,
                 assetsPath: './public/images',
                 referenceHref: 'docs/index.html'
             });
