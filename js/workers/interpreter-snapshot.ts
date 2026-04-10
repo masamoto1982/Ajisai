@@ -1,4 +1,5 @@
 import type { AjisaiInterpreter, UserWord, Value } from '../wasm-interpreter-types';
+import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 
 export interface InterpreterSnapshot {
     readonly stack: Value[];
@@ -17,19 +18,31 @@ export const createInterpreterSnapshot = (snapshot: {
 });
 
 export const applyInterpreterSnapshot = (
-    interpreter: AjisaiInterpreter,
+    interpreter: AjisaiRuntime | AjisaiInterpreter,
     snapshot?: Partial<InterpreterSnapshot> | null
 ): void => {
     interpreter.reset();
     if (!snapshot) return;
 
     if (snapshot.importedModules?.length) {
-        interpreter.restore_imported_modules(snapshot.importedModules);
+        if ('restoreImportedModules' in interpreter) {
+            interpreter.restoreImportedModules(snapshot.importedModules);
+        } else {
+            interpreter.restore_imported_modules(snapshot.importedModules);
+        }
     }
     if (snapshot.stack) {
-        interpreter.restore_stack(snapshot.stack);
+        if ('restoreStack' in interpreter) {
+            interpreter.restoreStack(snapshot.stack);
+        } else {
+            interpreter.restore_stack(snapshot.stack);
+        }
     }
     if (snapshot.userWords) {
-        interpreter.restore_user_words(snapshot.userWords);
+        if ('restoreUserWords' in interpreter) {
+            void interpreter.restoreUserWords(snapshot.userWords);
+        } else {
+            interpreter.restore_user_words(snapshot.userWords);
+        }
     }
 };

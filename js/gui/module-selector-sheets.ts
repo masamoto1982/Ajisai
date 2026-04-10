@@ -9,6 +9,7 @@ import {
     compareWordName,
 } from './dictionary-element-builders';
 import { formatDictionaryTabName } from './vocabulary-state-controller';
+import type { AjisaiRuntime } from '../core/ajisai-runtime-types';
 
 export interface ModuleSheet {
     readonly moduleName: string;
@@ -33,6 +34,7 @@ export interface ModuleActionConfig {
 }
 
 export interface ModuleTabManagerOptions {
+    readonly runtime: AjisaiRuntime;
     readonly selectEl: HTMLSelectElement;
     readonly sheetContainerEl: HTMLElement;
     readonly onWordClick: (word: string) => void;
@@ -50,6 +52,7 @@ export const createModuleTabManager = (
     options: ModuleTabManagerOptions
 ): ModuleTabManager => {
     const {
+        runtime,
         selectEl,
         sheetContainerEl,
         onWordClick,
@@ -113,8 +116,6 @@ export const createModuleTabManager = (
     };
 
     const renderModuleWords = (moduleSheet: ModuleSheet): void => {
-        if (!window.ajisaiInterpreter) return;
-
         const wordsDisplay = moduleSheet.sheetEl.querySelector('.module-words-display');
         const wordInfo = moduleSheet.sheetEl.querySelector('.module-word-info');
         if (!wordsDisplay || !wordInfo) return;
@@ -123,7 +124,7 @@ export const createModuleTabManager = (
 
         try {
             const moduleWords: Array<[string, string | null]> =
-                window.ajisaiInterpreter.collect_module_words_info(moduleSheet.moduleName);
+                runtime.collectModuleWordsInfo(moduleSheet.moduleName);
 
             const sorted = [...moduleWords].sort((a, b) => compareWordName(a[0], b[0]));
             const matched = sorted.filter(wd => checkWordMatchesFilter(wd[0], searchFilter));
@@ -168,12 +169,10 @@ export const createModuleTabManager = (
         sheets.find(s => s.moduleName === moduleName);
 
     const syncModuleTabs = (): string[] => {
-        if (!window.ajisaiInterpreter) return [];
-
         const newSheetIds: string[] = [];
 
         try {
-            const importedModules: string[] = window.ajisaiInterpreter.collect_imported_modules();
+            const importedModules: string[] = runtime.collectImportedModules();
             const importedSet = new Set(importedModules);
 
             for (let i = sheets.length - 1; i >= 0; i--) {
