@@ -160,6 +160,7 @@ header {
 
 .logo-qr {
     opacity: 0;
+    filter: brightness(0) invert(1);
 }
 
 .app-brand-block:hover .logo-default,
