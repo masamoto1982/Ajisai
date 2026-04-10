@@ -339,12 +339,12 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_pipe_character_removed_error() {
-        let result = tokenize("[ 2 ] * | 'DOUBLE' DEF");
+    fn test_multiple_dollar_clauses_in_single_line_error() {
+        let result = tokenize("{ [ 0 ] < $ 'negative' } { IDLE $ 'positive' }");
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
-            .contains("'|' (block separator) has been removed"));
+            .contains("COND: $ clauses must be written one clause per line"));
     }
 
 
