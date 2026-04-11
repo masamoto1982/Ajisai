@@ -11,40 +11,51 @@
  *   Level 4 (緑    #34C759): div祖先 3個  — .vocabulary-container, .search-wrapper 等
  *   Level 5 (青    #007AFF): div祖先 4個  — .words-area
  *   Level 6 (紫    #AF52DE): div祖先 5個  — #core-words-display, #user-words-display 等
+ *
+ * 余白について:
+ *   padding: 4px !important を全 div に付与することで、親の padding が子 div を
+ *   4px 内側に押し込み、各階層の outline が重ならないようにしています。
+ *   !important が必要な理由: 既存の padding: 0 / padding: 0.75rem 等を上書きするため。
  */
 
 /* Level 1 — div祖先 0個 */
 div {
     outline: 2px solid #FF3B30;
     outline-offset: -1px;
+    padding: 4px !important;
 }
 
 /* Level 2 — div祖先 1個 */
 div div {
     outline: 2px solid #FF9500;
     outline-offset: -1px;
+    padding: 4px !important;
 }
 
 /* Level 3 — div祖先 2個 */
 div div div {
     outline: 2px solid #FFCC00;
     outline-offset: -1px;
+    padding: 4px !important;
 }
 
 /* Level 4 — div祖先 3個 */
 div div div div {
     outline: 2px solid #34C759;
     outline-offset: -1px;
+    padding: 4px !important;
 }
 
 /* Level 5 — div祖先 4個 */
 div div div div div {
     outline: 2px solid #007AFF;
     outline-offset: -1px;
+    padding: 4px !important;
 }
 
 /* Level 6 — div祖先 5個以上 */
 div div div div div div {
     outline: 2px solid #AF52DE;
     outline-offset: -1px;
+    padding: 4px !important;
 }
