@@ -81,6 +81,12 @@ pub enum BuiltinExecutorKey {
     Timestamp,
     Csprng,
     Hash,
+    Spawn,
+    Await,
+    Status,
+    Kill,
+    Monitor,
+    Supervise,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -774,6 +780,60 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         "none",
         BuiltinDetailGroup::IoModule,
         Some(BuiltinExecutorKey::ImportOnly)
+    ),
+    builtin_spec!(
+        "SPAWN",
+        "control",
+        "Spawn an isolated child runtime from a code block. Block -> ProcessHandle",
+        "{ [ 1 ] [ 0 ] / } SPAWN",
+        "none",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Spawn)
+    ),
+    builtin_spec!(
+        "AWAIT",
+        "control",
+        "Run/wait a child runtime and return exit tuple.",
+        "{ ... } SPAWN AWAIT → [ 'ok' [ ... ] ] / [ 'exit' 'Reason' ]",
+        "none",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Await)
+    ),
+    builtin_spec!(
+        "STATUS",
+        "control",
+        "Read child status. ProcessHandle -> String",
+        "{ ... } SPAWN STATUS → 'running'|'ok'|'exit'|'killed'|'timeout'",
+        "none",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Status)
+    ),
+    builtin_spec!(
+        "KILL",
+        "control",
+        "Force child termination. ProcessHandle -> 'killed'",
+        "{ ... } SPAWN KILL",
+        "none",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Kill)
+    ),
+    builtin_spec!(
+        "MONITOR",
+        "control",
+        "Register monitor on a child handle.",
+        "{ ... } SPAWN MONITOR",
+        "none",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Monitor)
+    ),
+    builtin_spec!(
+        "SUPERVISE",
+        "control",
+        "Run block under one_for_one restart policy.",
+        "{ unstable } [ 3 ] SUPERVISE",
+        "none",
+        BuiltinDetailGroup::ControlHigherOrder,
+        Some(BuiltinExecutorKey::Supervise)
     ),
 ];
 

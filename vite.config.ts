@@ -1,9 +1,13 @@
 
 
 import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  root: '.',
+  root: projectRoot,
   base: './',
   server: {
     port: 3000,
@@ -15,8 +19,8 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       input: {
-        main: 'index.html',
-        reference: 'language-reference-playground.html'
+        main: path.resolve(projectRoot, 'index.html'),
+        reference: path.resolve(projectRoot, 'language-reference-playground.html')
       }
     }
   },
@@ -31,5 +35,5 @@ export default defineConfig({
   worker: {
     format: 'es'
   },
-  publicDir: 'public'
+  publicDir: path.resolve(projectRoot, 'public')
 });

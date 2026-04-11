@@ -11,6 +11,7 @@
 Ajisai is an AI-first, vector-oriented, fractional-dataflow language with a Rust (WASM) core and TypeScript GUI/runtime shell.
 
 - Playground: https://masamoto1982.github.io/Ajisai/
+- Runtime model includes local safe-mode (`~`) plus isolated child-runtime lifecycle words (`SPAWN`, `AWAIT`, `STATUS`, `KILL`, `MONITOR`, `SUPERVISE`) for Ajisai-style let-it-crash execution.
 
 ## Documentation Authority
 

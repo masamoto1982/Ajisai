@@ -167,6 +167,12 @@ impl Interpreter {
             BuiltinExecutorKey::Timestamp => datetime::op_timestamp(self),
             BuiltinExecutorKey::Csprng => random::op_csprng(self),
             BuiltinExecutorKey::Hash => hash::op_hash(self),
+            BuiltinExecutorKey::Spawn => self.op_spawn(),
+            BuiltinExecutorKey::Await => self.op_await(),
+            BuiltinExecutorKey::Status => self.op_status(),
+            BuiltinExecutorKey::Kill => self.op_kill(),
+            BuiltinExecutorKey::Monitor => self.op_monitor(),
+            BuiltinExecutorKey::Supervise => self.op_supervise(),
         }
     }
 

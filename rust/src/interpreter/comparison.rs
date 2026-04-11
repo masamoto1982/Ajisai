@@ -22,7 +22,7 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
             "scalar value",
             "non-scalar value",
         )),
-        ValueData::CodeBlock(_) => Err(AjisaiError::create_structure_error(
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Err(AjisaiError::create_structure_error(
             "scalar value",
             "non-scalar value",
         )),

@@ -49,6 +49,8 @@ pub enum ValueData {
     },
     Nil,
     CodeBlock(Vec<Token>),
+    ProcessHandle(u64),
+    SupervisorHandle(u64),
 }
 
 #[derive(Debug, Clone, PartialEq)]

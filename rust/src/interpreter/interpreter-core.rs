@@ -51,6 +51,48 @@ pub(crate) struct DictionaryDependencyInfo {
     pub depended_by: HashSet<String>,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) enum ChildState {
+    Running,
+    Completed,
+    Failed,
+    Killed,
+    Timeout,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum ExitReason {
+    Normal,
+    Error(String),
+    Killed,
+    Timeout,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct RuntimeDictionarySnapshot {
+    pub user_words: HashMap<String, Arc<WordDefinition>>,
+    pub user_dictionaries: HashMap<String, UserDictionary>,
+    pub dependents: HashMap<String, HashSet<String>>,
+    pub import_table: ImportTable,
+    pub module_vocabulary: HashMap<String, ModuleDictionary>,
+    pub dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
+    pub next_registration_order: u64,
+    pub active_user_dictionary: String,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ChildRuntime {
+    pub id: u64,
+    pub code_block: Vec<Token>,
+    pub dictionary_snapshot: RuntimeDictionarySnapshot,
+    pub state: ChildState,
+    pub exit_reason: Option<ExitReason>,
+    pub result_snapshot: Option<Vec<Value>>,
+    pub restart_count: usize,
+    pub supervisor_id: Option<u64>,
+    pub monitored: bool,
+}
+
 pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) core_vocabulary: HashMap<String, Arc<WordDefinition>>,
@@ -88,6 +130,11 @@ pub struct Interpreter {
     pub(crate) active_user_dictionary: String,
 
     pub(crate) semantic_registry: SemanticRegistry,
+
+    pub(crate) child_runtimes: HashMap<u64, ChildRuntime>,
+    pub(crate) next_child_id: u64,
+    pub(crate) monitor_notifications: Vec<Vec<Value>>,
+    pub(crate) next_supervisor_id: u64,
 }
 
 impl Interpreter {
@@ -123,6 +170,10 @@ impl Interpreter {
             next_registration_order: 1,
             active_user_dictionary: "DEMO".to_string(),
             semantic_registry: SemanticRegistry::new(),
+            child_runtimes: HashMap::new(),
+            next_child_id: 1,
+            monitor_notifications: Vec::new(),
+            next_supervisor_id: 1,
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -257,6 +308,10 @@ impl Interpreter {
         self.next_registration_order = 1;
         self.active_user_dictionary = "DEMO".to_string();
         self.semantic_registry.clear();
+        self.child_runtimes.clear();
+        self.next_child_id = 1;
+        self.monitor_notifications.clear();
+        self.next_supervisor_id = 1;
         crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }

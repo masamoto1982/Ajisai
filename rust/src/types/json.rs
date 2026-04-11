@@ -131,7 +131,7 @@ pub fn serialize_value_to_json(val: &Value) -> serde_json::Value {
             serde_json::Value::Array(arr)
         }
 
-        ValueData::CodeBlock(_) => serde_json::Value::Null,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => serde_json::Value::Null,
     }
 }
 

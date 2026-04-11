@@ -37,6 +37,8 @@ fn format_value_auto(data: &ValueData) -> String {
             format_value_recursive(data, 0)
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
+        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
+        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -84,6 +86,8 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
             format!("{} {} {}", open, inner.join(" "), close)
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
+        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
+        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -158,6 +162,8 @@ fn format_as_string(data: &ValueData) -> String {
             format!("'{}'", chars)
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
+        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
+        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -204,11 +210,14 @@ fn format_as_boolean(data: &ValueData) -> String {
                         }
                     }
                     ValueData::CodeBlock(_) => "TRUE",
+                    ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => "TRUE",
                 })
                 .collect();
             format!("{{ {} }}", inner.join(" "))
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
+        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
+        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -225,5 +234,7 @@ fn format_as_datetime(data: &ValueData) -> String {
         }
         ValueData::Vector(_) | ValueData::Record { .. } => format_value_recursive(data, 0),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
+        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
+        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }

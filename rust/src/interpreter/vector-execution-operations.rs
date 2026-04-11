@@ -41,6 +41,8 @@ fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
             let token_strs: Vec<String> = tokens.iter().map(format_token_to_source).collect();
             Ok(token_strs.join(" "))
         }
+        ValueData::ProcessHandle(id) => Ok(format!("<process:{}>", id)),
+        ValueData::SupervisorHandle(id) => Ok(format!("<supervisor:{}>", id)),
         ValueData::Vector(children)
         | ValueData::Record {
             pairs: children, ..

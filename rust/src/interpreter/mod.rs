@@ -3,6 +3,8 @@ pub mod audio;
 pub mod cast;
 pub mod comparison;
 pub mod control;
+#[path = "child-runtime.rs"]
+pub mod child_runtime;
 #[path = "control-cond.rs"]
 pub mod control_cond;
 pub mod datetime;
@@ -86,6 +88,9 @@ mod hash_tests;
 #[cfg(test)]
 #[path = "higher-order-fold-tests.rs"]
 mod higher_order_fold_tests;
+#[cfg(test)]
+#[path = "child-runtime-tests.rs"]
+mod child_runtime_tests;
 
 pub use interpreter_core::*;
 
