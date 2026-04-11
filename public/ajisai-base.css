@@ -388,7 +388,6 @@ article h2 {
 .header-btn,
 .btn-primary,
 .btn-secondary,
-.reference-btn,
 .test-btn {
     display: inline-flex;
     align-items: center;
@@ -442,7 +441,6 @@ article h2 {
 
 
 .header-btn,
-.reference-btn,
 .test-btn {
     background-color: var(--gradient-menu);
     color: var(--menu-text);
@@ -452,13 +450,11 @@ article h2 {
 }
 
 .header-btn:hover,
-.reference-btn:hover,
 .test-btn:hover {
     background-color: var(--gradient-menu-hover);
     color: var(--menu-text-hover);
 }
 
-.reference-btn svg,
 .test-btn svg {
     width: 16px;
     height: 16px;
@@ -723,7 +719,6 @@ small {
         z-index: 100;
     }
 
-    .reference-btn,
     .test-btn,
     .header-btn {
         padding: 0.4rem 0.8rem;
