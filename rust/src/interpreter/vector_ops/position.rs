@@ -44,13 +44,11 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (index_val, index) = pop_index_operand(interp)?;
 
-
-    let preserve_source = interp.gui_mode || is_keep_mode;
-
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
+            // StackTop always preserves the source vector (query semantics).
             let result_elem =
-                with_stacktop_vector_target_with_arg(interp, &index_val, preserve_source, |target_val| {
+                with_stacktop_vector_target_with_arg(interp, &index_val, true, |target_val| {
                     let len = target_val.len();
                     if len == 0 {
                         return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
@@ -86,8 +84,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
             };
 
             let result_elem = interp.stack[actual_index].clone();
-            if !preserve_source {
-
+            if !is_keep_mode {
                 interp.stack.clear();
             }
             interp.stack.push(result_elem);

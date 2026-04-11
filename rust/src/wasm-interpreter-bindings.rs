@@ -28,8 +28,7 @@ pub(crate) fn set_js_prop(obj: &js_sys::Object, key: &str, value: &JsValue) {
 impl AjisaiInterpreter {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        let mut interp = Interpreter::new();
-        interp.gui_mode = true;
+        let interp = Interpreter::new();
         AjisaiInterpreter {
             interpreter: interp,
             step_tokens: Vec::new(),

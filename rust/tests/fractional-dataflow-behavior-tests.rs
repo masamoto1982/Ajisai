@@ -20,14 +20,12 @@ use num_bigint::BigInt;
 
 async fn run(code: &str) -> Result<Vec<Value>, String> {
     let mut interp = Interpreter::new();
-    interp.gui_mode = true;
     interp.execute(code).await.map_err(|e| e.to_string())?;
     Ok(interp.get_stack().clone())
 }
 
 async fn run_with_flow_tracking(code: &str) -> Result<(Vec<Value>, Interpreter), String> {
     let mut interp = Interpreter::new();
-    interp.gui_mode = true;
     interp.update_flow_tracking(true);
     interp.execute(code).await.map_err(|e| e.to_string())?;
     let stack = interp.get_stack().clone();

@@ -3,7 +3,14 @@ use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::{DisplayHint, Value, ValueData};
+
+fn push_boolean_result(interp: &mut Interpreter, result: bool) {
+    interp.stack.push(Value::from_vector(vec![Value::from_bool(result)]));
+    let stack_len = interp.stack.len();
+    interp.semantic_registry.normalize_to_stack_len(stack_len);
+    interp.semantic_registry.update_hint_at(stack_len - 1, DisplayHint::Boolean);
+}
 
 fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
     match &val.data {
@@ -92,13 +99,7 @@ where
             };
 
             let result: bool = op(&a_scalar, &b_scalar);
-            if interp.gui_mode {
-                interp
-                    .stack
-                    .push(Value::from_vector(vec![Value::from_bool(result)]));
-            } else {
-                interp.stack.push(Value::from_bool(result));
-            }
+            push_boolean_result(interp, result);
             Ok(())
         }
 
@@ -134,7 +135,7 @@ where
                 }
             };
 
-            interp.stack.push(Value::from_bool(all_true));
+            push_boolean_result(interp, all_true);
             Ok(())
         }
     }
@@ -186,13 +187,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                     _ => false,
                 }
             };
-            if interp.gui_mode {
-                interp
-                    .stack
-                    .push(Value::from_vector(vec![Value::from_bool(result)]));
-            } else {
-                interp.stack.push(Value::from_bool(result));
-            }
+            push_boolean_result(interp, result);
             Ok(())
         }
 
@@ -218,7 +213,7 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
             };
 
             let all_equal: bool = check_all_adjacent_equal(&items);
-            interp.stack.push(Value::from_bool(all_equal));
+            push_boolean_result(interp, all_equal);
             Ok(())
         }
     }

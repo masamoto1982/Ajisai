@@ -43,41 +43,25 @@ fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, u
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let preserve_source = interp.gui_mode || is_keep_mode;
-
     let len = match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            if preserve_source {
-                let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+            // StackTop always preserves the source vector (query semantics).
+            let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
-                if target_val.is_nil() {
-                    0
-                } else if target_val.is_vector() {
-                    extract_vector_elements(target_val).len()
-                } else {
-                    return Err(AjisaiError::create_structure_error(
-                        "vector",
-                        "other format",
-                    ));
-                }
+            if target_val.is_nil() {
+                0
+            } else if target_val.is_vector() {
+                extract_vector_elements(target_val).len()
             } else {
-                let target_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-                if target_val.is_nil() {
-                    0
-                } else if target_val.is_vector() {
-                    extract_vector_elements(&target_val).len()
-                } else {
-                    interp.stack.push(target_val);
-                    return Err(AjisaiError::create_structure_error(
-                        "vector",
-                        "other format",
-                    ));
-                }
+                return Err(AjisaiError::create_structure_error(
+                    "vector",
+                    "other format",
+                ));
             }
         }
         OperationTargetMode::Stack => {
-            if preserve_source {
+            // Stack mode respects keep_mode for clearing behavior.
+            if is_keep_mode {
                 interp.stack.len()
             } else {
                 let len = interp.stack.len();
