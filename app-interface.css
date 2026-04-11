@@ -28,7 +28,68 @@
 
 
 
+:root {
+    /* Typography */
+    --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
 
+    /* Layout */
+    --radius-main: 10px;
+    --col-left-flex: 1;
+    --col-right-flex: 1;
+
+    /* Primary palette */
+    --color-primary: #6b5b95;
+
+    /* Backgrounds */
+    --gradient-header: #6b5b95;
+    --gradient-background: #f6f5f9;
+    --gradient-parent: #e4e1ec;
+    --gradient-child: #edebf2;
+    --gradient-menu: #7d6fa2;
+    --gradient-menu-hover: #9185b0;
+
+    /* Text */
+    --color-text: #333333;
+    --color-text-light: #555555;
+    --header-text: #ffffff;
+    --header-text-secondary: #cccccc;
+    --header-text-tertiary: #aaaaaa;
+    --menu-text: #ffffff;
+    --menu-text-hover: #ffffff;
+    --heading-h1: #ffffff;
+    --heading-h2: #605286;
+    --heading-h3: #6b5b95;
+
+    /* Borders */
+    --border-color: #aba9b1;
+    --border-main: solid 1px #aba9b1;
+    --color-border-strong: #b9b8bb;
+    --color-secondary: #aba9b1;
+
+    /* Shades */
+    --color-light: #f6f5f9;
+    --color-medium: #dddde0;
+    --color-dark: #e4e1ec;
+
+    /* Code areas */
+    --code-bg: #393544;
+    --code-text: #f8f8f2;
+    --code-comment: #a69dbf;
+    --code-inline-bg: rgba(107, 91, 149, 0.1);
+
+    /* Word button category colors */
+    --color-core: #E65100;
+    --color-dependency: #E69500;
+    --color-non-dependency: #009B68;
+    --color-stack: #990099;
+    --color-module: #0277BD;
+
+    /* Signature highlight colors */
+    --color-signature-map: #DFEBFD;
+    --color-signature-form: #DDEFE3;
+    --color-signature-fold: #FCE3D8;
+}
 
 .main-layout .output-area,
 .main-layout .input-area,

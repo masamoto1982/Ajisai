@@ -1,10 +1,10 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
+import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 import {
-    applyInterpreterSnapshot,
-    createInterpreterSnapshot,
-    type InterpreterSnapshot
-} from '../workers/interpreter-snapshot';
-import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
+    createExecutionSnapshot,
+    syncInterpreterState,
+    resolveExecutionException
+} from './interpreter-execution-utils';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import type { ViewMode } from './mobile-view-switcher';
 
@@ -30,59 +30,8 @@ export interface ExecutionController {
     readonly abortExecution: () => void;
 }
 
-const mapWordDataToUserWord = (
-    interpreter: AjisaiInterpreter,
-    wordData: [string, string, string | null, boolean]
-): UserWord => ({
-    dictionary: wordData[0],
-    name: wordData[1],
-    definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
-    description: wordData[2]
-});
-
-const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
-    const userWordsInfo = interpreter.collect_user_words_info();
-    return userWordsInfo.map(wordData => mapWordDataToUserWord(interpreter, wordData));
-};
-
-const restoreInterpreterState = (
-    interpreter: AjisaiInterpreter,
-    result: ExecuteResult
-): void => {
-    if (!result || result.error) return;
-
-    applyInterpreterSnapshot(interpreter, {
-        stack: result.stack,
-        userWords: result.userWords,
-        importedModules: result.importedModules
-    });
-};
-
 const checkIsResetCommand = (code: string): boolean =>
     code.trim().toUpperCase() === 'RESET';
-
-const isAbortError = (error: Error): boolean =>
-    error.message.includes('aborted');
-
-const createExecutionSnapshot = (interpreter: AjisaiInterpreter): InterpreterSnapshot =>
-    createInterpreterSnapshot({
-        stack: interpreter.collect_stack(),
-        userWords: collectUserWords(interpreter),
-        importedModules: interpreter.collect_imported_modules()
-    });
-
-const resolveExecutionException = (
-    error: unknown,
-    showInfo: (text: string, append: boolean) => void,
-    showError: (error: Error | string) => void
-): void => {
-    console.error('[ExecController] Code execution failed:', error);
-    if (error instanceof Error && isAbortError(error)) {
-        showInfo('Execution aborted', true);
-        return;
-    }
-    showError(error as Error);
-};
 
 export const createExecutionController = (
     interpreter: AjisaiInterpreter,
@@ -148,7 +97,7 @@ export const createExecutionController = (
             const result = await WORKER_MANAGER.execute(code, currentState);
 
             try {
-                restoreInterpreterState(interpreter, result);
+                syncInterpreterState(interpreter, result);
             } catch (error) {
                 console.error('[ExecController] Failed to sync state:', error);
                 showError(error as Error);
@@ -157,7 +106,7 @@ export const createExecutionController = (
             applyExecutionResult(result, code);
 
         } catch (error) {
-            resolveExecutionException(error, showInfo, showError);
+            resolveExecutionException('ExecController', error, showInfo, showError);
         }
 
         updateDisplays();
@@ -174,7 +123,6 @@ export const createExecutionController = (
             if (result.status === 'OK' && !result.error) {
                 clearEditor(true);
                 await fullReset();
-
                 updateView('input');
             } else {
                 showError(result.message || 'RESET execution failed');
@@ -202,13 +150,4 @@ export const createExecutionController = (
         checkIsStepModeActive,
         abortExecution
     };
-};
-
-export const executionControllerUtils = {
-    collectUserWords,
-    restoreInterpreterState,
-    checkIsResetCommand,
-    isAbortError,
-    createExecutionSnapshot,
-    resolveExecutionException
 };

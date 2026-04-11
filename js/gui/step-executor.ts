@@ -1,12 +1,11 @@
 
-
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter, UserWord, ExecuteResult } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 import {
-    applyInterpreterSnapshot,
-    createInterpreterSnapshot,
-    type InterpreterSnapshot
-} from '../workers/interpreter-snapshot';
+    createExecutionSnapshot,
+    syncInterpreterState,
+    resolveExecutionException
+} from './interpreter-execution-utils';
 
 export interface StepState {
     readonly active: boolean;
@@ -58,51 +57,6 @@ const formatStepMessage = (
 ): string => {
     const remaining = totalTokens - currentIndex - 1;
     return `[>] Step ${currentIndex + 1}/${totalTokens}: "${token}" (${remaining} remaining)`;
-};
-
-const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
-    const userWordsInfo = interpreter.collect_user_words_info();
-    return userWordsInfo.map(wordData => ({
-        dictionary: wordData[0],
-        name: wordData[1],
-        definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`),
-        description: wordData[2]
-    }));
-};
-
-const createStepExecutionSnapshot = (
-    interpreter: AjisaiInterpreter
-): InterpreterSnapshot =>
-    createInterpreterSnapshot({
-        stack: interpreter.collect_stack(),
-        userWords: collectUserWords(interpreter),
-        importedModules: interpreter.collect_imported_modules()
-    });
-
-const resolveStepExecutionException = (
-    error: unknown,
-    showInfo: (text: string, append: boolean) => void,
-    showError: (error: Error | string) => void
-): void => {
-    console.error('[StepExecutor] Step execution failed:', error);
-    if (error instanceof Error && error.message.includes('aborted')) {
-        showInfo('Step execution aborted', true);
-        return;
-    }
-    showError(error as Error);
-};
-
-const syncInterpreterState = (
-    interpreter: AjisaiInterpreter,
-    result: ExecuteResult
-): void => {
-    if (!result || result.error) return;
-
-    applyInterpreterSnapshot(interpreter, {
-        stack: result.stack,
-        userWords: result.userWords,
-        importedModules: result.importedModules
-    });
 };
 
 export const createStepExecutor = (
@@ -168,7 +122,7 @@ export const createStepExecutor = (
                 false
             );
 
-            const currentState = createStepExecutionSnapshot(interpreter);
+            const currentState = createExecutionSnapshot(interpreter);
             const result = await WORKER_MANAGER.execute(token, currentState);
 
             try {
@@ -196,7 +150,7 @@ export const createStepExecutor = (
             }
 
         } catch (error) {
-            resolveStepExecutionException(error, showInfo, showError);
+            resolveExecutionException('StepExecutor', error, showInfo, showError);
             reset();
         }
 
@@ -227,7 +181,4 @@ export const stepExecutorUtils = {
     createActiveState,
     advanceState,
     formatStepMessage,
-    collectUserWords,
-    createStepExecutionSnapshot,
-    resolveStepExecutionException
 };
