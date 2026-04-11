@@ -1,16 +1,176 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ajisai</title>
-  <link rel="stylesheet" href="/ajisai-base.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ajisai - A stack-based programming language inspired by FORTH">
+    <meta name="theme-color" content="#007bff">
+
+
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./images/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Ajisai">
+
+    <title>Ajisai</title>
+
+
+    <script src="/ajisai-config.js?v=20260408"></script>
+    <script src="/ajisai-theme.js?v=20260408"></script>
+    <style id="theme-vars"></style>
+    <script>
+
+        if (typeof AjisaiTheme !== 'undefined') {
+            const vars = AjisaiTheme.getAll();
+            let css = ':root {';
+            for (const [key, value] of Object.entries(vars)) {
+                css += `${key}: ${value};`;
+            }
+            css += '}';
+            document.getElementById('theme-vars').textContent = css;
+        }
+    </script>
+
+    <link rel="stylesheet" href="public/ajisai-base.css?v=20260408">
+    <link rel="stylesheet" href="app-interface.css?v=20260408">
 </head>
 <body>
-  <main style="max-width: 840px; margin: 48px auto; padding: 0 16px;">
-    <h1>Ajisai</h1>
-    <p>Referenceページは削除されました。最新情報はGitHubリポジトリをご確認ください。</p>
-    <p><a href="https://github.com/masamoto1982/Ajisai">https://github.com/masamoto1982/Ajisai</a></p>
-  </main>
+    <a href="#code-input" class="skip-link">Skip to main content</a>
+    <div class="container">
+        <header role="banner">
+            <div class="app-header-top">
+                <a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai">
+                    <span class="logo-swap" aria-hidden="true">
+                        <img src="public/images/ajisai-logo-thumbnail-w40.jpg" alt="" class="logo logo-default">
+                        <img src="public/images/ajisai-qr.png" alt="" class="logo logo-qr">
+                    </span>
+                    <div class="app-brand-meta">
+                        <h1>Ajisai</h1>
+                        <span class="version">ver.202604110853</span>
+                    </div>
+                </a>
+                <span id="offline-indicator" class="offline-indicator" style="display: none;">Offline</span>
+            </div>
+            <div class="header-actions">
+                <a href="docs/index.html" class="reference-btn" target="_blank">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+                    </svg>
+                    Reference
+                </a>
+                <button id="test-btn" class="test-btn" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Test
+                </button>
+            </div>
+        </header>
+
+        <main class="main-layout">
+            <div class="area-selector area-selector-mobile">
+                <label for="mobile-panel-select" class="visually-hidden">Select panel</label>
+                <select id="mobile-panel-select">
+                    <option value="input">Input</option>
+                    <option value="output">Output</option>
+                    <option value="stack">Stack</option>
+                    <option value="dictionary">Dictionary</option>
+                </select>
+            </div>
+
+            <div id="editor-panel" class="panel">
+                <div class="area-selector area-selector-left">
+                    <label for="left-panel-select" class="visually-hidden">Select left panel</label>
+                    <select id="left-panel-select">
+                        <option value="input">Input</option>
+                        <option value="output">Output</option>
+                    </select>
+                </div>
+                <section id="output-panel" class="output-area" role="region" aria-label="Output" tabindex="0">
+                    <h2 class="visually-hidden">Output</h2>
+                    <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
+                    <div class="vocabulary-actions">
+                        <button id="copy-output-btn" class="header-btn" type="button" aria-label="Copy output to clipboard">Copy</button>
+                    </div>
+                </section>
+                <section id="input-panel" class="input-area" role="region" aria-label="Input" tabindex="0">
+                    <h2 class="visually-hidden">Input</h2>
+                    <div class="textarea-wrapper">
+                        <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here"></textarea>
+                        <button id="clear-btn" type="button" class="inline-clear-btn" aria-label="Clear input">&times;</button>
+                    </div>
+                    <div class="vocabulary-actions">
+                        <button id="run-btn" type="button">Run</button>
+                    </div>
+                </section>
+            </div>
+
+            <div id="state-panel" class="panel">
+                <div class="area-selector area-selector-right">
+                    <label for="right-panel-select" class="visually-hidden">Select right panel</label>
+                    <select id="right-panel-select">
+                        <option value="stack">Stack</option>
+                        <option value="dictionary">Dictionary</option>
+                    </select>
+                </div>
+                <section id="stack-panel" class="stack-area" role="region" aria-label="Stack" tabindex="0">
+                    <h2 class="visually-hidden">Stack</h2>
+                    <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
+                    <div class="vocabulary-actions"></div>
+                </section>
+
+                <section id="dictionary-panel" class="dictionary-area" role="region" aria-label="Dictionary" tabindex="0" hidden>
+                    <div class="dictionary-toolbar">
+                        <div class="dictionary-sheet-selector">
+                            <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
+                            <select id="dictionary-sheet-select">
+                                <option value="core">Core word</option>
+                                <option value="user">User word</option>
+                            </select>
+                        </div>
+                        <div class="search-wrapper">
+                            <input type="text" id="dictionary-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search word">
+                            <button id="dictionary-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
+                        </div>
+                    </div>
+                    <div id="dictionary-sheet-core" class="dictionary-sheet active">
+                        <div class="vocabulary-container">
+                            <div class="words-area">
+                                <span id="core-word-info" class="word-info-display"></span>
+                                <div id="core-words-display" class="words-display"></div>
+                            </div>
+                        </div>
+                        <div class="vocabulary-actions"></div>
+                    </div>
+                    <div id="dictionary-sheet-user" class="dictionary-sheet" hidden>
+                        <div class="vocabulary-container">
+                            <div class="words-area">
+                                <div class="dictionary-sheet-selector">
+                                    <label for="user-dictionary-select" class="visually-hidden">Select user dictionary</label>
+                                    <select id="user-dictionary-select">
+                                        <option value="DEMO">Demonstration word</option>
+                                    </select>
+                                </div>
+                                <span id="user-word-info" class="word-info-display"></span>
+                                <div id="user-words-display" class="words-display"></div>
+                            </div>
+                        </div>
+                        <div class="vocabulary-actions">
+                            <button id="export-btn" class="header-btn" type="button">Export</button>
+                            <button id="import-btn" class="header-btn" type="button">Import</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+        <footer>
+            <span>&copy; <span id="footer-year"></span> masamoto yamashiro</span>
+            <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </footer>
+        <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
+    </div>
+
+    <script type="module" src="js/web-app-entrypoint.ts"></script>
 </body>
 </html>
