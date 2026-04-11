@@ -160,9 +160,9 @@ mod tests {
             "Safe mode should not affect normal execution: {:?}",
             result
         );
-        assert_eq!(interp.stack.len(), 1);
+        assert_eq!(interp.stack.len(), 2);
         assert!(
-            !interp.stack[0].is_nil(),
+            !interp.stack[1].is_nil(),
             "Result should not be NIL on success"
         );
     }

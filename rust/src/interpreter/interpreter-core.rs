@@ -116,10 +116,6 @@ pub struct Interpreter {
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
 
-
-
-    pub gui_mode: bool,
-
     pub(crate) flow_tracking: bool,
     pub(crate) active_flows: Vec<FlowToken>,
     pub(crate) flow_consumed_log: Vec<(u64, Fraction)>,
@@ -161,7 +157,6 @@ impl Interpreter {
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             input_buffer: String::new(),
             io_output_buffer: String::new(),
-            gui_mode: false,
             flow_tracking: false,
             active_flows: Vec::new(),
             flow_consumed_log: Vec::new(),

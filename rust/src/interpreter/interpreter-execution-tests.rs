@@ -28,9 +28,11 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(interp.stack.len(), 4);
         let val = &interp.stack[3];
-        assert_eq!(val.len(), 1, "Expected single element");
+        // Comparison returns a single-element vector boolean [ TRUE ]
+        assert_eq!(val.len(), 1, "Expected single-element vector boolean");
+        let inner = val.get_child(0).expect("Expected inner element");
         assert!(
-            !val.as_scalar().expect("Expected scalar").is_zero(),
+            !inner.as_scalar().expect("Expected scalar in result").is_zero(),
             "Expected TRUE from comparison"
         );
     }
