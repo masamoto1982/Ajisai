@@ -154,13 +154,13 @@ header {
     filter: brightness(0) invert(1);
 }
 
-.app-brand-block:hover .logo-default,
+.logo-swap:hover .logo-default,
 .app-brand-block:focus-visible .logo-default,
 .app-brand-block:focus-within .logo-default {
     opacity: 0;
 }
 
-.app-brand-block:hover .logo-qr,
+.logo-swap:hover .logo-qr,
 .app-brand-block:focus-visible .logo-qr,
 .app-brand-block:focus-within .logo-qr {
     opacity: 1;
