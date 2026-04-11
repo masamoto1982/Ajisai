@@ -9,7 +9,7 @@ This note captures the current Ajisai GUI behavior so the interface can be rebui
 - Mobile mode switches to a one-panel-at-a-time selector (`input/output/stack/dictionary`).
 
 ## Header/footer and app chrome
-- Header includes Ajisai logo, version text, offline indicator, Reference link, and Test button.
+- Header includes Ajisai logo, version text, offline indicator, and Test button.
 - Footer includes copyright + GitHub link.
 - Skip link exists for accessibility (`Skip to main content`).
 
