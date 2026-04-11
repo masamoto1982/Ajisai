@@ -12,13 +12,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: true,
-    rollupOptions: {
-      input: {
-        main: 'index.html',
-        reference: 'language-reference-playground.html'
-      }
-    }
+    sourcemap: true
   },
   optimizeDeps: {
     exclude: ['./js/pkg/ajisai_core.js']
