@@ -20,42 +20,42 @@
 
 /* Level 1 — div祖先 0個 */
 div {
-    outline: 2px solid #FF3B30;
+    outline: 1px solid #FF3B30;
     outline-offset: -1px;
     padding: 4px !important;
 }
 
 /* Level 2 — div祖先 1個 */
 div div {
-    outline: 2px solid #FF9500;
+    outline: 1px solid #FF9500;
     outline-offset: -1px;
     padding: 4px !important;
 }
 
 /* Level 3 — div祖先 2個 */
 div div div {
-    outline: 2px solid #FFCC00;
+    outline: 1px solid #FFCC00;
     outline-offset: -1px;
     padding: 4px !important;
 }
 
 /* Level 4 — div祖先 3個 */
 div div div div {
-    outline: 2px solid #34C759;
+    outline: 1px solid #34C759;
     outline-offset: -1px;
     padding: 4px !important;
 }
 
 /* Level 5 — div祖先 4個 */
 div div div div div {
-    outline: 2px solid #007AFF;
+    outline: 1px solid #007AFF;
     outline-offset: -1px;
     padding: 4px !important;
 }
 
 /* Level 6 — div祖先 5個以上 */
 div div div div div div {
-    outline: 2px solid #AF52DE;
+    outline: 1px solid #AF52DE;
     outline-offset: -1px;
     padding: 4px !important;
 }
