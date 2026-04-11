@@ -69,15 +69,6 @@ const AjisaiConfig = {
         { label: "Higher-Order", link: "higher-order.html" }
     ],
 
-    referenceMenu: [
-        { label: "Examples", link: "examples.html" },
-        { label: "GitHub", link: "https://github.com/masamoto1982/Ajisai" },
-        { label: "Demo", link: "https://masamoto1982.github.io/Ajisai/" }
-    ],
-
-
-
-
     social: {
         github: { url: "https://github.com/masamoto1982/Ajisai", label: "GitHub" },
         demo: { url: "https://masamoto1982.github.io/Ajisai/", label: "Try Demo" }
