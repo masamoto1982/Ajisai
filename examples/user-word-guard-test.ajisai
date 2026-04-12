@@ -1,16 +1,16 @@
-# Custom word behavior regression cases (canonical)
+# User word behavior regression cases (canonical)
 
-# 1) Basic custom word definition and execution
+# 1) Basic user word definition and execution
 [ '[ 1 ] [ 2 ] +' ] 'ADD12' DEF
 ADD12 PRINT
 # 期待: [ 3 ]
 
-# 2) Custom word composed from built-ins
+# 2) User word composed from built-ins
 [ '[ 1 ] +' ] 'INC' DEF
 [ 41 ] INC PRINT
 # 期待: [ 42 ]
 
-# 3) Custom word can be redefined intentionally
+# 3) User word can be redefined intentionally
 [ '[ 2 ] +' ] 'INC' DEF
 [ 40 ] INC PRINT
 # 期待: [ 42 ]
