@@ -361,11 +361,3 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         importJsonAsVector
     };
 };
-
-export const persistenceUtils = {
-    toUserWord,
-    collectCurrentState,
-    createExportData,
-    buildExportFilename,
-    parseUserWords
-};

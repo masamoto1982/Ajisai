@@ -395,9 +395,3 @@ export const createVocabularyManager = (
         updateSearchFilter
     };
 };
-
-export const dictionaryUtils = {
-    deserializeWordName,
-    createWordInfoFromTuple,
-    SYMBOL_MAP
-};

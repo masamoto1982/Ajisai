@@ -174,11 +174,3 @@ export const createStepExecutor = (
         extractState
     };
 };
-
-export const stepExecutorUtils = {
-    createInitialState,
-    tokenize,
-    createActiveState,
-    advanceState,
-    formatStepMessage,
-};

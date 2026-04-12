@@ -19,8 +19,6 @@ import {
     applyAreaState,
     updateHighlights,
     updateEditorPlaceholder,
-    checkStackHighlightAll,
-    checkStackHighlightTop,
     LayoutState
 } from './gui-layout-state';
 import { switchDictionarySheet } from './gui-dictionary-sheet';
@@ -374,12 +372,3 @@ export const createGUI = (): GUI => {
 };
 
 export const GUI_INSTANCE = createGUI();
-
-export const guiUtils = {
-    cacheElements,
-    extractDisplayElements,
-    extractVocabularyElements,
-    extractMobileElements,
-    checkStackHighlightAll,
-    checkStackHighlightTop
-};

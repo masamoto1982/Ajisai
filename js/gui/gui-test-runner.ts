@@ -410,10 +410,3 @@ export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner =>
 
     return { runAllTests };
 };
-
-
-export const testUtils = {
-    groupByCategory,
-    checkIsTestPassed,
-    calculateStackDifference
-};

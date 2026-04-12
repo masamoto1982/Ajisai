@@ -546,14 +546,3 @@ export const createDisplay = (elements: DisplayElements): Display => {
         extractState
     };
 };
-
-export const displayUtils = {
-    formatValue,
-    formatNumber,
-    formatDateTime,
-    formatTensor,
-    formatVector,
-    lookupBracketsAtDepth,
-    removeSpecialCommandLines,
-    formatErrorMessage
-};
