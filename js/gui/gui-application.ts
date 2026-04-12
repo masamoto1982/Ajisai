@@ -19,8 +19,6 @@ import {
     applyAreaState,
     updateHighlights,
     updateEditorPlaceholder,
-    checkStackHighlightAll,
-    checkStackHighlightTop,
     LayoutState
 } from './gui-layout-state';
 import { switchDictionarySheet } from './gui-dictionary-sheet';
