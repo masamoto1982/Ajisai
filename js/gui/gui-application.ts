@@ -204,32 +204,38 @@ export const createGUI = (): GUI => {
 
         {
             const TAP_MOVEMENT_LIMIT = 10;
-            let tapStartX = 0;
-            let tapStartY = 0;
 
-            elements.stackDisplay.addEventListener('touchstart', (e: TouchEvent) => {
-                const touch = e.changedTouches[0];
-                if (touch) {
-                    tapStartX = touch.screenX;
-                    tapStartY = touch.screenY;
-                }
-            }, { passive: true });
+            const setupTapToReturn = (target: HTMLElement, activeMode: ViewMode): void => {
+                let tapStartX = 0;
+                let tapStartY = 0;
 
-            elements.stackDisplay.addEventListener('touchend', (e: TouchEvent) => {
-                if (!mobile.isMobile()) return;
-                if (layoutState.currentMode !== 'stack') return;
+                target.addEventListener('touchstart', (e: TouchEvent) => {
+                    const touch = e.changedTouches[0];
+                    if (touch) {
+                        tapStartX = touch.screenX;
+                        tapStartY = touch.screenY;
+                    }
+                }, { passive: true });
 
-                const touch = e.changedTouches[0];
-                if (!touch) return;
+                target.addEventListener('touchend', (e: TouchEvent) => {
+                    if (!mobile.isMobile()) return;
+                    if (layoutState.currentMode !== activeMode) return;
 
-                const deltaX = Math.abs(touch.screenX - tapStartX);
-                const deltaY = Math.abs(touch.screenY - tapStartY);
+                    const touch = e.changedTouches[0];
+                    if (!touch) return;
 
-                if (deltaX < TAP_MOVEMENT_LIMIT && deltaY < TAP_MOVEMENT_LIMIT) {
-                    if ((e.target as HTMLElement).closest('button, a')) return;
-                    switchArea('input');
-                }
-            }, { passive: true });
+                    const deltaX = Math.abs(touch.screenX - tapStartX);
+                    const deltaY = Math.abs(touch.screenY - tapStartY);
+
+                    if (deltaX < TAP_MOVEMENT_LIMIT && deltaY < TAP_MOVEMENT_LIMIT) {
+                        if ((e.target as HTMLElement).closest('button, a')) return;
+                        switchArea('input');
+                    }
+                }, { passive: true });
+            };
+
+            setupTapToReturn(elements.outputDisplay, 'output');
+            setupTapToReturn(elements.stackDisplay, 'stack');
         }
 
         elements.copyOutputBtn.addEventListener('click', (e: MouseEvent) => {
