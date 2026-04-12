@@ -3,15 +3,11 @@ const urlsToCache = [
   './',
   './index.html',
   './app-interface.css',
-  './manifest.json',
-  './ajisai-config.js',
-  './ajisai-theme.js'
+  './manifest.json'
 ];
 
 
 const networkFirstPatterns = [
-  'ajisai-config.js',
-  'ajisai-theme.js',
   'config.js',
   'app-interface.css',
   'index.html'
