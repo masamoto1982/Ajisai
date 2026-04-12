@@ -9,7 +9,7 @@ const MANTISSA_PRECISION = 6;
 
 
 
-export function formatIntegerScientific(numStr: string): string {
+function formatIntegerScientific(numStr: string): string {
     const isNegative = numStr.startsWith('-');
     const absNumStr = isNegative ? numStr.substring(1) : numStr;
 

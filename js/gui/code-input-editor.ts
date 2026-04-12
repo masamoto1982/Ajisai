@@ -320,10 +320,3 @@ export const createEditor = (
         registerContentChangeCallback
     };
 };
-
-export const editorUtils = {
-    insertAt,
-    locateInnerBracketPosition,
-    computeCursorPosition,
-    extractToken
-};

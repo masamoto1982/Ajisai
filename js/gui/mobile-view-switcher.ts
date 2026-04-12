@@ -124,13 +124,3 @@ export const createMobileHandler = (
         updateView
     };
 };
-
-export const mobileUtils = {
-    checkIsMobile,
-    detectSwipeDirection,
-    resolveNextViewMode,
-    lookupVisibilityForMode,
-    VIEW_ORDER,
-    MOBILE_BREAKPOINT,
-    SWIPE_THRESHOLD
-};

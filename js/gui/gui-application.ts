@@ -374,12 +374,3 @@ export const createGUI = (): GUI => {
 };
 
 export const GUI_INSTANCE = createGUI();
-
-export const guiUtils = {
-    cacheElements,
-    extractDisplayElements,
-    extractVocabularyElements,
-    extractMobileElements,
-    checkStackHighlightAll,
-    checkStackHighlightTop
-};
