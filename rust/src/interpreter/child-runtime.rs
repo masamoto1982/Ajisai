@@ -56,14 +56,11 @@ impl Interpreter {
         self.child_runtimes.insert(
             id,
             ChildRuntime {
-                id,
                 code_block,
                 dictionary_snapshot: self.capture_runtime_snapshot(),
                 state: ChildState::Running,
                 exit_reason: None,
                 result_snapshot: None,
-                restart_count: 0,
-                supervisor_id: None,
                 monitored: false,
             },
         );
@@ -213,14 +210,11 @@ impl Interpreter {
             let id = self.next_child_id;
             self.next_child_id += 1;
             let mut child = ChildRuntime {
-                id,
                 code_block: code_block.clone(),
                 dictionary_snapshot: self.capture_runtime_snapshot(),
                 state: ChildState::Running,
                 exit_reason: None,
                 result_snapshot: None,
-                restart_count: attempt,
-                supervisor_id: Some(supervisor_id),
                 monitored: false,
             };
             self.run_child_to_completion(&mut child);

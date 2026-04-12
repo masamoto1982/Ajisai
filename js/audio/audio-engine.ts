@@ -40,7 +40,7 @@ const DEFAULT_ENVELOPE: Envelope = {
     release: 0.01,
 };
 
-export class AudioEngine {
+class AudioEngine {
     private audioContext: AudioContext | null = null;
     private isInitialized = false;
     private slotDuration = 0.5;
