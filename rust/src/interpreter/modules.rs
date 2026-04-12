@@ -350,17 +350,14 @@ fn import_all_public(interp: &mut Interpreter, module_name: &str) -> Result<()> 
         imported_samples.insert(short.clone());
     }
 
-    let imported_at = interp.next_registration_order();
     let entry = interp
         .import_table
         .modules
         .entry(module_name.to_string())
         .or_insert_with(|| ImportedModule {
-            module_name: module_name.to_string(),
             import_all_public: false,
             imported_words: HashSet::new(),
             imported_samples: HashSet::new(),
-            imported_at,
         });
 
     entry.import_all_public = true;
@@ -426,17 +423,14 @@ pub fn op_import_only(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    let imported_at = interp.next_registration_order();
     let entry = interp
         .import_table
         .modules
         .entry(module_name.clone())
         .or_insert_with(|| ImportedModule {
-            module_name: module_name.clone(),
             import_all_public: false,
             imported_words: HashSet::new(),
             imported_samples: HashSet::new(),
-            imported_at,
         });
 
     for (short, is_word) in validated {

@@ -27,7 +27,6 @@ pub fn lookup_builtin_detail(name: &str) -> String {
         BuiltinDetailGroup::ControlHigherOrder => lookup_detail_control_higher_order(name),
         BuiltinDetailGroup::Cond => lookup_detail_cond(name),
         BuiltinDetailGroup::IoModule => lookup_detail_io_module(name),
-        BuiltinDetailGroup::None => None,
     };
 
     if let Some(content) = detail {

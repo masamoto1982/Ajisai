@@ -3,13 +3,13 @@ import type { MobileHandler } from './mobile-view-switcher';
 import type { GUIElements } from './gui-dom-cache';
 import type { ModuleTabManager } from './module-selector-sheets';
 
-export const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
-export const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
+const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
+const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 
-export const checkStackHighlightAll = (content: string): boolean => /(\s|^)\.\.(\s|$)/.test(content);
-export const checkStackHighlightTop = (content: string): boolean => /(\s|^)\.(\s|$)/.test(content);
+const checkStackHighlightAll = (content: string): boolean => /(\s|^)\.\.(\s|$)/.test(content);
+const checkStackHighlightTop = (content: string): boolean => /(\s|^)\.(\s|$)/.test(content);
 
-export const DESKTOP_EDITOR_PLACEHOLDER = [
+const DESKTOP_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
     'Run → Shift+Enter',
@@ -19,7 +19,7 @@ export const DESKTOP_EDITOR_PLACEHOLDER = [
     'Autocomplete → Ctrl+Space / Tab / ↑↓'
 ].join('\n');
 
-export const MOBILE_EDITOR_PLACEHOLDER = [
+const MOBILE_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
     'Run → Tap the Run button',
@@ -38,16 +38,16 @@ export const createLayoutState = (): LayoutState => ({
     currentRightMode: 'stack'
 });
 
-export const syncSelectorState = (elements: GUIElements, leftMode: ViewMode, rightMode: ViewMode): void => {
+const syncSelectorState = (elements: GUIElements, leftMode: ViewMode, rightMode: ViewMode): void => {
     elements.leftPanelSelect.value = leftMode;
     elements.rightPanelSelect.value = rightMode;
 };
 
-export const syncMobileSelectorState = (elements: GUIElements, mode: ViewMode): void => {
+const syncMobileSelectorState = (elements: GUIElements, mode: ViewMode): void => {
     elements.mobilePanelSelect.value = mode;
 };
 
-export const syncDesktopLayout = (elements: GUIElements, state: LayoutState): void => {
+const syncDesktopLayout = (elements: GUIElements, state: LayoutState): void => {
     elements.editorPanel.hidden = false;
     elements.statePanel.hidden = false;
     elements.inputArea.hidden = state.currentLeftMode !== 'input';
@@ -56,7 +56,7 @@ export const syncDesktopLayout = (elements: GUIElements, state: LayoutState): vo
     elements.dictionaryArea.hidden = state.currentRightMode !== 'dictionary';
 };
 
-export const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
+const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
     if (LEFT_TAB_MODES.includes(mode)) {
         state.currentLeftMode = mode;
     }

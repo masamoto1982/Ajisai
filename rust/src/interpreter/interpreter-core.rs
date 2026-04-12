@@ -33,11 +33,9 @@ pub(crate) struct ModuleDictionary {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ImportedModule {
-    pub module_name: String,
     pub import_all_public: bool,
     pub imported_words: HashSet<String>,
     pub imported_samples: HashSet<String>,
-    pub imported_at: u64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -82,14 +80,11 @@ pub(crate) struct RuntimeDictionarySnapshot {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ChildRuntime {
-    pub id: u64,
     pub code_block: Vec<Token>,
     pub dictionary_snapshot: RuntimeDictionarySnapshot,
     pub state: ChildState,
     pub exit_reason: Option<ExitReason>,
     pub result_snapshot: Option<Vec<Value>>,
-    pub restart_count: usize,
-    pub supervisor_id: Option<u64>,
     pub monitored: bool,
 }
 

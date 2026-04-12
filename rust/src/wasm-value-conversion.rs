@@ -203,10 +203,6 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     }
 }
 
-pub(crate) fn value_to_js_value(value: &Value) -> JsValue {
-    value_to_js_value_with_hint(value, DisplayHint::Auto)
-}
-
 pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> JsValue {
     let obj = js_sys::Object::new();
 

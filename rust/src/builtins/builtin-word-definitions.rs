@@ -11,7 +11,6 @@ pub enum BuiltinDetailGroup {
     ControlHigherOrder,
     Cond,
     IoModule,
-    None,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

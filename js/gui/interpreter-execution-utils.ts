@@ -6,7 +6,7 @@ import {
 } from '../workers/interpreter-snapshot';
 import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
 
-export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
+const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
     const userWordsInfo = interpreter.collect_user_words_info();
     return userWordsInfo.map(wordData => ({
         dictionary: wordData[0],

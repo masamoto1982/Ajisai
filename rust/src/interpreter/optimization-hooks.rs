@@ -1,5 +1,4 @@
-use crate::types::{FlowToken, Value, ValueData};
-use std::rc::Rc;
+use crate::types::{FlowToken, Value};
 
 
 
@@ -63,6 +62,8 @@ pub(crate) fn check_in_place_candidate(
 mod tests {
     use super::*;
     use crate::types::fraction::Fraction;
+    use crate::types::ValueData;
+    use std::rc::Rc;
 
     fn scalar(n: i64) -> Value {
         Value::from_int(n)
