@@ -1,5 +1,6 @@
 mod builtins;
 mod error;
+pub mod elastic;
 pub mod interpreter;
 mod tokenizer;
 pub mod types;

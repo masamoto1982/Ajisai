@@ -12,7 +12,35 @@ use super::{
 };
 
 impl Interpreter {
+    /// Public entry point for word execution.
+    ///
+    /// When `AJISAI_TRACE=1` (or `set_trace_enabled(true)`) is active this
+    /// wraps the call with timing instrumentation.  All existing greedy
+    /// semantics are preserved unchanged.
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
+        if crate::elastic::tracer::is_enabled() {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let t0 = std::time::Instant::now();
+                let result = self.execute_word_core_inner(name);
+                let nanos = t0.elapsed().as_nanos() as u64;
+                crate::elastic::tracer::record(name, nanos);
+                return result;
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let result = self.execute_word_core_inner(name);
+                crate::elastic::tracer::record(name, 0);
+                return result;
+            }
+        }
+        self.execute_word_core_inner(name)
+    }
+
+    /// Core word-execution logic (greedy, always).
+    ///
+    /// Never call directly — use `execute_word_core` so tracing applies.
+    fn execute_word_core_inner(&mut self, name: &str) -> Result<()> {
         let (resolved_name, def) = self
             .resolve_word_entry(name)
             .ok_or_else(|| {
