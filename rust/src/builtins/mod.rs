@@ -41,6 +41,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
                 original_source: None,
                 namespace: None,
                 registration_order: 0,
+                compiled_plan: None,
             }),
         );
     }

@@ -9,7 +9,7 @@ use super::higher_order::{extract_executable_code, execute_executable_code, Exec
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -172,7 +172,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -367,7 +367,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
