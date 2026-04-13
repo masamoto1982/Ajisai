@@ -234,6 +234,9 @@ mod tests {
         assert_eq!(ElasticMode::from_str("greedy"),        ElasticMode::Greedy);
         assert_eq!(ElasticMode::from_str("elastic-safe"),  ElasticMode::ElasticSafe);
         assert_eq!(ElasticMode::from_str("elastic-force"), ElasticMode::ElasticForce);
+        assert_eq!(ElasticMode::from_str("elastic_safe"),  ElasticMode::ElasticSafe);
+        assert_eq!(ElasticMode::from_str("elastic_force"), ElasticMode::ElasticForce);
+        assert_eq!(ElasticMode::from_str(" Elastic-Safe "), ElasticMode::ElasticSafe);
     }
 
     #[test]

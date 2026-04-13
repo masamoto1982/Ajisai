@@ -19,14 +19,17 @@ impl ElasticMode {
     ///
     /// Unknown strings produce a stderr warning and fall back to `Greedy`.
     pub fn from_str(s: &str) -> Self {
-        match s {
+        let normalized = s.trim().to_ascii_lowercase();
+        match normalized.as_str() {
             "elastic-safe"  => ElasticMode::ElasticSafe,
+            "elastic_safe"  => ElasticMode::ElasticSafe,
             "elastic-force" => ElasticMode::ElasticForce,
+            "elastic_force" => ElasticMode::ElasticForce,
             "greedy"        => ElasticMode::Greedy,
-            other => {
+            _ => {
                 eprintln!(
                     "[warn] Unknown execution mode '{}'. Falling back to greedy.",
-                    other
+                    s
                 );
                 ElasticMode::Greedy
             }

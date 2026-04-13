@@ -5,6 +5,7 @@ use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
 use crate::interpreter;
 use crate::tokenizer;
+use crate::elastic::ElasticMode;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
@@ -241,6 +242,17 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn clear_io_output_buffer(&mut self) {
         self.interpreter.io_output_buffer.clear();
+    }
+
+    #[wasm_bindgen]
+    pub fn set_execution_mode(&mut self, mode: &str) {
+        self.interpreter
+            .set_elastic_mode(ElasticMode::from_str(mode));
+    }
+
+    #[wasm_bindgen]
+    pub fn get_execution_mode(&self) -> String {
+        self.interpreter.elastic_mode().as_str().to_string()
     }
 
     #[wasm_bindgen]
